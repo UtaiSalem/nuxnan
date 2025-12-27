@@ -1,0 +1,24 @@
+/* Icon styles to ensure proper display */
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1em;
+}
+
+/* Ensure icons are visible in all contexts */
+svg.icon {
+  fill: currentColor;
+  shape-rendering: geometricPrecision;
+}
+
+/* Fix for icons in buttons and links */
+button .icon,
+a .icon {
+  flex-shrink: 0;
+}
+
+/* Ensure icons don't affect line height */
+.icon-inline {
+  vertical-align: -0.125em;
+}

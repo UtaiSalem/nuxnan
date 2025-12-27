@@ -1,0 +1,459 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans text-gray-700 bg-vikinger-light dark:bg-vikinger-dark dark:text-gray-200 transition-colors duration-300;
+  }
+
+  /* Scrollbar Styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-vikinger-light-300 dark:bg-vikinger-dark-200;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-vikinger-purple/50 rounded-full hover:bg-vikinger-purple/70;
+  }
+
+  /* Hide scrollbar utility */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  /* ========================
+     Vikinger Card Styles
+     ======================== */
+  .vikinger-card {
+    @apply bg-white dark:bg-vikinger-dark-100 rounded-vikinger-lg p-5 
+           shadow-card dark:shadow-card-dark 
+           border border-vikinger-light-400 dark:border-vikinger-dark-50/30
+           transition-all duration-300;
+  }
+
+  .vikinger-card-hover:hover {
+    @apply transform -translate-y-1 shadow-vikinger;
+  }
+
+  /* ========================
+     Gradient Buttons
+     ======================== */
+  .btn-gradient {
+    @apply px-6 py-3 rounded-vikinger font-semibold text-white
+           bg-gradient-vikinger hover:shadow-vikinger-lg
+           transition-all duration-300 transform hover:scale-105;
+  }
+
+  .btn-gradient-pink {
+    @apply px-6 py-3 rounded-vikinger font-semibold text-white
+           bg-gradient-pink hover:shadow-purple-glow
+           transition-all duration-300 transform hover:scale-105;
+  }
+
+  .btn-gradient-outline {
+    @apply px-6 py-3 rounded-vikinger font-semibold 
+           border-2 border-vikinger-purple text-vikinger-purple
+           hover:bg-vikinger-purple hover:text-white
+           transition-all duration-300;
+  }
+
+  /* ========================
+     Avatar with Level Badge
+     ======================== */
+  .avatar-container {
+    @apply relative inline-block;
+  }
+
+  .avatar {
+    @apply w-16 h-16 rounded-full border-4 border-vikinger-purple 
+           shadow-purple-glow object-cover;
+  }
+
+  .avatar-sm {
+    @apply w-10 h-10 rounded-full border-2 border-vikinger-cyan object-cover;
+  }
+
+  .avatar-lg {
+    @apply w-24 h-24 rounded-full border-4 border-vikinger-purple 
+           shadow-vikinger-lg object-cover;
+  }
+
+  .level-badge {
+    @apply absolute -bottom-1 -right-1 w-7 h-7 
+           bg-gradient-vikinger rounded-full 
+           flex items-center justify-center 
+           text-white text-xs font-bold
+           border-2 border-white dark:border-vikinger-dark;
+  }
+
+  /* ========================
+     Stats Box (Gamification)
+     ======================== */
+  .stats-box {
+    @apply vikinger-card bg-gradient-vikinger text-white relative overflow-hidden;
+  }
+
+  .stats-box::before {
+    content: '';
+    @apply absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2;
+  }
+
+  .stats-number {
+    @apply text-4xl font-bold;
+  }
+
+  .stats-label {
+    @apply text-sm opacity-80;
+  }
+
+  .stats-trend {
+    @apply inline-flex items-center text-xs px-2 py-1 rounded-full bg-white/20;
+  }
+
+  /* ========================
+     Progress Bar
+     ======================== */
+  .progress-bar {
+    @apply w-full h-2 bg-vikinger-light-400 dark:bg-vikinger-dark-200 rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-gradient-vikinger rounded-full transition-all duration-500;
+  }
+
+  /* Circular Progress */
+  .progress-circle {
+    @apply relative w-24 h-24;
+  }
+
+  .progress-circle-bg {
+    @apply absolute inset-0 rounded-full border-8 border-vikinger-light-400 dark:border-vikinger-dark-200;
+  }
+
+  .progress-circle-fill {
+    @apply absolute inset-0 rounded-full border-8 border-vikinger-purple;
+  }
+
+  .progress-circle-text {
+    @apply absolute inset-0 flex items-center justify-center text-2xl font-bold text-vikinger-purple;
+  }
+
+  /* ========================
+     Sidebar Navigation
+     ======================== */
+  .sidebar {
+    @apply fixed left-0 top-16 h-[calc(100vh-64px)] w-64 
+           bg-white dark:bg-vikinger-dark-100 
+           border-r border-vikinger-light-400 dark:border-vikinger-dark-50/30
+           transition-transform duration-300 z-20;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 mx-2 rounded-vikinger
+           text-gray-600 dark:text-gray-300 
+           hover:bg-vikinger-purple/10 hover:text-vikinger-purple
+           transition-colors duration-200;
+  }
+
+  .sidebar-item-active {
+    @apply bg-gradient-vikinger text-white shadow-vikinger;
+  }
+
+  .sidebar-icon {
+    @apply w-6 h-6;
+  }
+
+  /* Sidebar Menu Item - Vikinger Style */
+  .sidebar-menu-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl
+           text-gray-500 dark:text-gray-400
+           hover:bg-vikinger-purple/10 hover:text-vikinger-purple dark:hover:text-vikinger-cyan
+           transition-all duration-300 font-medium;
+  }
+
+  .sidebar-menu-item-active {
+    @apply text-white !important;
+    background: linear-gradient(135deg, #40d04f, #1abc9c) !important;
+    box-shadow: 0 4px 12px rgba(64, 208, 79, 0.3);
+  }
+
+  /* ========================
+     Badge Styles
+     ======================== */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-cyan {
+    @apply bg-vikinger-cyan/20 text-vikinger-cyan;
+  }
+
+  .badge-purple {
+    @apply bg-vikinger-purple/20 text-vikinger-purple;
+  }
+
+  .badge-pink {
+    @apply bg-vikinger-pink/20 text-vikinger-pink;
+  }
+
+  .badge-green {
+    @apply bg-vikinger-green/20 text-vikinger-green;
+  }
+
+  /* ========================
+     Post/Feed Card
+     ======================== */
+  .post-card {
+    @apply vikinger-card space-y-4;
+  }
+
+  .post-header {
+    @apply flex items-center gap-3;
+  }
+
+  .post-author {
+    @apply font-semibold text-gray-800 dark:text-white;
+  }
+
+  .post-time {
+    @apply text-sm text-gray-500 dark:text-gray-400;
+  }
+
+  .post-content {
+    @apply text-gray-700 dark:text-gray-300 leading-relaxed;
+  }
+
+  .post-actions {
+    @apply flex items-center gap-4 pt-3 border-t border-vikinger-light-400 dark:border-vikinger-dark-50/30;
+  }
+
+  .post-action-btn {
+    @apply flex items-center gap-2 text-gray-500 dark:text-gray-400 
+           hover:text-vikinger-purple transition-colors;
+  }
+
+  /* ========================
+     Reaction Icons
+     ======================== */
+  .reaction-icon {
+    @apply w-8 h-8 rounded-full p-1.5 cursor-pointer 
+           transform hover:scale-125 transition-transform duration-200;
+  }
+
+  .reaction-like {
+    @apply bg-vikinger-purple text-white;
+  }
+
+  .reaction-love {
+    @apply bg-vikinger-pink text-white;
+  }
+
+  .reaction-happy {
+    @apply bg-vikinger-yellow text-vikinger-dark;
+  }
+
+  .reaction-dislike {
+    @apply bg-gray-400 text-white;
+  }
+
+  /* ========================
+     Sci-Fi Glow Effects
+     ======================== */
+  .glow-cyan {
+    @apply shadow-cyan-glow;
+  }
+
+  .glow-purple {
+    @apply shadow-purple-glow;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 10px rgba(35, 210, 226, 0.5);
+  }
+
+  .glow-text-purple {
+    text-shadow: 0 0 10px rgba(97, 93, 250, 0.5);
+  }
+
+  /* ========================
+     Header/Navbar
+     ======================== */
+  .navbar {
+    @apply fixed top-0 left-0 right-0 h-16 z-30
+           bg-white dark:bg-vikinger-dark-100 
+           border-b border-vikinger-light-400 dark:border-vikinger-dark-50/30
+           shadow-sm;
+  }
+
+  .navbar-brand {
+    @apply text-2xl font-bold bg-gradient-vikinger bg-clip-text text-transparent;
+  }
+
+  /* ========================
+     Input Styles
+     ======================== */
+  .input-vikinger {
+    @apply w-full px-4 py-3 rounded-vikinger 
+           bg-vikinger-light-200 dark:bg-vikinger-dark-200
+           border border-vikinger-light-400 dark:border-vikinger-dark-50/30
+           text-gray-800 dark:text-gray-200
+           placeholder-gray-400 dark:placeholder-gray-500
+           focus:border-vikinger-purple focus:ring-2 focus:ring-vikinger-purple/20
+           transition-all duration-200;
+  }
+
+  .input-post {
+    @apply w-full px-4 py-3 rounded-vikinger-lg 
+           bg-vikinger-light-200 dark:bg-vikinger-dark-200
+           border-none
+           text-gray-800 dark:text-gray-200
+           placeholder-gray-400 dark:placeholder-gray-500
+           focus:ring-2 focus:ring-vikinger-purple/30
+           resize-none;
+  }
+
+  /* ========================
+     Tab Styles
+     ======================== */
+  .tab-container {
+    @apply flex gap-1 p-1 bg-vikinger-light-200 dark:bg-vikinger-dark-200 rounded-vikinger;
+  }
+
+  .tab-item {
+    @apply px-4 py-2 rounded-vikinger text-sm font-medium
+           text-gray-600 dark:text-gray-400
+           hover:text-vikinger-purple
+           transition-colors duration-200;
+  }
+
+  .tab-item-active {
+    @apply bg-white dark:bg-vikinger-dark text-vikinger-purple shadow-sm;
+  }
+
+  /* ========================
+     Message/Chat
+     ======================== */
+  .chat-bubble {
+    @apply max-w-xs px-4 py-2 rounded-vikinger-lg;
+  }
+
+  .chat-bubble-sent {
+    @apply bg-gradient-vikinger text-white rounded-br-none;
+  }
+
+  .chat-bubble-received {
+    @apply bg-vikinger-light-300 dark:bg-vikinger-dark-200 text-gray-800 dark:text-gray-200 rounded-bl-none;
+  }
+
+  /* ========================
+     Notification Dot
+     ======================== */
+  .notification-dot {
+    @apply absolute -top-1 -right-1 w-5 h-5 
+           bg-vikinger-pink rounded-full 
+           flex items-center justify-center 
+           text-white text-xs font-bold
+           animate-pulse;
+  }
+
+  /* ========================
+     Loading Skeleton
+     ======================== */
+  .skeleton {
+    @apply bg-vikinger-light-400 dark:bg-vikinger-dark-200 rounded animate-pulse;
+  }
+
+  .skeleton-shimmer {
+    @apply relative overflow-hidden;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* ========================
+     Post Image Gallery
+     ======================== */
+  .post-image-grid {
+    @apply grid gap-1 rounded-xl overflow-hidden;
+  }
+
+  .post-image-item {
+    @apply w-full object-cover transition-all duration-300;
+  }
+
+  .post-image-item:hover {
+    @apply opacity-90 scale-[1.02];
+  }
+
+  /* ========================
+     Reaction Picker
+     ======================== */
+  .reaction-picker {
+    @apply absolute bottom-full left-0 mb-2 
+           bg-white dark:bg-vikinger-dark-100 
+           rounded-full shadow-xl p-2 
+           flex gap-1 z-10;
+  }
+
+  .reaction-item {
+    @apply w-10 h-10 rounded-full 
+           flex items-center justify-center 
+           text-xl transition-all duration-200;
+  }
+
+  .reaction-item:hover {
+    @apply scale-125;
+  }
+}
+
+/* ========================
+   Keyframe Animations
+   ======================== */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes like-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes float-up {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(1.5);
+  }
+}
+
+.like-animate {
+  animation: like-pulse 0.3s ease;
+}
+
+.float-heart {
+  animation: float-up 0.8s ease forwards;
+}

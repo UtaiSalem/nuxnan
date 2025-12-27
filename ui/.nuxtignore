@@ -1,0 +1,4 @@
+# Ignore files during build
+.output
+.nuxt
+node_modules

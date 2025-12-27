@@ -1,0 +1,12 @@
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\bin\Debug\net9.0\nuxniaspire.ServiceDefaults.deps.json
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\bin\Debug\net9.0\nuxniaspire.ServiceDefaults.dll
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\bin\Debug\net9.0\nuxniaspire.ServiceDefaults.pdb
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\obj\Debug\net9.0\nuxniaspire.ServiceDefaults.csproj.AssemblyReference.cache
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\obj\Debug\net9.0\nuxniaspire.ServiceDefaults.GeneratedMSBuildEditorConfig.editorconfig
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\obj\Debug\net9.0\nuxniaspire.ServiceDefaults.AssemblyInfoInputs.cache
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\obj\Debug\net9.0\nuxniaspire.ServiceDefaults.AssemblyInfo.cs
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\obj\Debug\net9.0\nuxniaspire.ServiceDefaults.csproj.CoreCompileInputs.cache
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\obj\Debug\net9.0\nuxniaspire.ServiceDefaults.dll
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\obj\Debug\net9.0\refint\nuxniaspire.ServiceDefaults.dll
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\obj\Debug\net9.0\nuxniaspire.ServiceDefaults.pdb
+C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ServiceDefaults\obj\Debug\net9.0\ref\nuxniaspire.ServiceDefaults.dll
