@@ -55,7 +55,6 @@ async function formSubmit(e) {
 
   try {
     let resp = await axios.post('/academies', data, config);
-    console.log(resp.data);
     if (resp.data && resp.data.success) {
         Swal.fire(
             'เสร็จสมบูรณ์',
@@ -71,7 +70,7 @@ async function formSubmit(e) {
         )
     }
   } catch (error) {
-    console.log(error);
+    // Handle error silently
   }
   isLoading.value = false;
 }

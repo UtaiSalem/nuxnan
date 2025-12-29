@@ -52,7 +52,6 @@ const handleLikesComment = async () => {
             isLoading.value = false;  
         }
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
     }
 };
@@ -85,7 +84,6 @@ const handleDislikesComment = async () => {
             isDislikeLoading.value = false;  
         }
     } catch (error) {
-        console.log(error);
         isDislikeLoading.value = false;
     }
 };
@@ -119,7 +117,6 @@ const handleDeleteComment = () => {
             }
         });
     } catch (error) {
-        console.log(error);
         isDeleting.value = false;
     }
 };

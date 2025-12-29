@@ -18,7 +18,6 @@ const fetchMoreDonations = async() => {
         isLoadingDonates.value = true;
         const moreDonatesResp = await axios.get(nextPageUrl.value);
         if (moreDonatesResp.data ) {
-            console.log(moreDonatesResp.data);
             moreDonatesResp.data.donates.data.forEach(donate => {
                 refDonatesData.value.push(donate);
             });
@@ -26,7 +25,7 @@ const fetchMoreDonations = async() => {
         }
         isLoadingDonates.value = false;
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 </script>

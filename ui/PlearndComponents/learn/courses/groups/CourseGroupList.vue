@@ -117,7 +117,6 @@ async function handleFormSubmit(){
         }
     } catch (error) {
         Swal.fire('ล้มเหลว','เกิดข้อผิดพลาด. <br />'+ error + "กรุณาลองใหม่อีกครั้ง",'error' );
-        console.log(error);
     }
 }
 
@@ -315,7 +314,7 @@ async function requestTobeGroupMember(grpId, indx){
                 );
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 
@@ -339,7 +338,7 @@ async function requestTobeUnMemberGroup(grpId, indx){
 
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 
 }

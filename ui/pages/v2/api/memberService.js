@@ -6,231 +6,145 @@
  * - Role management
  * - Bulk operations
  * - Search and filtering
+ * 
+ * Uses useApi() from composables/useApi.ts (auto-imported by Nuxt)
  */
 
-import { useApi } from '@/Pages/v2/stores/composables/useApi';
-
-const { get, post, put, del, upload } = useApi();
-
 export const memberService = {
-    /**
-     * Get members for a course
-     */
     async getCourseMembers(courseId, params = {}) {
-        const response = await get(`/api/courses/${courseId}/members`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/courses/${courseId}/members`, params)
     },
 
-    /**
-     * Get single member
-     */
     async getMember(memberId) {
-        const response = await get(`/api/members/${memberId}`);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/members/${memberId}`)
     },
 
-    /**
-     * Invite single member
-     */
     async inviteMember(courseId, data) {
-        const response = await post(`/api/courses/${courseId}/members/invite`, data);
-        return response;
+        const api = useApi()
+        return await api.post(`/api/courses/${courseId}/members/invite`, data)
     },
 
-    /**
-     * Bulk invite members
-     */
     async bulkInviteMembers(courseId, members) {
-        const response = await post(`/api/courses/${courseId}/members/bulk-invite`, {
-            members
-        });
-        return response;
+        const api = useApi()
+        return await api.post(`/api/courses/${courseId}/members/bulk-invite`, { members })
     },
 
-    /**
-     * Import members from CSV
-     */
     async importMembers(courseId, file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const response = await upload(`/api/courses/${courseId}/members/import`, formData);
-        return response;
+        const api = useApi()
+        const formData = new FormData()
+        formData.append('file', file)
+        return await api.post(`/api/courses/${courseId}/members/import`, formData)
     },
 
-    /**
-     * Update member role
-     */
     async updateMemberRole(memberId, role) {
-        const response = await put(`/api/members/${memberId}/role`, {
-            role
-        });
-        return response;
+        const api = useApi()
+        return await api.put(`/api/members/${memberId}/role`, { role })
     },
 
-    /**
-     * Bulk update member roles
-     */
     async bulkUpdateRoles(updates) {
-        const response = await post(`/api/members/bulk-update-roles`, {
-            updates
-        });
-        return response;
+        const api = useApi()
+        return await api.post(`/api/members/bulk-update-roles`, { updates })
     },
 
-    /**
-     * Update member status
-     */
     async updateMemberStatus(memberId, status) {
-        const response = await put(`/api/members/${memberId}/status`, {
-            status
-        });
-        return response;
+        const api = useApi()
+        return await api.put(`/api/members/${memberId}/status`, { status })
     },
 
-    /**
-     * Remove member from course
-     */
     async removeMember(courseId, memberId) {
-        const response = await del(`/api/courses/${courseId}/members/${memberId}`);
-        return response;
+        const api = useApi()
+        return await api.del(`/api/courses/${courseId}/members/${memberId}`)
     },
 
-    /**
-     * Bulk remove members
-     */
     async bulkRemoveMembers(courseId, memberIds) {
-        const response = await post(`/api/courses/${courseId}/members/bulk-remove`, {
-            member_ids: memberIds
-        });
-        return response;
+        const api = useApi()
+        return await api.post(`/api/courses/${courseId}/members/bulk-remove`, { member_ids: memberIds })
     },
 
-    /**
-     * Get member profile
-     */
     async getMemberProfile(memberId) {
-        const response = await get(`/api/members/${memberId}/profile`);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/members/${memberId}/profile`)
     },
 
-    /**
-     * Update member profile
-     */
     async updateMemberProfile(memberId, data) {
-        const response = await put(`/api/members/${memberId}/profile`, data);
-        return response;
+        const api = useApi()
+        return await api.put(`/api/members/${memberId}/profile`, data)
     },
 
-    /**
-     * Get member activity log
-     */
     async getMemberActivity(memberId, params = {}) {
-        const response = await get(`/api/members/${memberId}/activity`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/members/${memberId}/activity`, params)
     },
 
-    /**
-     * Get member statistics
-     */
     async getMemberStats(memberId) {
-        const response = await get(`/api/members/${memberId}/stats`);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/members/${memberId}/stats`)
     },
 
-    /**
-     * Search members
-     */
     async searchMembers(courseId, query, params = {}) {
-        const response = await get(`/api/courses/${courseId}/members/search`, {
-            q: query,
-            ...params
-        });
-        return response;
+        const api = useApi()
+        return await api.get(`/api/courses/${courseId}/members/search`, { q: query, ...params })
     },
 
-    /**
-     * Get member permissions
-     */
-    async getMemberPermissions(memberId) {
-        const response = await get(`/api/members/${memberId}/permissions`);
-        return response;
+    async getMembersByGroup(courseId, groupId, params = {}) {
+        const api = useApi()
+        return await api.get(`/api/courses/${courseId}/groups/${groupId}/members`, params)
     },
 
-    /**
-     * Update member permissions
-     */
-    async updateMemberPermissions(memberId, permissions) {
-        const response = await put(`/api/members/${memberId}/permissions`, {
-            permissions
-        });
-        return response;
+    async getMembersWithoutGroup(courseId, params = {}) {
+        const api = useApi()
+        return await api.get(`/api/courses/${courseId}/members/ungrouped`, params)
     },
 
-    /**
-     * Export members
-     */
+    async getMemberProgress(memberId) {
+        const api = useApi()
+        return await api.get(`/api/members/${memberId}/progress`)
+    },
+
+    async updateMemberProgress(memberId, data) {
+        const api = useApi()
+        return await api.put(`/api/members/${memberId}/progress`, data)
+    },
+
+    async getMemberGrades(memberId) {
+        const api = useApi()
+        return await api.get(`/api/members/${memberId}/grades`)
+    },
+
+    async getMemberAttendance(memberId, params = {}) {
+        const api = useApi()
+        return await api.get(`/api/members/${memberId}/attendance`, params)
+    },
+
+    async getMemberSubmissions(memberId, params = {}) {
+        const api = useApi()
+        return await api.get(`/api/members/${memberId}/submissions`, params)
+    },
+
+    async getMemberBadges(memberId) {
+        const api = useApi()
+        return await api.get(`/api/members/${memberId}/badges`)
+    },
+
+    async awardBadge(memberId, badgeId) {
+        const api = useApi()
+        return await api.post(`/api/members/${memberId}/badges`, { badge_id: badgeId })
+    },
+
+    async revokeBadge(memberId, badgeId) {
+        const api = useApi()
+        return await api.del(`/api/members/${memberId}/badges/${badgeId}`)
+    },
+
+    async sendNotification(memberIds, notification) {
+        const api = useApi()
+        return await api.post(`/api/members/notify`, { member_ids: memberIds, ...notification })
+    },
+
     async exportMembers(courseId, format = 'csv', params = {}) {
-        const response = await get(`/api/courses/${courseId}/members/export`, {
-            format,
-            ...params
-        });
-        return response;
+        const api = useApi()
+        return await api.get(`/api/courses/${courseId}/members/export`, { format, ...params })
     },
-
-    /**
-     * Get pending member requests
-     */
-    async getPendingRequests(courseId) {
-        const response = await get(`/api/courses/${courseId}/members/pending`);
-        return response;
-    },
-
-    /**
-     * Approve member request
-     */
-    async approveMemberRequest(courseId, requestId, groupId = null) {
-        const response = await post(`/api/courses/${courseId}/members/approve`, {
-            request_id: requestId,
-            group_id: groupId
-        });
-        return response;
-    },
-
-    /**
-     * Reject member request
-     */
-    async rejectMemberRequest(courseId, requestId, reason = '') {
-        const response = await post(`/api/courses/${courseId}/members/reject`, {
-            request_id: requestId,
-            reason
-        });
-        return response;
-    },
-
-    /**
-     * Send reminder to inactive members
-     */
-    async sendReminder(courseId, memberIds) {
-        const response = await post(`/api/courses/${courseId}/members/reminder`, {
-            member_ids: memberIds
-        });
-        return response;
-    },
-
-    /**
-     * Get member attendance summary
-     */
-    async getMemberAttendanceSummary(memberId, params = {}) {
-        const response = await get(`/api/members/${memberId}/attendance-summary`, params);
-        return response;
-    },
-
-    /**
-     * Get member assignment grades
-     */
-    async getMemberGrades(memberId, params = {}) {
-        const response = await get(`/api/members/${memberId}/grades`, params);
-        return response;
-    },
-};
+}

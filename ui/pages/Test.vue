@@ -58,19 +58,16 @@ function formSubmit(e) {
     // let existingObj = this;
     const config = { headers: { 'content-type': 'multipart/form-data' } }
 
-    console.log(form.value);
     let data = new FormData();
     data.append('cover', form.value.cover);
 
     axios.post('test/upload', data, config)
         .then(function (res) {
             form.value.success = res.data.success;
-            console.log(form.value.success);
-            console.log(res.data.cover);
             form.value.name = res.data.cover
         })
         .catch(function (err) {
-            console.log(err);
+            // Handle error silently
         });
 }
         

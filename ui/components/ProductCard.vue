@@ -52,6 +52,6 @@ interface Props {
 defineProps<Props>()
 
 const addToCart = () => {
-  console.log('Add to cart')
+  // Add to cart functionality
 }
 </script>

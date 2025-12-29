@@ -43,15 +43,12 @@ const isProcessing = ref(false)
 const handleLike = async () => {
   if (isProcessing.value) return
   
-  console.log('👆 PostAction: Like button clicked')
   isProcessing.value = true
   
   const wasLiked = localIsLiked.value
   const pointsToDeduct = wasLiked ? 12 : 24
   
-  console.log('💰 PostAction: Deducting', pointsToDeduct, 'points')
   const success = authStore.deductPoints(pointsToDeduct)
-  console.log('💰 PostAction: Deduct result:', success)
   
   if (success) {
     localIsLiked.value = !wasLiked
@@ -67,15 +64,12 @@ const handleLike = async () => {
 const handleDislike = async () => {
   if (isProcessing.value) return
   
-  console.log('👎 PostAction: Dislike button clicked')
   isProcessing.value = true
   
   const wasDisliked = localIsDisliked.value
   const pointsToDeduct = 12
   
-  console.log('💰 PostAction: Deducting', pointsToDeduct, 'points')
   const success = authStore.deductPoints(pointsToDeduct)
-  console.log('💰 PostAction: Deduct result:', success)
   
   if (success) {
     localIsDisliked.value = !wasDisliked

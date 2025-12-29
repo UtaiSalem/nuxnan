@@ -67,6 +67,5 @@ const openSettings = () => {
 
 const openNewPost = () => {
   // Open new post modal or navigate to create post page
-  console.log('Open new post')
 }
 </script>

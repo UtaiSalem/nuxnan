@@ -457,3 +457,114 @@
 .float-heart {
   animation: float-up 0.8s ease forwards;
 }
+
+/* ========================
+   VueDatePicker Dark Mode Styles
+   ======================== */
+.dark .dp__theme_light,
+.dark .dp__theme_dark {
+  --dp-background-color: #1f2937 !important;
+  --dp-text-color: #e5e7eb !important;
+  --dp-hover-color: #374151 !important;
+  --dp-hover-text-color: #f3f4f6 !important;
+  --dp-hover-icon-color: #f3f4f6 !important;
+  --dp-primary-color: #8b5cf6 !important;
+  --dp-primary-text-color: #ffffff !important;
+  --dp-secondary-color: #4b5563 !important;
+  --dp-border-color: #4b5563 !important;
+  --dp-menu-border-color: #4b5563 !important;
+  --dp-border-color-hover: #6b7280 !important;
+  --dp-disabled-color: #6b7280 !important;
+  --dp-scroll-bar-background: #374151 !important;
+  --dp-scroll-bar-color: #6b7280 !important;
+  --dp-success-color: #10b981 !important;
+  --dp-success-color-disabled: #065f46 !important;
+  --dp-icon-color: #9ca3af !important;
+  --dp-danger-color: #ef4444 !important;
+  --dp-highlight-color: rgba(139, 92, 246, 0.1) !important;
+}
+
+.dark .dp__input,
+.dark .dp__input_wrap input {
+  @apply bg-gray-800 text-gray-200 border-gray-600 !important;
+}
+
+.dark .dp__input:hover,
+.dark .dp__input_wrap input:hover {
+  @apply border-gray-500 bg-gray-700 !important;
+}
+
+.dark .dp__input:focus,
+.dark .dp__input_wrap input:focus {
+  @apply border-violet-500 bg-gray-700 !important;
+}
+
+.dark .dp__input_icon,
+.dark .dp__input_icon svg {
+  @apply text-gray-400 !important;
+  color: #9ca3af !important;
+}
+
+.dark .dp__menu {
+  @apply bg-gray-800 border-gray-600 !important;
+}
+
+.dark .dp__menu_inner {
+  @apply bg-gray-800 !important;
+}
+
+.dark .dp__calendar_header {
+  @apply bg-gray-700 !important;
+}
+
+.dark .dp__calendar_header_item {
+  @apply text-gray-300 !important;
+}
+
+.dark .dp__cell_inner {
+  @apply text-gray-200 !important;
+}
+
+.dark .dp__cell_inner:hover {
+  @apply bg-violet-600 text-white !important;
+}
+
+.dark .dp__cell_inner.dp__cell_offset {
+  @apply text-gray-500 !important;
+}
+
+.dark .dp__today {
+  @apply border-violet-500 !important;
+}
+
+.dark .dp__active_date,
+.dark .dp__overlay_cell_active {
+  @apply bg-violet-600 text-white !important;
+}
+
+.dark .dp__button,
+.dark .dp__button:hover {
+  @apply text-gray-300 !important;
+}
+
+.dark .dp__button:hover {
+  @apply bg-gray-700 !important;
+}
+
+.dark .dp__month_year_select,
+.dark .dp__overlay {
+  @apply bg-gray-800 text-gray-200 !important;
+}
+
+.dark .dp__overlay_cell {
+  @apply text-gray-200 !important;
+}
+
+.dark .dp__overlay_cell:hover {
+  @apply bg-gray-700 !important;
+}
+
+.dark .dp__time_input,
+.dark .dp__time_col_reg_block {
+  @apply bg-gray-800 text-gray-200 border-gray-600 !important;
+}

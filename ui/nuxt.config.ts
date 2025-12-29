@@ -91,7 +91,8 @@ export default defineNuxtConfig({
       link: [{ rel: 'icon', type: 'image/png', href: '/favicon.png' }],
       script: [],
     },
-    pageTransition: { name: 'page', mode: 'out-in' },
+    // Disable page transition to avoid warnings with multi-slot layouts
+    pageTransition: false,
   },
 
 })

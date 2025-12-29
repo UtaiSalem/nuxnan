@@ -33,7 +33,6 @@ const handleAcceptFriendRequest = async () => {
             isAccepting.value = false;
         }
     } catch (error) {
-        console.log(error);
         isAccepting.value = false;
     }
 };
@@ -58,7 +57,6 @@ const handleDenyFriendRequest = async () => {
             isDenying.value = false;
         }
     } catch (error) {
-        console.log(error);
         isDenying.value = false;
     }
 };

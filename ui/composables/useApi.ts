@@ -88,6 +88,13 @@ export const useApi = () => {
   }
 
   /**
+   * Make a PATCH request
+   */
+  const patch = (endpoint: string, body: any, options: any = {}) => {
+    return call(endpoint, { ...options, method: 'PATCH', body })
+  }
+
+  /**
    * Make a DELETE request
    */
   const del = (endpoint: string, options: any = {}) => {
@@ -99,6 +106,7 @@ export const useApi = () => {
     get,
     post,
     put,
+    patch,
     delete: del,
   }
 }

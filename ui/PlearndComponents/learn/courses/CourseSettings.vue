@@ -97,7 +97,6 @@ function handleDeleteCourse(){
         if (result.isConfirmed) {
             let deleteResp = await axios.delete(`/courses/${props.course.id}`);
             if (deleteResp.data && deleteResp.data.success) {
-                console.log(deleteResp.data);
                 router.route('/courses');
             }
         }
@@ -166,7 +165,6 @@ try {
         isSaving.value = false;
     }
 } catch (error) {
-    console.log(error);
     isSaving.value = false;
 }
 

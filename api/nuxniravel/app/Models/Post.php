@@ -113,11 +113,21 @@ class Post extends Model
     }
 
     /**
-     * Get all of the comments for the Post
+     * Get all of the comments for the Post (excluding replies)
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function postComments(): HasMany
+    {
+        return $this->hasMany(PostComment::class)->whereNull('parent_post_comment_id');
+    }
+
+    /**
+     * Get all comments including replies
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function allPostComments(): HasMany
     {
         return $this->hasMany(PostComment::class);
     }

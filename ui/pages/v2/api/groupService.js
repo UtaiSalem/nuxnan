@@ -5,207 +5,164 @@
  * - CRUD operations for groups
  * - Member management within groups
  * - Bulk operations
- * - Search and filtering
+ * - Statistics and activity
+ * 
+ * Uses useApi() from composables/useApi.ts (auto-imported by Nuxt)
  */
 
-import { useApi } from '@/Pages/v2/stores/composables/useApi';
-
-const { get, post, put, del } = useApi();
-
 export const groupService = {
-    /**
-     * Get groups for a course
-     */
     async getCourseGroups(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/groups`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/courses/${courseId}/groups`, params)
     },
 
-    /**
-     * Get single group
-     */
     async getGroup(groupId) {
-        const response = await get(`/groups/${groupId}`);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/groups/${groupId}`)
     },
 
-    /**
-     * Create a new group
-     */
     async createGroup(courseId, data) {
-        const response = await post(`/courses/${courseId}/groups`, data);
-        return response;
+        const api = useApi()
+        return await api.post(`/api/courses/${courseId}/groups`, data)
     },
 
-    /**
-     * Update an existing group
-     */
     async updateGroup(groupId, data) {
-        const response = await put(`/groups/${groupId}`, data);
-        return response;
+        const api = useApi()
+        return await api.put(`/api/groups/${groupId}`, data)
     },
 
-    /**
-     * Delete a group
-     */
     async deleteGroup(groupId) {
-        const response = await del(`/groups/${groupId}`);
-        return response;
+        const api = useApi()
+        return await api.del(`/api/groups/${groupId}`)
     },
 
-    /**
-     * Get members of a group
-     */
+    async bulkDeleteGroups(groupIds) {
+        const api = useApi()
+        return await api.post(`/api/groups/bulk-delete`, { group_ids: groupIds })
+    },
+
     async getGroupMembers(groupId, params = {}) {
-        const response = await get(`/groups/${groupId}/members`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/groups/${groupId}/members`, params)
     },
 
-    /**
-     * Add member to group
-     */
     async addMemberToGroup(groupId, memberId) {
-        const response = await post(`/groups/${groupId}/members`, {
-            member_id: memberId
-        });
-        return response;
+        const api = useApi()
+        return await api.post(`/api/groups/${groupId}/members`, { member_id: memberId })
     },
 
-    /**
-     * Remove member from group
-     */
     async removeMemberFromGroup(groupId, memberId) {
-        const response = await del(`/groups/${groupId}/members/${memberId}`);
-        return response;
+        const api = useApi()
+        return await api.del(`/api/groups/${groupId}/members/${memberId}`)
     },
 
-    /**
-     * Move member between groups
-     */
-    async moveMember(fromGroupId, toGroupId, memberId) {
-        const response = await post(`/groups/move-member`, {
-            from_group_id: fromGroupId,
-            to_group_id: toGroupId,
-            member_id: memberId,
-        });
-        return response;
+    async moveMember(memberId, fromGroupId, toGroupId) {
+        const api = useApi()
+        return await api.post(`/api/members/${memberId}/move`, { 
+            from_group_id: fromGroupId, 
+            to_group_id: toGroupId 
+        })
     },
 
-    /**
-     * Bulk add members to group
-     */
     async bulkAddMembersToGroup(groupId, memberIds) {
-        const response = await post(`/groups/${groupId}/members/bulk-add`, {
-            member_ids: memberIds
-        });
-        return response;
+        const api = useApi()
+        return await api.post(`/api/groups/${groupId}/members/bulk-add`, { member_ids: memberIds })
     },
 
-    /**
-     * Bulk remove members from group
-     */
     async bulkRemoveMembersFromGroup(groupId, memberIds) {
-        const response = await post(`/groups/${groupId}/members/bulk-remove`, {
-            member_ids: memberIds
-        });
-        return response;
+        const api = useApi()
+        return await api.post(`/api/groups/${groupId}/members/bulk-remove`, { member_ids: memberIds })
     },
 
-    /**
-     * Get group statistics
-     */
+    async bulkMoveMembersToGroup(memberIds, toGroupId) {
+        const api = useApi()
+        return await api.post(`/api/groups/${toGroupId}/members/bulk-move`, { member_ids: memberIds })
+    },
+
     async getGroupStats(groupId) {
-        const response = await get(`/groups/${groupId}/stats`);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/groups/${groupId}/stats`)
     },
 
-    /**
-     * Get group activity log
-     */
     async getGroupActivity(groupId, params = {}) {
-        const response = await get(`/groups/${groupId}/activity`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/api/groups/${groupId}/activity`, params)
     },
 
-    /**
-     * Assign group leader
-     */
     async assignGroupLeader(groupId, memberId) {
-        const response = await put(`/groups/${groupId}/leader`, {
-            member_id: memberId
-        });
-        return response;
+        const api = useApi()
+        return await api.post(`/api/groups/${groupId}/leader`, { member_id: memberId })
     },
 
-    /**
-     * Remove group leader
-     */
     async removeGroupLeader(groupId) {
-        const response = await del(`/groups/${groupId}/leader`);
-        return response;
+        const api = useApi()
+        return await api.del(`/api/groups/${groupId}/leader`)
     },
 
-    /**
-     * Get group assignments
-     */
-    async getGroupAssignments(groupId, params = {}) {
-        const response = await get(`/groups/${groupId}/assignments`, params);
-        return response;
+    async getGroupProgress(groupId) {
+        const api = useApi()
+        return await api.get(`/api/groups/${groupId}/progress`)
     },
 
-    /**
-     * Export group data
-     */
-    async exportGroupData(groupId, format = 'csv', params = {}) {
-        const response = await get(`/groups/${groupId}/export`, {
-            format,
-            ...params
-        });
-        return response;
+    async getGroupGrades(groupId) {
+        const api = useApi()
+        return await api.get(`/api/groups/${groupId}/grades`)
     },
 
-    /**
-     * Search groups
-     */
-    async searchGroups(courseId, query, params = {}) {
-        const response = await get(`/courses/${courseId}/groups/search`, {
-            q: query,
-            ...params
-        });
-        return response;
+    async getGroupAttendance(groupId, params = {}) {
+        const api = useApi()
+        return await api.get(`/api/groups/${groupId}/attendance`, params)
     },
 
-    /**
-     * Get group permissions
-     */
-    async getGroupPermissions(groupId) {
-        const response = await get(`/groups/${groupId}/permissions`);
-        return response;
+    async getGroupSubmissions(groupId, params = {}) {
+        const api = useApi()
+        return await api.get(`/api/groups/${groupId}/submissions`, params)
     },
 
-    /**
-     * Update group permissions
-     */
-    async updateGroupPermissions(groupId, permissions) {
-        const response = await put(`/groups/${groupId}/permissions`, {
-            permissions
-        });
-        return response;
+    async autoAssignToGroups(courseId, options = {}) {
+        const api = useApi()
+        return await api.post(`/api/courses/${courseId}/groups/auto-assign`, options)
     },
 
-    /**
-     * Get group attendance summary
-     */
-    async getGroupAttendanceSummary(groupId, params = {}) {
-        const response = await get(`/groups/${groupId}/attendance-summary`, params);
-        return response;
+    async shuffleGroups(courseId, options = {}) {
+        const api = useApi()
+        return await api.post(`/api/courses/${courseId}/groups/shuffle`, options)
     },
 
-    /**
-     * Get group grades summary
-     */
-    async getGroupGradesSummary(groupId, params = {}) {
-        const response = await get(`/groups/${groupId}/grades-summary`, params);
-        return response;
+    async resetGroups(courseId) {
+        const api = useApi()
+        return await api.post(`/api/courses/${courseId}/groups/reset`)
     },
-};
+
+    async exportGroups(courseId, format = 'csv', params = {}) {
+        const api = useApi()
+        return await api.get(`/api/courses/${courseId}/groups/export`, { format, ...params })
+    },
+
+    async importGroups(courseId, file) {
+        const api = useApi()
+        const formData = new FormData()
+        formData.append('file', file)
+        return await api.post(`/api/courses/${courseId}/groups/import`, formData)
+    },
+
+    async duplicateGroup(groupId, newName = null) {
+        const api = useApi()
+        return await api.post(`/api/groups/${groupId}/duplicate`, { name: newName })
+    },
+
+    async mergeGroups(sourceGroupIds, targetGroupId) {
+        const api = useApi()
+        return await api.post(`/api/groups/${targetGroupId}/merge`, { source_group_ids: sourceGroupIds })
+    },
+
+    async splitGroup(groupId, options = {}) {
+        const api = useApi()
+        return await api.post(`/api/groups/${groupId}/split`, options)
+    },
+
+    async setGroupOrder(courseId, groupIds) {
+        const api = useApi()
+        return await api.put(`/api/courses/${courseId}/groups/order`, { group_ids: groupIds })
+    },
+}

@@ -22,7 +22,7 @@ class PostComment extends Model
         'likes',
         'dislikes',
         'replies',
-        'parent_comment_id',
+        'parent_post_comment_id',
         'sentiment',
         'privacy_settings',
     ];
@@ -51,9 +51,9 @@ class PostComment extends Model
     /**
      * Get the parent comment for the reply.
      */
-    public function parentComment(): BelongsTo
+    public function parentPostComment(): BelongsTo
     {
-        return $this->belongsTo(PostComment::class, 'parent_comment_id');
+        return $this->belongsTo(PostComment::class, 'parent_post_comment_id');
     }
 
     /**
@@ -61,7 +61,7 @@ class PostComment extends Model
      */
     public function replies()
     {
-        return $this->hasMany(PostComment::class, 'parent_comment_id');
+        return $this->hasMany(PostComment::class, 'parent_post_comment_id');
     }
 
     public function postCommentImages(): HasMany

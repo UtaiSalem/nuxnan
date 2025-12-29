@@ -37,7 +37,6 @@ const handlePostImageCommentFormSubmit = async () => {
 };
 
 const handleAddPostCommentImage = () => {
-    console.log('Add post comment image', props.postId);
 };
 
 </script>

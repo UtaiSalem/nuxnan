@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 
 const props = defineProps({
@@ -14,11 +14,46 @@ const props = defineProps({
   badges: {
     type: Object,
     default: () => ({ unlocked: 22, total: 46 })
+  },
+  missingFields: {
+    type: Array,
+    default: () => []
+  },
+  showActions: {
+    type: Boolean,
+    default: true
   }
 })
 
+const emit = defineEmits(['edit-profile'])
+
+const activeTab = ref('status')
+const tabs = ['Status', 'Mentions', 'Friends', 'Groups', 'Blog Posts']
+
 const circumference = 2 * Math.PI * 58
 const offset = computed(() => circumference - (props.percentage / 100) * circumference)
+
+// Get icon for missing field
+const getFieldIcon = (field) => {
+  const icons = {
+    avatar: 'fluent:camera-24-regular',
+    cover: 'fluent:image-24-regular',
+    first_name: 'fluent:person-24-regular',
+    last_name: 'fluent:person-24-regular',
+    bio: 'fluent:text-description-24-regular',
+    birthdate: 'fluent:calendar-24-regular',
+    gender: 'fluent:people-24-regular',
+    location: 'fluent:location-24-regular',
+    website: 'fluent:globe-24-regular',
+    interests: 'fluent:heart-24-regular',
+    social_media: 'fluent:share-24-regular',
+  }
+  return icons[field] || 'fluent:add-circle-24-regular'
+}
+
+const handleEditClick = () => {
+  emit('edit-profile')
+}
 </script>
 
 <template>
@@ -67,6 +102,31 @@ const offset = computed(() => circumference - (props.percentage / 100) * circumf
         info, tabs, uploading avatar &<br>
         marking widgets
       </p>
+      
+      <!-- Missing Fields List -->
+      <div v-if="missingFields && missingFields.length > 0" class="mt-4 text-left">
+        <ul class="space-y-2">
+          <li 
+            v-for="field in missingFields.slice(0, 3)" 
+            :key="field.field"
+            class="flex items-center gap-2 text-sm"
+          >
+            <Icon :icon="getFieldIcon(field.field)" class="w-4 h-4 text-vikinger-purple" />
+            <span class="text-gray-600 dark:text-gray-400">{{ field.label }}</span>
+            <span class="ml-auto text-xs text-vikinger-purple font-medium">+{{ field.weight }}%</span>
+          </li>
+        </ul>
+        
+        <!-- Edit Profile Button -->
+        <button 
+          v-if="showActions"
+          @click="handleEditClick"
+          class="mt-4 w-full py-2 px-4 bg-vikinger-purple text-white text-sm font-medium rounded-vikinger hover:bg-vikinger-purple/80 transition-colors flex items-center justify-center gap-2"
+        >
+          <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
+          Complete Profile
+        </button>
+      </div>
     </div>
 
     <!-- All Updates Section -->
@@ -78,20 +138,18 @@ const offset = computed(() => circumference - (props.percentage / 100) * circumf
 
     <!-- Tabs: Status, Mentions, Friends, Groups, Blog Posts -->
     <div class="flex gap-2 justify-center flex-wrap">
-      <button class="px-3 py-1.5 text-xs font-medium rounded-vikinger bg-vikinger-purple text-white">
-        Status
-      </button>
-      <button class="px-3 py-1.5 text-xs font-medium rounded-vikinger bg-vikinger-light-300 dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 hover:bg-vikinger-purple/20">
-        Mentions
-      </button>
-      <button class="px-3 py-1.5 text-xs font-medium rounded-vikinger bg-vikinger-light-300 dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 hover:bg-vikinger-purple/20">
-        Friends
-      </button>
-      <button class="px-3 py-1.5 text-xs font-medium rounded-vikinger bg-vikinger-light-300 dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 hover:bg-vikinger-purple/20">
-        Groups
-      </button>
-      <button class="px-3 py-1.5 text-xs font-medium rounded-vikinger bg-vikinger-light-300 dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 hover:bg-vikinger-purple/20">
-        Blog Posts
+      <button 
+        v-for="tab in tabs" 
+        :key="tab"
+        @click="activeTab = tab.toLowerCase()"
+        :class="[
+          'px-3 py-1.5 text-xs font-medium rounded-vikinger transition-colors',
+          activeTab === tab.toLowerCase() 
+            ? 'bg-vikinger-purple text-white' 
+            : 'bg-vikinger-light-300 dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 hover:bg-vikinger-purple/20'
+        ]"
+      >
+        {{ tab }}
       </button>
     </div>
 

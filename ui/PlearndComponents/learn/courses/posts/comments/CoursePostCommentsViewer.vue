@@ -45,7 +45,6 @@ const showCommentsModalHandler = async () => {
     } catch (error) {
         isLoading.value = false;
         showCommentsModal.value = false;
-        console.log(error);
     }
 }
 
@@ -94,7 +93,7 @@ const fetchMorePostComments = async () => {
             }
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     } finally {
         isLoadingCoursePostComments.value = false;
     }

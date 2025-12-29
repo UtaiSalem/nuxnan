@@ -36,7 +36,7 @@ const handleQuestionInput = () => {
         isLoadingQuestion.value = true;
         getQuestions();
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 const getQuestions = useDebounceFn(async () => {
@@ -72,11 +72,8 @@ const handleCopyOldQuestions = async (question) => {
 
             emit('add-new-question', resp.data.question);
 
-        }else{
-            console.log(resp.data);
         }
     } catch (error) {
-        console.log(error);
     } finally {
         isCopyingQuestion.value = false;
     }

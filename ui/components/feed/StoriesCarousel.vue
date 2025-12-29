@@ -10,11 +10,11 @@ const stories = ref([
 ])
 
 const addStory = () => {
-  console.log('Add story clicked')
+  // Add story functionality
 }
 
 const viewStory = (story) => {
-  console.log('View story:', story)
+  // View story functionality
 }
 </script>
 

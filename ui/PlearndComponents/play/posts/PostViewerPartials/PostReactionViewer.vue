@@ -19,7 +19,7 @@ const refPost = ref(props.post);
 const canLikeOrDisLike = computed( () => props.post.author.id !== authStore.user?.id );
 
 const userLikePostHandler = () => {
-    console.log('🔵 userLikePostHandler CALLED');
+
     
     // อัพเดทสถานะปุ่มไลค์ทันที
     const wasLiked = refPost.value.isLikedByAuth;
@@ -48,10 +48,8 @@ const userLikePostHandler = () => {
         refPost.value.author.point += 12;
     }
     
-    console.log('🔵 Calling authStore.deductPoints with:', pointsUsed);
     // อัพเดทแต้มผู้ใช้ทันทีผ่าน Store
     const success = authStore.deductPoints(pointsUsed);
-    console.log('🔵 deductPoints returned:', success);
 };
 
 const userUnlikePostHandler = () => {
@@ -62,7 +60,6 @@ const userUnlikePostHandler = () => {
 };
 
 const userDislikePostHandler = () => {
-    console.log('🟠 userDislikePostHandler CALLED');
     
     // อัพเดทสถานะปุ่มดิสไลค์ทันที
     const wasLiked = refPost.value.isLikedByAuth;
@@ -90,10 +87,8 @@ const userDislikePostHandler = () => {
         refPost.value.author.point -= 12;
     }
     
-    console.log('🟠 Calling authStore.deductPoints with:', pointsUsed);
     // อัพเดทแต้มผู้ใช้ทันทีผ่าน Store
     const success = authStore.deductPoints(pointsUsed);
-    console.log('🟠 deductPoints returned:', success);
 };
 
 const userUndislikePostHandler = () => {

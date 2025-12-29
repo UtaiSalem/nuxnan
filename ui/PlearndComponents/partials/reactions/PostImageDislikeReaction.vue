@@ -35,7 +35,6 @@
             isLoading.value = false;
         } catch (error) {
             isLoading.value = false;
-            console.log(error);
         }
     };
 </script>

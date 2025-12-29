@@ -67,7 +67,7 @@ function requestToBeUnMember(memberId, memberIndx) {
                     });
                 }
             } catch (error) {
-                console.log(error);
+                // Handle error silently
             }
         }
     });

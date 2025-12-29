@@ -16,8 +16,10 @@ class PostCommentController extends \App\Http\Controllers\Controller
         try {
             $perPage = $request->input('per_page', 10);
             
-            // Get comments ordered by latest first (same as post_comments pre-load)
+            // Get top-level comments only (exclude replies)
+            // Replies have parent_post_comment_id set
             $postComments = PostComment::where('post_id', $post->id)
+                ->whereNull('parent_post_comment_id')
                 ->with(['user', 'postCommentImages'])
                 ->orderBy('created_at', 'desc')
                 ->paginate($perPage);
@@ -162,7 +164,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
             'post_id' => $comment->post_id,
             'user_id' => $user->id,
             'content' => $validatedData['content'],
-            'parent_comment_id' => $comment->id,
+            'parent_post_comment_id' => $comment->id,
             'likes' => 0,
             'dislikes' => 0,
             'replies' => 0,
@@ -207,7 +209,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
         try {
             $perPage = $request->input('per_page', 5);
             
-            $replies = PostComment::where('parent_comment_id', $comment->id)
+            $replies = PostComment::where('parent_post_comment_id', $comment->id)
                 ->with(['user', 'postCommentImages'])
                 ->orderBy('created_at', 'asc')
                 ->paginate($perPage);

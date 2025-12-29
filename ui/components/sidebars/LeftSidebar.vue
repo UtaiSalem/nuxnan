@@ -63,16 +63,16 @@ const isActive = (href) => route.path === href || route.path.startsWith(href + '
 
       <!-- Hexagon Avatar with Green Border -->
       <div class="avatar-section">
-        <div class="hexagon-border">
-          <div class="hexagon-avatar">
-            <img 
-              :src="currentUser.avatar || '/images/default-avatar.png'" 
-              :alt="currentUser.name"
-            />
-          </div>
-        </div>
-        <!-- Level Badge -->
-        <div class="level-badge">{{ currentUser.level || 24 }}</div>
+        <HexagonAvatar
+          :src="currentUser.avatar || '/images/default-avatar.png'"
+          :alt="currentUser.name"
+          size="lg"
+          :show-level="true"
+          :level="currentUser.level || 24"
+          :border-gradient="{ type: 'linear', angle: 180, colors: ['#40d04f', '#1abc9c'] }"
+          :level-badge-gradient="{ type: 'linear', angle: 135, colors: ['#23d2e2', '#1abc9c'] }"
+          bg-color="#1d2333"
+        />
       </div>
 
       <!-- User Info -->

@@ -26,8 +26,6 @@ class CourseResource extends JsonResource
             'duration'          => $this->duration,
             'start_date'        => $this->start_date,
             'end_date'          => $this->end_date,
-            // 'start_date'        => Carbon::parse($this->start_date)->toDateTimeString(),
-            // 'end_date'          => Carbon::parse($this->end_date)->toDateTimeString(),
             'tuition_fees'      => $this->tuition_fees,
             'price'             => $this->price,
             'discount'          => $this->discount,
@@ -55,13 +53,10 @@ class CourseResource extends JsonResource
             'certificate'       => $this->certificate,
             'isMember'          => $this->isMember(auth()->user()),
             'member_status'     => $this->member_status($this->id), //Course member status
-            // 'member_details'    => $this->member_details($this->id),
             'lessons_count'     => $this->lessons,
             'total_score'       => $this->total_score,
             'setting'           => $this->courseSettings,
             'saleable'          => $this->saleable,
-            // 'member_detail'     => new CourseMemberResource(),
-            // 'assignments'       => AssignmentResource::collection($this->assignments),
         ];
     }
 }

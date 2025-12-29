@@ -51,7 +51,6 @@ async function handleDeleteQuiz(qId, qIndex){
             });
         }
     } catch (error) {
-        console.log(error);
         Swal.fire({
             title: 'ลบแบบทดสอบไม่สำเร็จ',
             text: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',

@@ -102,7 +102,6 @@ async function handleUpdateLessonFormSubmit(){
       }
       isLoadingPage.value = false;
   } catch (error) {
-    console.log(error);
     Swal.fire(
         'ล้มเหลว',
         'เกิดข้อผิดพลาด, <br />' + 'กรุณาลองใหม่อีกครั้ง',

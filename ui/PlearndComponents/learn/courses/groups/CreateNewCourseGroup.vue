@@ -22,7 +22,7 @@ async function handleFormSubmit(){
             }
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 </script>

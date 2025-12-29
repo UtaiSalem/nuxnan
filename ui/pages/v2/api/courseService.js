@@ -6,274 +6,168 @@
  * - Course metadata management
  * - Statistics and analytics
  * - Settings management
+ * 
+ * Uses useApi() from composables/useApi.ts (auto-imported by Nuxt)
  */
 
-import { useApi } from '@/Pages/v2/stores/composables/useApi';
-
-const { get, post, put, del } = useApi();
-
 export const courseService = {
-    /**
-     * Get single course
-     */
     async getCourse(courseId) {
-        const response = await get(`/courses/${courseId}`);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}`)
     },
 
-    /**
-     * Get multiple courses
-     */
     async getCourses(params = {}) {
-        const response = await get('/courses', params);
-        return response;
+        const api = useApi()
+        return await api.get('/courses', params)
     },
 
-    /**
-     * Create a new course
-     */
     async createCourse(data) {
-        const response = await post('/courses', data);
-        return response;
+        const api = useApi()
+        return await api.post('/courses', data)
     },
 
-    /**
-     * Update an existing course
-     */
     async updateCourse(courseId, data) {
-        const response = await put(`/courses/${courseId}`, data);
-        return response;
+        const api = useApi()
+        return await api.put(`/courses/${courseId}`, data)
     },
 
-    /**
-     * Delete a course
-     */
     async deleteCourse(courseId) {
-        const response = await del(`/courses/${courseId}`);
-        return response;
+        const api = useApi()
+        return await api.del(`/courses/${courseId}`)
     },
 
-    /**
-     * Get course statistics
-     */
     async getCourseStats(courseId) {
-        const response = await get(`/courses/${courseId}/stats`);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/stats`)
     },
 
-    /**
-     * Get course announcements
-     */
     async getCourseAnnouncements(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/announcements`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/announcements`, params)
     },
 
-    /**
-     * Create course announcement
-     */
     async createAnnouncement(courseId, data) {
-        const response = await post(`/courses/${courseId}/announcements`, data);
-        return response;
+        const api = useApi()
+        return await api.post(`/courses/${courseId}/announcements`, data)
     },
 
-    /**
-     * Update course announcement
-     */
     async updateAnnouncement(announcementId, data) {
-        const response = await put(`/announcements/${announcementId}`, data);
-        return response;
+        const api = useApi()
+        return await api.put(`/announcements/${announcementId}`, data)
     },
 
-    /**
-     * Delete course announcement
-     */
     async deleteAnnouncement(announcementId) {
-        const response = await del(`/announcements/${announcementId}`);
-        return response;
+        const api = useApi()
+        return await api.del(`/announcements/${announcementId}`)
     },
 
-    /**
-     * Get course settings
-     */
     async getCourseSettings(courseId) {
-        const response = await get(`/courses/${courseId}/settings`);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/settings`)
     },
 
-    /**
-     * Update course settings
-     */
     async updateCourseSettings(courseId, data) {
-        const response = await put(`/courses/${courseId}/settings`, data);
-        return response;
+        const api = useApi()
+        return await api.put(`/courses/${courseId}/settings`, data)
     },
 
-    /**
-     * Get course lessons
-     */
     async getCourseLessons(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/lessons`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/lessons`, params)
     },
 
-    /**
-     * Get course assignments
-     */
     async getCourseAssignments(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/assignments`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/assignments`, params)
     },
 
-    /**
-     * Get course quizzes
-     */
     async getCourseQuizzes(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/quizzes`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/quizzes`, params)
     },
 
-    /**
-     * Get course attendance data
-     */
     async getCourseAttendance(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/attendance`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/attendance`, params)
     },
 
-    /**
-     * Get course grades summary
-     */
     async getCourseGrades(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/grades`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/grades`, params)
     },
 
-    /**
-     * Get course activity log
-     */
     async getCourseActivity(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/activity`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/activity`, params)
     },
 
-    /**
-     * Search courses
-     */
     async searchCourses(query, params = {}) {
-        const response = await get('/courses/search', {
-            q: query,
-            ...params
-        });
-        return response;
+        const api = useApi()
+        return await api.get('/courses/search', { q: query, ...params })
     },
 
-    /**
-     * Get course permissions
-     */
     async getCoursePermissions(courseId) {
-        const response = await get(`/courses/${courseId}/permissions`);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/permissions`)
     },
 
-    /**
-     * Update course permissions
-     */
     async updateCoursePermissions(courseId, permissions) {
-        const response = await put(`/courses/${courseId}/permissions`, {
-            permissions
-        });
-        return response;
+        const api = useApi()
+        return await api.put(`/courses/${courseId}/permissions`, { permissions })
     },
 
-    /**
-     * Export course data
-     */
     async exportCourseData(courseId, format = 'csv', params = {}) {
-        const response = await get(`/courses/${courseId}/export`, {
-            format,
-            ...params
-        });
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/export`, { format, ...params })
     },
 
-    /**
-     * Duplicate course
-     */
     async duplicateCourse(courseId, data) {
-        const response = await post(`/courses/${courseId}/duplicate`, data);
-        return response;
+        const api = useApi()
+        return await api.post(`/courses/${courseId}/duplicate`, data)
     },
 
-    /**
-     * Archive course
-     */
     async archiveCourse(courseId) {
-        const response = await post(`/courses/${courseId}/archive`);
-        return response;
+        const api = useApi()
+        return await api.post(`/courses/${courseId}/archive`)
     },
 
-    /**
-     * Restore archived course
-     */
     async restoreCourse(courseId) {
-        const response = await post(`/courses/${courseId}/restore`);
-        return response;
+        const api = useApi()
+        return await api.post(`/courses/${courseId}/restore`)
     },
 
-    /**
-     * Get course enrollment requests
-     */
     async getEnrollmentRequests(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/enrollment-requests`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/enrollment-requests`, params)
     },
 
-    /**
-     * Approve enrollment request
-     */
     async approveEnrollment(courseId, requestId, data = {}) {
-        const response = await post(`/courses/${courseId}/enrollment-requests/${requestId}/approve`, data);
-        return response;
+        const api = useApi()
+        return await api.post(`/courses/${courseId}/enrollment-requests/${requestId}/approve`, data)
     },
 
-    /**
-     * Reject enrollment request
-     */
     async rejectEnrollment(courseId, requestId, data = {}) {
-        const response = await post(`/courses/${courseId}/enrollment-requests/${requestId}/reject`, data);
-        return response;
+        const api = useApi()
+        return await api.post(`/courses/${courseId}/enrollment-requests/${requestId}/reject`, data)
     },
 
-    /**
-     * Get course calendar events
-     */
     async getCourseCalendar(courseId, params = {}) {
-        const response = await get(`/courses/${courseId}/calendar`, params);
-        return response;
+        const api = useApi()
+        return await api.get(`/courses/${courseId}/calendar`, params)
     },
 
-    /**
-     * Create course calendar event
-     */
     async createCalendarEvent(courseId, data) {
-        const response = await post(`/courses/${courseId}/calendar`, data);
-        return response;
+        const api = useApi()
+        return await api.post(`/courses/${courseId}/calendar`, data)
     },
 
-    /**
-     * Update course calendar event
-     */
     async updateCalendarEvent(eventId, data) {
-        const response = await put(`/calendar-events/${eventId}`, data);
-        return response;
+        const api = useApi()
+        return await api.put(`/calendar-events/${eventId}`, data)
     },
 
-    /**
-     * Delete course calendar event
-     */
     async deleteCalendarEvent(eventId) {
-        const response = await del(`/calendar-events/${eventId}`);
-        return response;
+        const api = useApi()
+        return await api.del(`/calendar-events/${eventId}`)
     },
-};
+}

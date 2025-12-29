@@ -33,6 +33,24 @@ class UserProfile extends Model
     ];
 
     /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'birthdate' => 'date',
+        'join_date' => 'datetime',
+        'last_login' => 'datetime',
+        'social_media_links' => 'array',
+        'privacy_settings' => 'array',
+        'interests' => 'array',
+        'metadata' => 'array',
+        'followers' => 'integer',
+        'following' => 'integer',
+        'friends' => 'integer',
+    ];
+
+    /**
      * Get the user that owns the profile.
      */
     public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo

@@ -55,7 +55,6 @@ const handleLikesComment = async () => {
         }
     } catch (error) {
         isLoading.value = false;
-        console.log(error);
     }
 
 };
@@ -83,7 +82,6 @@ const handleDislikesComment = async () => {
         }
     } catch (error) {
         isLoading.value = false;
-        console.log(error);
     }
 };
 
@@ -114,7 +112,6 @@ const handleDeleteImageComment = () => {
         })
     } catch (error) {
         isDeleting.value = false;
-        console.log(error);
     }
 
 };

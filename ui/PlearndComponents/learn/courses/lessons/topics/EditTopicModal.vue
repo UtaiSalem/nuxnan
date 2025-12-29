@@ -62,7 +62,7 @@ async function submitFormHandler(){
     }
 
   } catch (error) {
-    console.log(error);
+    // Handle error silently
   } finally {
     isSubmitting.value = false;
     closeModal();
@@ -100,7 +100,7 @@ const removeImage = async (index) => {
             props.topic.images.splice(index, 1);
         }
     } catch (error) {
-        console.log(error);        
+        // Handle error silently
     } finally {
         isDeletingImage.value = false;
         imageIndex.value = null;

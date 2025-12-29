@@ -114,7 +114,6 @@
                 } 
                 isLoading.value = false;
         } catch (error) {
-            console.log(error);
             Swal.fire("เกิดข้อผิดพลาด", error.response.data.message, "error");
         }
         isLoading.value = false;
@@ -139,7 +138,6 @@
                 personalCode.value = null;
                 isLoadingDonor.value = false;
             } catch (error) {
-                console.log(error);
                 Swal.fire("ขออภัย", "ไม่พบสมาชิกที่ระบุ", "error");
             }
         }else{

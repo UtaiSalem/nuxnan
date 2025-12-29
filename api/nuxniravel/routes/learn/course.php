@@ -41,12 +41,12 @@ use App\Http\Controllers\Api\Learn\Course\posts\CoursePostImageCommentReactionCo
 use App\Http\Controllers\CoursePostShareController;
 
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::get('/courses/{course}/settings', [CourseController::class, 'settings'])->name('course.settings.page.show');
     Route::get('/courses/{course}/basic-info', [CourseController::class, 'basicInfo'])->name('course.basic-info.page.show');
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->prefix('/courses')->group(function () {
+Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function () {
     Route::get('/', [CourseController::class, 'index'])->name('courses');
     Route::post('/', [CourseController::class, 'store'])->name('courses.store');
     Route::get('/create', [CourseController::class, 'create'])->name('courses.create');
@@ -73,19 +73,21 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->
     Route::get('/{course}/feeds/get-more-activities', [CourseActivityController::class, 'getActivities'])->name('course.feeds.getMoresActivities');
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->prefix('/api/courses')->group(function () {
+
+
+Route::middleware(['auth:api', 'verified'])->prefix('/api/courses')->group(function () {
     Route::get('/', [CourseController::class, 'getMoreCourses'])->name('api.courses.all');
     Route::get('/users/{user}', [CourseController::class, 'getMyCourses'])->name('api.courses.user-courses');
     Route::get('/users/{user}/my-courses', [CourseController::class, 'getMyCourses'])->name('api.courses.my-courses');
     Route::get('/users/{user}/membered', [CourseController::class, 'getAuthMemberedCourses'])->name('api.courses.member');
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->prefix('/courses/{course}/groups')->group(function () {
+Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/groups')->group(function () {
     Route::resource('/', CourseGroupController::class);
     Route::patch('/{group}', [CourseGroupController::class, 'update'])->name('course.groups.update');
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->prefix('/courses/{course}/lessons')->group(function () {
+Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/lessons')->group(function () {
     Route::get('/', [CourseLessonController::class, 'index'])->name('course.lessons.index');
     Route::post('/', [CourseLessonController::class, 'store'])->name('course.lessons.store');
     Route::get('/create', [CourseLessonController::class, 'create'])->name('course.lessons.create');
@@ -101,7 +103,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->
 });
 
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->prefix('/lessons/{lesson}')->group(function () {
+Route::middleware(['auth:api', 'verified'])->prefix('/lessons/{lesson}')->group(function () {
     Route::resource('/comments', LessonCommentController::class);
 
     Route::post('/comments/{comment}/like', [LessonCommentReactionController::class, 'toggleLike'])->name('lesson.comments.like.toggle');
@@ -109,7 +111,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->
 
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->prefix('/lessons')->group(function () {
+Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function () {
     Route::resource('/', LessonController::class);
     Route::resource('/{lesson}/images', LessonImageController::class);
     Route::resource('/{lesson}/assignments', LessonAssignmentController::class);
@@ -118,19 +120,19 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->
     Route::resource('/{lesson}/topics', TopicController::class);
     
 });
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->prefix('/topics')->group(function () {
+Route::middleware(['auth:api', 'verified'])->prefix('/topics')->group(function () {
     Route::resource('/{topic}/images', TopicImageController::class);
 });
 
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::resource('/assignments', AssignmentController::class);
     Route::resource('/asmimages', AssignmentImageController::class);
     Route::resource('/assignments/{assignment}/answers', AssignmentAnswerController::class);
     Route::post('/assignments/{assignment}/answers/{answer}/set-points', [AssignmentAnswerController::class, 'setAnswerPoints'])->name('assignments.answers.setAnswerPoints');
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->prefix('/courses/{course}')->group(function () {
+Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}')->group(function () {
     Route::resource('/assignments', CourseAssignmentController::class);
 
     Route::resource('/quizzes', CourseQuizController::class);
@@ -142,13 +144,13 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->p
     // Route::get('/quizzes/get-quizzes', [CourseQuizController::class, 'getQuizzes'])->name('course.quizzes.getQuizzes');
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->group(function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::get('/quizzes/get-quizzes', [CourseQuizController::class, 'getQuizzes'])->name('course.quizzes.getQuizzes');
     Route::post('/quizzes/{quiz}/duplicate', [CourseQuizController::class, 'duplicateQuiz'])->name('course.quizzes.duplicateQuizzes');
 });
 
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->prefix('/courses/{course}/members')->group(function () {
+Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/members')->group(function () {
     Route::get('/member-requesters', [CourseMemberController::class, 'getMembersRequesters'])->name('course.members.requesters');
     Route::get('/', [CourseMemberController::class, 'index'])->name('course.members.index');
     Route::post('/', [CourseMemberController::class, 'storemember'])->name('course.members.storemember');
@@ -175,7 +177,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->p
 
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::resource('/questions', QuestionController::class);
     Route::post('/questions/{question}/duplicate', [QuestionController::class, 'duplicateQuestion']);
     Route::patch('/questions/{question}/set_correct_option', [QuestionController::class, 'set_correct_option'])->name('questions.set_correct_option');
@@ -193,7 +195,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->
     Route::resource('/quizs/{quiz}/questions/{question}/answers', UserAnswerQuestionController::class);
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::get('/courses/{course}/attendances', [CourseAttendanceController::class, 'index'])->name('attendances.index');
     // Route::post('/attendances', [CourseAttendanceController::class, 'store'])->name('attendances.store');
     // Route::get('/attendances/{attendance}', [CourseAttendanceController::class, 'show'])->name('attendances.show');
@@ -203,9 +205,14 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->
     // Update member attendance status by admin
     Route::post('/attendances/{attendance}/member/{member}/update-status', [CourseAttendanceController::class, 'updateMemberStatus'])->name('attendances.member.update-status');
     
+    // Student self check-in
+    Route::post('/attendances/{attendance}/check-in', [CourseAttendanceController::class, 'studentCheckIn'])->name('attendances.student.check-in');
+    
+    // Update last access group tab for course member
+    Route::patch('/courses/{course}/members/update-last-access-group', [CourseAttendanceController::class, 'updateLastAccessGroupTab'])->name('courses.members.update-last-access-group');
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::get('/attendances/{attendance}/details', [AttendanceDetailController::class, 'index'])->name('attendances.details.index');
     Route::post('/attendances/{attendance}/details', [AttendanceDetailController::class, 'store'])->name('attendances.details.store');
     Route::patch('/attendances/details/{detail}', [AttendanceDetailController::class, 'update'])->name('attendance.details.update');
@@ -221,7 +228,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->
     
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::post('/courses/posts/comments/{comment}/like', [CoursePostCommentReactionController::class, 'toggleLikeComment'])->name('toggle.like.course_post_comment');
     Route::post('/courses/posts/comments/{comment}/dislike', [CoursePostCommentReactionController::class, 'toggleDislikeComment'])->name('toggle.dislike.course_post_comment');
     
@@ -229,7 +236,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->
     Route::post('/courses/posts/images/comments/{comment}/dislike', [CoursePostImageCommentReactionController::class, 'toggleDislikeComment'])->name('toggle.dislike.course_post_image_comment');
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->prefix('/courses/{course}/posts')->group(function () {
+Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/posts')->group(function () {
 
     // Route::get('/', [PostController::class, 'index'])->name('course.posts.index');
     Route::post('/', [CoursePostController::class, 'store'])->name('course.posts.store');
@@ -271,10 +278,11 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->p
 });
 
 // Course cover and logo update routes
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->group(function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::post('/courses/{course}/cover', [CourseController::class, 'updateCover'])->name('course.cover.update');
     Route::post('/courses/{course}/logo', [CourseController::class, 'updateLogo'])->name('course.logo.update');
     Route::patch('/courses/{course}/header', [CourseController::class, 'updateHeader'])->name('course.header.update');
     Route::patch('/courses/{course}/subheader', [CourseController::class, 'updateSubheader'])->name('course.subheader.update');
     Route::get('/courses/{course}/profile', [CourseController::class, 'profile'])->name('course.profile');
 });
+

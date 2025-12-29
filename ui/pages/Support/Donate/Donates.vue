@@ -42,7 +42,7 @@ const handleGetDonate = (donateId, idx) => {
         countdown();
 
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 };
 

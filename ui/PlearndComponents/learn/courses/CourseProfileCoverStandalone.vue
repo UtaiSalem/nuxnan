@@ -119,8 +119,6 @@ const isRequestingUnmember = computed(() => loadingStates.value.request_unmember
 
 // Mock notification system (replacing Swal and $toast)
 const showNotification = (title, message, type = 'info') => {
-    console.log(`[${type.toUpperCase()}] ${title}: ${message}`);
-    
     // Create simple notification if DOM is available
     if (typeof document !== 'undefined') {
         const notification = document.createElement('div');

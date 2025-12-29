@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Resources\Learn\Course;
+namespace App\Http\Resources\Learn\Course\attendances;
 
 use Illuminate\Http\Request;
 use App\Models\AttendanceDetail;
-use App\Http\Resources\AttendanceDetailResource;
+use App\Http\Resources\Learn\Course\attendances\AttendanceDetailResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class CourseAttendanceResource extends JsonResource

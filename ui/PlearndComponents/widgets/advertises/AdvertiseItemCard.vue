@@ -61,7 +61,6 @@ const handleViewAdvert = async () => {
         countdown();
 
     } catch (error) {
-        console.log(error);
         isProcessing.value = false;
     }
 };
@@ -91,7 +90,6 @@ const getAdvert = async () => {
         isProcessing.value = false;
     } catch (error) {
         alertGetAdvertError(error.message);
-        console.log(error.message);
     }
 };
 

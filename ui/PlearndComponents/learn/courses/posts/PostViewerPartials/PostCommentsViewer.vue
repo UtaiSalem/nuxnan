@@ -39,7 +39,6 @@ const showCommentsModalHandler = async () => {
     } catch (error) {
         isLoading.value = false;
         showCommentsModal.value = false;
-        console.log(error);
     }
     // setTimeout( async ()=>{
     // }, 1200);

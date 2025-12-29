@@ -89,7 +89,7 @@ const deleteImage = (imageId,imageIndex) => {
           console.error('Error deleting image:', error);
         }
       } catch (error) {
-        console.log(error); 
+        // Handle error silently
       } finally {
         isDeletingImage.value = true;
         targetImageIndex.value = null;

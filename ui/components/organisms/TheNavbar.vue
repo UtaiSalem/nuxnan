@@ -256,29 +256,27 @@ const isSettingsOpen = ref(false)
 
 // Methods
 const handleSearch = () => {
-  console.log('Searching for:', searchQuery.value)
   // Add your search logic here
 }
 
 const goToNewsfeed = () => {
-  console.log('Navigate to Newsfeed')
   // Add navigation logic
 }
 
 const goToHome = () => {
-  console.log('Navigate to Home')
+  // Navigate to home
 }
 
 const goToFriends = () => {
-  console.log('Navigate to Friends')
+  // Navigate to friends
 }
 
 const goToMessages = () => {
-  console.log('Navigate to Messages')
+  // Navigate to messages
 }
 
 const goToNotifications = () => {
-  console.log('Navigate to Notifications')
+  // Navigate to notifications
 }
 
 const toggleSettings = () => {
@@ -294,15 +292,15 @@ const handleLogout = () => {
 }
 
 const openHelp = () => {
-  console.log('Open Help')
+  // Open help
 }
 
 const openQRCode = () => {
-  console.log('Open QR Code')
+  // Open QR code
 }
 
 const openProfile = () => {
-  console.log('Open Profile')
+  // Open profile
 }
 
 // Click outside to close dropdown
@@ -319,7 +317,6 @@ onMounted(async () => {
   if (authStore.isAuthenticated && !authStore.user) {
     try {
       await authStore.fetchUser()
-      console.log('User data loaded in navbar:', authStore.user)
     } catch (error) {
       console.error('Failed to load user data in navbar:', error)
     }

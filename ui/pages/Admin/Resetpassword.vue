@@ -21,7 +21,7 @@ const handleSearchFormSubmit = useDebounceFn( async ()=> {
             usersResult.value.splice(0); 
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }, 480);
 

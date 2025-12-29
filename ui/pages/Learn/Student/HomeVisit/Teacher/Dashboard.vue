@@ -742,13 +742,11 @@ const selectStudent = (student) => {
 
     // Event handlers for student component saves
     const handleStudentSave = (message) => {
-      console.log('Student saved:', message)
       // Refresh data if needed
       searchStudents()
     }
 
     const handleStudentUpdate = (data) => {
-      console.log('Student updated:', data)
       // Update local selectedStudent data
       if (selectedStudent.value) {
         Object.assign(selectedStudent.value, data)
@@ -756,56 +754,50 @@ const selectStudent = (student) => {
     }
 
     const handleAcademicSave = (message) => {
-      console.log('Academic info saved:', message)
       searchStudents()
     }
 
     const handleAcademicUpdate = (data) => {
-      console.log('Academic info updated:', data)
       if (selectedStudent.value) {
         selectedStudent.value.academic_info = data
       }
     }
 
     const handleAddressSave = (message) => {
-      console.log('Address saved:', message)
+      // Address saved
     }
 
     const handleAddressUpdate = (data) => {
-      console.log('Address updated:', data)
       if (selectedStudent.value) {
         selectedStudent.value.addresses = data
       }
     }
 
     const handleContactSave = (message) => {
-      console.log('Contact saved:', message)
+      // Contact saved
     }
 
     const handleContactUpdate = (data) => {
-      console.log('Contact updated:', data)
       if (selectedStudent.value) {
         selectedStudent.value.contacts = data
       }
     }
 
     const handleHealthSave = (message) => {
-      console.log('Health info saved:', message)
+      // Health info saved
     }
 
     const handleHealthUpdate = (data) => {
-      console.log('Health info updated:', data)
       if (selectedStudent.value) {
         selectedStudent.value.health_info = data
       }
     }
 
     const handleGuardianSave = (message) => {
-      console.log('Guardian saved:', message)
+      // Guardian saved
     }
 
     const handleGuardianUpdate = (data) => {
-      console.log('Guardian updated:', data)
       if (selectedStudent.value) {
         selectedStudent.value.guardians = data
       }

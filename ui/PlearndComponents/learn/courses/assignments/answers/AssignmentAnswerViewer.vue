@@ -17,7 +17,7 @@ async function onSetPoints(points,i){
     try {
         props.answers[i].points = points;
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 

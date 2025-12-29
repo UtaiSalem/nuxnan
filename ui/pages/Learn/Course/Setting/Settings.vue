@@ -39,7 +39,7 @@ async function onUpdateCourseHandler(courseData){
             router.reload({ only: ['course']});
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 
 }

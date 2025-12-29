@@ -16,7 +16,7 @@ const props = defineProps({
 // const { course, lesson, isCourseAdmin, courseMemberOfAuth } = $page.props;
 
 const handleLessonUpdated = (lesson) => {
-    console.log(lesson);
+    // Handle lesson update
 }
 
 </script>

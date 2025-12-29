@@ -196,7 +196,6 @@ const toggleGroup = (groupId) => {
 // Method to handle the assignment of selected groups
 const assignGroups = () => {
   // Your logic to assign the selected groups to the assignment
-  console.log('Assigned Groups:', selectedGroups.value);
   alert(`Assigned Groups: ${selectedGroups.value.join(', ')}`);
 };
 

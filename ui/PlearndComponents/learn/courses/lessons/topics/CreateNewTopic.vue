@@ -51,7 +51,7 @@ async function submitFormHandler() {
     }
 
   } catch (error) {
-    console.log(error);
+    // Handle error silently
   } finally {
     isSubmitting.value = false;
     handleCancle();

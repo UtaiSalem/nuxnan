@@ -565,14 +565,10 @@ const addComment = async () => {
       body: { content: newComment.value }
     })
     
-    console.log('Add comment response:', response)
-    
     if (response.success) {
       // Add new comment to top of list
       if (response.comment) {
-        console.log('Adding comment to newlyAddedComments:', response.comment)
         newlyAddedComments.value.unshift(response.comment)
-        console.log('newlyAddedComments after unshift:', newlyAddedComments.value)
       }
       
       // Increment appropriate comment count
@@ -1130,13 +1126,6 @@ const handleQuickShare = async () => {
     return
   }
   
-  // Debug: Check user data
-  console.log('🔍 Share Debug:', {
-    user: authStore.user,
-    points: authStore.user?.points,
-    pointsComputed: authStore.points
-  })
-  
   // Check points
   const pointsRequired = 36
   const currentPoints = authStore.points || 0
@@ -1168,7 +1157,6 @@ const handleQuickShare = async () => {
     }
     
     const apiUrl = `${config.public.apiBase}/api/shares`
-    console.log('🚀 Calling:', apiUrl)
     
     const response = await $fetch(apiUrl, {
       method: 'POST',
@@ -1192,7 +1180,6 @@ const handleQuickShare = async () => {
       swal.error(response.message || 'ไม่สามารถแชร์ได้')
     } else {
       // Success notification
-      console.log('✅ Share success:', response)
       swal.toast('แชร์โพสต์สำเร็จ! 🎉', 'success')
     }
   } catch (error) {
@@ -1329,12 +1316,6 @@ const handleShareLike = async () => {
     return
   }
   
-  console.log('🔍 Share Like - Before:', { 
-    userPoints: authStore.user?.points,
-    pointsComputed: authStore.points,
-    shareId: shareData.value.id
-  })
-  
   isShareLiking.value = true
   
   const wasLiked = localShareIsLiked.value
@@ -1367,8 +1348,6 @@ const handleShareLike = async () => {
     const response = await api.call(`/api/shares/${shareData.value.id}/like`, {
       method: 'POST'
     })
-    
-    console.log('✅ Share like response:', response)
     
     if (!response.success) {
       // Revert
@@ -1743,12 +1722,6 @@ const deleteShare = async () => {
     return
   }
 
-  console.log('🔍 Delete Share:', {
-    shareId,
-    shareData: shareData.value,
-    activityable_id: props.post.activityable_id
-  })
-
   // Close menu first
   showOptionsMenu.value = false
 
@@ -1763,14 +1736,11 @@ const deleteShare = async () => {
   try {
     const config = useRuntimeConfig()
     const apiUrl = `${config.public.apiBase}/api/shares/${shareId}`
-    console.log(`🚀 Calling DELETE ${apiUrl}`)
     
     const response = await $fetch(apiUrl, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
-
-    console.log('📥 Delete Response:', response)
 
     if (response.success) {
       // Emit event to parent to remove activity from list
@@ -1811,14 +1781,11 @@ const deletePost = async () => {
   try {
     const config = useRuntimeConfig()
     const apiUrl = `${config.public.apiBase}/api/posts/${postData.value.id}`
-    console.log(`🚀 Calling DELETE ${apiUrl}`)
     
     const response = await $fetch(apiUrl, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
-
-    console.log('📥 Delete Post Response:', response)
 
     if (response.success) {
       // Emit event to parent to remove activity from list
@@ -2585,50 +2552,53 @@ const handlePostUpdated = (updatedPost) => {
               </div>
               
               <!-- Comment Actions -->
-              <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400 px-2">
-                <span>{{ comment.create_at || comment.diff_humans_created_at || comment.createdAt || 'เมื่อสักครู่' }}</span>
+              <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-xs text-gray-500 dark:text-gray-400 px-2">
+                <span class="text-[11px]">{{ comment.create_at || comment.diff_humans_created_at || comment.createdAt || 'เมื่อสักครู่' }}</span>
+                <span class="text-gray-300 dark:text-gray-600">•</span>
                 <button 
                   @click="handleCommentLike(comment)"
                   :disabled="comment.isLiking || authStore.user?.id === (comment.user?.id || comment.author?.id)"
                   :class="[
-                    'flex items-center gap-1 font-medium transition-colors',
-                    comment.isLikedByAuth ? 'text-vikinger-purple' : 'hover:text-vikinger-purple',
+                    'flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-gray-100 dark:hover:bg-vikinger-dark-300',
+                    comment.isLikedByAuth ? 'text-vikinger-purple bg-vikinger-purple/10' : 'hover:text-vikinger-purple',
                     (authStore.user?.id === (comment.user?.id || comment.author?.id)) ? 'opacity-50 cursor-not-allowed' : ''
                   ]"
                 >
                   <Icon :icon="comment.isLikedByAuth ? 'fluent:thumb-like-20-filled' : 'fluent:thumb-like-20-regular'" class="w-3.5 h-3.5" />
-                  <span>{{ comment.isLikedByAuth ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
+                  <span class="hidden sm:inline">{{ comment.isLikedByAuth ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
                 </button>
                 <button 
                   @click="handleCommentDislike(comment)"
                   :disabled="comment.isDisliking || authStore.user?.id === (comment.user?.id || comment.author?.id)"
                   :class="[
-                    'flex items-center gap-1 font-medium transition-colors',
-                    comment.isDislikedByAuth ? 'text-red-500' : 'hover:text-red-500',
+                    'flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-gray-100 dark:hover:bg-vikinger-dark-300',
+                    comment.isDislikedByAuth ? 'text-red-500 bg-red-500/10' : 'hover:text-red-500',
                     (authStore.user?.id === (comment.user?.id || comment.author?.id)) ? 'opacity-50 cursor-not-allowed' : ''
                   ]"
                 >
                   <Icon :icon="comment.isDislikedByAuth ? 'fluent:thumb-dislike-20-filled' : 'fluent:thumb-dislike-20-regular'" class="w-3.5 h-3.5" />
-                  <span>{{ comment.isDislikedByAuth ? 'ไม่ถูกใจแล้ว' : 'ไม่ถูกใจ' }}</span>
+                  <span class="hidden sm:inline">{{ comment.isDislikedByAuth ? 'ไม่ถูกใจ' : 'ไม่ถูกใจ' }}</span>
                 </button>
                 <button 
                   @click="startReply(comment)"
-                  class="hover:text-vikinger-purple font-medium transition-colors flex items-center gap-1"
+                  class="flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-gray-100 dark:hover:bg-vikinger-dark-300 hover:text-vikinger-purple"
                 >
                   <Icon icon="fluent:arrow-reply-20-regular" class="w-3.5 h-3.5" />
-                  <span>ตอบกลับ</span>
+                  <span class="hidden sm:inline">ตอบกลับ</span>
                 </button>
                 <!-- View Replies Toggle -->
                 <button 
                   v-if="comment.replies_count > 0"
                   @click="toggleReplies(comment)"
-                  class="hover:text-vikinger-cyan font-medium transition-colors flex items-center gap-1"
+                  class="flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-vikinger-cyan/10 text-vikinger-cyan"
                 >
                   <Icon 
                     :icon="expandedReplies[comment.id] ? 'fluent:chevron-up-20-regular' : 'fluent:chevron-down-20-regular'" 
                     class="w-3.5 h-3.5" 
                   />
-                  <span>{{ expandedReplies[comment.id] ? 'ซ่อน' : 'ดู' }} {{ comment.replies_count }} การตอบกลับ</span>
+                  <span class="hidden xs:inline">{{ expandedReplies[comment.id] ? 'ซ่อน' : '' }}</span>
+                  <span>{{ comment.replies_count }}</span>
+                  <span class="hidden sm:inline">การตอบกลับ</span>
                 </button>
               </div>
 
@@ -2711,27 +2681,30 @@ const handlePostUpdated = (updatedPost) => {
                       </div>
 
                       <!-- Reply Actions -->
-                      <div class="flex items-center gap-2 mt-0.5 text-[10px] text-gray-500 px-2">
+                      <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[10px] text-gray-500 px-2">
                         <span>{{ reply.create_at || 'เมื่อสักครู่' }}</span>
+                        <span class="text-gray-300 dark:text-gray-600">•</span>
                         <button 
                           @click="handleReplyLike(reply)"
                           :disabled="reply.isLiking || authStore.user?.id === reply.user?.id"
                           :class="[
-                            'font-medium transition-colors',
+                            'flex items-center gap-0.5 font-medium transition-colors px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-vikinger-dark-400',
                             reply.isLikedByAuth ? 'text-vikinger-purple' : 'hover:text-vikinger-purple'
                           ]"
                         >
-                          {{ reply.isLikedByAuth ? 'ถูกใจแล้ว' : 'ถูกใจ' }}
+                          <Icon :icon="reply.isLikedByAuth ? 'fluent:thumb-like-16-filled' : 'fluent:thumb-like-16-regular'" class="w-3 h-3" />
+                          <span class="hidden sm:inline">{{ reply.isLikedByAuth ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
                         </button>
                         <button 
                           @click="handleReplyDislike(reply)"
                           :disabled="reply.isDisliking || authStore.user?.id === reply.user?.id"
                           :class="[
-                            'font-medium transition-colors',
+                            'flex items-center gap-0.5 font-medium transition-colors px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-vikinger-dark-400',
                             reply.isDislikedByAuth ? 'text-red-500' : 'hover:text-red-500'
                           ]"
                         >
-                          {{ reply.isDislikedByAuth ? 'ไม่ถูกใจแล้ว' : 'ไม่ถูกใจ' }}
+                          <Icon :icon="reply.isDislikedByAuth ? 'fluent:thumb-dislike-16-filled' : 'fluent:thumb-dislike-16-regular'" class="w-3 h-3" />
+                          <span class="hidden sm:inline">{{ reply.isDislikedByAuth ? 'ไม่ถูกใจ' : 'ไม่ถูกใจ' }}</span>
                         </button>
                       </div>
                     </div>

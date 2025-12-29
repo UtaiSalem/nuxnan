@@ -67,7 +67,6 @@ const form = ref({
 async function submitFormHandler(){
   try {
     let topicResp = await axios.post('/topics', form.value);
-    console.log(topicResp.data.newTopic);
     // usePage().props.lesson.data.topics.push(newTopic.data);   
     // emit('closeCreateTopicBox');
   } catch (err) {

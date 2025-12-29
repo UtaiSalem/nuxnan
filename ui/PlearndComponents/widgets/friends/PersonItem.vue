@@ -32,7 +32,6 @@ const addFriend = async () => {
             isLoading.value = false;
         }
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
     }
 };
@@ -59,7 +58,6 @@ const handleDeleteFriendRequest = async () => {
             isLoading.value = false;
         }
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
     }
 };

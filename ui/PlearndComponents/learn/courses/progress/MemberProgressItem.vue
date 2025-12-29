@@ -177,7 +177,6 @@ const handleBonusPointsInputSubmit = async () => {
         }
         
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
         Swal.fire({
             icon: 'error',
@@ -209,7 +208,6 @@ const handleOrderNumberInputSubmit = async () => {
         }
         
     } catch (error) {
-        console.log(error);
         isOrderLoading.value = false;
         Swal.fire({
             icon: 'error',
@@ -241,7 +239,6 @@ const handleMemberCodeInputSubmit = async () => {
         }
         
     } catch (error) {
-        console.log(error);
         isMemberCodeLoading.value = false;
         Swal.fire({
             icon: 'error',
@@ -263,7 +260,7 @@ const navigateToMemberSettings = (courseId, memberId) => {
         // route('course.member.settings.page.show', { course: courseId, course_member: memberId });
         window.location.href = `/courses/${courseId}/members/${memberId}/member-settings`;
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 

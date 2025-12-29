@@ -105,8 +105,6 @@ const fetchActivities = async (page = 1, append = false) => {
   try {
     const data = await api.get(`/api/newsfeed/activities?page=${page}&per_page=${pagination.value.perPage}`)
 
-    console.log('Activities data:', data)
-
     if (data && data.activities) {
       const newActivities = Array.isArray(data.activities) ? data.activities : (data.activities.data || [])
       
@@ -169,7 +167,6 @@ const refreshFeed = async () => {
 }
 
 const handlePostCreated = (activity) => {
-  console.log('New post created:', activity)
   // Add activity from API response directly to the feed
   if (activity && activity.id) {
     activities.value.unshift(activity)
@@ -185,8 +182,6 @@ const handleDeleteActivity = (activityId) => {
   if (pagination.value.total > 0) {
     pagination.value.total--
   }
-  
-  console.log('✅ Activity removed from list:', activityId)
 }
 
 // Handle post updated
@@ -207,7 +202,6 @@ const handlePostUpdated = (updatedPost) => {
     } else {
       activities.value[index] = { ...activities.value[index], ...updatedPost }
     }
-    console.log('✅ Post updated in list:', updatedPost.id)
   }
 }
 

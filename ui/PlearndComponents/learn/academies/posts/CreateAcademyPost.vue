@@ -111,7 +111,6 @@ const privacyOptions = reactive([
                 postForm.images = [];
                 tempPostImages.splice(0);
                 waiting.value = false;
-                console.log(response.data);
                 Swal.fire({
                     icon: 'success',
                     title: 'โพสต์สำเร็จ',
@@ -127,7 +126,7 @@ const privacyOptions = reactive([
             }
             
         } catch (error) {
-            console.log(error);
+            // Handle error silently
         }
     }
 

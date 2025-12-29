@@ -76,7 +76,7 @@ async function onRequestToBeAMember(){
             }
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 

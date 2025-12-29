@@ -17,9 +17,9 @@ const toggleSidebar = () => {
 
 <template>
   <div>
-    <!-- <TheNavbar />
+    <TheNavbar />
     
-    <TheSidebar  :is-open="isOpen" @toggle="toggleSidebar" />
+    <TheSidebar :is-open="isOpen" @toggle="toggleSidebar" />
     
     <FriendListSidebar />
 
@@ -33,6 +33,6 @@ const toggleSidebar = () => {
       <div class="container mx-auto max-w-7xl">
         <slot />
       </div>
-    </main> -->
+    </main>
   </div>
 </template>

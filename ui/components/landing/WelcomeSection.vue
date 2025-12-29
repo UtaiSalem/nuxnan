@@ -451,7 +451,6 @@ const handleLogin = async () => {
 
 const handleRegister = () => {
   // Registration functionality would connect to a backend service
-  console.log('Registration attempted with:', registerForm.value)
   swal.info('ฟังก์ชันลงทะเบียนจะเชื่อมต่อกับระบบหลังบ้าน', 'อยู่ระหว่างพัฒนา')
 }
 

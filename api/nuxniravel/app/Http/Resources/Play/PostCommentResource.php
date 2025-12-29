@@ -35,11 +35,11 @@ class PostCommentResource extends JsonResource
             'isLikedByAuth'     => auth()->check() ? $this->likedPostComment()->where('user_id', auth()->id())->exists() : false,
             'isDislikedByAuth'  => auth()->check() ? $this->dislikedPostComment()->where('user_id', auth()->id())->exists() : false,
             
-            'parent_comment_id' => $this->parent_comment_id,
-            'parent_comment'    => $this->when($this->parent_comment_id, function () {
-                return $this->parentComment ? [
-                    'id' => $this->parentComment->id,
-                    'user' => new UserResource($this->parentComment->user),
+            'parent_post_comment_id' => $this->parent_post_comment_id,
+            'parent_post_comment'    => $this->when($this->parent_post_comment_id, function () {
+                return $this->parentPostComment ? [
+                    'id' => $this->parentPostComment->id,
+                    'user' => new UserResource($this->parentPostComment->user),
                 ] : null;
             }),
             'sentiment'         => $this->sentiment,

@@ -282,7 +282,7 @@ const deleteOptionImage = async (questionOptionIndex, optionImageIndex)=> {
             Swal.fire('ลบรูปภาพ', 'ลบรูปภาพไม่สำเร็จ', 'error');
         }      
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     } finally {
         isOptionImageLoading.value = false;
         deletingOptionImageIndex.value = false;

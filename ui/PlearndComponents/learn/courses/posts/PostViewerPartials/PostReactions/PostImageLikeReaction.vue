@@ -33,7 +33,6 @@
             let likeResp = await axios.post(`/courses/${props.courseId}/posts/${props.postId}/images/${props.desModelId}/like`);
 
             if(likeResp.data.success){
-                console.log(likeResp.data);
                 refIsLikedByAuth.value = !refIsLikedByAuth.value;
                 if(refIsLikedByAuth.value){
                     emit('user-like-post_image');
@@ -51,7 +50,6 @@
             isLoading.value = false;
         } catch (error) {
             isLoading.value = false;
-            console.log(error);
         }
         
     };

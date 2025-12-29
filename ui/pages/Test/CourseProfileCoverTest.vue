@@ -52,25 +52,22 @@ if (typeof window !== 'undefined') {
 
 // Event handlers for testing
 function onCoverImageChange(file) {
-    console.log('Cover image changed:', file);
+    // Cover image changed
 }
 
 function onLogoImageChange(file) {
-    console.log('Logo image changed:', file);
+    // Logo image changed
 }
 
 function onHeaderChange(header) {
-    console.log('Header changed:', header);
     mockCourseData.value.cover_header = header;
 }
 
 function onSubheaderChange(subheader) {
-    console.log('Subheader changed:', subheader);
     mockCourseData.value.cover_subheader = subheader;
 }
 
 function onRequestToBeMember(groupId, groupIndex) {
-    console.log('Request to be member:', { groupId, groupIndex });
     // Simulate membership request
     mockCourseMemberOfAuth.value = {
         id: 1,
@@ -81,7 +78,6 @@ function onRequestToBeMember(groupId, groupIndex) {
 }
 
 function onRequestToBeUnmember(memberId) {
-    console.log('Request to unmember:', memberId);
     // Simulate unmembership
     mockCourseMemberOfAuth.value = null;
     mockCourseData.value.member_status = null;

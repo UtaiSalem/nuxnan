@@ -113,7 +113,7 @@ async function formSubmit(e) {
           emit('add-new-academy', res.data.academy[0]);
       })
       .catch(function (err) {
-          console.log(err);
+          // Handle error silently
       });
 
   isLoading.value = false;

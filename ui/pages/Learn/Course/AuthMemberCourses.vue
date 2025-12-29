@@ -31,7 +31,6 @@ async function fetchMoreCourses(){
         }
         isLoading.value = false;
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
     }
 };

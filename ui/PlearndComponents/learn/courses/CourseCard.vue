@@ -36,7 +36,7 @@ async function requestTobeCourseMember(){
             )
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 
@@ -58,7 +58,6 @@ async function requestTobeUnmemberCourse(){
         }
     } catch (error) {
         isLoading.value= false;
-        console.log(error);
     }
 }
 

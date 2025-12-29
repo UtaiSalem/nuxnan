@@ -37,7 +37,6 @@ const handleSubmit = async () => {
                 emit('user-undislike-lesson');
             }
         }else{
-            console.log(dislikeResp.data);
             Swal.fire({
                 title: 'เกิดข้อผิดพลาด',
                 text: dislikeResp.data.message,
@@ -48,7 +47,6 @@ const handleSubmit = async () => {
         isLoading.value = false;
     } catch (error) {
         isLoading.value = false;
-        console.log(error);
         Swal.fire({
                 title: 'เกิดข้อผิดพลาด',
                 text: error,

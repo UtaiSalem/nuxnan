@@ -43,11 +43,8 @@ const handleCreateNewAttendanceFormSubmit = async () => {
         let resp = await axios.post(`/courses/${usePage().props.course.data.id}/groups/${props.groupId}/attendances`, form.value);
         if(resp.data && resp.data.success){
             emit('add-new-attendance', resp.data.attendance);          
-        }else{
-            console.log(resp.data);
         }
     } catch (error) {
-        console.log(error);
     } finally {
         isSaveingNewAttendance.value = false;
         emit('cancle-create-new-attendance');

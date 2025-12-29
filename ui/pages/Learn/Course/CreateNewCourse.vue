@@ -166,7 +166,6 @@ async function handleSubmitForm(){
 
   } catch (error) {
     // form.value = defaultFormValue.value;
-    console.log(error);
     Swal.fire(
         'ล้มเหลว',
         'เกิดข้อผิดพลาดในการบันทึกข้อมูล, <br />กรุณาตรวจสอบความถูกต้องของข้อมูล' + ' ' + error.message ,

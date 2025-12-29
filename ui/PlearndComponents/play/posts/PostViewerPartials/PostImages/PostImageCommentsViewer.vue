@@ -35,14 +35,12 @@ const showCommentsModalHandler = async () => {
         let imageCommentsResponse = await axios.get(`/postimage/${props.postImageID}/comments`);
         if (imageCommentsResponse.data) {
             // showAllComments.value = true;
-            console.log(imageCommentsResponse.data.comments);
             tempComments.value = imageCommentsResponse.data.comments;
             showAllComments.value = false;
         }
         isLoading.value = false;
     } catch (error) {
         isLoading.value = false;
-        console.log(error);
     }
 }
 

@@ -57,6 +57,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 
 const { locale, locales, setLocale } = useI18n()
 const isOpen = ref(false)

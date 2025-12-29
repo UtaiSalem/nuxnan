@@ -2,28 +2,40 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\info;
 
-
 use App\Models\Course;
 use App\Models\Activity;
 use App\Models\CoursePost;
-use App\Http\Resources\Learn\info\CourseResource;
-use App\Http\Resources\Learn\Academy\AcademyResource;
+use App\Models\CourseGroup;
+use App\Http\Controllers\Controller;
 use App\Http\Resources\Play\ActivityResource;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use App\Http\Resources\Learn\Academy\AcademyResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 
-class CourseActivityController extends \App\Http\Controllers\Controller
+class CourseActivityController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    public static function middleware(): array
     {
-        $this->middleware('auth:sanctum');
+        return [
+            new Middleware('auth:api'),
+        ];
     }
 
     public function index(Course $course)
     {
+
         try {
 
             $isCourseAdmin = $course->user_id == auth()->id();
             $cma = $course->courseMembers()->where('user_id', auth()->id())->first();
             $coursesResource = new CourseResource($course);
+            
+            // Get course groups
+            $courseGroups = CourseGroup::where('course_id', $course->id)
+                ->withCount('course_group_members')
+                ->get();
     
             $activities = Activity::whereHasMorph('activityable', [CoursePost::class], function ($query) use ($course) {
                     $query->where('course_id', $course->id);
@@ -35,6 +47,7 @@ class CourseActivityController extends \App\Http\Controllers\Controller
                 'course'                => $coursesResource,
                 'isCourseAdmin'         => $isCourseAdmin,
                 'courseMemberOfAuth'    => $cma,
+                'courseGroups'          => CourseGroupResource::collection($courseGroups),
                 'activities'            => ActivityResource::collection($activities),
             ]);
         } catch (\Exception $e) {
@@ -51,6 +64,15 @@ class CourseActivityController extends \App\Http\Controllers\Controller
         return response()->json([
             'success' => true,
             'activities' => ActivityResource::collection($activities),
+        ]);
+    }
+
+    public function test_get_data(Course $course)
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Test route works fine',
+            'data'    => CourseGroup::where('course_id', $course->id)->get(),
         ]);
     }
 }

@@ -27,7 +27,7 @@ async function handleResetButtonClicked() {
             }
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 
@@ -74,7 +74,7 @@ async function confirmDeleteUser() {
             Swal.fire("เกิดข้อผิดพลาด", delResp.data.message, 'warning' );
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 </script>

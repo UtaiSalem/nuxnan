@@ -86,7 +86,6 @@ async function handleUpdateMemberInfo() {
             });
         }
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
     }
 }

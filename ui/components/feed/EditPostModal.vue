@@ -118,7 +118,7 @@ const loadPostData = () => {
     }
   }).filter(img => img.url) // Filter out images without valid URLs
   
-  console.log('📷 Loaded existing images:', existingImages.value)
+
   deletedImageIds.value = []
   selectedImages.value = []
   

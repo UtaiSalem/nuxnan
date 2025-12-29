@@ -74,12 +74,11 @@ async function onRequestToBeAMember(){
             )
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 
 async function onRequestToBeUnmember(){
-    console.log('unmember');
     try {
         let memberResp = await axios.post(`/academies/${props.academy.data.id}/unmembers`);
         if (memberResp.data && memberResp.data.success) {
@@ -94,7 +93,7 @@ async function onRequestToBeUnmember(){
             )
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 </script>

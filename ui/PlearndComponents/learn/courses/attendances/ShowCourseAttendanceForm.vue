@@ -44,11 +44,8 @@ const handleUpdateAttendance = async () => {
                 timer: 1200
             });
             emit('updat-attendance', resp.data.attendance);          
-        } else {
-            console.log(resp.data);
         }
     } catch (error) {
-        console.log(error);
     } finally {
         isSaveingNewAttendance.value = false;
     }

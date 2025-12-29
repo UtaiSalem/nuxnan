@@ -21,16 +21,14 @@ watch(() => props.gradeStatus, (newStatus) => {
 async function handleGradeStatusChange(event) {
   const selectedStatus = event.target.value;
   localGradeStatus.value = parseInt(selectedStatus);
-  console.log(localGradeStatus.value);
 
   try {
     let resp = await axios.patch(`/courses/${props.course_id}/members/${props.member_id}/grade_progress`, { grade_progress: selectedStatus });
     if (resp.data && resp.data.success) {
-      console.log(resp.data);
       emit('update:gradeProgress', localGradeStatus.value);
     }
   } catch (error) {
-    console.log(error);
+    // Handle error silently
   }
 }
 </script>

@@ -13,6 +13,6 @@ onMounted(() => {
     <NuxtPage />
     
     <!-- Toast Notifications -->
-    <ToastNotification />
+    <NotificationsToastNotification />
   </NuxtLayout>
 </template>

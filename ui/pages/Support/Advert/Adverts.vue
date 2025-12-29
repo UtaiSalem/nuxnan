@@ -39,7 +39,7 @@ async function fetchMoreAdvertises(){
             isLoadingMoreAdverts.value = false;
         }
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 

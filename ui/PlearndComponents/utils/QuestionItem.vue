@@ -140,7 +140,6 @@ async function handleConfirmAnswer(qID, userAnswer) {
         courseOwnerPoint: page.props.course_owner.personal_point,
     }
     );
-    console.log(confirmAnswerResponsed.data);
     
 }
 
@@ -154,8 +153,6 @@ async function setCorrectAnswer(qid, aid) {
     if (aid) {
         let respAnswer = await axios.post(`/question/${qid}/answers`, { answer: aid });
         correctAnswer.value = respAnswer.data.answer.correct_option_id;
-    } else {
-        console.log("กรุณาเลือกคำตอบ");
     }
 }
 

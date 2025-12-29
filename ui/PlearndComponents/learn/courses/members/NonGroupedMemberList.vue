@@ -53,7 +53,6 @@ Swal.fire({
             let unmemberCourseResp = await axios.delete(`/courses/${usePage().props.course.data.id}/members/${memberId}/delete`);
             if (unmemberCourseResp.data && unmemberCourseResp.data.success) {
                 props.groups[activeGroupTab.value].members.splice(memberIndx, 1);
-                console.log(unmemberCourseResp.data.success);
                 Swal.fire({
                     icon: 'success',
                     title: 'ลบสมาชิกเรียบร้อย!',
@@ -63,7 +62,7 @@ Swal.fire({
                 });
             }
         } catch (error) {
-            console.log(error);
+            // Handle error silently
         }
     }
 });

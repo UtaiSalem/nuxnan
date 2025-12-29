@@ -114,7 +114,6 @@ const formSubmitHandler = async () => {
 
     let resp = await axios.post('/academies', data, config);
     // emit('add-new-academy', resp.data.academy[0]);
-    console.log(resp.data);
     // console.log(form);
     // console.log(data);
 

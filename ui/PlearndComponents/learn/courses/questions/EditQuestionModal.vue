@@ -57,7 +57,6 @@ async function updateQuestion() {
                 closeModal();
             }
         } catch (error) {
-            console.log('Error details:', error.response ? error.response.data : error);
             Swal.fire('ผิดพลาด', 'เกิดข้อผิดพลาดในการอัปเดตคำถาม', 'error');
         }
     }

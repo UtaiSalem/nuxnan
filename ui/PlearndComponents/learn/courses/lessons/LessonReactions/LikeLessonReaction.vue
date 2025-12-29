@@ -38,7 +38,6 @@ const handleSubmit = async () => {
             refIsLikedByAuth.value = !refIsLikedByAuth.value;
             emit(refIsLikedByAuth.value ? 'user-like-lesson' : 'user-unlike-lesson');
         } else {
-            console.log(likeResp.data);
             Swal.fire({
                 title: 'เกิดข้อผิดพลาด',
                 text: likeResp.data.message,
@@ -47,7 +46,7 @@ const handleSubmit = async () => {
             });
         }
     } catch (error) {
-        console.log(error);
+
         Swal.fire({
             title: 'เกิดข้อผิดพลาด',
             text: error,

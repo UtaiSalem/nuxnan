@@ -276,7 +276,6 @@ const toggleLike = () => {
 }
 
 const reactWithEmoji = (emojiName: string) => {
-  console.log('React with:', emojiName)
   isLiked.value = true
 }
 
@@ -287,7 +286,6 @@ const toggleComments = () => {
 
 const submitComment = () => {
   if (newComment.value.trim()) {
-    console.log('New comment:', newComment.value)
     newComment.value = ''
   }
 }

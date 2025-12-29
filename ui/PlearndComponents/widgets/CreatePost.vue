@@ -152,7 +152,6 @@ const privacyOptions = reactive([
 
     function handleErrorCreatePost(errors){
         waiting.value = false;
-        console.log(errors);
         Swal.fire({
             icon: 'error',
             title: 'เกิดข้อผิดพลาด',

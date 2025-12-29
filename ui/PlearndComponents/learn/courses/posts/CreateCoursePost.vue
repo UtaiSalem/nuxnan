@@ -125,7 +125,7 @@ async function onSubmitCreatePost(){
         }
         
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     }
 }
 

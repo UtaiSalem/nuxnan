@@ -7,8 +7,8 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\AttendanceDetail;
 use App\Models\CourseAttendance;
-use App\Http\Resources\Learn\attendances\AttendanceDetailResource;
-use App\Http\Resources\Learn\attendances\CourseAttendanceResource;
+use App\Http\Resources\Learn\Course\attendances\AttendanceDetailResource;
+use App\Http\Resources\Learn\Course\attendances\CourseAttendanceResource;
 
 class AttendanceDetailController extends Controller
 {

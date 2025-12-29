@@ -55,7 +55,6 @@ const getAuthOwnerAcademies = async () => {
             });
         }
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
     }
 };
@@ -76,7 +75,6 @@ const getAuthMemberedAcademies = async () => {
             });
         }
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
     }
 };
@@ -97,7 +95,6 @@ const getAllAcademies = async () => {
             });
         }
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
     }
 };

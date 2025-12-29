@@ -191,45 +191,43 @@ const userAvatar = ref('https://api.dicebear.com/7.x/avataaars/svg?seed=Jack');
 
 // Methods
 const handleSearch = () => {
-  console.log('Searching for:', searchQuery.value);
   // Add your search logic here
 };
 
 const goToNewsfeed = () => {
-  console.log('Navigate to Newsfeed');
   // Add navigation logic
 };
 
 const goToHome = () => {
-  console.log('Navigate to Home');
+  // Navigate to home
 };
 
 const goToFriends = () => {
-  console.log('Navigate to Friends');
+  // Navigate to friends
 };
 
 const goToMessages = () => {
-  console.log('Navigate to Messages');
+  // Navigate to messages
 };
 
 const goToNotifications = () => {
-  console.log('Navigate to Notifications');
+  // Navigate to notifications
 };
 
 const openSettings = () => {
-  console.log('Open Settings');
+  // Open settings
 };
 
 const openHelp = () => {
-  console.log('Open Help');
+  // Open help
 };
 
 const openQRCode = () => {
-  console.log('Open QR Code');
+  // Open QR code
 };
 
 const openProfile = () => {
-  console.log('Open Profile');
+  // Open profile
 };
 </script>
 

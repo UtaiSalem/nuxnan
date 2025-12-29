@@ -65,8 +65,6 @@ onMounted(async () => {
       throw new Error('User data not available')
     }
     
-    console.log('OAuth login successful, user:', authStore.user)
-    
     // Small delay to ensure state is fully updated
     await new Promise(resolve => setTimeout(resolve, 100))
     

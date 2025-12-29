@@ -36,7 +36,6 @@ async function handleNotesCommentsFormSubmit () {
         }
         
     } catch (error) {
-        console.log(error);
         isLoading.value = false;
     }
 }

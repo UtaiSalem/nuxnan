@@ -117,8 +117,6 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('No user data received from server')
       }
       
-      console.log('User data loaded:', user.value)
-      
     } catch (e: any) {
       console.error('Fetch user error:', e)
       // If token is invalid, clear it
@@ -233,18 +231,7 @@ export const useAuthStore = defineStore('auth', () => {
       return false
     }
     
-    console.log('💰 deductPoints BEFORE:', { 
-      currentPoints, 
-      amount, 
-      willBecome: currentPoints - amount 
-    })
-    
     user.value.points = currentPoints - amount
-    
-    console.log('💰 deductPoints AFTER:', { 
-      newPoints: user.value.points,
-      computedPoints: points.value
-    })
     
     return true
   }
@@ -253,13 +240,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (!user.value) return
     const currentPoints = Number(user.value.points) || 0
     user.value.points = currentPoints + amount
-    console.log('💰 addPoints:', { amount, newPoints: user.value.points })
   }
 
   function setPoints(amount: number): void {
     if (!user.value) return
     user.value.points = amount
-    console.log('💰 setPoints:', { amount })
   }
 
   function rollback(amount: number): void {

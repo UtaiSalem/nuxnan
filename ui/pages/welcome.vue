@@ -195,7 +195,6 @@ const handleGetDonate = async (donateId: number, idx: number) => {
       isCreateDonateLoading.value = false
     }
   } catch (error) {
-    console.log(error)
     isCreateDonateLoading.value = false
   }
 }

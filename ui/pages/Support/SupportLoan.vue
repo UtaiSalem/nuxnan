@@ -116,7 +116,6 @@ async function submitForm(e) {
         )
     }
   } catch (error) {
-    console.log(error);
     Swal.fire(
             'เกิดข้อผิดพลาด',
             error.response.data.message,

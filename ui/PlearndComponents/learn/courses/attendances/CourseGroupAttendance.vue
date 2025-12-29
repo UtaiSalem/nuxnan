@@ -94,7 +94,6 @@ async function getGroupAttendances(courseId, groupId){
             isLoadingAttendances.value = false;
         }
     } catch (error) {
-        console.log(error);
         isLoadingAttendances.value = false;
     }
 }
@@ -105,17 +104,14 @@ const handleCreateNewAttendanceFormSubmit = async () => {
         isLoadingAttendances.value = true;
         let resp = await axios.post(`/courses/${usePage().props.course.data.id}/groups/${props.groups[activeGroupTab.value].id}/attendances`, form.value);
         if(resp.data && resp.data.success){
-            console.log(resp.data);
             groupAttendances.value.push(resp.data.attendance);
 
             isLoadingAttendances.value = false;
             openCreateNewAttendanceForm.value = false;
         }else{
-                console.log(resp.data);
                 isLoadingAttendances.value = false;
         }
     } catch (error) {
-        console.log(error);
         isLoadingAttendances.value = false;
         openCreateNewAttendanceForm.value = false;
     }
@@ -144,7 +140,7 @@ const handleCancleCreateNewAttendance = () => {
                 </li>
             </ul>
 
-            <div class="plearnd-card mt-4">
+            <div class="plearnd-card mt-4 dark:bg-gray-800">
                 <div v-if="openCreateNewAttendanceForm" class="flex flex-col space-y-4">
                     <form @submit.prevent="handleCreateNewAttendanceFormSubmit">
                         <div class="space-y-4">
@@ -152,7 +148,7 @@ const handleCancleCreateNewAttendance = () => {
                                 <div class=" grid grid-cols-1 gap-4 sm:grid-cols-6">
                                     <div class="sm:col-span-3">
                                         <span :id="`attendance-start_date-input`"
-                                            class="block text-sm font-medium leading-6 text-gray-900">เริ่มต้น</span>
+                                            class="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-200">เริ่มต้น</span>
                                         <div class="mt-2">
                                             <VueDatePicker id="attendanceDateInput" name="attendanceDateInput"
                                                 :format="'dd/MM/yyyy HH:mm'"
@@ -163,7 +159,7 @@ const handleCancleCreateNewAttendance = () => {
                                     </div>
                                     <div class="sm:col-span-3">
                                         <span :id="`attendance-finish_date-input`"
-                                            class="block text-sm font-medium leading-6 text-gray-900">สิ้นสุด</span>
+                                            class="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-200">สิ้นสุด</span>
                                         <div class="mt-2">
                                             <VueDatePicker id="attendanceDateInput" name="attendanceDateInput"
                                                 :format="'dd/MM/yyyy HH:mm'"
@@ -174,10 +170,10 @@ const handleCancleCreateNewAttendance = () => {
                                     </div>
                                     <div class="sm:col-span-6">
                                         <label for="first-name"
-                                            class="block text-sm font-medium leading-6 text-gray-900">คำอธิบาย</label>
+                                            class="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-200">คำอธิบาย</label>
                                         <div class="mt-2">
                                             <Textarea type="text" :name="form.description" id="first-name" required :autocomplete="form.description||'_'" v-model="form.description"
-                                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
+                                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-gray-200 dark:bg-gray-700 dark:border-gray-600 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-violet-500 sm:text-sm sm:leading-6" />
                                         </div>
                                     </div>
                                 </div>
@@ -203,40 +199,41 @@ const handleCancleCreateNewAttendance = () => {
                 </div>
             </div>
 
-            <div v-if="isLoadingAttendances" class="plearnd-card mt-4 ">
-                <Icon icon="svg-spinners:blocks-shuffle-3" class="h-6 w-6 mx-auto text-violet-600" />
+            <div v-if="isLoadingAttendances" class="plearnd-card mt-4 dark:bg-gray-800">
+                <Icon icon="svg-spinners:blocks-shuffle-3" class="h-6 w-6 mx-auto text-violet-600 dark:text-violet-400" />
             </div>
 
             <div v-if="showAttendanceResource" class="">
                 <div class="pt-4" id="tab-panel-1a" aria-hidden="false" role="tabpanel" aria-labelledby="tab-label-1a"
                     tabindex="-1">
                     <staggered-fade :duration="50" tag="ul" class="flex flex-col w-full ">
-                        <div class="bg-white rounded-md p-2">
+                        <div class="bg-white dark:bg-gray-800 rounded-md p-2">
                             <div class="relative overflow-x-auto rounded-lg">
                                 <table class="w-full divide-y divide-gray-200 overflow-x-auto">
                                     <thead class="text-xs text-gray-700 uppercase bg-gray-200 dark:bg-gray-700 dark:text-gray-400">
                                         <tr class="text-center">
                                             
-                                            <th scope="col" class=" px-1 py-3 border border-slate-300">
+                                            <th scope="col" class=" px-1 py-3 border border-slate-300 dark:border-gray-600">
                                                 เลขที่
                                             </th>
 
-                                            <th scope="col" class=" px-1 py-3 border border-slate-300">
+                                            <th scope="col" class=" px-1 py-3 border border-slate-300 dark:border-gray-600">
                                                 สมาชิก
                                             </th>
 
                                             <th scope="col" v-for="(attendance, index) in groupAttendances" :key="attendance.id"
-                                                class="px-1 py-3 border border-slate-300">
+                                                class="px-1 py-3 border border-slate-300 dark:border-gray-600">
                                                 #{{ index + 1 }}
                                             </th>
                                         </tr>
                                     </thead>
                                     
-                                    <tbody class="bg-white divide-y divide-gray-200">
+                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                         <MembersAttendanceDetails 
                                             v-for="(member) in activeGroupMembers" :key="member.id"
                                             :member="member"
                                             :groupAttendances="groupAttendances"
+                                            :isCourseAdmin="$page.props.isCourseAdmin"
                                         />
                                     </tbody>
                                 </table>

@@ -126,7 +126,6 @@ async function handleDeleteQuestion(qID, qIdx) {
         }
         
     } catch (error) {
-        console.log(error);
         Swal.fire('ลบคำถามล้มเหลว', 'เกิดข้อผิดพลาดในการลบคำถาม กรุณาลองใหม่', 'error');
     } finally {
         isLoading.value = false;

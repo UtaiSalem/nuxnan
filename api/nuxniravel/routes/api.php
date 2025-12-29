@@ -142,6 +142,21 @@ Route::middleware(['auth:api'])->group(function () {
     Route::apiResource('activities', ActivityController::class)->only(['index', 'show', 'destroy']);
     Route::get('/users/{user:reference_code}/profile', [UserProfileController::class, 'index'])->name('user.profile');
 
+    // Profile Management Routes
+    Route::prefix('profile')->group(function () {
+        Route::get('/me', [UserProfileController::class, 'me'])->name('profile.me');
+        Route::put('/update', [UserProfileController::class, 'update'])->name('profile.update');
+        Route::post('/avatar', [UserProfileController::class, 'updateAvatar'])->name('profile.avatar');
+        Route::post('/cover', [UserProfileController::class, 'updateCover'])->name('profile.cover');
+        Route::get('/completion', [UserProfileController::class, 'completion'])->name('profile.completion');
+        Route::put('/privacy', [UserProfileController::class, 'updatePrivacy'])->name('profile.privacy');
+        Route::get('/stats', [UserProfileController::class, 'stats'])->name('profile.stats');
+    });
+    // User profile by identifier (supports ID, reference_code, or username)
+    Route::get('/users/{identifier}/show', [UserProfileController::class, 'show'])->name('user.profile.show');
+    Route::get('/users/{identifier}/stats', [UserProfileController::class, 'stats'])->name('user.stats');
+    Route::get('/users/{identifier}/activities', [UserProfileController::class, 'activities'])->name('user.activities');
+
     // Forgot Password (Authenticated?) - Logic from old web.php seems to have it under auth:sanctum? 
     // Usually forgot password is public, but let's keep it as is if that's what it was, 
     // OR move it to public if it was a mistake. 
@@ -184,11 +199,9 @@ require __DIR__ . '/play/post.php';
 require __DIR__ . '/play/game.php';
 require __DIR__ . '/learn/academy.php';
 require __DIR__ . '/learn/course.php';
-require __DIR__ . '/apis/v2/course.php';
 require __DIR__ . '/learn/student.php';
 require __DIR__ . '/homevisit/homevisit.php';
 require __DIR__ . '/studentcard/studentcard.php';
-require __DIR__ . '/apis/academies.php';
 
 // Share system routes
 require __DIR__ . '/api_shares.php';

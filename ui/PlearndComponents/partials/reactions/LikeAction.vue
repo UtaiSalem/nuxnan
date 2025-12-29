@@ -24,6 +24,6 @@
         post:''
     });
     const handleSubmit = () => {
-        likePostForm.post(`/${props.desModel}/${props.desModelId}/${props.actionType}`,{ preserveScroll: true, onSuccess: () => console.log('success') });
+        likePostForm.post(`/${props.desModel}/${props.desModelId}/${props.actionType}`,{ preserveScroll: true });
     };
 </script>

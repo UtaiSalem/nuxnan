@@ -42,7 +42,7 @@ const fetchMorePostComments = async () => {
         }
 
     } catch (error) {
-        console.log(error);
+        // Handle error silently
     } finally {
         isLoadingCoursePostComments.value = false;
     }
