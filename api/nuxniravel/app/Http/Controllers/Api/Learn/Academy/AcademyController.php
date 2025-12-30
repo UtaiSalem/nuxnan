@@ -9,7 +9,7 @@ use App\Models\Academy;
 use Illuminate\Http\Request;
 use App\Models\AcademyMember;
 use Intervention\Image\Facades\Image;
-use App\Http\Resources\Learn\info\CourseResource;
+use App\\Http\\Resources\\Learn\\Course\\info\\CourseResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 use Illuminate\Support\Facades\Storage;
 

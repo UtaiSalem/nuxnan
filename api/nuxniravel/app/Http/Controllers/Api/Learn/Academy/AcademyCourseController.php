@@ -11,7 +11,7 @@ use App\Models\Academy;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use App\Http\Resources\Learn\info\CourseResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 use Illuminate\Support\Facades\Storage;
 

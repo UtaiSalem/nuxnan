@@ -85,6 +85,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/api/courses')->group(funct
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/groups')->group(function () {
     Route::resource('/', CourseGroupController::class);
     Route::patch('/{group}', [CourseGroupController::class, 'update'])->name('course.groups.update');
+    Route::delete('/{group}', [CourseGroupController::class, 'destroy'])->name('course.groups.destroy');
 });
 
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/lessons')->group(function () {
@@ -97,8 +98,15 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/lessons')
     Route::patch('/{lesson}', [CourseLessonController::class, 'update'])->name('course.lessons.part.update');
     Route::delete('/{lesson}', [CourseLessonController::class, 'destroy'])->name('course.lessons.destroy');
 
+
+    // Lesson reactions - both singular and plural routes for compatibility
+    Route::post('/{lesson}/like', [CourseLessonReactionController::class,'toggleLike'])->name('course.lessons.like');
+    Route::post('/{lesson}/dislike', [CourseLessonReactionController::class,'toggleDislike'])->name('course.lessons.dislike');
     Route::post('/{lesson}/likes', [CourseLessonReactionController::class,'toggleLike'])->name('course.lessons.like.toggle');
     Route::post('/{lesson}/dislikes', [CourseLessonReactionController::class,'toggleDislike'])->name('course.lessons.dislike.toggle');
+    Route::post('/{lesson}/bookmark', [CourseLessonController::class, 'toggleBookmark'])->name('course.lessons.bookmark.toggle');
+    Route::post('/{lesson}/share', [CourseLessonController::class, 'shareLesson'])->name('course.lessons.share');
+
 
 });
 
@@ -106,8 +114,10 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/lessons')
 Route::middleware(['auth:api', 'verified'])->prefix('/lessons/{lesson}')->group(function () {
     Route::resource('/comments', LessonCommentController::class);
 
-    Route::post('/comments/{comment}/like', [LessonCommentReactionController::class, 'toggleLike'])->name('lesson.comments.like.toggle');
-    Route::post('/comments/{comment}/dislike', [LessonCommentReactionController::class, 'toggleDislike'])->name('lesson.comments.dislike.toggle');
+
+    Route::post('/comments/{lesson_comment}/like', [LessonCommentReactionController::class, 'toggleLike'])->name('lesson.comments.like.toggle');
+    Route::post('/comments/{lesson_comment}/dislike', [LessonCommentReactionController::class, 'toggleDislike'])->name('lesson.comments.dislike.toggle');
+
 
 });
 
@@ -238,7 +248,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
 
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/posts')->group(function () {
 
-    // Route::get('/', [PostController::class, 'index'])->name('course.posts.index');
+    Route::get('/', [CoursePostController::class, 'index'])->name('course.posts.index');
     Route::post('/', [CoursePostController::class, 'store'])->name('course.posts.store');
     Route::get('/{course_post}', [CoursePostController::class, 'show'])->name('course.posts.show');
     Route::get('/{course_post}/edit', [CoursePostController::class, 'edit'])->name('course.posts.edit');

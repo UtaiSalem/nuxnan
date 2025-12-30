@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  'saved': []
+  'saved': [group: any]
   'cancel': []
 }>()
 
@@ -76,15 +76,17 @@ const saveGroup = async () => {
   
   isSaving.value = true
   try {
+    let savedGroup: any
+    
     if (props.group) {
       // Update existing group
-      await courseGroupStore.updateGroupData(props.courseId, props.group.id, formData.value)
+      savedGroup = await courseGroupStore.updateGroupData(props.courseId, props.group.id, formData.value)
     } else {
       // Create new group
-      await courseGroupStore.createGroup(props.courseId, formData.value)
+      savedGroup = await courseGroupStore.createGroup(props.courseId, formData.value)
     }
     
-    emit('saved')
+    emit('saved', savedGroup)
   } catch (error: any) {
     console.error('Failed to save group:', error)
     errors.value.general = error.data?.message || error.data?.msg || 'เกิดข้อผิดพลาดในการบันทึก'

@@ -10,6 +10,7 @@ const authStore = useAuthStore()
 const toast = useToast()
 const api = useApi()
 const swal = useSweetAlert()
+const { getAvatarUrl } = useAvatar()
 
 const props = defineProps({
   post: {
@@ -260,6 +261,14 @@ const postAuthor = computed(() => {
 const actionBy = computed(() => {
   return props.post.action_by || postAuthor.value
 })
+
+// Avatar computed properties using useAvatar composable
+const postAuthorAvatar = computed(() => getAvatarUrl(postAuthor.value))
+const actionByAvatar = computed(() => getAvatarUrl(actionBy.value))
+const currentUserAvatar = computed(() => getAvatarUrl(authStore.user))
+
+// Get avatar for comment/reply author
+const getCommentAvatar = (comment) => getAvatarUrl(comment?.user || comment?.author)
 
 // Get created time - handle different field names
 const createdTime = computed(() => {
@@ -1832,7 +1841,7 @@ const handlePostUpdated = (updatedPost) => {
     <template v-if="isShareActivity && !isNested">
       <!-- Sharer Header -->
       <div class="flex items-center gap-3 mb-4">
-        <img :src="actionBy?.avatar || `https://i.pravatar.cc/150?img=${post.id % 70}`" 
+        <img :src="actionByAvatar" 
              class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-cyan/30" 
              :alt="actionBy?.username" />
         <div class="flex-1">
@@ -1976,7 +1985,7 @@ const handlePostUpdated = (updatedPost) => {
           <!-- Add Comment Box -->
           <div class="flex gap-2">
             <img 
-              :src="authStore.user?.avatar || `https://i.pravatar.cc/150`" 
+              :src="currentUserAvatar" 
               class="w-8 h-8 rounded-full object-cover flex-shrink-0" 
               alt="Your avatar"
             />
@@ -2015,7 +2024,7 @@ const handlePostUpdated = (updatedPost) => {
               class="flex gap-3 group"
             >
               <img 
-                :src="comment.user?.avatar || `https://i.pravatar.cc/150?img=${comment.id}`" 
+                :src="getCommentAvatar(comment)" 
                 class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" 
                 :alt="comment.user?.username"
               />
@@ -2115,7 +2124,7 @@ const handlePostUpdated = (updatedPost) => {
         <div class="flex items-center gap-3">
           <!-- Avatar with badge -->
           <div class="relative flex-shrink-0">
-            <img :src="postAuthor?.avatar || `https://i.pravatar.cc/150?img=${post.id % 70}`" 
+            <img :src="postAuthorAvatar" 
                  class="w-12 h-12 aspect-square rounded-full object-cover ring-2 ring-vikinger-purple/30 group-hover:ring-vikinger-purple transition-all duration-300" 
                  :alt="postAuthor?.username" />
             <!-- Post Type Badge -->
@@ -2506,7 +2515,7 @@ const handlePostUpdated = (updatedPost) => {
       <div v-if="showComments && !isNested" class="mt-4 pt-4 border-t border-gray-200 dark:border-vikinger-dark-50/30 space-y-4">
         <!-- Add Comment -->
         <div class="flex gap-3">
-          <img :src="authStore.user?.avatar || 'https://i.pravatar.cc/150?img=99'" class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" alt="You" />
+          <img :src="currentUserAvatar" class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" alt="You" />
           <div class="flex-1 flex gap-2">
             <input 
               v-model="newComment"
@@ -2530,7 +2539,7 @@ const handlePostUpdated = (updatedPost) => {
         <!-- Existing Comments -->
         <div v-if="displayedComments.length" class="space-y-3">
           <div v-for="comment in displayedComments" :key="comment.id" class="flex gap-3 group">
-            <img :src="comment.user?.avatar || comment.author?.avatar || `https://i.pravatar.cc/150?img=${comment.id}`" 
+            <img :src="getCommentAvatar(comment)" 
                  class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" 
                  :alt="comment.user?.username || comment.author?.username" />
             <div class="flex-1">
@@ -2608,7 +2617,7 @@ const handlePostUpdated = (updatedPost) => {
                 class="mt-2 ml-2 flex gap-2"
               >
                 <img 
-                  :src="authStore.user?.avatar || `https://i.pravatar.cc/150?u=${authStore.user?.id}`" 
+                  :src="currentUserAvatar" 
                   class="w-8 h-8 rounded-full object-cover flex-shrink-0"
                   alt="You"
                 />
@@ -2658,7 +2667,7 @@ const handlePostUpdated = (updatedPost) => {
                     class="flex gap-2"
                   >
                     <img 
-                      :src="reply.user?.avatar || `https://i.pravatar.cc/150?img=${reply.id}`" 
+                      :src="getCommentAvatar(reply)" 
                       class="w-8 h-8 flex-shrink-0 rounded-full object-cover"
                       :alt="reply.user?.username"
                     />

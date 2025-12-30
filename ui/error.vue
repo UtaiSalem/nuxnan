@@ -5,19 +5,19 @@
         <Icon icon="mdi:alert-circle" class="w-24 h-24 text-primary-500 mx-auto mb-4" />
       </div>
 
-      <h1 class="text-6xl font-bold text-secondary-900 mb-4">404</h1>
+      <h1 class="text-6xl font-bold text-secondary-900 mb-4">{{ error?.statusCode || 404 }}</h1>
       <h2 class="text-2xl font-semibold text-secondary-700 mb-4">Page Not Found</h2>
       <p class="text-secondary-600 mb-8">
         Sorry, the page you are looking for doesn't exist or has been moved.
       </p>
 
-      <NuxtLink
-        to="/newsfeed"
-        class="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+      <button
+        @click="handleBackToHome"
+        class="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors cursor-pointer"
       >
         <Icon icon="mdi:home" class="w-5 h-5" />
         Back to Home
-      </NuxtLink>
+      </button>
     </div>
   </div>
 </template>
@@ -25,11 +25,18 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 
-definePageMeta({
-  layout: false,
-})
+const props = defineProps<{
+  error: {
+    statusCode: number
+    message: string
+  }
+}>()
+
+const handleBackToHome = () => {
+  clearError({ redirect: '/' })
+}
 
 useHead({
-  title: '404 - Page Not Found',
+  title: `${props.error?.statusCode || 404} - Page Not Found`,
 })
 </script>

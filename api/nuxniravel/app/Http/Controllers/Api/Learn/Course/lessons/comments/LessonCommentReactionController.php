@@ -2,77 +2,103 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons\comments;
 
-use App\Models\Course;
-use App\Models\Lesson;
+use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\LessonComment;
-use Illuminate\Support\Facades\DB;
 
-class LessonCommentReactionController extends \App\Http\Controllers\Controller
+class LessonCommentReactionController extends Controller
 {
-    private const REACTION_COST = 12;
-    private const REACTION_REWARD = 6;
+    public $plearndAdmin = null;
 
-    public function toggleReaction(Course $course, Lesson $lesson, LessonComment $comment, string $reactionType)
+    public function __construct()
     {
-        if (auth()->user()->pp < self::REACTION_COST) {
-            return $this->insufficientPointsResponse($reactionType);
+        $this->plearndAdmin = User::find(1);
+    }
+
+    public function toggleLike(LessonComment $lesson_comment)
+    {
+        $userId = auth()->id();
+        $hasLiked = $lesson_comment->likeComment()->where('user_id', $userId)->exists();
+        $hasDisliked = $lesson_comment->dislikeComment()->where('user_id', $userId)->exists();
+        
+        $requiredPoints = $hasLiked ? 12 : 24;
+        
+        if(auth()->user()->pp < $requiredPoints){
+            return response()->json([
+                'success' => false,
+                'message' => $hasLiked 
+                    ? 'You do not have enough points to unlike (12 points required). / คุณไม่มีพ้อยท์เพียงพอในการยกเลิกไลค์ (ต้องการ 12 แต้ม)'
+                    : 'You do not have enough points to like (24 points required). / คุณไม่มีพ้อยท์เพียงพอในการกดถูกใจ (ต้องการ 24 แต้ม)',
+            ]);
+        }
+        
+        // ถ้ากด dislike อยู่แล้ว ต้องยกเลิก dislike ก่อน
+        if ($hasDisliked) {
+            $lesson_comment->dislikeComment()->detach($userId);
+            $lesson_comment->decrement('dislikes');
+        }
+        
+        $lesson_comment->likeComment()->toggle($userId);
+        if($lesson_comment->likeComment()->where('user_id', $userId)->exists())
+        {
+            // Like
+            $lesson_comment->increment('likes');
+            auth()->user()->decrement('pp', 24);
+            $lesson_comment->user->increment('pp', 12);
+            $this->plearndAdmin->increment('pp', 12);
+        }
+        else
+        {
+            // Unlike
+            $lesson_comment->decrement('likes');
+            auth()->user()->decrement('pp', 12);
+            // เจ้าของไม่ลดแต้ม
+            $this->plearndAdmin->increment('pp', 12);
         }
 
-        return DB::transaction(function () use ($course, $lesson, $comment, $reactionType) {
-            $userId = auth()->id();
-            $relationMethod = $reactionType . 'Comment';
-            $countColumn = $reactionType . 's';
-            
-            // กำหนดอีกประเภทหนึ่ง
-            $oppositeType = $reactionType === 'like' ? 'dislike' : 'like';
-            $oppositeRelationMethod = $oppositeType . 'Comment';
-            $oppositeCountColumn = $oppositeType . 's';
-            
-            // ตรวจสอบว่ามีการกดอีกอย่างหนึ่งอยู่หรือไม่
-            $hasOppositeReaction = $comment->$oppositeRelationMethod()->where('user_id', $userId)->exists();
-            
-            // ถ้ามีการกดอีกอย่างหนึ่งอยู่ ให้ยกเลิกก่อน
-            if ($hasOppositeReaction) {
-                $comment->$oppositeRelationMethod()->detach($userId);
-                $comment->decrement($oppositeCountColumn);
-                auth()->user()->increment('pp', self::REACTION_REWARD);
-                $comment->user()->decrement('pp', self::REACTION_REWARD);
-            }
-
-            $isReacted = $comment->$relationMethod()->toggle($userId);
-            $wasToggled = !empty($isReacted['attached']);
-
-            if ($wasToggled) {
-                $comment->increment($countColumn);
-                auth()->user()->decrement('pp', self::REACTION_COST);
-                $comment->user()->increment('pp', self::REACTION_REWARD);
-                $course->increment('points', self::REACTION_REWARD);
-            } else {
-                $comment->decrement($countColumn);
-                auth()->user()->increment('pp', self::REACTION_REWARD);
-                $comment->user()->decrement('pp', self::REACTION_REWARD);
-            }
-
-            return response()->json(['success' => true]);
-        });
-    }
-
-    public function toggleLike(Course $course, Lesson $lesson, LessonComment $comment)
-    {
-        return $this->toggleReaction($course, $lesson, $comment, 'like');
-    }
-
-    public function toggleDislike(Course $course, Lesson $lesson, LessonComment $comment)
-    {
-        return $this->toggleReaction($course, $lesson, $comment, 'dislike');
-    }
-
-    private function insufficientPointsResponse(string $reactionType)
-    {
-        $action = $reactionType === 'liked' ? 'ถูกใจ' : 'ไม่ถูกใจ';
         return response()->json([
-            'success' => false,
-            'message' => "คุณมีพอยต์ไม่เพียงพอในการกด{$action}ความคิดเห็นนี้ กรุณาสะสมแต้มเพิ่มเติม",
-        ], 403);
+            'success' => true,
+        ]);
+    }
+
+    public function toggleDislike(LessonComment $lesson_comment)
+    {
+        $userId = auth()->id();
+        $hasLiked = $lesson_comment->likeComment()->where('user_id', $userId)->exists();
+        $hasDisliked = $lesson_comment->dislikeComment()->where('user_id', $userId)->exists();
+        
+        if(auth()->user()->pp < 12){
+            return response()->json([
+                'success' => false,
+                'message' => $hasDisliked
+                    ? 'You do not have enough points to undislike (12 points required). / คุณไม่มีพ้อยท์เพียงพอในการยกเลิกดิสไลค์ (ต้องการ 12 แต้ม)'
+                    : 'You do not have enough points to dislike (12 points required). / คุณไม่มีพ้อยท์เพียงพอในการกดไม่ถูกใจ (ต้องการ 12 แต้ม)',
+            ]);
+        }
+        
+        // ถ้ากด like อยู่แล้ว ต้องยกเลิก like ก่อน
+        if ($hasLiked) {
+            $lesson_comment->likeComment()->detach($userId);
+            $lesson_comment->decrement('likes');
+        }
+        
+        $lesson_comment->dislikeComment()->toggle($userId);
+        if($lesson_comment->dislikeComment()->where('user_id', $userId)->exists()){
+            // Dislike
+            $lesson_comment->increment('dislikes');
+            auth()->user()->decrement('pp', 12);
+            $lesson_comment->user->decrement('pp', 12);
+            $this->plearndAdmin->increment('pp', 24);
+        }
+        else{
+            // Undislike
+            $lesson_comment->decrement('dislikes');
+            auth()->user()->decrement('pp', 12);
+            $this->plearndAdmin->increment('pp', 12);
+        }
+
+        return response()->json([
+            'success' => true,
+        ]);
     }
 }

@@ -7,13 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Topic;
 use App\Models\Lesson;
 use Illuminate\Http\Request;
-use App\Http\Resources\Learn\lessons\TopicResource;
-use App\Http\Resources\Learn\info\CourseResource;
-use App\Http\Resources\Learn\lessons\LessonResource;
+use App\Http\Resources\Learn\Course\lessons\TopicResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Http\Resources\Learn\Course\lessons\LessonResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\questions\QuestionResource;
-use App\Http\Resources\Learn\assignments\AssignmentResource;
+use App\Http\Resources\Learn\Course\questions\QuestionResource;
+use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 
 class TopicController extends \App\Http\Controllers\Controller
 {

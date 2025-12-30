@@ -17,12 +17,12 @@ use App\Models\CourseQuizResult;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use App\Exceptions\ImageCopyException;
-use App\Http\Resources\Learn\info\CourseResource;
+use App\\Http\\Resources\\Learn\\Course\\info\\CourseResource;
 
 use Illuminate\Support\Facades\Storage;
 use App\Exceptions\ImageNotFoundException;
-use App\Http\Resources\Learn\quizzes\CourseQuizResource;
-use App\Http\Resources\Learn\groups\CourseGroupResource;
+use App\\Http\\Resources\\Learn\\Course\\quizzes\\CourseQuizResource;
+use App\\Http\\Resources\\Learn\\Course\\groups\\CourseGroupResource;
 
 class CourseQuizController extends Controller
 {

@@ -10,6 +10,7 @@ use App\Models\Assignment;
 use App\Models\LessonImage;
 use App\Models\LessonComment;
 use App\Models\LessonDislike;
+use App\Models\LessonBookmark;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -63,8 +64,18 @@ class Lesson extends Model
     }
 
     public function dislikes(): HasMany
-    { 
-        return $this->hasMany(LessonDislike::class); 
+    {
+        return $this->hasMany(LessonDislike::class);
+    }
+
+    public function bookmarks(): HasMany
+    {
+        return $this->hasMany(LessonBookmark::class);
+    }
+
+    public function isBookmarkedBy(User $user): bool
+    {
+        return $this->bookmarks()->where('user_id', $user->id)->exists();
     }
 
     public function likeLesson(): BelongsToMany

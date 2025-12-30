@@ -63,9 +63,13 @@ class CourseGroupController extends Controller
                 'image_url'         => $cover_filename ?? null,
             ]);
 
+            // Update groups count in course
+            $course->increment('groups');
+
             return response()->json([
                 'success' => true,
                 'newGroup' => new CourseGroupResource(CourseGroup::find($newGroup->id)),
+                'groupsCount' => $course->groups,
             ], 200);
 
         } catch (\Throwable $th) {
@@ -117,8 +121,12 @@ class CourseGroupController extends Controller
 
         $group->delete();
 
+        // Update groups count in course
+        $course->decrement('groups');
+
         return response()->json([
             'success' => true,
+            'groupsCount' => $course->groups,
         ], 200);
     }
 }

@@ -8,7 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use Illuminate\Http\Request;
 use App\Models\AcademyMember;
-use App\Http\Resources\Learn\info\CourseResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 
 class AcademyMemberController extends Controller

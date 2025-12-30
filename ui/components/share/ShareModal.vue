@@ -2,6 +2,8 @@
 import { Icon } from '@iconify/vue'
 import { ref, computed } from 'vue'
 
+const { getAvatarUrl } = useAvatar()
+
 const props = defineProps({
   show: {
     type: Boolean,
@@ -168,7 +170,7 @@ const previewImage = computed(() => {
             <div class="border border-gray-200 dark:border-vikinger-dark-50/30 rounded-xl p-3 bg-gray-50 dark:bg-vikinger-dark-200/50">
               <div class="flex gap-3">
                 <!-- Author -->
-                <img :src="post.author?.avatar || post.user?.avatar || 'https://i.pravatar.cc/150'" class="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" />
+                <img :src="getAvatarUrl(post.author || post.user)" class="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" />
                 <div class="flex-1 min-w-0">
                   <p class="font-semibold text-sm text-gray-800 dark:text-white">{{ post.author?.username || post.user?.username || 'ผู้ใช้' }}</p>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-3">{{ previewContent }}</p>

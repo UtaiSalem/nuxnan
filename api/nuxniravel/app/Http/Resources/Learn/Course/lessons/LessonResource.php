@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Resources\Learn\Course;
+namespace App\Http\Resources\Learn\Course\lessons;
 
 use Illuminate\Http\Request;
 use App\Http\Resources\UserResource;
-use App\Http\Resources\TopicResource;
-use App\Http\Resources\CourseResource;
-use App\Http\Resources\AssignmentResource;
-use App\Http\Resources\LessonCommentResource;
+use App\Http\Resources\Learn\Course\lessons\TopicResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
+use App\Http\Resources\Learn\Course\lessons\LessonCommentResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class LessonResource extends JsonResource
@@ -40,6 +40,8 @@ class LessonResource extends JsonResource
             'comment_count'         => $this->comment_count,
             'share_count'           => $this->share_count,
             'download_count'        => $this->download_count,
+            'is_bookmarked_by_auth' => auth()->check() ? $this->isBookmarkedBy(auth()->user()) : false,
+            'bookmarks_count'       => $this->bookmarks()->count(),
             'status'                => $this->status,
             'assigned_groups'       => $this->assigned_groups,
             'point_tuition_fee'     => $this->point_tuition_fee,

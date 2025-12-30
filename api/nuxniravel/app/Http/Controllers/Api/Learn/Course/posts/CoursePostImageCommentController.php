@@ -9,7 +9,7 @@ use App\Models\Course;
 use App\Models\CoursePost;
 use Illuminate\Http\Request;
 use App\Models\CoursePostImage;
-use App\Http\Resources\Learn\posts\CoursePostImageCommentResource;
+use App\\Http\\Resources\\Learn\\Course\\posts\\CoursePostImageCommentResource;
 
 class CoursePostImageCommentController extends Controller
 {

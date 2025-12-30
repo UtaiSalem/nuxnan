@@ -8,9 +8,9 @@ use App\Models\Course;
 use App\Models\Assignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use App\Http\Resources\Learn\info\CourseResource;
+use App\\Http\\Resources\\Learn\\Course\\info\\CourseResource;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\assignments\AssignmentResource;
+use App\\Http\\Resources\\Learn\\Course\\assignments\\AssignmentResource;
 
 
 class CourseAssignmentController extends Controller

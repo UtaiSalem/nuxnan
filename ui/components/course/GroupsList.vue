@@ -17,11 +17,21 @@ const emit = defineEmits<{
   'edit': [group: any]
   'join': [groupId: number]
   'refresh': []
+  'deleted': [groupId: number]
 }>()
 
 const api = useApi()
+const swal = useSweetAlert()
 const isDeleting = ref(false)
 const showCreateModal = ref(false)
+
+// Local groups list for immediate UI updates
+const localGroups = ref<any[]>([])
+
+// Sync props to local state
+watch(() => props.groups, (newGroups) => {
+  localGroups.value = [...newGroups]
+}, { immediate: true, deep: true })
 
 // Navigate to group
 const navigateToGroup = (group: any) => {
@@ -35,20 +45,55 @@ const editGroup = (group: any) => {
 
 // Delete group
 const deleteGroup = async (groupId: number) => {
-  if (!confirm('ยืนยันการลบกลุ่มนี้หรือไม่? สมาชิกในกลุ่มจะถูกย้ายไปยังกลุ่มหลัก')) return
+  const confirmed = await swal.confirm(
+    'สมาชิกในกลุ่มจะถูกย้ายไปยังกลุ่มหลัก คุณต้องการลบกลุ่มนี้หรือไม่?',
+    'ยืนยันการลบกลุ่ม',
+    {
+      confirmText: 'ลบกลุ่ม',
+      cancelText: 'ยกเลิก',
+      icon: 'warning',
+      isDanger: true
+    }
+  )
+  
+  if (!confirmed) return
   
   isDeleting.value = true
   try {
     const response = await api.delete(`/api/courses/${props.courseId}/groups/${groupId}`)
     if (response.success) {
+      // Remove from local list immediately
+      localGroups.value = localGroups.value.filter(g => g.id !== groupId)
+      swal.success('กลุ่มถูกลบเรียบร้อยแล้ว', 'ลบกลุ่มสำเร็จ')
+      emit('deleted', groupId)
       emit('refresh')
     }
   } catch (err: any) {
-    alert(err.data?.msg || 'ไม่สามารถลบกลุ่มได้')
+    swal.error(err.data?.msg || 'เกิดข้อผิดพลาดในการลบกลุ่ม', 'ไม่สามารถลบกลุ่มได้')
   } finally {
     isDeleting.value = false
   }
 }
+
+// Add new group to local list (called from parent after create success)
+const addGroup = (group: any) => {
+  localGroups.value.push(group)
+}
+
+// Update group in local list
+const updateGroup = (updatedGroup: any) => {
+  const index = localGroups.value.findIndex(g => g.id === updatedGroup.id)
+  if (index !== -1) {
+    localGroups.value[index] = { ...localGroups.value[index], ...updatedGroup }
+  }
+}
+
+// Expose methods to parent
+defineExpose({
+  addGroup,
+  updateGroup,
+  localGroups
+})
 </script>
 
 <template>
@@ -62,7 +107,7 @@ const deleteGroup = async (groupId: number) => {
           </div>
           <div>
             <h2 class="text-lg font-bold text-gray-900 dark:text-white">กลุ่มเรียน</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ groups.length }} กลุ่ม</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ localGroups.length }} กลุ่ม</p>
           </div>
         </div>
         <button
@@ -77,9 +122,9 @@ const deleteGroup = async (groupId: number) => {
     </div>
 
     <!-- Groups Grid -->
-    <div v-if="groups.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div v-if="localGroups.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <GroupCard
-        v-for="group in groups"
+        v-for="group in localGroups"
         :key="group.id"
         :group="group"
         :course-id="courseId"

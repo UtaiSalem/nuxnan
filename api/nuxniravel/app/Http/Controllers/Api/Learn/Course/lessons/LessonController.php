@@ -7,10 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Lesson;
 use Illuminate\Http\Request;
-use App\Http\Resources\Learn\info\CourseResource;
-use App\Http\Resources\Learn\lessons\LessonResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Http\Resources\Learn\Course\lessons\LessonResource;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\groups\CourseGroupResource;
+use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 
 class LessonController extends Controller
 {

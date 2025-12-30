@@ -55,15 +55,6 @@ class Question extends Model
         return $this->morphMany(QuestionOption::class, 'optionable');
     }
 
-    /**
-     * Get the courseQuiz that owns the Question
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
-    public function courseQuiz(): BelongsTo
-    {
-        return $this->belongsTo(CourseQuiz::class, 'quiz_id');
-    }
 
     /**
      * Get all of the userAnsers for the Question

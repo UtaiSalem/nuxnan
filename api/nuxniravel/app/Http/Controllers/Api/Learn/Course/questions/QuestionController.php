@@ -7,7 +7,7 @@ use App\Models\Question;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\questions\QuestionResource;
+use App\\Http\\Resources\\Learn\\Course\\questions\\QuestionResource;
 
 class QuestionController extends Controller
 {
@@ -33,44 +33,35 @@ class QuestionController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Course $course, Request $request)
+    public function store(Request $request)
     {
- 
         $validatedData = $request->validate([
             'text' =>'required|string',
             'points' =>'required|integer',
             'pp_fine' => 'nullable|integer',
+            'course_id' => 'required|integer',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
-        $quiz = $question->questionable;
-
-        $new_question = $quiz->questions()->create([
+        $new_question = Question::create([
             'user_id'   => auth()->id(),
-            'course_id' => $course->id,
+            'course_id' => $request->course_id,
             'text'      => $request->text,
             'points'    => $request->points,
             'pp_fine'  => $request->pp_fine ?? 0,
         ]);
-    
-        $course = $quiz->course;
 
-        $course->increment('total_score', $request->points);
-        $quiz->increment('total_score', $request->points);
-        $quiz->increment('total_questions');
-    
         if($request->hasFile('images')) {
             $q_images = $request->file('images');
             foreach ($q_images as $q_image) {
                 $q_img_filename = uniqid() . '.' . $q_image->getClientOriginalExtension();
-                Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $q_image, $q_img_filename);
+                Storage::disk('public')->putFileAs('images/courses/questions', $q_image, $q_img_filename);
                 $new_question->images()->create([
                     'filename' => $q_img_filename,
                 ]);
             }
         }
-        
 
         return response()->json([
             'success' => true,
@@ -91,28 +82,17 @@ class QuestionController extends Controller
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
-        $quiz = $question->questionable;
-        $quiz->decrement('total_score', $question->points);
-        
-        $course = $quiz->course;
-        $course->decrement('total_score', $question->points);
-        
         $question->update([
             'text'      => $request->text,
             'points'    => $request->points,
             'pp_fine'  => $request->pp_fine ?? 0,
-            ]);
-            
-        $quiz->increment('total_score', $question->points);
-        $course->increment('total_score', $question->points);
-        
-        // $quiz->increment('total_questions');
+        ]);
 
         if($request->hasFile('images')) {
             $q_images = $request->file('images');
             foreach ($q_images as $q_image) {
                 $q_img_filename = uniqid() . '.' . $q_image->getClientOriginalExtension();
-                Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $q_image, $q_img_filename);
+                Storage::disk('public')->putFileAs('images/courses/questions', $q_image, $q_img_filename);
                 $question->images()->create([
                     'filename' => $q_img_filename,
                 ]);
@@ -120,7 +100,7 @@ class QuestionController extends Controller
         }
 
         $question->refresh();
-    
+
         $questionResource = new QuestionResource($question);
 
         return response()->json([
@@ -161,7 +141,7 @@ class QuestionController extends Controller
     {
         if ($question->images) {
             foreach ($question->images as $q_image) {
-                Storage::disk('public')->delete('images/courses/questions'. $q_image->filename);
+                Storage::disk('public')->delete('images/courses/questions/' . $q_image->filename);
             }
             $question->images()->delete();
         }
@@ -170,7 +150,7 @@ class QuestionController extends Controller
             foreach ($question->options as $option) {
                 if ($option->images) {
                     foreach ($option->images as $o_image) {
-                        Storage::disk('public')->delete('images/courses/questions'. $o_image->filename);
+                        Storage::disk('public')->delete('images/courses/questions/' . $o_image->filename);
                     }
                     $option->images()->delete();
                 }
@@ -178,16 +158,8 @@ class QuestionController extends Controller
             $question->options()->delete();
         }
 
-        // decrement quiz's total_score
-        $quiz = $question->questionable;
-        $quiz->decrement('total_score', $question->points);
-        $quiz->decrement('total_questions');
-
-        $course = $question->course;
-        $course->decrement('total_score', $question->points);
-
         $question->delete();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Question deleted successfully',
@@ -196,17 +168,21 @@ class QuestionController extends Controller
 
     public function duplicateQuestion(Question $question, Request $request)
     {
-        // $old_question = $question;
         $new_question = $question->replicate();
-        $new_question->questionable_id = $request->quiz_id;
+        if ($request->quiz_id) {
+            $new_question->questionable_type = 'App\Models\CourseQuiz';
+            $new_question->questionable_id = $request->quiz_id;
+        }
         $new_question->save();
 
-        $quiz = $new_question->questionable;
-        $quiz->increment('total_score', $question->points);
-        $quiz->increment('total_questions');
+        if ($request->quiz_id) {
+            $quiz = $new_question->questionable;
+            $quiz->increment('total_score', $question->points);
+            $quiz->increment('total_questions');
 
-        $course = $quiz->course;
-        $course->increment('total_score', $question->points);
+            $course = $quiz->course;
+            $course->increment('total_score', $question->points);
+        }
 
         if($question->images){
             foreach ($question->images as $old_q_image) {

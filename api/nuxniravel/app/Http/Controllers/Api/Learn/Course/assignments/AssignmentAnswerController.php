@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\AssignmentAnswer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\assignments\AssignmentAnswerResource;
+use App\\Http\\Resources\\Learn\\Course\\assignments\\AssignmentAnswerResource;
 
 class AssignmentAnswerController extends Controller
 {

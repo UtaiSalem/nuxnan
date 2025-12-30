@@ -9,7 +9,7 @@ use App\Models\CourseGroup;
 use App\Models\CourseMember;
 use Illuminate\Http\Request;
 use App\Models\CourseGroupMember;
-use App\Http\Resources\Learn\groups\CourseGroupResource;
+use App\\Http\\Resources\\Learn\\Course\\groups\\CourseGroupResource;
 
 class CourseGroupMemberController extends Controller
 {

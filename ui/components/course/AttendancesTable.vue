@@ -2,6 +2,8 @@
 import { Icon } from '@iconify/vue'
 import AttendanceStatusBadge from '~/components/course/AttendanceStatusBadge.vue'
 
+const { getAvatarUrl } = useAvatar()
+
 interface Props {
   attendances: any[]
   groupMembers: any[]
@@ -36,25 +38,17 @@ const getMemberStatus = (attendance: any, memberId: number) => {
   return detail?.status
 }
 
-// Get avatar URL with fallback
-const getAvatarUrl = (member: any) => {
-  const avatarPath = member.user?.avatar || member.avatar
-  if (!avatarPath) return '/images/default-avatar.png'
-  
-  // If already full URL, return as is
-  if (avatarPath.startsWith('http')) return avatarPath
-  
-  // If starts with /, return as is (already absolute path)
-  if (avatarPath.startsWith('/')) return avatarPath
-  
-  // Otherwise prepend storage path
-  return `/storage/${avatarPath}`
+// Get avatar for member using useAvatar composable
+const getMemberAvatar = (member: any) => {
+  return getAvatarUrl(member.user || member)
 }
 
 // Handle image error
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
-  img.src = '/images/default-avatar.png'
+  const name = img.alt || 'User'
+  // Fallback to UI Avatars
+  img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&color=7F9CF5&background=EBF4FF`
 }
 </script>
 
@@ -118,7 +112,7 @@ const handleImageError = (event: Event) => {
                 <div class="relative">
                   <img
                     class="w-14 h-14 rounded-full border-2 border-white dark:border-gray-700 shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg object-cover"
-                    :src="getAvatarUrl(member)"
+                    :src="getMemberAvatar(member)"
                     :alt="member.user?.name || member.name || 'Avatar'"
                     @error="handleImageError"
                   >

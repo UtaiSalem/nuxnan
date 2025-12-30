@@ -128,7 +128,7 @@ export const useCourseGroupStore = defineStore('courseGroup', () => {
       if (group) {
         addGroup(group)
       }
-      return response
+      return group // Return the group object
     } catch (err: any) {
       error.value = err.data?.msg || 'ไม่สามารถสร้างกลุ่มได้'
       throw err
@@ -149,7 +149,7 @@ export const useCourseGroupStore = defineStore('courseGroup', () => {
       if (group) {
         updateGroup(groupId as number, group)
       }
-      return response
+      return group // Return the group object
     } catch (err: any) {
       error.value = err.data?.msg || 'ไม่สามารถอัพเดทกลุ่มได้'
       throw err

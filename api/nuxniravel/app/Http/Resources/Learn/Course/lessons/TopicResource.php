@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Learn\Course\lessons;
 
 use Illuminate\Http\Request;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class TopicResourse extends JsonResource
+class TopicResource extends JsonResource
 {
     /**
      * Transform the resource into an array.

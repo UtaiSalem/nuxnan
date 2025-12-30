@@ -16,7 +16,13 @@ export const useAuth = () => {
         return true
     }
 
+    // Computed wrapper for user
+    const user = computed(() => authStore.user)
+    const isAuthenticated = computed(() => authStore.isAuthenticated)
+
     return {
+        user,
+        isAuthenticated,
         login,
         register
     }

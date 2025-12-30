@@ -3,7 +3,10 @@ import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
 
 const authStore = useAuthStore()
+const { getAvatarUrl } = useAvatar()
 const emit = defineEmits(['open-modal'])
+
+const userAvatar = computed(() => getAvatarUrl(authStore.user))
 
 const openModal = () => {
   emit('open-modal')
@@ -14,7 +17,7 @@ const openModal = () => {
   <div class="bg-white dark:bg-vikinger-dark-100 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-vikinger-dark-50/20">
     <div class="flex items-center gap-3 mb-3">
       <img 
-        :src="authStore.user?.avatar || 'https://i.pravatar.cc/40'" 
+        :src="userAvatar" 
         alt="Avatar" 
         class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-purple/20"
       />

@@ -6,6 +6,7 @@ import GroupForm from '~/components/course/GroupForm.vue'
 // Inject course data from parent
 const course = inject<Ref<any>>('course')
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
+const refreshCourse = inject<() => Promise<void>>('refreshCourse')
 
 // Stores
 const courseGroupStore = useCourseGroupStore()
@@ -19,6 +20,10 @@ const editingGroup = ref<any>(null)
 
 // API
 const api = useApi()
+const swal = useSweetAlert()
+
+// Ref for GroupsList component
+const groupsListRef = ref<InstanceType<typeof GroupsList> | null>(null)
 
 // Load groups from store
 const loadGroups = async () => {
@@ -63,6 +68,37 @@ const handleRefresh = async () => {
   }
 }
 
+// Handle group deleted - refresh course data to update groups count
+const handleGroupDeleted = async (groupId: number) => {
+  // Refresh course data to update groups count in UI
+  if (refreshCourse) {
+    await refreshCourse()
+  }
+}
+
+// Handle group saved (created or updated)
+const handleGroupSaved = async (savedGroup: any) => {
+  showCreateModal.value = false
+  
+  if (editingGroup.value) {
+    // Update existing group
+    groupsListRef.value?.updateGroup(savedGroup)
+    swal.success('อัปเดตกลุ่มสำเร็จ', 'แก้ไขกลุ่มสำเร็จ')
+  } else {
+    // Add new group immediately to UI
+    groupsListRef.value?.addGroup(savedGroup)
+    swal.success('สร้างกลุ่มใหม่สำเร็จ', 'สร้างกลุ่มสำเร็จ')
+    
+    // Refresh course data to update groups count
+    if (refreshCourse) {
+      await refreshCourse()
+    }
+  }
+  
+  // Also refresh from API to ensure sync
+  await handleRefresh()
+}
+
 // Load on mount
 onMounted(async () => {
   if (course?.value?.id) {
@@ -91,6 +127,7 @@ watch(() => course?.value?.id, async (newId) => {
     <!-- Groups List -->
     <GroupsList 
       v-else
+      ref="groupsListRef"
       :groups="groups"
       :course-id="course?.id"
       :is-course-admin="isCourseAdmin"
@@ -98,6 +135,7 @@ watch(() => course?.value?.id, async (newId) => {
       @edit="handleEdit"
       @join="handleJoin"
       @refresh="handleRefresh"
+      @deleted="handleGroupDeleted"
     />
 
     <!-- Create/Edit Modal -->
@@ -120,7 +158,7 @@ watch(() => course?.value?.id, async (newId) => {
         <GroupForm
           :course-id="course?.id"
           :group="editingGroup"
-          @saved="showCreateModal = false"
+          @saved="handleGroupSaved"
           @cancel="showCreateModal = false"
         />
       </template>

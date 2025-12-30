@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use App\Enums\ActivityType;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\ActivityResource;
-use App\Http\Resources\Learn\posts\CoursePostResource;
+use App\Http\Resources\Learn\Course\posts\CoursePostResource;
 use App\Http\Requests\StoreCoursePostRequest;
 use App\Http\Requests\UpdateCoursePostRequest;
 
@@ -20,9 +20,65 @@ class CoursePostController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Course $course, Request $request)
     {
-        //
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
+        $type = $request->input('type'); // discussions, questions, materials, announcements
+        
+        $query = CoursePost::where('course_id', $course->id)
+            ->with([
+                'user:id,name,email,profile_photo_path',
+                'post_images',
+                'post_comments' => function($q) {
+                    $q->with(['user:id,name,email,profile_photo_path'])
+                      ->orderBy('created_at', 'desc')
+                      ->limit(3);
+                },
+            ])
+            ->withCount(['post_comments', 'post_likes', 'post_dislikes'])
+            ->orderBy('created_at', 'desc');
+        
+        // Add type filter if specified
+        if ($type && $type !== 'all') {
+            $query->where('post_type', $type);
+        }
+        
+        $posts = $query->paginate($perPage, ['*'], 'page', $page);
+        
+        // Add auth user reaction status to each post
+        $userId = auth()->id();
+        $posts->getCollection()->transform(function ($post) use ($userId) {
+            $post->isLikedByAuth = $post->post_likes()->where('user_id', $userId)->exists();
+            $post->isDislikedByAuth = $post->post_dislikes()->where('user_id', $userId)->exists();
+            $post->likes = $post->post_likes_count;
+            $post->dislikes = $post->post_dislikes_count;
+            $post->comments_count = $post->post_comments_count;
+            $post->diff_humans_created_at = $post->created_at->diffForHumans();
+            
+            // Add images resources
+            $post->imagesResources = $post->post_images->map(function ($image) {
+                return [
+                    'id' => $image->id,
+                    'url' => asset('storage/images/courses/posts/' . $image->filename),
+                    'filename' => $image->filename,
+                ];
+            });
+            
+            return $post;
+        });
+        
+        return response()->json([
+            'success' => true,
+            'data' => $posts->items(),
+            'pagination' => [
+                'current_page' => $posts->currentPage(),
+                'last_page' => $posts->lastPage(),
+                'per_page' => $posts->perPage(),
+                'total' => $posts->total(),
+                'has_more' => $posts->hasMorePages(),
+            ]
+        ]);
     }
 
     /**

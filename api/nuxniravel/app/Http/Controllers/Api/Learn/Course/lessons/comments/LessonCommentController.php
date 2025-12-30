@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Api\Learn\Course\lessons\comments;
 use App\Http\Controllers\Controller;
 use App\Models\Lesson;
 use Illuminate\Http\Request;
-use App\Models\comments\LessonComment;
+use App\Models\LessonComment;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\lessons\LessonCommentResource;
+use App\Http\Resources\Learn\Course\lessons\LessonCommentResource;
 
-class LessonCommentController extends \App\Http\Controllers\Controller
+class LessonCommentController extends Controller
 {
     //get all comments resource collections for a lesson by lesson id and paginate them
     public function index(Lesson $lesson)

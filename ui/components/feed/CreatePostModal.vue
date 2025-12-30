@@ -16,6 +16,7 @@ const emit = defineEmits(['close', 'post-created'])
 const { $apiFetch } = useNuxtApp()
 const authStore = useAuthStore()
 const swal = useSweetAlert()
+const { getAvatarUrl } = useAvatar()
 const { 
   feelings, 
   activityTypes, 
@@ -23,6 +24,9 @@ const {
   fetchPostOptions, 
   createPost: createPostApi 
 } = usePosts()
+
+// Current user avatar
+const currentUserAvatar = computed(() => getAvatarUrl(authStore.user))
 
 // Form state
 const postText = ref('')
@@ -327,7 +331,7 @@ const removeTaggedFriend = (friendId) => {
 
                 <!-- User & Privacy -->
                 <div class="flex items-center gap-3 mb-4">
-                  <img :src="authStore.user?.avatar || 'https://i.pravatar.cc/40'" class="w-10 h-10 rounded-full object-cover" />
+                  <img :src="currentUserAvatar" class="w-10 h-10 rounded-full object-cover" />
                   <div class="flex-1">
                     <div class="font-medium text-gray-800 dark:text-white">{{ authStore.user?.name }}</div>
                     <button @click="showPrivacyOptions = !showPrivacyOptions" class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
@@ -471,7 +475,7 @@ const removeTaggedFriend = (friendId) => {
                   <!-- Tagged Friends Display -->
                   <div v-if="taggedFriends.length > 0" class="flex flex-wrap gap-2 mb-3">
                     <div v-for="friend in taggedFriends" :key="friend.id" class="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                      <img :src="friend.avatar || 'https://i.pravatar.cc/40'" class="w-5 h-5 rounded-full" />
+                      <img :src="getAvatarUrl(friend)" class="w-5 h-5 rounded-full" />
                       <span class="text-xs text-blue-700 dark:text-blue-300">{{ friend.name }}</span>
                       <button @click="removeTaggedFriend(friend.id)" class="ml-1 text-blue-500 hover:text-red-500">
                         <Icon icon="mdi:close" class="w-3 h-3" />
@@ -499,7 +503,7 @@ const removeTaggedFriend = (friendId) => {
                   <!-- Search Results -->
                   <div v-if="friendSearchResults.length > 0" class="mt-2 space-y-1 max-h-40 overflow-y-auto border border-gray-200 dark:border-vikinger-dark-50/30 rounded-lg bg-white dark:bg-vikinger-dark-100">
                     <button v-for="friend in friendSearchResults" :key="friend.id" @click="tagFriend(friend)" class="w-full flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 transition-colors" :class="{ 'opacity-50 cursor-not-allowed': taggedFriends.find(f => f.id === friend.id) }" :disabled="!!taggedFriends.find(f => f.id === friend.id)">
-                      <img :src="friend.avatar || 'https://i.pravatar.cc/40'" class="w-8 h-8 rounded-full" />
+                      <img :src="getAvatarUrl(friend)" class="w-8 h-8 rounded-full" />
                       <div class="flex-1 text-left">
                         <span class="text-sm text-gray-800 dark:text-white block">{{ friend.name }}</span>
                         <span v-if="friend.username" class="text-xs text-gray-500">@{{ friend.username }}</span>

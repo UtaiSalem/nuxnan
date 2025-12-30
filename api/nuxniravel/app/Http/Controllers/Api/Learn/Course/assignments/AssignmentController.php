@@ -8,10 +8,10 @@ use App\Models\Assignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-use App\Http\Resources\Learn\info\CourseResource;
-use App\Http\Resources\Learn\lessons\LessonResource;
-use App\Http\Resources\Learn\assignments\AssignmentResource;
-use App\Http\Resources\Learn\groups\CourseGroupResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Http\Resources\Learn\Course\lessons\LessonResource;
+use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
+use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 
 class AssignmentController extends Controller
 {

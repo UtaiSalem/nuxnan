@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Resources\Learn\Course;
+namespace App\Http\Resources\Learn\Course\lessons;
 
 use Illuminate\Http\Request;
 use App\Http\Resources\UserResource;

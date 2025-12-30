@@ -9,7 +9,7 @@ use App\Models\CourseQuiz;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\questions\QuestionResource;
+use App\\Http\\Resources\\Learn\\Course\\questions\\QuestionResource;
 
 class CourseQuizQuestionController extends Controller
 {
