@@ -3,6 +3,9 @@ import { Icon } from '@iconify/vue'
 import GroupsList from '~/components/course/GroupsList.vue'
 import GroupForm from '~/components/course/GroupForm.vue'
 import { usePage } from '@inertiajs/vue3'
+import { useCourseMemberStore } from '~/stores/courseMember'
+import { useAuthStore } from '~/stores/auth'
+import { useCourseStore } from '~/stores/course'
 
 // Inject course data from parent
 const course = inject<Ref<any>>('course')
@@ -11,6 +14,9 @@ const refreshCourse = inject<() => Promise<void>>('refreshCourse')
 
 // Stores
 const courseGroupStore = useCourseGroupStore()
+const courseMemberStore = useCourseMemberStore()
+const authStore = useAuthStore()
+const courseStore = useCourseStore()
 const route = useRoute()
 const page = usePage()
 
@@ -58,62 +64,78 @@ const joiningGroupId = ref<number | null>(null)
 
 // Join group
 const handleJoin = async (groupId: number) => {
+  // Check Points first
+  const userPP = authStore.user?.pp || 0
+  const tuitionFees = courseStore.course?.tuition_fees || 0
+
+  if (userPP < tuitionFees) {
+      await swal.fire({
+          icon: 'warning',
+          title: 'ขออภัย',
+          text: 'คุณมีแต้มสะสมไม่เพียงพอที่จะสมัครเข้าร่วมกลุ่มรายวิชานี้ กรุณาเติมแต้มสะสมก่อน',
+          confirmButtonText: 'ตกลง'
+      })
+      return
+  }
+
+  // Capture old group ID before any changes
+  const oldGroupId = courseMemberStore.member?.group_id
+  const userId = authStore.user?.id
+
   joiningGroupId.value = groupId
   try {
     const res = await api.post(`/api/courses/${course.value.id}/groups/${groupId}/members`)
     
+    // Handle Resource nesting (data wrapper)
+    let memberData = res.courseMemberOfAuth
+    if (memberData && memberData.data) {
+        memberData = memberData.data
+    }
+    
+    // --- 1. Optimistic UI Update (Immediate) ---
+    // Update Old Group (if exists and different from new)
+    if (oldGroupId && oldGroupId != groupId) {
+        const oldGroup = courseGroupStore.getGroupById(oldGroupId)
+        if (oldGroup) {
+            courseGroupStore.updateGroup(oldGroupId, {
+                members_count: Math.max(0, (oldGroup.members_count || 0) - 1),
+                groupMemberOfAuth: null
+            })
+        }
+    }
+
+    // Update New Group
+    const newGroup = courseGroupStore.getGroupById(groupId)
+    if (newGroup) {
+         // Only increment if not already a member locally
+         const newCount = newGroup.groupMemberOfAuth ? (newGroup.members_count || 0) : ((newGroup.members_count || 0) + 1)
+         
+         courseGroupStore.updateGroup(groupId, {
+             members_count: newCount,
+             groupMemberOfAuth: {
+                 user_id: userId,
+                 group_id: groupId,
+                 status: 1,
+                 ...memberData // usage of memberData properties if needed
+             }
+         })
+    }
+
+    // --- 2. Update Stores ---
+    // Update Member Store
+    courseMemberStore.setMember(memberData)
+    
+    // Refresh Group Store (Server Sync) - acts as confirmation
+    await courseGroupStore.fetchGroups(course.value.id, true)
+
     // Show success message
     await swal.success(
         res.message || 'ดำเนินการเรียบร้อยแล้ว',
         'สำเร็จ (Success)'
     )
     
-    
-    // --- Seamless Update (No Reload) ---
-
-    // 1. Update Global Auth State (courseMemberOfAuth)
-    const authMember = page.props.courseMemberOfAuth as any
-    const oldGroupId = authMember?.group_id || null
-
-    if (authMember) {
-        authMember.group_id = groupId
-        authMember.group_member_status = 1 
-    }
-
-    // 2. Update Local Groups List (Member Counts & Button State)
-    if (groupsListRef.value?.localGroups) {
-        const groups = groupsListRef.value.localGroups
-        const userId = page.props.auth.user.id
-        
-        // Loop through all groups to ensure clean state
-        groups.forEach((g: any) => {
-             // If this was the old group (has auth member)
-             if (g.groupMemberOfAuth && g.id != groupId) {
-                 g.members_count = Math.max(0, (g.members_count || 0) - 1)
-                 g.groupMemberOfAuth = null
-             }
-             
-             // If this is the new group
-             if (g.id == groupId) {
-                 // Only increment if not already a member (safety check)
-                 if (!g.groupMemberOfAuth) {
-                     g.members_count = (g.members_count || 0) + 1
-                 }
-                 g.groupMemberOfAuth = { 
-                     user_id: userId, 
-                     group_id: groupId, 
-                     status: 1 
-                 }
-             }
-        })
-    }
-    
   } catch (error: any) {
     console.error('Join Error:', error)
-    // Only show error alert if it's NOT a runtime error from our update logic to avoid confusing user 
-    // (though in prod we want to know, but here we want to avoid double alert if success happened)
-    // But we can't easily distinguish without checking if swal.success was called.
-    // However, fixing the usePage crash should solve the root cause.
     swal.error(error.data?.message || 'ไม่สามารถเข้าร่วมกลุ่มได้', 'เกิดข้อผิดพลาด')
   } finally {
     joiningGroupId.value = null

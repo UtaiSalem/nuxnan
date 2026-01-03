@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { usePage } from '@inertiajs/vue3'
 import Swal from 'sweetalert2'
+import { useCourseMemberStore } from '~/stores/courseMember'
+import { storeToRefs } from 'pinia'
 
 interface Props {
   group: any
@@ -89,10 +90,11 @@ const formatNumber = (num: number | undefined | null) => {
 const isMember = computed(() => !!props.group.groupMemberOfAuth)
 
 // Check if user is member of ANY group (from global state)
-const page = usePage()
-const courseMemberOfAuth = computed(() => page.props.courseMemberOfAuth as any)
+const courseMemberStore = useCourseMemberStore()
+const { member } = storeToRefs(courseMemberStore)
+
 const isMemberOfOtherGroup = computed(() => {
-    return courseMemberOfAuth.value?.group_id && courseMemberOfAuth.value.group_id != props.group.id
+    return member.value?.group_id && member.value.group_id != props.group.id
 })
 
 const handleJoinClick = async () => {
