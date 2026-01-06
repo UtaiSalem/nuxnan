@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import BaseCard from '~/components/atoms/BaseCard.vue'
+import MyCoursesWidget from '~/components/widgets/MyCoursesWidget.vue'
 
 definePageMeta({
   layout: 'main',
-  middleware: 'auth'
+  middleware: 'auth',
 })
 
 useHead({
-  title: 'Courses - Marketplace'
+  title: 'Courses - Marketplace',
 })
 
 const api = useApi()
@@ -96,10 +97,10 @@ const fetchCourses = async (page = 1, append = false) => {
 
     // Response could be { courses: [...] } or { success: true, courses: [...] }
     if (response.courses) {
-      const newCourses = Array.isArray(response.courses) 
-        ? response.courses 
-        : (response.courses.data || [])
-      
+      const newCourses = Array.isArray(response.courses)
+        ? response.courses
+        : response.courses.data || []
+
       if (append) {
         courses.value = [...courses.value, ...newCourses]
       } else {
@@ -222,7 +223,10 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
         <div class="flex flex-wrap gap-3 mb-6">
           <!-- Search -->
           <div class="relative flex-1 min-w-[200px]">
-            <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Icon
+              icon="fluent:search-24-regular"
+              class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+            />
             <input
               v-model="searchQuery"
               @input="handleSearch"
@@ -266,7 +270,11 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
         <!-- Loading State -->
         <template v-if="isLoading">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div v-for="i in 6" :key="i" class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden animate-pulse shadow-lg">
+            <div
+              v-for="i in 6"
+              :key="i"
+              class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden animate-pulse shadow-lg"
+            >
               <div class="h-44 bg-gray-200 dark:bg-gray-700"></div>
               <div class="p-4 space-y-3">
                 <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
@@ -278,11 +286,14 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
         </template>
 
         <!-- Error State -->
-        <div v-else-if="error" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-lg">
+        <div
+          v-else-if="error"
+          class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-lg"
+        >
           <Icon icon="fluent:error-circle-24-regular" class="w-20 h-20 text-red-500 mx-auto mb-4" />
           <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">เกิดข้อผิดพลาด</h3>
           <p class="text-gray-500 mb-4">{{ error }}</p>
-          <button 
+          <button
             @click="fetchCourses(1)"
             class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
@@ -291,7 +302,10 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="courses.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-lg">
+        <div
+          v-else-if="courses.length === 0"
+          class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-lg"
+        >
           <Icon icon="fluent:book-24-regular" class="w-20 h-20 text-gray-400 mx-auto mb-4" />
           <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">ไม่พบรายวิชา</h3>
           <p class="text-gray-500">ลองค้นหาด้วยคำค้นอื่น หรือเปลี่ยนตัวกรอง</p>
@@ -313,20 +327,22 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
                   :alt="course.name"
                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-                
+
                 <!-- Badge (Best Seller / Trending) -->
-                <div 
+                <div
                   v-if="getBadgeType(course, index)"
                   :class="[
                     'absolute top-3 left-3 px-3 py-1 text-white text-xs font-bold rounded shadow-lg',
-                    getBadgeType(course, index) === 'bestseller' ? 'bg-blue-500' : 'bg-orange-500'
+                    getBadgeType(course, index) === 'bestseller' ? 'bg-blue-500' : 'bg-orange-500',
                   ]"
                 >
                   {{ getBadgeType(course, index) === 'bestseller' ? 'Best Seller' : 'Trending' }}
                 </div>
 
                 <!-- Rating Badge -->
-                <div class="absolute bottom-3 left-3 px-2 py-1 bg-yellow-500 text-gray-900 rounded text-xs font-bold flex items-center gap-1">
+                <div
+                  class="absolute bottom-3 left-3 px-2 py-1 bg-yellow-500 text-gray-900 rounded text-xs font-bold flex items-center gap-1"
+                >
                   <Icon icon="fluent:star-16-filled" class="w-3 h-3" />
                   <span>{{ course.rating || '4.5' }}</span>
                 </div>
@@ -337,17 +353,21 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
                 <!-- Instructor & Price Row -->
                 <div class="flex items-center justify-between mb-3">
                   <div v-if="course.user" class="flex items-center gap-2">
-                    <img 
-                      :src="getInstructorAvatar(course)" 
+                    <img
+                      :src="getInstructorAvatar(course)"
                       :alt="course.user.name"
                       class="w-8 h-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
                     />
                     <div class="min-w-0">
-                      <p class="text-xs text-gray-500 dark:text-gray-400">By: {{ course.user.name }}</p>
-                      <p class="text-xs text-blue-500 truncate">{{ course.category || 'General' }}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">
+                        By: {{ course.user.name }}
+                      </p>
+                      <p class="text-xs text-blue-500 truncate">
+                        {{ course.category || 'General' }}
+                      </p>
                     </div>
                   </div>
-                  
+
                   <!-- Price -->
                   <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 font-bold">
                     <Icon icon="ri:bit-coin-line" class="w-5 h-5 text-yellow-500" />
@@ -356,12 +376,16 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
                 </div>
 
                 <!-- Title -->
-                <h3 class="text-gray-800 dark:text-white font-bold mb-3 line-clamp-2 group-hover:text-blue-500 transition-colors">
+                <h3
+                  class="text-gray-800 dark:text-white font-bold mb-3 line-clamp-2 group-hover:text-blue-500 transition-colors"
+                >
                   {{ course.name }}
                 </h3>
 
                 <!-- Stats Row -->
-                <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <div
+                  class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-700"
+                >
                   <div class="flex items-center gap-1">
                     <Icon icon="fluent:book-open-16-regular" class="w-4 h-4" />
                     <span>{{ course.lessons_count || 20 }} Lectures</span>
@@ -373,7 +397,10 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
                 </div>
 
                 <!-- Member Badge -->
-                <div v-if="course.isMember" class="mt-3 flex items-center justify-center gap-2 py-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-sm font-medium">
+                <div
+                  v-if="course.isMember"
+                  class="mt-3 flex items-center justify-center gap-2 py-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-sm font-medium"
+                >
                   <Icon icon="fluent:checkmark-circle-16-filled" class="w-4 h-4" />
                   เป็นสมาชิกแล้ว
                 </div>
@@ -388,9 +415,11 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
               :disabled="isLoadingMore"
               class="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto font-medium"
             >
-              <Icon 
-                :icon="isLoadingMore ? 'fluent:spinner-ios-20-regular' : 'fluent:arrow-down-24-regular'" 
-                :class="['w-5 h-5', { 'animate-spin': isLoadingMore }]" 
+              <Icon
+                :icon="
+                  isLoadingMore ? 'fluent:spinner-ios-20-regular' : 'fluent:arrow-down-24-regular'
+                "
+                :class="['w-5 h-5', { 'animate-spin': isLoadingMore }]"
               />
               {{ isLoadingMore ? 'กำลังโหลด...' : 'โหลดเพิ่มเติม' }}
             </button>
@@ -400,34 +429,40 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
 
       <!-- Sidebar -->
       <div class="w-full lg:w-80 space-y-6 flex-shrink-0">
+        <MyCoursesWidget />
         <!-- Popular Courses Widget -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
           <div class="p-4 border-b border-gray-100 dark:border-gray-700">
             <h3 class="font-bold text-gray-800 dark:text-white">Popular Courses</h3>
           </div>
           <div class="divide-y divide-gray-100 dark:divide-gray-700">
-            <div 
-              v-for="course in popularCourses" 
+            <div
+              v-for="course in popularCourses"
               :key="course.id"
               class="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
               @click="goToCourse(course.id)"
             >
-              <img 
-                :src="getCoverUrl(course)" 
+              <img
+                :src="getCoverUrl(course)"
                 :alt="course.name"
                 class="w-16 h-16 rounded-lg object-cover flex-shrink-0"
               />
               <div class="flex-1 min-w-0">
-                <h4 class="text-sm font-medium text-gray-800 dark:text-white line-clamp-2 mb-1">{{ course.name }}</h4>
+                <h4 class="text-sm font-medium text-gray-800 dark:text-white line-clamp-2 mb-1">
+                  {{ course.name }}
+                </h4>
                 <p class="text-xs text-blue-500">{{ course.user?.name || 'Unknown' }}</p>
               </div>
               <button class="p-1 text-gray-400 hover:text-blue-500 transition-colors flex-shrink-0">
                 <Icon icon="fluent:bookmark-24-regular" class="w-5 h-5" />
               </button>
             </div>
-            
+
             <!-- Empty state -->
-            <div v-if="popularCourses.length === 0 && !isLoading" class="p-4 text-center text-gray-500 text-sm">
+            <div
+              v-if="popularCourses.length === 0 && !isLoading"
+              class="p-4 text-center text-gray-500 text-sm"
+            >
               ไม่มีข้อมูล
             </div>
           </div>
@@ -437,36 +472,48 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
           <h3 class="font-bold text-gray-800 dark:text-white mb-3">Ask Research Question?</h3>
           <div class="flex items-start gap-3 mb-4">
-            <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0"
+            >
               <Icon icon="fluent:question-circle-24-regular" class="w-5 h-5 text-blue-500" />
             </div>
             <p class="text-sm text-gray-600 dark:text-gray-400">
               Ask questions in Q&A to get help from experts in your field.
             </p>
           </div>
-          <button class="w-full py-2.5 border-2 border-blue-500 text-blue-500 rounded-lg font-medium hover:bg-blue-500 hover:text-white transition-colors">
+          <button
+            class="w-full py-2.5 border-2 border-blue-500 text-blue-500 rounded-lg font-medium hover:bg-blue-500 hover:text-white transition-colors"
+          >
             Ask a question
           </button>
         </div>
 
         <!-- Explore Events Widget -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <div
+            class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between"
+          >
             <h3 class="font-bold text-gray-800 dark:text-white">Explore Events</h3>
             <NuxtLink to="/events" class="text-sm text-blue-500 hover:underline">See All</NuxtLink>
           </div>
           <div class="p-4 space-y-3">
             <!-- Event Card 1 -->
-            <div class="relative h-24 rounded-lg overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 p-3 flex items-end cursor-pointer hover:opacity-90 transition-opacity">
+            <div
+              class="relative h-24 rounded-lg overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 p-3 flex items-end cursor-pointer hover:opacity-90 transition-opacity"
+            >
               <div class="absolute inset-0 bg-black/20"></div>
               <div class="relative">
                 <Icon icon="fluent:building-24-regular" class="w-6 h-6 text-white mb-1" />
-                <p class="text-white text-sm font-medium line-clamp-2">University good night event in columbia</p>
+                <p class="text-white text-sm font-medium line-clamp-2">
+                  University good night event in columbia
+                </p>
               </div>
             </div>
-            
+
             <!-- Event Card 2 -->
-            <div class="relative h-24 rounded-lg overflow-hidden bg-gradient-to-r from-green-500 to-teal-500 p-3 flex items-end cursor-pointer hover:opacity-90 transition-opacity">
+            <div
+              class="relative h-24 rounded-lg overflow-hidden bg-gradient-to-r from-green-500 to-teal-500 p-3 flex items-end cursor-pointer hover:opacity-90 transition-opacity"
+            >
               <div class="absolute inset-0 bg-black/20"></div>
               <div class="relative">
                 <Icon icon="fluent:people-audience-24-regular" class="w-6 h-6 text-white mb-1" />
@@ -485,12 +532,14 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
             <div class="p-4 flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="relative">
-                  <img 
-                    src="/images/default-avatar.png" 
+                  <img
+                    src="/images/default-avatar.png"
                     alt="User"
                     class="w-10 h-10 rounded-full object-cover"
                   />
-                  <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-400 rounded text-[8px] flex items-center justify-center font-bold text-gray-900">
+                  <div
+                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-400 rounded text-[8px] flex items-center justify-center font-bold text-gray-900"
+                  >
                     5
                   </div>
                 </div>
@@ -501,16 +550,18 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
               </div>
               <button class="text-blue-500 text-sm font-medium hover:underline">Follow</button>
             </div>
-            
+
             <div class="p-4 flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="relative">
-                  <img 
-                    src="/images/default-avatar.png" 
+                  <img
+                    src="/images/default-avatar.png"
                     alt="User"
                     class="w-10 h-10 rounded-full object-cover"
                   />
-                  <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-400 rounded text-[8px] flex items-center justify-center font-bold text-gray-900">
+                  <div
+                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-400 rounded text-[8px] flex items-center justify-center font-bold text-gray-900"
+                  >
                     5
                   </div>
                 </div>

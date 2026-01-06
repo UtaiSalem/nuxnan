@@ -1,0 +1,1 @@
+import{_ as s,c as t,o as n,a as r}from"./DuB962GZ.js";const o={},a={class:"fixed inset-0 bg-white/80 z-50 flex items-center justify-center"};function c(i,e){return n(),t("div",a,[...e[0]||(e[0]=[r("div",{class:"animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"},null,-1)])])}const l=s(o,[["render",c]]);export{l as L};

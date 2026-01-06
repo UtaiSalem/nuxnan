@@ -1,0 +1,1 @@
+import{W as u,r as c,X as i,N as d}from"./DuB962GZ.js";const f=u("ui",()=>{const o=c(!0),e=i(),r=d(()=>e.value==="dark");function t(){o.value=!o.value}function a(){e.preference=e.value==="dark"?"light":"dark"}function n(s){e.preference=s}return{isSidebarOpen:o,isDarkMode:r,colorMode:e,toggleSidebar:t,toggleTheme:a,setTheme:n}});export{f as u};

@@ -1,0 +1,1 @@
+import{ag as t}from"./DuB962GZ.js";const a=()=>{const e=t();return{success:(r,o,n)=>e.success(r,o,n),error:(r,o,n)=>e.error(r,o,n),warning:(r,o,n)=>e.warning(r,o,n),info:(r,o,n)=>e.info(r,o,n),show:r=>e.add(r),remove:r=>{e.remove(r)},clear:()=>{e.clear()}}};export{a as u};

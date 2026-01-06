@@ -42,7 +42,7 @@ const getColorFromName = (name: string): string => {
 
 export const useAvatar = () => {
   const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase || 'http://localhost:8000'
+  const apiBase = config.public.apiBase
 
   /**
    * Get avatar URL for a user

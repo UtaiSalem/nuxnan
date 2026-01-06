@@ -1,0 +1,1 @@
+import{ah as c,N as s}from"./DuB962GZ.js";const h=()=>{const t=c(),o=async r=>{try{return await t.login(r),!0}catch(e){throw e}},u=async r=>(await new Promise(e=>setTimeout(e,500)),!0),a=s(()=>t.user),n=s(()=>t.isAuthenticated);return{user:a,isAuthenticated:n,login:o,register:u}};export{h as u};

@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig()
 
     // Forward login request to Laravel backend
-    const response = await $fetch(`${config.public.apiBase || 'http://localhost:8000'}/api/login`, {
+    const response = await $fetch(`${config.public.apiBase}/api/login`, {
       method: 'POST',
       body: {
         login: body.login || body.email,

@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
     // Forward request to Laravel backend
     const config = useRuntimeConfig()
-    const apiBase = config.public.apiBase || 'http://localhost:8000'
+    const apiBase = config.public.apiBase
     
     // Get query parameters (e.g., page for pagination)
     const query = getQuery(event)

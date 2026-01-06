@@ -79,4 +79,25 @@ class Academy extends Model
         return $this->hasMany(AcademyPost::class);
     }
 
+    public function getCoverUrlAttribute()
+    {
+        if (!$this->cover) {
+            return null;
+        }
+        if (filter_var($this->cover, FILTER_VALIDATE_URL)) {
+            return $this->cover;
+        }
+        return asset('storage/images/academies/covers/' . $this->cover);
+    }
+
+    public function getLogoUrlAttribute()
+    {
+        if (!$this->logo) {
+            return null;
+        }
+        if (filter_var($this->logo, FILTER_VALIDATE_URL)) {
+            return $this->logo;
+        }
+        return asset('storage/images/academies/logos/' . $this->logo);
+    }
 }

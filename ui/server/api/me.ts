@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
     // Forward request to Laravel backend
     const response = await $fetch(
-      `${config.public.apiBase || 'http://localhost:8000'}/api/auth/me`,
+      `${config.public.apiBase}/api/auth/me`,
       {
         method: 'GET',
         headers: {

@@ -1,0 +1,1 @@
+async function o(t,e){let a=new FormData;a.append("file",t.file),t.status="loading";let n=await fetch(e,{method:"POST",body:a});return t.status=n.ok,n}function r(t,e){return Promise.all(t.map(a=>o(a,e)))}function u(t){return{uploadFile:function(e){return o(e,t)},uploadFiles:function(e){return r(e,t)}}}export{u as default,o as uploadFile,r as uploadFiles};

@@ -1,0 +1,1 @@
+import{j as a,o as r,w as e,h as s,am as n}from"./DuB962GZ.js";const u={__name:"course",setup(l){return(t,_)=>{const o=n;return r(),a(o,{name:"main"},{hero:e(()=>[s(t.$slots,"hero")]),leftWidgets:e(()=>[s(t.$slots,"leftWidgets")]),rightWidgets:e(()=>[s(t.$slots,"rightWidgets")]),default:e(()=>[s(t.$slots,"default")]),_:3})}}};export{u as default};

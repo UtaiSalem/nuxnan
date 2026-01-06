@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
     // Forward logout request to Laravel backend
     const response = await $fetch(
-      `${config.public.apiBase || 'http://localhost:8000'}/api/logout`,
+      `${config.public.apiBase}/api/logout`,
       {
         method: 'POST',
         headers: {

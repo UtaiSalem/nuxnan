@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
 
     // Forward registration request to Laravel backend
     const response = await $fetch(
-      `${config.public.apiBase || 'http://localhost:8000'}/api/register`,
+      `${config.public.apiBase}/api/register`,
       {
         method: 'POST',
         body: body,

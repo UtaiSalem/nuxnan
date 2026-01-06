@@ -1,0 +1,1 @@
+import{_ as a}from"./CZOFP7UD.js";import{L as t}from"./Czq9JhUr.js";import{j as e,o as s,w as n,a as o,u as i}from"./DuB962GZ.js";const f={__name:"AuthenticationCardLogo",setup(_){return(m,r)=>(s(),e(i(t),{href:"/"},{default:n(()=>[...r[0]||(r[0]=[o("figure",null,[o("img",{src:a,alt:"Plearnd Logo",class:"w-20 h-20"})],-1)])]),_:1}))}};export{f as _};

@@ -62,6 +62,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
     
     Route::get('/users/{user}', [CourseController::class, 'getUserCourses'])->name('user.courses');
     Route::get('/users/{user}/member', [CourseController::class, 'getAuthMemberCourses'])->name('auth.member.courses');
+    Route::get('/users/{user}/membered', [CourseController::class, 'getAuthMemberedCourses'])->name('api.courses.member');
 
     Route::get('/{course}/groups/{group}/member-requesters', [CourseGroupMemberController::class, 'getRequesters']);
     Route::post('/{course}/groups/{group}/members/{member}/approve', [CourseGroupMemberController::class, 'approveRequest']);
@@ -87,7 +88,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/api/courses')->group(funct
     Route::get('/', [CourseController::class, 'getMoreCourses'])->name('api.courses.all');
     Route::get('/users/{user}', [CourseController::class, 'getMyCourses'])->name('api.courses.user-courses');
     Route::get('/users/{user}/my-courses', [CourseController::class, 'getMyCourses'])->name('api.courses.my-courses');
-    Route::get('/users/{user}/membered', [CourseController::class, 'getAuthMemberedCourses'])->name('api.courses.member');
+    // Route::get('/users/{user}/membered', [CourseController::class, 'getAuthMemberedCourses'])->name('api.courses.member');
 });
 
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/groups')->group(function () {
@@ -149,7 +150,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/lessons/{lesson}')->group(
 
 Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function () {
     Route::resource('/', LessonController::class);
-    Route::resource('/{lesson}/images', LessonImageController::class);
+    Route::resource('/{lesson}/images', LessonImageController::class)->names('lesson.images');
     Route::resource('/{lesson}/assignments', LessonAssignmentController::class);
     Route::resource('/{lesson}/questions', LessonQuestionController::class, [
         'names' => [
@@ -168,7 +169,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function 
     
 });
 Route::middleware(['auth:api', 'verified'])->prefix('/topics')->group(function () {
-    Route::resource('/{topic}/images', TopicImageController::class);
+    Route::resource('/{topic}/images', TopicImageController::class)->names('topic.images');
 });
 
 
@@ -231,7 +232,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
 
     Route::get('/user/questions', [QuestionController::class, 'getUserQuestions'])->name('user.get.questions');
 
-    Route::resource('/questions/{question}/images', QuestionImageController::class);
+    Route::resource('/questions/{question}/images', QuestionImageController::class)->names('question.images');
     
     Route::resource('/questions/{question}/options', QuestionOptionController::class);
     Route::resource('/options', QuestionOptionController::class);

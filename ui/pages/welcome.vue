@@ -83,7 +83,7 @@ const getAvatarUrl = (avatar: string) => {
   if (avatar.startsWith('http')) {
     return avatar // Already a full URL (e.g., UI Avatars)
   }
-  return `http://localhost:8000${avatar}` // Prepend backend URL
+  return `${useRuntimeConfig().public.apiBase}${avatar}` // Prepend backend URL
 }
 
 const currentTimes = ref('')

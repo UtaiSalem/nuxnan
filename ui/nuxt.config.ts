@@ -67,10 +67,10 @@ export default defineNuxtConfig({
   },
 
   css: [
-    '~/assets/css/theme.css', // Theme variables for light/dark mode
-    '~/assets/css/main.min.css',
-    '~/assets/css/style.css',
-    '~/assets/css/color.css',
+    // '~/assets/css/theme.css', // Theme variables for light/dark mode
+    // '~/assets/css/main.min.css',
+    // '~/assets/css/style.css',
+    // '~/assets/css/color.css',
     '~/assets/css/LineIcons.css',
     '~/assets/css/animate.min.css',
     '~/assets/css/icons.css', // Icon styles

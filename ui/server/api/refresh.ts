@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
     // Forward token refresh request to Laravel backend
     const response = await $fetch(
-      `${config.public.apiBase || 'http://localhost:8000'}/api/refresh`,
+      `${config.public.apiBase}/api/refresh`,
       {
         method: 'POST',
         headers: {

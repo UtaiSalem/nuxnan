@@ -1,0 +1,1 @@
+import{_ as t,c as o,o as s,a as r}from"./DuB962GZ.js";const n={},a={class:"relative inline-block text-left"};function c(l,e){return s(),o("div",a,[...e[0]||(e[0]=[r("button",{class:"text-gray-500 hover:text-gray-700"}," ... ",-1)])])}const i=t(n,[["render",c]]);export{i as D};
