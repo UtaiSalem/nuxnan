@@ -151,7 +151,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/lessons/{lesson}')->group(
 Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function () {
     Route::resource('/', LessonController::class);
     Route::resource('/{lesson}/images', LessonImageController::class)->names('lesson.images');
-    Route::resource('/{lesson}/assignments', LessonAssignmentController::class);
+    Route::resource('/{lesson}/assignments', LessonAssignmentController::class)->names('lesson.assignments');
     Route::resource('/{lesson}/questions', LessonQuestionController::class, [
         'names' => [
             'index' => 'lesson.questions.index',
