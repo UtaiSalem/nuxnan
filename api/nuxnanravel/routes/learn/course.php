@@ -181,7 +181,17 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}')->group(function () {
-    Route::resource('/assignments', CourseAssignmentController::class);
+    Route::resource('/assignments', CourseAssignmentController::class, [
+        'names' => [
+            'index' => 'course.assignments.index',
+            'create' => 'course.assignments.create',
+            'store' => 'course.assignments.store',
+            'show' => 'course.assignments.show',
+            'edit' => 'course.assignments.edit',
+            'update' => 'course.assignments.update',
+            'destroy' => 'course.assignments.destroy',
+        ]
+    ]);
 
     Route::resource('/quizzes', CourseQuizController::class);
     Route::post('/quizzes/{quiz}/efficiency', [CourseQuizController::class, 'calculateSumQuizsEfficiency'])->name('course.member.quiz.efficiency');
