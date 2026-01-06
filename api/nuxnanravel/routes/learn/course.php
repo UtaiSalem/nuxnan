@@ -72,7 +72,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
     Route::delete('/{course}/members/groups/{group}', [CourseGroupMemberController::class, 'unMemberGroup']);
     Route::delete('/{course}/groups/{group}/members/{member}', [CourseGroupMemberController::class, 'unMemberGroup']);
 
-    Route::resource('/{course}/quizzes/{quiz}/questions', CourseQuizQuestionController::class);
+    Route::resource('/{course}/quizzes/{quiz}/questions', CourseQuizQuestionController::class)->names('course.quiz.questions');
     Route::resource('/{course}/quizzes/{quiz}/results', CourseQuizResultController::class);
 
     Route::get('/{course}/groups/{group}/attendances', [CourseAttendanceController::class, 'getCourseGroupAttendances'])->name('course.groups.attendances');
@@ -196,7 +196,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}')->group(
     Route::resource('/quizzes', CourseQuizController::class);
     Route::post('/quizzes/{quiz}/efficiency', [CourseQuizController::class, 'calculateSumQuizsEfficiency'])->name('course.member.quiz.efficiency');
 
-    Route::resource('/quizzes/{quiz}/questions', CourseQuizQuestionController::class);
+    Route::resource('/quizzes/{quiz}/questions', CourseQuizQuestionController::class)->names('quiz.questions');
     Route::resource('/quizzes/{quiz}/results', CourseQuizResultController::class);
 
     // Route::get('/quizzes/get-quizzes', [CourseQuizController::class, 'getQuizzes'])->name('course.quizzes.getQuizzes');
@@ -236,7 +236,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/members')
 });
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
-    Route::resource('/questions', QuestionController::class);
+    Route::resource('/questions', QuestionController::class)->names('questions');
     Route::post('/questions/{question}/duplicate', [QuestionController::class, 'duplicateQuestion']);
     Route::patch('/questions/{question}/set_correct_option', [QuestionController::class, 'set_correct_option'])->name('questions.set_correct_option');
 
@@ -250,7 +250,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::resource('/questions/{question}/answers', QuestionAnswerController::class);
     // Route::resource('/users/{user}/answers/{answer}/questions', UserAnswerQuestionController::class);
     // Route::resource('/users/{user}/questions/{question}/answers', UserAnswerQuestionController::class);
-    Route::resource('/quizs/{quiz}/questions/{question}/answers', UserAnswerQuestionController::class);
+    Route::resource('/quizs/{quiz}/questions/{question}/answers', UserAnswerQuestionController::class)->names('quiz.question.answers');
 });
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
