@@ -64,7 +64,6 @@ const form = ref({
   auto_accept_members: true,
   tuition_fees: 0,
   saleable: true,
-  saleable: true,
   price: 0,
   discount: 0,
   discount_type: 'fixed',

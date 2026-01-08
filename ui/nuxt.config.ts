@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath } from 'url'
+
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
@@ -6,7 +8,7 @@ export default defineNuxtConfig({
   vite: {
     resolve: {
       alias: {
-        '@inertiajs/vue3': '/shims/inertia-vue3',
+        '@inertiajs/vue3': fileURLToPath(new URL('./shims/inertia-vue3', import.meta.url)),
       },
     },
   },

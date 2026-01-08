@@ -63,6 +63,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
     Route::get('/users/{user}', [CourseController::class, 'getUserCourses'])->name('user.courses');
     Route::get('/users/{user}/member', [CourseController::class, 'getAuthMemberCourses'])->name('auth.member.courses');
     Route::get('/users/{user}/membered', [CourseController::class, 'getAuthMemberedCourses'])->name('api.courses.member');
+    Route::get('/users/{user}/my-courses', [CourseController::class, 'getMyCourses'])->name('api.courses.my-courses');
 
     Route::get('/{course}/groups/{group}/member-requesters', [CourseGroupMemberController::class, 'getRequesters']);
     Route::post('/{course}/groups/{group}/members/{member}/approve', [CourseGroupMemberController::class, 'approveRequest']);
@@ -84,12 +85,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
 
 
 
-Route::middleware(['auth:api', 'verified'])->prefix('/api/courses')->group(function () {
-    Route::get('/', [CourseController::class, 'getMoreCourses'])->name('api.courses.all');
-    Route::get('/users/{user}', [CourseController::class, 'getMyCourses'])->name('api.courses.user-courses');
-    Route::get('/users/{user}/my-courses', [CourseController::class, 'getMyCourses'])->name('api.courses.my-courses');
-    // Route::get('/users/{user}/membered', [CourseController::class, 'getAuthMemberedCourses'])->name('api.courses.member');
-});
+
 
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/groups')->group(function () {
     Route::get('/', [CourseGroupController::class, 'index'])->name('course.groups.index');
@@ -236,7 +232,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/members')
 });
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
-    Route::resource('/questions', QuestionController::class)->names('questions');
+    Route::resource('/questions', QuestionController::class)->names('api.questions');
     Route::post('/questions/{question}/duplicate', [QuestionController::class, 'duplicateQuestion']);
     Route::patch('/questions/{question}/set_correct_option', [QuestionController::class, 'set_correct_option'])->name('questions.set_correct_option');
 
@@ -244,10 +240,10 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
 
     Route::resource('/questions/{question}/images', QuestionImageController::class)->names('question.images');
     
-    Route::resource('/questions/{question}/options', QuestionOptionController::class);
+    Route::resource('/questions/{question}/options', QuestionOptionController::class)->names('questions.options');
     Route::resource('/options', QuestionOptionController::class);
     
-    Route::resource('/questions/{question}/answers', QuestionAnswerController::class);
+    Route::resource('/questions/{question}/answers', QuestionAnswerController::class)->names('questions.answers');
     // Route::resource('/users/{user}/answers/{answer}/questions', UserAnswerQuestionController::class);
     // Route::resource('/users/{user}/questions/{question}/answers', UserAnswerQuestionController::class);
     Route::resource('/quizs/{quiz}/questions/{question}/answers', UserAnswerQuestionController::class)->names('quiz.question.answers');

@@ -23,7 +23,7 @@ class DonateResource extends JsonResource
         
         return [
             'id'                    => $this->id,
-            'user'                  => new UserResource($this->user),
+            'user'                  => $this->user ? new UserResource($this->user) : null,
             'donor'                 => $this->donor_id ? new UserResource($this->donor) : null,
             'donor_name'            => $this->donor_name ?? 'ไม่ประสงค์ออกนาม',
             'amounts'               => Number::currency($this->amounts, 'THB', 'th_TH'),

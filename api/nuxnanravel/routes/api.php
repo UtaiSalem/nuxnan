@@ -33,10 +33,17 @@ Route::get('/user1', function () {
         'user' => $user1Resource
     ]);
 });
-
+Route::get('/ping', function () {
+    return response()->json([
+        'status' => 'ok',
+        'message' => 'Laravel is working!',
+        'timestamp' => now()->toDateTimeString()
+    ]);
+});
 // Public Routes
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::get('/welcome', [WelcomeController::class, 'index'])->name('api.welcome');
+
 Route::get('/register/{user:reference_code}', [SuggesterController::class, 'index'])->name('register.reference');
 Route::get('/suggester/check/{user:personal_code}', [SuggesterController::class, 'checkSuggesterExist'])->name('suggester.check');
 Route::get('/check-username-exists/{name}', [UserProfileController::class, 'checkUsernameExists'])->name('profile.username.check');

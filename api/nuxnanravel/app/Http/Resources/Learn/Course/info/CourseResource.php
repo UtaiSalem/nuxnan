@@ -59,6 +59,17 @@ class CourseResource extends JsonResource
             'lessons_count'     => $this->lessons,
             'total_score'       => $this->total_score,
             'setting'           => $this->courseSettings,
+            'auth_role'         => $this->when(auth()->guard('api')->check(), function() {
+                if ($this->user_id == auth()->guard('api')->id()) {
+                    return 4;
+                }
+                $member = $this->courseMembers->where('user_id', auth()->guard('api')->id())->first();
+                return $member?->role;
+            }),
+            'auth_progress'     => $this->when(auth()->guard('api')->check(), function() {
+                $member = $this->courseMembers->where('user_id', auth()->guard('api')->id())->first();
+                return $member?->getPercentageScore() ?? 0;
+            }),
             'saleable'          => $this->saleable,
         ];
     }

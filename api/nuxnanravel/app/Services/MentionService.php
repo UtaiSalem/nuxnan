@@ -19,7 +19,7 @@ class MentionService
         $savedMentions = [];
 
         foreach ($mentions as $mention) {
-            $user = User::where('username', $mention['username'])->first();
+            $user = User::where('name', $mention['username'])->first();
             
             if ($user && $user->id !== $mentionedBy) {
                 $savedMention = PostMention::updateOrCreate(
@@ -113,7 +113,7 @@ class MentionService
         
         return preg_replace_callback($pattern, function ($matches) use ($baseUrl) {
             $username = $matches[1];
-            $user = User::where('username', $username)->first();
+            $user = User::where('name', $username)->first();
             
             if ($user) {
                 return '<a href="' . $baseUrl . $username . '" class="mention">@' . $username . '</a>';

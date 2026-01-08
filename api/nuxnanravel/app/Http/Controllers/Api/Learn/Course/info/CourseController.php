@@ -25,6 +25,7 @@ use App\Http\Resources\Learn\Course\quizzes\CourseQuizResource;
 use App\Http\Resources\Learn\Course\progress\CourseMemberGradeProgressResource;
 use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\members\CourseMemberResource;
+use App\Http\Resources\Learn\Course\info\MemberedCourseResource;
 use App\Models\RecentlyViewedCourse;
 
 class CourseController extends Controller
@@ -85,9 +86,17 @@ class CourseController extends Controller
 
     public function getMoreCourses()
     {
+        $query = Course::latest();
+
+        if (auth()->guard('api')->check()) {
+            $query->with(['courseMembers' => function($q) {
+                $q->where('user_id', auth()->guard('api')->id());
+            }]);
+        }
+
         return response()->json([
             'success'       => true,
-            'courses'       => CourseResource::collection(Course::latest()->paginate()),
+            'courses'       => CourseResource::collection($query->paginate()),
         ], 200);
     }
 
@@ -98,11 +107,23 @@ class CourseController extends Controller
         ]);
     }
 
-    public function getMyCourses(User $user)
+    public function getMyCourses(User $user, Request $request)
     {
+        $perPage = $request->input('per_page', 8);
+        $query = $user->courses()->latest()->paginate($perPage);
+
         return response()->json([
             'success'   => true,
-            'courses'   => CourseResource::collection($user->courses()->latest()->paginate()),
+            'courses'   => CourseResource::collection($query),
+            'create_course_threshold' => config('features.create_course_threshold', 100),
+            'pagination' => [
+                'total'        => $query->total(),
+                'per_page'     => $query->perPage(),
+                'current_page' => $query->currentPage(),
+                'last_page'    => $query->lastPage(),
+                'from'         => $query->firstItem(),
+                'to'           => $query->lastItem(),
+            ]
         ], 200);
     }
 
@@ -117,14 +138,25 @@ class CourseController extends Controller
         ]);
     }
 
-    public function getAuthMemberedCourses(User $user)
+    public function getAuthMemberedCourses(User $user, Request $request)
     {
+        $perPage = $request->input('per_page', 8); // Default to 8 if not specified
         $authMemberCourse = CourseMember::where('user_id', auth()->id())->pluck('course_id')->all();
-        $coursesAuthMember = CourseResource::collection(Course::whereIn('id', $authMemberCourse)->latest()->paginate());
+        
+        $query = Course::whereIn('id', $authMemberCourse)->latest()->paginate($perPage);
+        $coursesAuthMember = MemberedCourseResource::collection($query);
 
         return response()->json([
             'success'           => true,
             'courses'           => $coursesAuthMember,
+            'pagination'        => [
+                'total'        => $query->total(),
+                'per_page'     => $query->perPage(),
+                'current_page' => $query->currentPage(),
+                'last_page'    => $query->lastPage(),
+                'from'         => $query->firstItem(),
+                'to'           => $query->lastItem(),
+            ]
         ], 200);
     }
 

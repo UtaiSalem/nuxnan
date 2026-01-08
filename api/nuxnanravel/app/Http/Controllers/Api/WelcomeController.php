@@ -17,27 +17,37 @@ class WelcomeController extends Controller
 {
     public function index()
     {
-        // Increment visitor counter
-        $visitorCounterModel = VisitorCounter::first();
-        if ($visitorCounterModel) {
-            $visitorCounterModel->increment('visitor_counter');
-            $visitorCounter = $visitorCounterModel->visitor_counter;
-        } else {
-            // Handle case where VisitorCounter might not exist yet
-            $visitorCounter = 0; 
+        try {
+            // Increment visitor counter
+            $visitorCounterModel = VisitorCounter::first();
+            if ($visitorCounterModel) {
+                $visitorCounterModel->increment('visitor_counter');
+                $visitorCounter = $visitorCounterModel->visitor_counter;
+            } else {
+                // Handle case where VisitorCounter might not exist yet
+                $visitorCounter = 0; 
+            }
+
+            return response()->json([
+                'usersCount'        => User::count(),
+                'coursesCount'      => Course::count(),
+                'lessonsCount'      => Lesson::count(),
+                'postsCount'        => Post::count(),
+                'visitorCounter'    => $visitorCounter,
+
+                'donates'           => DonateResource::collection(Donate::whereNotIn('status', [2])->orderBy('remaining_points', 'DESC')->latest()->paginate(8)),
+                'donateRecipients'  => UserResource::collection(User::whereNotIn('id', [1])->orderBy('pp', 'DESC')->latest()->paginate(12)),
+
+                'ceo'               => User::find(1) ? new UserResource(User::find(1)) : null,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
         }
-
-        return response()->json([
-            'usersCount'        => User::count(),
-            'coursesCount'      => Course::count(),
-            'lessonsCount'      => Lesson::count(),
-            'postsCount'        => Post::count(),
-            'visitorCounter'    => $visitorCounter,
-
-            'donates'           => DonateResource::collection(Donate::whereNotIn('status', [2])->orderBy('remaining_points', 'DESC')->latest()->paginate(8)),
-            'donateRecipients'  => UserResource::collection(User::whereNotIn('id', [1])->orderBy('pp', 'DESC')->latest()->paginate(12)),
-
-            'ceo'               => new UserResource(User::find(1)),
-        ]);
     }
 }

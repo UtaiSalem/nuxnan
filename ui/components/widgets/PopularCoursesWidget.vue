@@ -49,7 +49,7 @@ onMounted(() => {
       >
         <div class="relative shrink-0 w-12 h-12 mt-1">
           <img
-            :src="course.cover ? course.cover : 'https://via.placeholder.com/150'"
+            :src="course.cover ? course.cover : `${config.public.apiBase}/storage/images/courses/covers/default_cover.jpg`"
             :alt="course.name"
             class="w-full h-full object-cover rounded-lg shadow-sm"
           />

@@ -12,7 +12,7 @@ const props = defineProps({
     <div class="flex items-center mb-4">
       <!-- User Avatar -->
       <img 
-        :src="post.user?.avatar || 'https://via.placeholder.com/40'" 
+        :src="post.user?.avatar || '/images/default-avatar.png'" 
         alt="User Avatar" 
         class="w-10 h-10 rounded-full mr-3"
       >

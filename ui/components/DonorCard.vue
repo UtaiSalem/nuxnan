@@ -46,10 +46,10 @@ defineProps<{
 
 <template>
   <div
-    class="bg-gradient-to-br from-white to-indigo-50 border border-indigo-200 rounded-2xl hover:shadow-2xl hover:shadow-indigo-300 transform hover:scale-105 transition-all duration-300 overflow-hidden group"
+    class="bg-gradient-to-br from-white to-indigo-50 border border-indigo-200 rounded-2xl hover:shadow-2xl hover:shadow-indigo-300 transform hover:scale-105 transition-all duration-300 overflow-hidden group h-full flex flex-col"
   >
-    <div class="h-2 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600"></div>
-    <div class="flex flex-col justify-between h-full p-5 rounded-b-2xl">
+    <div class="h-2 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 shrink-0"></div>
+    <div class="flex flex-col justify-between flex-1 p-5 rounded-b-2xl">
       <figure
         class="flex items-center p-3 mb-3 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-xl shadow-sm"
       >

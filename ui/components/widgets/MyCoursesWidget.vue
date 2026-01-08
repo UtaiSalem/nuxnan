@@ -4,25 +4,71 @@ import { Icon } from '@iconify/vue'
 
 const api = useApi()
 const { user } = useAuth()
+const authStore = useAuthStore()
+const points = computed(() => Number(authStore.points))
+const createCourseThreshold = ref(100) // Default
+const canCreateCourse = computed(() => points.value >= Number(createCourseThreshold.value))
 const myCourses = ref([])
 const isLoading = ref(true)
 
-const fetchMyCourses = async () => {
+const page = ref(1)
+const lastPage = ref(1)
+const isLoadingMore = ref(false)
+
+const fetchMyCourses = async (isLoadMore = false) => {
   if (!user.value) return
 
-  isLoading.value = true
+  if (isLoadMore) {
+    isLoadingMore.value = true
+  } else {
+    isLoading.value = true
+  }
+
   try {
-    // Note: getAuthMemberedCourses ignores the ID parameter but requires one in the route
-    const res = (await api.get(`/api/courses/users/${user.value.id}/membered`)) as any
+    const res = (await api.get(`/api/courses/users/${user.value.id}/my-courses`, {
+      params: {
+        page: page.value,
+        per_page: 5
+      }
+    })) as any
+
     if (res.success) {
-      myCourses.value = res.courses.data || res.courses
+      // Update threshold from API
+      if (res.create_course_threshold !== undefined) {
+        createCourseThreshold.value = res.create_course_threshold
+      }
+
+      const newCourses = res.courses.data || res.courses
+      
+      if (isLoadMore) {
+        myCourses.value.push(...newCourses)
+      } else {
+        myCourses.value = newCourses
+      }
+
+      // Update pagination info
+      if (res.pagination && res.pagination.last_page) {
+        lastPage.value = res.pagination.last_page
+      } else if (res.courses.last_page) {
+        // Fallback for older responses if needed
+        lastPage.value = res.courses.last_page
+      }
     }
   } catch (error) {
     console.error('Failed to fetch my courses', error)
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
+
+const loadMore = () => {
+  if (page.value < lastPage.value) {
+    page.value++
+    fetchMyCourses(true)
+  }
+}
+
 
 const getCoverUrl = (course: any) => {
   if (course.cover) {
@@ -31,7 +77,7 @@ const getCoverUrl = (course: any) => {
     }
     return `${useRuntimeConfig().public.apiBase}/storage/images/courses/covers/${course.cover}`
   }
-  return 'https://via.placeholder.com/150'
+  return `${useRuntimeConfig().public.apiBase}/storage/images/courses/covers/default_cover.jpg`
 }
 
 onMounted(() => {
@@ -46,11 +92,37 @@ watch(user, (newUser) => {
     fetchMyCourses()
   }
 })
+
+const formatPoints = (num: number) => {
+  return new Intl.NumberFormat().format(num)
+}
 </script>
 
 <template>
   <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 shadow-sm mb-6">
-    <h3 class="font-semibold text-gray-900 dark:text-white mb-4">คอร์สของฉัน</h3>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-gray-900 dark:text-white">คอร์สของฉัน</h3>
+      
+      <!-- Top Right Plus Icon Button -->
+      <NuxtLink 
+        v-if="canCreateCourse"
+        to="/courses/create" 
+        class="text-xs font-medium text-white bg-vikinger-purple hover:bg-vikinger-purple-dark p-1.5 rounded-lg transition-colors shadow-sm shadow-vikinger-purple/50"
+        title="สร้างคอร์สใหม่"
+      >
+        <Icon icon="mdi:plus" class="w-4 h-4" />
+      </NuxtLink>
+      
+      <div v-else class="group relative">
+         <button disabled class="text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 dark:text-gray-500 p-1.5 rounded-lg cursor-not-allowed">
+            <Icon icon="mdi:lock" class="w-4 h-4" />
+         </button>
+         <!-- Tooltip -->
+         <div class="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
+            ต้องมีคะแนนสะสม {{ formatPoints(createCourseThreshold) }} คะแนน
+         </div>
+      </div>
+    </div>
 
     <div v-if="isLoading" class="space-y-3">
       <div v-for="i in 3" :key="i" class="flex gap-3 animate-pulse">
@@ -62,50 +134,86 @@ watch(user, (newUser) => {
       </div>
     </div>
 
-    <div v-else-if="myCourses.length > 0" class="space-y-4">
-      <NuxtLink
-        v-for="course in myCourses"
-        :key="course.id"
-        :to="`/courses/${course.id}`"
-        class="flex items-start gap-3 group hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 p-2 -mx-2 rounded-lg transition-colors"
-      >
-        <div class="relative shrink-0 w-12 h-12 mt-1">
-          <img
-            :src="getCoverUrl(course)"
-            :alt="course.name"
-            class="w-full h-full object-cover rounded-lg shadow-sm"
-            @error="($event.target as HTMLImageElement).src = 'https://via.placeholder.com/150'"
-          />
-        </div>
-        <div class="flex-1 min-w-0">
-          <h4
-            class="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 leading-tight group-hover:text-vikinger-purple transition-colors mb-1"
-          >
-            {{ course.name }}
-          </h4>
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {{
-                course.user
-                  ? course.user.name
-                  : course.instructor
-                  ? course.instructor.name
-                  : 'Unknown'
-              }}
-            </span>
-          </div>
-        </div>
-        <div
-          class="flex items-center justify-center text-gray-400 group-hover:text-vikinger-purple transition-colors mt-2"
+    <div v-else class="space-y-4">
+      <template v-if="myCourses.length > 0">
+        <NuxtLink
+          v-for="course in myCourses"
+          :key="course.id"
+          :to="`/courses/${course.id}`"
+          class="flex items-start gap-3 group hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 p-2 -mx-2 rounded-lg transition-colors"
         >
-          <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5" />
-        </div>
-      </NuxtLink>
-    </div>
+          <div class="relative shrink-0 w-12 h-12 mt-1">
+            <img
+              :src="getCoverUrl(course)"
+              :alt="course.name"
+              class="w-full h-full object-cover rounded-lg shadow-sm"
+              @error="($event.target as HTMLImageElement).src = `${useRuntimeConfig().public.apiBase}/storage/images/courses/covers/default_cover.jpg`"
+            />
+          </div>
+          <div class="flex-1 min-w-0">
+            <h4
+              class="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 leading-tight group-hover:text-vikinger-purple transition-colors mb-1"
+            >
+              {{ course.name }}
+            </h4>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {{
+                  course.user
+                    ? course.user.name
+                    : course.instructor
+                    ? course.instructor.name
+                    : 'Unknown'
+                }}
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex items-center justify-center text-gray-400 group-hover:text-vikinger-purple transition-colors mt-2"
+          >
+            <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5" />
+          </div>
+        </NuxtLink>
+      </template>
 
-    <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-      <Icon icon="fluent:hat-graduation-24-regular" class="w-8 h-8 mx-auto mb-2 opacity-50" />
-      <p>คุณยังไม่ได้ลงทะเบียนเรียน</p>
+      <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+        <Icon icon="fluent:hat-graduation-24-regular" class="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <p>คุณยังไม่ได้สร้างรายวิชา</p>
+      </div>
+
+      <!-- Footer Buttons: Load More & Create Course -->
+      <div class="space-y-2 pt-2">
+        <button 
+            v-if="page < lastPage" 
+            @click="loadMore" 
+            :disabled="isLoadingMore"
+            class="w-full py-2 text-xs font-medium text-vikinger-purple bg-vikinger-purple/10 hover:bg-vikinger-purple/20 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+            <Icon v-if="isLoadingMore" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+            <span v-else>โหลดเพิ่ม</span>
+        </button>
+
+        <!-- Big Create Course Button at Bottom -->
+        <div v-if="points >= createCourseThreshold">
+            <NuxtLink 
+                to="/courses/create" 
+                class="w-full py-2 text-xs font-medium text-white bg-vikinger-purple hover:bg-vikinger-purple-dark rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm shadow-vikinger-purple/50"
+            >
+                <Icon icon="mdi:plus" class="w-4 h-4" />
+                สร้างคอร์สใหม่
+            </NuxtLink>
+        </div>
+        <div v-else class="group relative">
+            <button disabled class="w-full py-2 text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 dark:text-gray-500 rounded-lg cursor-not-allowed flex items-center justify-center gap-2">
+                <Icon icon="mdi:lock" class="w-4 h-4" />
+                สร้างคอร์สใหม่
+            </button>
+             <!-- Tooltip -->
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-gray-900 text-white text-xs rounded-lg py-1 px-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center whitespace-nowrap">
+                ต้องมีคะแนนสะสม {{ formatPoints(createCourseThreshold) }} คะแนน เพื่อสร้างคอร์สใหม่
+            </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>

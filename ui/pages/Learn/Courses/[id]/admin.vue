@@ -140,7 +140,7 @@ const getRoleName = (admin: any) => {
                     {{ getRoleName(admin) }}
                 </div>
 
-                <img :src="admin.user?.avatar || 'https://via.placeholder.com/150'" class="w-16 h-16 rounded-full object-cover border-2 border-gray-200" />
+                <img :src="admin.user?.avatar || '/images/default-avatar.png'" class="w-16 h-16 rounded-full object-cover border-2 border-gray-200" />
                 
                 <div class="flex-1 min-w-0">
                     <h3 class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ admin.user?.name || 'Unknown' }}</h3>
@@ -198,7 +198,7 @@ const getRoleName = (admin: any) => {
                         <div v-else-if="searchResults.length > 0" class="space-y-2">
                             <div v-for="user in searchResults" :key="user.id" class="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded shadow-sm hover:shadow-md transition-shadow">
                                 <div class="flex items-center gap-3">
-                                    <img :src="user.avatar || 'https://via.placeholder.com/40'" class="w-10 h-10 rounded-full" />
+                                    <img :src="user.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
                                     <div>
                                         <p class="font-medium text-sm">{{ user.name }}</p>
                                         <p class="text-xs text-gray-500">{{ user.email }}</p>

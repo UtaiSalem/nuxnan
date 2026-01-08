@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-lg shadow p-4 flex flex-col">
+  <div class="bg-white rounded-lg shadow p-4 flex flex-col h-full">
     <div class="h-40 bg-gray-200 rounded mb-4">
         <img v-if="course.cover" :src="course.cover" class="w-full h-full object-cover rounded" />
     </div>

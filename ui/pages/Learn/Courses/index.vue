@@ -2,6 +2,9 @@
 import { Icon } from '@iconify/vue'
 import BaseCard from '~/components/atoms/BaseCard.vue'
 import MyCoursesWidget from '~/components/widgets/MyCoursesWidget.vue'
+import MemberedCoursesWidget from '~/components/widgets/MemberedCoursesWidget.vue'
+import CourseCard from '~/components/CourseCard.vue'
+
 
 definePageMeta({
   layout: 'main',
@@ -150,7 +153,7 @@ const handleSearch = () => {
   }, 300)
 }
 
-// Course card helpers
+// Helpers for Sidebar (Popular Courses)
 const getCoverUrl = (course: any) => {
   if (course.cover) {
     if (course.cover.startsWith('http')) {
@@ -161,42 +164,9 @@ const getCoverUrl = (course: any) => {
   return `${useRuntimeConfig().public.apiBase}/storage/images/courses/covers/default_cover.jpg`
 }
 
-const getInstructorAvatar = (course: any) => {
-  return course.user?.avatar || '/images/default-avatar.png'
-}
-
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('th-TH').format(price || 0)
-}
-
-// Get badge type based on course data
-const getBadgeType = (course: any, index: number) => {
-  if (course.enrolled_students > 50) return 'bestseller'
-  if (index < 3) return 'trending'
-  return null
-}
-
-// Navigate to course detail
 const goToCourse = (courseId: number) => {
   router.push(`/courses/${courseId}`)
 }
-
-// Enroll in course
-const enrollCourse = async (course: any) => {
-  try {
-    const response = await api.post(`/courses/${course.id}/members`)
-    if (response.success) {
-      course.isMember = true
-      course.member_status = response.memberStatus
-      course.enrolled_students++
-    }
-  } catch (err: any) {
-    console.error('Error enrolling:', err)
-    alert(err.data?.msg || 'ไม่สามารถสมัครเรียนได้')
-  }
-}
-
-// On mount
 onMounted(() => {
   fetchCourses()
 })
@@ -314,98 +284,12 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
         <!-- Course Grid - 2 Columns -->
         <template v-else>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div
+            <CourseCard
               v-for="(course, index) in courses"
               :key="course.id"
-              class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer group"
-              @click="goToCourse(course.id)"
-            >
-              <!-- Cover -->
-              <div class="relative h-44 overflow-hidden bg-gray-100 dark:bg-gray-700">
-                <img
-                  :src="getCoverUrl(course)"
-                  :alt="course.name"
-                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-
-                <!-- Badge (Best Seller / Trending) -->
-                <div
-                  v-if="getBadgeType(course, index)"
-                  :class="[
-                    'absolute top-3 left-3 px-3 py-1 text-white text-xs font-bold rounded shadow-lg',
-                    getBadgeType(course, index) === 'bestseller' ? 'bg-blue-500' : 'bg-orange-500',
-                  ]"
-                >
-                  {{ getBadgeType(course, index) === 'bestseller' ? 'Best Seller' : 'Trending' }}
-                </div>
-
-                <!-- Rating Badge -->
-                <div
-                  class="absolute bottom-3 left-3 px-2 py-1 bg-yellow-500 text-gray-900 rounded text-xs font-bold flex items-center gap-1"
-                >
-                  <Icon icon="fluent:star-16-filled" class="w-3 h-3" />
-                  <span>{{ course.rating || '4.5' }}</span>
-                </div>
-              </div>
-
-              <!-- Content -->
-              <div class="p-4">
-                <!-- Instructor & Price Row -->
-                <div class="flex items-center justify-between mb-3">
-                  <div v-if="course.user" class="flex items-center gap-2">
-                    <img
-                      :src="getInstructorAvatar(course)"
-                      :alt="course.user.name"
-                      class="w-8 h-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
-                    />
-                    <div class="min-w-0">
-                      <p class="text-xs text-gray-500 dark:text-gray-400">
-                        By: {{ course.user.name }}
-                      </p>
-                      <p class="text-xs text-blue-500 truncate">
-                        {{ course.category || 'General' }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- Price -->
-                  <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 font-bold">
-                    <Icon icon="ri:bit-coin-line" class="w-5 h-5 text-yellow-500" />
-                    <span>{{ formatPrice(course.price) }}</span>
-                  </div>
-                </div>
-
-                <!-- Title -->
-                <h3
-                  class="text-gray-800 dark:text-white font-bold mb-3 line-clamp-2 group-hover:text-blue-500 transition-colors"
-                >
-                  {{ course.name }}
-                </h3>
-
-                <!-- Stats Row -->
-                <div
-                  class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-700"
-                >
-                  <div class="flex items-center gap-1">
-                    <Icon icon="fluent:book-open-16-regular" class="w-4 h-4" />
-                    <span>{{ course.lessons_count || 20 }} Lectures</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <Icon icon="fluent:clock-16-regular" class="w-4 h-4" />
-                    <span>{{ course.hours || 20 }}Hrs</span>
-                  </div>
-                </div>
-
-                <!-- Member Badge -->
-                <div
-                  v-if="course.isMember"
-                  class="mt-3 flex items-center justify-center gap-2 py-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-sm font-medium"
-                >
-                  <Icon icon="fluent:checkmark-circle-16-filled" class="w-4 h-4" />
-                  เป็นสมาชิกแล้ว
-                </div>
-              </div>
-            </div>
+              :course="course"
+              :index="index"
+            />
           </div>
 
           <!-- Load More -->
@@ -429,6 +313,7 @@ watch([selectedCategory, selectedLevel, sortBy], () => {
 
       <!-- Sidebar -->
       <div class="w-full lg:w-80 space-y-6 flex-shrink-0">
+        <MemberedCoursesWidget />
         <MyCoursesWidget />
         <!-- Popular Courses Widget -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">

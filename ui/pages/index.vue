@@ -308,8 +308,8 @@ const handleGetDonate = async (donateId: number, idx: number) => {
                 class="w-10 h-10 sm:w-12 sm:h-12 text-yellow-300 animate-spin-slow"
               />
               <span
-                class="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20 shadow-xl"
-                >เรียนบ้าง เล่นบ้าง สร้างรายได้ด้วย</span
+                class="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20 shadow-xl audiowide-font"
+                >หนุกหนานๆ เรียนบ้าง เล่นบ้าง สร้างรายได้ด้วย </span
               >
               <IconWrapper
                 icon="fluent:emoji:money-bag"
@@ -321,7 +321,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
             <span class="text-3xl md:text-5xl font-light">www.</span
             ><b
               class="audiowide-font text-4xl md:text-8xl bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 drop-shadow-[0_0_30px_rgba(168,85,247,0.5)]"
-              >plearnd</b
+              >NUXNAN</b
             ><span class="text-3xl md:text-5xl font-light">.com</span>
           </h3>
           <div
@@ -404,10 +404,10 @@ const handleGetDonate = async (donateId: number, idx: number) => {
           <div class="container px-5 py-12 mx-auto">
             <div class="flex flex-wrap -m-4 text-center text-blue-500">
               <div
-                class="w-full px-4 py-2 md:w-1/4 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
+                class="w-full px-4 py-2 lg:w-1/4 md:w-1/2 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
               >
                 <div
-                  class="relative w-full p-8 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-blue-500 overflow-hidden group"
+                  class="relative w-full h-full p-6 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-blue-500 overflow-hidden group"
                 >
                   <div
                     class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"
@@ -443,16 +443,16 @@ const handleGetDonate = async (donateId: number, idx: number) => {
                         icon="solar:users-group-two-rounded-bold-duotone"
                         class="w-6 h-6 text-blue-600"
                       />
-                      <span>ผู้ใช้งาน</span>
+                      <span class="whitespace-nowrap">ผู้ใช้งาน</span>
                     </div>
                   </div>
                 </div>
               </div>
               <div
-                class="w-full px-4 py-2 md:w-1/4 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
+                class="w-full px-4 py-2 lg:w-1/4 md:w-1/2 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
               >
                 <div
-                  class="relative w-full p-8 bg-gradient-to-br from-purple-50 to-pink-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-purple-500 overflow-hidden group"
+                  class="relative w-full h-full p-6 bg-gradient-to-br from-purple-50 to-pink-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-purple-500 overflow-hidden group"
                 >
                   <div
                     class="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"
@@ -488,16 +488,16 @@ const handleGetDonate = async (donateId: number, idx: number) => {
                         icon="solar:chat-round-bold-duotone"
                         class="w-6 h-6 text-purple-600"
                       />
-                      <span>โพสต์</span>
+                      <span class="whitespace-nowrap">โพสต์</span>
                     </div>
                   </div>
                 </div>
               </div>
               <div
-                class="w-full px-4 py-2 md:w-1/4 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
+                class="w-full px-4 py-2 lg:w-1/4 md:w-1/2 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
               >
                 <div
-                  class="relative w-full p-8 bg-gradient-to-br from-green-50 to-emerald-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-green-500 overflow-hidden group"
+                  class="relative w-full h-full p-6 bg-gradient-to-br from-green-50 to-emerald-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-green-500 overflow-hidden group"
                 >
                   <div
                     class="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"
@@ -533,16 +533,16 @@ const handleGetDonate = async (donateId: number, idx: number) => {
                         icon="solar:notebook-bold-duotone"
                         class="w-6 h-6 text-green-600"
                       />
-                      <span>รายวิชา</span>
+                      <span class="whitespace-nowrap">รายวิชา</span>
                     </div>
                   </div>
                 </div>
               </div>
               <div
-                class="w-full px-4 py-2 md:w-1/4 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
+                class="w-full px-4 py-2 lg:w-1/4 md:w-1/2 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
               >
                 <div
-                  class="relative w-full p-8 bg-gradient-to-br from-orange-50 to-red-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-orange-500 overflow-hidden group"
+                  class="relative w-full h-full p-6 bg-gradient-to-br from-orange-50 to-red-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-orange-500 overflow-hidden group"
                 >
                   <div
                     class="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"
@@ -575,7 +575,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
                         icon="solar:document-text-bold-duotone"
                         class="w-6 h-6 text-orange-600"
                       />
-                      <span>บทเรียน</span>
+                      <span class="whitespace-nowrap">บทเรียน</span>
                     </div>
                   </div>
                 </div>
@@ -766,7 +766,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
           <span class="text-2xl font-light">www.</span>
           <b
             class="audiowide-font text-5xl md:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg"
-            >plearnd</b
+            >nuxnan</b
           >
           <span class="text-2xl font-light">.com</span>
         </h3>
@@ -774,7 +774,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
           class="mt-6 text-lg leading-6 text-center text-gray-800 font-prompt font-bold flex items-center justify-center gap-3 bg-blue-50 py-3 px-8 rounded-full mx-auto"
         >
           <IconWrapper icon="fluent-emoji:books" class="w-6 h-6 animate-bounce-slow" />
-          <span>เล่นบ้าง เรียนบ้าง สร้างรายได้ด้วย เพลิน!!</span>
+          <span>เล่นบ้าง เรียนบ้าง สร้างรายได้ด้วย หนุกหนาน!!</span>
           <IconWrapper icon="noto:smiling-face-with-hearts" class="w-6 h-6 animate-pulse-slow" />
         </p>
         <div class="mt-10 flex justify-center">
