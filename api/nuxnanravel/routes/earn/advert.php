@@ -5,19 +5,21 @@ use App\Http\Controllers\Api\Shared\SupportController;
 use App\Http\Controllers\AdvertController;
 
 
+Route::get('/advertises/widget', [AdvertController::class, 'widget'])->name('advertises.widget');
+Route::get('/advertises', [AdvertController::class, 'index'])->name('advertises.index');
+Route::get('/advertises/more', [AdvertController::class, 'getMoreAdvertisings'])->name('advertises.more');
+
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {
     
-    Route::get('/supports/widget', [SupportController::class, 'widget'])->name('supports.widget');
-    Route::get('/supports', [SupportController::class, 'index'])->name('supports.index');
-    Route::get('/supports/advertises/more', [SupportController::class, 'getMoreAdvertisings'])->name('supports.advertises.getmore');
-    Route::get('/supports/advertises/create', [SupportController::class, 'create'])->name('support.advert.create');
-    Route::post('/supports/advertise', [SupportController::class, 'storeAdvertise'])->name('support.store.advertise');
-    Route::post('/supports/advertises/{advert}/view', [SupportController::class, 'viewAdvertise'])->name('support.advertises.view');
+    Route::get('/advertises/create', [AdvertController::class, 'create'])->name('advertises.create');
+    Route::post('/advertises', [AdvertController::class, 'store'])->name('advertises.store');
+    Route::post('/supports/plearnd', [SupportController::class, 'storePlearndSupport'])->name('support.store.plearnd');
+    Route::post('/advertises/{advert}/view', [AdvertController::class, 'view'])->name('advertises.view');
 
-    Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/supports/advertises')->group(function () {
-        Route::get('/', [SupportController::class, 'advertisesIndex'])->name('admin.support.advert.index');
-        Route::patch('/{advert}/approve', [SupportController::class, 'approveAdvertise'])->name('admin.support.advert.approve');
-        Route::patch('/{advert}/reject', [SupportController::class, 'rejectAdvertise'])->name('admin.support.advert.reject');  
+    Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/advertises')->group(function () {
+        Route::get('/', [AdvertController::class, 'advertisesIndex'])->name('admin.advertises.index');
+        Route::patch('/{advert}/approve', [AdvertController::class, 'approve'])->name('admin.advertises.approve');
+        Route::patch('/{advert}/reject', [AdvertController::class, 'reject'])->name('admin.advertises.reject');  
     });
         
 });

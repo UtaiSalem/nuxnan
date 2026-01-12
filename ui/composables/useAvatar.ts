@@ -60,7 +60,10 @@ export const useAvatar = () => {
       // If already a full URL
       if (avatarPath.startsWith('http')) return avatarPath
       
-      // If starts with / it's already a path
+      // If starts with /storage, likely from backend
+      if (avatarPath.startsWith('/storage')) return `${apiBase}${avatarPath}`
+
+      // If starts with / but not storage, assume local asset
       if (avatarPath.startsWith('/')) return avatarPath
       
       // Otherwise construct the storage URL

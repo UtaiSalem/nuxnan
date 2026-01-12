@@ -153,7 +153,8 @@ export const useDateFormatter = () => {
     format: formatDate,
     validate: isValidDate,
     getToday: getCurrentDate,
-    getTodayThai: getCurrentDateThai
+    getTodayThai: getCurrentDateThai,
+    formatRelative: formatTimeAgo
   }
 }
 

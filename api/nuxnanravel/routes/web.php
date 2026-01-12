@@ -7,7 +7,11 @@ use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupController;
 
 
 Route::get('/', function () {
-    return view('welcome');
+    return response()->json([
+        'name' => config('app.name'),
+        'version' => '1.0.0',
+        'status' => 'running',
+    ]);
 });
 
 // Named login route for API - returns JSON instead of redirect

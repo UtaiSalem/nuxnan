@@ -48,6 +48,7 @@ class UserResource extends JsonResource
             'is_email_verified' => $this->hasVerifiedEmail(),
             'created_at'        => $this->created_at,
             'profile'           => $this->whenLoaded('profile', function () {
+                if (!$this->profile) return null;
                 return [
                     'first_name'        => $this->profile->first_name,
                     'last_name'         => $this->profile->last_name,

@@ -328,11 +328,22 @@ class UserProfileController extends \App\Http\Controllers\Controller
     {
         $authUser = Auth::user();
         
-        // Find user by ID, reference_code, or username
-        $user = User::where('id', $identifier)
-            ->orWhere('reference_code', $identifier)
-            ->orWhere('name', $identifier)
-            ->first();
+        // Handle 'me' identifier - use authenticated user
+        if ($identifier === 'me') {
+            if (!$authUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required',
+                ], 401);
+            }
+            $user = $authUser;
+        } else {
+            // Find user by ID, reference_code, or username
+            $user = User::where('id', $identifier)
+                ->orWhere('reference_code', $identifier)
+                ->orWhere('name', $identifier)
+                ->first();
+        }
         
         if (!$user) {
             return response()->json([
@@ -341,39 +352,55 @@ class UserProfileController extends \App\Http\Controllers\Controller
             ], 404);
         }
 
-        // ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบเป็นเพื่อนกับผู้ใช้ที่เป็นเจ้าของโปรไฟล์หรือไม่
-        $heIsMyFriend = Friend::where('user_id', $authUser->id)->where('friend_id', $user->id)
-            ->whereStatus(1)->exists();
-        
-        // ตรวจสอบว่าผู้ใช้ที่เป็นเจ้าของโปรไฟล์ป็นเพื่อนกับผู้ใช้ที่เข้าสู่ระบบเหรือไม่
-        $iAmHisFriend = Friend::where('friend_id', $authUser->id)->where('user_id', $user->id)
-            ->whereStatus(1)->exists();
+        // ถ้าไม่มี authUser (guest) ให้ดูได้เฉพาะ public posts
+        if (!$authUser) {
+            $privacySettings = [3]; // Global only
+            $isOwnProfile = false;
+            $friendWithAuth = false;
+        } else {
+            // ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบเป็นเพื่อนกับผู้ใช้ที่เป็นเจ้าของโปรไฟล์หรือไม่
+            $heIsMyFriend = Friend::where('user_id', $authUser->id)->where('friend_id', $user->id)
+                ->whereStatus(1)->exists();
+            
+            // ตรวจสอบว่าผู้ใช้ที่เป็นเจ้าของโปรไฟล์ป็นเพื่อนกับผู้ใช้ที่เข้าสู่ระบบเหรือไม่
+            $iAmHisFriend = Friend::where('friend_id', $authUser->id)->where('user_id', $user->id)
+                ->whereStatus(1)->exists();
 
-        $friendWithAuth = $heIsMyFriend || $iAmHisFriend;
-        
-        // ถ้าเป็นโปรไฟล์ของตัวเอง ให้ดูได้ทุกอย่าง
-        $isOwnProfile = $authUser->id === $user->id;
+            $friendWithAuth = $heIsMyFriend || $iAmHisFriend;
+            
+            // ถ้าเป็นโปรไฟล์ของตัวเอง ให้ดูได้ทุกอย่าง
+            $isOwnProfile = $authUser->id === $user->id;
 
-        $privacySettings = $isOwnProfile ? [1, 2, 3] : ($friendWithAuth ? [2, 3] : [3]);
+            $privacySettings = $isOwnProfile ? [1, 2, 3] : ($friendWithAuth ? [2, 3] : [3]);
+        }
 
-        // ใช้ Eloquent ORM เพื่อดึงโพสต์จากตาราง "กิจกรรม" โดยกำหนดเงื่อนไขตามที่ระบุ
+        // ใช้ Eloquent ORM เพื่อดึงกิจกรรมจากตาราง activities
+        // ตอนนี้เช็ค privacy_settings ที่ activities table โดยตรง
         $activities = Activity::with([
                 'user',
                 'activityable',
                 'activityable.user',
-                'activityable.postImages',
-                'activityable.postComments',
             ])
-            ->whereHasMorph(
-                'activityable',
-                [Post::class],
-                function ($query) use ($user, $privacySettings) {
-                    $query->whereIn('privacy_settings', $privacySettings)
-                        ->where('user_id', $user->id);
-                }
-            )
+            ->where('user_id', $user->id)
+            ->whereIn('privacy_settings', $privacySettings)
             ->latest()
             ->paginate(10);
+        
+        // Eager load specific relationships based on activityable type
+        // This avoids loading non-existent relationships on models like DonateRecipient
+        $activities->getCollection()->each(function ($activity) {
+            $activityable = $activity->activityable;
+            if ($activityable) {
+                // Load postImages if the relationship exists
+                if (method_exists($activityable, 'postImages')) {
+                    $activityable->load('postImages');
+                }
+                // Load postComments if the relationship exists
+                if (method_exists($activityable, 'postComments')) {
+                    $activityable->load('postComments');
+                }
+            }
+        });
 
         return response()->json([
             'success' => true,

@@ -5,6 +5,7 @@ import { useAuthStore } from '~/stores/auth'
 import ShareModal from '~/components/share/ShareModal.vue'
 import EditPostModal from '~/components/play/feed/EditPostModal.vue'
 import ImageLightbox from '~/components/play/feed/ImageLightbox.vue'
+import PollCard from '~/components/play/poll/PollCard.vue'
 
 const authStore = useAuthStore()
 const toast = useToast()
@@ -101,7 +102,7 @@ const actionText = computed(() => {
     'comment': 'แสดงความคิดเห็น',
     'like': 'ถูกใจ',
     'donate': 'บริจาค',
-    'receive_donation': 'ได้รับบริจาค',
+    'receive_donation': 'ได้รับการสนับสนุน',
     'create': 'สร้าง',
     'update': 'อัปเดต',
     'join': 'เข้าร่วม',
@@ -123,7 +124,7 @@ const actionTextShort = computed(() => {
     'comment': 'แสดงความคิดเห็น',
     'like': 'ถูกใจ',
     'donate': 'บริจาค',
-    'receive_donation': 'ได้รับบริจาค',
+    'receive_donation': 'ได้รับการสนับสนุน',
     'create': 'สร้าง',
     'update': 'อัปเดต',
     'join': 'เข้าร่วม',
@@ -221,9 +222,9 @@ const contextInfo = computed(() => {
     return {
       type: 'donate_recipient',
       icon: 'fluent:gift-24-regular',
-      name: 'ได้รับบริจาคจาก ' + (data.donation?.donor_name || 'ไม่ประสงค์ออกนาม'),
+      name: 'ได้รับการสนับสนุนจาก ' + (data.donation?.donor_name || 'ไม่ประสงค์ออกนาม'),
       link: data.donation?.donor?.id ? `/profile/${data.donation.donor.id}` : null,
-      amount: data.donation?.amounts,
+      points: data.points_received || 240, // แสดงแต้มที่ได้รับแทนเงิน
       color: 'text-green-500'
     }
   }
@@ -292,6 +293,22 @@ const views = computed(() => postData.value.views || 0)
 const commentsCount = computed(() => postData.value.comments_count || 0)
 const shares = computed(() => postData.value.shares || 0)
 
+// Poll-related computed properties
+const hasPoll = computed(() => {
+  return actionTo.value === 'Poll' || postData.value.poll !== undefined
+})
+
+const pollData = computed(() => {
+  if (actionTo.value === 'Poll') {
+    return postData.value
+  }
+  return postData.value.poll || null
+})
+
+const isPollOwner = computed(() => {
+  return authStore.user?.id === pollData.value?.user_id || authStore.user?.id === postAuthor.value?.id
+})
+
 // Feeling/Activity data
 const feeling = computed(() => postData.value.feeling || null)
 const feelingIcon = computed(() => postData.value.feeling_icon || null)
@@ -319,10 +336,11 @@ const postContent = computed(() => {
     return postData.value.notes ? `💝 ${postData.value.notes}` : `💝 บริจาค ${postData.value.amounts}`
   }
   
-  // For DonateRecipient type
+  // For DonateRecipient type - ไม่แสดงข้อความซ้ำ เพราะมีกล่องแสดงแต้มแยกอยู่แล้ว
   if (actionTo.value === 'DonateRecipient') {
     const donation = postData.value.donation
-    return donation?.notes ? `🎁 ${donation.notes}` : `🎁 ได้รับบริจาค ${donation?.amounts || ''}`
+    // แสดงแค่ notes ของ donation ถ้ามี ไม่ต้องแสดงจำนวนแต้มซ้ำ
+    return donation?.notes || ''
   }
   
   return postData.value.content || postData.value.description || ''
@@ -1826,6 +1844,19 @@ const handlePostUpdated = (updatedPost) => {
   emit('post-updated', updatedPost)
 }
 
+// Poll event handlers
+const handlePollDelete = () => {
+  emit('delete-success', props.post.id)
+}
+
+const handlePollUpdate = (updatedPoll) => {
+  // Update local poll data
+  if (pollData.value) {
+    Object.assign(pollData.value, updatedPoll)
+  }
+  emit('post-updated', props.post)
+}
+
 </script>
 
 <template>
@@ -2199,45 +2230,86 @@ const handlePostUpdated = (updatedPost) => {
           
           <!-- Dropdown Menu -->
           <Transition name="dropdown">
-            <div 
-              v-if="showPostOptionsMenu" 
+            <div
+              v-if="showPostOptionsMenu"
               v-click-outside="() => showPostOptionsMenu = false"
               class="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-lg border border-gray-200 dark:border-vikinger-dark-50/30 overflow-hidden z-50"
             >
-              <!-- Edit Post (only for post owner) -->
-              <button
-                v-if="isOwnPost"
-                @click="openEditModal"
-                class="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left text-blue-600"
-              >
-                <Icon 
-                  icon="fluent:edit-24-regular" 
-                  class="w-5 h-5" 
-                />
-                <span class="text-sm font-medium">แก้ไขโพสต์</span>
-              </button>
+              <!-- Poll-specific options -->
+              <template v-if="hasPoll && isPollOwner">
+                <!-- Edit Poll -->
+                <button
+                  class="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left text-blue-600"
+                >
+                  <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
+                  <span class="text-sm font-medium">แก้ไขโพล</span>
+                </button>
+                
+                <!-- Close Poll -->
+                <button
+                  class="w-full flex items-center gap-3 px-4 py-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors text-left text-yellow-600"
+                >
+                  <Icon icon="fluent:checkmark-circle-24-regular" class="w-5 h-5" />
+                  <span class="text-sm font-medium">ปิดโพล</span>
+                </button>
+                
+                <!-- Delete Poll -->
+                <button
+                  @click="deletePost"
+                  :disabled="isDeletingPost"
+                  class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left text-red-500"
+                >
+                  <Icon
+                    v-if="!isDeletingPost"
+                    icon="fluent:delete-24-regular"
+                    class="w-5 h-5"
+                  />
+                  <Icon
+                    v-else
+                    icon="fluent:spinner-ios-20-regular"
+                    class="w-5 h-5 animate-spin"
+                  />
+                  <span class="text-sm font-medium">ลบโพล</span>
+                </button>
+              </template>
               
-              <!-- Delete Post (only for post owner) -->
-              <button
-                v-if="isOwnPost"
-                @click="deletePost"
-                :disabled="isDeletingPost"
-                class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left text-red-500"
-              >
-                <Icon 
-                  v-if="!isDeletingPost"
-                  icon="fluent:delete-24-regular" 
-                  class="w-5 h-5" 
-                />
-                <Icon 
-                  v-else 
-                  icon="fluent:spinner-ios-20-regular" 
-                  class="w-5 h-5 animate-spin" 
-                />
-                <span class="text-sm font-medium">ลบโพสต์</span>
-              </button>
+              <!-- Regular post options -->
+              <template v-else>
+                <!-- Edit Post (only for post owner) -->
+                <button
+                  v-if="isOwnPost"
+                  @click="openEditModal"
+                  class="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left text-blue-600"
+                >
+                  <Icon
+                    icon="fluent:edit-24-regular"
+                    class="w-5 h-5"
+                  />
+                  <span class="text-sm font-medium">แก้ไขโพสต์</span>
+                </button>
+                
+                <!-- Delete Post (only for post owner) -->
+                <button
+                  v-if="isOwnPost"
+                  @click="deletePost"
+                  :disabled="isDeletingPost"
+                  class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left text-red-500"
+                >
+                  <Icon
+                    v-if="!isDeletingPost"
+                    icon="fluent:delete-24-regular"
+                    class="w-5 h-5"
+                  />
+                  <Icon
+                    v-else
+                    icon="fluent:spinner-ios-20-regular"
+                    class="w-5 h-5 animate-spin"
+                  />
+                  <span class="text-sm font-medium">ลบโพสต์</span>
+                </button>
+              </template>
               
-              <!-- Report option -->
+              <!-- Report option (always available) -->
               <button
                 class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 transition-colors text-left"
               >
@@ -2250,16 +2322,16 @@ const handlePostUpdated = (updatedPost) => {
       </div>
 
       <!-- Donation Amount Display (for Donate posts) -->
-      <div v-if="contextInfo?.amount && !isNested" class="mb-4 p-4 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-xl">
+      <div v-if="(contextInfo?.amount || contextInfo?.points) && !isNested" class="mb-4 p-4 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-xl">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center">
-              <Icon icon="fluent:heart-24-filled" class="w-6 h-6 text-white" />
+              <Icon :icon="contextInfo.type === 'donate_recipient' ? 'fluent:gift-24-filled' : 'fluent:heart-24-filled'" class="w-6 h-6 text-white" />
             </div>
             <div>
-              <p class="text-sm text-gray-600 dark:text-gray-400">{{ contextInfo.type === 'donate' ? 'จำนวนบริจาค' : 'จำนวนที่ได้รับ' }}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">{{ contextInfo.type === 'donate' ? 'จำนวนบริจาค' : 'แต้มที่ได้รับ' }}</p>
               <p class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">
-                {{ contextInfo.amount }}
+                {{ contextInfo.points ? `${contextInfo.points} แต้ม` : contextInfo.amount }}
               </p>
             </div>
           </div>
@@ -2337,6 +2409,17 @@ const handlePostUpdated = (updatedPost) => {
           <audio v-else-if="postData.media.type === 'audio'" controls class="w-full">
             <source :src="postData.media.url" />
           </audio>
+        </div>
+
+        <!-- Poll Display -->
+        <div v-if="hasPoll && pollData" class="mt-4">
+          <PollCard
+            :poll="pollData"
+            :show-actions="isPollOwner && !isNested"
+            :is-nested="isNested"
+            @delete="handlePollDelete"
+            @update="handlePollUpdate"
+          />
         </div>
       </div>
 

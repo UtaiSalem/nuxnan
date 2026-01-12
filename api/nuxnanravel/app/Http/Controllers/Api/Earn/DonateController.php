@@ -11,6 +11,7 @@ use App\Enums\ActivityType;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\Earn\DonateResource;
+use App\Http\Resources\UserResource;
 use App\Http\Resources\Play\ActivityResource;
 
 class DonateController extends \App\Http\Controllers\Controller
@@ -27,109 +28,13 @@ class DonateController extends \App\Http\Controllers\Controller
             'donates' => $donatesResource,
         ]);
     }
-
-    public function fetch_more_donates()
-    {
-        $donates = Donate::latest()->paginate();
-        $donatesResource = DonateResource::collection($donates);
-
-        return response()->json([
-            'success'           => true,
-            'donates'           => $donates,
-        ]);
-    }
-
-    public function allAvailableDonates()
-    {
-        return response()->json([
-            'donates' => DonateResource::collection(Donate::whereNotIn('status',[2])->orderBy('remaining_points', 'desc')->latest()->paginate()),
-        ]);
-    }
-
-    /**
-     * Get donates for sidebar widget (limited to 5 items).
-     */
-    public function widget()
-    {
-        $donates = Donate::whereNotIn('status', [2])
-            ->orderBy('remaining_points', 'DESC')
-            ->latest()
-            ->limit(5)
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'donates' => DonateResource::collection($donates),
-        ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        $donor = Auth::user();
-
-        return response()->json([
-            'donor' => $donor,
-        ]);
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-       
-        $validated = $request->validate([
-            'user_id'      => ['nullable'],
-            'donor_id'      => ['nullable'],
-            'donor_name'    => ['nullable'],
-            'amounts'       => ['required', 'numeric'],
-            'transfer_date' => ['required'],
-            'transfer_time' => ['required'],
-        ]);
-       
-        if($request->file('slip')) {
-            $slip_file = $request->file('slip');
-            $slip_filename =  uniqid().'.'.$slip_file->getClientOriginalExtension();
-            // $slip_file->storeAs('public/images/supports/donates/slips', $slip_filename);
-            $slip_file->storeAs('public/images/donates', $slip_filename);
-
-        }
-
-        $donate = new Donate();
-
-        $donate->user_id            = $validated['user_id'] ?? 7;
-        $donate->donor_id           = !$validated['donor_id'] || $validated['donor_id'] === 'null' ? null : $validated['donor_id'];
-        $donate->donor_name         = $validated['donor_name'] ?? null;
-        
-        $donate->amounts            = $validated['amounts'];
-        $donate->slip               = $slip_filename;
-        $donate->transfer_date      = Carbon::parse($request->transfer_date);
-        $donate->transfer_time      = $validated['transfer_time'];
-        $donate->remaining_points   = $validated['amounts']*1080;
-        $donate->save();
-
-        $activity = new Activity();
-        $activity->user_id = $donate->donor_id ?? 7;
-        $activity->activity_type = ActivityType::GIVE_DONATION->value;
-        $activity->activityable()->associate($donate);
-        $activity->save();
-
-        return response()->json([
-            'success' => true,
-            'donate' => $donate,
-        ]);
-    }
-
-
+// ... (skip unchanged methods)
     // get donor
     public function getDonor(User $user)
     {
         return response()->json([
             'success' => true,
-            'donor' => $user,
+            'donor' => new UserResource($user),
         ]);
     }
 
@@ -164,6 +69,21 @@ class DonateController extends \App\Http\Controllers\Controller
     //get donate
     public function getDonate(Donate $donate)
     {
+        // ตรวจสอบสถานะการอนุมัติ (status: 0=รอ, 1=อนุมัติ, 2=ปฏิเสธ)
+        if($donate->status !== 1){
+            $statusMessage = match($donate->status) {
+                0 => 'การสนับสนุนนี้ยังรอการตรวจสอบและอนุมัติจากแอดมิน',
+                2 => 'การสนับสนุนนี้ถูกปฏิเสธ',
+                default => 'การสนับสนุนนี้ยังไม่พร้อมใช้งาน',
+            };
+            return response()->json([
+                'success' => false,
+                'donate' => $donate,
+                'message' => $statusMessage,
+                'pending_approval' => $donate->status === 0,
+            ]);
+        }
+
         if($donate->remaining_points < 270){
             return response()->json([
                 'success' => false,
@@ -174,6 +94,22 @@ class DonateController extends \App\Http\Controllers\Controller
         try {
             if($donate->remaining_points > 269){
                 $authUser = auth()->user();
+
+                // ตรวจสอบจำนวนครั้งที่รับแต้มจาก donate นี้ในวันนี้ (จำกัด 10 ครั้ง/คน/วัน/การสนับสนุน)
+                $todayReceiveCount = $donate->recipients()
+                    ->where('user_id', $authUser->id)
+                    ->whereDate('donate_recipients.created_at', Carbon::today())
+                    ->count();
+
+                if ($todayReceiveCount >= 10) {
+                    return response()->json([
+                        'success' => false,
+                        'donate' => $donate,
+                        'message' => 'คุณได้รับแต้มจากการสนับสนุนนี้ครบ 10 ครั้งแล้วในวันนี้ กรุณารอวันใหม่',
+                        'daily_limit_reached' => true,
+                        'today_count' => $todayReceiveCount,
+                    ]);
+                }
 
                 $donate->recipients()->attach($authUser->id);
 
@@ -220,4 +156,65 @@ class DonateController extends \App\Http\Controllers\Controller
             ]);
         }
     }
+    /**
+     * Get all available donations for public view.
+     */
+    public function allAvailableDonates()
+    {
+        $donates = Donate::latest()
+            ->with(['donor'])
+            ->paginate(12);
+
+        // Manually structure response to match frontend expectations
+        return response()->json([
+            'donates' => [
+                'data' => DonateResource::collection($donates)->resolve(),
+                'links' => [
+                    'first' => $donates->url(1),
+                    'last' => $donates->url($donates->lastPage()),
+                    'prev' => $donates->previousPageUrl(),
+                    'next' => $donates->nextPageUrl(),
+                ],
+                'meta' => [
+                    'current_page' => $donates->currentPage(),
+                    'from' => $donates->firstItem(),
+                    'last_page' => $donates->lastPage(),
+                    'per_page' => $donates->perPage(),
+                    'to' => $donates->lastItem(),
+                    'total' => $donates->total(),
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Get donations for dashboard widget (limited count).
+     */
+    public function widget()
+    {
+        $donates = Donate::whereIn('status', [0, 1])
+            ->where('remaining_points', '>', 0)
+            ->latest()
+            ->take(10)
+            ->get();
+
+        return response()->json([
+            'donates' => DonateResource::collection($donates),
+        ]);
+    }
+
+    /**
+     * Get donation history for the authenticated user.
+     */
+    public function history()
+    {
+        $donates = Donate::where('donor_id', auth()->id())
+            ->latest()
+            ->paginate(12);
+
+        return response()->json([
+            'donates' => DonateResource::collection($donates),
+        ]);
+    }
 }
+

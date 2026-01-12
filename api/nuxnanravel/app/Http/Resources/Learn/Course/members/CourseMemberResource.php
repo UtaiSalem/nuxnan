@@ -17,6 +17,7 @@ class CourseMemberResource extends JsonResource
     {
         return [
             'id'                    =>  $this->id,
+            'user_id'               =>  $this->user_id,
             'course_id'             =>  $this->course_id,
             'user'                  =>  new UserResource($this->user),
             'member_name'           =>  $this->member_name,
@@ -40,6 +41,7 @@ class CourseMemberResource extends JsonResource
             'last_accessed_at'      =>  $this->last_accessed_at,
             'updated_at'            =>  $this->updated_at,
             'created_at'            =>  $this->created_at,
+            'grade_name'            =>  $this->getGradeName(),
         ];
     }
 }

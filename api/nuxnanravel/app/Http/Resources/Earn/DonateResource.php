@@ -16,18 +16,14 @@ class DonateResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // Check if the resource exists
-        if (!$this->resource) {
-            return [];
-        }
-        
         return [
             'id'                    => $this->id,
-            'user'                  => $this->user ? new UserResource($this->user) : null,
-            'donor'                 => $this->donor_id ? new UserResource($this->donor) : null,
+            'donor'                 => $this->relationLoaded('donor') && $this->donor 
+                                        ? new UserResource($this->donor) 
+                                        : null,
             'donor_name'            => $this->donor_name ?? 'ไม่ประสงค์ออกนาม',
-            'amounts'               => Number::currency($this->amounts, 'THB', 'th_TH'),
-            'total_points'          => $this->total_points,
+            'amounts'               => $this->amounts !== null ? Number::currency($this->amounts, 'THB', 'th_TH') : '฿0.00',
+            'total_points'          => $this->total_points ?? 0,
             'slip'                  => $this->slip,
             'transfer_date'         => $this->transfer_date,
             'transfer_time'         => $this->transfer_time,
@@ -36,14 +32,14 @@ class DonateResource extends JsonResource
             'payment_method'        => $this->payment_method,
             'transaction_id'        => $this->transaction_id,
             'donor_address'         => $this->donor_address,
-            'status'                => $this->status,
+            'status'                => $this->status ?? 0,
             'privacy_setting'       => $this->privacy_setting,
-            'remaining_points'      => Number::format($this->remaining_points),
+            'remaining_points'      => $this->remaining_points ?? 0,
             'approved_by'           => $this->approved_by,
             'notes'                 => $this->notes,
             'created_at'            => $this->created_at,
             'updated_at'            => $this->updated_at,
-            'diff_humans_created_at' => $this->created_at->diffForHumans(),
+            'diff_humans_created_at' => $this->created_at ? $this->created_at->diffForHumans() : null,
         ];
     }
 }

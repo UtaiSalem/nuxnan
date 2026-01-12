@@ -82,6 +82,13 @@ class ActivityController extends Controller
             }
         });
 
+        // Load DonateRecipient specific relations
+        $activities->getCollection()->each(function($activity) {
+            if ($activity->activityable_type === 'App\Models\DonateRecipient' && $activity->activityable) {
+                $activity->activityable->load(['reciever', 'donation']);
+            }
+        });
+
         // Load Share comments for Share activities
         $activities->getCollection()->each(function($activity) {
             if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {

@@ -27,6 +27,10 @@ class AssignmentAnswerController extends Controller
              });
         }
 
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
         return AssignmentAnswerResource::collection($query->paginate(15));
     }
 

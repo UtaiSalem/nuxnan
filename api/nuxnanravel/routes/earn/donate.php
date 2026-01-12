@@ -8,6 +8,9 @@ Route::get('/supports/donates/create', [DonateController::class, 'create'])->nam
 Route::post('/supports/donates', [DonateController::class, 'store'])->name('support.donate.store');
 Route::get('/supports/donates/donor/{user:personal_code}', [DonateController::class, 'getDonor'])->name('donate.get-donor');
 
+// Public endpoint for viewing available donates (no auth required)
+Route::get('/donates/available', [DonateController::class, 'allAvailableDonates'])->name('donates.available');
+
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/supports/donates')->group(function () {
     Route::get('/', [DonateController::class, 'index'])->name('admin.support.donate.index');
     Route::get('/more', [DonateController::class, 'fetch_more_donates'])->name('admin.support.donate.fetch-more-donates');
@@ -19,6 +22,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'pl
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {
     Route::get('/donates/widget', [DonateController::class, 'widget'])->name('donates.widget');
     Route::get('/donates/{donate}/get-donate', [DonateController::class, 'getDonate'])->name('donate.get-donate');
+    Route::get('/donates/history', [DonateController::class, 'history'])->name('donates.history');
     Route::get('/donates', [DonateController::class, 'allAvailableDonates'])->name('donates.list');
 });
 

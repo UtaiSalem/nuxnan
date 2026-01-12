@@ -4,6 +4,10 @@ import MainLayout from '~/layouts/main.vue'
 import DonateCard from '@/components/earn/donates/DonateCard.vue'
 import InfiniteLoading from 'v3-infinite-loading'
 
+definePageMeta({
+  middleware: ['plearnd-admin'],
+})
+
 const props = defineProps({
   donates: Object,
 })

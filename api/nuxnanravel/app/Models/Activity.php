@@ -19,7 +19,12 @@ class Activity extends Model
         'activity_type',
         'activity_details',
         'activityable_id',
-        'activityable_type'
+        'activityable_type',
+        'privacy_settings',
+    ];
+
+    protected $casts = [
+        'privacy_settings' => 'integer',
     ];
 
 

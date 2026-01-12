@@ -23,6 +23,12 @@ class DonateRecipient extends Model
         return $this->belongsTo(Donate::class, 'donate_id');
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+
     public function reciever()
     {
         return $this->belongsTo(User::class, 'user_id');

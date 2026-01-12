@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'super-admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
+            'plearnd_admin' => \App\Http\Middleware\EnsurePlearndAdmin::class,
         ]);
         
         // Ensure CORS is applied to API routes

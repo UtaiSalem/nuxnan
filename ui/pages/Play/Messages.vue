@@ -2,7 +2,7 @@
 import BaseCard from '~/components/atoms/BaseCard.vue'
 
 definePageMeta({
-  layout: 'default'
+  layout: 'main'
 })
 </script>
 

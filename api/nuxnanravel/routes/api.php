@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Play\ActivityController;
 use App\Http\Controllers\Api\Learn\Course\info\MentalMathController;
 use App\Http\Controllers\Api\Auth\ProviderAuthController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\SettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -136,6 +137,16 @@ Route::middleware(['auth:api'])->group(function () {
     
     Route::get('/user', function (Request $request) {
         return $request->user();
+    });
+
+    // Settings Routes
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingsController::class, 'index']);
+        Route::post('/profile', [SettingsController::class, 'updateProfile']);
+        Route::post('/account', [SettingsController::class, 'updateAccount']);
+        Route::post('/password', [SettingsController::class, 'updatePassword']);
+        Route::post('/avatar', [SettingsController::class, 'updateAvatar']);
+        Route::post('/cover', [SettingsController::class, 'updateCover']);
     });
 
     Route::get('/dashboard', function () {

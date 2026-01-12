@@ -80,6 +80,7 @@ class CourseMemberController extends Controller
 
     public function show(Course $course, CourseMember $member)
     {
+        $member->load(['user', 'group']);
         $userId = $member->user_id;
         
         // Get all lessons with completion status
@@ -179,6 +180,7 @@ class CourseMemberController extends Controller
             'isCourseAdmin' => $course->user_id === auth()->id(),
             'course' => new CourseResource($course),
             'member' => new CourseMemberResource($member),
+            'groups' => CourseGroupResource::collection($course->courseGroups),
             'lessons' => $lessons,
             'assignments' => $assignments,
             'quizzes' => $quizzes,
@@ -274,17 +276,22 @@ class CourseMemberController extends Controller
     //function update
     public function update(Course $course, CourseMember $member, Request $request)
     {
+        $request->validate([
+            'member_name'   => 'nullable|string|max:255',
+            'order_number'  => 'nullable|integer',
+            'member_code'   => 'nullable|string|max:50',
+            'group_id'      => 'nullable|exists:course_groups,id',
+        ]);
+
+        if ($request->has('group_id') && $request->group_id != $member->group_id) {
+            $this->moveMemberToGroup($member, $request->group_id);
+        }
+
         $member->update([
             'member_name'   => $request->member_name,
             'order_number'  => $request->order_number,
             'member_code'   => $request->member_code,
         ]);
-
-        if($member->user_id === auth()->id()){
-            $member->update([
-                'notes_comments' => null,
-            ]);
-        }
 
         return response()->json([
             'success' => true,

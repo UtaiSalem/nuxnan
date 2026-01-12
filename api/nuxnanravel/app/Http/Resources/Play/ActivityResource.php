@@ -10,7 +10,7 @@ use App\Http\Resources\Play\PollResource;
 use App\Http\Resources\Play\PostResource;
 use App\Http\Resources\Play\ShareResource;
 use App\Http\Resources\Earn\DonateResource;
-use App\Http\Resources\Shared\SupportResource;
+use App\Http\Resources\Shared\AdvertResource;
 use App\Http\Resources\Learn\Academy\AcademyPostResource;
 use App\Http\Resources\Learn\Course\posts\CoursePostResource;
 use App\Http\Resources\Earn\DonateRecipientResource;
@@ -68,8 +68,8 @@ class ActivityResource extends JsonResource
         elseif ($type === 'Donate') {
             return new DonateResource($model);
         }
-        elseif ($type === 'Support') {
-            return new SupportResource($model);
+        elseif ($type === 'Advert') {
+            return new AdvertResource($model);
         }
         elseif ($type === 'DonateRecipient') {
             return new DonateRecipientResource($model);
@@ -77,11 +77,11 @@ class ActivityResource extends JsonResource
         elseif ($type === 'Poll') {
             return new PollResource($model);
         }
-        elseif ($type === 'SupportViewer') {
-            // SupportViewer doesn't have a specific resource, return basic data
+        elseif ($type === 'AdvertViewer') {
+            // AdvertViewer doesn't have a specific resource, return basic data
             return [
                 'id' => $model->id,
-                'support_id' => $model->support_id,
+                'advert_id' => $model->advert_id,
                 'user_id' => $model->user_id,
                 'created_at' => $model->created_at,
                 'updated_at' => $model->updated_at,

@@ -4,6 +4,14 @@ import BaseCard from '~/components/atoms/BaseCard.vue'
 import FeedPost from '~/components/play/feed/FeedPost.vue'
 import ProfileCompletionWidget from '~/components/organisms/ProfileCompletionWidget.vue'
 import CreatePostBox from '~/components/play/feed/CreatePostBox.vue'
+import FriendsList from '~/components/profile/FriendsList.vue'
+import PhotosGallery from '~/components/profile/PhotosGallery.vue'
+import BadgesDisplay from '~/components/profile/BadgesDisplay.vue'
+import FriendRequestsWidget from '~/components/profile/FriendRequestsWidget.vue'
+import ProfileAboutSection from '~/components/profile/ProfileAboutSection.vue'
+import GroupsList from '~/components/profile/GroupsList.vue'
+import EventsList from '~/components/profile/EventsList.vue'
+import VideosList from '~/components/profile/VideosList.vue'
 import type { UserProfile, FriendshipStatus } from '~/composables/useProfile'
 
 definePageMeta({
@@ -13,7 +21,9 @@ definePageMeta({
 
 const route = useRoute()
 const { fetchUserProfile, fetchMyProfile } = useProfile()
+const { sendFriendRequest, acceptFriendRequest, cancelFriendRequest, unfriend } = useFriends()
 const authStore = useAuthStore()
+const toast = useToast()
 
 // State
 const profile = ref<UserProfile | null>(null)
@@ -97,7 +107,19 @@ const loadActivities = async (page: number = 1) => {
     // - เจ้าของโปรไฟล์: เห็นได้ทุกโพสต์ (privacy 1, 2, 3)
     // - เพื่อน: เห็นโพสต์ Friends + Global (privacy 2, 3)
     // - คนอื่น: เห็นเฉพาะ Global (privacy 3)
-    const response = await api.get(`/api/users/${referenceCode.value}/activities?page=${page}`)
+    
+    // Use actual user identifier (for 'me', use auth user's reference_code or id)
+    let userIdentifier = referenceCode.value
+    if (isViewingOwnProfile.value && authStore.user) {
+      userIdentifier = authStore.user.reference_code || authStore.user.id
+    } else if (profile.value) {
+      // Use loaded profile's reference_code or user_id
+      userIdentifier = profile.value.reference_code || profile.value.user_id || referenceCode.value
+    }
+    
+    console.log('[loadActivities] Fetching activities for:', userIdentifier)
+    const response = await api.get(`/api/users/${userIdentifier}/activities?page=${page}`)
+    console.log('[loadActivities] Response:', response)
     
     if (response.success && response.activities) {
       if (page === 1) {
@@ -340,24 +362,81 @@ const memberSince = computed(() => {
 
 const friendButtonConfig = computed(() => {
   if (!friendshipStatus.value) {
-    return { text: 'Add Friend', icon: 'fluent:person-add-24-regular', class: 'bg-vikinger-purple' }
+    return { text: 'เพิ่มเพื่อน', icon: 'fluent:person-add-24-regular', class: 'bg-vikinger-purple', action: 'add' }
   }
   
-  switch (friendshipStatus.value) {
+  switch (friendshipStatus.value.status) {
     case 'pending_sent':
-      return { text: 'Request Sent', icon: 'fluent:clock-24-regular', class: 'bg-gray-500' }
+      return { text: 'ยกเลิกคำขอ', icon: 'fluent:clock-24-regular', class: 'bg-gray-500', action: 'cancel' }
     case 'pending_received':
-      return { text: 'Accept Request', icon: 'fluent:checkmark-24-regular', class: 'bg-green-500' }
+      return { text: 'ยอมรับคำขอ', icon: 'fluent:checkmark-24-regular', class: 'bg-green-500', action: 'accept' }
     case 'friends':
-      return { text: 'Friends', icon: 'fluent:people-24-filled', class: 'bg-vikinger-cyan' }
+      return { text: 'เพื่อนแล้ว', icon: 'fluent:people-24-filled', class: 'bg-vikinger-cyan', action: 'unfriend' }
     default:
-      return { text: 'Add Friend', icon: 'fluent:person-add-24-regular', class: 'bg-vikinger-purple' }
+      return { text: 'เพิ่มเพื่อน', icon: 'fluent:person-add-24-regular', class: 'bg-vikinger-purple', action: 'add' }
   }
 })
 
+// Friend action state
+const isProcessingFriend = ref(false)
+
 // Handle friend action
-const handleFriendAction = () => {
-  // TODO: Implement friend actions
+const handleFriendAction = async () => {
+  if (!profile.value || isProcessingFriend.value) return
+  
+  isProcessingFriend.value = true
+  const action = friendButtonConfig.value.action
+  const userId = profile.value.user_id
+  
+  try {
+    let success = false
+    
+    switch (action) {
+      case 'add':
+        success = await sendFriendRequest(userId)
+        if (success) {
+          friendshipStatus.value = { status: 'pending_sent', label: 'คำขอถูกส่งแล้ว' }
+          toast.success('ส่งคำขอเป็นเพื่อนแล้ว!')
+        }
+        break
+        
+      case 'cancel':
+        success = await cancelFriendRequest(userId)
+        if (success) {
+          friendshipStatus.value = { status: 'none', label: '' }
+          toast.success('ยกเลิกคำขอแล้ว')
+        }
+        break
+        
+      case 'accept':
+        success = await acceptFriendRequest(userId)
+        if (success) {
+          friendshipStatus.value = { status: 'friends', label: 'เพื่อน' }
+          toast.success('เพิ่มเพื่อนสำเร็จ!')
+        }
+        break
+        
+      case 'unfriend':
+        // Show confirmation first
+        if (confirm(`ต้องการเลิกเป็นเพื่อนกับ ${displayName.value} หรือไม่?`)) {
+          success = await unfriend(userId)
+          if (success) {
+            friendshipStatus.value = { status: 'none', label: '' }
+            toast.success('เลิกเป็นเพื่อนแล้ว')
+          }
+        }
+        break
+    }
+    
+    if (!success && action !== 'unfriend') {
+      toast.error('ไม่สามารถดำเนินการได้ กรุณาลองใหม่')
+    }
+  } catch (error) {
+    console.error('Friend action error:', error)
+    toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่')
+  } finally {
+    isProcessingFriend.value = false
+  }
 }
 
 // Handle post created - add new post to activities list
@@ -542,14 +621,20 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
           <div v-if="!isOwnProfile" class="absolute bottom-4 right-4 flex gap-3">
             <button 
               @click="handleFriendAction"
-              :class="[friendButtonConfig.class, 'px-6 py-3 text-white rounded-lg hover:opacity-90 transition-all flex items-center gap-2 font-semibold shadow-lg']"
+              :disabled="isProcessingFriend"
+              :class="[friendButtonConfig.class, 'px-6 py-3 text-white rounded-lg hover:opacity-90 transition-all flex items-center gap-2 font-semibold shadow-lg disabled:opacity-70']"
             >
-              <Icon :icon="friendButtonConfig.icon" class="w-5 h-5" />
+              <Icon 
+                v-if="isProcessingFriend" 
+                icon="fluent:spinner-ios-20-regular" 
+                class="w-5 h-5 animate-spin" 
+              />
+              <Icon v-else :icon="friendButtonConfig.icon" class="w-5 h-5" />
               {{ friendButtonConfig.text }}
             </button>
             <button class="px-6 py-3 bg-primary text-white rounded-lg hover:opacity-90 transition-all flex items-center gap-2 font-semibold shadow-lg">
               <Icon icon="fluent:chat-24-regular" class="w-5 h-5" />
-              Send Message
+              ส่งข้อความ
             </button>
           </div>
         </div>
@@ -705,6 +790,141 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
           <!-- Profile Completion Widget (Own Profile) -->
           <ProfileCompletionWidget v-if="isOwnProfile" />
 
+          <!-- Friend Requests Widget (Own Profile) -->
+          <FriendRequestsWidget v-if="isOwnProfile" />
+
+          <!-- Points & Wallet Card - Gaming Style -->
+          <BaseCard class="bg-gray-800 border-gray-700 overflow-hidden">
+            <!-- Header with gradient -->
+            <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 p-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <Icon icon="fluent:wallet-24-filled" class="w-5 h-5" />
+                แต้ม & กระเป๋าเงิน
+              </h3>
+            </div>
+            <div class="p-5 space-y-4">
+              <!-- Points -->
+              <div class="flex items-center justify-between p-3 bg-gradient-to-r from-amber-900/30 to-orange-900/30 rounded-xl border border-amber-600/30">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                    <Icon icon="fluent:star-24-filled" class="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p class="text-xs text-amber-400 uppercase tracking-wider font-medium">แต้มสะสม</p>
+                    <p class="text-2xl font-black text-white">{{ (profile.points || profile.pp || 0).toLocaleString() }}</p>
+                  </div>
+                </div>
+                <Icon icon="fluent:sparkle-24-filled" class="w-8 h-8 text-amber-400 animate-pulse" />
+              </div>
+              
+              <!-- Wallet -->
+              <div class="flex items-center justify-between p-3 bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl border border-green-600/30">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
+                    <Icon icon="fluent:money-24-filled" class="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p class="text-xs text-green-400 uppercase tracking-wider font-medium">Wallet</p>
+                    <p class="text-2xl font-black text-white">฿{{ (profile.wallet || 0).toLocaleString() }}</p>
+                  </div>
+                </div>
+                <Icon icon="fluent:wallet-credit-card-24-filled" class="w-8 h-8 text-green-400" />
+              </div>
+            </div>
+          </BaseCard>
+
+          <!-- Level & XP Progress Card - Gaming Style -->
+          <BaseCard class="bg-gray-800 border-gray-700 overflow-hidden">
+            <!-- Header with gradient -->
+            <div class="bg-gradient-to-r from-vikinger-purple via-purple-600 to-vikinger-cyan p-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  <Icon icon="fluent:trophy-24-filled" class="w-5 h-5" />
+                  Level & Experience
+                </h3>
+                <div class="flex items-center gap-1 px-3 py-1 bg-white/20 rounded-full">
+                  <Icon icon="fluent:star-24-filled" class="w-4 h-4 text-yellow-300" />
+                  <span class="text-white font-bold text-sm">LV.{{ profile.level || 1 }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-5 space-y-4">
+              <!-- Level Circle Display -->
+              <div class="flex items-center justify-center">
+                <div class="relative">
+                  <!-- Outer ring -->
+                  <svg class="w-28 h-28 transform -rotate-90" viewBox="0 0 100 100">
+                    <!-- Background circle -->
+                    <circle 
+                      cx="50" cy="50" r="45" 
+                      stroke="currentColor" 
+                      stroke-width="8" 
+                      fill="none" 
+                      class="text-gray-700"
+                    />
+                    <!-- Progress circle -->
+                    <circle 
+                      cx="50" cy="50" r="45" 
+                      stroke="url(#levelGradient)" 
+                      stroke-width="8" 
+                      fill="none" 
+                      stroke-linecap="round"
+                      :stroke-dasharray="`${(profile.level_progress || 65) * 2.83} 283`"
+                      class="transition-all duration-1000"
+                    />
+                    <defs>
+                      <linearGradient id="levelGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#9333ea" />
+                        <stop offset="100%" style="stop-color:#23d2e2" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <!-- Level number in center -->
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-center">
+                      <span class="text-3xl font-black text-white">{{ profile.level || 1 }}</span>
+                      <p class="text-xs text-gray-400 uppercase">LEVEL</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- XP Progress Bar -->
+              <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-400">Experience</span>
+                  <span class="text-vikinger-cyan font-medium">{{ (profile.level_progress || 65) }}%</span>
+                </div>
+                <div class="h-3 bg-gray-700 rounded-full overflow-hidden">
+                  <div 
+                    class="h-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-full transition-all duration-1000 relative overflow-hidden"
+                    :style="{ width: (profile.level_progress || 65) + '%' }"
+                  >
+                    <!-- Shimmer effect -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                  </div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500">
+                  <span>{{ ((profile.points || profile.pp || 0) * 0.65).toLocaleString() }} XP</span>
+                  <span>{{ ((profile.points || profile.pp || 0) * 0.65 + 1000).toLocaleString() }} XP</span>
+                </div>
+              </div>
+
+              <!-- Next Level Reward -->
+              <div class="p-3 bg-gray-700/50 rounded-xl border border-gray-600">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center">
+                    <Icon icon="fluent:gift-24-filled" class="w-5 h-5 text-white" />
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-white">Next Level Reward</p>
+                    <p class="text-xs text-gray-400">+500 points bonus</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </BaseCard>
+
           <!-- About Me Card - Vikinger Style -->
           <BaseCard class="bg-gray-800 border-gray-700 p-5">
             <div class="flex items-center justify-between mb-4">
@@ -837,91 +1057,58 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
 
           <!-- About Tab -->
           <template v-if="activeTab === 'about'">
-            <BaseCard class="bg-gray-800 border-gray-700 p-6">
-              <h3 class="text-lg font-bold text-white mb-6">About {{ displayName }}</h3>
-              
-              <div class="space-y-6">
-                <!-- Bio -->
-                <div v-if="profile.bio">
-                  <h4 class="text-sm font-medium text-gray-400 mb-2">Bio</h4>
-                  <p class="text-white">{{ profile.bio }}</p>
-                </div>
-
-                <!-- Basic Info -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div v-if="profile.gender">
-                    <h4 class="text-sm font-medium text-gray-400 mb-1">Gender</h4>
-                    <p class="text-white capitalize">{{ profile.gender }}</p>
-                  </div>
-                  <div v-if="profile.birthdate">
-                    <h4 class="text-sm font-medium text-gray-400 mb-1">Birthday</h4>
-                    <p class="text-white">{{ new Date(profile.birthdate).toLocaleDateString('th-TH') }}</p>
-                  </div>
-                  <div v-if="profile.location">
-                    <h4 class="text-sm font-medium text-gray-400 mb-1">Location</h4>
-                    <p class="text-white">{{ profile.location }}</p>
-                  </div>
-                  <div v-if="profile.website">
-                    <h4 class="text-sm font-medium text-gray-400 mb-1">Website</h4>
-                    <a :href="profile.website" target="_blank" class="text-vikinger-cyan hover:underline">{{ profile.website }}</a>
-                  </div>
-                </div>
-
-                <!-- Interests -->
-                <div v-if="profile.interests">
-                  <h4 class="text-sm font-medium text-gray-400 mb-2">Interests</h4>
-                  <p class="text-white">{{ profile.interests }}</p>
-                </div>
-              </div>
-            </BaseCard>
+            <ProfileAboutSection 
+              :profile="profile" 
+              :is-own-profile="isOwnProfile" 
+            />
           </template>
 
           <!-- Friends Tab -->
           <template v-if="activeTab === 'friends'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:people-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Friends list coming soon</p>
-            </BaseCard>
+            <FriendsList 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
 
           <!-- Photos Tab -->
           <template v-if="activeTab === 'photos'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:image-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Photos coming soon</p>
-            </BaseCard>
+            <PhotosGallery 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
 
           <!-- Videos Tab -->
           <template v-if="activeTab === 'videos'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:video-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Videos coming soon</p>
-            </BaseCard>
+            <VideosList 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
 
           <!-- Badges Tab -->
           <template v-if="activeTab === 'badges'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:trophy-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Badges coming soon</p>
-            </BaseCard>
+            <BadgesDisplay 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
 
           <!-- Groups Tab -->
           <template v-if="activeTab === 'groups'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:people-community-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Groups coming soon</p>
-            </BaseCard>
+            <GroupsList 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
 
           <!-- Events Tab -->
           <template v-if="activeTab === 'events'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:calendar-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Events coming soon</p>
-            </BaseCard>
+            <EventsList 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
 
           <!-- Blog Tab -->
@@ -961,6 +1148,146 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
 
         <!-- Right Sidebar (Photos, Groups) -->
         <div class="lg:col-span-3 space-y-6">
+          <!-- Stats Card - Gaming Style -->
+          <BaseCard class="bg-gray-800 border-gray-700 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600 to-cyan-500 p-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <Icon icon="fluent:data-trending-24-filled" class="w-5 h-5" />
+                สถิติ
+              </h3>
+            </div>
+            <div class="p-4 space-y-3">
+              <!-- Stats Grid -->
+              <div class="grid grid-cols-2 gap-3">
+                <!-- Posts -->
+                <div class="p-3 bg-gray-700/50 rounded-xl text-center hover:bg-gray-700 transition-colors">
+                  <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                    <Icon icon="fluent:document-24-filled" class="w-5 h-5 text-white" />
+                  </div>
+                  <p class="text-xl font-bold text-white">{{ profile.posts_count || 0 }}</p>
+                  <p class="text-xs text-gray-400">โพสต์</p>
+                </div>
+                <!-- Likes Received -->
+                <div class="p-3 bg-gray-700/50 rounded-xl text-center hover:bg-gray-700 transition-colors">
+                  <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
+                    <Icon icon="fluent:heart-24-filled" class="w-5 h-5 text-white" />
+                  </div>
+                  <p class="text-xl font-bold text-white">{{ (profile.likes_received || 0).toLocaleString() }}</p>
+                  <p class="text-xs text-gray-400">ถูกใจ</p>
+                </div>
+                <!-- Comments -->
+                <div class="p-3 bg-gray-700/50 rounded-xl text-center hover:bg-gray-700 transition-colors">
+                  <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <Icon icon="fluent:chat-24-filled" class="w-5 h-5 text-white" />
+                  </div>
+                  <p class="text-xl font-bold text-white">{{ profile.comments_count || 0 }}</p>
+                  <p class="text-xs text-gray-400">ความคิดเห็น</p>
+                </div>
+                <!-- Shares -->
+                <div class="p-3 bg-gray-700/50 rounded-xl text-center hover:bg-gray-700 transition-colors">
+                  <div class="w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+                    <Icon icon="fluent:share-24-filled" class="w-5 h-5 text-white" />
+                  </div>
+                  <p class="text-xl font-bold text-white">{{ profile.shares_count || 0 }}</p>
+                  <p class="text-xs text-gray-400">แชร์</p>
+                </div>
+              </div>
+
+              <!-- Activity Streak -->
+              <div class="p-3 bg-gradient-to-r from-orange-900/30 to-red-900/30 rounded-xl border border-orange-600/30">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
+                      <Icon icon="fluent:fire-24-filled" class="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-white">Activity Streak</p>
+                      <p class="text-xs text-gray-400">Active days in a row</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-2xl font-black text-orange-400">{{ profile.streak || 7 }}</p>
+                    <p class="text-xs text-gray-500">days</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </BaseCard>
+
+          <!-- Achievements Widget - Gaming Style -->
+          <BaseCard class="bg-gray-800 border-gray-700 overflow-hidden">
+            <div class="bg-gradient-to-r from-yellow-500 to-amber-500 p-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <Icon icon="fluent:ribbon-star-24-filled" class="w-5 h-5" />
+                ความสำเร็จ
+              </h3>
+            </div>
+            <div class="p-4 space-y-3">
+              <!-- Achievement Items -->
+              <div class="space-y-2">
+                <!-- First Post -->
+                <div class="flex items-center gap-3 p-2 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center">
+                    <Icon icon="fluent:document-checkmark-24-filled" class="w-5 h-5 text-white" />
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-white">โพสต์แรก</p>
+                    <p class="text-xs text-gray-400">สร้างโพสต์แรกของคุณ</p>
+                  </div>
+                  <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5 text-green-500" />
+                </div>
+                
+                <!-- 10 Friends -->
+                <div class="flex items-center gap-3 p-2 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
+                    <Icon icon="fluent:people-24-filled" class="w-5 h-5 text-white" />
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-white">สังคมออนไลน์</p>
+                    <p class="text-xs text-gray-400">มีเพื่อน 10 คน</p>
+                  </div>
+                  <div class="text-xs text-gray-400">{{ Math.min(profile.friends_count || 0, 10) }}/10</div>
+                </div>
+                
+                <!-- 100 Points -->
+                <div class="flex items-center gap-3 p-2 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                    <Icon icon="fluent:star-24-filled" class="w-5 h-5 text-white" />
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-white">นักสะสมแต้ม</p>
+                    <p class="text-xs text-gray-400">สะสม 100 แต้ม</p>
+                  </div>
+                  <Icon 
+                    :icon="(profile.points || profile.pp || 0) >= 100 ? 'fluent:checkmark-circle-24-filled' : 'fluent:circle-24-regular'" 
+                    :class="(profile.points || profile.pp || 0) >= 100 ? 'w-5 h-5 text-green-500' : 'w-5 h-5 text-gray-500'" 
+                  />
+                </div>
+                
+                <!-- Level 5 -->
+                <div class="flex items-center gap-3 p-2 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400 to-violet-500 flex items-center justify-center">
+                    <Icon icon="fluent:trophy-24-filled" class="w-5 h-5 text-white" />
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-white">ผู้ชำนาญ</p>
+                    <p class="text-xs text-gray-400">ถึง Level 5</p>
+                  </div>
+                  <Icon 
+                    :icon="(profile.level || 1) >= 5 ? 'fluent:checkmark-circle-24-filled' : 'fluent:circle-24-regular'" 
+                    :class="(profile.level || 1) >= 5 ? 'w-5 h-5 text-green-500' : 'w-5 h-5 text-gray-500'" 
+                  />
+                </div>
+              </div>
+              
+              <!-- View All Button -->
+              <button class="w-full py-2 text-vikinger-cyan text-sm hover:underline flex items-center justify-center gap-1">
+                <span>ดูทั้งหมด</span>
+                <Icon icon="fluent:chevron-right-24-regular" class="w-4 h-4" />
+              </button>
+            </div>
+          </BaseCard>
+
           <!-- Stream Box / Featured Content -->
           <BaseCard class="bg-gray-800 border-gray-700 p-5">
             <div class="flex items-center justify-between mb-4">
@@ -1270,5 +1597,19 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
 .modal-enter-from .relative,
 .modal-leave-to .relative {
   transform: scale(0.95) translateY(-20px);
+}
+
+/* Shimmer animation for progress bars */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
 }
 </style>

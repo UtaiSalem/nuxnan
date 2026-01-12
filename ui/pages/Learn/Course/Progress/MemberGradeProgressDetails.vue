@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import CourseLayout from '@/Layouts/CourseLayout.vue';
 import MemberAssignmentsAnswersDetails from '@/components/learn/course/assignments/MemberAssignmentsAnswersDetails.vue';
 import MemberQuizzesDetails from '@/components/learn/course/progress/MemberQuizzesDetails.vue';
+import Textarea from 'primevue/textarea';
 
 const props = defineProps({
     isCourseAdmin: Boolean,
@@ -364,23 +365,22 @@ const projectedGrade = computed(() => {
                                     งานที่ยังไม่ได้ส่ง / ยังไม่ได้ตรวจ
                                 </h3>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <template v-for="assign in props.course_assignments" :key="assign.id">
-                                        <div v-if="!props.member_assignments_answers.data.find(a => a.assignment_id === assign.id) || !props.member_assignments_answers.data.find(a => a.assignment_id === assign.id).points" 
-                                             class="bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                    <div v-for="assign in props.course_assignments" :key="assign.id"
+                                         v-if="!props.member_assignments_answers.data.find(a => a.assignment_id === assign.id) || !props.member_assignments_answers.data.find(a => a.assignment_id === assign.id).points"
+                                         class="bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
                                             <div class="flex justify-between text-sm mb-2">
                                                 <span class="font-medium text-gray-700 truncate pr-2" :title="assign.title">{{ truncateText(assign.title, 30).text }}</span>
                                                 <span class="text-gray-500 text-xs bg-gray-100 px-2 py-0.5 rounded-full">Max: {{ assign.points }}</span>
                                             </div>
                                             <div class="relative">
-                                                <input type="number" 
-                                                       v-model="hypotheticalScores[`assignment_${assign.id}`]"
-                                                       :max="assign.points" 
-                                                       min="0"
-                                                       class="w-full rounded-lg border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm py-1.5 px-3" 
-                                                       placeholder="คะแนนที่คาดหวัง" />
+                                                <Textarea
+                                                    v-model="hypotheticalScores[`assignment_${assign.id}`]"
+                                                    :max="assign.points"
+                                                    rows="1"
+                                                    class="w-full"
+                                                    placeholder="คะแนนที่คาดหวัง" />
                                             </div>
                                         </div>
-                                    </template>
                                 </div>
                             </div>
 
@@ -391,21 +391,20 @@ const projectedGrade = computed(() => {
                                     แบบทดสอบที่ยังไม่ได้ทำ
                                 </h3>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <template v-for="quiz in props.course_quizzes" :key="quiz.id">
-                                        <div v-if="!props.member_quizes_results.data.find(r => r.quiz_id === quiz.id)" 
-                                             class="bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                    <div v-for="quiz in props.course_quizzes" :key="quiz.id"
+                                         v-if="!props.member_quizes_results.data.find(r => r.quiz_id === quiz.id)"
+                                         class="bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
                                             <div class="flex justify-between text-sm mb-2">
                                                 <span class="font-medium text-gray-700 truncate pr-2" :title="quiz.title">{{ truncateText(quiz.title, 30).text }}</span>
                                                 <span class="text-gray-500 text-xs bg-gray-100 px-2 py-0.5 rounded-full">Max: {{ quiz.total_score }}</span>
                                             </div>
-                                            <input type="number" 
+                                            <Textarea
                                                    v-model="hypotheticalScores[`quiz_${quiz.id}`]"
                                                    :max="quiz.total_score"
-                                                   min="0" 
-                                                   class="w-full rounded-lg border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm py-1.5 px-3" 
+                                                   rows="1"
+                                                   class="w-full"
                                                    placeholder="คะแนนที่คาดหวัง" />
                                         </div>
-                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -757,7 +756,7 @@ const projectedGrade = computed(() => {
                         </div>
                         <div class="text-center p-4 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border border-red-200">
                             <p class="font-bold text-red-600 text-lg">0</p>
-                            <p class="text-xs text-gray-600 mt-1"><50%</p>
+                            <p class="text-xs text-gray-600 mt-1"><50%></p>
                         </div>
                         <div class="text-center p-4 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200">
                             <p class="font-bold text-gray-600 text-lg">ร.</p>
@@ -769,4 +768,5 @@ const projectedGrade = computed(() => {
          </CourseLayout>
     </div>
 </template>
+
 

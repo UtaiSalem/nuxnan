@@ -1,18 +1,25 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useAuthStore } from '~/stores/auth'
+import Swal from 'sweetalert2'
+
+const api = useApi()
+const authStore = useAuthStore()
 
 interface DonorProfile {
-  first_name: string
-  last_name: string
-  bio: string | null
-  location: string | null
-  website: string | null
-  social_media_links: any | null
+  first_name?: string
+  last_name?: string
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  social_media_links?: any | null
 }
 
 interface Donor {
   id: number
   username: string
+  name?: string
   email: string
   phone: string | null
   avatar: string
@@ -21,8 +28,10 @@ interface Donor {
   personal_code: string
   reference_code: string
   is_email_verified: boolean
+  is_plearnd_admin?: boolean
+  is_super_admin?: boolean
   created_at: string
-  profile?: DonorProfile
+  profile?: DonorProfile | null
   roles?: string[]
 }
 
@@ -30,26 +39,102 @@ interface Donate {
   id: number
   donor: Donor | null
   donor_name: string
-  total_points: number
-  remaining_points: number
-  slip?: string
-  transfer_date?: string
-  transfer_time?: string
-  amounts?: number
+  amounts?: string | number
+  total_points: number | string
+  remaining_points: number | string
+  slip?: string | null
+  transfer_date?: string | null
+  transfer_time?: string | null
+  donor_email?: string | null
+  donation_purpose?: string | null
+  payment_method?: string | null
+  transaction_id?: string | null
+  donor_address?: string | null
   status?: number
+  privacy_setting?: string | null
+  approved_by?: number | null
+  notes?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  diff_humans_created_at?: string | null
 }
 
-defineProps<{
+const props = defineProps<{
   donate: Donate
 }>()
+
+const emit = defineEmits<{
+  friendRequestSent: [donorId: number]
+}>()
+
+const isSendingRequest = ref(false)
+const requestSent = ref(false)
+
+const sendFriendRequest = async () => {
+  if (!props.donate.donor) return
+  
+  if (!authStore.isAuthenticated) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'กรุณาเข้าสู่ระบบ',
+      text: 'คุณต้องเข้าสู่ระบบก่อนจึงจะสามารถเพิ่มเพื่อนได้',
+      confirmButtonText: 'เข้าสู่ระบบ',
+      confirmButtonColor: '#3085d6',
+      showCancelButton: true,
+      cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        navigateTo('/auth')
+      }
+    })
+    return
+  }
+
+  isSendingRequest.value = true
+  try {
+    await api.post(`/api/friends/${props.donate.donor.id}`, {})
+    requestSent.value = true
+    emit('friendRequestSent', props.donate.donor.id)
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'ส่งคำขอเพิ่มเพื่อนแล้ว',
+      text: `ส่งคำขอเพิ่มเพื่อนไปยัง ${props.donate.donor_name} แล้ว`,
+      showConfirmButton: false,
+      timer: 1500
+    })
+  } catch (err: any) {
+    console.error('Error sending friend request:', err)
+    Swal.fire({
+      icon: 'error',
+      title: 'ไม่สำเร็จ',
+      text: err?.data?.message || 'ไม่สามารถส่งคำขอเพิ่มเพื่อนได้',
+      confirmButtonText: 'ตกลง'
+    })
+  } finally {
+    isSendingRequest.value = false
+  }
+}
+
+// Check if should show add friend button
+const shouldShowAddFriend = () => {
+  // Don't show if no donor info
+  if (!props.donate.donor) return false
+  // Don't show if not authenticated
+  if (!authStore.isAuthenticated) return true // Show but will prompt login
+  // Don't show if it's the current user
+  if (authStore.user?.id === props.donate.donor.id) return false
+  // Show the button
+  return true
+}
 </script>
 
 <template>
   <div
-    class="bg-gradient-to-br from-white to-indigo-50 border border-indigo-200 rounded-2xl hover:shadow-2xl hover:shadow-indigo-300 transform hover:scale-105 transition-all duration-300 overflow-hidden group h-full flex flex-col"
+    class="bg-gradient-to-br from-white to-indigo-50 dark:from-gray-800 dark:to-gray-700 border border-indigo-200 dark:border-gray-600 rounded-2xl hover:shadow-2xl hover:shadow-indigo-300 dark:hover:shadow-gray-900 transform hover:scale-105 transition-all duration-300 overflow-hidden group h-full flex flex-col"
   >
     <div class="h-2 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 shrink-0"></div>
-    <div class="flex flex-col justify-between flex-1 p-5 rounded-b-2xl">
+    <div class="flex flex-col justify-between flex-1 p-5 pb-20 rounded-b-2xl">
       <figure
         class="flex items-center p-3 mb-3 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-xl shadow-sm"
       >
@@ -68,23 +153,46 @@ defineProps<{
         <div class="w-full ps-4">
           <div class="flex flex-col mb-2 text-sm">
             <span
-              class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600"
+              class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
             >
               {{ donate.donor ? donate.donor_name : 'ไม่ระบุนาม' }}
             </span>
-            <span class="font-semibold text-gray-600 flex items-center gap-1">
+            <span class="font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
               <Icon icon="mdi:identifier" class="w-3 h-3" />
               {{ donate.donor ? donate.donor.personal_code : '' }}
             </span>
           </div>
-          <NuxtLink
-            v-if="donate.donor && donate.donor.reference_code"
-            :to="`/auth?tab=register&ref=${donate.donor.reference_code}`"
-            class="inline-flex items-center gap-1 px-4 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-teal-400 to-emerald-500 rounded-lg hover:from-teal-500 hover:to-emerald-600 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
-          >
-            <Icon icon="mdi:account-plus" class="w-4 h-4" />
-            <span>สมัครต่อ</span>
-          </NuxtLink>
+          <!-- Action Buttons -->
+          <div class="flex flex-wrap gap-2">
+            <!-- Register Link -->
+            <NuxtLink
+              v-if="donate.donor && donate.donor.reference_code"
+              :to="`/auth?tab=register&ref=${donate.donor.reference_code}`"
+              class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-teal-400 to-emerald-500 rounded-lg hover:from-teal-500 hover:to-emerald-600 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
+            >
+              <Icon icon="mdi:account-star" class="w-4 h-4" />
+              <span>สมัครต่อ</span>
+            </NuxtLink>
+            <!-- Add Friend Button -->
+            <button
+              v-if="shouldShowAddFriend() && !requestSent"
+              @click.stop="sendFriendRequest"
+              :disabled="isSendingRequest"
+              class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Icon v-if="isSendingRequest" icon="mdi:loading" class="w-4 h-4 animate-spin" />
+              <Icon v-else icon="mdi:account-plus" class="w-4 h-4" />
+              <span>เพิ่มเพื่อน</span>
+            </button>
+            <!-- Request Sent Badge -->
+            <span
+              v-if="requestSent"
+              class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg"
+            >
+              <Icon icon="mdi:check" class="w-4 h-4" />
+              <span>ส่งคำขอแล้ว</span>
+            </span>
+          </div>
         </div>
       </figure>
       <div

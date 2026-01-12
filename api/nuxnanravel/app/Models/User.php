@@ -22,7 +22,7 @@ use App\Models\User;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Academy;
-use App\Models\Support;
+use App\Models\Advert;
 use App\Models\Activity;
 use App\Models\CourseQuiz;
 use App\Models\Friendship;
@@ -358,19 +358,19 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasMany(UserAnswerQuestion::class);
     }
 
-    public function supports(): HasMany
+    public function adverts(): HasMany
     {
-        return $this->hasMany(Support::class);
+        return $this->hasMany(Advert::class);
     }
 
-    public function supportViewers(): HasMany
+    public function advertViewers(): HasMany
     {
-        return $this->hasMany(SupportViewer::class);
+        return $this->hasMany(AdvertViewer::class);
     }
 
     public function isPlearndAdmin(): bool
     {
-        return PlearndAdmin::where('user_id', 1)->exists() && $this->hasVerifiedEmail();
+        return PlearndAdmin::where('user_id', $this->id)->exists() && $this->hasVerifiedEmail();
     }
 
     public function getIsPlearndAdminAttribute()

@@ -147,26 +147,23 @@ onBeforeRouteLeave((to, from, next) => {
     });
 });
 
-const submitQuiz = async (auto = false) => {
-    if (!auto) {
-        const result = await Swal.fire({
-            title: 'ส่งคำตอบ?',
-            text: 'คุณต้องการส่งคำตอบและสิ้นสุดการทำแบบทดสอบใช่หรือไม่?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'ส่งคำตอบ',
-            cancelButtonText: 'ยกเลิก'
-        })
-        if (!result.isConfirmed) return
-    }
-
+const finishAttempt = async () => {
+    // 1. Confirm intention to stop (optional, or just single click as requested)
+    // User requested "No validation/sending answer anymore" and just "Stop Timer".
+    // I will add a simple confirmation just in case they misclicked "Finish", but NOT "Are you sure you want to submit?".
+    // Actually, user said "When done... NO need to press Send Answer again... Just press Pause Time".
+    // So let's make it a "Finish / Stop Timer" button.
+    
+    // Set submitting flag to bypass route guard
     isSubmitting.value = true
+    
     try {
         if (!quizResult.value || !quizResult.value.id) {
             throw new Error('Result ID not found')
         }
 
-        // Call endpoint to finalize result
+        // Call endpoint to finalize result (Heartbeat/Duration update)
+        // We set completed_at to mark it as done
         await api.put(`/api/courses/${courseId}/quizzes/${quizId}/results/${quizResult.value.id}`, {
              completed_at: new Date().toISOString(),
              duration: timeElapsed.value
@@ -174,16 +171,18 @@ const submitQuiz = async (auto = false) => {
         
         await Swal.fire({
             icon: 'success',
-            title: 'ส่งคำตอบเรียบร้อย',
+            title: 'สิ้นสุดการทำข้อสอบ',
+            text: 'ระบบบันทึกเวลาเรียบร้อยแล้ว',
             timer: 1500,
             showConfirmButton: false
         })
         
+        // Use replace to prevent back navigation
         router.replace(`/courses/${courseId}/quizzes/${quizId}`)
     } catch (err) {
         console.error(err)
-        Swal.fire('Error', 'เกิดข้อผิดพลาดในการส่งคำตอบ', 'error')
-    } finally {
+        // Even if it fails, allowing exit might be safer, but let's warn
+        Swal.fire('Error', 'เกิดข้อผิดพลาดในการบันทึกเวลา', 'error')
         isSubmitting.value = false
     }
 }
@@ -214,14 +213,14 @@ const submitQuiz = async (auto = false) => {
                        {{ formattedTime }}
                    </div>
 
-                   <!-- Submit Button (Header) -->
+                   <!-- Finish Button (Header) -->
                    <button 
-                      @click="submitQuiz(false)"
+                      @click="finishAttempt"
                       :disabled="isSubmitting"
-                      class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium shadow-md transition-colors flex items-center gap-2"
+                      class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-md transition-colors flex items-center gap-2"
                    >
-                       <span class="hidden sm:inline">ยืนยันการทำแบบทดสอบเสร็จสิ้น</span>
-                       <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5 sm:hidden" />
+                       <span class="hidden sm:inline">สิ้นสุดการสอบ (หยุดเวลา)</span>
+                       <Icon icon="fluent:stop-24-filled" class="w-5 h-5 sm:hidden" />
                    </button>
 
               </div>
@@ -236,15 +235,16 @@ const submitQuiz = async (auto = false) => {
                 v-model="quizResult"
                 :questions="quiz.questions"
                 :quizId="parseInt(quizId as string)"
+                :courseId="parseInt(courseId as string)"
                 :quiz="quiz"
                 :quizResult="quizResult"
                 :questionApiRoute="`/api/quizs/${quizId}`"
             />
             
             <div class="mt-8 flex justify-center pb-10">
-                 <button @click="submitQuiz(false)" class="px-8 py-3 bg-blue-600 text-white rounded-full font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2">
-                    <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
-                    ยืนยันการทำแบบทดสอบเสร็จสิ้น
+                 <button @click="finishAttempt" class="px-8 py-3 bg-red-600 text-white rounded-full font-bold shadow-lg hover:bg-red-700 transition flex items-center gap-2">
+                    <Icon icon="fluent:stop-24-filled" class="w-5 h-5" />
+                    สิ้นสุดการทำข้อสอบ (หยุดเวลา)
                  </button>
             </div>
           </div>

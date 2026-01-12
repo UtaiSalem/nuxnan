@@ -154,7 +154,7 @@ const handleLinkToCreateDonate = async () => {
   }
 
   isCreateDonateLoading.value = true
-  await navigateTo('/supports/donates/create')
+  await navigateTo('/earn/donates/create')
   isCreateDonateLoading.value = false
 }
 

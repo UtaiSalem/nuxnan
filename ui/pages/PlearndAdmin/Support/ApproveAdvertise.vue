@@ -2,6 +2,10 @@
 import MainLayout from '~/layouts/main.vue'
 import ApproveAdvertCard from '@/components/earn/advertise/ApproveAdvertCard.vue'
 
+definePageMeta({
+  middleware: ['plearnd-admin'],
+})
+
 const props = defineProps({
   advertises: {
     type: Object,

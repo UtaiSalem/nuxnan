@@ -49,6 +49,7 @@ const authUser = computed(() => {
     posts: user.posts || 930,
     friends: user.friends || 82,
     visits: user.visits || '5.7K',
+    is_plearnd_admin: user.is_plearnd_admin || false,
   }
 })
 
@@ -57,7 +58,7 @@ const navigation = [
   { name: 'กระดานข่าว', href: '/play/newsfeed', icon: 'fluent:feed-24-regular' },
   { name: 'รายวิชา', href: '/learn/courses', icon: 'fluent-mdl2:publish-course' },
   { name: 'สะสมแต้ม', href: '/earn/donates', icon: 'mdi:hand-coin-outline' },
-  { name: 'ดูสินค้า', href: '/supports', icon: 'eos-icons:product-subscriptions-outlined' },
+  { name: 'ดูสินค้า', href: '/earn/advertise', icon: 'eos-icons:product-subscriptions-outlined' },
 ]
 
 // Toggle functions
@@ -214,7 +215,7 @@ const handleTestChangePoints = () => {
             <img src="/storage/images/plearnd-logo.png" alt="Plearnd Logo" class="w-10 h-10" />
             <span
               class="hidden md:inline-block px-3 py-1 text-lg font-semibold text-white rounded-lg bg-gradient-vikinger shadow-lg"
-              >Plearnd</span
+              >nuxnan</span
             >
           </NuxtLink>
         </div>
@@ -356,6 +357,33 @@ const handleTestChangePoints = () => {
                   <Icon icon="fluent:alert-24-regular" class="w-5 h-5" />
                   <span>การแจ้งเตือน</span>
                 </NuxtLink>
+                
+                <!-- Admin Menu Section -->
+                <div v-if="authUser.is_plearnd_admin" class="border-t my-1" :class="isDarkMode ? 'border-vikinger-dark-50/30' : 'border-gray-200'"></div>
+                <div v-if="authUser.is_plearnd_admin" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
+                  เมนูผู้ดูแลระบบ
+                </div>
+                <NuxtLink
+                  v-if="authUser.is_plearnd_admin"
+                  to="/PlearndAdmin/Donation/ApproveDonation"
+                  @click="closeSettings"
+                  class="flex items-center gap-3 px-4 py-3 transition-colors"
+                  :class="isDarkMode ? 'hover:bg-vikinger-dark-200 text-gray-300' : 'hover:bg-gray-100 text-gray-700'"
+                >
+                  <Icon icon="mdi:hand-coin" class="w-5 h-5 text-purple-500" />
+                  <span>อนุมัติการสนับสนุน</span>
+                </NuxtLink>
+                <NuxtLink
+                  v-if="authUser.is_plearnd_admin"
+                  to="/Admin/Resetpassword"
+                  @click="closeSettings"
+                  class="flex items-center gap-3 px-4 py-3 transition-colors"
+                  :class="isDarkMode ? 'hover:bg-vikinger-dark-200 text-gray-300' : 'hover:bg-gray-100 text-gray-700'"
+                >
+                  <Icon icon="mdi:lock-reset" class="w-5 h-5 text-orange-500" />
+                  <span>รีเซ็ตรหัสผ่าน</span>
+                </NuxtLink>
+                
                 <div class="border-t my-1" :class="isDarkMode ? 'border-vikinger-dark-50/30' : 'border-gray-200'"></div>
                 <button
                   @click="authStore.logout(); closeSettings()"

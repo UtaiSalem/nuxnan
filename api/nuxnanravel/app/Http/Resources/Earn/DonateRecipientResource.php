@@ -20,8 +20,10 @@ class DonateRecipientResource extends JsonResource
             'id' => $this->id,
             'donate_id' => $this->donate_id,
             'user_id' => $this->user_id,
+            'points_received' => 240, // แต้มที่ได้รับต่อครั้ง
 
             'donation' => new DonateResource($this->donation),
+            'user' => new UserResource($this->reciever), // เพิ่ม user สำหรับ FeedPost
             'reciever' => new UserResource($this->reciever),
         ];
     }

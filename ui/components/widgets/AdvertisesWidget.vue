@@ -24,12 +24,13 @@ const fetchAdvertises = async () => {
   }
 }
 
-const viewAdvertise = async (advertId) => {
+async function handleAdView(advertId) {
   try {
-    const data = await api.post(`/api/supports/advertises/${advertId}/view`)
-    if (data?.success) {
-      // Refresh the list after viewing
-      fetchAdvertises()
+    const data = await api.post(`/api/advertises/${advertId}/view`)
+    if (data) {
+      // Handle success, e.g., refresh the list if needed, or just log
+      // For now, we'll just log and not refresh, as per the instruction's new handleAdView
+      console.log('Advertise viewed successfully:', data);
     }
   } catch (err) {
     console.error('Error viewing advertise:', err)
@@ -42,12 +43,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 shadow-sm">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="font-semibold text-gray-900 dark:text-white">โฆษณา</h3>
+      <h3 class="font-bold text-lg dark:text-white">สินค้าแนะนำ</h3>
       <NuxtLink 
-        to="/supports" 
-        class="text-xs text-vikinger-purple hover:text-vikinger-purple/80 transition-colors"
+        to="/earn/advertise" 
+        class="text-sm text-blue-500 hover:underline"
       >
         ดูทั้งหมด
       </NuxtLink>
