@@ -25,8 +25,8 @@ export interface FriendRequest {
   created_at: string
 }
 
-// Re-export FriendshipStatus from useProfile for backward compatibility
-export type { FriendshipStatus }
+// Re-export FriendshipStatus removed to prevent duplicate imports warning
+
 
 export const useFriends = () => {
   const api = useApi()
@@ -155,7 +155,7 @@ export const useFriends = () => {
    */
   const sendFriendRequest = async (userId: number): Promise<boolean> => {
     try {
-      const response = await api.post(`/api/friends/${userId}`) as {
+      const response = await api.post(`/api/friends/${userId}`, {}) as {
         success: boolean
         message?: string
       }
@@ -178,7 +178,7 @@ export const useFriends = () => {
    */
   const acceptFriendRequest = async (userId: number): Promise<boolean> => {
     try {
-      const response = await api.patch(`/api/friends/${userId}/accept`) as {
+      const response = await api.patch(`/api/friends/${userId}/accept`, {}) as {
         success: boolean
         message?: string
       }
@@ -208,7 +208,7 @@ export const useFriends = () => {
    */
   const denyFriendRequest = async (userId: number): Promise<boolean> => {
     try {
-      const response = await api.post(`/api/friends/${userId}/deny`) as {
+      const response = await api.post(`/api/friends/${userId}/deny`, {}) as {
         success: boolean
         message?: string
       }
@@ -251,7 +251,7 @@ export const useFriends = () => {
    */
   const unfriend = async (userId: number): Promise<boolean> => {
     try {
-      const response = await api.post(`/api/friends/${userId}/unfriend`) as {
+      const response = await api.post(`/api/friends/${userId}/unfriend`, {}) as {
         success: boolean
         message?: string
       }

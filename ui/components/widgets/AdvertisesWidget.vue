@@ -12,7 +12,7 @@ const fetchAdvertises = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const data = await api.get('/api/supports/widget')
+    const data = await api.get('/api/advertises/widget')
     if (data?.advertises) {
       advertises.value = data.advertises
     }
