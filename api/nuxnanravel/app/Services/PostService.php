@@ -6,6 +6,8 @@ use App\Models\Post;
 use App\Models\Activity;
 use App\Models\PostImage;
 use App\Enums\ActivityType;
+use App\Models\Poll;
+use App\Models\QuestionOption;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -39,6 +41,47 @@ class PostService
     public function createPost(array $data, int $userId): Post
     {
         return DB::transaction(function () use ($data, $userId) {
+            // Handle Poll Creation
+            if (!empty($data['is_poll']) && !empty($data['poll_title'])) {
+                $pointsPool = (int) ($data['poll_points_pool'] ?? 0);
+                $maxVotes = (int) ($data['poll_max_votes'] ?? 100);
+
+                $poll = Poll::create([
+                    'user_id' => $userId,
+                    'title' => $data['poll_title'],
+                    'start_date' => now(),
+                    'end_date' => now()->addHours((int) ($data['poll_duration'] ?? 24)),
+                    'is_active' => true,
+                    'is_public' => ($data['privacy_settings'] ?? 3) === 3,
+                    'points_pool' => $pointsPool,
+                    'points_per_vote' => $maxVotes > 0 ? (int) ($pointsPool / $maxVotes) : 0,
+                    'max_votes' => $maxVotes,
+                ]);
+
+                // Deduct points from creator if they provided a pool
+                if ($pointsPool > 0) {
+                    $creator = \App\Models\User::find($userId);
+                    if ($creator && $creator->pp >= $pointsPool) {
+                        $creator->decrement('pp', $pointsPool);
+                    } else {
+                        throw new \Exception('คุณมีแต้มไม่เพียงพอสำหรับการสร้างโพลรางวัล');
+                    }
+                }
+
+                if (!empty($data['poll_options'])) {
+                    foreach ($data['poll_options'] as $index => $optionText) {
+                        if (trim($optionText)) {
+                            $poll->options()->create([
+                                'text' => trim($optionText),
+                                'position' => $index,
+                            ]);
+                        }
+                    }
+                }
+                
+                $data['poll_id'] = $poll->id;
+            }
+
             // Extract hashtags from content
             $content = $data['content'] ?? '';
             $hashtags = $this->extractHashtags($content);
@@ -124,6 +167,7 @@ class PostService
                 'postMentions.user',
                 'postTaggedUsers.user',
                 'postLinkPreview',
+                'poll.options',
             ]);
 
             return $post;

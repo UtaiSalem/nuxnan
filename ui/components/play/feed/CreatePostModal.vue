@@ -8,6 +8,10 @@ const props = defineProps({
   show: {
     type: Boolean,
     default: false
+  },
+  initialTab: {
+    type: String,
+    default: 'status'
   }
 })
 
@@ -67,10 +71,44 @@ const friendSearchResults = ref([])
 const isSearchingFriends = ref(false)
 const hasSearchedFriends = ref(false)
 
+// Tabs
+const activeTab = ref('status')
+const tabs = [
+  { id: 'status', label: 'สถานะ', icon: 'mdi:card-text-outline' },
+  { id: 'poll', label: 'โพล', icon: 'mdi:poll' }
+]
+
+// Poll state
+const pollQuestion = ref('')
+const pollOptions = ref(['', ''])
+const pollDuration = ref(24) // hours
+const pollPointsPool = ref(12000)
+const maxVotes = ref(100)
+const pollEndDate = computed(() => {
+  const date = new Date()
+  date.setDate(date.getDate() + parseInt(pollDuration.value))
+  return date.toISOString()
+})
+
+const addPollOption = () => {
+  if (pollOptions.value.length < 10) {
+    pollOptions.value.push('')
+  }
+}
+
+const removePollOption = (index) => {
+  if (pollOptions.value.length > 2) {
+    pollOptions.value.splice(index, 1)
+  }
+}
+
 // Load options when modal opens
 watch(() => props.show, (newVal) => {
   if (newVal) {
+    activeTab.value = props.initialTab || 'status'
     fetchPostOptions()
+  } else {
+    resetForm()
   }
 })
 
@@ -114,8 +152,6 @@ const feelingActivityText = computed(() => {
   }
   return parts.join(' — ')
 })
-
-// Group by category
 const feelingsByCategory = computed(() => {
   const grouped = {}
   feelings.value.forEach(f => {
@@ -141,7 +177,8 @@ const closeModal = () => {
 
 // Create post
 const createPost = async () => {
-  if (!postText.value.trim() && selectedImages.value.length === 0) return
+  // For status tab, require text or images. For poll tab, we check pollQuestion later.
+  if (activeTab.value === 'status' && !postText.value.trim() && selectedImages.value.length === 0) return
   if (isSubmitting.value) return
   
   if (authStore.user && authStore.user.pp < 180) {
@@ -156,6 +193,26 @@ const createPost = async () => {
       images: selectedImages.value,
       privacy_settings: selectedPrivacy.value,
       comments_disabled: commentsDisabled.value
+    }
+
+    if (activeTab.value === 'poll') {
+      if (!pollQuestion.value.trim()) {
+        swal.warning('กรุณาระบุคำถามสำหรับโพล')
+        isSubmitting.value = false
+        return
+      }
+      if (pollOptions.value.some(o => !o.trim())) {
+        swal.warning('กรุณาระบุตัวเลือกให้ครบถ้วน')
+        isSubmitting.value = false
+        return
+      }
+      
+      options.is_poll = true
+      options.poll_title = pollQuestion.value
+      options.poll_options = pollOptions.value.filter(opt => opt.trim())
+      options.poll_duration = pollDuration.value
+      options.poll_points_pool = pollPointsPool.value
+      options.poll_max_votes = maxVotes.value
     }
     
     if (locationInput.value) {
@@ -226,6 +283,15 @@ const resetForm = () => {
   showTagFriends.value = false
   showScheduler.value = false
   showPrivacyOptions.value = false
+  
+  // Reset poll
+  activeTab.value = 'status'
+  pollQuestion.value = ''
+  pollOptions.value = ['', '']
+  pollDuration.value = 24
+  pollPointsPool.value = 12000
+  maxVotes.value = 100
+  
   closeModal()
 }
 
@@ -318,16 +384,70 @@ const removeTaggedFriend = (friendId) => {
           <div class="bg-white dark:bg-vikinger-dark-300 rounded-xl shadow-2xl">
             <!-- Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-vikinger-dark-50/30">
-              <h2 class="text-xl font-bold text-gray-800 dark:text-white">สร้างโพสต์</h2>
+              <div class="flex items-center gap-2">
+                <Icon icon="fluent:calendar-ltr-24-regular" class="w-5 h-5 text-vikinger-purple" />
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white">โพสต์หัวข้อใหม่ / สร้างโพล</h2>
+              </div>
               <button @click="closeModal" class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full">
-                <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
+                <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-500" />
               </button>
             </div>
 
             <!-- Body -->
-            <div class="p-4 max-h-[70vh] overflow-y-auto">
-              <!-- Hidden file input -->
-              <input type="file" ref="imageInput" class="hidden" accept="image/*" multiple @change="handleImageSelect" />
+            <div class="p-4 max-h-[75vh] overflow-y-auto">
+              
+              <!-- User Info (matching Course style) -->
+              <div class="flex items-center gap-3 mb-4">
+                <img 
+                  :src="currentUserAvatar" 
+                  class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-purple/20" 
+                />
+                <div class="flex-1">
+                  <div class="font-bold text-gray-800 dark:text-white leading-tight">{{ authStore.user?.name }}</div>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <button @click="showPrivacyOptions = !showPrivacyOptions" class="flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-vikinger-purple uppercase tracking-wider transition-colors">
+                      <Icon :icon="currentPrivacy.icon" class="w-2.5 h-2.5" />
+                      <span>{{ currentPrivacy.label }}</span>
+                      <Icon icon="mdi:chevron-down" class="w-3 h-3" />
+                    </button>
+                    <span v-if="locationInput" class="text-gray-300 dark:text-gray-700 font-light text-xs">|</span>
+                    <div v-if="locationInput" class="flex items-center gap-1 text-[11px] font-bold text-vikinger-cyan uppercase tracking-wider">
+                      <Icon icon="mdi:map-marker" class="w-2.5 h-2.5" />
+                      <span class="truncate max-w-[150px]">{{ locationInput }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab Navigation (50-50 split) -->
+              <div class="flex border-b border-gray-200 dark:border-vikinger-dark-50/30 mb-4">
+                <button
+                  v-for="tab in tabs" 
+                  :key="tab.id"
+                  @click="activeTab = tab.id"
+                  :class="[
+                    'flex-1 pb-3 text-sm font-bold uppercase tracking-wider transition-all relative flex items-center justify-center gap-2',
+                    activeTab === tab.id 
+                      ? tab.id === 'status' ? 'text-blue-600' : 'text-amber-600' 
+                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                  ]"
+                >
+                  <Icon :icon="tab.id === 'status' ? 'fluent:edit-24-regular' : 'fluent:poll-24-regular'" class="w-5 h-5" />
+                  {{ tab.label }}
+                  <div 
+                    v-if="activeTab === tab.id" 
+                    :class="[
+                      'absolute bottom-0 left-0 w-full h-1 rounded-full',
+                      tab.id === 'status' ? 'bg-blue-600' : 'bg-amber-600'
+                    ]"
+                  ></div>
+                </button>
+              </div>
+
+              <!-- Status Tab Content -->
+              <div v-show="activeTab === 'status'">
+                <!-- Hidden file input -->
+                <input type="file" ref="imageInput" class="hidden" accept="image/*" multiple @change="handleImageSelect" />
 
                 <!-- User & Privacy -->
                 <div class="flex items-center gap-3 mb-4">
@@ -491,17 +611,18 @@ const removeTaggedFriend = (friendId) => {
                       <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                   </div>
-                  
-                  <!-- Loading State -->
-                  <div v-if="isSearchingFriends" class="mt-2 p-4 text-center">
+                </div>
+                
+                <div class="mt-4">
+                  <!-- Search Results -->
+                  <div v-if="isSearchingFriends" class="mb-2 p-4 text-center">
                     <div class="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                       <span>กำลังค้นหา...</span>
                     </div>
                   </div>
                   
-                  <!-- Search Results -->
-                  <div v-if="friendSearchResults.length > 0" class="mt-2 space-y-1 max-h-40 overflow-y-auto border border-gray-200 dark:border-vikinger-dark-50/30 rounded-lg bg-white dark:bg-vikinger-dark-100">
+                  <div v-if="friendSearchResults.length > 0" class="mb-2 space-y-1 max-h-40 overflow-y-auto border border-gray-200 dark:border-vikinger-dark-50/30 rounded-lg bg-white dark:bg-vikinger-dark-100">
                     <button v-for="friend in friendSearchResults" :key="friend.id" @click="tagFriend(friend)" class="w-full flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 transition-colors" :class="{ 'opacity-50 cursor-not-allowed': taggedFriends.find(f => f.id === friend.id) }" :disabled="!!taggedFriends.find(f => f.id === friend.id)">
                       <img :src="getAvatarUrl(friend)" class="w-8 h-8 rounded-full" />
                       <div class="flex-1 text-left">
@@ -513,14 +634,10 @@ const removeTaggedFriend = (friendId) => {
                     </button>
                   </div>
                   
-                  <!-- No Results -->
-                  <div v-else-if="hasSearchedFriends && friendSearchQuery && !isSearchingFriends" class="mt-2 p-3 text-center text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-vikinger-dark-100 rounded-lg border border-gray-200 dark:border-vikinger-dark-50/30">
+                  <div v-else-if="hasSearchedFriends && friendSearchQuery && !isSearchingFriends" class="mb-2 p-3 text-center text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-vikinger-dark-100 rounded-lg border border-gray-200 dark:border-vikinger-dark-50/30">
                     <Icon icon="mdi:account-search" class="w-8 h-8 mx-auto mb-1 text-gray-400" />
                     <p>ไม่พบเพื่อนที่ชื่อ "{{ friendSearchQuery }}"</p>
                   </div>
-                  
-                  <!-- Hint -->
-                  <p v-if="!friendSearchQuery" class="mt-2 text-xs text-gray-500 dark:text-gray-400">พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา</p>
                 </div>
 
                 <!-- Schedule -->
@@ -565,19 +682,171 @@ const removeTaggedFriend = (friendId) => {
                 </div>
               </div>
 
-              <!-- Footer -->
+              <!-- Poll Tab Content -->
+              <div v-show="activeTab === 'poll'" class="mb-4">
+                <!-- Poll Card (matching CourseCreatePostModal style) -->
+                <div class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700/30">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                      <Icon icon="fluent:poll-24-regular" class="w-5 h-5 text-amber-600" />
+                      <span class="font-medium text-amber-700 dark:text-amber-300">รายละเอียดโพล</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Poll Question -->
+                  <input 
+                    v-model="pollQuestion"
+                    type="text"
+                    placeholder="คำถามโพล..."
+                    class="w-full px-3 py-2 mb-3 rounded-lg border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-vikinger-dark-200 text-gray-800 dark:text-white"
+                  />
+                  
+                  <!-- Poll Options -->
+                  <div class="space-y-3 mb-4">
+                    <div v-for="(option, index) in pollOptions" :key="index" class="flex items-center gap-3 p-3 bg-white dark:bg-vikinger-dark-100 rounded-xl border border-gray-200 dark:border-vikinger-dark-50/30">
+                      <div class="w-7 h-7 rounded-full bg-vikinger-purple text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                        {{ index + 1 }}
+                      </div>
+                      <input 
+                        v-model="pollOptions[index]"
+                        type="text"
+                        :placeholder="`ตัวเลือกที่ ${index + 1}`"
+                        class="flex-1 bg-transparent border-none outline-none text-gray-800 dark:text-white text-sm"
+                      />
+                      <button 
+                        v-if="pollOptions.length > 2"
+                        @click="removePollOption(index)"
+                        class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <button 
+                    v-if="pollOptions.length < 10"
+                    @click="addPollOption"
+                    class="w-full h-11 border-2 border-dashed border-gray-200 dark:border-vikinger-dark-50/20 rounded-xl flex items-center justify-center gap-2 text-sm text-gray-500 hover:border-vikinger-cyan hover:text-vikinger-cyan transition-all mb-4"
+                  >
+                    <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
+                    <span>เพิ่มตัวเลือก (สูงสุด 10 ตัวเลือก)</span>
+                  </button>
+                  
+                  <!-- Poll Duration (inside card) -->
+                  <div class="mt-3 pt-3 border-t border-amber-200 dark:border-amber-700/30">
+                    <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <Icon icon="fluent:clock-24-regular" class="w-4 h-4" />
+                      <span>ระยะเวลาโพล:</span>
+                      <select 
+                        v-model="pollDuration"
+                        class="px-2 py-1 rounded border border-gray-200 dark:border-vikinger-dark-50/30 bg-white dark:bg-vikinger-dark-100 text-sm"
+                      >
+                        <option :value="1">1 ชั่วโมง</option>
+                        <option :value="6">6 ชั่วโมง</option>
+                        <option :value="12">12 ชั่วโมง</option>
+                        <option :value="24">1 วัน</option>
+                        <option :value="72">3 วัน</option>
+                        <option :value="168">1 สัปดาห์</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Settings Row (Points, Max Votes) - Outside card -->
+                <div class="grid grid-cols-2 gap-4 mt-6">
+                  <!-- Points Pool -->
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
+                      แต้มรางวัลรวม
+                    </label>
+                    <div class="relative flex items-center">
+                      <div class="absolute left-3 text-vikinger-cyan">
+                        <Icon icon="mdi:piggy-bank" class="w-4 h-4" />
+                      </div>
+                      <input
+                        v-model.number="pollPointsPool"
+                        type="number"
+                        min="0"
+                        step="100"
+                        class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/10 rounded-xl text-sm focus:ring-1 focus:ring-vikinger-cyan outline-none"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Max Votes -->
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
+                      จำนวนคนโหวตสูงสุด
+                    </label>
+                    <div class="relative flex items-center">
+                      <div class="absolute left-3 text-vikinger-orange">
+                        <Icon icon="mdi:account-group" class="w-4 h-4" />
+                      </div>
+                      <input
+                        v-model.number="maxVotes"
+                        type="number"
+                        min="1"
+                        class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/10 rounded-xl text-sm focus:ring-1 focus:ring-vikinger-cyan outline-none"
+                        placeholder="100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Points Summary Box -->
+                <div class="mt-4 p-4 bg-vikinger-cyan/5 dark:bg-vikinger-cyan/10 border border-vikinger-cyan/20 rounded-xl">
+                  <div class="flex items-start gap-3">
+                    <Icon icon="fluent:info-24-regular" class="w-6 h-6 text-vikinger-cyan flex-shrink-0 mt-0.5" />
+                    <div class="text-sm dark:text-gray-200 w-full">
+                      <p class="font-bold text-vikinger-cyan mb-2">สรุปแต้มที่ต้องใช้:</p>
+                      <ul class="space-y-1.5">
+                        <li class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                          <span>ค่าธรรมเนียมสร้างโพล</span>
+                          <span class="font-semibold">180 แต้ม</span>
+                        </li>
+                        <li class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                          <span>แต้มรางวัลสำหรับคนโหวต</span>
+                          <span class="font-semibold">{{ pollPointsPool }} แต้ม</span>
+                        </li>
+                        <li class="flex justify-between items-center pt-2 border-t border-vikinger-cyan/20 font-bold text-gray-800 dark:text-white mt-1">
+                          <span>รวมทั้งหมด</span>
+                          <span>{{ 180 + pollPointsPool }} แต้ม</span>
+                        </li>
+                      </ul>
+                      <div class="mt-3 flex items-center gap-2 text-xs text-green-600 dark:text-green-400 font-medium">
+                        <Icon icon="fluent:gift-24-regular" class="w-4 h-4" />
+                        <span>ผู้ร่วมโหวตจะได้รับแต้มรางวัลโดยอัตโนมัติ!</span>
+                      </div>
+                      <p v-if="authStore.user && authStore.user.pp < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
+                        ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ authStore.user.pp }} แต้ม)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Footer Buttons -->
               <div class="p-4 border-t border-gray-200 dark:border-vikinger-dark-50/30">
-                <button @click="createPost" :disabled="isSubmitting || (!postText.trim() && imagePreviews.length === 0)" class="w-full py-3 px-4 bg-gradient-vikinger text-white font-semibold rounded-lg hover:shadow-vikinger transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                <button 
+                  @click="createPost" 
+                  :disabled="isSubmitting || (activeTab === 'status' && !postText.trim() && imagePreviews.length === 0) || (activeTab === 'poll' && !pollQuestion.trim())" 
+                  class="w-full py-3 px-4 bg-gradient-vikinger text-white font-semibold rounded-lg hover:shadow-vikinger transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
                   <Icon v-if="isSubmitting" icon="mdi:loading" class="w-5 h-5 animate-spin" />
+                  <Icon v-else-if="activeTab === 'poll'" icon="mdi:poll" class="w-5 h-5" />
                   <Icon v-else-if="scheduledDate" icon="mdi:clock-outline" class="w-5 h-5" />
-                  <span>{{ isSubmitting ? 'กำลังโพสต์...' : (scheduledDate ? 'ตั้งเวลาโพสต์' : 'โพสต์') }}</span>
+                  <span>{{ isSubmitting ? (activeTab === 'poll' ? 'กำลังสร้างโพล...' : 'กำลังโพสต์...') : (activeTab === 'poll' ? 'สร้างโพล' : (scheduledDate ? 'ตั้งเวลาโพสต์' : 'โพสต์')) }}</span>
                 </button>
               </div>
+
             </div>
           </div>
         </div>
-      </Transition>
-  </Teleport>
+      </div>
+    </Transition>
+    </Teleport>
 </template>
 
 <style scoped>

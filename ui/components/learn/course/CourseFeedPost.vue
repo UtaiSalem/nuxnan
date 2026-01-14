@@ -7,6 +7,7 @@ import { Icon } from '@iconify/vue'
 import { ref, computed, watch } from 'vue'
 import ShareModal from '~/components/share/ShareModal.vue'
 import ImageLightbox from '~/components/play/feed/ImageLightbox.vue'
+import PollCard from '~/components/play/poll/PollCard.vue'
 
 interface Props {
   post: any
@@ -596,6 +597,18 @@ const handleShareSuccess = () => {
 const openLightbox = (index: number) => {
   selectedImageIndex.value = index
 }
+
+// Poll event handlers
+const handlePollUpdate = (updatedPoll: any) => {
+  if (props.post.poll) {
+    Object.assign(props.post.poll, updatedPoll)
+  }
+  emit('post-updated', props.post)
+}
+
+const handlePollDelete = () => {
+  emit('delete', props.post.id)
+}
 </script>
 
 <template>
@@ -735,30 +748,14 @@ const openLightbox = (index: number) => {
     </div>
     
     <!-- Poll -->
-    <div v-if="pollData" class="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 mx-4 mb-3 rounded-lg">
-      <h4 class="font-medium text-gray-900 dark:text-white mb-2">{{ pollData.question }}</h4>
-      <div class="space-y-2">
-        <div 
-          v-for="option in pollData.options" 
-          :key="option.id"
-          class="relative bg-white dark:bg-vikinger-dark-200 rounded-lg p-2"
-        >
-          <div 
-            class="absolute left-0 top-0 h-full bg-amber-200 dark:bg-amber-700/30 rounded-lg transition-all"
-            :style="{ width: `${option.percentage || 0}%` }"
-          ></div>
-          <div class="relative flex items-center justify-between">
-            <span class="text-sm text-gray-700 dark:text-gray-300">{{ option.text }}</span>
-            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              {{ option.votes_count || 0 }} ({{ option.percentage || 0 }}%)
-            </span>
-          </div>
-        </div>
-      </div>
-      <p class="text-xs text-gray-500 mt-2">
-        {{ pollData.total_votes || 0 }} คนโหวต · 
-        {{ pollData.is_ended ? 'สิ้นสุดแล้ว' : `เหลือ ${pollData.time_remaining || ''}` }}
-      </p>
+    <div v-if="pollData" class="px-4 mb-3">
+      <PollCard
+        :poll="pollData"
+        :show-actions="isAuthor"
+        :is-nested="true"
+        @update="handlePollUpdate"
+        @delete="handlePollDelete"
+      />
     </div>
     
     <!-- Stats -->

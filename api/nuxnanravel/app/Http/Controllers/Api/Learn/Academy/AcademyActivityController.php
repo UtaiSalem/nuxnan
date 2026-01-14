@@ -10,7 +10,7 @@ use App\Models\Activity;
 use App\Models\AcademyPost;
 use Illuminate\Http\Request;
 use App\Http\Resources\AcademyResource;
-use App\Http\Resources\ActivityResource;
+use App\Http\Resources\Play\ActivityResource;
 
 class AcademyActivityController extends Controller
 {

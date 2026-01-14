@@ -35,6 +35,11 @@ class QuestionController extends Controller
      */
     public function store(Request $request)
     {
+        $course = \App\Models\Course::find($request->course_id);
+        if (!$course || !$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $validatedData = $request->validate([
             'text' =>'required|string',
             'points' =>'required|integer',
@@ -74,6 +79,10 @@ class QuestionController extends Controller
      */
     public function update(Question $question, Request $request)
     {
+        if (!$question->course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $validatedData = $request->validate([
             'text' =>'required|string',
             'points' =>'required|integer',
@@ -139,6 +148,10 @@ class QuestionController extends Controller
      */
     public function destroy(Question $question)
     {
+        if (!$question->course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         if ($question->images) {
             foreach ($question->images as $q_image) {
                 Storage::disk('public')->delete('images/courses/questions/' . $q_image->filename);

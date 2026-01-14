@@ -105,6 +105,7 @@ const deleteAssignment = async (assignmentId: number) => {
         @click="navigateToAssignment"
         @edit="editAssignment"
         @delete="deleteAssignment"
+        @refresh="emit('refresh')"
       />
     </div>
 

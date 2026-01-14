@@ -87,7 +87,7 @@ onMounted(() => {
           <!-- Radial Progress / Avatar -->
           <div class="relative w-14 h-14 flex-shrink-0">
             <!-- Student: Show Progress Ring -->
-            <template v-if="course.auth_role !== 4">
+            <template v-if="!course.isCourseAdmin">
                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                 <!-- Background Ring -->
                 <circle
@@ -132,7 +132,7 @@ onMounted(() => {
             <div class="flex items-center gap-2 mt-1">
               <!-- Admin Badge -->
               <span 
-                v-if="course.auth_role === 4"
+                v-if="course.isCourseAdmin"
                 class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
               >
                 Admin

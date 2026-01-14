@@ -62,7 +62,14 @@ const memberGroupName = computed(() =>
 );
 
 const memberAvatar = computed(() => 
-  props.member?.user?.avatar || '/images/default-avatar.png'
+  props.member?.avatar || 
+  props.member?.user?.avatar || 
+  props.member?.user?.profile_photo_url ||
+  '/images/default-avatar.png'
+);
+
+const memberCode = computed(() =>
+  props.member?.member_code || props.member?.user?.email || ''
 );
 
 // Handler functions

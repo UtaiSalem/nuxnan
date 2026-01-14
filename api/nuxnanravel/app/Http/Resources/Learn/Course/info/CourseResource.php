@@ -58,6 +58,7 @@ class CourseResource extends JsonResource
             'isMember'          => $this->isMember(auth()->user()),
             'member_status'     => $this->member_status($this->id), //Course member status
             'lessons_count'     => $this->lessons,
+            'isCourseAdmin'     => $this->isAdmin(auth()->guard('api')->user()),
             'total_score'       => $this->total_score,
             'setting'           => $this->courseSettings,
             'auth_role'         => $this->when(auth()->guard('api')->check(), function() {

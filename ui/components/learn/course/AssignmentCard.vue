@@ -17,6 +17,7 @@ const emit = defineEmits<{
   'edit': [assignment: any]
   'delete': [assignmentId: number]
   'click': [assignment: any]
+  'refresh': []
 }>()
 
 const showFullContent = ref(false)
@@ -51,14 +52,41 @@ const getStatusBadge = computed(() => {
   return new Date(props.assignment.due_date) < new Date()
 })
 
-const isSubmitted = computed(() => {
-    return props.assignment.answer_status === 'submitted' || props.assignment.answer_status === 'graded'
+const currentAnswer = computed(() => {
+  if (props.assignment.answers && props.assignment.answers.length > 0) {
+    return props.assignment.answers[0]
+  }
+  return null
 })
 
+const hasAnswer = computed(() => !!currentAnswer.value)
+
+const answerStatus = computed(() => {
+  if (currentAnswer.value) return currentAnswer.value.status
+  return props.assignment.answer_status
+})
+
+const answerContent = computed(() => currentAnswer.value?.content)
+const answerImages = computed(() => currentAnswer.value?.images || [])
+
+const isSubmitted = computed(() => {
+    return answerStatus.value === 'submitted' || answerStatus.value === 'graded'
+})
+
+const viewImage = (img: any) => {
+  window.open(img.full_url || img.image_url, '_blank')
+}
+
 const showGrading = ref(false)
+const isEditingGraded = ref(false)
 
 const toggleGrading = () => {
   showGrading.value = !showGrading.value
+}
+
+const handleGradedEditSubmit = () => {
+  isEditingGraded.value = false
+  emit('refresh')
 }
 </script>
 
@@ -151,54 +179,115 @@ export default {
           <RichTextViewer :content="assignment.description" />
        </div>
 
-       <!-- Action Footer -->
-       <div class="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+
+
+
           <!-- Student Answer Status -->
-          <div v-if="assignment.answer_status !== undefined" class="flex items-center gap-2">
-             <span class="text-sm font-medium text-gray-500">สถานะ:</span>
-             <span 
-                class="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5"
-                :class="assignment.answer_status === 'submitted' || assignment.answer_status === 'graded'
-                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                    : 'bg-orange-50 text-orange-500 border-orange-100'"
-             >
-                <Icon :icon="assignment.answer_status === 'submitted' || assignment.answer_status === 'graded' ? 'fluent:checkmark-circle-16-filled' : 'fluent:circle-16-regular'" />
-                {{ (assignment.answer_status === 'submitted' || assignment.answer_status === 'graded') ? 'ส่งแล้ว' : 'ยังไม่ส่ง' }}
-             </span>
+           <!-- Student Answer Status -->
+
+       <!-- Read-only Answer for Graded Assignments -->
+       <div v-if="!isCourseAdmin && answerStatus === 'graded' && hasAnswer" class="mb-6 p-5 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-700/30">
+           <div class="flex justify-between items-start mb-3">
+               <h3 class="text-sm font-bold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                  <Icon icon="fluent:person-feedback-24-regular" class="w-5 h-5 text-emerald-600" />
+                  คำตอบของคุณ (ตรวจแล้ว):
+               </h3>
+               <!-- Edit Button for Graded Answer -->
+               <button 
+                  @click="isEditingGraded = !isEditingGraded"
+                  class="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-emerald-100 transition-colors"
+               >
+                  <Icon :icon="isEditingGraded ? 'fluent:dismiss-16-regular' : 'fluent:edit-16-regular'" class="w-4 h-4" />
+                  {{ isEditingGraded ? 'ยกเลิก' : 'แก้ไข' }}
+               </button>
+           </div>
+           
+           <!-- Answer Content (Read-only) -->
+           <div v-if="answerContent && !isEditingGraded" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap mb-4 leading-relaxed font-sans bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+               {{ answerContent }}
+           </div>
+
+           <div v-if="answerImages.length && !isEditingGraded" class="flex flex-wrap gap-3">
+                 <div v-for="img in answerImages" :key="img.id" class="group relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 shadow-sm hover:shadow-md transition-all">
+                    <img :src="img.full_url || img.image_url" class="w-full h-full object-cover cursor-zoom-in group-hover:scale-110 transition-transform duration-500" @click="viewImage(img)" />
+                 </div>
+           </div>
+
+           <!-- Edit Form for Graded Answer -->
+           <div v-if="isEditingGraded" class="mt-4">
+              <AssignmentSubmissionForm 
+                 :assignment="assignment"
+                 :courseId="courseId"
+                 :is-editing="true"
+                 :existing-answer="currentAnswer"
+                 :show-cancel="true"
+                 @submitted="handleGradedEditSubmit"
+                 @cancel="isEditingGraded = false"
+              />
+           </div>
+       </div>
+
+        <!-- Action Footer & Admin View -->
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+           <!-- Status Badge Row (Only if it has status info) -->
+           <div v-if="answerStatus || (!isCourseAdmin && hasAnswer)" class="flex items-center justify-between mb-4">
+             <div v-if="answerStatus" class="flex items-center gap-2">
+                <span class="text-sm font-medium text-gray-500">สถานะ:</span>
+                <span 
+                   class="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5"
+                   :class="answerStatus === 'submitted' || answerStatus === 'graded'
+                       ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                       : 'bg-orange-50 text-orange-500 border-orange-100'"
+                >
+                   <Icon :icon="answerStatus === 'submitted' || answerStatus === 'graded' ? 'fluent:checkmark-circle-16-filled' : 'fluent:circle-16-regular'" />
+                   {{ (answerStatus === 'submitted' || answerStatus === 'graded') ? 'ส่งแล้ว' : 'ยังไม่ส่ง' }}
+                </span>
+             </div>
+             <div v-else></div>
+
           </div>
-          <div v-else></div>
 
-          <button 
-             @click.stop="isCourseAdmin ? toggleGrading() : emit('click', assignment)"
-            class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg font-medium text-sm"
-          >
-             <span v-if="isCourseAdmin">
-                {{ showGrading ? 'ซ่อนคำตอบ' : 'ตรวจคำตอบ / ดูรายชื่อ' }}
-             </span>
-             <span v-else-if="isSubmitted">ดูรายละเอียด / แก้ไข</span>
-             <span v-else>ดูรายละเอียด</span>
-             
-             <Icon :icon="showGrading ? 'fluent:chevron-up-24-filled' : 'fluent:chevron-down-24-filled'" class="w-4 h-4 ml-1" v-if="isCourseAdmin" />
-             <Icon icon="fluent:arrow-right-24-filled" class="w-4 h-4" v-else />
-          </button>
-       </div>
+          <!-- Score Progress Bar (Student - Graded Only) -->
+          <div v-if="!isCourseAdmin && answerStatus === 'graded' && hasAnswer" class="mt-3">
+             <div class="flex justify-between items-center mb-1.5">
+                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">คะแนน</span>
+                 <span class="text-sm font-bold" :class="(currentAnswer?.points || 0) >= (assignment.passing_score || 0) ? 'text-emerald-600' : 'text-red-500'">
+                     {{ currentAnswer?.points || 0 }} / {{ assignment.points }}
+                     <span v-if="assignment.passing_score" class="ml-1 text-xs font-normal">
+                        <span v-if="(currentAnswer?.points || 0) >= assignment.passing_score" class="text-emerald-500">✓ ผ่าน</span>
+                        <span v-else class="text-red-400">✗ ไม่ผ่าน</span>
+                     </span>
+                 </span>
+             </div>
+             <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                 <div 
+                     class="h-full rounded-full transition-all duration-500"
+                     :class="(currentAnswer?.points || 0) >= (assignment.passing_score || 0) ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-red-400 to-red-600'"
+                     :style="{ width: `${((currentAnswer?.points || 0) / (assignment.points || 1)) * 100}%` }"
+                 ></div>
+             </div>
+          </div>
        
-       <!-- Admin Grading View (Collapsible) -->
-       <div v-if="isCourseAdmin && showGrading" class="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
-           <AssignmentGradingView 
-             :assignment="assignment"
-             :courseId="courseId"
-           />
-       </div>
+           <!-- Admin Grading View (Shared footer space) -->
+           <div v-if="isCourseAdmin" class="mt-4">
+               <AssignmentGradingView 
+                 :assignment="assignment"
+                 :courseId="courseId"
+               />
+           </div>
 
-       <!-- Student Direct Submission Form -->
-       <div v-if="!isCourseAdmin && !isSubmitted" class="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
-          <AssignmentSubmissionForm 
-             :assignment="assignment"
-             :courseId="courseId"
-             @submitted="emit('click', assignment)" 
-          />
-       </div>
+           <!-- Student Direct Submission Form / Edit Form -->
+           <div v-if="!isCourseAdmin && (answerStatus !== 'graded')" class="mt-4">
+              <AssignmentSubmissionForm 
+                 :assignment="assignment"
+                 :courseId="courseId"
+                 :is-editing="hasAnswer"
+                 :existing-answer="currentAnswer"
+                 :show-cancel="false"
+                 @submitted="emit('refresh')"
+              />
+           </div>
+        </div>
     </div>
   </article>
 </template>

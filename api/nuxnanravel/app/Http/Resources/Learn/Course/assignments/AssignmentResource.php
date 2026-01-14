@@ -33,7 +33,7 @@ class AssignmentResource extends JsonResource
         if ($isCreator) {
             $answers = []; // Optimization: Instructors fetch answers via separate endpoint
         }else{
-            $answers = $this->answers->where('user_id', auth()->id());
+            $answers = $this->answers->where('user_id', auth()->id())->values();
         }
 
         return [

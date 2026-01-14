@@ -60,6 +60,8 @@ class PostController extends \App\Http\Controllers\Controller
                 'postTaggedUsers.user',
                 'postLinkPreview',
                 'activity',
+                'poll.options',
+                'poll.comments.user',
             ])
             ->where('is_published', true)
             ->latest();
@@ -135,10 +137,13 @@ class PostController extends \App\Http\Controllers\Controller
 
         try {
             // Check points
-            if (auth()->user()->pp < 180) {
+            $pollPointsPool = (int)$request->input('poll_points_pool', 0);
+            $totalPointsNeeded = 180 + $pollPointsPool;
+
+            if (auth()->user()->pp < $totalPointsNeeded) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'You need at least 180 points to create a post. / คุณมีแต้มสะสมไม่พอสำหรับการโพสต์ กรุณาสะสมแต้มสะสมอย่างน้อย 180 แต้ม',
+                    'message' => "คุณมีแต้มสะสมไม่พอสำหรับการสร้างโพสต์ (ต้องการ {$totalPointsNeeded} แต้ม)",
                 ], 403);
             }
 
@@ -168,9 +173,16 @@ class PostController extends \App\Http\Controllers\Controller
             // Create post using service
             $post = $this->postService->createPost($validatedData, auth()->id());
 
-            // Get the activity for response
+            // Get the activity for response with all necessary relationships
             $activity = $post->activity;
-            $activity->load(['user', 'activityable.user', 'activityable.postImages']);
+            $activity->load([
+                'user', 
+                'activityable.user', 
+                'activityable.postImages',
+                'activityable.poll.options',
+                'activityable.poll.user',
+                'activityable.poll.comments.user'
+            ]);
 
             // Deduct points
             auth()->user()->decrement('pp', 180);
@@ -222,6 +234,8 @@ class PostController extends \App\Http\Controllers\Controller
             'postMentions.user',
             'postTaggedUsers.user',
             'postLinkPreview',
+            'poll.options',
+            'poll.comments.user',
             'postComments' => function ($query) {
                 $query->latest()->limit(3);
             },

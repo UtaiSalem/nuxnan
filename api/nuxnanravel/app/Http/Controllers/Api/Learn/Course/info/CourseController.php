@@ -10,6 +10,7 @@ use App\Models\Academy;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use App\Models\CourseMember;
+use App\Models\CourseInvitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
@@ -412,6 +413,10 @@ class CourseController extends Controller
      */
     public function update(Course $course, Request $request )
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'user_id'           => 'nullable',
             'instructor_id'     => 'nullable',
@@ -471,6 +476,10 @@ class CourseController extends Controller
      */
     public function destroy(Course $course)
     {
+        if (!$course->isAdmin(auth()->user())) { // Usually only owner can destroy course, but if user wants admin = owner, then this is fine.
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $lessons = $course->lessons;
         if ($lessons) {
             foreach ($lessons as $lesson) {
@@ -717,7 +726,7 @@ class CourseController extends Controller
         $completedMembers = $course->courseMembers()->where('course_member_status', 1)->count();
 
         return response()->json([
-            'isCourseAdmin' => $course->user_id === auth()->id(),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course'        => new CourseResource($course),
             'groups'        => CourseGroupResource::collection($course->courseGroups),
             'assignments'       => AssignmentResource::collection($course->courseAssignments),      
@@ -744,16 +753,24 @@ class CourseController extends Controller
     {
         return response()->json([
             'course'                => new CourseResource($course),
-            'isCourseAdmin'         => $course->user_id === auth()->id(),
+            'isCourseAdmin'         => $course->isAdmin(auth()->user()),
             'courseMemberOfAuth'   => $course->courseMembers()->where('user_id', auth()->id())->first(),
+            'pendingInvitation'    => \App\Models\CourseInvitation::where('course_id', $course->id)
+                ->where('invitee_id', auth()->id())
+                ->where('status', 'pending')
+                ->first(),
         ]);
     }
 
     public function basicInfo(Course $course){
         return response()->json([
             'course'                => new CourseResource($course),
-            'isCourseAdmin'         => $course->user_id === auth()->id(),
+            'isCourseAdmin'         => $course->isAdmin(auth()->user()),
             'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),
+            'pendingInvitation'    => \App\Models\CourseInvitation::where('course_id', $course->id)
+                ->where('invitee_id', auth()->id())
+                ->where('status', 'pending')
+                ->first(),
         ]);
     }
 

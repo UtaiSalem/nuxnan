@@ -11,6 +11,7 @@ use App\Models\CoursePostLike;
 use App\Models\CoursePostImage;
 use App\Models\CoursePostShare;
 use App\Models\CoursePostComment;
+use App\Models\Poll;
 use App\Models\CoursePostDislike;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
@@ -44,6 +45,7 @@ class CoursePost extends Model
         'source_platform',
         'interacted_at',
         'meta',
+        'poll_id',
     ];
 
     protected $casts = [
@@ -55,6 +57,11 @@ class CoursePost extends Model
     protected $appends = [
         'post_url',
     ];
+
+    public function poll(): BelongsTo
+    {
+        return $this->belongsTo(Poll::class);
+    }
 
     public function user(): BelongsTo
     {

@@ -1,0 +1,108 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\PointsController;
+use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Api\GamificationController;
+use App\Http\Controllers\Api\RewardController;
+use App\Http\Controllers\Api\AdminPointsController;
+use App\Http\Controllers\Api\AdminWalletController;
+
+/*
+|--------------------------------------------------------------------------
+| Points & Wallet API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your points and wallet system.
+| These routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "api" middleware group. Make something great!
+|
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    // Points Routes
+    Route::prefix('points')->group(function () {
+        Route::get('/balance', [PointsController::class, 'balance']);
+        Route::post('/earn', [PointsController::class, 'earn']);
+        Route::post('/spend', [PointsController::class, 'spend']);
+        Route::post('/refund', [PointsController::class, 'refund']);
+        Route::post('/transfer', [PointsController::class, 'transfer']);
+        Route::post('/convert', [PointsController::class, 'convert']);
+        Route::get('/transactions', [PointsController::class, 'transactions']);
+        Route::get('/rules', [PointsController::class, 'rules']);
+    });
+
+    // Wallet Routes
+    Route::prefix('wallet')->group(function () {
+        Route::get('/balance', [WalletController::class, 'balance']);
+        Route::post('/deposit', [WalletController::class, 'deposit']);
+        Route::post('/withdraw', [WalletController::class, 'withdraw']);
+        Route::post('/transfer', [WalletController::class, 'transfer']);
+        Route::post('/convert-points', [WalletController::class, 'convertPoints']);
+        Route::get('/transactions', [WalletController::class, 'transactions']);
+        
+        // Admin routes
+        Route::middleware('role:admin')->group(function () {
+            Route::post('/withdrawals/{id}/approve', [WalletController::class, 'approveWithdrawal']);
+            Route::post('/withdrawals/{id}/reject', [WalletController::class, 'rejectWithdrawal']);
+        });
+    });
+
+    // Gamification Routes
+    Route::prefix('gamification')->group(function () {
+        Route::post('/login', [GamificationController::class, 'recordLogin']);
+        Route::get('/streak', [GamificationController::class, 'getStreakInfo']);
+        Route::get('/achievements', [GamificationController::class, 'getAchievements']);
+        Route::get('/achievements/available', [GamificationController::class, 'getAvailableAchievements']);
+        Route::get('/achievements/stats', [GamificationController::class, 'getAchievementStats']);
+        Route::get('/leaderboard/points', [GamificationController::class, 'getPointsLeaderboard']);
+        Route::get('/leaderboard/streak', [GamificationController::class, 'getStreakLeaderboard']);
+        Route::get('/leaderboard/achievements', [GamificationController::class, 'getAchievementLeaderboard']);
+        Route::get('/leaderboard/level', [GamificationController::class, 'getLevelLeaderboard']);
+        Route::get('/leaderboard/summary', [GamificationController::class, 'getLeaderboardSummary']);
+    });
+
+    // Rewards Routes
+    Route::prefix('rewards')->group(function () {
+        Route::get('/', [RewardController::class, 'index']);
+        Route::get('/{id}', [RewardController::class, 'show']);
+        Route::post('/redeem', [RewardController::class, 'redeem']);
+        Route::post('/{id}/claim', [RewardController::class, 'claim']);
+        Route::get('/my', [RewardController::class, 'myRewards']);
+        Route::get('/stats', [RewardController::class, 'stats']);
+        
+        // Admin routes
+        Route::middleware('role:admin')->group(function () {
+            Route::post('/', [RewardController::class, 'store']);
+            Route::put('/{id}', [RewardController::class, 'update']);
+            Route::delete('/{id}', [RewardController::class, 'destroy']);
+        });
+    });
+
+    // Admin Routes
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        // Admin Points Routes
+        Route::prefix('points')->group(function () {
+            Route::get('/stats', [AdminPointsController::class, 'stats']);
+            Route::get('/rules', [AdminPointsController::class, 'rules']);
+            Route::post('/rules', [AdminPointsController::class, 'createRule']);
+            Route::put('/rules/{id}', [AdminPointsController::class, 'updateRule']);
+            Route::delete('/rules/{id}', [AdminPointsController::class, 'deleteRule']);
+            Route::post('/users/{userId}/adjust', [AdminPointsController::class, 'adjustPoints']);
+            Route::get('/users/{userId}/transactions', [AdminPointsController::class, 'userTransactions']);
+            Route::get('/leaderboard', [AdminPointsController::class, 'leaderboard']);
+            Route::get('/analytics', [AdminPointsController::class, 'analytics']);
+        });
+
+        // Admin Wallet Routes
+        Route::prefix('wallet')->group(function () {
+            Route::get('/stats', [AdminWalletController::class, 'stats']);
+            Route::get('/withdrawals/pending', [AdminWalletController::class, 'pendingWithdrawals']);
+            Route::post('/withdrawals/{transactionId}/approve', [AdminWalletController::class, 'approveWithdrawal']);
+            Route::post('/withdrawals/{transactionId}/reject', [AdminWalletController::class, 'rejectWithdrawal']);
+            Route::post('/users/{userId}/adjust', [AdminWalletController::class, 'adjustWallet']);
+            Route::get('/users/{userId}/transactions', [AdminWalletController::class, 'userTransactions']);
+            Route::get('/analytics', [AdminWalletController::class, 'analytics']);
+        });
+    });
+});

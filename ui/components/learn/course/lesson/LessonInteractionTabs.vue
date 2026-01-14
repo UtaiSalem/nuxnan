@@ -10,9 +10,12 @@ import QuestionFormModal from './QuestionFormModal.vue'
 
 interface Props {
   lesson: any
+  isAdmin?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isAdmin: false
+})
 
 const emit = defineEmits<{
   like: []
@@ -61,7 +64,7 @@ const editingAssignment = ref<any>(null)
 const gradingAssignment = ref<any>(null)
 
 const isCreator = computed(() => {
-  return authStore.user?.id === props.lesson.creater?.id
+  return props.isAdmin || authStore.user?.id === props.lesson.creater?.id
 })
 
 const openAddAssignment = () => {
@@ -341,7 +344,7 @@ const canDeleteComment = (comment: any) => {
   const userId = authStore.user?.id
   const commentOwnerId = comment.user?.id
   // Can delete if user is comment owner or course admin
-  return userId === commentOwnerId || props.lesson.creater?.id === userId
+  return userId === commentOwnerId || props.isAdmin || props.lesson.creater?.id === userId
 }
 
 // Delete comment

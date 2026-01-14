@@ -14,8 +14,8 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  close: []
-  pollCreated: (poll: any) => void
+  (e: 'close'): void
+  (e: 'pollCreated', poll: any): void
 }>()
 
 const authStore = useAuthStore()
@@ -31,6 +31,9 @@ const pollQuestion = ref('')
 const pollOptions = ref(['', ''])
 const allowMultiple = ref(false)
 const pollDuration = ref(24) // hours
+const selectedPrivacy = ref(3) // Public
+const pollPointsPool = ref(12000) // Default 12000 points
+const maxVotes = ref(100) // Default max voters
 const isSubmitting = ref(false)
 
 // UI states
@@ -38,7 +41,6 @@ const showDurationDropdown = ref(false)
 const validationErrors = ref<Record<string, string>>({})
 
 // Privacy options
-const selectedPrivacy = ref(3)
 const privacyOptions = [
   { value: 3, label: 'สาธารณะ', icon: 'mdi:earth' },
   { value: 2, label: 'เพื่อน', icon: 'mdi:account-group' },
@@ -132,9 +134,12 @@ const createNewPoll = async () => {
   
   if (isSubmitting.value) return
   
-  // Check points
-  if (authStore.user && authStore.user.pp < 180) {
-    swal.warning('คุณมีแต้มสะสมไม่พอสำหรับการสร้างโพล กรุณาสะสมแต้มอย่างน้อย 180 แต้ม', 'แต้มไม่พอ')
+  // Total points required: 180 (base) + pollPointsPool
+  const totalPointsNeeded = 180 + pollPointsPool.value
+  
+  // Check if user has enough points
+  if (authStore.user && authStore.user.pp < totalPointsNeeded) {
+    swal.error(`คุณมีแต้มไม่เพียงพอ (ต้องการทั้งหมด ${totalPointsNeeded} แต้ม)`, 'แต้มไม่พอ')
     return
   }
   
@@ -148,12 +153,20 @@ const createNewPoll = async () => {
       options: validOptions,
       duration: pollDuration.value,
       is_multiple: allowMultiple.value,
+      points_pool: pollPointsPool.value,
+      max_votes: maxVotes.value,
       privacy_settings: selectedPrivacy.value,
     }
     
     const response = await createPoll(pollData)
     
-    if (response.success && response.poll) {
+    if (response.success && response.activity) {
+      // Emit the activity for feed display
+      emit('pollCreated', response.activity)
+      resetForm()
+      swal.toast('สร้างโพลสำเร็จ!', 'success')
+    } else if (response.success && response.poll) {
+      // Fallback to poll if activity not available
       emit('pollCreated', response.poll)
       resetForm()
       swal.toast('สร้างโพลสำเร็จ!', 'success')
@@ -176,6 +189,7 @@ const resetForm = () => {
   allowMultiple.value = false
   pollDuration.value = 24
   selectedPrivacy.value = 3
+  pollPointsPool.value = 12000
   validationErrors.value = {}
   closeModal()
 }
@@ -271,7 +285,9 @@ watch(() => props.show, (newVal) => {
                   :key="index"
                   class="poll-option-input"
                 >
-                  <span class="text-sm text-gray-500 w-6">{{ index + 1 }}.</span>
+                  <div class="w-7 h-7 rounded-full bg-vikinger-purple text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    {{ index + 1 }}
+                  </div>
                   <input
                     :model-value="option"
                     @input="updatePollOption(index, ($event.target as HTMLInputElement).value)"
@@ -293,9 +309,9 @@ watch(() => props.show, (newVal) => {
               <button
                 v-if="pollOptions.length < 6"
                 @click="addPollOption"
-                class="flex items-center gap-1 text-sm text-vikinger-cyan hover:text-vikinger-purple mt-2"
+                class="w-full h-11 border-2 border-dashed border-gray-200 dark:border-vikinger-dark-50/20 rounded-xl flex items-center justify-center gap-2 text-sm text-gray-500 hover:border-vikinger-cyan hover:text-vikinger-cyan transition-all mt-2"
               >
-                <Icon icon="mdi:plus" class="w-4 h-4" />
+                <Icon icon="mdi:plus" class="w-5 h-5" />
                 <span>เพิ่มตัวเลือก (สูงสุด 6 ตัวเลือก)</span>
               </button>
               
@@ -345,6 +361,79 @@ watch(() => props.show, (newVal) => {
               <p v-if="validationErrors.duration" class="text-xs text-red-500 mt-1">
                 {{ validationErrors.duration }}
               </p>
+            </div>
+
+            <!-- Settings Row (Points, Max Votes) -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <!-- Points Pool -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
+                  แต้มรางวัลรวม
+                </label>
+                <div class="relative">
+                  <div class="absolute left-3 top-1/2 -translate-y-1/2 text-vikinger-cyan">
+                    <Icon icon="mdi:piggy-bank" class="w-4 h-4" />
+                  </div>
+                  <input
+                    v-model.number="pollPointsPool"
+                    type="number"
+                    min="0"
+                    step="100"
+                    class="poll-input pl-9"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <!-- Max Votes -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">
+                  จำนวนคนโหวตสูงสุด
+                </label>
+                <div class="relative">
+                  <div class="absolute left-3 top-1/2 -translate-y-1/2 text-vikinger-orange">
+                    <Icon icon="mdi:account-group" class="w-4 h-4" />
+                  </div>
+                  <input
+                    v-model.number="maxVotes"
+                    type="number"
+                    min="1"
+                    class="poll-input pl-9"
+                    placeholder="100"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Points Summary Box -->
+            <div class="mb-4 p-4 bg-vikinger-cyan/5 dark:bg-vikinger-cyan/10 border border-vikinger-cyan/20 rounded-xl">
+              <div class="flex items-start gap-3">
+                <Icon icon="fluent:info-24-regular" class="w-6 h-6 text-vikinger-cyan flex-shrink-0 mt-0.5" />
+                <div class="text-sm dark:text-gray-200">
+                  <p class="font-bold text-vikinger-cyan mb-2">สรุปแต้มที่ต้องใช้:</p>
+                  <ul class="space-y-1.5">
+                    <li class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                      <span>ค่าธรรมเนียมสร้างโพล</span>
+                      <span class="font-semibold">180 แต้ม</span>
+                    </li>
+                    <li class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                      <span>แต้มรางวัลสำหรับคนโหวต</span>
+                      <span class="font-semibold">{{ pollPointsPool }} แต้ม</span>
+                    </li>
+                    <li class="flex justify-between items-center pt-2 border-t border-vikinger-cyan/20 font-bold text-gray-800 dark:text-white mt-1">
+                      <span>รวมทั้งหมด</span>
+                      <span>{{ 180 + pollPointsPool }} แต้ม</span>
+                    </li>
+                  </ul>
+                  <div class="mt-3 flex items-center gap-2 text-xs text-green-600 dark:text-green-400 font-medium">
+                    <Icon icon="fluent:gift-24-regular" class="w-4 h-4" />
+                    <span>ผู้ร่วมโหวตจะได้รับแต้มรางวัลโดยอัตโนมัติ!</span>
+                  </div>
+                  <p v-if="authStore.user && authStore.user.pp < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
+                    ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ authStore.user.pp }} แต้ม)
+                  </p>
+                </div>
+              </div>
             </div>
             
             <!-- Multiple Choice Toggle -->

@@ -18,7 +18,7 @@ class AssignmentController extends Controller
     public function index(Course $course)
     {
         return response()->json([
-            'isCourseAdmin' => $course->user_id === auth()->id(),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course'        => new CourseResource($course),
             'lessons'       => LessonResource::collection($course->lessons),
             'assignments'       => AssignmentResource::collection($course->assignments),
@@ -29,6 +29,11 @@ class AssignmentController extends Controller
 
     public function destroy(Assignment $assignment)
     {
+        $course = $assignment->assignmentable;
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         foreach ( $assignment->answers as $answer) {            
             foreach ($answer->images as $image) {
                 Storage::disk('public')->delete('images/courses/assignments/answers/'. $image->filename);

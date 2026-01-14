@@ -30,7 +30,7 @@ class CourseQuizController extends Controller
 
     public function index(Course $course) 
     {
-        $isCourseAdmin = $course->user_id === auth()->id();
+        $isCourseAdmin = $course->isAdmin(auth()->user());
         return response()->json([
             'course'                => new CourseResource($course),
             'quizzes'               => $isCourseAdmin ? CourseQuizResource::collection($course->courseQuizzes) : CourseQuizResource::collection($course->courseQuizzes->where('is_active', 1)),
@@ -47,6 +47,10 @@ class CourseQuizController extends Controller
 
     public function store(Course $course, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'title'             => 'required|string',
             'description'       => 'nullable|string',
@@ -100,6 +104,10 @@ class CourseQuizController extends Controller
 
     public function update(Course $course, CourseQuiz $quiz, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         // $quiz->update($request->all());
         $validated = $request->validate([
             'title'             => 'required|string',
@@ -131,6 +139,10 @@ class CourseQuizController extends Controller
 
     public function destroy(Course $course, CourseQuiz $quiz)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $questions = $quiz->questions;
         foreach ($questions as $question) {
             if ($question->images) {

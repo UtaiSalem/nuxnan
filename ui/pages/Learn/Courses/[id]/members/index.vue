@@ -18,6 +18,7 @@ const searchQuery = ref('')
 const filterGroup = ref<string | number>('all')
 // const groups = ref<any[]>([]) // Removed in favor of store
 const viewMode = ref<'grid' | 'list'>('grid')
+const isSavingGroupTab = ref(false)
 
 import MemberCard from '~/components/learn/course/MemberCard.vue'
 
@@ -83,8 +84,9 @@ const totalmembers = computed(() => members.value.length)
 // Lifecycle
 onMounted(async () => {
     // Set default group from preference (Only for admins or if filtering is allowed)
-    if (isCourseAdmin.value && courseMemberStore.member?.last_access_group_tab) {
-         filterGroup.value = courseMemberStore.member.last_access_group_tab
+    // Note: API returns 'last_accessed_group_tab' (with 'd')
+    if (isCourseAdmin.value && courseMemberStore.member?.last_accessed_group_tab) {
+         filterGroup.value = courseMemberStore.member.last_accessed_group_tab
     } 
     // For students, we might want to default 'filterGroup' to their group ID conceptually, 
     // although our 'members' computed handles the filtering regardless.
@@ -94,6 +96,27 @@ onMounted(async () => {
 
     if (course?.value?.id) {
         await courseGroupStore.fetchGroups(course.value.id)
+    }
+})
+
+// Watch for group filter changes - save to last_accessed_group_tab
+watch(filterGroup, async (newGroupId) => {
+    // Only save if admin and not 'all' and course exists
+    if (isCourseAdmin.value && newGroupId !== 'all' && course?.value?.id && !isSavingGroupTab.value) {
+        isSavingGroupTab.value = true
+        try {
+            await api.patch(`/api/courses/${course.value.id}/members/update-last-access-group`, {
+                last_accessed_group_tab: Number(newGroupId)
+            })
+            // Update local store
+            if (courseMemberStore.member) {
+                courseMemberStore.member.last_accessed_group_tab = Number(newGroupId)
+            }
+        } catch (error) {
+            console.error('Error saving last accessed group tab:', error)
+        } finally {
+            isSavingGroupTab.value = false
+        }
     }
 })
 

@@ -82,6 +82,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'two_factor_confirmed_at',
         'remember_token',
         'current_team_id',
+        'total_points_earned',
+        'total_points_spent',
+        'level',
+        'xp_for_next_level',
+        'current_xp',
     ];
 
     /**
@@ -111,10 +116,15 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'phone_verified_at' => 'datetime',
             'password'          => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'total_points_earned' => 'integer',
+            'total_points_spent' => 'integer',
+            'level' => 'integer',
+            'xp_for_next_level' => 'integer',
+            'current_xp' => 'integer',
             // 'no_of_ref' => 'integer',
             // 'pp' => 'decimal:2',
             // 'wallet' => 'decimal:2',
-        ]; 
+        ];
     }
 
     /**
@@ -457,6 +467,54 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function lessonComments()
     {
         return $this->hasMany(LessonComment::class);
+    }
+
+    /**
+     * Get points transactions for the user.
+     */
+    public function pointsTransactions()
+    {
+        return $this->hasMany(\App\Models\PointsTransaction::class);
+    }
+
+    /**
+     * Get wallet transactions for the user.
+     */
+    public function walletTransactions()
+    {
+        return $this->hasMany(\App\Models\WalletTransaction::class);
+    }
+
+    /**
+     * Get user rewards for the user.
+     */
+    public function userRewards()
+    {
+        return $this->hasMany(\App\Models\UserReward::class);
+    }
+
+    /**
+     * Get user achievements for the user.
+     */
+    public function userAchievements()
+    {
+        return $this->hasMany(\App\Models\UserAchievement::class);
+    }
+
+    /**
+     * Get point streak for the user.
+     */
+    public function pointStreak()
+    {
+        return $this->hasOne(\App\Models\PointStreak::class);
+    }
+
+    /**
+     * Get daily point limits for the user.
+     */
+    public function dailyPointLimits()
+    {
+        return $this->hasMany(\App\Models\DailyPointLimit::class);
     }
 
 }

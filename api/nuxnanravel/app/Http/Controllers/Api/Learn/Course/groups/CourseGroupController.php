@@ -21,7 +21,7 @@ class CourseGroupController extends Controller
     public function index(Course $course)
     {
         return response()->json([
-            'isCourseAdmin' => $course->user_id === auth()->id(),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course'        => new CourseResource($course),
             'groups'        => CourseGroupResource::collection($course->courseGroups),
             'courseMemberOfAuth'=> $course->courseMembers()->where('user_id', auth()->id())->first(),
@@ -41,6 +41,10 @@ class CourseGroupController extends Controller
      */
     public function store(Course $course, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
             $request->validate([
                 'name'              => 'required|string|max:255',
@@ -87,7 +91,7 @@ class CourseGroupController extends Controller
             'success' => true,
             'group' => new CourseGroupResource($group),
             'isMember' => $group->course_group_members()->where('user_id', auth()->id())->exists(),
-            'isAdmin' => $group->course_group_members()->where('user_id', auth()->id())->where('role', 'admin')->exists() || $course->user_id === auth()->id(),
+            'isAdmin' => $group->course_group_members()->where('user_id', auth()->id())->where('role', 'admin')->exists() || $course->isAdmin(auth()->user()),
         ]);
     }
 
@@ -104,6 +108,10 @@ class CourseGroupController extends Controller
      */
     public function update(Course $course, CourseGroup $group, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
             $request->validate([
                 'name'              => 'required|string|max:255',
@@ -141,6 +149,10 @@ class CourseGroupController extends Controller
      */
     public function destroy(Course $course, CourseGroup $group)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         if ($group->image_url) {
             Storage::disk('public')->delete('images/courses/groups/'. $group->image_url); 
         }

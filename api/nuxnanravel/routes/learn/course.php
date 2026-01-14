@@ -349,8 +349,9 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/admins')-
     Route::post('/invite', [CourseAdminController::class, 'store'])->name('course.admins.invite');
     Route::delete('/{member}', [CourseAdminController::class, 'destroy'])->name('course.admins.destroy');
     
-    Route::post('/invitations/{member}/accept', [CourseAdminController::class, 'acceptInvitation'])->name('course.admins.invitation.accept');
-    Route::post('/invitations/{member}/decline', [CourseAdminController::class, 'declineInvitation'])->name('course.admins.invitation.decline');
+    Route::post('/invitations/{invitation}/accept', [CourseAdminController::class, 'acceptInvitation'])->name('course.admins.invitation.accept');
+    Route::post('/invitations/{invitation}/decline', [CourseAdminController::class, 'declineInvitation'])->name('course.admins.invitation.decline');
+    Route::delete('/invitations/{invitation}', [CourseAdminController::class, 'cancelInvitation'])->name('course.admins.invitation.cancel');
 });
 
 // Course Reviews Routes

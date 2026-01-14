@@ -50,7 +50,10 @@ const barGlow = computed(() => {
     <div 
       class="poll-progress-fill"
       :class="[barColor, barGlow]"
-      :style="{ width: `${percentage}%` }"
+      :style="{ 
+        width: `${percentage}%`,
+        '--progress-width': `${percentage}%`
+      }"
       role="progressbar"
       :aria-valuenow="percentage"
       :aria-valuemin="0"

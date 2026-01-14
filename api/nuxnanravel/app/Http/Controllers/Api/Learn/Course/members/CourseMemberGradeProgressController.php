@@ -214,7 +214,7 @@ class CourseMemberGradeProgressController extends Controller
                 ->get();
 
         return response()->json([
-            'isCourseAdmin'             => $course->user_id === auth()->id(),
+            'isCourseAdmin'             => $course->isAdmin(auth()->user()),
             'course'                    => new CourseResource($course),
             // 'lessons'                   => LessonResource::collection($course->courseLessons),
             // 'groups'                    => CourseGroupResource::collection($course->courseGroups),

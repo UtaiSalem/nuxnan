@@ -76,4 +76,12 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/post_image_comments/{post_image_comment}/like', [PostImageCommentReactionController::class, 'toggleLikePostImageComment'])->name('toggle.like.post.image.comment');
     Route::post('/post_image_comments/{post_image_comment}/dislike', [PostImageCommentReactionController::class, 'toggleDislikePostImageComment'])->name('toggle.dislike.post.image.comment');
 
+    // Polls
+    Route::post('/polls', [App\Http\Controllers\Api\Play\PollController::class, 'store'])->name('polls.store');
+    Route::post('/polls/vote', [App\Http\Controllers\Api\Play\PollVoteController::class, 'store'])->name('polls.vote');
+    Route::post('/polls/{poll}/like', [App\Http\Controllers\Api\Play\PollReactionController::class, 'toggleLikePoll'])->name('polls.like');
+    Route::post('/polls/{poll}/dislike', [App\Http\Controllers\Api\Play\PollReactionController::class, 'toggleDislikePoll'])->name('polls.dislike');
+    Route::post('/polls/{poll}/comment', [App\Http\Controllers\Api\Play\PollReactionController::class, 'storeComment'])->name('polls.comment');
+    Route::delete('/poll_comments/{poll_comment}', [App\Http\Controllers\Api\Play\PollReactionController::class, 'destroyComment'])->name('polls.comment.destroy');
+    Route::delete('/polls/{poll}', [App\Http\Controllers\Api\Play\PollController::class, 'destroy'])->name('polls.destroy');
 });

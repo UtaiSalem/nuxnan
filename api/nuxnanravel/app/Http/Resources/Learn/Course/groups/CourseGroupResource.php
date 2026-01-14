@@ -58,8 +58,12 @@ class CourseGroupResource extends JsonResource
                     'course_id'     => $member->course_id,
                     'group_id'      => $member->group_id,
                     'user_id'       => $member->user_id,
-                    // 'member_name'   => $member->member_name, // Removed
+                    'member_name'   => $member->member_name,
+                    'member_code'   => $member->member_code,
                     'order_number'  => $member->order_number,
+                    'achieved_score' => $member->achieved_score ?? 0,
+                    'bonus_points'  => $member->bonus_points ?? 0,
+                    'role'          => $member->role,
                     'user'          => $user ? [
                         'id'        => $user->id,
                         'name'      => $user->name,
@@ -67,7 +71,7 @@ class CourseGroupResource extends JsonResource
                         'email'     => $user->email,
                     ] : null,
                     'avatar'        => $avatarUrl,
-                    'name'          => $user?->name ?? 'Unknown User',
+                    'name'          => $member->member_name ?? $user?->name ?? 'Unknown User',
                     'group'         => [
                         'id'        => $this->id,
                         'name'      => $this->name,

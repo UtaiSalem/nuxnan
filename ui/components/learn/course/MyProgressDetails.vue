@@ -202,6 +202,12 @@ const tabs = [
                          <h3 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
                              <Icon icon="fluent:person-edit-24-filled" class="text-blue-500" />
                              ข้อมูลส่วนตัว
+                             <span v-if="data.member?.role === 4" class="px-2 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-700 rounded-full border border-purple-200">
+                                 ผู้ดูแลระบบ (Admin)
+                             </span>
+                             <span v-else class="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full border border-blue-200">
+                                 นักเรียน (Student)
+                             </span>
                          </h3>
                          <p class="text-sm text-gray-500">แก้ไขข้อมูลพื้นฐานของคุณในรายวิชานี้</p>
                     </div>

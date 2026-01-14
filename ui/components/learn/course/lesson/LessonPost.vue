@@ -499,6 +499,7 @@ const handleTopicComplete = (topicId: number) => {
       <!-- Interaction Tabs (Reaction / Assignment / Quiz) -->
       <LessonInteractionTabs
         :lesson="lesson"
+        :isAdmin="isAdmin"
         @like="$emit('like', lesson.id)"
         @dislike="$emit('dislike', lesson.id)"
         @bookmark="$emit('bookmark', lesson.id)"

@@ -102,7 +102,13 @@ watch(course, (newCourse) => {
 
 // On mount
 onMounted(() => {
-  fetchCourse()
+  fetchCourse().then(() => {
+    // If the user is a member/admin and just entered the base course URL, redirect to feeds
+    const isBaseUrl = route.path === `/courses/${courseId.value}` || route.path === `/courses/${courseId.value}/`
+    if (isBaseUrl && courseMemberOfAuth.value) {
+      navigateTo(`/courses/${courseId.value}/feeds`)
+    }
+  })
 })
 
 // Invitation Logic

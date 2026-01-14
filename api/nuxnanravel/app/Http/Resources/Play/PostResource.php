@@ -11,6 +11,7 @@ use App\Http\Resources\Play\PostLocationResource;
 use App\Http\Resources\Play\PostMentionResource;
 use App\Http\Resources\Play\PostTaggedUserResource;
 use App\Http\Resources\Play\PostLinkPreviewResource;
+use App\Http\Resources\Play\PollResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class PostResource extends JsonResource
@@ -126,6 +127,9 @@ class PostResource extends JsonResource
             // Poll
             'poll_id'           => $this->poll_id,
             'has_poll'          => !empty($this->poll_id),
+            'poll'              => $this->when($this->relationLoaded('poll') && $this->poll, function () {
+                return new PollResource($this->poll);
+            }),
             
             // Meta
             'meta'              => $this->meta,

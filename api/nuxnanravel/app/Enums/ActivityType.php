@@ -18,6 +18,9 @@ enum ActivityType: string
     case DELETE_POST = 'delete_post';
     case SHARE_POST = 'share_post';
 
+    // Poll Activities
+    case CREATE_POLL = 'create_poll';
+
     // Comment Activities
     case CREATE_COMMENT = 'create_comment';
     case UPDATE_COMMENT = 'update_comment';
@@ -72,6 +75,7 @@ enum ActivityType: string
             self::ENROLL_COURSE => 'ลงทะเบียนเรียน',
             self::COMPLETE_COURSE => 'เรียนจบ',
             self::JOIN_COURSE => 'เข้าร่วมรายวิชา',
+            self::CREATE_POLL => 'สร้างแบบสำรวจใหม่',
             self::CREATE => 'สร้าง',
             self::UPDATE => 'อัปเดต',
             self::DELETE => 'ลบ',
@@ -93,6 +97,7 @@ enum ActivityType: string
             self::RECEIVE_DONATION => 'รับบริจาค',
             self::ENROLL_COURSE => 'ลงทะเบียน',
             self::COMPLETE_COURSE => 'เรียนจบ',
+            self::CREATE_POLL => 'สร้างโพล',
             default => $this->label(),
         };
     }
@@ -116,6 +121,7 @@ enum ActivityType: string
             self::REJECT_ADVERTISE => 'fluent:dismiss-circle-24-regular',
             self::ENROLL_COURSE, self::JOIN_COURSE => 'fluent:book-add-24-regular',
             self::COMPLETE_COURSE => 'fluent:checkmark-circle-24-regular',
+            self::CREATE_POLL => 'fluent:poll-24-regular',
             default => 'fluent:flash-24-regular',
         };
     }

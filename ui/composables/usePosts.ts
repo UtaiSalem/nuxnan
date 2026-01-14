@@ -50,6 +50,10 @@ export interface CreatePostOptions {
   tagged_users?: number[]
   scheduled_at?: string
   comments_disabled?: boolean
+  is_poll?: boolean
+  poll_title?: string
+  poll_options?: string[]
+  poll_duration?: number
 }
 
 export interface UpdatePostOptions extends CreatePostOptions {
@@ -260,6 +264,18 @@ export const usePosts = () => {
       // Comments disabled
       if (options.comments_disabled !== undefined) {
         formData.append('comments_disabled', options.comments_disabled ? '1' : '0')
+      }
+
+      // Poll
+      if (options.is_poll) {
+        formData.append('is_poll', '1')
+        if (options.poll_title) formData.append('poll_title', options.poll_title)
+        if (options.poll_duration) formData.append('poll_duration', String(options.poll_duration))
+        if (options.poll_options && options.poll_options.length > 0) {
+          options.poll_options.forEach((opt, index) => {
+            formData.append(`poll_options[${index}]`, opt)
+          })
+        }
       }
 
       const response = await $apiFetch('/api/posts', {

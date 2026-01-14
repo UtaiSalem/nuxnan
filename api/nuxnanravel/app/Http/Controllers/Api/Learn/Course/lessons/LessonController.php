@@ -21,7 +21,7 @@ class LessonController extends Controller
     {
         // $isCourseAdmin = $course->user_id == auth()->id() ? true: false;
         return response()->json([
-            'isCourseAdmin' => $course->user_id === auth()->id(),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course'        => new CourseResource($course),
             'lessons'       => LessonResource::collection($course->lessons),
             'groups'        => CourseGroupResource::collection($course->courseGroups),
@@ -33,6 +33,10 @@ class LessonController extends Controller
      */
     public function store(Course $course, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'title'         => ['required','string'],
             'description'   => ['nullable','string'],
@@ -76,7 +80,7 @@ class LessonController extends Controller
      */
     public function show(Lesson $lesson)
     {
-        $isCourseAdmin = $lesson->user_id === auth()->id();
+        $isCourseAdmin = $lesson->course->isAdmin(auth()->user());
         $course = $lesson->course;
         
         try {
@@ -96,7 +100,7 @@ class LessonController extends Controller
             return response()->json([
                 'course'                => new CourseResource($course),
                 'lesson'                => new LessonResource($lesson),
-                'isCourseAdmin'         => $lesson->user_id === auth()->id(),
+                'isCourseAdmin'         => $course->isAdmin(auth()->user()),
                 'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),
                 'authUserPP'            => auth()->user()->pp,
             ]);
@@ -122,6 +126,10 @@ class LessonController extends Controller
      */
     public function update(Course $course, Lesson $lesson, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'title'             => ['required','string'],
             'description'       => ['nullable','string'],
@@ -170,6 +178,10 @@ class LessonController extends Controller
      */
     public function destroy(Lesson $lesson)
     {
+        if (!$lesson->course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
         // delete lesson comments if exist
             if ($lesson->comments->count() > 0) {

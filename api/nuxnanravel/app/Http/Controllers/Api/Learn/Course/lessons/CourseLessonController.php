@@ -39,7 +39,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
      */
     private function checkCoursePermission(Course $course): bool
     {
-        return $course->user_id === auth()->id();
+        return $course->isAdmin(auth()->user());
     }
 
     /**
@@ -59,7 +59,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             return response()->json([
                 'course' => new CourseResource($course),
                 'lessons' => LessonResource::collection($course->courseLessons()->orderBy('order')->paginate()),
-                'isCourseAdmin' => $course->user_id === auth()->id(),
+                'isCourseAdmin' => $course->isAdmin(auth()->user()),
                 'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
                 'groups' => $course->courseGroups()->get(['id', 'name']),
             ], 200);

@@ -27,9 +27,9 @@ class ActivityController extends Controller
         $activities->getCollection()->each(function($activity) {
             if ($activity->activityable) {
                 if ($activity->activityable_type === 'App\Models\Post') {
-                    $activity->activityable->load('postImages');
+                    $activity->activityable->load(['postImages', 'poll.options', 'poll.user']);
                 } elseif ($activity->activityable_type === 'App\Models\CoursePost') {
-                    $activity->activityable->load('post_images');
+                    $activity->activityable->load(['post_images', 'poll.options', 'poll.user']);
                 }
             }
         });
@@ -71,13 +71,13 @@ class ActivityController extends Controller
             ->latest()
             ->paginate($perPage);
 
-        // Load images based on model type
+        // Load images and poll based on model type
         $activities->getCollection()->each(function($activity) {
             if ($activity->activityable) {
                 if ($activity->activityable_type === 'App\Models\Post') {
-                    $activity->activityable->load('postImages');
+                    $activity->activityable->load(['postImages', 'poll.options', 'poll.user']);
                 } elseif ($activity->activityable_type === 'App\Models\CoursePost') {
-                    $activity->activityable->load('post_images');
+                    $activity->activityable->load(['post_images', 'poll.options', 'poll.user']);
                 }
             }
         });
@@ -124,9 +124,9 @@ class ActivityController extends Controller
         $activities->getCollection()->each(function($activity) {
             if ($activity->activityable) {
                 if ($activity->activityable_type === 'App\Models\Post') {
-                    $activity->activityable->load('postImages');
+                    $activity->activityable->load(['postImages', 'poll.options', 'poll.user']);
                 } elseif ($activity->activityable_type === 'App\Models\CoursePost') {
-                    $activity->activityable->load('post_images');
+                    $activity->activityable->load(['post_images', 'poll.options', 'poll.user']);
                 }
             }
         });

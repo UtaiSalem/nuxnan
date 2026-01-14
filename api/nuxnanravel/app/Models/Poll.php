@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 // use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Poll extends Model
 {
@@ -23,11 +24,17 @@ class Poll extends Model
         'is_multiple_choice',
         'total_votes',
         'image_url',
+        'points_pool',
+        'points_per_vote',
+        'points_distributed',
     ];
 
-    protected $dates = [
-        'start_date',
-        'end_date',
+    protected $casts = [
+        'start_date' => 'datetime',
+        'end_date'   => 'datetime',
+        'is_active' => 'boolean',
+        'is_public' => 'boolean',
+        'is_multiple_choice' => 'boolean',
     ];
 
     /**
@@ -45,4 +52,28 @@ class Poll extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function options(): MorphMany
+    {
+        return $this->morphMany(QuestionOption::class, 'optionable');
+    }
+
+    public function votes()
+    {
+        return $this->hasMany(PollVote::class);
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(LikedPoll::class);
+    }
+
+    public function dislikes()
+    {
+        return $this->hasMany(DislikedPoll::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(PollComment::class);
+    }
 }

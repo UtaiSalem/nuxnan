@@ -6,7 +6,22 @@ interface ApiResponse<T = any> {
   data?: T
   message?: string
   poll?: T
+  comment?: T
   activity?: T
+}
+
+// Type definitions for poll
+export interface PollComment {
+  id: number
+  poll_id: number
+  content: string
+  created_at: string
+  diff_humans_created_at: string
+  user: {
+    id: number
+    name: string
+    avatar: string
+  }
 }
 
 // Type definitions for poll
@@ -29,6 +44,9 @@ export interface Poll {
   created_at: string
   user_voted: boolean
   user_votes?: number[]
+  points_pool?: number
+  points_per_vote?: number
+  points_distributed?: number
   author: {
     id: number
     name: string
@@ -37,6 +55,16 @@ export interface Poll {
   }
   time_remaining?: string
   diff_humans_created_at?: string
+  reaction_counts: {
+    likes: number
+    dislikes: number
+    comments: number
+  }
+  user_reactions: {
+    is_liked: boolean
+    is_disliked: boolean
+  }
+  comments?: PollComment[]
 }
 
 export interface CreatePollOptions {
@@ -44,6 +72,8 @@ export interface CreatePollOptions {
   options: string[]
   duration: number // hours
   is_multiple: boolean
+  points_pool?: number
+  max_votes?: number
   privacy_settings?: number
   location_name?: string
   tagged_users?: number[]
@@ -68,6 +98,14 @@ export const usePolls = () => {
       formData.append('duration', String(options.duration))
       formData.append('is_multiple', options.is_multiple ? '1' : '0')
       formData.append('privacy_settings', String(options.privacy_settings ?? 3))
+      
+      if (options.points_pool !== undefined) {
+        formData.append('points_pool', String(options.points_pool))
+      }
+
+      if (options.max_votes !== undefined) {
+        formData.append('max_votes', String(options.max_votes))
+      }
       
       // Add options
       options.options.forEach((option, index) => {
@@ -113,12 +151,13 @@ export const usePolls = () => {
   }
   
   // Vote on a poll
-  const votePoll = async (pollId: number, optionIds: number[]) => {
+  const votePoll = async (pollId: number, optionId: number) => {
     try {
-      const response = await $apiFetch(`/api/polls/${pollId}/vote`, {
+      const response = await $apiFetch('/api/polls/vote', {
         method: 'POST',
         body: {
-          option_ids: optionIds,
+          poll_id: pollId,
+          option_id: optionId,
         },
       }) as ApiResponse
       
@@ -242,6 +281,59 @@ export const usePolls = () => {
     }))
   }
   
+  // Like a poll
+  const likePoll = async (pollId: number) => {
+    try {
+      const response = await $apiFetch(`/api/polls/${pollId}/like`, {
+        method: 'POST',
+      }) as ApiResponse
+      return response
+    } catch (error) {
+      console.error('Error liking poll:', error)
+      throw error
+    }
+  }
+
+  // Dislike a poll
+  const dislikePoll = async (pollId: number) => {
+    try {
+      const response = await $apiFetch(`/api/polls/${pollId}/dislike`, {
+        method: 'POST',
+      }) as ApiResponse
+      return response
+    } catch (error) {
+      console.error('Error disliking poll:', error)
+      throw error
+    }
+  }
+
+  // Comment on a poll
+  const commentOnPoll = async (pollId: number, content: string) => {
+    try {
+      const response = await $apiFetch(`/api/polls/${pollId}/comment`, {
+        method: 'POST',
+        body: { content },
+      }) as ApiResponse<PollComment>
+      return response
+    } catch (error) {
+      console.error('Error commenting on poll:', error)
+      throw error
+    }
+  }
+
+  // Delete a poll comment
+  const deletePollComment = async (commentId: number) => {
+    try {
+      const response = await $apiFetch(`/api/poll_comments/${commentId}`, {
+        method: 'DELETE',
+      }) as ApiResponse
+      return response
+    } catch (error) {
+      console.error('Error deleting poll comment:', error)
+      throw error
+    }
+  }
+  
   return {
     createPoll,
     getPoll,
@@ -252,5 +344,9 @@ export const usePolls = () => {
     getPollResults,
     calculateTimeRemaining,
     calculatePercentages,
+    likePoll,
+    dislikePoll,
+    commentOnPoll,
+    deletePollComment,
   }
 }

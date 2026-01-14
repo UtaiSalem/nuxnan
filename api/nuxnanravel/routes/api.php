@@ -224,6 +224,9 @@ require __DIR__ . '/studentcard/studentcard.php';
 // Share system routes
 require __DIR__ . '/api_shares.php';
 
+// Points & Wallet system routes
+require __DIR__ . '/api-points-wallet.php';
+
 // Debug routes (remove in production)
 if (env('APP_DEBUG')) {
     require __DIR__ . '/debug_login.php';

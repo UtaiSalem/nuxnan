@@ -76,6 +76,11 @@ class StorePostRequest extends FormRequest
             
             // Poll reference
             'poll_id'               => 'nullable|integer|exists:polls,id',
+            'is_poll'               => 'nullable|boolean',
+            'poll_title'            => 'required_if:is_poll,true|nullable|string|max:255',
+            'poll_options'          => 'required_if:is_poll,true|nullable|array|min:2|max:10',
+            'poll_options.*'        => 'required_if:is_poll,true|string|max:255',
+            'poll_duration'         => 'nullable|integer|in:1,6,12,24,72,168',
             
             // Points (for sponsored posts)
             'point'                 => 'nullable|integer|min:1',
@@ -135,6 +140,9 @@ class StorePostRequest extends FormRequest
             
             // Poll
             'poll_id.exists' => 'ไม่พบโพลที่ระบุ / Poll not found',
+            'poll_title.required_if' => 'กรุณาระบุคำถามสำหรับโพล / Please provide poll question',
+            'poll_options.required_if' => 'กรุณาระบุตัวเลือกสำหรับโพล / Please provide poll options',
+            'poll_options.min' => 'ต้องมีตัวเลือกอย่างน้อย 2 ข้อ / At least 2 options required',
         ];
     }
 
@@ -146,7 +154,7 @@ class StorePostRequest extends FormRequest
         $validator->after(function ($validator) {
             $hasContent = !empty($this->content) && strlen(trim($this->content)) > 0;
             $hasImages = $this->hasFile('images') && count($this->file('images')) > 0;
-            $hasPoll = !empty($this->poll_id);
+            $hasPoll = !empty($this->poll_id) || (!empty($this->is_poll) && filter_var($this->is_poll, FILTER_VALIDATE_BOOLEAN));
             $hasBackground = !empty($this->background_color) || !empty($this->background_gradient) || !empty($this->background_id);
             
             // Must have at least one of: content, images, poll

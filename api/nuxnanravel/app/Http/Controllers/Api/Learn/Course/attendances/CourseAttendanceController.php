@@ -21,7 +21,7 @@ class CourseAttendanceController extends Controller
     public function index(Course $course, Request $request)
     {
         $courseMemberOfAuth = $course->courseMembers()->where('user_id', auth()->id())->first();
-        $isCourseAdmin = $course->user_id === auth()->id();
+        $isCourseAdmin = $course->isAdmin(auth()->user());
         
         // Get attendances with optional group filter and eager load relationships
         $attendancesQuery = $course->courseAttendances()
@@ -63,6 +63,10 @@ class CourseAttendanceController extends Controller
      */
     public function store(Course $course, CourseGroup $group, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $request->validate([
             'start_at' => 'required|date',
             'finish_at' => 'required|date',
@@ -93,6 +97,10 @@ class CourseAttendanceController extends Controller
     // Update Attendance
     public function update(CourseAttendance $attendance, Request $request)
     {
+        if (!$attendance->course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $request->validate([
             'start_at' => 'required|date',
             'finish_at' => 'required|date',
@@ -124,6 +132,10 @@ class CourseAttendanceController extends Controller
      */
     public function destroy(CourseAttendance $attendance)
     {
+        if (!$attendance->course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         //delete attendance details
         $attendance->details()->delete();
         //delete attendance
@@ -163,7 +175,7 @@ class CourseAttendanceController extends Controller
 
         // Check if user is course admin
         $course = $attendance->course;
-        if ($course->user_id !== auth()->id()) {
+        if (!$course->isAdmin(auth()->user())) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่มีสิทธิ์แก้ไขสถานะการเข้าร่วม'

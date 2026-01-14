@@ -37,7 +37,7 @@ class CourseActivityController extends Controller implements HasMiddleware
                 );
             }
 
-            $isCourseAdmin = $course->user_id == auth()->id();
+            $isCourseAdmin = $course->isAdmin(auth()->user());
             $cma = $course->courseMembers()->where('user_id', auth()->id())->first();
             $coursesResource = new CourseResource($course);
             

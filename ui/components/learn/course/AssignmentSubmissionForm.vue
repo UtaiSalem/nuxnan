@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
 const props = defineProps<{
@@ -7,6 +7,7 @@ const props = defineProps<{
   courseId: string | number
   existingAnswer?: any
   isEditing?: boolean
+  showCancel?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -28,8 +29,11 @@ watch(() => props.existingAnswer, (newVal) => {
     if (newVal) {
         answerContent.value = newVal.content || ''
         existingImages.value = [...(newVal.images || [])]
+    } else {
+        answerContent.value = ''
+        existingImages.value = []
     }
-}, { immediate: true })
+}, { immediate: true, deep: true })
 
 const handleFileSelect = (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -133,7 +137,7 @@ const submitAnswer = async () => {
        
        <div class="mt-6 flex gap-3 justify-end">
           <button 
-             v-if="isEditing" 
+             v-if="isEditing && showCancel !== false" 
              @click="emit('cancel')"
              class="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >

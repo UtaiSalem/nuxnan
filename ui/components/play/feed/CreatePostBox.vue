@@ -10,8 +10,10 @@ import CreatePostModal from './CreatePostModal.vue'
 const emit = defineEmits(['post-created'])
 
 const showModal = ref(false)
+const initialTab = ref('status')
 
-const openModal = () => {
+const openModal = (tab = 'status') => {
+  initialTab.value = tab
   showModal.value = true
 }
 
@@ -30,9 +32,10 @@ const handlePostCreated = (activity) => {
     <!-- Trigger Box -->
     <CreatePostTrigger @open-modal="openModal" />
     
-    <!-- Modal (Teleported to body) -->
+    <!-- Post/Poll Modal (Teleported to body) -->
     <CreatePostModal 
       :show="showModal" 
+      :initial-tab="initialTab"
       @close="closeModal" 
       @post-created="handlePostCreated" 
     />

@@ -8,6 +8,7 @@ use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 use App\Http\Resources\Learn\Course\posts\CoursePostImageResource;
 use App\Http\Resources\Learn\Course\posts\CoursePostCommentResource;
+use App\Http\Resources\Play\PollResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class CoursePostResource extends JsonResource
@@ -52,6 +53,9 @@ class CoursePostResource extends JsonResource
             'engagement_rate'   => $this->engagement_rate,
             'post_type'         => $this->post_type,
             'source_platform'   => $this->source_platform,
+            'poll'              => $this->when($this->relationLoaded('poll') && $this->poll, function () {
+                                        return new PollResource($this->poll);
+                                    }),
             'updated_at'        => $this->updated_at,
             'created_at'        => $this->created_at,
             'diff_humans_created_at'    => $this->created_at->diffForHumans(),

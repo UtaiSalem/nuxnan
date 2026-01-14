@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSweetAlert } from '~/composables/useSweetAlert'
 
@@ -26,24 +26,38 @@ const showCloseConfirm = ref(false)
 const isDeleting = ref(false)
 const isClosing = ref(false)
 
+// Template ref for the menu element
+const menuRef = ref<HTMLElement | null>(null)
+
 // Close menu when clicking outside
+const handleClickOutside = (event: MouseEvent) => {
+  // Use the template ref instead of document.querySelector
+  // This ensures we check the correct menu instance
+  if (menuRef.value && !menuRef.value.contains(event.target as Node)) {
+    // Check if clicked on a menu trigger button by looking for the class
+    const target = event.target as HTMLElement
+    const clickedOnTrigger = target.closest('.poll-menu-trigger')
+    if (!clickedOnTrigger) {
+      emit('close')
+    }
+  }
+}
+
 watch(() => props.show, (newValue) => {
   if (newValue) {
-    document.addEventListener('click', handleClickOutside)
+    // Use setTimeout to avoid immediately closing when the menu opens
+    setTimeout(() => {
+      document.addEventListener('click', handleClickOutside)
+    }, 0)
   } else {
     document.removeEventListener('click', handleClickOutside)
   }
 })
 
-const handleClickOutside = (event: MouseEvent) => {
-  const menu = document.querySelector('.poll-menu')
-  const trigger = document.querySelector('.poll-menu-trigger')
-  
-  if (menu && !menu.contains(event.target as Node) && 
-      trigger && !trigger.contains(event.target as Node)) {
-    emit('close')
-  }
-}
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 const handleEdit = () => {
   emit('close')
@@ -105,6 +119,7 @@ const handleShare = () => {
   <Transition name="dropdown">
     <div 
       v-if="show" 
+      ref="menuRef"
       class="poll-menu"
     >
       <!-- Edit Poll (only for owner) -->

@@ -312,11 +312,15 @@ const projectedGrade = computed(() => {
                                         <p class="text-sm opacity-90 mb-1">เลขประจำตัว</p>
                                         <p class="text-2xl font-bold">{{ props.member.data.member_code }}</p>
                                     </div>
-                                    <div class="bg-white/20 backdrop-blur-md rounded-xl p-4 transition-all duration-200 hover:bg-white/25">
-                                        <p class="text-sm opacity-90 mb-1">ชื่อสมาชิก</p>
-                                        <p class="text-2xl font-bold">{{ props.member.data.member_name }}</p>
-                                    </div>
-                                </div>
+                                     <div class="bg-white/20 backdrop-blur-md rounded-xl p-4 transition-all duration-200 hover:bg-white/25">
+                                         <p class="text-sm opacity-90 mb-1">ชื่อสมาชิก</p>
+                                         <p class="text-2xl font-bold">{{ props.member.data.member_name }}</p>
+                                     </div>
+                                     <div class="bg-white/20 backdrop-blur-md rounded-xl p-4 transition-all duration-200 hover:bg-white/25">
+                                         <p class="text-sm opacity-90 mb-1">สถานะผู้ใช้งาน</p>
+                                         <p class="text-2xl font-bold">{{ props.member.data.role === 4 ? 'ผู้ดูแลระบบ' : 'นักเรียน' }}</p>
+                                     </div>
+                                 </div>
                             </div>
                             <div class="flex gap-3 print:hidden">
                                 <button @click="toggleCalculator" :class="`flex items-center gap-2 px-4 py-2 ${isCalculatorOpen ? 'bg-white text-indigo-600 shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'} rounded-xl backdrop-blur-md transition-all font-medium border border-transparent`">

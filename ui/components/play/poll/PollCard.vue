@@ -40,6 +40,13 @@ const selectedOptions = ref<number[]>([])
 const showResults = ref(false)
 const showMenu = ref(false)
 const localPoll = ref<Poll>({ ...props.poll })
+const { likePoll, dislikePoll, commentOnPoll } = usePolls()
+const isLiking = ref(false)
+const isDisliking = ref(false)
+const showComments = ref(false)
+const newComment = ref('')
+const isCommenting = ref(false)
+const { deletePollComment } = usePolls()
 
 // Computed
 const isOwner = computed(() => {
@@ -53,6 +60,8 @@ const isEnded = computed(() => {
 const hasVoted = computed(() => {
   return localPoll.value.user_voted
 })
+
+const currentUserAvatar = computed(() => getAvatarUrl(authStore.user))
 
 const canVote = computed(() => {
   return !isEnded.value && !hasVoted.value
@@ -75,6 +84,11 @@ const showResultsMode = computed(() => {
 
 const sortedOptions = computed(() => {
   return [...localPoll.value.options].sort((a, b) => b.votes - a.votes)
+})
+
+const maxPercentage = computed(() => {
+  if (localPoll.value.options.length === 0) return 0
+  return Math.max(...localPoll.value.options.map(o => o.percentage))
 })
 
 // Watch for poll updates
@@ -118,28 +132,23 @@ const submitVote = async () => {
     return
   }
   
-  // Check points
-  const pointsRequired = 12
-  if (authStore.user && authStore.user.pp < pointsRequired) {
-    swal.warning(`แต้มของคุณไม่พอสำหรับการโหวต\n\nต้องการ: ${pointsRequired} แต้ม\nมีอยู่: ${authStore.user.pp} แต้ม\nขาดอีก: ${pointsRequired - authStore.user.pp} แต้ม`, 'แต้มไม่พอ')
-    return
-  }
-  
   isVoting.value = true
   
   try {
-    const response = await votePoll(localPoll.value.id, selectedOptions.value)
+    // For now, our backend PollVoteController handles single option voting
+    const optionId = selectedOptions.value[0]
+    const response = await votePoll(localPoll.value.id, optionId) as any
     
     if (response.success) {
       // Update local state
       localPoll.value.user_voted = true
-      localPoll.value.user_votes = [...selectedOptions.value]
+      localPoll.value.user_votes = [optionId]
       
       // Update option votes
       localPoll.value.options = localPoll.value.options.map(option => ({
         ...option,
-        votes: selectedOptions.value.includes(option.id) ? option.votes + 1 : option.votes,
-        is_user_vote: selectedOptions.value.includes(option.id),
+        votes: option.id === optionId ? option.votes + 1 : option.votes,
+        is_user_vote: option.id === optionId,
       }))
       
       // Recalculate percentages
@@ -151,20 +160,23 @@ const submitVote = async () => {
         percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0,
       }))
       
-      // Update store
-      pollStore.updatePollVote(localPoll.value.id, selectedOptions.value)
+      // If points were earned, update auth store
+      if (response.points_earned && response.points_earned > 0) {
+        authStore.user.pp += response.points_earned
+        swal.success(`โหวตสำเร็จ! คุณได้รับ ${response.points_earned} แต้ม`, 'โหวตสำเร็จ')
+      } else {
+        toast.success(response.message || 'โหวตสำเร็จ!')
+      }
       
       // Show results
       showResults.value = true
       selectedOptions.value = []
-      
-      toast.success('โหวตสำเร็จ!')
     } else {
       swal.error(response.message || 'ไม่สามารถโหวตได้')
     }
   } catch (error) {
     console.error('Error voting on poll:', error)
-    const errorMsg = error?.data?.message || error?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+    const errorMsg = error?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'
     swal.error(errorMsg)
   } finally {
     isVoting.value = false
@@ -228,6 +240,97 @@ const handleShare = () => {
   // Implement share functionality
   toast.info('ฟีเจอร์แชร์จะเข้ามาเร็วๆ นี้!')
 }
+
+const toggleLike = async () => {
+  if (isLiking.value) return
+  isLiking.value = true
+  try {
+    const response = await likePoll(localPoll.value.id)
+    if (response.success) {
+      localPoll.value.user_reactions.is_liked = !localPoll.value.user_reactions.is_liked
+      if (localPoll.value.user_reactions.is_liked) {
+          localPoll.value.reaction_counts.likes++
+          if (localPoll.value.user_reactions.is_disliked) {
+              localPoll.value.user_reactions.is_disliked = false
+              localPoll.value.reaction_counts.dislikes--
+          }
+      } else {
+          localPoll.value.reaction_counts.likes--
+      }
+    } else {
+      swal.error(response.message || 'ไม่สามารถถูกใจได้')
+    }
+  } catch (error) {
+    swal.error(error?.data?.message || 'เกิดข้อผิดพลาด')
+  } finally {
+    isLiking.value = false
+  }
+}
+
+const toggleDislike = async () => {
+  if (isDisliking.value) return
+  isDisliking.value = true
+  try {
+    const response = await dislikePoll(localPoll.value.id)
+    if (response.success) {
+      localPoll.value.user_reactions.is_disliked = !localPoll.value.user_reactions.is_disliked
+      if (localPoll.value.user_reactions.is_disliked) {
+          localPoll.value.reaction_counts.dislikes++
+          if (localPoll.value.user_reactions.is_liked) {
+              localPoll.value.user_reactions.is_liked = false
+              localPoll.value.reaction_counts.likes--
+          }
+      } else {
+          localPoll.value.reaction_counts.dislikes--
+      }
+    } else {
+      swal.error(response.message || 'ไม่สามารถไม่ถูกใจได้')
+    }
+  } catch (error) {
+    swal.error(error?.data?.message || 'เกิดข้อผิดพลาด')
+  } finally {
+    isDisliking.value = false
+  }
+}
+
+const submitComment = async () => {
+  if (!newComment.value.trim() || isCommenting.value) return
+  isCommenting.value = true
+  try {
+    const response = await commentOnPoll(localPoll.value.id, newComment.value)
+    if (response.success && response.comment) {
+      if (!localPoll.value.comments) localPoll.value.comments = []
+      localPoll.value.comments.unshift(response.comment)
+      localPoll.value.reaction_counts.comments++
+      newComment.value = ''
+      toast.success('แสดงความคิดเห็นสำเร็จ!')
+    } else {
+      swal.error(response.message || 'ไม่สามารถแสดงความคิดเห็นได้')
+    }
+  } catch (error) {
+    swal.error(error?.data?.message || 'เกิดข้อผิดพลาด')
+  } finally {
+    isCommenting.value = false
+  }
+}
+
+const handleDeleteComment = async (commentId: number) => {
+  const result = await swal.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบความคิดเห็นนี้?', 'ยืนยันการลบ')
+  if (!result) return
+  
+  try {
+    const response = await deletePollComment(commentId)
+    if (response.success) {
+      localPoll.value.comments = localPoll.value.comments?.filter(c => c.id !== commentId)
+      localPoll.value.reaction_counts.comments--
+      toast.success('ลบความคิดเห็นสำเร็จ!')
+    } else {
+      swal.error(response.message || 'ไม่สามารถลบความคิดเห็นได้')
+    }
+  } catch (error) {
+    swal.error('เกิดข้อผิดพลาดในการลบความคิดเห็น')
+  }
+}
 </script>
 
 <template>
@@ -238,8 +341,8 @@ const handleShare = () => {
     ]"
   >
     <!-- Header -->
-    <div class="poll-header">
-      <div class="flex items-center gap-3">
+    <div v-if="!isNested || localPoll.points_pool > 0 || !isEnded" class="poll-header">
+      <div v-if="!isNested" class="flex items-center gap-3">
         <!-- Author Avatar -->
         <img 
           :src="getAvatarUrl(localPoll.author)" 
@@ -267,11 +370,35 @@ const handleShare = () => {
           </div>
         </div>
       </div>
+
+      <!-- Nested Header (Poll-specific info only) -->
+      <div v-else class="flex items-center gap-3">
+        <!-- Poll Badge -->
+        <span class="poll-badge">
+          <Icon icon="fluent:poll-24-regular" class="w-3.5 h-3.5" />
+          <span>โพล</span>
+        </span>
+
+        <!-- Time Info -->
+        <div class="poll-meta !mt-0">
+          <Icon icon="fluent:clock-24-regular" class="w-3.5 h-3.5" />
+          <span>{{ timeRemaining }}</span>
+        </div>
+      </div>
+      
+      <!-- Reward Info -->
+      <div v-if="localPoll.points_pool > 0" class="flex flex-col items-end">
+        <div class="flex items-center gap-1.5 px-3 py-1 bg-vikinger-cyan/10 rounded-lg text-vikinger-cyan">
+          <Icon icon="mdi:piggy-bank" class="w-4 h-4" />
+          <span class="text-sm font-bold">{{ localPoll.points_pool - localPoll.points_distributed }} แต้มคงเหลือ</span>
+        </div>
+        <span class="text-[10px] text-gray-500 mt-1">รางวัลโหวตละ {{ localPoll.points_per_vote }} แต้ม</span>
+      </div>
       
       <!-- Menu Button (only for owner) -->
       <div v-if="showActions && isOwner" class="relative">
         <button 
-          @click="showMenu = !showMenu"
+          @click.stop="showMenu = !showMenu"
           class="poll-menu-trigger"
         >
           <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5" />
@@ -300,16 +427,27 @@ const handleShare = () => {
     
     <!-- Voting Mode -->
     <div v-if="showVotingMode" class="poll-options">
-      <PollOption
-        v-for="(option, index) in localPoll.options"
-        :key="option.id"
-        :option="option"
-        :is-voting-mode="true"
-        :is-selected="selectedOptions.includes(option.id)"
-        :is-multiple="localPoll.is_multiple"
-        :index="index"
-        @click="selectOption(option.id)"
-      />
+      <div class="space-y-3">
+        <PollOption
+          v-for="(option, index) in localPoll.options"
+          :key="option.id"
+          :option="option"
+          :is-voting-mode="true"
+          :is-selected="selectedOptions.includes(option.id)"
+          :is-multiple="!!localPoll.is_multiple"
+          :max-percentage="maxPercentage"
+          :index="index"
+          @click="selectOption(option.id)"
+        />
+      </div>
+      
+      <!-- Voter Reward Notice -->
+      <div v-if="localPoll.points_pool > 0 && (localPoll.points_pool - localPoll.points_distributed) > 0" class="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700/30">
+        <Icon icon="fluent:gift-24-filled" class="w-5 h-5 text-green-500 flex-shrink-0" />
+        <span class="text-sm text-green-700 dark:text-green-300">
+          🎁 ร่วมโหวตเพื่อรับ <strong>{{ localPoll.points_per_vote }}</strong> แต้มรางวัล!
+        </span>
+      </div>
       
       <!-- Submit Button -->
       <button
@@ -335,16 +473,19 @@ const handleShare = () => {
     
     <!-- Results Mode -->
     <div v-else class="poll-options">
-      <PollOption
-        v-for="(option, index) in sortedOptions"
-        :key="option.id"
-        :option="option"
-        :is-voting-mode="false"
-        :is-selected="false"
-        :is-multiple="false"
-        :index="index"
-        @click="changeVote"
-      />
+      <div class="space-y-3">
+        <PollOption
+          v-for="(option, index) in sortedOptions"
+          :key="option.id"
+          :option="option"
+          :is-voting-mode="false"
+          :is-selected="false"
+          :is-multiple="false"
+          :max-percentage="maxPercentage"
+          :index="index"
+          @click="viewResults"
+        />
+      </div>
       
       <!-- Change Vote Button (if user voted) -->
       <button
@@ -358,22 +499,92 @@ const handleShare = () => {
     </div>
     
     <!-- Footer Stats -->
-    <div class="poll-footer">
-      <div class="flex items-center gap-4">
-        <span class="poll-stat-item">
-          <Icon icon="fluent:thumb-like-24-regular" class="w-4 h-4" />
-          <span>{{ localPoll.total_votes }} คนโหวต</span>
+    <div v-if="!isNested" class="poll-footer">
+      <div class="flex items-center gap-3">
+        <button 
+          @click="toggleLike" 
+          class="poll-action-btn"
+          :class="{ 'active text-vikinger-purple': localPoll.user_reactions.is_liked }"
+        >
+          <Icon :icon="localPoll.user_reactions.is_liked ? 'fluent:thumb-like-24-filled' : 'fluent:thumb-like-24-regular'" class="w-5 h-5" />
+          <span>{{ localPoll.reaction_counts.likes }}</span>
+        </button>
+
+        <button 
+          @click="toggleDislike" 
+          class="poll-action-btn"
+          :class="{ 'active text-red-500': localPoll.user_reactions.is_disliked }"
+        >
+          <Icon :icon="localPoll.user_reactions.is_disliked ? 'fluent:thumb-dislike-24-filled' : 'fluent:thumb-dislike-24-regular'" class="w-5 h-5" />
+          <span>{{ localPoll.reaction_counts.dislikes }}</span>
+        </button>
+
+        <button 
+          @click="showComments = !showComments" 
+          class="poll-action-btn"
+          :class="{ 'active text-vikinger-cyan': showComments }"
+        >
+          <Icon icon="fluent:comment-24-regular" class="w-5 h-5" />
+          <span>{{ localPoll.reaction_counts.comments }}</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-4 text-xs text-gray-500">
+        <span>{{ localPoll.total_votes }} คนโหวต</span>
+        <span v-if="hasVoted" class="text-green-500 flex items-center gap-1">
+          <Icon icon="fluent:checkmark-circle-24-filled" class="w-3.5 h-3.5" />
+          โหวตแล้ว
         </span>
-        
-        <span v-if="!isEnded" class="poll-stat-item">
-          <Icon icon="fluent:clock-24-regular" class="w-4 h-4" />
-          <span>{{ timeRemaining }}</span>
-        </span>
-        
-        <span v-if="hasVoted" class="poll-stat-item voted">
-          <Icon icon="fluent:checkmark-circle-24-filled" class="w-4 h-4" />
-          <span>คุณโหวตแล้ว</span>
-        </span>
+      </div>
+    </div>
+
+    <!-- Comment Section -->
+    <div v-if="showComments && !isNested" class="poll-comment-section border-t border-gray-100 dark:border-vikinger-dark-50/10">
+      <!-- Comment List -->
+      <div v-if="localPoll.comments && localPoll.comments.length > 0" class="poll-comments-list p-4 space-y-4 max-h-[300px] overflow-y-auto">
+        <div v-for="comment in localPoll.comments" :key="comment.id" class="flex gap-3 group">
+          <img :src="getAvatarUrl(comment.user)" class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+          <div class="flex-1">
+            <div class="bg-gray-50 dark:bg-vikinger-dark-100 p-3 rounded-2xl rounded-tl-none relative">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-sm font-bold text-vikinger-dark-50 dark:text-white">{{ comment.user.name }}</span>
+                <span class="text-[10px] text-gray-500">{{ comment.diff_humans_created_at }}</span>
+              </div>
+              <p class="text-sm text-gray-700 dark:text-gray-300">{{ comment.content }}</p>
+              
+              <!-- Delete Comment Button -->
+              <button 
+                v-if="comment.user.id === authStore.user?.id || isOwner"
+                @click="handleDeleteComment(comment.id)"
+                class="absolute -right-2 -top-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+              >
+                <Icon icon="fluent:delete-24-regular" class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Comment Input -->
+      <div class="p-4 border-t border-gray-50 dark:border-vikinger-dark-50/5">
+        <div class="flex gap-3">
+          <img :src="currentUserAvatar" class="w-8 h-8 rounded-full object-cover" />
+          <div class="flex-1 relative">
+            <input 
+              v-model="newComment"
+              @keydown.enter="submitComment"
+              placeholder="เขียนความเห็น..."
+              class="w-full pl-4 pr-10 py-2 bg-gray-50 dark:bg-vikinger-dark-100 border-none rounded-lg text-sm focus:ring-1 focus:ring-vikinger-purple outline-none"
+            />
+            <button 
+              @click="submitComment"
+              :disabled="!newComment.trim() || isCommenting"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-vikinger-purple disabled:opacity-30"
+            >
+              <Icon icon="mdi:send" class="w-5 h-5" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -385,6 +596,19 @@ const handleShare = () => {
   border-radius: 16px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.poll-card-nested {
+  margin-bottom: 0;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: none;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.dark .poll-card-nested {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .dark .poll-card {
@@ -607,6 +831,51 @@ const handleShare = () => {
 
 .poll-stat-item.voted {
   color: #00e676;
+}
+
+/* Action Buttons */
+.poll-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dark .poll-action-btn {
+  color: #9ca3af;
+}
+
+.poll-action-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dark .poll-action-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.poll-action-btn.active {
+  background: rgba(97, 93, 250, 0.1);
+}
+
+.dark .poll-action-btn.active {
+  background: rgba(97, 93, 250, 0.2);
+}
+
+/* Comment Section */
+.poll-comment-section {
+  background: #fdfdfd;
+}
+
+.dark .poll-comment-section {
+  background: rgba(0, 0, 0, 0.1);
 }
 
 /* Reduced motion */

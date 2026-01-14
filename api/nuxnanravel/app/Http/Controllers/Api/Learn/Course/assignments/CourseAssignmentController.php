@@ -21,7 +21,7 @@ class CourseAssignmentController extends Controller
             'course'                => new CourseResource($course),
             'assignments'           => AssignmentResource::collection($course->courseAssignments()->latest()->paginate(15)),
             'groups'                => $course->courseGroups()->get(['id', 'name']),
-            'isCourseAdmin'         => $course->user_id === auth()->id(),
+            'isCourseAdmin'         => $course->isAdmin(auth()->user()),
             'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),
         ]);
     }
@@ -32,12 +32,16 @@ class CourseAssignmentController extends Controller
             'assignment' => new AssignmentResource($assignment),
             'course' => new CourseResource($course),
             'groups' => $course->courseGroups()->get(['id', 'name']),
-            'isCourseAdmin' => $course->user_id === auth()->id(),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
         ]);
     }
     
     public function store(Course $course, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string',
             'points' => 'required',
@@ -90,6 +94,10 @@ class CourseAssignmentController extends Controller
 
     public function update(Course $course, Assignment $assignment, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $course->decrement('total_score', $assignment->points);
 
         $validated = $request->validate([
@@ -145,6 +153,11 @@ class CourseAssignmentController extends Controller
 
     public function destroy(Assignment $assignment)
     {
+        $course = $assignment->assignmentable;
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         // $answers = $assignment->answers;
         foreach ( $assignment->answers as $answer) {            
             foreach ($answer->images as $image) {

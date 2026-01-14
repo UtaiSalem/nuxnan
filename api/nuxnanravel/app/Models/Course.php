@@ -196,4 +196,27 @@ class Course extends Model
         $avg = $this->reviews()->where('is_approved', true)->avg('rating');
         return $avg ? round($avg, 1) : null;
     }
+
+    /**
+     * Check if the given user is an admin of the course.
+     * Returns true if user is the owner OR is a member with role 4 (Admin).
+     */
+    public function isAdmin($user)
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        // Check if member exists, has role 4 (Admin) and is active (status 1)
+        // using existence check for efficiency
+        return $this->courseMembers()
+            ->where('user_id', $user->id)
+            ->where('role', 4)
+            ->where('status', 1)
+            ->exists();
+    }
 }

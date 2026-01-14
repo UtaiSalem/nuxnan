@@ -309,6 +309,20 @@ const isPollOwner = computed(() => {
   return authStore.user?.id === pollData.value?.user_id || authStore.user?.id === postAuthor.value?.id
 })
 
+// Determine if this activity should be rendered as a standalone PollCard (not nested in PostCard)
+// This happens when:
+// 1. The activity type is 'Poll' directly, OR
+// 2. The post has a poll and post_type is 'poll'
+const isPollOnlyActivity = computed(() => {
+  // Direct Poll activity
+  if (actionTo.value === 'Poll') return true
+  
+  // Post with poll where post_type is 'poll' (meaning the poll is the main content)
+  if (postData.value.post_type === 'poll' && postData.value.poll) return true
+  
+  return false
+})
+
 // Feeling/Activity data
 const feeling = computed(() => postData.value.feeling || null)
 const feelingIcon = computed(() => postData.value.feeling_icon || null)
@@ -1798,7 +1812,12 @@ const deletePost = async () => {
   showPostOptionsMenu.value = false
 
   // Ask for confirmation using SweetAlert2
-  const confirmed = await swal.confirmDelete('โพสต์นี้', 'การลบโพสต์จะลบรูปภาพและความคิดเห็นทั้งหมดด้วย')
+  const itemName = actionTo.value === 'Poll' ? 'โพลนี้' : 'โพสต์นี้'
+  const itemWarning = actionTo.value === 'Poll' 
+    ? 'การลบโพลจะลบโหวตและความคิดเห็นทั้งหมดด้วย'
+    : 'การลบโพสต์จะลบรูปภาพและความคิดเห็นทั้งหมดด้วย'
+  
+  const confirmed = await swal.confirmDelete(itemName, itemWarning)
   if (!confirmed) {
     return
   }
@@ -1807,7 +1826,27 @@ const deletePost = async () => {
 
   try {
     const config = useRuntimeConfig()
-    const apiUrl = `${config.public.apiBase}/api/posts/${postData.value.id}`
+    
+    // Determine the correct API endpoint based on model type
+    let apiUrl = ''
+    switch (actionTo.value) {
+      case 'Poll':
+        apiUrl = `${config.public.apiBase}/api/polls/${postData.value.id}`
+        break
+      case 'CoursePost':
+        // For course posts, we need course_id to construct the proper URL
+        const courseId = postData.value.course_id || postData.value.course?.id
+        if (courseId) {
+          apiUrl = `${config.public.apiBase}/api/courses/${courseId}/posts/${postData.value.id}`
+        } else {
+          swal.error('ไม่สามารถระบุรายวิชาของโพสต์นี้ได้')
+          return
+        }
+        break
+      default:
+        // Regular Post
+        apiUrl = `${config.public.apiBase}/api/posts/${postData.value.id}`
+    }
     
     const response = await $fetch(apiUrl, {
       method: 'DELETE',
@@ -1819,13 +1858,14 @@ const deletePost = async () => {
       emit('delete-success', props.post.id)
       
       // Show success notification
-      swal.toast('ลบโพสต์สำเร็จ', 'success')
+      const successMsg = actionTo.value === 'Poll' ? 'ลบโพลสำเร็จ' : 'ลบโพสต์สำเร็จ'
+      swal.toast(successMsg, 'success')
     } else {
-      swal.error(response.message || 'ไม่สามารถลบโพสต์ได้')
+      swal.error(response.message || 'ไม่สามารถลบได้')
     }
   } catch (error) {
-    console.error('❌ Failed to delete post:', error)
-    const errorMsg = error?.data?.message || error?.message || 'เกิดข้อผิดพลาดในการลบโพสต์'
+    console.error('❌ Failed to delete:', error)
+    const errorMsg = error?.data?.message || error?.message || 'เกิดข้อผิดพลาดในการลบ'
     swal.error(errorMsg)
   } finally {
     isDeletingPost.value = false
@@ -1863,13 +1903,29 @@ const handlePollUpdate = (updatedPoll) => {
   <div :class="[
     isNested 
       ? 'border border-gray-200 dark:border-vikinger-dark-50/30 rounded-xl p-4 bg-gray-50 dark:bg-vikinger-dark-200/50' 
-      : 'vikinger-card group hover:shadow-lg transition-shadow duration-300'
+      : isPollOnlyActivity
+        ? '' 
+        : 'vikinger-card group hover:shadow-lg transition-shadow duration-300'
   ]">
+    <!-- ========================================
+         LAYOUT 0: Standalone Poll Activity
+         Shows: PollCard directly without PostCard wrapper
+         ======================================== -->
+    <template v-if="isPollOnlyActivity && !isNested">
+      <PollCard
+        :poll="pollData"
+        :show-actions="isPollOwner"
+        :is-nested="false"
+        @delete="handlePollDelete"
+        @update="handlePollUpdate"
+      />
+    </template>
+
     <!-- ========================================
          LAYOUT 1: Share Activity (Different Actor)
          Shows: Sharer header + Nested original post
          ======================================== -->
-    <template v-if="isShareActivity && !isNested">
+    <template v-else-if="isShareActivity && !isNested">
       <!-- Sharer Header -->
       <div class="flex items-center gap-3 mb-4">
         <img :src="actionByAvatar" 
@@ -1893,7 +1949,7 @@ const handlePollUpdate = (updatedPoll) => {
         <!-- More Options Dropdown -->
         <div class="relative">
           <button 
-            @click="showOptionsMenu = !showOptionsMenu"
+            @click.stop="showOptionsMenu = !showOptionsMenu"
             class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
           >
             <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-600 dark:text-gray-300" />
@@ -2222,7 +2278,7 @@ const handlePollUpdate = (updatedPoll) => {
         <!-- More Options -->
         <div v-if="!isNested" class="relative">
           <button 
-            @click="showPostOptionsMenu = !showPostOptionsMenu"
+            @click.stop="showPostOptionsMenu = !showPostOptionsMenu"
             class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
           >
             <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-600 dark:text-gray-300" />

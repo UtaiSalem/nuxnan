@@ -2,12 +2,14 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { PollOption as PollOptionType } from '~/composables/usePolls'
+import PollProgressBar from './PollProgressBar.vue'
 
 interface Props {
   option: PollOptionType
   isVotingMode: boolean
   isSelected?: boolean
   isMultiple: boolean
+  maxPercentage: number
   index: number
 }
 
@@ -32,7 +34,7 @@ const rankBadge = computed(() => {
 })
 
 const isLeading = computed(() => {
-  return props.option.percentage === Math.max(...props.option.percentage)
+  return props.option.percentage > 0 && props.option.percentage === props.maxPercentage
 })
 
 const handleClick = () => {

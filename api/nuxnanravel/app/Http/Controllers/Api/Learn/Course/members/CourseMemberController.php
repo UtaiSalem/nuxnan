@@ -72,7 +72,7 @@ class CourseMemberController extends Controller
             'course'                => new CourseResource($course),
             'members'               => CourseMemberResource::collection($members),
             'groups'                => CourseGroupResource::collection($course->courseGroups),
-            'isCourseAdmin'         => $course->user_id === auth()->id(),
+            'isCourseAdmin'         => $course->isAdmin(auth()->user()),
             'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),
             'filters' => $request->only(['status', 'role', 'group_id', 'search']),
         ]);
@@ -177,7 +177,7 @@ class CourseMemberController extends Controller
         })->values();
 
         return response()->json([
-            'isCourseAdmin' => $course->user_id === auth()->id(),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course' => new CourseResource($course),
             'member' => new CourseMemberResource($member),
             'groups' => CourseGroupResource::collection($course->courseGroups),
@@ -238,6 +238,10 @@ class CourseMemberController extends Controller
 
     public function destroy(Course $course, CourseMember $member)
     {     
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
 
             $member_group = CourseGroupMember::where('group_id', $member->group_id)->where('user_id', $member->user_id)->first();
@@ -276,6 +280,10 @@ class CourseMemberController extends Controller
     //function update
     public function update(Course $course, CourseMember $member, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $request->validate([
             'member_name'   => 'nullable|string|max:255',
             'order_number'  => 'nullable|integer',
@@ -302,7 +310,10 @@ class CourseMemberController extends Controller
     // function delete course's member
     public function deleteCourseMember(Course $course, CourseMember $member)
     {
-        
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
             $member_group = CourseGroupMember::where('course_id', $course->id)
                                                 ->where('group_id', $member->group_id ?? null)
@@ -364,6 +375,10 @@ class CourseMemberController extends Controller
     //function update member bonus points
     public function updateBonusPoints(Course $course, CourseMember $member, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $member->update(['bonus_points' => $request->bonus_points]);
 
         $percentage = (($member->achieved_score + $request->bonus_points) / $course->total_score) * 100;
@@ -385,6 +400,10 @@ class CourseMemberController extends Controller
 
     public function updateGradeProgress(Course $course, CourseMember $member, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $member->update([
             'grade_progress' => $request->grade_progress,
         ]);
@@ -396,6 +415,10 @@ class CourseMemberController extends Controller
 
     public function updateNotesComments(Course $course, CourseMember $member, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $member->update([
             'notes_comments' => $request->notes_comments,
         ]);
@@ -414,7 +437,7 @@ class CourseMemberController extends Controller
             'course' => new CourseResource($course),
             'groups' => CourseGroupResource::collection($course->courseGroups),
             'members' => CourseMemberResource::collection($members),
-            'isCourseAdmin' => $course->user_id === auth()->id(),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
         ]);
     }
@@ -422,7 +445,7 @@ class CourseMemberController extends Controller
     public function memberSettings(Course $course, CourseMember $course_member)
     {
         return response()->json([
-            'isCourseAdmin' => $course->user_id === auth()->id(),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course'        => new CourseResource($course),
             'lessons'       => LessonResource::collection($course->courseLessons),
             'groups'        => CourseGroupResource::collection($course->courseGroups),
@@ -479,7 +502,7 @@ class CourseMemberController extends Controller
         })->values();
         
         return response()->json([
-            'isCourseAdmin' => $course->user_id === auth()->id(),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course'        => new CourseResource($course),
             'lessons'       => LessonResource::collection($course->courseLessons),
             'groups'        => CourseGroupResource::collection($course->courseGroups),
@@ -492,6 +515,10 @@ class CourseMemberController extends Controller
 
     public function updateOrderNumber(Course $course, CourseMember $member, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $member->update([
             'order_number' => $request->order_number,
         ]);
@@ -503,6 +530,10 @@ class CourseMemberController extends Controller
 
     public function updateMemberCode(Course $course, CourseMember $member, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $request->validate([
             'member_code' => 'required|string|max:50',
         ]);
@@ -640,6 +671,10 @@ class CourseMemberController extends Controller
      */
     public function bulkUpdateV2(Course $course, Request $request)
     {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $request->validate([
             'member_ids' => 'required|array',
             'member_ids.*' => 'exists:course_members,id',

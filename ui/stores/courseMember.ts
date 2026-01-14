@@ -8,9 +8,8 @@ export const useCourseMemberStore = defineStore('course-member', {
     
     getters: {
         isMember: (state) => !!state.member,
-        isAdmin: (state) => state.member?.role === 1 || state.member?.role === 2, // Assuming 1=Owner/Admin, 2=Teacher? Adjust logic as needed
         currentGroupId: (state) => state.member?.group_id,
-        lastAccessGroupTab: (state) => state.member?.last_access_group_tab
+        lastAccessedGroupTab: (state) => state.member?.last_accessed_group_tab
     },
 
     actions: {

@@ -7,11 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Activity;
 use App\Models\CoursePost;
+use App\Models\CoursePostImage;
 use Illuminate\Http\Request;
 use App\Enums\ActivityType;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\ActivityResource;
+use App\Http\Resources\Play\ActivityResource;
 use App\Http\Resources\Learn\Course\posts\CoursePostResource;
+use App\Models\Poll;
+use App\Models\QuestionOption;
 use App\Http\Requests\StoreCoursePostRequest;
 use App\Http\Requests\UpdateCoursePostRequest;
 
@@ -35,6 +38,9 @@ class CoursePostController extends Controller
                       ->orderBy('created_at', 'desc')
                       ->limit(3);
                 },
+                'poll.options',
+                'poll.user',
+                'poll.comments.user',
             ])
             ->withCount(['post_comments', 'post_likes', 'post_dislikes'])
             ->orderBy('created_at', 'desc');
@@ -54,31 +60,9 @@ class CoursePostController extends Controller
         
         $posts = $query->paginate($perPage, ['*'], 'page', $page);
         
-        // Add auth user reaction status to each post
-        $userId = auth()->id();
-        $posts->getCollection()->transform(function ($post) use ($userId) {
-            $post->isLikedByAuth = $post->post_likes()->where('user_id', $userId)->exists();
-            $post->isDislikedByAuth = $post->post_dislikes()->where('user_id', $userId)->exists();
-            $post->likes = $post->post_likes_count;
-            $post->dislikes = $post->post_dislikes_count;
-            $post->comments_count = $post->post_comments_count;
-            $post->diff_humans_created_at = $post->created_at->diffForHumans();
-            
-            // Add images resources
-            $post->imagesResources = $post->post_images->map(function ($image) {
-                return [
-                    'id' => $image->id,
-                    'url' => asset('storage/images/courses/posts/' . $image->filename),
-                    'filename' => $image->filename,
-                ];
-            });
-            
-            return $post;
-        });
-        
         return response()->json([
             'success' => true,
-            'data' => $posts->items(),
+            'data' => CoursePostResource::collection($posts),
             'pagination' => [
                 'current_page' => $posts->currentPage(),
                 'last_page' => $posts->lastPage(),
@@ -86,7 +70,7 @@ class CoursePostController extends Controller
                 'total' => $posts->total(),
                 'has_more' => $posts->hasMorePages(),
             ]
-        ]);
+        ], 200);
     }
 
     /**
@@ -120,7 +104,61 @@ class CoursePostController extends Controller
             $post->content      = $validatedData['content'] ?? '';
             $post->privacy_settings = 3;
             $post->status       = 0;
-            $post->hashtags     = json_encode($hashtags);
+            $post->hashtags     = $hashtags;
+
+            // Handle Poll Creation
+            if ($request->has('poll_question') && $request->has('poll_options')) {
+                $pollTitle = $request->poll_question;
+                $pollOptions = $request->poll_options;
+                $pollDuration = $request->poll_duration ?? 24; // Hours
+                $pollPointsPool = (int)$request->input('poll_points_pool', 0);
+                
+                if (!empty($pollTitle) && is_array($pollOptions) && count($pollOptions) >= 2) {
+                    // Check if user has enough points for poll with reward pool
+                    $totalPointsNeeded = 180 + $pollPointsPool;
+                    if (auth()->user()->pp < $totalPointsNeeded) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "คุณมีแต้มสะสมไม่พอสำหรับการสร้างโพล (ต้องการ {$totalPointsNeeded} แต้ม)",
+                        ], 403);
+                    }
+
+                    // Calculate points per vote
+                    $maxVotes = (int)$request->input('poll_max_votes', 100);
+                    $pointsPerVote = $pollPointsPool > 0 ? floor($pollPointsPool / $maxVotes) : 0;
+
+                    $poll = Poll::create([
+                        'user_id' => auth()->id(),
+                        'title' => $pollTitle,
+                        'start_date' => now(),
+                        'end_date' => now()->addHours((int)$pollDuration),
+                        'is_active' => true,
+                        'is_public' => true,
+                        'points_pool' => $pollPointsPool,
+                        'points_per_vote' => $pointsPerVote,
+                        'points_distributed' => 0,
+                        'max_votes' => $maxVotes,
+                    ]);
+
+                    foreach ($pollOptions as $index => $optionText) {
+                        if (trim($optionText)) {
+                            $poll->options()->create([
+                                'text' => trim($optionText),
+                                'position' => $index,
+                            ]);
+                        }
+                    }
+                    
+                    $post->poll_id = $poll->id;
+                    $post->post_type = 'poll';
+
+                    // Deduct poll points pool from user (base cost is deducted separately)
+                    if ($pollPointsPool > 0) {
+                        auth()->user()->decrement('pp', $pollPointsPool);
+                    }
+                }
+            }
+
             $post->save();
             
             if($request->hasFile('images')) {
@@ -142,6 +180,12 @@ class CoursePostController extends Controller
             $activity->save();
 
             auth()->user()->decrement('pp',180);
+
+            // Reload the post with all necessary relationships including poll
+            $post = $post->fresh(['user', 'post_images', 'post_comments.user', 'course', 'academy', 'poll.options', 'poll.user', 'poll.comments.user']);
+            
+            // Reload activity with all relationships for poll
+            $activity->load(['user', 'activityable.user', 'activityable.poll.options', 'activityable.poll.user', 'activityable.poll.comments.user']);
 
             // return to_route('course.feeds', $course->id);
             return response()->json([
@@ -166,10 +210,10 @@ class CoursePostController extends Controller
     {
         $course_post->increment('views');
 
-        $activityResource = new ActivityResource($post->activity);
+        $activityResource = new ActivityResource($course_post->activity);
         
         return response()->json([
-            'activity' => new ActivityResource($post->activity),
+            'activity' => new ActivityResource($course_post->activity),
         ]);
     }
 
@@ -180,10 +224,10 @@ class CoursePostController extends Controller
     {
         $course_post->increment('views');
         
-        $activityResource = new ActivityResource($post->activity);
+        $activityResource = new ActivityResource($course_post->activity);
         
         return response()->json([
-            'activity' => new ActivityResource($post->activity),
+            'activity' => new ActivityResource($course_post->activity),
         ]);
     }
 
@@ -202,10 +246,10 @@ class CoursePostController extends Controller
         $content = $validatedData['content'];
         $hashtags = $this->extractHashtags($content);
 
-        $post->content = $validatedData['content'];
-        $post->privacy_settings = $validatedData['privacy_settings'];
-        $post->hashtags = json_encode($hashtags);
-        $post->save();
+        $course_post->content = $validatedData['content'];
+        $course_post->privacy_settings = $validatedData['privacy_settings'];
+        $course_post->hashtags = json_encode($hashtags);
+        $course_post->save();
 
         if($request->hasFile('images')) {
             $post_images = $request->file('images');
@@ -219,11 +263,11 @@ class CoursePostController extends Controller
             }
         }
 
-        $post->refresh();
+        $course_post->refresh();
 
         return response()->json([
             'success'   => true,
-            'post'      => new CoursePostResource($post),
+            'post'      => new CoursePostResource($course_post),
         ], 200);
     }
 
@@ -252,13 +296,13 @@ class CoursePostController extends Controller
             }
             
             // Delete post likes and dislikes
-            $post->post_likes()->delete();
-            $post->post_dislikes()->delete();
+            $course_post->post_likes()->delete();
+            $course_post->post_dislikes()->delete();
             // $course_post->likedPosts()->detach();
             // $course_post->dislikedPosts()->detach();
 
             // Delete post comments
-            foreach ($post->post_comments as $comment) {
+            foreach ($course_post->post_comments as $comment) {
                 // Delete comment images if any
                 foreach ($comment->postCommentImages as $commentImage) {
                     Storage::disk('public')->delete('images/courses/posts/comments/' . $commentImage->filename);                    
@@ -272,9 +316,9 @@ class CoursePostController extends Controller
             }
             
             // Delete the activity associated with the post
-            $post->activity()->delete();
+            $course_post->activity()->delete();
             // Finally, delete the post itself
-            $post->delete();
+            $course_post->delete();
     
             return response()->json([
                 'success' => true,

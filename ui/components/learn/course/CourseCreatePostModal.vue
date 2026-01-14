@@ -34,11 +34,19 @@ const selectedFiles = ref([])
 const imageInput = ref(null)
 const fileInput = ref(null)
 
+// Tabs
+const activeTab = ref('status')
+const tabs = [
+  { id: 'status', label: 'สถานะ', icon: 'fluent:edit-24-regular' },
+  { id: 'poll', label: 'โพล', icon: 'fluent:poll-24-regular' }
+]
+
 // Poll feature
-const showPoll = ref(false)
 const pollQuestion = ref('')
 const pollOptions = ref(['', ''])
 const pollDuration = ref(24) // hours
+const pollPointsPool = ref(12000) // Default 12000 points
+const maxVotes = ref(100) // Default max voters
 
 // Privacy (for course posts, this might be limited)
 const selectedPrivacy = ref('course') // 'course' = visible to course members only
@@ -59,11 +67,11 @@ const closeModal = () => {
 
 // Create post
 const createPost = async () => {
-  if (!postText.value.trim() && selectedImages.value.length === 0 && !showPoll.value) return
+  if (!postText.value.trim() && selectedImages.value.length === 0 && activeTab.value !== 'poll') return
   if (isSubmitting.value) return
   
   // Validate poll if enabled
-  if (showPoll.value) {
+  if (activeTab.value === 'poll') {
     if (!pollQuestion.value.trim()) {
       swal.warning('กรุณาใส่คำถามสำหรับโพล')
       return
@@ -94,18 +102,18 @@ const createPost = async () => {
     })
     
     // Add poll data if enabled
-    if (showPoll.value && pollQuestion.value.trim()) {
+    if (activeTab.value === 'poll' && pollQuestion.value.trim()) {
       formData.append('poll_question', pollQuestion.value)
       const validOptions = pollOptions.value.filter(opt => opt.trim())
       validOptions.forEach((option, index) => {
         formData.append(`poll_options[${index}]`, option)
       })
       formData.append('poll_duration', pollDuration.value)
+      formData.append('poll_points_pool', pollPointsPool.value)
+      formData.append('poll_max_votes', maxVotes.value)
     }
     
-    const response = await api.post(`/api/courses/${props.courseId}/posts`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    const response = await api.post(`/api/courses/${props.courseId}/posts`, formData)
     
     if (response.success || response.data) {
       const newPost = response.data || response.post
@@ -130,10 +138,12 @@ const resetForm = () => {
   postText.value = ''
   selectedImages.value = []
   selectedFiles.value = []
-  showPoll.value = false
+  activeTab.value = 'status'
   pollQuestion.value = ''
   pollOptions.value = ['', '']
   pollDuration.value = 24
+  pollPointsPool.value = 12000
+  maxVotes.value = 100
   closeModal()
 }
 
@@ -168,16 +178,13 @@ const triggerFileInput = () => {
 }
 
 // Poll handling
-const togglePoll = () => {
-  showPoll.value = !showPoll.value
-  if (!showPoll.value) {
-    pollQuestion.value = ''
-    pollOptions.value = ['', '']
-  }
+const resetPoll = () => {
+  pollQuestion.value = ''
+  pollOptions.value = ['', '']
 }
 
 const addPollOption = () => {
-  if (pollOptions.value.length < 6) {
+  if (pollOptions.value.length < 10) {
     pollOptions.value.push('')
   }
 }
@@ -240,17 +247,34 @@ const formatFileSize = (bytes) => {
                 </div>
               </div>
 
-              <!-- Post Input -->
-              <div class="rounded-lg mb-4 min-h-[120px] p-4 bg-gray-50 dark:bg-vikinger-dark-200">
-                <textarea 
-                  v-model="postText" 
-                  placeholder="แชร์ความรู้หรือถามคำถามในรายวิชานี้..." 
-                  rows="4"
-                  class="w-full bg-transparent border-none outline-none resize-none text-gray-800 dark:text-white placeholder-gray-400" 
-                  @keydown.ctrl.enter="createPost" 
-                  :disabled="isSubmitting" 
-                />
+              <!-- Tabs -->
+              <div class="flex border-b border-gray-200 dark:border-vikinger-dark-50/30 mb-4">
+                <button 
+                  v-for="tab in tabs" 
+                  :key="tab.id"
+                  @click="activeTab = tab.id"
+                  class="flex-1 pb-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors relative"
+                  :class="activeTab === tab.id ? 'text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300'"
+                >
+                  <Icon :icon="tab.icon" class="w-5 h-5" />
+                  <span>{{ tab.label }}</span>
+                </button>
               </div>
+
+              <!-- Status Tab -->
+              <div v-show="activeTab === 'status'">
+                <!-- Post Input -->
+                <div class="rounded-lg mb-4 min-h-[120px] p-4 bg-gray-50 dark:bg-vikinger-dark-200">
+                  <textarea 
+                    v-model="postText" 
+                    placeholder="แชร์ความรู้หรือถามคำถามในรายวิชานี้..." 
+                    rows="4"
+                    class="w-full bg-transparent border-none outline-none resize-none text-gray-800 dark:text-white placeholder-gray-400" 
+                    @keydown.ctrl.enter="createPost" 
+                    :disabled="isSubmitting" 
+                  />
+                </div>
+
 
               <!-- Images Preview -->
               <div v-if="imagePreviews.length > 0" class="mb-4">
@@ -302,16 +326,16 @@ const formatFileSize = (bytes) => {
                 </div>
               </div>
 
-              <!-- Poll Section -->
-              <div v-if="showPoll" class="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700/30">
+              </div>
+
+              <!-- Poll Tab -->
+              <div v-show="activeTab === 'poll'" class="mb-4">
+                <div class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700/30">
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center gap-2">
                     <Icon icon="fluent:poll-24-regular" class="w-5 h-5 text-amber-600" />
-                    <span class="font-medium text-amber-700 dark:text-amber-300">สร้างโพล</span>
+                    <span class="font-medium text-amber-700 dark:text-amber-300">รายละเอียดโพล</span>
                   </div>
-                  <button @click="togglePoll" class="text-gray-400 hover:text-red-500">
-                    <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
-                  </button>
                 </div>
                 
                 <!-- Poll Question -->
@@ -323,32 +347,34 @@ const formatFileSize = (bytes) => {
                 />
                 
                 <!-- Poll Options -->
-                <div class="space-y-2 mb-3">
-                  <div v-for="(option, index) in pollOptions" :key="index" class="flex items-center gap-2">
-                    <span class="text-sm text-gray-500 w-6">{{ index + 1 }}.</span>
+                <div class="space-y-3 mb-4">
+                  <div v-for="(option, index) in pollOptions" :key="index" class="flex items-center gap-3 p-3 bg-white dark:bg-vikinger-dark-100 rounded-xl border border-gray-200 dark:border-vikinger-dark-50/30">
+                    <div class="w-7 h-7 rounded-full bg-vikinger-purple text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {{ index + 1 }}
+                    </div>
                     <input 
                       v-model="pollOptions[index]"
                       type="text"
-                      :placeholder="`ตัวเลือก ${index + 1}`"
-                      class="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-vikinger-dark-50/30 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white text-sm"
+                      :placeholder="`ตัวเลือกที่ ${index + 1}`"
+                      class="flex-1 bg-transparent border-none outline-none text-gray-800 dark:text-white text-sm"
                     />
                     <button 
                       v-if="pollOptions.length > 2"
                       @click="removePollOption(index)"
-                      class="p-1 text-gray-400 hover:text-red-500"
+                      class="p-1 text-gray-400 hover:text-red-500 transition-colors"
                     >
-                      <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
+                      <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
                     </button>
                   </div>
                 </div>
                 
                 <button 
-                  v-if="pollOptions.length < 6"
+                  v-if="pollOptions.length < 10"
                   @click="addPollOption"
-                  class="flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700"
+                  class="w-full h-11 border-2 border-dashed border-gray-200 dark:border-vikinger-dark-50/20 rounded-xl flex items-center justify-center gap-2 text-sm text-gray-500 hover:border-vikinger-cyan hover:text-vikinger-cyan transition-all mb-4"
                 >
-                  <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
-                  <span>เพิ่มตัวเลือก</span>
+                  <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
+                  <span>เพิ่มตัวเลือก (สูงสุด 10 ตัวเลือก)</span>
                 </button>
                 
                 <!-- Poll Duration -->
@@ -371,8 +397,83 @@ const formatFileSize = (bytes) => {
                 </div>
               </div>
 
-              <!-- Action Buttons -->
-              <div class="flex flex-wrap gap-2 border-t border-gray-200 dark:border-vikinger-dark-50/30 pt-4">
+                <!-- Settings Row (Points, Max Votes) -->
+                <div class="grid grid-cols-2 gap-4 mt-6">
+                  <!-- Points Pool -->
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
+                      แต้มรางวัลรวม
+                    </label>
+                    <div class="relative flex items-center">
+                      <div class="absolute left-3 text-vikinger-cyan">
+                        <Icon icon="mdi:piggy-bank" class="w-4 h-4" />
+                      </div>
+                      <input
+                        v-model.number="pollPointsPool"
+                        type="number"
+                        min="0"
+                        step="100"
+                        class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/10 rounded-xl text-sm focus:ring-1 focus:ring-vikinger-cyan outline-none"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Max Votes -->
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
+                      จำนวนคนโหวตสูงสุด
+                    </label>
+                    <div class="relative flex items-center">
+                      <div class="absolute left-3 text-vikinger-orange">
+                        <Icon icon="mdi:account-group" class="w-4 h-4" />
+                      </div>
+                      <input
+                        v-model.number="maxVotes"
+                        type="number"
+                        min="1"
+                        class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/10 rounded-xl text-sm focus:ring-1 focus:ring-vikinger-cyan outline-none"
+                        placeholder="100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Points Summary Box -->
+                <div class="mt-4 p-4 bg-vikinger-cyan/5 dark:bg-vikinger-cyan/10 border border-vikinger-cyan/20 rounded-xl">
+                  <div class="flex items-start gap-3">
+                    <Icon icon="fluent:info-24-regular" class="w-6 h-6 text-vikinger-cyan flex-shrink-0 mt-0.5" />
+                    <div class="text-sm dark:text-gray-200 w-full">
+                      <p class="font-bold text-vikinger-cyan mb-2">สรุปแต้มที่ต้องใช้:</p>
+                      <ul class="space-y-1.5">
+                        <li class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                          <span>ค่าธรรมเนียมสร้างโพล</span>
+                          <span class="font-semibold">180 แต้ม</span>
+                        </li>
+                        <li class="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                          <span>แต้มรางวัลสำหรับคนโหวต</span>
+                          <span class="font-semibold">{{ pollPointsPool }} แต้ม</span>
+                        </li>
+                        <li class="flex justify-between items-center pt-2 border-t border-vikinger-cyan/20 font-bold text-gray-800 dark:text-white mt-1">
+                          <span>รวมทั้งหมด</span>
+                          <span>{{ 180 + pollPointsPool }} แต้ม</span>
+                        </li>
+                      </ul>
+                      <div class="mt-3 flex items-center gap-2 text-xs text-green-600 dark:text-green-400 font-medium">
+                        <Icon icon="fluent:gift-24-regular" class="w-4 h-4" />
+                        <span>ผู้ร่วมโหวตจะได้รับแต้มรางวัลโดยอัตโนมัติ!</span>
+                      </div>
+                      <p v-if="user && user.pp < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
+                        ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ user.pp }} แต้ม)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Action Buttons (Only for Status Tab) -->
+              <div v-if="activeTab === 'status'" class="flex flex-wrap gap-2 border-t border-gray-200 dark:border-vikinger-dark-50/30 pt-4">
                 <button 
                   @click="triggerImageInput" 
                   class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all" 
@@ -391,15 +492,6 @@ const formatFileSize = (bytes) => {
                   <span class="text-sm text-gray-700 dark:text-gray-300">ไฟล์แนบ</span>
                 </button>
                 
-                <button 
-                  @click="togglePoll" 
-                  class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all" 
-                  :class="{ 'border-amber-400 bg-amber-50 dark:bg-amber-900/20': showPoll }"
-                  :disabled="isSubmitting"
-                >
-                  <Icon icon="fluent:poll-24-regular" class="w-5 h-5 text-amber-500" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">โพล</span>
-                </button>
               </div>
             </div>
 
@@ -407,7 +499,7 @@ const formatFileSize = (bytes) => {
             <div class="p-4 border-t border-gray-200 dark:border-vikinger-dark-50/30">
               <button 
                 @click="createPost" 
-                :disabled="isSubmitting || (!postText.trim() && imagePreviews.length === 0 && !showPoll)" 
+                :disabled="isSubmitting || (activeTab === 'status' && !postText.trim() && imagePreviews.length === 0) || (activeTab === 'poll' && !pollQuestion.trim())" 
                 class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />

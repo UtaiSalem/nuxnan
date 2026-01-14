@@ -124,7 +124,7 @@ class CourseGroupMemberController extends Controller
         // Authorization check (Admin/Moderator)
         // Check if auth user is group admin
         $authMember = CourseGroupMember::where('group_id', $group->id)->where('user_id', auth()->id())->first();
-        $isCourseAdmin = $course->user_id === auth()->id();
+        $isCourseAdmin = $course->isAdmin(auth()->user());
         
         if (!$isCourseAdmin && (!$authMember || $authMember->role !== 'admin')) {
              return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -157,7 +157,7 @@ class CourseGroupMemberController extends Controller
 
         // Authorization check
         $authMember = CourseGroupMember::where('group_id', $group->id)->where('user_id', auth()->id())->first();
-        $isCourseAdmin = $course->user_id === auth()->id();
+        $isCourseAdmin = $course->isAdmin(auth()->user());
 
         if (!$isCourseAdmin && (!$authMember || $authMember->role !== 'admin')) {
              return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -176,7 +176,7 @@ class CourseGroupMemberController extends Controller
     public function getRequesters(Course $course, CourseGroup $group)
     {
         // Authorization check
-        $isCourseAdmin = $course->user_id === auth()->id();
+        $isCourseAdmin = $course->isAdmin(auth()->user());
         $authMember = CourseGroupMember::where('group_id', $group->id)->where('user_id', auth()->id())->first();
         
         if (!$isCourseAdmin && (!$authMember || $authMember->role === 'member')) {

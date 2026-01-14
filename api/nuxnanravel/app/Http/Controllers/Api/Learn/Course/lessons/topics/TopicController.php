@@ -19,6 +19,10 @@ class TopicController extends \App\Http\Controllers\Controller
 {
     public function store(Lesson $lesson, Request $request)
     {
+        if (!$lesson->course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $validatedData = $request->validate([
             'title'         => ['required', 'string'],
             'content'       => ['required', 'string'],
@@ -63,11 +67,7 @@ class TopicController extends \App\Http\Controllers\Controller
         $course = $lesson->course;
         $academy = $course->academy;
 
-        if ($topic->user_id == auth()->id()) {
-            $isCourseAdmin = true;
-        }else{
-            $isCourseAdmin = false;
-        }
+        $isCourseAdmin = $course->isAdmin(auth()->user());
 
         return response()->json([
             'isCourseAdmin' => $isCourseAdmin,
@@ -96,6 +96,10 @@ class TopicController extends \App\Http\Controllers\Controller
 
     public function update(Lesson $lesson, Topic $topic, Request $request,)
     {
+        if (!$lesson->course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $lesson->decrement('min_read', $topic->min_read);
         // validate data
         $validatedData = $request->validate([
@@ -135,6 +139,10 @@ class TopicController extends \App\Http\Controllers\Controller
 
     public function destroy(Lesson $lesson, Topic $topic)
     {
+        if (!$lesson->course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         if ($topic->images->count() > 0) {
             foreach ($topic->images as $image) {
                 Storage::disk('public')->delete('images/courses/lessons/topics/'. $image->filename);
