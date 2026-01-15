@@ -6,10 +6,11 @@ import MemberedCoursesWidget from '~/components/widgets/MemberedCoursesWidget.vu
 import RecentlyViewedCoursesWidget from '~/components/widgets/RecentlyViewedCoursesWidget.vue'
 import FavoriteCoursesWidget from '~/components/widgets/FavoriteCoursesWidget.vue'
 import CourseCard from '~/components/CourseCard.vue'
+import CourseSearchFilterWidget from '~/components/widgets/CourseSearchFilterWidget.vue'
 
 
 definePageMeta({
-  layout: 'main',
+  layout: false,
   middleware: 'auth',
 })
 
@@ -35,7 +36,11 @@ const selectedYear = ref('all')
 
 // Semesters
 const semesters = ref([
-  { value: 'all', label: 'ทุกภาคเรียน' }
+  { value: 'all', label: 'ทุกภาคเรียน' },
+  { value: '1', label: 'ภาคเรียนที่ 1' },
+  { value: '2', label: 'ภาคเรียนที่ 2' },
+  { value: '3', label: 'ภาคเรียนที่ 3' },
+  { value: 'summer', label: 'Summer' }
 ])
 
 // Years
@@ -105,7 +110,7 @@ const fetchCourses = async (page = 1, append = false) => {
       params.append('academic_year', selectedYear.value)
     }
 
-    const response = await api.get(`/api/courses?${params.toString()}`)
+    const response: any = await api.get(`/api/courses?${params.toString()}`)
 
     // Response could be { courses: [...] } or { success: true, courses: [...] }
     if (response.courses) {
@@ -191,9 +196,17 @@ const fetchFilterOptions = async () => {
       // Years
       if (res.years && res.years.length > 0) {
          years.value = [
-            { value: 'all', label: 'ทุกปีการศึกษา' },
-             ...res.years.map((y: string) => ({ value: y, label: y }))
-         ]
+             { value: 'all', label: 'ทุกปีการศึกษา' },
+              ...res.years.map((y: string) => ({ value: y, label: y }))
+          ]
+      } else {
+        // Fallback to default years if API doesn't return any
+        years.value = [
+          { value: 'all', label: 'ทุกปีการศึกษา' },
+          { value: '2567', label: '2567' },
+          { value: '2568', label: '2568' },
+          { value: '2569', label: '2569' }
+        ]
       }
 
       // Categories
@@ -229,92 +242,104 @@ watch([selectedCategory, selectedLevel, sortBy, selectedSemester, selectedYear],
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 py-6">
-    <!-- Header with accent bar -->
-    <div class="mb-6 flex items-center gap-3">
-      <div class="w-1 h-8 bg-blue-500 rounded-full"></div>
-      <h1 class="text-2xl font-bold text-white">Courses</h1>
-    </div>
+  <NuxtLayout name="main">
+    <!-- Hero Banner -->
+    <template #hero>
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-400">
+        <!-- Animated Background Pattern -->
+        <div class="absolute inset-0 opacity-20">
+          <div class="absolute inset-0" style="background-image: url('/images/resources/animate-bg.png'); background-size: cover;"></div>
+        </div>
+        
+        <!-- Left side badges decoration -->
+        <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          <!-- Badge 1 -->
+          <img 
+            :src="`${$config.public.apiBase}/storage/images/badge/gold-b.png`" 
+            alt="badge" 
+            class="w-16 h-16 md:w-20 md:h-20 drop-shadow-lg animate-bounce"
+            style="animation-duration: 2s;"
+          />
+          <!-- Badge 2 -->
+          <img 
+            :src="`${$config.public.apiBase}/storage/images/badge/scientist-b.png`" 
+            alt="badge" 
+            class="w-12 h-12 md:w-16 md:h-16 drop-shadow-lg animate-bounce hidden sm:block"
+            style="animation-duration: 2.5s; animation-delay: 0.3s;"
+          />
+        </div>
+        
+        <!-- Content -->
+        <div class="relative z-10 px-6 py-8 md:py-10 ml-24 sm:ml-36 md:ml-44">
+          <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">
+            รายวิชาทั้งหมด
+          </h1>
+          <p class="text-blue-100 text-sm md:text-base">
+            ค้นหาและเข้าร่วมเรียนรู้ในรายวิชาที่คุณสนใจ
+          </p>
+        </div>
+        
+        <!-- Right side floating badges (hidden on mobile) -->
+        <div class="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 items-center gap-3">
+          <img 
+            :src="`${$config.public.apiBase}/storage/images/badge/globet-b.png`" 
+            alt="badge" 
+            class="w-10 h-10 drop-shadow-lg opacity-70 animate-pulse"
+          />
+          <img 
+            :src="`${$config.public.apiBase}/storage/images/badge/collector-b.png`" 
+            alt="badge" 
+            class="w-14 h-14 drop-shadow-lg opacity-80 animate-bounce"
+            style="animation-duration: 3s;"
+          />
+          <img 
+            :src="`${$config.public.apiBase}/storage/images/badge/platinum-b.png`" 
+            alt="badge" 
+            class="w-12 h-12 drop-shadow-lg opacity-70 animate-pulse"
+            style="animation-delay: 0.5s;"
+          />
+          <img 
+            :src="`${$config.public.apiBase}/storage/images/badge/tycoon.png`" 
+            alt="badge" 
+            class="w-16 h-16 drop-shadow-lg opacity-90 animate-bounce"
+            style="animation-duration: 2.8s; animation-delay: 0.2s;"
+          />
+        </div>
+        
+        <!-- Sparkle effects -->
+        <div class="absolute top-4 left-1/3 w-2 h-2 bg-white rounded-full animate-ping opacity-75"></div>
+        <div class="absolute bottom-6 left-1/2 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-60" style="animation-delay: 0.5s;"></div>
+        <div class="absolute top-6 right-1/3 w-1 h-1 bg-white rounded-full animate-ping opacity-50" style="animation-delay: 1s;"></div>
+      </div>
+    </template>
 
-    <!-- Main Layout: 3 Columns Grid (1:2:1) -->
-    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
-      
-      <!-- Left Sidebar (Recently Viewed) -->
-      <div class="col-span-1 order-2 xl:order-1">
+    <!-- Main Content (Default Slot) -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <!-- Main Layout: 3 Columns Grid (1:2:1) -->
+      <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        
+        <!-- Left Sidebar (Search & Filters) -->
+        <div class="col-span-1 order-2 xl:order-1 space-y-6">
+        <CourseSearchFilterWidget
+          v-model:searchQuery="searchQuery"
+          v-model:selectedCategory="selectedCategory"
+          v-model:selectedLevel="selectedLevel"
+          v-model:selectedSemester="selectedSemester"
+          v-model:selectedYear="selectedYear"
+          v-model:sortBy="sortBy"
+          :categories="categories"
+          :levels="levels"
+          :semesters="semesters"
+          :years="years"
+          :sortOptions="sortOptions"
+          @handleSearch="handleSearch"
+        />
         <RecentlyViewedCoursesWidget />
         <FavoriteCoursesWidget />
       </div>
 
       <!-- Main Content (Center) -->
       <div class="col-span-1 xl:col-span-2 min-w-0 order-1 xl:order-2">
-        <!-- Filters Row -->
-        <div class="flex flex-wrap gap-3 mb-6">
-          <!-- Search -->
-          <div class="relative flex-1 min-w-[200px]">
-            <Icon
-              icon="fluent:search-24-regular"
-              class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-            />
-            <input
-              v-model="searchQuery"
-              @input="handleSearch"
-              type="text"
-              placeholder="ค้นหารายวิชา..."
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <!-- Category -->
-          <select
-            v-model="selectedCategory"
-            class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option v-for="cat in categories" :key="cat.value" :value="cat.value">
-              {{ cat.label }}
-            </option>
-          </select>
-
-          <!-- Level -->
-          <select
-            v-model="selectedLevel"
-            class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option v-for="level in levels" :key="level.value" :value="level.value">
-              {{ level.label }}
-            </option>
-          </select>
-
-          <!-- Semester -->
-          <select
-            v-model="selectedSemester"
-            class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option v-for="sem in semesters" :key="sem.value" :value="sem.value">
-              {{ sem.label }}
-            </option>
-          </select>
-
-          <!-- Year -->
-          <select
-            v-model="selectedYear"
-            class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option v-for="y in years" :key="y.value" :value="y.value">
-              {{ y.label }}
-            </option>
-          </select>
-
-          <!-- Sort -->
-          <select
-            v-model="sortBy"
-            class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option v-for="option in sortOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </div>
-
         <!-- Loading State -->
         <template v-if="isLoading">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -538,8 +563,9 @@ watch([selectedCategory, selectedLevel, sortBy, selectedSemester, selectedYear],
           </div>
         </div>
       </div>
+      </div>
     </div>
-  </div>
+  </NuxtLayout>
 </template>
 
 <style scoped>

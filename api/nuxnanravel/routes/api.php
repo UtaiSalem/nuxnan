@@ -191,12 +191,14 @@ Route::middleware(['auth:api'])->group(function () {
     // Friends
     Route::get('/friends/suggestions', [FriendController::class, 'suggestions'])->name('friends.suggestions');
     Route::get('/friends/pending', [FriendController::class, 'pendingRequests'])->name('friends.pending');
+    Route::get('/friends/search', [FriendController::class, 'search'])->name('friends.search');
     Route::post('/friends/{recipient}', [FriendController::class, 'addFriendRequest'])->name('friend-request');
     Route::delete('/friends/{friend}', [FriendController::class, 'deleteFriendRequest'])->name('delete-friend-request');   
     Route::patch('/friends/{friend}/accept', [FriendController::class, 'acceptFriendRequest'])->name('accept-friend-request');
     Route::post('/friends/{friend}/deny', [FriendController::class, 'denyFriendRequest'])->name('deny-friend-request');
     Route::post('/friends/{friend}/unfriend', [FriendController::class, 'unfriend'])->name('unfriend');
     Route::get('/friends', [FriendController::class, 'index'])->name('friends');
+    Route::get('/users/{identifier}/friends', [FriendController::class, 'userFriends'])->name('user.friends');
 
     // Super Admin Check (any authenticated user can check their own status)
     Route::get('/super-admins/check', [\App\Http\Controllers\Api\SuperAdminController::class, 'check'])->name('super-admin.check');
@@ -226,6 +228,12 @@ require __DIR__ . '/api_shares.php';
 
 // Points & Wallet system routes
 require __DIR__ . '/api-points-wallet.php';
+
+// Photos & Albums system routes
+require __DIR__ . '/api-photos.php';
+
+// Videos system routes
+require __DIR__ . '/api-videos.php';
 
 // Debug routes (remove in production)
 if (env('APP_DEBUG')) {

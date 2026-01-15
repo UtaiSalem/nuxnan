@@ -29,6 +29,29 @@ class Post extends Model
     use Notifiable;
     // use HasUlids;
 
+    /**
+     * Boot the model and register event listeners
+     */
+    protected static function booted(): void
+    {
+        // Sync privacy_settings to activities when updated
+        static::updated(function (Post $post) {
+            if ($post->isDirty('privacy_settings')) {
+                Activity::where('activityable_type', Post::class)
+                    ->where('activityable_id', $post->id)
+                    ->update(['privacy_settings' => $post->privacy_settings]);
+            }
+        });
+
+        // Set privacy_settings on activity when created
+        static::created(function (Post $post) {
+            // Activity is created separately, but we ensure sync if needed
+            if ($post->activity) {
+                $post->activity->update(['privacy_settings' => $post->privacy_settings]);
+            }
+        });
+    }
+
     // protected $fillable = [
     //     'user_id',
     //     'content',

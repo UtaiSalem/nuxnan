@@ -28,6 +28,8 @@ use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\members\CourseMemberResource;
 use App\Http\Resources\Learn\Course\info\MemberedCourseResource;
 use App\Models\RecentlyViewedCourse;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\LearningResultsExport;
 
 class CourseController extends Controller
 {
@@ -557,8 +559,14 @@ class CourseController extends Controller
         // 2. Fetch all answers and results efficiently (For the current page only)
         $memberUserIds = $courseMembers->pluck('user_id');
 
+        // Only count graded assignments for score calculation
+        // An assignment is considered graded if status='graded' OR has points assigned
         $allAssignmentAnswers = \App\Models\AssignmentAnswer::whereIn('assignment_id', $courseAssignmentIds->merge($lessonAssignmentIds))
             ->whereIn('user_id', $memberUserIds)
+            ->where(function($query) {
+                $query->where('status', 'graded')
+                      ->orWhereNotNull('points');
+            })
             ->get()
             ->groupBy('user_id');
 
@@ -717,6 +725,12 @@ class CourseController extends Controller
                     'grade_progress' => $finalGrade, // Effective Grade
                     'calculated_grade' => $realtimeGrade, // Original Calculated Grade
                     'grade_name' => $finalGradeName, // Effective Grade Name
+                    // Max scores for each category
+                    'max_lesson_assignments' => $lessonAssignments->sum('points'),
+                    'max_lesson_quizzes' => $lessonQuestions->sum('points'),
+                    'max_course_assignments' => $courseAssignments->sum('points'),
+                    'max_course_quizzes' => $courseQuizzes->sum('total_score'),
+                    'max_total' => $course->total_score ?? 0,
                 ]
             ];
         }
@@ -991,6 +1005,154 @@ class CourseController extends Controller
         }
 
         return round($totalGrade / $members->count(), 2);
+    }
+
+    public function exportLearningResults(Course $course, Request $request)
+    {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $query = $course->courseMembers()->with(['user', 'group']);
+
+        // Filter by Group
+        if ($request->has('group_id') && $request->group_id && $request->group_id !== 'all') {
+            if ($request->group_id === 'ungrouped') {
+                $query->whereNull('group_id');
+            } else {
+                $query->where('group_id', $request->group_id);
+            }
+        }
+
+        // Fetch ALL members for export
+        $courseMembers = $query->orderBy('order_number')->get();
+        
+        // --- Calculation Logic (Reused from progress method) ---
+        $courseAssignments = $course->courseAssignments;
+        $courseQuizzes = $course->courseQuizzes;
+        $lessons = $course->courseLessons()->with(['assignments', 'questions'])->get();
+        
+        $lessonAssignments = $lessons->flatMap->assignments;
+        $lessonQuestions = $lessons->flatMap->questions;
+
+        $courseAssignmentIds = $courseAssignments->pluck('id');
+        $lessonAssignmentIds = $lessonAssignments->pluck('id');
+        $lessonQuestionIds = $lessonQuestions->pluck('id');
+        
+        $memberUserIds = $courseMembers->pluck('user_id');
+
+        $allAssignmentAnswers = \App\Models\AssignmentAnswer::whereIn('assignment_id', $courseAssignmentIds->merge($lessonAssignmentIds))
+            ->whereIn('user_id', $memberUserIds)
+            ->where(function($query) {
+                $query->where('status', 'graded')
+                      ->orWhereNotNull('points');
+            })
+            ->get()
+            ->groupBy('user_id');
+
+        $allQuizResults = \App\Models\CourseQuizResult::where('course_id', $course->id)
+            ->whereIn('user_id', $memberUserIds)
+            ->get()
+            ->groupBy('user_id');
+
+        $allQuestionAnswers = \App\Models\UserAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
+            ->whereIn('user_id', $memberUserIds)
+            ->with('question')
+            ->get()
+            ->groupBy('user_id');
+
+        $lessonIds = $lessons->pluck('id');
+        $allLessonProgress = \App\Models\LessonProgress::whereIn('lesson_id', $lessonIds)
+            ->whereIn('user_id', $memberUserIds)
+            ->where('status', 'completed')
+            ->get()
+            ->groupBy('user_id');
+
+        $totalLessons = $lessons->count();
+        $totalAssignments = $courseAssignments->count() + $lessonAssignments->count();
+        $totalQuizzes = $courseQuizzes->count();
+
+        $allCourseAttendances = $course->courseAttendances()->get();
+        $attendancesByGroup = $allCourseAttendances->groupBy('group_id');
+        
+        $allAttendanceDetails = \App\Models\AttendanceDetail::whereIn('course_attendance_id', $allCourseAttendances->pluck('id'))
+            ->whereIn('course_member_id', $courseMembers->pluck('id'))
+            ->get()
+            ->groupBy('course_member_id');
+
+        $exportData = [];
+        foreach ($courseMembers as $member) {
+            $userId = $member->user_id;
+
+            $courseAssignScore = isset($allAssignmentAnswers[$userId]) 
+                ? $allAssignmentAnswers[$userId]->whereIn('assignment_id', $courseAssignmentIds)->sum('points') 
+                : 0;
+
+            $lessonAssignScore = isset($allAssignmentAnswers[$userId]) 
+                ? $allAssignmentAnswers[$userId]->whereIn('assignment_id', $lessonAssignmentIds)->sum('points') 
+                : 0;
+
+            $courseQuizScore = isset($allQuizResults[$userId]) 
+                ? $allQuizResults[$userId]->sum('score') 
+                : 0;
+
+            $lessonTestScore = 0;
+            if (isset($allQuestionAnswers[$userId])) {
+                foreach ($allQuestionAnswers[$userId] as $ans) {
+                    if ($ans->question && $ans->answer_id == $ans->question->correct_option_id) {
+                        $lessonTestScore += $ans->question->points ?? 1;
+                    }
+                }
+            }
+
+            $lessonsCompleted = isset($allLessonProgress[$userId]) ? $allLessonProgress[$userId]->count() : 0;
+            $assignmentsCompleted = isset($allAssignmentAnswers[$userId]) 
+                ? $allAssignmentAnswers[$userId]->unique('assignment_id')->count() 
+                : 0;
+            $quizzesCompleted = isset($allQuizResults[$userId]) 
+                ? $allQuizResults[$userId]->unique('quiz_id')->count() 
+                : 0;
+            
+            $lessonsProgressPct = ($totalLessons > 0) ? round(($lessonsCompleted / $totalLessons) * 100) : 0;
+            $assignmentsProgressPct = ($totalAssignments > 0) ? round(($assignmentsCompleted / $totalAssignments) * 100) : 0;
+            $quizzesProgressPct = ($totalQuizzes > 0) ? round(($quizzesCompleted / $totalQuizzes) * 100) : 0;
+
+            $memberId = $member->id;
+            $memberGroupId = $member->group_id;
+            $groupAttendanceSessions = isset($attendancesByGroup[$memberGroupId]) ? $attendancesByGroup[$memberGroupId] : collect([]);
+            $totalGroupAttendanceSessions = $groupAttendanceSessions->count();
+            $memberAttendance = isset($allAttendanceDetails[$memberId]) ? $allAttendanceDetails[$memberId] : collect([]);
+            $groupSessionIds = $groupAttendanceSessions->pluck('id');
+            $memberGroupAttendance = $memberAttendance->whereIn('course_attendance_id', $groupSessionIds);
+            
+            $attendancePresent = $memberGroupAttendance->whereIn('status', [1, 2])->pluck('course_attendance_id')->unique()->count();
+            $attendanceRate = ($totalGroupAttendanceSessions > 0) ? round(($attendancePresent / $totalGroupAttendanceSessions) * 100) : 0;
+
+            $rawTotal = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
+            $percentage = ($course->total_score > 0) ? ($rawTotal / $course->total_score) * 100 : 0;
+            $realtimeGrade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
+            $finalGrade = $member->edited_grade ?? $realtimeGrade;
+            $finalGradeName = \App\Models\CourseMember::getGradeNameFromGrade($finalGrade);
+
+            $exportData[] = [
+                'member' => $member,
+                'attendance_rate' => $attendanceRate,
+                'lessons_progress' => $lessonsProgressPct,
+                'assignments_progress' => $assignmentsProgressPct,
+                'quizzes_progress' => $quizzesProgressPct,
+                'scores' => [
+                    'total_score' => $rawTotal,
+                    'grade_name' => $finalGradeName,
+                ]
+            ];
+        }
+
+        $filename = 'learning-results-' . $course->id . '-' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(
+            new LearningResultsExport($exportData, $course->name),
+            $filename
+        );
     }
 
 }

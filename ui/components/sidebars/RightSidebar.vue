@@ -1,9 +1,11 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
+import { useGamification } from '~/composables/useGamification'
 
 const authStore = useAuthStore()
+const { getPointsLeaderboard, isLoading: isGamificationLoading } = useGamification()
 
 // Stats data
 const userStats = computed(() => ({
@@ -26,12 +28,20 @@ const onlineFriends = ref([
   { id: 5, name: 'Alex Turner', avatar: 'https://i.pravatar.cc/150?img=15', status: 'busy' },
 ])
 
-// Messages
-const messages = ref([
-  { id: 1, user: 'Nick Grissom', avatar: 'https://i.pravatar.cc/150?img=11', text: 'Can you stream the new game?', time: '2hrs' },
-  { id: 2, user: 'Sarah Chen', avatar: 'https://i.pravatar.cc/150?img=12', text: 'Hey! Check out my latest post', time: '4hrs' },
-  { id: 3, user: 'Mike Johnson', avatar: 'https://i.pravatar.cc/150?img=13', text: 'Thanks for the help!', time: '1d' },
-])
+// Leaderboard data
+const leaderboard = ref([])
+const fetchLeaderboard = async () => {
+  try {
+    const data = await getPointsLeaderboard({ limit: 5 })
+    leaderboard.value = data.leaderboard
+  } catch (error) {
+    console.error('Failed to fetch leaderboard:', error)
+  }
+}
+
+onMounted(() => {
+  fetchLeaderboard()
+})
 
 // Events
 const upcomingEvents = ref([
@@ -145,36 +155,70 @@ const getStatusColor = (status) => {
       </NuxtLink>
     </div>
 
-    <!-- Messages / Chat -->
+    <!-- Top Learners (Leaderboard) -->
     <div class="vikinger-card">
       <div class="flex items-center justify-between mb-4">
-        <h4 class="font-bold text-vikinger-cyan text-sm">
-          <Icon icon="fluent:chat-24-regular" class="w-4 h-4 inline mr-1" />
-          Messages
+        <h4 class="font-bold text-vikinger-purple text-sm">
+          <Icon icon="fluent:trophy-24-filled" class="w-4 h-4 inline mr-1 text-vikinger-yellow" />
+          Top Learners
         </h4>
-        <span class="badge badge-purple">3</span>
+        <span class="badge badge-purple">Rankings</span>
       </div>
-      <div class="space-y-3">
-        <div 
-          v-for="msg in messages" 
-          :key="msg.id" 
-          class="flex items-center gap-3 p-2 rounded-vikinger hover:bg-vikinger-light-300 dark:hover:bg-vikinger-dark-200 cursor-pointer transition-colors"
-        >
-          <div class="relative shrink-0">
-            <img :src="msg.avatar" class="w-9 h-9 rounded-full" :alt="msg.user" />
-            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-vikinger-green rounded-full border-2 border-white dark:border-vikinger-dark-100"></span>
+      
+      <!-- Loading State -->
+      <div v-if="isGamificationLoading && !leaderboard.length" class="space-y-3 animate-pulse">
+        <div v-for="i in 5" :key="i" class="flex items-center gap-3 p-2">
+          <div class="w-9 h-9 bg-gray-200 dark:bg-vikinger-dark-200 rounded-full"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-3 bg-gray-200 dark:bg-vikinger-dark-200 rounded w-2/3"></div>
+            <div class="h-2 bg-gray-200 dark:bg-vikinger-dark-200 rounded w-1/2"></div>
           </div>
-          <div class="flex-1 min-w-0">
-            <div class="font-medium text-gray-800 dark:text-white text-sm truncate">{{ msg.user }}</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ msg.text }}</div>
-          </div>
-          <div class="text-xs text-gray-400 shrink-0">{{ msg.time }}</div>
         </div>
       </div>
+
+      <div v-else class="space-y-3">
+        <div 
+          v-for="(user, index) in leaderboard" 
+          :key="user.user_id" 
+          class="flex items-center gap-3 p-2 rounded-vikinger hover:bg-vikinger-light-300 dark:hover:bg-vikinger-dark-200 cursor-pointer transition-colors group"
+        >
+          <div class="relative shrink-0">
+            <img :src="user.profile_photo_url || '/images/default-avatar.png'" class="w-9 h-9 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors" :alt="user.user_name" />
+            <span 
+              class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 border-white dark:border-vikinger-dark-100 flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
+              :class="index === 0 ? 'bg-vikinger-yellow' : index === 1 ? 'bg-gray-300' : index === 2 ? 'bg-orange-400' : 'bg-vikinger-purple'"
+            >
+              {{ index + 1 }}
+            </span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-gray-800 dark:text-white text-sm truncate">{{ user.user_name }}</div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <div class="flex items-center gap-1 text-[10px] font-bold text-vikinger-purple" title="แต้มสะสม (PP)">
+                <img src="/storage/images/badge/completedq.png" class="w-3 h-3" alt="pp" />
+                {{ Number(user.pp).toLocaleString() }}
+              </div>
+              <div class="flex items-center gap-1 text-[10px] font-bold text-vikinger-yellow" title="เงินในวอลเล็ต (Gold)">
+                <img src="/storage/images/badge/goldc.png" class="w-3 h-3" alt="gold" />
+                {{ Number(user.wallet).toLocaleString() }}
+              </div>
+            </div>
+          </div>
+          <div class="shrink-0 group-hover:scale-110 transition-transform">
+            <Icon icon="fluent:star-24-filled" class="w-4 h-4 text-vikinger-yellow" />
+          </div>
+        </div>
+
+        <!-- No data state -->
+        <div v-if="!leaderboard.length" class="text-center py-4 text-gray-500 dark:text-gray-400 text-xs">
+          ยังไม่มีข้อมูลลำดับ
+        </div>
+      </div>
+
       <div class="mt-3 relative">
         <input 
           type="text" 
-          placeholder="Search Messages..." 
+          placeholder="ค้นหาสมาชิก..." 
           class="input-vikinger text-sm pr-10"
         />
         <Icon icon="fluent:search-24-regular" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />

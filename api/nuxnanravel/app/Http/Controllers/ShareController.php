@@ -91,6 +91,10 @@ class ShareController extends Controller
                 ]);
                 
                 // Create activity
+                // Map privacy to privacy_settings (1=private, 2=friends, 3=public)
+                $privacyMap = ['private' => 1, 'friends' => 2, 'public' => 3];
+                $privacySettings = $privacyMap[$validated['privacy'] ?? 'public'] ?? 3;
+                
                 $activity = Activity::create([
                     'user_id' => $user->id,
                     'activityable_type' => 'App\\Models\\Share',
@@ -101,7 +105,8 @@ class ShareController extends Controller
                         'privacy' => $validated['privacy'] ?? 'public',
                         'original_post_type' => $validated['shareable_type'],
                         'original_post_id' => $shareableId
-                    ])
+                    ]),
+                    'privacy_settings' => $privacySettings
                 ]);
                 
                 // Deduct points from sharer

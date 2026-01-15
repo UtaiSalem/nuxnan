@@ -388,6 +388,7 @@ class PostService
         $activity = new Activity();
         $activity->user_id = $post->user_id;
         $activity->activity_type = $type->value;
+        $activity->privacy_settings = $post->privacy_settings; // Sync privacy_settings from post
         $activity->activityable()->associate($post);
         $activity->save();
         

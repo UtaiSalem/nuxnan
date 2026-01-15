@@ -827,19 +827,27 @@ onMounted(() => {
             </h4>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedMember?.scores?.lesson_assignments || 0 }}</div>
+                <div class="text-lg font-bold text-gray-900 dark:text-white">
+                  {{ selectedMember?.scores?.lesson_assignments || 0 }}<span class="text-sm font-normal text-gray-500">/{{ selectedMember?.scores?.max_lesson_assignments || 0 }}</span>
+                </div>
                 <p class="text-xs text-gray-500">งานบทเรียน</p>
               </div>
               <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedMember?.scores?.lesson_quizzes || 0 }}</div>
+                <div class="text-lg font-bold text-gray-900 dark:text-white">
+                  {{ selectedMember?.scores?.lesson_quizzes || 0 }}<span class="text-sm font-normal text-gray-500">/{{ selectedMember?.scores?.max_lesson_quizzes || 0 }}</span>
+                </div>
                 <p class="text-xs text-gray-500">ทดสอบบทเรียน</p>
               </div>
               <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedMember?.scores?.course_assignments || 0 }}</div>
+                <div class="text-lg font-bold text-gray-900 dark:text-white">
+                  {{ selectedMember?.scores?.course_assignments || 0 }}<span class="text-sm font-normal text-gray-500">/{{ selectedMember?.scores?.max_course_assignments || 0 }}</span>
+                </div>
                 <p class="text-xs text-gray-500">งานรายวิชา</p>
               </div>
               <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedMember?.scores?.course_quizzes || 0 }}</div>
+                <div class="text-lg font-bold text-gray-900 dark:text-white">
+                  {{ selectedMember?.scores?.course_quizzes || 0 }}<span class="text-sm font-normal text-gray-500">/{{ selectedMember?.scores?.max_course_quizzes || 0 }}</span>
+                </div>
                 <p class="text-xs text-gray-500">ทดสอบรายวิชา</p>
               </div>
             </div>

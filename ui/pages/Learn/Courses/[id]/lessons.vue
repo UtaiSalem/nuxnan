@@ -20,7 +20,6 @@ const error = ref<string | null>(null)
 const showScrollButton = ref(false)
 
 const isRoot = computed(() => {
-  console.log('isRoot Path Check:', route.path)
   return /\/lessons\/?$/.test(route.path)
 })
 
@@ -30,7 +29,6 @@ const fetchLessons = async () => {
     error.value = null
     try {
         const response = (await api.get(`/api/courses/${course.value.id}/lessons`)) as any
-        console.log('Lessons Response:', response)
         lessons.value = response.lessons || response.data || response || []
     } catch (err: any) {
         console.error('Error fetching lessons:', err)

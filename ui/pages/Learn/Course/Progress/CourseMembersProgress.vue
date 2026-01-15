@@ -60,14 +60,19 @@ const unGroupedMembers = computed(() => {
 
 /* Dashboard Stats Logic */
 const memberStats = computed(() => {
-    const allMembers = props.members?.data || [];
-    if (!allMembers.length) return { average: 0, max: 0, min: 0, passCount: 0, failCount: 0, passRate: 0 };
+    const allProgress = props.courseMembersProgress || [];
+    if (!allProgress.length) return { average: 0, max: 0, min: 0, passCount: 0, failCount: 0, passRate: 0, avgAttendance: 0, totalAttendSessions: 0 };
     
-    const scores = allMembers.map(m => m.total_score || 0);
+    const scores = allProgress.map(p => p.scores?.total_score || 0);
     const sum = scores.reduce((a, b) => a + b, 0);
     const avg = (sum / scores.length) || 0;
     const max = Math.max(...scores);
     const min = Math.min(...scores);
+    
+    const attendanceRates = allProgress.map(p => p.attendance_rate || 0);
+    const avgAttendance = attendanceRates.reduce((a, b) => a + b, 0) / attendanceRates.length;
+    // Get total sessions from the first member (assuming same for group, but could be different)
+    const totalAttendSessions = allProgress[0]?.total_attendance || 0;
     
     // Pass count (assuming 50% threshold like in Details page)
     const threshold = (props.course?.data?.total_score || 100) / 2;
@@ -79,9 +84,44 @@ const memberStats = computed(() => {
         min,
         passCount,
         failCount: scores.length - passCount,
-        passRate: ((passCount / scores.length) * 100).toFixed(1)
+        passRate: ((passCount / scores.length) * 100).toFixed(1),
+        avgAttendance: avgAttendance.toFixed(1),
+        totalAttendSessions
     };
 });
+
+const isExporting = ref(false);
+const exportToExcel = async () => {
+    if (isExporting.value) return;
+    isExporting.value = true;
+    try {
+        const groups = props.groups?.data || [];
+        const groupId = activeGroupTab.value < groups.length ? groups[activeGroupTab.value].id : 'all';
+        
+        const response = await api.get(`/api/courses/${props.course.data.id}/export/results`, {
+            params: { group_id: groupId },
+            responseType: 'blob'
+        });
+
+        // Create blob URL and download
+        const blob = new Blob([response], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `results-${props.course.data.id}-${new Date().toISOString().split('T')[0]}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Export failed:', error);
+        alert('เกิดข้อผิดพลาดในการส่งออกข้อมูล กรุณาลองใหม่อีกครั้ง');
+    } finally {
+        isExporting.value = false;
+    }
+};
 
 const searchQuery = ref('');
 const filteredActiveGroupMembers = computed(() => {
@@ -98,8 +138,16 @@ const filteredActiveGroupMembers = computed(() => {
     if (props.courseMembersProgress) {
         members = members.map(member => {
              const progressData = props.courseMembersProgress.find(p => p.member.id === member.id);
-             if (progressData && progressData.scores) {
-                 return { ...member, scores: progressData.scores };
+             if (progressData) {
+                 return { 
+                     ...member, 
+                     scores: progressData.scores,
+                     attendance_rate: progressData.attendance_rate,
+                     lessons_progress: progressData.lessons_progress,
+                     assignments_progress: progressData.assignments_progress,
+                     quizzes_progress: progressData.quizzes_progress,
+                     overall_progress: progressData.overall_progress
+                 };
              }
              return member;
         });
@@ -149,7 +197,17 @@ const openMemberModal = (member) => {
                                 </svg>
                                 ภาพรวมผลการเรียน (Dashboard)
                             </h2>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="flex justify-end mb-4">
+                                <button 
+                                    @click="exportToExcel"
+                                    :disabled="isExporting"
+                                    class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md disabled:opacity-50"
+                                >
+                                    <Icon :icon="isExporting ? 'line-md:loading-twotone-loop' : 'lucide:file-spreadsheet'" class="w-5 h-5" />
+                                    {{ isExporting ? 'กำลังส่งออก...' : 'ส่งออก Excel' }}
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                                 <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                     <p class="text-sm text-gray-600">คะแนนเฉลี่ย</p>
                                     <p class="text-2xl font-bold text-blue-700">{{ memberStats.average }}</p>
@@ -165,6 +223,14 @@ const openMemberModal = (member) => {
                                 <div class="bg-red-50 p-4 rounded-lg border border-red-100">
                                     <p class="text-sm text-gray-600">คะแนนต่ำสุด</p>
                                     <p class="text-2xl font-bold text-red-700">{{ memberStats.min }}</p>
+                                </div>
+                                <div class="bg-orange-50 p-4 rounded-lg border border-orange-100">
+                                    <p class="text-sm text-gray-600">การเข้าเรียนเฉลี่ย</p>
+                                    <p class="text-2xl font-bold text-orange-700">{{ memberStats.avgAttendance }}%</p>
+                                </div>
+                                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                                    <p class="text-sm text-gray-600">จำนวนคาบเรียน</p>
+                                    <p class="text-2xl font-bold text-indigo-700">{{ memberStats.totalAttendSessions }}</p>
                                 </div>
                             </div>
                         </div>

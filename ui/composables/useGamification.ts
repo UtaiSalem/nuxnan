@@ -3,6 +3,8 @@ import { useAuthStore } from '~/stores/auth'
 
 export const useGamification = () => {
   const authStore = useAuthStore()
+  const config = useRuntimeConfig()
+  const apiBase = config.public.apiBase as string
   
   // Reactive state
   const isLoading = ref(false)
@@ -19,7 +21,7 @@ export const useGamification = () => {
       isLoading.value = true
       error.value = null
       
-      const response = await $fetch('/api/gamification/login', {
+      const response = await $fetch(`${apiBase}/api/gamification/login`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -48,7 +50,7 @@ export const useGamification = () => {
       isLoading.value = true
       error.value = null
       
-      const response = await $fetch('/api/gamification/streak', {
+      const response = await $fetch(`${apiBase}/api/gamification/streak`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -77,7 +79,7 @@ export const useGamification = () => {
       isLoading.value = true
       error.value = null
       
-      const response = await $fetch('/api/gamification/achievements', {
+      const response = await $fetch(`${apiBase}/api/gamification/achievements`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -106,7 +108,7 @@ export const useGamification = () => {
       isLoading.value = true
       error.value = null
       
-      const response = await $fetch('/api/gamification/achievements/available', {
+      const response = await $fetch(`${apiBase}/api/gamification/achievements/available`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -135,7 +137,7 @@ export const useGamification = () => {
       isLoading.value = true
       error.value = null
       
-      const response = await $fetch('/api/gamification/achievements/stats', {
+      const response = await $fetch(`${apiBase}/api/gamification/achievements/stats`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -168,7 +170,7 @@ export const useGamification = () => {
       if (params.limit) queryParams.append('limit', params.limit.toString())
       if (params.page) queryParams.append('page', params.page.toString())
       
-      const response = await $fetch(`/api/gamification/leaderboard/points?${queryParams.toString()}`, {
+      const response = await $fetch(`${apiBase}/api/gamification/leaderboard/points?${queryParams.toString()}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -201,7 +203,7 @@ export const useGamification = () => {
       if (params.limit) queryParams.append('limit', params.limit.toString())
       if (params.page) queryParams.append('page', params.page.toString())
       
-      const response = await $fetch(`/api/gamification/leaderboard/streak?${queryParams.toString()}`, {
+      const response = await $fetch(`${apiBase}/api/gamification/leaderboard/streak?${queryParams.toString()}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -234,7 +236,7 @@ export const useGamification = () => {
       if (params.limit) queryParams.append('limit', params.limit.toString())
       if (params.page) queryParams.append('page', params.page.toString())
       
-      const response = await $fetch(`/api/gamification/leaderboard/achievements?${queryParams.toString()}`, {
+      const response = await $fetch(`${apiBase}/api/gamification/leaderboard/achievements?${queryParams.toString()}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -267,7 +269,7 @@ export const useGamification = () => {
       if (params.limit) queryParams.append('limit', params.limit.toString())
       if (params.page) queryParams.append('page', params.page.toString())
       
-      const response = await $fetch(`/api/gamification/leaderboard/level?${queryParams.toString()}`, {
+      const response = await $fetch(`${apiBase}/api/gamification/leaderboard/level?${queryParams.toString()}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -296,7 +298,7 @@ export const useGamification = () => {
       isLoading.value = true
       error.value = null
       
-      const response = await $fetch('/api/gamification/leaderboard/summary', {
+      const response = await $fetch(`${apiBase}/api/gamification/leaderboard/summary`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,

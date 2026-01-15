@@ -375,7 +375,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
         }
 
         // ใช้ Eloquent ORM เพื่อดึงกิจกรรมจากตาราง activities
-        // ตอนนี้เช็ค privacy_settings ที่ activities table โดยตรง
+        // ตรวจสอบ privacy_settings จาก activities table โดยตรง
         $activities = Activity::with([
                 'user',
                 'activityable',

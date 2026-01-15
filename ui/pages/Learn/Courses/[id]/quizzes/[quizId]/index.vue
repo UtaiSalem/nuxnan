@@ -20,7 +20,6 @@ const { data: quiz, refresh, pending } = await useAsyncData(
 )
 
 const startQuiz = () => {
-  console.log('Start Quiz clicked', { courseId, quizId });
   navigateTo(`/courses/${courseId}/quizzes/${quizId}/attempt`)
 }
 

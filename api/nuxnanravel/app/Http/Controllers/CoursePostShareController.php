@@ -116,12 +116,17 @@ class CoursePostShareController extends Controller
                     'course_id' => $courseId
                 ];
                 
+                // Map privacy to privacy_settings (1=private, 2=friends, 3=public)
+                $privacyMap = ['private' => 1, 'friends' => 2, 'public' => 3];
+                $privacySettings = $privacyMap[$validated['privacy'] ?? 'public'] ?? 3;
+                
                 $activity = Activity::create([
                     'user_id' => $user->id,
                     'activityable_type' => 'App\\Models\\Share',
                     'activityable_id' => $share->id,
                     'activity_type' => 'share_post',
-                    'activity_details' => json_encode($activityDetails)
+                    'activity_details' => json_encode($activityDetails),
+                    'privacy_settings' => $privacySettings
                 ]);
                 
                 DB::commit();

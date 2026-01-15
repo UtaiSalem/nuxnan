@@ -101,6 +101,13 @@ const loadProfile = async () => {
 
 // Load user activities/posts
 const loadActivities = async (page: number = 1) => {
+  console.log('[loadActivities] Starting...', { 
+    page, 
+    referenceCode: referenceCode.value, 
+    isViewingOwnProfile: isViewingOwnProfile.value,
+    profileLoaded: !!profile.value 
+  })
+  
   try {
     const api = useApi()
     // API จะตรวจสอบ privacy settings ตาม:
@@ -117,7 +124,7 @@ const loadActivities = async (page: number = 1) => {
       userIdentifier = profile.value.reference_code || profile.value.user_id || referenceCode.value
     }
     
-    console.log('[loadActivities] Fetching activities for:', userIdentifier)
+    console.log('[loadActivities] Fetching activities for:', userIdentifier, 'URL:', `/api/users/${userIdentifier}/activities?page=${page}`)
     const response = await api.get(`/api/users/${userIdentifier}/activities?page=${page}`)
     console.log('[loadActivities] Response:', response)
     

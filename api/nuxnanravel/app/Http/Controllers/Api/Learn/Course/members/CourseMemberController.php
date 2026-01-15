@@ -122,15 +122,27 @@ class CourseMemberController extends Controller
                 ->where('user_id', $userId)
                 ->first();
             
+            // Determine actual status - if has points, it's graded regardless of stored status
+            $actualStatus = 'not_submitted';
+            if ($answer) {
+                if ($answer->status === 'graded' || $answer->points !== null) {
+                    $actualStatus = 'graded';
+                } elseif ($answer->status === 'in_review') {
+                    $actualStatus = 'in_review';
+                } else {
+                    $actualStatus = 'submitted';
+                }
+            }
+            
             return [
                 'id' => $assignment->id,
                 'title' => $assignment->title ?? $assignment->name ?? 'งานที่ ' . $assignment->id,
                 'max_score' => $assignment->points ?? $assignment->max_score ?? 100,
                 'score' => $answer ? $answer->points : null,
                 'submitted' => $answer !== null,
-                'status' => $answer ? $answer->status : 'not_submitted', // submitted, in_review, graded
+                'status' => $actualStatus,
                 'submitted_at' => $answer ? $answer->created_at : null,
-                'graded' => $answer && $answer->status === 'graded',
+                'graded' => $actualStatus === 'graded',
             ];
         })->values();
         
@@ -162,6 +174,12 @@ class CourseMemberController extends Controller
                 $maxScore = $quiz->questions->count() ?: 10;
             }
             
+            // Calculate percentage for pass/fail comparison
+            // passing_score is stored as percentage (e.g., 50 means 50%)
+            $percentage = $result && $maxScore > 0 
+                ? ($result->score / $maxScore) * 100 
+                : 0;
+            
             return [
                 'id' => $quiz->id,
                 'title' => $quiz->title ?? $quiz->name ?? 'แบบทดสอบที่ ' . $quiz->id,
@@ -171,7 +189,7 @@ class CourseMemberController extends Controller
                 'attempt_count' => $attemptCount,
                 'completed_at' => $result ? $result->created_at : null,
                 'passed' => $result !== null 
-                    ? ($quiz->passing_score ? $result->score >= $quiz->passing_score : true) 
+                    ? ($quiz->passing_score ? $percentage >= $quiz->passing_score : true) 
                     : null,
             ];
         })->values();
@@ -487,6 +505,12 @@ class CourseMemberController extends Controller
                 $maxScore = $quiz->questions->count() ?: 10;
             }
             
+            // Calculate percentage for pass/fail comparison
+            // passing_score is stored as percentage (e.g., 50 means 50%)
+            $percentage = $result && $maxScore > 0 
+                ? ($result->score / $maxScore) * 100 
+                : 0;
+            
             return [
                 'id' => $quiz->id,
                 'title' => $quiz->title ?? 'แบบทดสอบที่ ' . $quiz->id,
@@ -496,7 +520,7 @@ class CourseMemberController extends Controller
                 'attempt_count' => $attemptCount,
                 'completed_at' => $result ? $result->created_at : null,
                 'passed' => $result !== null 
-                    ? ($quiz->passing_score ? $result->score >= $quiz->passing_score : true) 
+                    ? ($quiz->passing_score ? $percentage >= $quiz->passing_score : true) 
                     : null,
             ];
         })->values();

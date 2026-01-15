@@ -17,7 +17,6 @@ const showScrollButton = ref(false)
 
 // Determine if at root route
 const isRoot = computed(() => {
-  console.log('isRoot Path Check (Quizzes):', route.path)
   return /\/quizzes\/?$/.test(route.path)
 })
 
@@ -28,7 +27,6 @@ const fetchQuizzes = async () => {
   error.value = null
   try {
     const response = (await api.get(`/api/courses/${course.value.id}/quizzes`)) as any
-    console.log('Quizzes Response:', response)
     quizzes.value = response.quizzes || response.data || response || []
   } catch (err: any) {
     console.error('Error fetching quizzes:', err)
@@ -40,17 +38,14 @@ const fetchQuizzes = async () => {
 
 // Handlers
 const handleCreate = () => {
-  console.log('Index: handleCreate called')
   navigateTo(`/courses/${course?.value?.id}/quizzes/create`)
 }
 
 const handleEdit = (quiz: any) => {
-  console.log('Index: handleEdit called', quiz)
   navigateTo(`/courses/${course?.value?.id}/quizzes/${quiz.id}/edit`)
 }
 
 const handleDelete = async (quizId: number) => {
-  console.log('Index: handleDelete called', quizId)
   if (!confirm('ยืนยันการลบแบบทดสอบนี้หรือไม่?')) return
   
   try {
@@ -63,12 +58,10 @@ const handleDelete = async (quizId: number) => {
 }
 
 const handleStart = (quiz: any) => {
-  console.log('Index: handleStart called', quiz)
   navigateTo(`/courses/${course?.value?.id}/quizzes/${quiz.id}/attempt`)
 }
 
 const handleView = (quiz: any) => {
-  console.log('Index: handleView called', quiz)
   navigateTo(`/courses/${course?.value?.id}/quizzes/${quiz.id}`)
 }
 
@@ -81,7 +74,6 @@ const handleScroll = () => {
 }
 
 onMounted(() => {
-  console.log('Quizzes Mounted. Name:', route.name)
   fetchQuizzes()
   window.addEventListener('scroll', handleScroll)
 })

@@ -16,7 +16,7 @@ class LeaderboardService
     {
         $offset = ($page - 1) * $limit;
 
-        $users = User::select('id', 'name', 'profile_photo_path', 'total_points_earned', 'level')
+        $users = User::select('id', 'name', 'profile_photo_path', 'total_points_earned', 'level', 'pp', 'wallet')
             ->orderBy('total_points_earned', 'desc')
             ->offset($offset)
             ->limit($limit)
@@ -33,7 +33,10 @@ class LeaderboardService
                 'user_id' => $user->id,
                 'user_name' => $user->name,
                 'profile_photo_path' => $user->profile_photo_path,
+                'profile_photo_url' => $user->profile_photo_url,
                 'total_points' => $user->total_points_earned ?? 0,
+                'pp' => $user->pp ?? 0,
+                'wallet' => $user->wallet ?? 0,
                 'level' => $user->level ?? 1,
             ];
         }

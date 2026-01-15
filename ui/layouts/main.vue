@@ -3,11 +3,24 @@ import { ref, computed, onBeforeUnmount, onMounted, watch, provide } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
+import { useGamification } from '~/composables/useGamification'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const uiStore = useUIStore()
+const { getPointsLeaderboard, isLoading: isGamificationLoading } = useGamification()
+
+// Leaderboard data
+const leaderboard = ref([])
+const fetchLeaderboard = async () => {
+  try {
+    const data = await getPointsLeaderboard({ limit: 8 })
+    leaderboard.value = data.leaderboard
+  } catch (error) {
+    console.error('Failed to fetch leaderboard:', error)
+  }
+}
 
 // Drawer states
 const isLeftDrawerOpen = ref(false)
@@ -129,6 +142,8 @@ onMounted(async () => {
       console.error('Failed to fetch user:', error)
     }
   }
+
+  fetchLeaderboard()
 })
 
 // Provide theme to child components
@@ -420,7 +435,7 @@ const handleTestChangePoints = () => {
               class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             ></div>
             <Icon 
-              :icon="isRightDrawerOpen ? 'fluent:chat-24-filled' : 'fluent:chat-24-regular'" 
+              :icon="isRightDrawerOpen ? 'fluent:trophy-24-filled' : 'fluent:trophy-24-regular'" 
               class="w-6 h-6 relative z-10" 
             />
           </button>
@@ -529,6 +544,20 @@ const handleTestChangePoints = () => {
           <!-- Navigation Menu -->
           <div class="space-y-1">
             <NuxtLink
+              to="/dashboard"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
+              :class="
+                route.path === '/dashboard'
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
+              "
+            >
+              <Icon icon="fluent:grid-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Dashboard</span>
+            </NuxtLink>
+            <NuxtLink
               to="/play/newsfeed"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
               :class="
@@ -543,102 +572,60 @@ const handleTestChangePoints = () => {
               <span class="font-semibold">Newsfeed</span>
             </NuxtLink>
             <NuxtLink
-              to="/overview"
+              to="/Learn/Courses"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
               :class="
-                route.path === '/overview'
+                route.path.startsWith('/Learn/Courses') || route.path.startsWith('/learn/courses') || route.path.startsWith('/courses')
                   ? 'bg-gradient-vikinger text-white shadow-vikinger'
                   : isDarkMode
                   ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                   : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
               "
             >
-              <Icon icon="fluent:data-histogram-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Overview</span>
+              <Icon icon="fluent:book-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Courses</span>
             </NuxtLink>
             <NuxtLink
-              to="/play/groups"
+              to="/earn/points"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
               :class="
-                route.path === '/play/groups'
+                route.path.startsWith('/earn')
                   ? 'bg-gradient-vikinger text-white shadow-vikinger'
                   : isDarkMode
                   ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                   : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
               "
             >
-              <Icon icon="fluent:people-community-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Groups</span>
+              <Icon icon="fluent:wallet-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Earn</span>
             </NuxtLink>
             <NuxtLink
-              to="/members"
+              to="/notifications"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
               :class="
-                route.path === '/members'
+                route.path === '/notifications'
                   ? 'bg-gradient-vikinger text-white shadow-vikinger'
                   : isDarkMode
                   ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                   : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
               "
             >
-              <Icon icon="fluent:person-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Members</span>
+              <Icon icon="fluent:alert-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Notifications</span>
             </NuxtLink>
             <NuxtLink
-              to="/badges"
+              to="/settings"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
               :class="
-                route.path === '/badges'
+                route.path === '/settings'
                   ? 'bg-gradient-vikinger text-white shadow-vikinger'
                   : isDarkMode
                   ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                   : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
               "
             >
-              <Icon icon="fluent:shield-checkmark-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Badges</span>
-            </NuxtLink>
-            <NuxtLink
-              to="/quests"
-              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
-              :class="
-                route.path === '/quests'
-                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                  : isDarkMode
-                  ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
-              "
-            >
-              <Icon icon="fluent:star-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Quests</span>
-            </NuxtLink>
-            <NuxtLink
-              to="/play/streams"
-              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
-              :class="
-                route.path === '/play/streams'
-                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                  : isDarkMode
-                  ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
-              "
-            >
-              <Icon icon="fluent:video-clip-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Streams</span>
-            </NuxtLink>
-            <NuxtLink
-              to="/events"
-              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
-              :class="
-                route.path === '/events'
-                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                  : isDarkMode
-                  ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
-              "
-            >
-              <Icon icon="fluent:calendar-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Events</span>
+              <Icon icon="fluent:settings-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Settings</span>
             </NuxtLink>
           </div>
         </div>
@@ -656,6 +643,20 @@ const handleTestChangePoints = () => {
 
           <!-- Navigation Icons (Collapsed) -->
           <NuxtLink
+            to="/dashboard"
+            class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
+            :class="
+              route.path === '/dashboard'
+                ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                : isDarkMode
+                ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
+            "
+            :title="'Dashboard'"
+          >
+            <Icon icon="fluent:grid-24-regular" class="w-6 h-6" />
+          </NuxtLink>
+          <NuxtLink
             to="/play/newsfeed"
             class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
             :class="
@@ -670,102 +671,60 @@ const handleTestChangePoints = () => {
             <Icon icon="fluent:chat-bubbles-question-24-regular" class="w-6 h-6" />
           </NuxtLink>
           <NuxtLink
-            to="/overview"
+            to="/Learn/Courses"
             class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
             :class="
-              route.path === '/overview'
+              route.path.startsWith('/Learn/Courses') || route.path.startsWith('/learn/courses') || route.path.startsWith('/courses')
                 ? 'bg-gradient-vikinger text-white shadow-vikinger'
                 : isDarkMode
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Overview'"
+            :title="'Courses'"
           >
-            <Icon icon="fluent:data-histogram-24-regular" class="w-6 h-6" />
+            <Icon icon="fluent:book-24-regular" class="w-6 h-6" />
           </NuxtLink>
           <NuxtLink
-            to="/play/groups"
+            to="/earn/points"
             class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
             :class="
-              route.path === '/play/groups'
+              route.path.startsWith('/earn')
                 ? 'bg-gradient-vikinger text-white shadow-vikinger'
                 : isDarkMode
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Groups'"
+            :title="'Earn'"
           >
-            <Icon icon="fluent:people-community-24-regular" class="w-6 h-6" />
+            <Icon icon="fluent:wallet-24-regular" class="w-6 h-6" />
           </NuxtLink>
           <NuxtLink
-            to="/members"
+            to="/notifications"
             class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
             :class="
-              route.path === '/members'
+              route.path === '/notifications'
                 ? 'bg-gradient-vikinger text-white shadow-vikinger'
                 : isDarkMode
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Members'"
+            :title="'Notifications'"
           >
-            <Icon icon="fluent:person-24-regular" class="w-6 h-6" />
+            <Icon icon="fluent:alert-24-regular" class="w-6 h-6" />
           </NuxtLink>
           <NuxtLink
-            to="/badges"
+            to="/settings"
             class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
             :class="
-              route.path === '/badges'
+              route.path === '/settings'
                 ? 'bg-gradient-vikinger text-white shadow-vikinger'
                 : isDarkMode
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Badges'"
+            :title="'Settings'"
           >
-            <Icon icon="fluent:shield-checkmark-24-regular" class="w-6 h-6" />
-          </NuxtLink>
-          <NuxtLink
-            to="/quests"
-            class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
-            :class="
-              route.path === '/quests'
-                ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                : isDarkMode
-                ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
-                : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
-            "
-            :title="'Quests'"
-          >
-            <Icon icon="fluent:star-24-regular" class="w-6 h-6" />
-          </NuxtLink>
-          <NuxtLink
-            to="/play/streams"
-            class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
-            :class="
-              route.path === '/play/streams'
-                ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                : isDarkMode
-                ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
-                : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
-            "
-            :title="'Streams'"
-          >
-            <Icon icon="fluent:video-clip-24-regular" class="w-6 h-6" />
-          </NuxtLink>
-          <NuxtLink
-            to="/events"
-            class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
-            :class="
-              route.path === '/events'
-                ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                : isDarkMode
-                ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
-                : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
-            "
-            :title="'Events'"
-          >
-            <Icon icon="fluent:calendar-24-regular" class="w-6 h-6" />
+            <Icon icon="fluent:settings-24-regular" class="w-6 h-6" />
           </NuxtLink>
         </div>
       </aside>
@@ -837,15 +796,18 @@ const handleTestChangePoints = () => {
       >
         <!-- Expanded Content -->
         <div v-if="isRightDrawerOpen" key="expanded-right" class="p-6 space-y-6">
-          <h3 class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-            Messages / Chat
-          </h3>
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              Leaderboard
+            </h3>
+            <span class="px-2 py-1 rounded-lg bg-vikinger-purple text-white text-[10px] font-bold uppercase tracking-wider">Top Learners</span>
+          </div>
 
           <!-- Search -->
           <div class="relative">
             <input
               type="text"
-              placeholder="Search Messages..."
+              placeholder="ค้นหาสมาชิก..."
               class="w-full px-4 py-2 pl-10 rounded-lg border transition-colors duration-300 focus:ring-2 focus:ring-vikinger-purple/20"
               :class="
                 isDarkMode
@@ -860,50 +822,84 @@ const handleTestChangePoints = () => {
             />
           </div>
 
-          <!-- Online Friends -->
-          <div class="space-y-3">
+          <!-- Online Friends (Ranked) -->
+          <div v-if="isGamificationLoading && !leaderboard.length" class="space-y-3 animate-pulse">
+            <div v-for="i in 8" :key="i" class="flex items-center gap-3 p-2">
+              <div class="w-10 h-10 bg-gray-200 dark:bg-vikinger-dark-200 rounded-full"></div>
+              <div class="flex-1 space-y-2">
+                <div class="h-3 bg-gray-200 dark:bg-vikinger-dark-200 rounded w-2/3"></div>
+                <div class="h-2 bg-gray-200 dark:bg-vikinger-dark-200 rounded w-1/2"></div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="space-y-3">
             <div
-              v-for="i in 8"
-              :key="i"
-              class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors"
+              v-for="(user, index) in leaderboard"
+              :key="user.user_id"
+              class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors group"
               :class="isDarkMode ? 'hover:bg-vikinger-dark-200' : 'hover:bg-gray-100'"
             >
               <div class="relative">
-                <img :src="`https://i.pravatar.cc/150?img=${i}`" class="w-10 h-10 rounded-full" />
+                <img :src="user.profile_photo_url || '/images/default-avatar.png'" class="w-10 h-10 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors" />
                 <div
-                  class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2"
-                  :class="isDarkMode ? 'border-vikinger-dark-100' : 'border-white'"
-                ></div>
+                  class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
+                  :class="[
+                    index === 0 ? 'bg-vikinger-yellow' : index === 1 ? 'bg-gray-300' : index === 2 ? 'bg-orange-400' : 'bg-vikinger-purple',
+                    isDarkMode ? 'border-vikinger-dark-100' : 'border-white'
+                  ]"
+                >
+                  {{ index + 1 }}
+                </div>
               </div>
-              <div class="flex-1">
+              <div class="flex-1 min-w-0">
                 <div
-                  class="text-sm font-semibold"
+                  class="text-sm font-semibold truncate"
                   :class="isDarkMode ? 'text-white' : 'text-gray-900'"
                 >
-                  User {{ i }}
+                  {{ user.user_name }}
                 </div>
-                <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Online
+                <div class="flex items-center gap-3 mt-1">
+                  <div class="flex items-center gap-1 text-[10px] font-bold text-vikinger-purple" title="แต้มสะสม (PP)">
+                    <img src="/storage/images/badge/completedq.png" class="w-3.5 h-3.5" alt="pp" />
+                    {{ Number(user.pp).toLocaleString() }}
+                  </div>
+                  <div class="flex items-center gap-1 text-[10px] font-bold text-vikinger-yellow" title="เงินในวอลเล็ต (Gold)">
+                    <img src="/storage/images/badge/goldc.png" class="w-3.5 h-3.5" alt="gold" />
+                    {{ Number(user.wallet).toLocaleString() }}
+                  </div>
                 </div>
               </div>
+              <div class="shrink-0 group-hover:scale-110 transition-transform">
+                <Icon icon="fluent:star-24-filled" class="w-4 h-4 text-vikinger-yellow" />
+              </div>
+            </div>
+            
+            <div v-if="!leaderboard.length" class="text-center py-4 text-gray-500 dark:text-gray-400 text-xs">
+              ยังไม่มีข้อมูลลำดับ
             </div>
           </div>
         </div>
 
         <!-- Collapsed Content -->
-        <div v-else key="collapsed-right" class="p-2 pt-6 space-y-3 flex flex-col items-center">
-          <!-- Online Friends Icons (Collapsed) -->
+        <div v-if="!isRightDrawerOpen" key="collapsed-right" class="p-2 pt-6 space-y-3 flex flex-col items-center">
+          <!-- Top Ranked Icons (Collapsed) -->
           <div
-            v-for="i in 6"
-            :key="i"
-            class="relative cursor-pointer transition-transform hover:scale-110"
-            :title="`User ${i}`"
+            v-for="(user, index) in leaderboard.slice(0, 6)"
+            :key="user.user_id"
+            class="relative cursor-pointer transition-transform hover:scale-110 group"
+            :title="`Rank ${index + 1}: ${user.user_name}`"
           >
-            <img :src="`https://i.pravatar.cc/150?img=${i}`" class="w-11 h-11 rounded-full" />
+            <img :src="user.profile_photo_url || '/images/default-avatar.png'" class="w-11 h-11 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors" />
             <div
-              class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2"
-              :class="isDarkMode ? 'border-vikinger-dark-100' : 'border-white'"
-            ></div>
+              class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
+              :class="[
+                index === 0 ? 'bg-vikinger-yellow' : index === 1 ? 'bg-gray-300' : index === 2 ? 'bg-orange-400' : 'bg-vikinger-purple',
+                isDarkMode ? 'border-vikinger-dark-100' : 'border-white'
+              ]"
+            >
+              {{ index + 1 }}
+            </div>
           </div>
         </div>
       </aside>

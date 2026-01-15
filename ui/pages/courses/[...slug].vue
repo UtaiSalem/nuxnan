@@ -8,8 +8,8 @@ definePageMeta({
       const slug = to.params.slug
       const targetPath = Array.isArray(slug) ? slug.join('/') : slug || ''
       
-      // Redirect to /learn/courses/...
-      return navigateTo(`/learn/courses/${targetPath}`)
+      // Redirect to /Learn/Courses/... (matching folder structure)
+      return navigateTo(`/Learn/Courses/${targetPath}`)
     }
   ]
 })
