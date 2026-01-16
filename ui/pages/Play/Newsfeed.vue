@@ -14,6 +14,8 @@ import AdvertisesWidget from '~/components/widgets/AdvertisesWidget.vue'
 import RecentlyViewedCoursesWidget from '~/components/widgets/RecentlyViewedCoursesWidget.vue'
 import PopularCoursesWidget from '~/components/widgets/PopularCoursesWidget.vue'
 import MemberedCoursesWidget from '~/components/widgets/MemberedCoursesWidget.vue'
+import MemberedAcademiesWidget from '~/components/widgets/MemberedAcademiesWidget.vue'
+import AllAcademiesWidget from '~/components/widgets/AllAcademiesWidget.vue'
 
 definePageMeta({
   layout: false,
@@ -379,7 +381,11 @@ onUnmounted(() => {
 
     <!-- Right Widgets Column -->
     <template #rightWidgets>
-      <ReactionsWidget />
+      <!-- <ReactionsWidget /> -->
+
+      <!-- Academy Widgets -->
+      <MemberedAcademiesWidget />
+      <AllAcademiesWidget />
 
       <!-- Self-loading sidebar widgets -->
       <PopularCoursesWidget />

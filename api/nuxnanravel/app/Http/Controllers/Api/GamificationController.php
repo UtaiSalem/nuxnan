@@ -3,92 +3,29 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\GamificationService;
 use App\Services\AchievementService;
-use App\Services\StreakService;
-use App\Services\LeaderboardService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
 class GamificationController extends Controller
 {
+    protected GamificationService $gamificationService;
     protected AchievementService $achievementService;
-    protected StreakService $streakService;
-    protected LeaderboardService $leaderboardService;
 
     public function __construct(
-        AchievementService $achievementService,
-        StreakService $streakService,
-        LeaderboardService $leaderboardService
+        GamificationService $gamificationService,
+        AchievementService $achievementService
     ) {
+        $this->gamificationService = $gamificationService;
         $this->achievementService = $achievementService;
-        $this->streakService = $streakService;
-        $this->leaderboardService = $leaderboardService;
-    }
-
-    /**
-     * Record user login and update streak.
-     */
-    public function recordLogin(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not authenticated',
-            ], 401);
-        }
-
-        try {
-            $result = $this->streakService->recordLogin($user->id);
-
-            return response()->json([
-                'success' => true,
-                'message' => $result['message'] ?? 'Login recorded successfully',
-                'data' => $result,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
-     * Get user streak information.
-     */
-    public function getStreakInfo(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not authenticated',
-            ], 401);
-        }
-
-        try {
-            $streakInfo = $this->streakService->getStreakInfo($user->id);
-
-            return response()->json([
-                'success' => true,
-                'data' => $streakInfo,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
     }
 
     /**
      * Get user achievements.
      */
-    public function getAchievements(Request $request): JsonResponse
+    public function achievements(Request $request): JsonResponse
     {
         $user = Auth::user();
 
@@ -99,27 +36,21 @@ class GamificationController extends Controller
             ], 401);
         }
 
-        try {
-            $achievements = $this->achievementService->getUserAchievements($user->id);
+        $achievements = $this->achievementService->getUserAchievements($user);
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'achievements' => $achievements,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'achievements' => $achievements,
+                'stats' => $this->achievementService->getAchievementStats($user),
+            ],
+        ]);
     }
 
     /**
-     * Get available achievements (not yet unlocked).
+     * Get leaderboard.
      */
-    public function getAvailableAchievements(Request $request): JsonResponse
+    public function leaderboard(Request $request): JsonResponse
     {
         $user = Auth::user();
 
@@ -130,27 +61,31 @@ class GamificationController extends Controller
             ], 401);
         }
 
-        try {
-            $achievements = $this->achievementService->getAvailableAchievements($user->id);
+        $validated = $request->validate([
+            'type' => 'required|in:points,weekly,monthly,streak,achievements',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'achievements' => $achievements,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
+        $type = $validated['type'] ?? 'points';
+        $page = $validated['page'] ?? 1;
+        $perPage = $validated['per_page'] ?? 20;
+
+        $leaderboard = $this->gamificationService->getLeaderboard($type, $page, $perPage);
+        $userRank = $this->gamificationService->getUserRank($user, $type);
+
+        return response()->json([
+            'success' => true,
+            'data' => array_merge($leaderboard, [
+                'user_rank' => $userRank,
+            ]),
+        ]);
     }
 
     /**
-     * Get achievement statistics.
+     * Get user streak.
      */
-    public function getAchievementStats(Request $request): JsonResponse
+    public function streak(Request $request): JsonResponse
     {
         $user = Auth::user();
 
@@ -161,117 +96,18 @@ class GamificationController extends Controller
             ], 401);
         }
 
-        try {
-            $stats = $this->achievementService->getAchievementStats($user->id);
+        $streak = $this->gamificationService->getUserStreak($user);
 
-            return response()->json([
-                'success' => true,
-                'data' => $stats,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => $streak,
+        ]);
     }
 
     /**
-     * Get points leaderboard.
+     * Get user level.
      */
-    public function getPointsLeaderboard(Request $request): JsonResponse
-    {
-        $limit = $request->input('limit', 10);
-        $page = $request->input('page', 1);
-
-        try {
-            $leaderboard = $this->leaderboardService->getPointsLeaderboard($limit, $page);
-
-            return response()->json([
-                'success' => true,
-                'data' => $leaderboard,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
-     * Get streak leaderboard.
-     */
-    public function getStreakLeaderboard(Request $request): JsonResponse
-    {
-        $limit = $request->input('limit', 10);
-        $page = $request->input('page', 1);
-
-        try {
-            $leaderboard = $this->leaderboardService->getStreakLeaderboard($limit, $page);
-
-            return response()->json([
-                'success' => true,
-                'data' => $leaderboard,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
-     * Get achievement leaderboard.
-     */
-    public function getAchievementLeaderboard(Request $request): JsonResponse
-    {
-        $limit = $request->input('limit', 10);
-        $page = $request->input('page', 1);
-
-        try {
-            $leaderboard = $this->leaderboardService->getAchievementLeaderboard($limit, $page);
-
-            return response()->json([
-                'success' => true,
-                'data' => $leaderboard,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
-     * Get level leaderboard.
-     */
-    public function getLevelLeaderboard(Request $request): JsonResponse
-    {
-        $limit = $request->input('limit', 10);
-        $page = $request->input('page', 1);
-
-        try {
-            $leaderboard = $this->leaderboardService->getLevelLeaderboard($limit, $page);
-
-            return response()->json([
-                'success' => true,
-                'data' => $leaderboard,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
-     * Get user's leaderboard summary.
-     */
-    public function getLeaderboardSummary(Request $request): JsonResponse
+    public function level(Request $request): JsonResponse
     {
         $user = Auth::user();
 
@@ -282,18 +118,63 @@ class GamificationController extends Controller
             ], 401);
         }
 
-        try {
-            $summary = $this->leaderboardService->getUserLeaderboardSummary($user->id);
+        $level = $this->gamificationService->getUserLevel($user);
 
-            return response()->json([
-                'success' => true,
-                'data' => $summary,
-            ]);
-        } catch (\Exception $e) {
+        return response()->json([
+            'success' => true,
+            'data' => $level,
+        ]);
+    }
+
+    /**
+     * Record user activity.
+     */
+    public function recordActivity(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+                'message' => 'User not authenticated',
+            ], 401);
         }
+
+        $result = $this->gamificationService->recordActivity($user);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Activity recorded successfully',
+            'data' => $result,
+        ]);
+    }
+
+    /**
+     * Initialize default data.
+     */
+    public function initialize(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated',
+            ], 401);
+        }
+
+        if (!$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $this->gamificationService->initializeDefaultData();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Default data initialized successfully',
+        ]);
     }
 }

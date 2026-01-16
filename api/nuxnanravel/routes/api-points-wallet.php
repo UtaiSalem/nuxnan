@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\GamificationController;
 use App\Http\Controllers\Api\RewardController;
 use App\Http\Controllers\Api\AdminPointsController;
 use App\Http\Controllers\Api\AdminWalletController;
+use App\Http\Controllers\Api\Admin\DepositRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,7 +40,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/withdraw', [WalletController::class, 'withdraw']);
         Route::post('/transfer', [WalletController::class, 'transfer']);
         Route::post('/convert-points', [WalletController::class, 'convertPoints']);
+        Route::post('/convert-to-points', [WalletController::class, 'convertToPoints']);
         Route::get('/transactions', [WalletController::class, 'transactions']);
+        
+        // Deposit Request Routes (User)
+        Route::post('/deposit-request', [WalletController::class, 'createDepositRequest']);
+        Route::get('/deposit-requests', [WalletController::class, 'getDepositRequests']);
+        Route::delete('/deposit-requests/{id}', [WalletController::class, 'cancelDepositRequest']);
         
         // Admin routes
         Route::middleware('role:admin')->group(function () {
@@ -103,6 +110,14 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/users/{userId}/adjust', [AdminWalletController::class, 'adjustWallet']);
             Route::get('/users/{userId}/transactions', [AdminWalletController::class, 'userTransactions']);
             Route::get('/analytics', [AdminWalletController::class, 'analytics']);
+        });
+
+        // Admin Deposit Request Routes
+        Route::prefix('deposit-requests')->group(function () {
+            Route::get('/', [DepositRequestController::class, 'index']);
+            Route::get('/{id}', [DepositRequestController::class, 'show']);
+            Route::post('/{id}/approve', [DepositRequestController::class, 'approve']);
+            Route::post('/{id}/reject', [DepositRequestController::class, 'reject']);
         });
     });
 });

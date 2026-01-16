@@ -118,7 +118,10 @@ export const useAuthStore = defineStore('auth', () => {
       }
       
     } catch (e: any) {
-      console.error('Fetch user error:', e)
+      // Only log if not a 401 (expected when token is invalid/expired)
+      if (e.statusCode !== 401) {
+        console.error('Fetch user error:', e)
+      }
       // If token is invalid, clear it
       if (e.statusCode === 401) {
         token.value = null
@@ -230,9 +233,9 @@ export const useAuthStore = defineStore('auth', () => {
       console.error('❌ deductPoints: Not enough points', { currentPoints, amount })
       return false
     }
-    
+
     user.value.points = currentPoints - amount
-    
+
     return true
   }
 
@@ -275,6 +278,40 @@ export const useAuthStore = defineStore('auth', () => {
     return deductPoints(12)
   }
 
+  // Wallet Management
+  const wallet = computed(() => Number(user.value?.wallet) || 0)
+
+  function setWallet(amount: number): void {
+    if (!user.value) return
+    user.value.wallet = amount
+  }
+
+  function addWallet(amount: number): void {
+    if (!user.value) return
+    const currentWallet = Number(user.value.wallet) || 0
+    user.value.wallet = currentWallet + amount
+  }
+
+  function deductWallet(amount: number): boolean {
+    if (!user.value) {
+      console.error('❌ deductWallet: No user')
+      return false
+    }
+    const currentWallet = Number(user.value.wallet) || 0
+    if (currentWallet < amount) {
+      console.error('❌ deductWallet: Not enough wallet balance', { currentWallet, amount })
+      return false
+    }
+
+    user.value.wallet = currentWallet - amount
+
+    return true
+  }
+
+  const hasEnoughWallet = computed(() => (amount: number) => {
+    return wallet.value >= amount
+  })
+
   return {
     user,
     token,
@@ -300,5 +337,11 @@ export const useAuthStore = defineStore('auth', () => {
     deductForDislike,
     deductForUnlike,
     deductForUndislike,
+    // Wallet management
+    wallet,
+    setWallet,
+    addWallet,
+    deductWallet,
+    hasEnoughWallet,
   }
 })

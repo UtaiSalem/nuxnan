@@ -18,59 +18,38 @@ class RewardController extends Controller
     }
 
     /**
-     * Get available rewards.
+     * Get all rewards.
      */
     public function index(Request $request): JsonResponse
     {
-        try {
-            $rewards = $this->rewardService->getAvailableRewards();
+        $user = Auth::user();
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'rewards' => $rewards,
-                ],
-            ]);
-        } catch (\Exception $e) {
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+                'message' => 'User not authenticated',
+            ], 401);
         }
+
+        $type = $request->input('type');
+
+        $rewards = $type 
+            ? $this->rewardService->getRewardsByType($type)
+            : $this->rewardService->getAllRewards();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'rewards' => $rewards,
+            ],
+        ]);
     }
 
     /**
-     * Get reward by ID.
+     * Get reward details.
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        try {
-            $reward = $this->rewardService->getRewardById($id);
-
-            if (!$reward) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Reward not found',
-                ], 404);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $reward,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
-     * Redeem a reward.
-     */
-    public function redeem(Request $request): JsonResponse
-    {
         $user = Auth::user();
 
         if (!$user) {
@@ -80,53 +59,21 @@ class RewardController extends Controller
             ], 401);
         }
 
-        $validated = $request->validate([
-            'reward_id' => 'required|integer|exists:rewards,id',
+        $reward = $this->rewardService->getRewardDetails($id);
+
+        if (!$reward) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reward not found',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'reward' => $reward,
+            ],
         ]);
-
-        try {
-            $result = $this->rewardService->redeemReward($user->id, $validated['reward_id']);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Reward redeemed successfully',
-                'data' => $result,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
-     * Claim a reward.
-     */
-    public function claim(Request $request, int $id): JsonResponse
-    {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not authenticated',
-            ], 401);
-        }
-
-        try {
-            $this->rewardService->claimReward($user->id, $id);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Reward claimed successfully',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
     }
 
     /**
@@ -143,27 +90,20 @@ class RewardController extends Controller
             ], 401);
         }
 
-        try {
-            $rewards = $this->rewardService->getUserRewards($user->id);
+        $userRewards = $this->rewardService->getUserRewards($user);
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'rewards' => $rewards,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'user_rewards' => $userRewards,
+            ],
+        ]);
     }
 
     /**
-     * Get reward statistics.
+     * Redeem reward.
      */
-    public function stats(Request $request): JsonResponse
+    public function redeem(Request $request): JsonResponse
     {
         $user = Auth::user();
 
@@ -174,134 +114,67 @@ class RewardController extends Controller
             ], 401);
         }
 
-        try {
-            $stats = $this->rewardService->getRewardStats($user->id);
-
-            return response()->json([
-                'success' => true,
-                'data' => $stats,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
-     * Create a new reward (Admin only).
-     */
-    public function store(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-
-        if (!$user || !$user->hasRole('admin')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
-        }
-
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:500',
-            'type' => 'required|in:points,wallet,badge,feature,discount',
-            'value' => 'nullable|string|max:255',
-            'points_cost' => 'required|integer|min:0',
-            'image_url' => 'nullable|url|max:500',
-            'stock' => 'required|integer|min:0',
-            'max_redemptions_per_user' => 'required|integer|min:0',
-            'is_active' => 'nullable|boolean',
-            'available_from' => 'nullable|date',
-            'available_until' => 'nullable|date',
+            'reward_id' => 'required|integer|exists:rewards,id',
+            'quantity' => 'nullable|integer|min:1|max:10',
         ]);
 
-        try {
-            $result = $this->rewardService->createReward($validated);
+        $quantity = $validated['quantity'] ?? 1;
+        $result = $this->rewardService->redeemReward($user, $validated['reward_id'], $quantity);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Reward created successfully',
-                'data' => $result,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
+        return response()->json($result, $result['success'] ? 200 : 400);
     }
 
     /**
-     * Update a reward (Admin only).
+     * Cancel user reward.
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function cancel(Request $request, int $id): JsonResponse
     {
         $user = Auth::user();
 
-        if (!$user || !$user->hasRole('admin')) {
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
+                'message' => 'User not authenticated',
+            ], 401);
         }
 
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:500',
-            'type' => 'nullable|in:points,wallet,badge,feature,discount',
-            'value' => 'nullable|string|max:255',
-            'points_cost' => 'nullable|integer|min:0',
-            'image_url' => 'nullable|url|max:500',
-            'stock' => 'nullable|integer|min:0',
-            'max_redemptions_per_user' => 'nullable|integer|min:0',
-            'is_active' => 'nullable|boolean',
-            'available_from' => 'nullable|date',
-            'available_until' => 'nullable|date',
+        $result = $this->rewardService->cancelUserReward($user, $id);
+
+        if (!$result) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel reward',
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reward cancelled successfully',
         ]);
-
-        try {
-            $this->rewardService->updateReward($id, $validated);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Reward updated successfully',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
     }
 
     /**
-     * Delete a reward (Admin only).
+     * Get reward statistics (Admin only).
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
         $user = Auth::user();
 
-        if (!$user || !$user->hasRole('admin')) {
+        if (!$user || !$user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 403);
         }
 
-        try {
-            $this->rewardService->deleteReward($id);
+        $stats = $this->rewardService->getRewardStats();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Reward deleted successfully',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => $stats,
+            ],
+        ]);
     }
 }

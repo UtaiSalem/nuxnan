@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('academy_groups', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->foreignId('academy_id')->constrained()->onDelete('cascade');
+            $table->string('name');
+            $table->string('description')->nullable();
+            $table->string('type')->default('classroom'); // department, classroom, club
+            $table->json('settings')->nullable();
             $table->timestamps();
         });
     }

@@ -170,6 +170,10 @@ Route::middleware(['auth:api'])->group(function () {
         Route::put('/privacy', [UserProfileController::class, 'updatePrivacy'])->name('profile.privacy');
         Route::get('/stats', [UserProfileController::class, 'stats'])->name('profile.stats');
     });
+    
+    // User search for transfer (must be before {identifier} routes)
+    Route::get('/users/search', [UserProfileController::class, 'search'])->name('users.search');
+    
     // User profile by identifier (supports ID, reference_code, or username)
     Route::get('/users/{identifier}/show', [UserProfileController::class, 'show'])->name('user.profile.show');
     Route::get('/users/{identifier}/stats', [UserProfileController::class, 'stats'])->name('user.stats');

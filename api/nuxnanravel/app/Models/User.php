@@ -283,6 +283,20 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
                     )->withTimestamps();
     }
 
+    public function academyGroupsMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(AcademyGroup::class, 'academy_group_members', 'user_id', 'academy_group_id')
+                    ->withPivot('role')
+                    ->withTimestamps();
+    }
+
+    public function academyGroupsAdmins(): BelongsToMany
+    {
+        return $this->belongsToMany(AcademyGroup::class, 'academy_group_admins', 'user_id', 'academy_group_id')
+                    ->withPivot('role')
+                    ->withTimestamps();
+    }
+
     public function academyAdmins(): BelongsToMany
     {
         return $this->belongsToMany(Academy::class, 'academy_admins', 'user_id', 'academy_id');

@@ -33,20 +33,18 @@ class PointsController extends Controller
             ], 401);
         }
 
-        $balance = $this->pointsService->getBalance($user->id);
+        $balance = $this->pointsService->getBalance($user);
 
         return response()->json([
             'success' => true,
             'data' => [
                 'current_points' => $balance['current_points'],
-                'bonus_points' => $balance['bonus_points'],
-                'available_points' => $balance['available_points'],
-                'locked_points' => $balance['locked_points'],
-                'total_points_earned' => $user->total_points_earned ?? 0,
-                'total_points_spent' => $user->total_points_spent ?? 0,
-                'level' => $user->level ?? 1,
-                'current_xp' => $user->current_xp ?? 0,
-                'xp_for_next_level' => $user->xp_for_next_level ?? 100,
+                'total_earned' => $balance['total_earned'],
+                'total_spent' => $balance['total_spent'],
+                'level' => $balance['level'],
+                'current_xp' => $balance['current_xp'],
+                'xp_for_next_level' => $balance['xp_for_next_level'],
+                'progress_percentage' => $balance['progress_percentage'],
             ],
         ]);
     }
@@ -68,23 +66,28 @@ class PointsController extends Controller
         $validated = $request->validate([
             'source_type' => 'required|string|max:50',
             'source_id' => 'nullable|integer',
-            'amount' => 'required|integer|min:1',
+            'amount' => 'required|numeric|min:0.01',
             'description' => 'nullable|string|max:255',
             'metadata' => 'nullable|array',
         ]);
 
         try {
-            $result = $this->pointsService->earn($user->id, $validated);
+            $result = $this->pointsService->earn(
+                $user,
+                $validated['amount'],
+                $validated['source_type'],
+                $validated['source_id'] ?? null,
+                $validated['description'] ?? null,
+                $validated['metadata'] ?? null
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Points earned successfully',
                 'data' => [
-                    'points_earned' => $result['points_earned'],
-                    'new_balance' => $result['new_balance'],
-                    'level' => $result['level'],
-                    'leveled_up' => $result['leveled_up'],
-                    'achievements_unlocked' => $result['achievements_unlocked'] ?? [],
+                    'points_earned' => $result->amount,
+                    'new_balance' => $result->balance_after,
+                    'transaction_id' => $result->id,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -112,20 +115,35 @@ class PointsController extends Controller
         $validated = $request->validate([
             'source_type' => 'required|string|max:50',
             'source_id' => 'nullable|integer',
-            'amount' => 'required|integer|min:1',
+            'amount' => 'required|numeric|min:0.01',
             'description' => 'nullable|string|max:255',
             'metadata' => 'nullable|array',
         ]);
 
         try {
-            $result = $this->pointsService->spend($user->id, $validated);
+            $result = $this->pointsService->spend(
+                $user,
+                $validated['amount'],
+                $validated['source_type'],
+                $validated['source_id'] ?? null,
+                $validated['description'] ?? null,
+                $validated['metadata'] ?? null
+            );
+
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient points',
+                ], 400);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Points spent successfully',
                 'data' => [
-                    'points_spent' => $result['points_spent'],
-                    'new_balance' => $result['new_balance'],
+                    'points_spent' => $result->amount,
+                    'new_balance' => $result->balance_after,
+                    'transaction_id' => $result->id,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -151,21 +169,29 @@ class PointsController extends Controller
         }
 
         $validated = $request->validate([
-            'transaction_id' => 'required|integer|exists:points_transactions,id',
-            'amount' => 'required|integer|min:1',
+            'transaction_id' => 'nullable|integer|exists:points_transactions,id',
+            'amount' => 'required|numeric|min:0.01',
             'description' => 'nullable|string|max:255',
             'metadata' => 'nullable|array',
         ]);
 
         try {
-            $result = $this->pointsService->refund($user->id, $validated);
+            $result = $this->pointsService->refund(
+                $user,
+                $validated['amount'],
+                'refund',
+                $validated['transaction_id'] ?? null,
+                $validated['description'] ?? null,
+                $validated['metadata'] ?? null
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Points refunded successfully',
                 'data' => [
-                    'points_refunded' => $result['points_refunded'],
-                    'new_balance' => $result['new_balance'],
+                    'points_refunded' => $result->amount,
+                    'new_balance' => $result->balance_after,
+                    'transaction_id' => $result->id,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -192,20 +218,40 @@ class PointsController extends Controller
 
         $validated = $request->validate([
             'recipient_id' => 'required|integer|exists:users,id|different:' . $user->id,
-            'amount' => 'required|integer|min:1',
+            'amount' => 'required|numeric|min:0.01',
             'message' => 'nullable|string|max:255',
             'metadata' => 'nullable|array',
         ]);
 
         try {
-            $result = $this->pointsService->transfer($user->id, $validated);
+            $toUser = User::find($validated['recipient_id']);
+            if (!$toUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Recipient not found',
+                ], 404);
+            }
+
+            $result = $this->pointsService->transfer(
+                $user,
+                $toUser,
+                $validated['amount'],
+                $validated['message'] ?? null
+            );
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'],
+                ], 400);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Points transferred successfully',
                 'data' => [
-                    'points_transferred' => $result['points_transferred'],
-                    'new_balance' => $result['new_balance'],
+                    'points_transferred' => $validated['amount'],
+                    'new_balance' => $user->pp,
                     'recipient_id' => $validated['recipient_id'],
                 ],
             ]);
@@ -232,12 +278,19 @@ class PointsController extends Controller
         }
 
         $validated = $request->validate([
-            'points' => 'required|integer|min:1080', // Minimum 1080 points (1 THB)
+            'points' => 'required|integer|min:1200', // Minimum 1200 points (1 THB)
             'target' => 'required|in:wallet',
         ]);
 
         try {
-            $result = $this->pointsService->convertPointsToWallet($user->id, $validated['points']);
+            $result = $this->pointsService->convertPointsToWallet($user, $validated['points']);
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'],
+                ], 400);
+            }
 
             return response()->json([
                 'success' => true,
@@ -246,7 +299,8 @@ class PointsController extends Controller
                     'points_converted' => $result['points_converted'],
                     'wallet_amount' => $result['wallet_amount'],
                     'new_points_balance' => $result['new_points_balance'],
-                    'exchange_rate' => '1080 points = 1 THB',
+                    'new_wallet_balance' => $result['new_wallet_balance'],
+                    'exchange_rate' => '1200 points = 1 THB',
                 ],
             ]);
         } catch (\Exception $e) {

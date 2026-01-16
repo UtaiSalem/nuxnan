@@ -1,3 +1,17 @@
+<script setup lang="ts">
+import { useAuthStore } from '~/stores/auth'
+
+const authStore = useAuthStore()
+
+// Settings URL - dynamic based on user reference_code
+const settingsUrl = computed(() => {
+  if (authStore.user?.reference_code) {
+    return `/profile/${authStore.user.reference_code}/settings`
+  }
+  return '/settings'
+})
+</script>
+
 <template>
   <section>
     <div class="gap no-gap">
@@ -11,7 +25,7 @@
           <h5>Monica Light</h5>
           <ul>
             <li><NuxtLink class="redbg" to="/about" title="Profile"><i class="lni lni-user"></i></NuxtLink></li>
-            <li><NuxtLink class="bluebg" to="/settings" title="Edit Profile"><i class="lni lni-pencil"></i></NuxtLink></li>
+            <li><NuxtLink class="bluebg" :to="settingsUrl" title="Edit Profile"><i class="lni lni-pencil"></i></NuxtLink></li>
             <li><a class="yellowbg" href="#" title="Follow"><i class="lni lni-star"></i></a></li>
           </ul>
         </div>

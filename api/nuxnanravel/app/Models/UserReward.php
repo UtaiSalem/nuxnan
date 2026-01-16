@@ -10,18 +10,6 @@ class UserReward extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'user_rewards';
-
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'user_id',
         'reward_id',
@@ -32,11 +20,6 @@ class UserReward extends Model
         'metadata',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'points_spent' => 'integer',
         'redeemed_at' => 'datetime',
@@ -45,7 +28,7 @@ class UserReward extends Model
     ];
 
     /**
-     * Get the user that owns the user reward.
+     * Get user that owns this user reward.
      */
     public function user(): BelongsTo
     {
@@ -53,7 +36,7 @@ class UserReward extends Model
     }
 
     /**
-     * Get the reward associated with the user reward.
+     * Get reward for this user reward.
      */
     public function reward(): BelongsTo
     {
@@ -61,15 +44,7 @@ class UserReward extends Model
     }
 
     /**
-     * Scope a query to only include pending rewards.
-     */
-    public function scopePending($query)
-    {
-        return $query->where('status', 'pending');
-    }
-
-    /**
-     * Scope a query to only include claimed rewards.
+     * Scope for claimed rewards
      */
     public function scopeClaimed($query)
     {
@@ -77,7 +52,15 @@ class UserReward extends Model
     }
 
     /**
-     * Scope a query to only include expired rewards.
+     * Scope for pending rewards
+     */
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    /**
+     * Scope for expired rewards
      */
     public function scopeExpired($query)
     {
@@ -85,7 +68,7 @@ class UserReward extends Model
     }
 
     /**
-     * Scope a query to only include cancelled rewards.
+     * Scope for cancelled rewards
      */
     public function scopeCancelled($query)
     {
@@ -93,23 +76,7 @@ class UserReward extends Model
     }
 
     /**
-     * Scope a query to only include active rewards (not expired or cancelled).
-     */
-    public function scopeActive($query)
-    {
-        return $query->whereIn('status', ['pending', 'claimed']);
-    }
-
-    /**
-     * Check if the reward is pending.
-     */
-    public function isPending(): bool
-    {
-        return $this->status === 'pending';
-    }
-
-    /**
-     * Check if the reward is claimed.
+     * Check if reward is claimed
      */
     public function isClaimed(): bool
     {
@@ -117,16 +84,24 @@ class UserReward extends Model
     }
 
     /**
-     * Check if the reward is expired.
+     * Check if reward is pending
+     */
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    /**
+     * Check if reward is expired
      */
     public function isExpired(): bool
     {
         return $this->status === 'expired' || 
-               ($this->expires_at && $this->expires_at->isPast());
+               ($this->expires_at && $this->expires_at <= now());
     }
 
     /**
-     * Check if the reward is cancelled.
+     * Check if reward is cancelled
      */
     public function isCancelled(): bool
     {
@@ -134,7 +109,7 @@ class UserReward extends Model
     }
 
     /**
-     * Get the status label attribute.
+     * Get status label in Thai
      */
     public function getStatusLabelAttribute(): string
     {
@@ -148,7 +123,7 @@ class UserReward extends Model
     }
 
     /**
-     * Get the formatted points spent attribute.
+     * Get formatted points spent
      */
     public function getFormattedPointsSpentAttribute(): string
     {
@@ -156,26 +131,26 @@ class UserReward extends Model
     }
 
     /**
-     * Mark the reward as claimed.
+     * Get formatted redeemed date
      */
-    public function markAsClaimed(): bool
+    public function getFormattedRedeemedAtAttribute(): string
     {
-        return $this->update(['status' => 'claimed']);
+        if (!$this->redeemed_at) {
+            return '-';
+        }
+
+        return $this->redeemed_at->locale('th')->translatedFormat('j F Y H:i');
     }
 
     /**
-     * Mark the reward as expired.
+     * Get formatted expiry date
      */
-    public function markAsExpired(): bool
+    public function getFormattedExpiresAtAttribute(): string
     {
-        return $this->update(['status' => 'expired']);
-    }
+        if (!$this->expires_at) {
+            return '-';
+        }
 
-    /**
-     * Mark the reward as cancelled.
-     */
-    public function markAsCancelled(): bool
-    {
-        return $this->update(['status' => 'cancelled']);
+        return $this->expires_at->locale('th')->translatedFormat('j F Y H:i');
     }
 }

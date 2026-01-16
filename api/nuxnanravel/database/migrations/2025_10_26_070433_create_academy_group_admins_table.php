@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('academy_group_admins', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->foreignId('academy_group_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('role')->default('admin');
             $table->timestamps();
         });
     }

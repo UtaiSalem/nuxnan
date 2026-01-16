@@ -87,7 +87,7 @@ const getStatusColor = (status) => {
     </div>
 
     <!-- Reactions Received -->
-    <div class="vikinger-card">
+    <!-- <div class="vikinger-card">
       <div class="flex items-center justify-between mb-4">
         <h4 class="font-bold text-gray-800 dark:text-white text-sm">Reactions Received</h4>
       </div>
@@ -121,7 +121,7 @@ const getStatusColor = (status) => {
           <div class="text-xs text-gray-500 dark:text-gray-400">HAPPY</div>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Online Friends -->
     <div class="vikinger-card">

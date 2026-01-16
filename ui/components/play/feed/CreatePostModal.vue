@@ -12,6 +12,19 @@ const props = defineProps({
   initialTab: {
     type: String,
     default: 'status'
+  },
+  context: {
+    type: String,
+    default: 'newsfeed', // 'newsfeed', 'academy', 'course'
+    validator: (value) => ['newsfeed', 'academy', 'course'].includes(value)
+  },
+  contextId: {
+    type: Number,
+    default: null
+  },
+  contextName: {
+    type: String,
+    default: ''
   }
 })
 
@@ -28,6 +41,55 @@ const {
   fetchPostOptions, 
   createPost: createPostApi 
 } = usePosts()
+
+// Modal title based on context
+const modalTitle = computed(() => {
+  if (props.context === 'academy' && props.contextName) {
+    return `โพสต์ใน ${props.contextName}`
+  }
+  if (props.context === 'course' && props.contextName) {
+    return `โพสต์ในรายวิชา ${props.contextName}`
+  }
+  return 'สร้างโพสต์'
+})
+
+// Create academy post
+const createAcademyPost = async (content, options) => {
+  const formData = new FormData()
+  formData.append('content', content)
+  
+  if (options.images && options.images.length > 0) {
+    options.images.forEach((image, index) => {
+      formData.append(`images[${index}]`, image)
+    })
+  }
+  
+  if (options.privacy_settings !== undefined) {
+    formData.append('privacy_settings', String(options.privacy_settings))
+  }
+  
+  return await $apiFetch(`/api/academies/${props.contextId}/posts`, {
+    method: 'POST',
+    body: formData,
+  })
+}
+
+// Create course post
+const createCoursePost = async (content, options) => {
+  const formData = new FormData()
+  formData.append('content', content)
+  
+  if (options.images && options.images.length > 0) {
+    options.images.forEach((image, index) => {
+      formData.append(`images[${index}]`, image)
+    })
+  }
+  
+  return await $apiFetch(`/api/courses/${props.contextId}/posts`, {
+    method: 'POST',
+    body: formData,
+  })
+}
 
 // Current user avatar
 const currentUserAvatar = computed(() => getAvatarUrl(authStore.user))
@@ -181,7 +243,8 @@ const createPost = async () => {
   if (activeTab.value === 'status' && !postText.value.trim() && selectedImages.value.length === 0) return
   if (isSubmitting.value) return
   
-  if (authStore.user && authStore.user.pp < 180) {
+  // Skip point check for academy/course posts (handled differently)
+  if (props.context === 'newsfeed' && authStore.user && authStore.user.pp < 180) {
     swal.warning('คุณมีแต้มสะสมไม่พอสำหรับการโพสต์ กรุณาสะสมแต้มสะสมอย่างน้อย 180 แต้ม', 'แต้มไม่พอ')
     return
   }
@@ -245,10 +308,19 @@ const createPost = async () => {
       options.scheduled_at = scheduledDate.value
     }
     
-    const response = await createPostApi(postText.value, options)
+    let response
+    
+    // Handle different contexts
+    if (props.context === 'academy' && props.contextId) {
+      response = await createAcademyPost(postText.value, options)
+    } else if (props.context === 'course' && props.contextId) {
+      response = await createCoursePost(postText.value, options)
+    } else {
+      response = await createPostApi(postText.value, options)
+    }
     
     if (response.success) {
-      emit('post-created', response.activity)
+      emit('post-created', response.activity || response.post)
       resetForm()
       swal.toast('สร้างโพสต์สำเร็จ!', 'success')
     } else {
@@ -385,8 +457,8 @@ const removeTaggedFriend = (friendId) => {
             <!-- Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-vikinger-dark-50/30">
               <div class="flex items-center gap-2">
-                <Icon icon="fluent:calendar-ltr-24-regular" class="w-5 h-5 text-vikinger-purple" />
-                <h2 class="text-xl font-bold text-gray-800 dark:text-white">โพสต์หัวข้อใหม่ / สร้างโพล</h2>
+                <Icon :icon="context === 'academy' ? 'fluent:building-24-regular' : context === 'course' ? 'fluent:book-24-regular' : 'fluent:calendar-ltr-24-regular'" class="w-5 h-5 text-vikinger-purple" />
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white">{{ modalTitle }}</h2>
               </div>
               <button @click="closeModal" class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full">
                 <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-500" />

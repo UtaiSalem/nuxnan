@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\WalletTransaction;
+use App\Models\WalletDepositRequest;
 use App\Models\User;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class WalletController extends Controller
 {
@@ -33,7 +35,7 @@ class WalletController extends Controller
             ], 401);
         }
 
-        $balance = $this->walletService->getBalance($user->id);
+        $balance = $this->walletService->getBalance($user);
 
         return response()->json([
             'success' => true,
@@ -42,7 +44,7 @@ class WalletController extends Controller
                 'reward_balance' => $balance['reward_balance'],
                 'total_balance' => $balance['total_balance'],
                 'locked_balance' => $balance['locked_balance'],
-                'currency' => 'THB',
+                'currency' => $balance['currency'],
             ],
         ]);
     }
@@ -70,16 +72,23 @@ class WalletController extends Controller
         ]);
 
         try {
-            $result = $this->walletService->deposit($user->id, $validated);
+            $result = $this->walletService->deposit(
+                $user,
+                $validated['amount'],
+                $validated['method'],
+                $validated['reference'] ?? null,
+                $validated['description'] ?? null,
+                $validated['metadata'] ?? null
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Deposit successful',
                 'data' => [
-                    'amount' => $result['amount'],
-                    'new_balance' => $result['new_balance'],
-                    'reference_number' => $result['reference_number'],
-                    'transaction_id' => $result['transaction_id'],
+                    'amount' => $result->amount,
+                    'new_balance' => $result->balance_after,
+                    'reference_number' => $result->reference_number,
+                    'transaction_id' => $result->id,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -105,7 +114,7 @@ class WalletController extends Controller
         }
 
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:10',
+            'amount' => 'required|numeric|min:100', // Minimum 100 THB
             'method' => 'required|string|max:50',
             'bank_account' => 'required|array',
             'bank_account.bank_name' => 'required|string|max:50',
@@ -115,19 +124,32 @@ class WalletController extends Controller
         ]);
 
         try {
-            $result = $this->walletService->withdraw($user->id, $validated);
+            $result = $this->walletService->withdraw(
+                $user,
+                $validated['amount'],
+                $validated['method'],
+                $validated['bank_account'],
+                $validated['description'] ?? null
+            );
+
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient wallet balance',
+                ], 400);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Withdrawal request submitted',
                 'data' => [
-                    'amount' => $result['amount'],
-                    'fee' => $result['fee'],
-                    'net_amount' => $result['net_amount'],
-                    'new_balance' => $result['new_balance'],
-                    'reference_number' => $result['reference_number'],
-                    'transaction_id' => $result['transaction_id'],
-                    'status' => 'pending',
+                    'amount' => $result->amount,
+                    'fee' => $result->metadata['fee'] ?? 0,
+                    'net_amount' => $result->metadata['net_amount'] ?? $result->amount,
+                    'new_balance' => $result->balance_after,
+                    'reference_number' => $result->reference_number,
+                    'transaction_id' => $result->id,
+                    'status' => $result->status,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -160,17 +182,35 @@ class WalletController extends Controller
         ]);
 
         try {
-            $result = $this->walletService->transfer($user->id, $validated);
+            $toUser = User::find($validated['recipient_id']);
+            if (!$toUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Recipient not found',
+                ], 404);
+            }
+
+            $result = $this->walletService->transfer(
+                $user,
+                $toUser,
+                $validated['amount'],
+                $validated['message'] ?? null
+            );
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'],
+                ], 400);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Transfer successful',
                 'data' => [
-                    'amount' => $result['amount'],
-                    'new_balance' => $result['new_balance'],
+                    'amount' => $validated['amount'],
+                    'new_balance' => $user->wallet,
                     'recipient_id' => $validated['recipient_id'],
-                    'reference_number' => $result['reference_number'],
-                    'transaction_id' => $result['transaction_id'],
                 ],
             ]);
         } catch (\Exception $e) {
@@ -196,11 +236,18 @@ class WalletController extends Controller
         }
 
         $validated = $request->validate([
-            'points' => 'required|integer|min:1080', // Minimum 1080 points (1 THB)
+            'points' => 'required|integer|min:1200', // Minimum 1200 points (1 THB)
         ]);
 
         try {
-            $result = $this->walletService->convertPointsToWallet($user->id, $validated['points']);
+            $result = $this->walletService->convertPointsToWallet($user, $validated['points']);
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'],
+                ], 400);
+            }
 
             return response()->json([
                 'success' => true,
@@ -210,7 +257,54 @@ class WalletController extends Controller
                     'wallet_amount' => $result['wallet_amount'],
                     'new_points_balance' => $result['new_points_balance'],
                     'new_wallet_balance' => $result['new_wallet_balance'],
-                    'exchange_rate' => '1080 points = 1 THB',
+                    'exchange_rate' => '1200 points = 1 THB',
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Convert wallet to points (for advertising support).
+     */
+    public function convertToPoints(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:10', // Minimum 10 THB
+        ]);
+
+        try {
+            $result = $this->walletService->convertWalletToPoints($user, $validated['amount']);
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'],
+                ], 400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Wallet converted to points successfully',
+                'data' => [
+                    'wallet_amount' => $result['wallet_amount'],
+                    'points_received' => $result['points_received'],
+                    'new_wallet_balance' => $result['new_wallet_balance'],
+                    'new_points_balance' => $result['new_points_balance'],
+                    'exchange_rate' => '1 THB = 1080 points',
                 ],
             ]);
         } catch (\Exception $e) {
@@ -279,7 +373,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->hasRole('admin')) {
+        if (!$user || !$user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -287,13 +381,28 @@ class WalletController extends Controller
         }
 
         try {
-            $result = $this->walletService->approveWithdrawal($transactionId);
+            $transaction = WalletTransaction::find($transactionId);
+            if (!$transaction) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaction not found',
+                ], 404);
+            }
+
+            $result = $this->walletService->approveWithdrawal($transaction);
+
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot approve this transaction',
+                ], 400);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Withdrawal approved successfully',
                 'data' => [
-                    'transaction_id' => $result['transaction_id'],
+                    'transaction_id' => $transaction->id,
                     'status' => 'completed',
                 ],
             ]);
@@ -312,7 +421,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->hasRole('admin')) {
+        if (!$user || !$user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -324,14 +433,29 @@ class WalletController extends Controller
         ]);
 
         try {
-            $result = $this->walletService->rejectWithdrawal($transactionId, $validated['reason']);
+            $transaction = WalletTransaction::find($transactionId);
+            if (!$transaction) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaction not found',
+                ], 404);
+            }
+
+            $result = $this->walletService->rejectWithdrawal($transaction, $validated['reason']);
+
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot reject this transaction',
+                ], 400);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Withdrawal rejected successfully',
                 'data' => [
-                    'transaction_id' => $result['transaction_id'],
-                    'status' => 'failed',
+                    'transaction_id' => $transaction->id,
+                    'status' => 'cancelled',
                     'reason' => $validated['reason'],
                 ],
             ]);
@@ -341,5 +465,158 @@ class WalletController extends Controller
                 'message' => $e->getMessage(),
             ], 400);
         }
+    }
+
+    /**
+     * Create a deposit request (requires admin approval).
+     */
+    public function createDepositRequest(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:10',
+            'payment_method' => 'required|string|in:bank_transfer,promptpay,credit_card',
+            'bank_name' => 'required_if:payment_method,bank_transfer|nullable|string|max:100',
+            'account_number' => 'nullable|string|max:50',
+            'account_name' => 'nullable|string|max:100',
+            'transfer_slip' => 'required|image|max:5120', // 5MB max
+            'transfer_date' => 'required|date',
+            'transfer_time' => 'nullable|string|max:10',
+            'reference_number' => 'nullable|string|max:100',
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            // Store the transfer slip
+            $slipPath = null;
+            if ($request->hasFile('transfer_slip')) {
+                $slipPath = $request->file('transfer_slip')->store('deposit-slips/' . $user->id, 'public');
+            }
+
+            // Create the deposit request
+            $depositRequest = WalletDepositRequest::create([
+                'user_id' => $user->id,
+                'amount' => $validated['amount'],
+                'payment_method' => $validated['payment_method'],
+                'bank_name' => $validated['bank_name'] ?? null,
+                'account_number' => $validated['account_number'] ?? null,
+                'account_name' => $validated['account_name'] ?? null,
+                'transfer_slip' => $slipPath,
+                'transfer_date' => $validated['transfer_date'],
+                'transfer_time' => $validated['transfer_time'] ?? null,
+                'reference_number' => $validated['reference_number'] ?? null,
+                'note' => $validated['note'] ?? null,
+                'status' => 'pending',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'คำขอเติมเงินถูกส่งแล้ว รอการตรวจสอบจาก Admin',
+                'data' => [
+                    'id' => $depositRequest->id,
+                    'amount' => $depositRequest->amount,
+                    'status' => $depositRequest->status,
+                    'status_label' => $depositRequest->status_label,
+                    'created_at' => $depositRequest->created_at,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Get user's deposit requests.
+     */
+    public function getDepositRequests(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated',
+            ], 401);
+        }
+
+        $requests = WalletDepositRequest::where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->get('per_page', 10));
+
+        return response()->json([
+            'success' => true,
+            'data' => $requests->map(function ($req) {
+                return [
+                    'id' => $req->id,
+                    'amount' => $req->amount,
+                    'payment_method' => $req->payment_method,
+                    'payment_method_label' => $req->payment_method_label,
+                    'bank_name' => $req->bank_name,
+                    'transfer_slip' => $req->slip_url,
+                    'transfer_date' => $req->transfer_date?->format('Y-m-d'),
+                    'status' => $req->status,
+                    'status_label' => $req->status_label,
+                    'rejection_reason' => $req->rejection_reason,
+                    'reviewed_at' => $req->reviewed_at?->format('Y-m-d H:i:s'),
+                    'created_at' => $req->created_at->format('Y-m-d H:i:s'),
+                ];
+            }),
+            'pagination' => [
+                'current_page' => $requests->currentPage(),
+                'last_page' => $requests->lastPage(),
+                'per_page' => $requests->perPage(),
+                'total' => $requests->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Cancel a pending deposit request (user can cancel their own).
+     */
+    public function cancelDepositRequest(int $requestId): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated',
+            ], 401);
+        }
+
+        $depositRequest = WalletDepositRequest::where('id', $requestId)
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$depositRequest) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบคำขอเติมเงินหรือคำขอถูกดำเนินการแล้ว',
+            ], 404);
+        }
+
+        // Delete the slip file
+        if ($depositRequest->transfer_slip) {
+            Storage::disk('public')->delete($depositRequest->transfer_slip);
+        }
+
+        $depositRequest->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ยกเลิกคำขอเติมเงินสำเร็จ',
+        ]);
     }
 }

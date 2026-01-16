@@ -14,11 +14,11 @@ use App\Http\Resources\Learn\Academy\AcademyResource;
 use Illuminate\Support\Facades\Storage;
 
 
+
 class AcademyController extends Controller
 {
-    public function __construct() {
-        $this->middleware('auth:sanctum');
-    }
+    // Middleware is now handled in route definitions (routes/learn/academy.php)
+    
     /**
      * Display a listing of the resource.
      */
@@ -127,7 +127,13 @@ class AcademyController extends Controller
      */
     public function show(Academy $academy)
     {
-        return to_route('academy.feeds', $academy->name);
+        $isAcademyAdmin = $academy->user_id == auth()->id();
+        
+        return response()->json([
+            'success' => true,
+            'academy' => new AcademyResource($academy),
+            'isAcademyAdmin' => $isAcademyAdmin,
+        ]);
     }
 
     /**

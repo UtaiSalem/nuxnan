@@ -3,56 +3,60 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\PointsService;
-use App\Services\AchievementService;
-use App\Services\StreakService;
-use App\Services\LeaderboardService;
+use App\Models\PointsTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use App\Models\PointsTransaction;
-use App\Models\PointRule;
-use App\Models\DailyPointLimit;
+use Illuminate\Support\Facades\Auth;
 
 class AdminPointsController extends Controller
 {
     protected PointsService $pointsService;
-    protected AchievementService $achievementService;
-    protected StreakService $streakService;
-    protected LeaderboardService $leaderboardService;
 
-    public function __construct(
-        PointsService $pointsService,
-        AchievementService $achievementService,
-        StreakService $streakService,
-        LeaderboardService $leaderboardService
-    ) {
+    public function __construct(PointsService $pointsService)
+    {
         $this->pointsService = $pointsService;
-        $this->achievementService = $achievementService;
-        $this->streakService = $streakService;
-        $this->leaderboardService = $leaderboardService;
     }
 
     /**
-     * Get points statistics
+     * Get points dashboard statistics.
      */
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
-        $totalPoints = User::sum('pp');
+        $user = Auth::user();
+
+        if (!$user || !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
         $totalPointsEarned = User::sum('total_points_earned');
         $totalPointsSpent = User::sum('total_points_spent');
-        $totalUsers = User::count();
+        $totalPoints = User::sum('pp');
         $activeUsers = User::where('pp', '>', 0)->count();
 
-        // Get daily stats
+        // Calculate daily earnings
         $today = now()->toDateString();
-        $todayEarned = DailyPointLimit::where('date', $today)->sum('points_earned');
-        $todaySpent = DailyPointLimit::where('date', $today)->sum('points_spent');
+        $dailyEarnings = PointsTransaction::where('transaction_type', 'earn')
+            ->whereDate('created_at', $today)
+            ->sum('amount');
 
-        // Get transaction counts
-        $totalTransactions = PointsTransaction::count();
-        $pendingTransactions = PointsTransaction::where('status', 'pending')->count();
+        // Calculate weekly earnings
+        $weekStart = now()->startOfWeek();
+        $weekEnd = now()->endOfWeek();
+        $weeklyEarnings = PointsTransaction::where('transaction_type', 'earn')
+            ->whereBetween('created_at', [$weekStart, $weekEnd])
+            ->sum('amount');
+
+        // Calculate monthly earnings
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfMonth();
+        $monthlyEarnings = PointsTransaction::where('transaction_type', 'earn')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->sum('amount');
 
         return response()->json([
             'success' => true,
@@ -60,39 +64,54 @@ class AdminPointsController extends Controller
                 'total_points' => $totalPoints,
                 'total_points_earned' => $totalPointsEarned,
                 'total_points_spent' => $totalPointsSpent,
-                'net_points' => $totalPointsEarned - $totalPointsSpent,
-                'total_users' => $totalUsers,
                 'active_users' => $activeUsers,
-                'today_earned' => $todayEarned,
-                'today_spent' => $todaySpent,
-                'total_transactions' => $totalTransactions,
-                'pending_transactions' => $pendingTransactions,
-            ]
+                'daily_earnings' => $dailyEarnings,
+                'weekly_earnings' => $weeklyEarnings,
+                'monthly_earnings' => $monthlyEarnings,
+            ],
         ]);
     }
 
     /**
-     * Get all point rules
+     * Get all point rules.
      */
-    public function rules(): JsonResponse
+    public function rules(Request $request): JsonResponse
     {
-        $rules = PointRule::orderBy('is_active', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $user = Auth::user();
+
+        if (!$user || !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $rules = \App\Models\PointRule::withTrashed()->get();
 
         return response()->json([
             'success' => true,
-            'data' => $rules
+            'data' => [
+                'rules' => $rules,
+            ],
         ]);
     }
 
     /**
-     * Create a new point rule
+     * Create new point rule.
      */
     public function createRule(Request $request): JsonResponse
     {
+        $user = Auth::user();
+
+        if (!$user || !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
         $validated = $request->validate([
-            'rule_key' => 'required|string|unique:point_rules,rule_key',
+            'rule_key' => 'required|string|max:100|unique:point_rules,rule_key',
             'rule_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'action_type' => 'required|in:earn,spend',
@@ -102,279 +121,353 @@ class AdminPointsController extends Controller
             'max_daily_earnings' => 'nullable|integer|min:0',
             'max_monthly_earnings' => 'nullable|integer|min:0',
             'cooldown_minutes' => 'nullable|integer|min:0',
-            'is_active' => 'boolean',
             'effective_date' => 'nullable|date',
             'expiry_date' => 'nullable|date|after:effective_date',
+            'is_active' => 'boolean',
         ]);
 
-        $rule = PointRule::create($validated);
+        $rule = \App\Models\PointRule::create($validated);
 
         return response()->json([
             'success' => true,
-            'message' => 'Point rule created successfully',
-            'data' => $rule
+            'message' => 'Rule created successfully',
+            'data' => [
+                'rule' => $rule,
+            ],
         ], 201);
     }
 
     /**
-     * Update a point rule
+     * Update point rule.
      */
-    public function updateRule(Request $request, $id): JsonResponse
+    public function updateRule(Request $request, int $id): JsonResponse
     {
-        $rule = PointRule::findOrFail($id);
+        $user = Auth::user();
+
+        if (!$user || !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $rule = \App\Models\PointRule::find($id);
+
+        if (!$rule) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rule not found',
+            ], 404);
+        }
 
         $validated = $request->validate([
-            'rule_key' => 'required|string|unique:point_rules,rule_key,' . $id,
-            'rule_name' => 'required|string|max:255',
+            'rule_name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'action_type' => 'required|in:earn,spend',
-            'source_type' => 'required|string|max:50',
-            'base_amount' => 'required|numeric|min:0',
+            'base_amount' => 'nullable|numeric|min:0',
             'multiplier' => 'nullable|numeric|min:0|max:10',
             'max_daily_earnings' => 'nullable|integer|min:0',
             'max_monthly_earnings' => 'nullable|integer|min:0',
             'cooldown_minutes' => 'nullable|integer|min:0',
-            'is_active' => 'boolean',
             'effective_date' => 'nullable|date',
             'expiry_date' => 'nullable|date|after:effective_date',
+            'is_active' => 'boolean',
         ]);
 
         $rule->update($validated);
 
         return response()->json([
             'success' => true,
-            'message' => 'Point rule updated successfully',
-            'data' => $rule
+            'message' => 'Rule updated successfully',
+            'data' => [
+                'rule' => $rule,
+            ],
         ]);
     }
 
     /**
-     * Delete a point rule
+     * Delete point rule.
      */
-    public function deleteRule($id): JsonResponse
+    public function deleteRule(Request $request, int $id): JsonResponse
     {
-        $rule = PointRule::findOrFail($id);
+        $user = Auth::user();
+
+        if (!$user || !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $rule = \App\Models\PointRule::find($id);
+
+        if (!$rule) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rule not found',
+            ], 404);
+        }
+
         $rule->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Point rule deleted successfully'
+            'message' => 'Rule deleted successfully',
         ]);
     }
 
     /**
-     * Adjust user points
+     * Adjust user points.
      */
-    public function adjustPoints(Request $request, $userId): JsonResponse
+    public function adjustPoints(Request $request, int $userId): JsonResponse
     {
-        $validated = $request->validate([
-            'action' => 'required|in:add,deduct,set',
-            'amount' => 'required|numeric|min:0',
-            'reason' => 'required|string|max:500',
-        ]);
+        $adminUser = Auth::user();
 
-        $user = User::findOrFail($userId);
-
-        try {
-            DB::beginTransaction();
-
-            $balanceBefore = $user->pp;
-            $pointsToAdjust = $validated['amount'];
-
-            switch ($validated['action']) {
-                case 'add':
-                    $user->pp += $pointsToAdjust;
-                    $user->total_points_earned += $pointsToAdjust;
-                    $transactionType = 'admin_adjust';
-                    $amount = $pointsToAdjust;
-                    break;
-
-                case 'deduct':
-                    $user->pp = max(0, $user->pp - $pointsToAdjust);
-                    $user->total_points_spent += $pointsToAdjust;
-                    $transactionType = 'admin_adjust';
-                    $amount = -$pointsToAdjust;
-                    break;
-
-                case 'set':
-                    $difference = $pointsToAdjust - $user->pp;
-                    $user->pp = $pointsToAdjust;
-                    if ($difference > 0) {
-                        $user->total_points_earned += $difference;
-                    } else {
-                        $user->total_points_spent += abs($difference);
-                    }
-                    $transactionType = 'admin_adjust';
-                    $amount = $difference;
-                    break;
-            }
-
-            $balanceAfter = $user->pp;
-            $user->save();
-
-            // Record transaction
-            PointsTransaction::create([
-                'user_id' => $user->id,
-                'transaction_type' => $transactionType,
-                'amount' => abs($amount),
-                'balance_before' => $balanceBefore,
-                'balance_after' => $balanceAfter,
-                'source_type' => 'admin',
-                'source_id' => auth()->id(),
-                'description' => $validated['reason'],
-                'metadata' => json_encode([
-                    'admin_id' => auth()->id(),
-                    'action' => $validated['action'],
-                    'original_amount' => $pointsToAdjust
-                ]),
-                'status' => 'completed',
-            ]);
-
-            // Update user level
-            $this->pointsService->updateUserLevel($user);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Points adjusted successfully',
-                'data' => [
-                    'user_id' => $user->id,
-                    'balance_before' => $balanceBefore,
-                    'balance_after' => $balanceAfter,
-                    'amount_adjusted' => $amount,
-                    'new_level' => $user->level,
-                ]
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
+        if (!$adminUser || !$adminUser->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to adjust points: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Unauthorized',
+            ], 403);
         }
+
+        $targetUser = User::find($userId);
+
+        if (!$targetUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'action_type' => 'required|in:add,deduct,set',
+            'amount' => 'required|numeric|min:0',
+            'reason' => 'required|string|max:255',
+        ]);
+
+        $result = $this->pointsService->adminAdjust(
+            $targetUser,
+            $validated['amount'],
+            $validated['action_type'],
+            $validated['reason']
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Points adjusted successfully',
+            'data' => [
+                'user_id' => $userId,
+                'new_balance' => $targetUser->pp,
+                'transaction_id' => $result->id,
+            ],
+        ]);
     }
 
     /**
-     * Get user transactions
+     * Get user points transactions.
      */
-    public function userTransactions(Request $request, $userId): JsonResponse
+    public function userTransactions(Request $request, int $userId): JsonResponse
     {
-        $user = User::findOrFail($userId);
+        $adminUser = Auth::user();
 
-        $transactions = PointsTransaction::where('user_id', $userId)
-            ->with(['user:id,name,avatar'])
-            ->orderBy('created_at', 'desc')
-            ->paginate($request->input('per_page', 20));
+        if (!$adminUser || !$adminUser->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $user = User::find($userId);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        $query = PointsTransaction::where('user_id', $userId);
+
+        // Filter by type
+        if ($request->has('type') && $request->type) {
+            $query->where('transaction_type', $request->type);
+        }
+
+        // Filter by date range
+        if ($request->has('date_from') && $request->date_from) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to') && $request->date_to) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Pagination
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        $transactions = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
 
         return response()->json([
             'success' => true,
             'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'current_points' => $user->pp,
-                    'total_earned' => $user->total_points_earned,
-                    'total_spent' => $user->total_points_spent,
-                    'level' => $user->level,
+                'transactions' => $transactions->items(),
+                'pagination' => [
+                    'current_page' => $transactions->currentPage(),
+                    'total_pages' => $transactions->lastPage(),
+                    'per_page' => $transactions->perPage(),
+                    'total_items' => $transactions->total(),
                 ],
-                'transactions' => $transactions
-            ]
+            ],
         ]);
     }
 
     /**
-     * Get leaderboard
+     * Get leaderboard.
      */
     public function leaderboard(Request $request): JsonResponse
     {
-        $type = $request->input('type', 'points');
-        $period = $request->input('period', 'all_time');
-        $limit = $request->input('limit', 50);
+        $user = Auth::user();
 
-        $leaderboard = match ($type) {
-            'points' => $this->leaderboardService->getPointsLeaderboard($limit),
-            'streak' => $this->leaderboardService->getStreakLeaderboard($limit),
-            'achievements' => $this->leaderboardService->getAchievementLeaderboard($limit),
-            'level' => $this->leaderboardService->getLevelLeaderboard($limit),
-            default => $this->leaderboardService->getPointsLeaderboard($limit),
-        };
+        if (!$user || !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $type = $request->input('type', 'points');
+        $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 20);
+
+        $query = User::query();
+
+        switch ($type) {
+            case 'points':
+                $query->orderByDesc('pp');
+                break;
+            case 'weekly':
+                $query->with(['pointsTransactions' => function ($query) {
+                    $query->where('transaction_type', 'earn')
+                        ->where('created_at', '>=', now()->startOfWeek())
+                        ->where('created_at', '<=', now()->endOfWeek());
+                }])
+                ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as weekly_points')
+                ->groupBy('users.id')
+                ->orderByDesc('weekly_points');
+                break;
+            case 'monthly':
+                $query->with(['pointsTransactions' => function ($query) {
+                    $query->where('transaction_type', 'earn')
+                        ->where('created_at', '>=', now()->startOfMonth())
+                        ->where('created_at', '<=', now()->endOfMonth());
+                }])
+                ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as monthly_points')
+                ->groupBy('users.id')
+                ->orderByDesc('monthly_points');
+                break;
+            default:
+                $query->orderByDesc('pp');
+                break;
+        }
+
+        $users = $query->paginate($perPage, ['id', 'username', 'pp', 'level', 'profile_photo_path'], 'page', $page);
+
+        $leaderboard = [];
+        $rank = 1;
+
+        foreach ($users->items() as $userItem) {
+            $leaderboard[] = [
+                'rank' => $rank++,
+                'user_id' => $userItem->id,
+                'username' => $userItem->username,
+                'avatar' => $userItem->profile_photo_path,
+                'score' => match($type) {
+                    'points' => $userItem->pp,
+                    'weekly' => $userItem->weekly_points ?? $userItem->pp,
+                    'monthly' => $userItem->monthly_points ?? $userItem->pp,
+                    default => $userItem->pp,
+                },
+                'level' => $userItem->level ?? 1,
+            ];
+        }
 
         return response()->json([
             'success' => true,
             'data' => [
                 'type' => $type,
-                'period' => $period,
-                'leaderboard' => $leaderboard
-            ]
+                'leaderboard' => $leaderboard,
+                'pagination' => [
+                    'current_page' => $users->currentPage(),
+                    'total_pages' => $users->lastPage(),
+                    'per_page' => $users->perPage(),
+                    'total_items' => $users->total(),
+                ],
+            ],
         ]);
     }
 
     /**
-     * Get analytics
+     * Get analytics.
      */
     public function analytics(Request $request): JsonResponse
     {
-        $startDate = $request->input('start_date', now()->subDays(30)->toDateString());
-        $endDate = $request->input('end_date', now()->toDateString());
+        $user = Auth::user();
 
-        // Daily trend
-        $dailyTrend = PointsTransaction::select(
-            DB::raw('DATE(created_at) as date'),
-            DB::raw('SUM(CASE WHEN transaction_type = "earn" THEN amount ELSE 0 END) as earned'),
-            DB::raw('SUM(CASE WHEN transaction_type = "spend" THEN amount ELSE 0 END) as spent'),
-            DB::raw('COUNT(*) as total_transactions')
-        )
-            ->whereBetween('created_at', [$startDate, $endDate])
+        if (!$user || !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+
+        $query = PointsTransaction::query();
+
+        if ($dateFrom) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if ($dateTo) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        // Get daily trend
+        $dailyTrend = PointsTransaction::selectRaw('DATE(created_at) as date, SUM(amount) as total')
+            ->where('transaction_type', 'earn')
             ->groupBy('date')
             ->orderBy('date')
-            ->get();
+            ->get()
+            ->map(fn($item) => [
+                'date' => $item->date,
+                'total' => (float) $item->total,
+            ]);
 
-        // Distribution by source type
-        $distribution = PointsTransaction::select(
-            'source_type',
-            DB::raw('COUNT(*) as count'),
-            DB::raw('SUM(amount) as total_amount')
-        )
-            ->whereBetween('created_at', [$startDate, $endDate])
+        // Get distribution by source type
+        $distribution = PointsTransaction::selectRaw('source_type, SUM(amount) as total')
+            ->where('transaction_type', 'earn')
             ->groupBy('source_type')
-            ->orderByDesc('total_amount')
-            ->get();
+            ->get()
+            ->map(fn($item) => [
+                'source_type' => $item->source_type,
+                'total' => (float) $item->total,
+            ]);
 
-        // Top earners
-        $topEarners = User::orderByDesc('total_points_earned')
+        // Get top earners
+        $topEarners = User::selectRaw('users.*, SUM(total_points_earned) as total_earned')
+            ->orderByDesc('total_earned')
             ->limit(10)
-            ->get(['id', 'name', 'avatar', 'pp', 'total_points_earned', 'level']);
-
-        // Top spenders
-        $topSpenders = User::orderByDesc('total_points_spent')
-            ->limit(10)
-            ->get(['id', 'name', 'avatar', 'pp', 'total_points_spent', 'level']);
-
-        // Transaction types breakdown
-        $transactionTypes = PointsTransaction::select(
-            'transaction_type',
-            DB::raw('COUNT(*) as count'),
-            DB::raw('SUM(amount) as total_amount')
-        )
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy('transaction_type')
             ->get();
 
         return response()->json([
             'success' => true,
             'data' => [
-                'period' => [
-                    'start_date' => $startDate,
-                    'end_date' => $endDate,
-                ],
                 'daily_trend' => $dailyTrend,
-                'source_distribution' => $distribution,
+                'distribution' => $distribution,
                 'top_earners' => $topEarners,
-                'top_spenders' => $topSpenders,
-                'transaction_types' => $transactionTypes,
-            ]
+            ],
         ]);
     }
 }

@@ -2,7 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 </script>
 <template>
-    <div class="flex h-screen bg-gray-100">
+    <div class="flex h-screen bg-gray-200">
       <!-- Sidebar -->
       <div class="w-64 bg-blue-400 text-white p-6">
         <h2 class="text-2xl font-bold mb-6">เมนูเกม</h2>

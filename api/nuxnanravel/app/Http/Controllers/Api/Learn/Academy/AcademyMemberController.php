@@ -150,4 +150,146 @@ class AcademyMemberController extends Controller
             'members'  => $members,
         ], 200);
     }
+
+    /**
+     * Invite a user to join the academy
+     */
+    public function inviteMember(Academy $academy, Request $request)
+    {
+        // Check if the current user is an admin of this academy
+        if ($academy->user_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์เชิญสมาชิก'
+            ], 403);
+        }
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $userId = $request->user_id;
+
+        // Check if user is already a member
+        $existingMember = AcademyMember::where('academy_id', $academy->id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($existingMember) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ผู้ใช้นี้เป็นสมาชิกหรือถูกเชิญอยู่แล้ว'
+            ], 422);
+        }
+
+        // Create invitation (status 4 = invited)
+        $invitation = $academy->academyMembers()->create([
+            'user_id' => $userId,
+            'status' => 4, // 4 = invited
+            'invited_by' => auth()->id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ส่งคำเชิญเรียบร้อยแล้ว',
+            'invitation' => $invitation,
+        ], 200);
+    }
+
+    /**
+     * Accept an invitation to join academy
+     */
+    public function acceptInvitation(Academy $academy)
+    {
+        $invitation = AcademyMember::where('academy_id', $academy->id)
+            ->where('user_id', auth()->id())
+            ->where('status', 4) // invited status
+            ->first();
+
+        if (!$invitation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบคำเชิญ'
+            ], 404);
+        }
+
+        $invitation->update([
+            'status' => 2, // member status
+        ]);
+        $academy->increment('total_students');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ยอมรับคำเชิญเรียบร้อยแล้ว',
+            'memberStatus' => 2,
+            'totalStudents' => $academy->total_students,
+        ], 200);
+    }
+
+    /**
+     * Decline an invitation to join academy
+     */
+    public function declineInvitation(Academy $academy)
+    {
+        $invitation = AcademyMember::where('academy_id', $academy->id)
+            ->where('user_id', auth()->id())
+            ->where('status', 4) // invited status
+            ->first();
+
+        if (!$invitation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบคำเชิญ'
+            ], 404);
+        }
+
+        $invitation->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ปฏิเสธคำเชิญเรียบร้อยแล้ว',
+        ], 200);
+    }
+
+    /**
+     * Get pending invitations for current user
+     */
+    public function getMyInvitations()
+    {
+        $invitations = AcademyMember::where('user_id', auth()->id())
+            ->where('status', 4) // invited status
+            ->with(['academy' => function($query) {
+                $query->select('id', 'name', 'logo', 'slogan', 'type');
+            }])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'invitations' => $invitations,
+        ], 200);
+    }
+
+    /**
+     * Get pending requests (for admin) - users who requested to join
+     */
+    public function getPendingRequests(Academy $academy)
+    {
+        // Check if the current user is an admin of this academy
+        if ($academy->user_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์ดูข้อมูลนี้'
+            ], 403);
+        }
+
+        $pendingRequests = AcademyMember::where('academy_id', $academy->id)
+            ->where('status', 1) // pending status
+            ->with('user:id,name,email,profile_photo_url,reference_code')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'pendingRequests' => $pendingRequests,
+        ], 200);
+    }
 }

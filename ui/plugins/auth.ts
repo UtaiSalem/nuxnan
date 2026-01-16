@@ -8,8 +8,11 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     try {
       // Fetch current user data
       await authStore.fetchUser()
-    } catch (error) {
-      console.error('Failed to fetch user on init', error)
+    } catch (error: any) {
+      // Only log if not a 401 (expected when token is invalid/expired)
+      if (error?.statusCode !== 401 && !error?.message?.includes('401')) {
+        console.error('Failed to fetch user on init', error)
+      }
       // Clear token if it's invalid
       token.value = null
       authStore.user = null

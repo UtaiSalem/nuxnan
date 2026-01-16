@@ -44,6 +44,11 @@ class Academy extends Model
         return $this->hasMany(Course::class);
     }
 
+    public function academyGroups(): HasMany
+    {
+        return $this->hasMany(AcademyGroup::class);
+    }
+
     public function academyAdmins(): HasMany
     {
         return $this->hasMany(AcademyAdmin::class);
@@ -61,10 +66,11 @@ class Academy extends Model
 
     public function member_status($id)
     {
-        // $academy = AcademyMember::where('academy_id', $id)->where('user_id', auth()->id())->get();
+        // Check if user is authenticated
+        if (!auth()->check()) {
+            return null;
+        }
         
-        // return $academy->pluck('status')->first();
-
         return auth()->user()->memberAcademies()->where('academy_id', $id)->pluck('status')->first();
     }
 

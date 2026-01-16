@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Reward extends Model
@@ -36,7 +35,7 @@ class Reward extends Model
     ];
 
     /**
-     * Get user rewards for this reward
+     * Get user rewards for this reward.
      */
     public function userRewards(): HasMany
     {
@@ -60,7 +59,7 @@ class Reward extends Model
     }
 
     /**
-     * Scope for type
+     * Scope for reward type
      */
     public function scopeType($query, string $type)
     {
@@ -68,7 +67,7 @@ class Reward extends Model
     }
 
     /**
-     * Scope for available stock
+     * Scope for available rewards (in stock)
      */
     public function scopeAvailable($query)
     {
@@ -87,6 +86,10 @@ class Reward extends Model
             return false;
         }
 
+        if ($this->stock !== null && $this->stock <= 0) {
+            return false;
+        }
+
         $now = now();
 
         if ($this->available_from && $this->available_from > $now) {
@@ -94,30 +97,6 @@ class Reward extends Model
         }
 
         if ($this->available_until && $this->available_until <= $now) {
-            return false;
-        }
-
-        if ($this->stock !== null && $this->stock <= 0) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Check if user can redeem this reward
-     */
-    public function canRedeem(int $userPoints, int $userRedemptionsCount = 0): bool
-    {
-        if (!$this->isAvailable()) {
-            return false;
-        }
-
-        if ($userPoints < $this->points_cost) {
-            return false;
-        }
-
-        if ($this->max_redemptions_per_user !== null && $userRedemptionsCount >= $this->max_redemptions_per_user) {
             return false;
         }
 
@@ -131,7 +110,7 @@ class Reward extends Model
     {
         return match($this->type) {
             'points' => 'แต้ม',
-            'wallet' => 'เงิน Wallet',
+            'wallet' => 'เงิน',
             'badge' => 'Badge',
             'feature' => 'ฟีเจอร์',
             'discount' => 'ส่วนลด',
@@ -152,10 +131,11 @@ class Reward extends Model
      */
     public function getFormattedValueAttribute(): string
     {
-        if ($this->type === 'wallet') {
-            return number_format($this->value, 2) . ' บาท';
-        }
-
-        return number_format($this->value) . ' ' . $this->getTypeLabelAttribute();
+        return match($this->type) {
+            'points', 'wallet' => number_format($this->value, 2) . ' บาท',
+            'badge', 'feature' => $this->value,
+            'discount' => number_format($this->value, 2) . '%',
+            default => $this->value,
+        };
     }
 }

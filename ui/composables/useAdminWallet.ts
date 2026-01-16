@@ -1,68 +1,133 @@
-import { useFetch } from '#app'
+import { ref } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 
 export const useAdminWallet = () => {
-  const apiBase = '/api/admin/wallet'
+  const authStore = useAuthStore()
+  const config = useRuntimeConfig()
+  const apiBase = config.public.apiBase as string
+  
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
 
   // Get wallet statistics
   const getStats = async () => {
-    const { data, error } = await useFetch(`${apiBase}/stats`)
-    return { data: data.value?.data, error }
+    try {
+      isLoading.value = true
+      const response = await $fetch(`${apiBase}/api/admin/wallet/stats`, {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      }) as any
+      return response.success ? response.data : null
+    } catch (err) {
+      console.error('Failed to get stats:', err)
+      return null
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // Get pending withdrawals
-  const getPendingWithdrawals = async (page = 1, perPage = 20) => {
-    const { data, error } = await useFetch(
-      `${apiBase}/withdrawals/pending?page=${page}&per_page=${perPage}`
-    )
-    return { data: data.value?.data, error }
+  const getPendingWithdrawals = async (params: any = {}) => {
+    try {
+      isLoading.value = true
+      const queryParams = new URLSearchParams(params).toString()
+      const response = await $fetch(`${apiBase}/api/admin/wallet/withdrawals/pending?${queryParams}`, {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      }) as any
+      return response.success ? response.data : null
+    } catch (err) {
+      console.error('Failed to get pending withdrawals:', err)
+      return null
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // Approve a withdrawal
   const approveWithdrawal = async (transactionId: number, adminNotes = '') => {
-    const { data, error } = await useFetch(
-      `${apiBase}/withdrawals/${transactionId}/approve`,
-      {
+    try {
+      isLoading.value = true
+      const response = await $fetch(`${apiBase}/api/admin/wallet/withdrawals/${transactionId}/approve`, {
         method: 'POST',
-        body: { admin_notes: adminNotes },
-      }
-    )
-    return { data: data.value?.data, error }
+        headers: { 'Authorization': `Bearer ${authStore.token}` },
+        body: { admin_notes: adminNotes }
+      }) as any
+      return response.success ? response.data : null
+    } catch (err) {
+      console.error('Failed to approve withdrawal:', err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // Reject a withdrawal
   const rejectWithdrawal = async (transactionId: number, reason: string) => {
-    const { data, error } = await useFetch(
-      `${apiBase}/withdrawals/${transactionId}/reject`,
-      {
+    try {
+      isLoading.value = true
+      const response = await $fetch(`${apiBase}/api/admin/wallet/withdrawals/${transactionId}/reject`, {
         method: 'POST',
-        body: { reason },
-      }
-    )
-    return { data: data.value?.data, error }
+        headers: { 'Authorization': `Bearer ${authStore.token}` },
+        body: { reason }
+      }) as any
+      return response.success ? response.data : null
+    } catch (err) {
+      console.error('Failed to reject withdrawal:', err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // Adjust user wallet
   const adjustWallet = async (userId: number, adjustmentData: any) => {
-    const { data, error } = await useFetch(`${apiBase}/users/${userId}/adjust`, {
-      method: 'POST',
-      body: adjustmentData,
-    })
-    return { data: data.value?.data, error }
+    try {
+      isLoading.value = true
+      const response = await $fetch(`${apiBase}/api/admin/wallet/users/${userId}/adjust`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authStore.token}` },
+        body: adjustmentData
+      }) as any
+      return response.success ? response.data : null
+    } catch (err) {
+      console.error('Failed to adjust wallet:', err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // Get user wallet transactions
-  const getUserTransactions = async (userId: number, page = 1, perPage = 20) => {
-    const { data, error } = await useFetch(
-      `${apiBase}/users/${userId}/transactions?page=${page}&per_page=${perPage}`
-    )
-    return { data: data.value?.data, error }
+  const getUserTransactions = async (userId: number, params: any = {}) => {
+    try {
+      isLoading.value = true
+      const queryParams = new URLSearchParams(params).toString()
+      const response = await $fetch(`${apiBase}/api/admin/wallet/users/${userId}/transactions?${queryParams}`, {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      }) as any
+      return response.success ? response.data : null
+    } catch (err) {
+      console.error('Failed to get user transactions:', err)
+      return null
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // Get analytics
   const getAnalytics = async (filters: any = {}) => {
-    const params = new URLSearchParams(filters as Record<string, string>).toString()
-    const { data, error } = await useFetch(`${apiBase}/analytics?${params}`)
-    return { data: data.value?.data, error }
+    try {
+      isLoading.value = true
+      const queryParams = new URLSearchParams(filters).toString()
+      const response = await $fetch(`${apiBase}/api/admin/wallet/analytics?${queryParams}`, {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      }) as any
+      return response.success ? response.data : null
+    } catch (err) {
+      console.error('Failed to get analytics:', err)
+      return null
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // Format money for display
@@ -95,6 +160,8 @@ export const useAdminWallet = () => {
   }
 
   return {
+    isLoading,
+    error,
     getStats,
     getPendingWithdrawals,
     approveWithdrawal,

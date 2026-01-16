@@ -42,6 +42,27 @@ class SettingsController extends Controller
             'birthdate' => 'nullable|date',
             'gender' => 'nullable|in:male,female,other',
             'social_media_links' => 'nullable|array',
+            // Personal Information
+            'phone_number' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:500',
+            'city' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
+            'postal_code' => 'nullable|string|max:20',
+            // Professional Information
+            'job_title' => 'nullable|string|max:255',
+            'company' => 'nullable|string|max:255',
+            'industry' => 'nullable|string|max:255',
+            'skills' => 'nullable|array',
+            'experience_years' => 'nullable|string|max:50',
+            // Privacy Settings
+            'privacy_settings' => 'nullable|in:public,friends,private',
+            'show_email' => 'nullable|boolean',
+            'show_phone' => 'nullable|boolean',
+            'show_birthdate' => 'nullable|boolean',
+            'show_location' => 'nullable|boolean',
+            'allow_friend_requests' => 'nullable|boolean',
+            'allow_messages' => 'nullable|boolean',
+            'show_online_status' => 'nullable|boolean',
         ]);
 
         // Create profile if not exists
@@ -50,6 +71,12 @@ class SettingsController extends Controller
         // Update fields
         $profile->fill($validated);
         $user->profile()->save($profile);
+
+        // Update phone_number in users table if provided
+        if (isset($validated['phone_number'])) {
+            $user->phone_number = $validated['phone_number'];
+            $user->save();
+        }
 
         return response()->json([
             'success' => true,

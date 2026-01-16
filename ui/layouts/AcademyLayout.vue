@@ -97,12 +97,21 @@ const getAcademyActivities = async () => {
 // const isDarkMode = ref(false);
 // const currentTabIndex = ref(0);
 
-const tempLogo = ref(props.academy.data.logo? '/storage/images/academies/logos/' + props.academy.data.logo:'/storage/images/academies/logos/default_logo.png');
-// const tempLogo = ref(props.app_url + '/storage/images/academies/logos/' + props.academy.data.logo  || props.app_url + '/storage/images/academies/logos/default_logo.png');
-// const tempCover = ref(props.app_url + '/storage/images/academies/covers/' + props.academy.data.cover || props.app_url + '/storage/images/academies/covers/default_cover.png');
-const tempCover = ref(props.academy.data.cover? '/storage/images/academies/covers/' + props.academy.data.cover : '/storage/images/academies/covers/default_cover.png');
-const tempHeader = ref(props.academy.data.name);
-const tempSubheader = ref(props.academy.data.slogan);
+// Safe accessors for academy data
+const academyData = computed(() => props.academy?.data || props.academy || {});
+
+const tempLogo = computed(() => {
+    const logo = academyData.value.logo;
+    return logo ? '/storage/images/academies/logos/' + logo : '/storage/images/academies/logos/default_logo.png';
+});
+
+const tempCover = computed(() => {
+    const cover = academyData.value.cover;
+    return cover ? '/storage/images/academies/covers/' + cover : '/storage/images/academies/covers/default_cover.png';
+});
+
+const tempHeader = ref(academyData.value.name || '');
+const tempSubheader = ref(academyData.value.slogan || '');
 
 // const formAcademyUpdate = useForm({
 //     name:'', 
@@ -183,7 +192,7 @@ async function onRequestToBeUnmember(){
 </script>
 
 <template>
-    <MainLayout :title="props.academy.data.name">
+    <MainLayout :title="academyData.name || 'Academy'">
 
         <template #coverProfileCard>
             <AcademyCoverProfile 
@@ -194,11 +203,11 @@ async function onRequestToBeUnmember(){
 
                         :model="'Academy'"
                         :modelTable="'academies'"
-                        :modelableId="props.academy.data.id"
+                        :modelableId="academyData.id"
                         :modelableType="'app/models/Academy'"
-                        :modelableRoute="`/academies/${props.academy.data.id}`"
-                        :modelData="props.academy.data"
-                        :subModelDataLength="props.academy.data.courses_offered"
+                        :modelableRoute="`/academies/${academyData.id}`"
+                        :modelData="academyData"
+                        :subModelDataLength="academyData.courses_offered"
                         :subModelNameTh="'รายวิชา'"
                         :isAcademyAdmin="props.isAcademyAdmin"
 
@@ -210,7 +219,7 @@ async function onRequestToBeUnmember(){
                         @request-tobe-unmember="onRequestToBeUnmember"
                     ></AcademyCoverProfile>
 
-                    <AcademyNavbarTab :academy :activeTab="0" />
+                    <AcademyNavbarTab :academy="academy" :activeTab="0" />
 
         </template>
 

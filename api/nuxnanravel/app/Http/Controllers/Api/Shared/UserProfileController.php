@@ -519,4 +519,78 @@ class UserProfileController extends \App\Http\Controllers\Controller
         return $areFriends;
     }
 
+    /**
+     * Search users for transfer/mention
+     */
+    public function search(Request $request)
+    {
+        $query = $request->get('q', '');
+        $limit = min((int)$request->get('limit', 10), 50);
+        
+        if (strlen($query) < 2) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'Query too short'
+            ]);
+        }
+        
+        $currentUserId = Auth::id();
+        
+        $users = User::where(function ($q) use ($query) {
+            $q->where('name', 'like', "%{$query}%")
+              ->orWhere('email', 'like', "%{$query}%")
+              ->orWhere('reference_code', 'like', "%{$query}%")
+              ->orWhere('personal_code', 'like', "%{$query}%")
+              ->orWhere('phone_number', 'like', "%{$query}%");
+        })
+        ->where('id', '!=', $currentUserId) // Exclude current user
+        ->select([
+            'id', 
+            'name', 
+            'email', 
+            'reference_code', 
+            'profile_photo_url',
+            'profile_photo_path'
+        ])
+        ->limit($limit)
+        ->get()
+        ->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $this->maskEmail($user->email),
+                'reference_code' => $user->reference_code,
+                'profile_photo_url' => $user->profile_photo_url,
+                'avatar' => $user->profile_photo_url,
+            ];
+        });
+        
+        return response()->json([
+            'success' => true,
+            'data' => $users,
+        ]);
+    }
+    
+    /**
+     * Mask email for privacy
+     */
+    private function maskEmail($email)
+    {
+        if (!$email) return null;
+        
+        $parts = explode('@', $email);
+        if (count($parts) !== 2) return $email;
+        
+        $name = $parts[0];
+        $domain = $parts[1];
+        
+        if (strlen($name) <= 2) {
+            return $name . '***@' . $domain;
+        }
+        
+        $visible = substr($name, 0, 2);
+        return $visible . '***@' . $domain;
+    }
+
 }

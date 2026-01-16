@@ -21,6 +21,16 @@ class AcademyMember extends Model
         return $this->belongsTo(Academy::class);
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function inviter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'invited_by');
+    }
+
     public function members():HasMany
     {
         return $this->hasMany(User::class);

@@ -405,4 +405,13 @@ class PointsService
                 : 100,
         ];
     }
+
+    /**
+     * Convert points to wallet (alias for WalletService)
+     */
+    public function convertPointsToWallet(User $user, int $points): array
+    {
+        $walletService = new \App\Services\WalletService();
+        return $walletService->convertPointsToWallet($user, $points);
+    }
 }

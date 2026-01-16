@@ -3,6 +3,8 @@ import { useAuthStore } from '~/stores/auth'
 
 export const usePoints = () => {
   const authStore = useAuthStore()
+  const config = useRuntimeConfig()
+  const apiBase = computed(() => config.public.apiBase || '')
   
   // Reactive state
   const isLoading = ref(false)
@@ -20,7 +22,7 @@ export const usePoints = () => {
       isLoading.value = true
       error.value = null
       
-      const response = await $fetch('/api/points/balance', {
+      const response = await $fetch(`${apiBase.value}/api/points/balance`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -59,7 +61,7 @@ export const usePoints = () => {
       isLoading.value = true
       error.value = null
       
-      const response = await $fetch('/api/points/earn', {
+      const response = await $fetch(`${apiBase.value}/api/points/earn`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -125,7 +127,7 @@ export const usePoints = () => {
         throw new Error('แต้มของคุณไม่เพียงพอ')
       }
       
-      const response = await $fetch('/api/points/spend', {
+      const response = await $fetch(`${apiBase.value}/api/points/spend`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -153,32 +155,32 @@ export const usePoints = () => {
   /**
    * Convert points to wallet money
    */
-  const convertToWallet = async (points: number) => {
+  const convertToWallet = async (pointsAmount: number) => {
     try {
       isLoading.value = true
       error.value = null
       
       // Check if user has enough points
-      if (points.value < points) {
-        throw new Error(`แต้มของคุณไม่เพียงพอ (ต้องการ ${points} แต้ม, มีอยู่ ${points.value} แต้ม)`)
+      if (points.value < pointsAmount) {
+        throw new Error(`แต้มของคุณไม่เพียงพอ (ต้องการ ${pointsAmount} แต้ม, มีอยู่ ${points.value} แต้ม)`)
       }
       
       const exchangeRate = 1080 // 1 THB = 1080 points
-      const walletAmount = points / exchangeRate
+      const walletAmount = pointsAmount / exchangeRate
       
       // Deduct points from auth store (optimistic update)
-      const hasEnough = authStore.deductPoints(points)
+      const hasEnough = authStore.deductPoints(pointsAmount)
       if (!hasEnough) {
         throw new Error('แต้มของคุณไม่เพียงพอ')
       }
       
-      const response = await $fetch('/api/points/convert', {
+      const response = await $fetch(`${apiBase.value}/api/points/convert`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
         },
         body: {
-          points: points,
+          points: pointsAmount,
           target: 'wallet',
         },
       }) as any
@@ -192,12 +194,77 @@ export const usePoints = () => {
         return response.data
       } else {
         // Rollback points
-        authStore.rollback(points)
+        authStore.rollback(pointsAmount)
         throw new Error(response.message || 'Failed to convert points')
       }
     } catch (err: any) {
       error.value = err.message || 'Failed to convert points'
       console.error('Convert points error:', err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  /**
+   * Transfer points to another user
+   */
+  const transfer = async (data: {
+    recipient_id: number
+    amount: number
+    message?: string
+  }) => {
+    try {
+      isLoading.value = true
+      error.value = null
+      
+      // Validate amount
+      if (data.amount <= 0) {
+        throw new Error('จำนวนแต้มต้องมากกว่า 0')
+      }
+      
+      // Check if user has enough points
+      if (points.value < data.amount) {
+        throw new Error(`แต้มของคุณไม่เพียงพอ (ต้องการ ${data.amount} แต้ม, มีอยู่ ${points.value} แต้ม)`)
+      }
+      
+      // Check if recipient is not self
+      if (data.recipient_id === authStore.user?.id) {
+        throw new Error('ไม่สามารถโอนแต้มให้ตัวเองได้')
+      }
+      
+      // Deduct points (optimistic update)
+      const hasEnough = authStore.deductPoints(data.amount)
+      if (!hasEnough) {
+        throw new Error('แต้มของคุณไม่เพียงพอ')
+      }
+      
+      const response = await $fetch(`${apiBase.value}/api/points/transfer`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+        },
+        body: {
+          recipient_id: data.recipient_id,
+          amount: data.amount,
+          message: data.message || '',
+        },
+      }) as any
+      
+      if (response.success) {
+        // Update auth store with new points balance
+        if (response.data) {
+          authStore.setPoints(response.data.new_balance || points.value - data.amount)
+        }
+        return response.data
+      } else {
+        // Rollback points
+        authStore.rollback(data.amount)
+        throw new Error(response.message || 'ไม่สามารถโอนแต้มได้')
+      }
+    } catch (err: any) {
+      error.value = err.message || 'ไม่สามารถโอนแต้มได้'
+      console.error('Transfer points error:', err)
       throw err
     } finally {
       isLoading.value = false
@@ -227,7 +294,7 @@ export const usePoints = () => {
       if (params.page) queryParams.append('page', params.page.toString())
       if (params.per_page) queryParams.append('per_page', params.per_page.toString())
       
-      const response = await $fetch(`/api/points/transactions?${queryParams.toString()}`, {
+      const response = await $fetch(`${apiBase.value}/api/points/transactions?${queryParams.toString()}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
@@ -260,8 +327,9 @@ export const usePoints = () => {
    */
   const showAchievementNotification = (achievement: any) => {
     // Use SweetAlert or similar notification system
-    if (typeof Swal !== 'undefined') {
-      Swal.fire({
+    const SwalLib = (window as any).Swal
+    if (typeof SwalLib !== 'undefined') {
+      SwalLib.fire({
         icon: 'success',
         title: '🎉 บรรลุความสำเร็จ!',
         html: `
@@ -314,6 +382,7 @@ export const usePoints = () => {
     getBalance,
     earn,
     spend,
+    transfer,
     convertToWallet,
     getTransactions,
     

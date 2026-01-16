@@ -10,18 +10,6 @@ class UserAchievement extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'user_achievements';
-
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'user_id',
         'achievement_id',
@@ -31,11 +19,6 @@ class UserAchievement extends Model
         'metadata',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'progress' => 'integer',
         'is_completed' => 'boolean',
@@ -44,7 +27,7 @@ class UserAchievement extends Model
     ];
 
     /**
-     * Get the user that owns the user achievement.
+     * Get user that owns this achievement.
      */
     public function user(): BelongsTo
     {
@@ -52,7 +35,7 @@ class UserAchievement extends Model
     }
 
     /**
-     * Get the achievement associated with the user achievement.
+     * Get achievement for this user achievement.
      */
     public function achievement(): BelongsTo
     {
@@ -60,7 +43,7 @@ class UserAchievement extends Model
     }
 
     /**
-     * Scope a query to only include completed achievements.
+     * Scope for completed achievements
      */
     public function scopeCompleted($query)
     {
@@ -68,29 +51,25 @@ class UserAchievement extends Model
     }
 
     /**
-     * Scope a query to only include incomplete achievements.
+     * Scope for pending achievements
      */
-    public function scopeIncomplete($query)
+    public function scopePending($query)
     {
         return $query->where('is_completed', false);
     }
 
     /**
-     * Check if the achievement is completed.
+     * Get progress percentage
      */
-    public function isCompleted(): bool
+    public function getProgressPercentageAttribute(): float
     {
-        return $this->is_completed;
-    }
+        if (!$this->achievement) {
+            return 0;
+        }
 
-    /**
-     * Get the progress percentage.
-     */
-    public function getProgressPercentage(): float
-    {
         $criteria = $this->achievement->criteria ?? [];
-        $target = $criteria['count'] ?? $criteria['points'] ?? $criteria['streak'] ?? 100;
-        
+        $target = $criteria['target'] ?? 100;
+
         if ($target <= 0) {
             return 0;
         }
@@ -99,58 +78,25 @@ class UserAchievement extends Model
     }
 
     /**
-     * Get the formatted progress attribute.
+     * Get formatted progress
      */
     public function getFormattedProgressAttribute(): string
     {
-        $percentage = $this->getProgressPercentage();
-        return number_format($percentage, 1) . '%';
-    }
+        if (!$this->achievement) {
+            return '0/0';
+        }
 
-    /**
-     * Update progress.
-     */
-    public function updateProgress(int $progress): bool
-    {
-        $this->progress = $progress;
-        
-        // Check if achievement is completed
         $criteria = $this->achievement->criteria ?? [];
-        $target = $criteria['count'] ?? $criteria['points'] ?? $criteria['streak'] ?? 100;
-        
-        if ($progress >= $target && !$this->is_completed) {
-            $this->is_completed = true;
-            $this->completed_at = now();
-        }
-        
-        return $this->save();
+        $target = $criteria['target'] ?? 100;
+
+        return "{$this->progress}/{$target}";
     }
 
     /**
-     * Mark as completed.
+     * Check if achievement is completed
      */
-    public function markAsCompleted(): bool
+    public function isCompleted(): bool
     {
-        if ($this->is_completed) {
-            return true;
-        }
-
-        $this->is_completed = true;
-        $this->completed_at = now();
-        $this->progress = 100; // Set to 100% progress
-
-        return $this->save();
-    }
-
-    /**
-     * Get the time since completed.
-     */
-    public function getTimeSinceCompleted(): string
-    {
-        if (!$this->completed_at) {
-            return '';
-        }
-
-        return $this->completed_at->diffForHumans();
+        return $this->is_completed;
     }
 }

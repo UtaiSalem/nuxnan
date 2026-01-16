@@ -30,6 +30,26 @@ class UserProfile extends Model
         'join_date',
         'last_login',
         'metadata',
+        // Personal Information
+        'phone_number',
+        'address',
+        'city',
+        'country',
+        'postal_code',
+        // Professional Information
+        'job_title',
+        'company',
+        'industry',
+        'skills',
+        'experience_years',
+        // Privacy Settings
+        'show_email',
+        'show_phone',
+        'show_birthdate',
+        'show_location',
+        'allow_friend_requests',
+        'allow_messages',
+        'show_online_status',
     ];
 
     /**
@@ -48,6 +68,14 @@ class UserProfile extends Model
         'followers' => 'integer',
         'following' => 'integer',
         'friends' => 'integer',
+        'skills' => 'array',
+        'show_email' => 'boolean',
+        'show_phone' => 'boolean',
+        'show_birthdate' => 'boolean',
+        'show_location' => 'boolean',
+        'allow_friend_requests' => 'boolean',
+        'allow_messages' => 'boolean',
+        'show_online_status' => 'boolean',
     ];
 
     /**

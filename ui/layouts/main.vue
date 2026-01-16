@@ -27,6 +27,30 @@ const isLeftDrawerOpen = ref(false)
 const isRightDrawerOpen = ref(false)
 const isMobileSidebarOpen = ref(false)
 const isSettingsOpen = ref(false)
+const isEarnMenuOpen = ref(false)
+
+// Set sidebar and Earn menu state based on screen size
+const updateSidebarState = () => {
+  if (typeof window !== 'undefined') {
+    // lg breakpoint = 1024px, expand on large screens
+    const isLargeScreen = window.innerWidth >= 1024
+    isLeftDrawerOpen.value = isLargeScreen
+    isEarnMenuOpen.value = isLargeScreen
+  }
+}
+
+// Toggle Earn submenu
+const toggleEarnMenu = () => {
+  isEarnMenuOpen.value = !isEarnMenuOpen.value
+}
+
+// Earn submenu items
+const earnSubmenu = [
+  { name: 'Points', href: '/earn/points', icon: 'fluent:coin-stack-24-regular' },
+  { name: 'Wallet', href: '/earn/wallet', icon: 'fluent:wallet-24-regular' },
+  { name: 'Rewards', href: '/earn/rewards', icon: 'fluent:gift-24-regular' },
+  { name: 'Achievements', href: '/earn/gamification', icon: 'fluent:trophy-24-regular' },
+]
 
 // Theme state
 const isDarkMode = ref(false)
@@ -135,6 +159,12 @@ onMounted(async () => {
     document.documentElement.classList.add('light')
   }
 
+  // Set initial sidebar state based on screen size
+  updateSidebarState()
+  
+  // Add resize listener to auto expand/collapse sidebar
+  window.addEventListener('resize', updateSidebarState)
+
   if (authStore.isAuthenticated && !authStore.user) {
     try {
       await authStore.fetchUser()
@@ -146,8 +176,23 @@ onMounted(async () => {
   fetchLeaderboard()
 })
 
+// Cleanup resize listener
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', updateSidebarState)
+  }
+})
+
 // Provide theme to child components
 provide('isDarkMode', isDarkMode)
+
+// Settings URL - dynamic based on user reference_code
+const settingsUrl = computed(() => {
+  if (authStore.user?.reference_code) {
+    return `/profile/${authStore.user.reference_code}/settings`
+  }
+  return '/settings' // Fallback that will redirect
+})
 provide('toggleTheme', toggleTheme)
 
 
@@ -161,7 +206,7 @@ const handleTestChangePoints = () => {
 <template>
   <div
     class="min-h-screen transition-colors duration-300"
-    :class="isDarkMode ? 'bg-vikinger-dark dark' : 'bg-gray-50 light'"
+    :class="isDarkMode ? 'bg-vikinger-dark dark' : 'bg-gray-200 light'"
   >
     <!-- ========================================
              HEADER (Fixed Top)
@@ -229,8 +274,8 @@ const handleTestChangePoints = () => {
           <NuxtLink to="/" class="flex items-center gap-3">
             <img src="/storage/images/plearnd-logo.png" alt="Plearnd Logo" class="w-10 h-10" />
             <span
-              class="hidden md:inline-block px-3 py-1 text-lg font-semibold text-white rounded-lg bg-gradient-vikinger shadow-lg"
-              >nuxnan</span
+              class="hidden md:inline-block px-3 py-1 text-lg font-audiowide text-white rounded-lg bg-gradient-vikinger shadow-lg"
+              >NUXNAN</span
             >
           </NuxtLink>
         </div>
@@ -261,7 +306,7 @@ const handleTestChangePoints = () => {
         <div class="flex items-center gap-3">
           <!-- Points -->
           <NuxtLink
-            to="/earn/donates"
+            to="/earn/points"
             class="hidden sm:flex items-center gap-1 px-3 py-1 rounded-lg transition-colors"
             :class="
               isDarkMode
@@ -276,15 +321,16 @@ const handleTestChangePoints = () => {
           </NuxtLink>
 
           <!-- Wallet -->
-          <div
-            class="hidden sm:flex items-center gap-1 px-3 py-1 rounded-lg transition-colors"
-            :class="isDarkMode ? 'bg-vikinger-dark-200' : 'bg-gray-100'"
+          <NuxtLink
+            to="/earn/wallet"
+            class="hidden sm:flex items-center gap-1 px-3 py-1 rounded-lg transition-colors cursor-pointer hover:opacity-80"
+            :class="isDarkMode ? 'bg-vikinger-dark-200 hover:bg-vikinger-dark-300' : 'bg-gray-100 hover:bg-gray-200'"
           >
             <img src="/storage/images/badge/goldc.png" alt="wallet" class="w-6 h-6" />
             <span class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
               {{ authUser.wallet.toLocaleString() }}
             </span>
-          </div>
+          </NuxtLink>
 
           <!-- Avatar -->
           <NuxtLink to="/profile">
@@ -355,7 +401,7 @@ const handleTestChangePoints = () => {
                   <span>โปรไฟล์</span>
                 </NuxtLink>
                 <NuxtLink
-                  to="/settings"
+                  :to="settingsUrl"
                   @click="closeSettings"
                   class="flex items-center gap-3 px-4 py-3 transition-colors"
                   :class="isDarkMode ? 'hover:bg-vikinger-dark-200 text-gray-300' : 'hover:bg-gray-100 text-gray-700'"
@@ -585,20 +631,50 @@ const handleTestChangePoints = () => {
               <Icon icon="fluent:book-24-regular" class="w-5 h-5" />
               <span class="font-semibold">Courses</span>
             </NuxtLink>
-            <NuxtLink
-              to="/earn/points"
-              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
-              :class="
-                route.path.startsWith('/earn')
-                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                  : isDarkMode
-                  ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
-              "
-            >
-              <Icon icon="fluent:wallet-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Earn</span>
-            </NuxtLink>
+            <!-- Earn Menu with Submenu -->
+            <div>
+              <button
+                @click="toggleEarnMenu"
+                class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300"
+                :class="
+                  route.path.startsWith('/earn')
+                    ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                    : isDarkMode
+                    ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
+                "
+              >
+                <div class="flex items-center gap-3">
+                  <Icon icon="fluent:wallet-24-regular" class="w-5 h-5" />
+                  <span class="font-semibold">Earn</span>
+                </div>
+                <Icon 
+                  :icon="isEarnMenuOpen ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
+                  class="w-4 h-4 transition-transform duration-200"
+                />
+              </button>
+              <!-- Submenu -->
+              <transition name="expand">
+                <div v-if="isEarnMenuOpen" class="ml-4 mt-1 space-y-1 border-l-2 border-vikinger-purple/30 pl-3">
+                  <NuxtLink
+                    v-for="sub in earnSubmenu"
+                    :key="sub.href"
+                    :to="sub.href"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm"
+                    :class="
+                      route.path === sub.href
+                        ? 'bg-vikinger-purple/20 text-vikinger-purple dark:text-vikinger-cyan font-medium'
+                        : isDarkMode
+                        ? 'text-gray-400 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-vikinger-purple'
+                    "
+                  >
+                    <Icon :icon="sub.icon" class="w-4 h-4" />
+                    <span>{{ sub.name }}</span>
+                  </NuxtLink>
+                </div>
+              </transition>
+            </div>
             <NuxtLink
               to="/notifications"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
@@ -614,10 +690,10 @@ const handleTestChangePoints = () => {
               <span class="font-semibold">Notifications</span>
             </NuxtLink>
             <NuxtLink
-              to="/settings"
+              :to="settingsUrl"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
               :class="
-                route.path === '/settings'
+                route.path.includes('/settings')
                   ? 'bg-gradient-vikinger text-white shadow-vikinger'
                   : isDarkMode
                   ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
@@ -713,10 +789,10 @@ const handleTestChangePoints = () => {
             <Icon icon="fluent:alert-24-regular" class="w-6 h-6" />
           </NuxtLink>
           <NuxtLink
-            to="/settings"
+            :to="settingsUrl"
             class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
             :class="
-              route.path === '/settings'
+              route.path.includes('/settings')
                 ? 'bg-gradient-vikinger text-white shadow-vikinger'
                 : isDarkMode
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
@@ -914,30 +990,170 @@ const handleTestChangePoints = () => {
         :class="isDarkMode ? 'bg-vikinger-dark-100' : 'bg-white'"
       >
         <div class="p-6 space-y-6">
-          <!-- Same content as left drawer -->
+          <!-- Close Button -->
+          <button
+            @click="toggleMobileSidebar"
+            class="absolute top-4 right-4 p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'hover:bg-vikinger-purple/10' : 'hover:bg-gray-100'"
+          >
+            <Icon icon="mdi:close" class="w-6 h-6" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'" />
+          </button>
+
+          <!-- Profile Card -->
           <div class="text-center">
-            <img
-              :src="authUser.profile_photo_url"
-              class="w-20 h-20 rounded-full mx-auto mb-3 border-4 border-vikinger-purple"
-            />
+            <div class="relative inline-block mb-3">
+              <img
+                :src="authUser.profile_photo_url"
+                class="w-20 h-20 rounded-full mx-auto border-4 border-vikinger-purple"
+              />
+              <div
+                class="absolute -bottom-1 -right-1 w-8 h-8 bg-gradient-vikinger rounded-full flex items-center justify-center text-white text-xs font-bold border-2"
+                :class="isDarkMode ? 'border-vikinger-dark-100' : 'border-white'"
+              >
+                {{ authUser.level }}
+              </div>
+            </div>
             <h3 class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
               {{ authUser.name }}
             </h3>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+              {{ authUser.email }}
+            </p>
           </div>
+
+          <!-- Stats -->
+          <div class="flex justify-center gap-6 py-3 border-y" :class="isDarkMode ? 'border-vikinger-dark-50/30' : 'border-gray-200'">
+            <div class="text-center">
+              <div class="font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ authUser.posts }}</div>
+              <div class="text-xs uppercase" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Posts</div>
+            </div>
+            <div class="text-center">
+              <div class="font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ authUser.friends }}</div>
+              <div class="text-xs uppercase" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Friends</div>
+            </div>
+            <div class="text-center">
+              <div class="font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ authUser.visits }}</div>
+              <div class="text-xs uppercase" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Visits</div>
+            </div>
+          </div>
+
+          <!-- Navigation Menu -->
           <nav class="space-y-1">
             <NuxtLink
-              v-for="item in navigation"
-              :key="item.href"
-              :to="item.href"
+              to="/dashboard"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
               :class="
-                isDarkMode
+                route.path === '/dashboard'
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
                   ? 'text-gray-300 hover:bg-vikinger-purple/10'
                   : 'text-gray-700 hover:bg-gray-100'
               "
             >
-              <Icon :icon="item.icon" class="w-5 h-5" />
-              <span>{{ item.name }}</span>
+              <Icon icon="fluent:grid-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Dashboard</span>
+            </NuxtLink>
+            <NuxtLink
+              to="/play/newsfeed"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+              :class="
+                route.path === '/play/newsfeed'
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-vikinger-purple/10'
+                  : 'text-gray-700 hover:bg-gray-100'
+              "
+            >
+              <Icon icon="fluent:chat-bubbles-question-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Newsfeed</span>
+            </NuxtLink>
+            <NuxtLink
+              to="/Learn/Courses"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+              :class="
+                route.path.startsWith('/Learn/Courses') || route.path.startsWith('/learn/courses')
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-vikinger-purple/10'
+                  : 'text-gray-700 hover:bg-gray-100'
+              "
+            >
+              <Icon icon="fluent:book-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Courses</span>
+            </NuxtLink>
+
+            <!-- Earn with Submenu -->
+            <div>
+              <button
+                @click="toggleEarnMenu"
+                class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors"
+                :class="
+                  route.path.startsWith('/earn')
+                    ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                    : isDarkMode
+                    ? 'text-gray-300 hover:bg-vikinger-purple/10'
+                    : 'text-gray-700 hover:bg-gray-100'
+                "
+              >
+                <div class="flex items-center gap-3">
+                  <Icon icon="fluent:wallet-24-regular" class="w-5 h-5" />
+                  <span class="font-semibold">Earn</span>
+                </div>
+                <Icon 
+                  :icon="isEarnMenuOpen ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
+                  class="w-4 h-4"
+                />
+              </button>
+              <!-- Submenu -->
+              <transition name="expand">
+                <div v-if="isEarnMenuOpen" class="ml-4 mt-1 space-y-1 border-l-2 border-vikinger-purple/30 pl-3">
+                  <NuxtLink
+                    v-for="sub in earnSubmenu"
+                    :key="sub.href"
+                    :to="sub.href"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm"
+                    :class="
+                      route.path === sub.href
+                        ? 'bg-vikinger-purple/20 text-vikinger-purple dark:text-vikinger-cyan font-medium'
+                        : isDarkMode
+                        ? 'text-gray-400 hover:bg-vikinger-purple/10'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    "
+                  >
+                    <Icon :icon="sub.icon" class="w-4 h-4" />
+                    <span>{{ sub.name }}</span>
+                  </NuxtLink>
+                </div>
+              </transition>
+            </div>
+
+            <NuxtLink
+              to="/notifications"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+              :class="
+                route.path === '/notifications'
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-vikinger-purple/10'
+                  : 'text-gray-700 hover:bg-gray-100'
+              "
+            >
+              <Icon icon="fluent:alert-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Notifications</span>
+            </NuxtLink>
+            <NuxtLink
+              :to="settingsUrl"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+              :class="
+                route.path.includes('/settings')
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-vikinger-purple/10'
+                  : 'text-gray-700 hover:bg-gray-100'
+              "
+            >
+              <Icon icon="fluent:settings-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">Settings</span>
             </NuxtLink>
           </nav>
         </div>
@@ -945,3 +1161,26 @@ const handleTestChangePoints = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Expand transition for submenu */
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-10px);
+}
+
+.expand-enter-to,
+.expand-leave-from {
+  opacity: 1;
+  max-height: 200px;
+  transform: translateY(0);
+}
+</style>
