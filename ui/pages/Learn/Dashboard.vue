@@ -351,7 +351,7 @@ onMounted(() => {
               <Icon icon="fluent:lightning-24-filled" class="w-5 h-5 text-yellow-500" />
               การกระทำด่วน
             </h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <NuxtLink 
                 to="/Learn/Courses"
                 class="group bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 text-center hover:shadow-md transition-all hover:scale-105"
@@ -394,6 +394,28 @@ onMounted(() => {
                 </div>
                 <p class="font-semibold text-gray-900 dark:text-white text-sm">แบบทดสอบ</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ทำแบบทดสอบ</p>
+              </NuxtLink>
+
+              <NuxtLink 
+                to="/student-card"
+                class="group bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl p-4 text-center hover:shadow-md transition-all hover:scale-105"
+              >
+                <div class="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                  <Icon icon="fluent:person-card-24-filled" class="w-6 h-6 text-white" />
+                </div>
+                <p class="font-semibold text-gray-900 dark:text-white text-sm">บัตรนักเรียน</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ดูบัตรนักเรียน</p>
+              </NuxtLink>
+
+              <NuxtLink 
+                to="/home-visit"
+                class="group bg-gradient-to-br from-cyan-50 to-sky-50 dark:from-cyan-900/20 dark:to-sky-900/20 rounded-xl p-4 text-center hover:shadow-md transition-all hover:scale-105"
+              >
+                <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-sky-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                  <Icon icon="fluent:home-person-24-filled" class="w-6 h-6 text-white" />
+                </div>
+                <p class="font-semibold text-gray-900 dark:text-white text-sm">เยี่ยมบ้าน</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ระบบเยี่ยมบ้าน</p>
               </NuxtLink>
             </div>
           </div>

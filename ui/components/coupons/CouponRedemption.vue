@@ -137,6 +137,7 @@
 import { ref, onUnmounted } from 'vue'
 import { useApi } from '~/composables/useApi'
 import { useToast } from '~/composables/useToast'
+import jsQR from 'jsqr'
 
 const api = useApi()
 const toast = useToast()
@@ -185,14 +186,8 @@ async function startScanning() {
 }
 
 async function initializeBarcodeDetector() {
-  // Dynamically import barcode detector library
-  try {
-    const { BarcodeDetector } = await import('@zxing/library')
-    barcodeDetector = new BarcodeDetector()
-  } catch (err) {
-    console.error('Failed to initialize barcode detector:', err)
-    toast.error('ไม่สามารถโหลดตัวตรวจสอบบาร์โค้ด')
-  }
+  // jsQR is imported at the top - no dynamic import needed
+  barcodeDetector = true // Flag that we're ready to scan
 }
 
 function scanLoop() {
@@ -212,21 +207,17 @@ function scanLoop() {
     canvas.height = video.videoHeight
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
     
-    // Detect barcode/QR code
+    // Detect QR code using jsQR
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const code = jsQR(imageData.data, imageData.width, imageData.height)
     
-    barcodeDetector.detectFromImageData(imageData)
-      .then((result: any) => {
-        if (result && result.code) {
-          // QR code detected
-          stopScanning()
-          couponCode.value = result.code
-          toast.success('ตรวจพบ QR Code!')
-        }
-      })
-      .catch((err: any) => {
-        console.error('Detection error:', err)
-      })
+    if (code && code.data) {
+      // QR code detected
+      stopScanning()
+      couponCode.value = code.data
+      toast.success('ตรวจพบ QR Code!')
+      return
+    }
     
     animationFrameId = requestAnimationFrame(scan)
   }

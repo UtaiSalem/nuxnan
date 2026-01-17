@@ -201,7 +201,7 @@ onMounted(() => {
     <div class="relative overflow-hidden">
       <!-- Background with animated gradient -->
       <div class="absolute inset-0 bg-gradient-to-r from-vikinger-dark via-vikinger-purple to-vikinger-dark"></div>
-      <div class="absolute inset-0 bg-[url('/images/patterns/hexagon-pattern.png')] opacity-5"></div>
+      <div class="absolute inset-0 bg-[url('/images/patterns/hexagon-pattern.svg')] opacity-5"></div>
       
       <!-- Floating particles effect -->
       <div class="absolute inset-0 overflow-hidden">

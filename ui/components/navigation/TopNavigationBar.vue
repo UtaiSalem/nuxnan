@@ -40,6 +40,12 @@ const menuItems = [
     href: '/play/groups', 
     icon: 'fluent:people-community-24-regular' 
   },
+  { 
+    id: 'homevisit', 
+    label: 'Home Visit', 
+    href: '/home-visit', 
+    icon: 'fluent:home-24-regular' 
+  },
 ]
 
 const isActive = (href) => {
