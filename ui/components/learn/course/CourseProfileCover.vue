@@ -65,20 +65,28 @@ const logoPreview = ref(null);
 const coverUrl = computed(() => {
     if (coverPreview.value) return coverPreview.value;
     if (course.value?.cover) {
+        // Check if it's already a full URL
+        if (course.value.cover.startsWith('http')) {
+            return course.value.cover;
+        }
         return `${config.public.apiBase}/storage/images/courses/covers/${course.value.cover}`;
     }
-    return '/images/default-cover.jpg';
+    return `${config.public.apiBase}/storage/images/courses/covers/default_cover.jpg`;
 });
 
 const logoUrl = computed(() => {
     if (logoPreview.value) return logoPreview.value;
     if (course.value?.logo) {
+        // Check if it's already a full URL
+        if (course.value.logo.startsWith('http')) {
+            return course.value.logo;
+        }
         return `${config.public.apiBase}/storage/images/courses/logos/${course.value.logo}`;
     }
     if (course.value?.user?.avatar) {
         return course.value.user.avatar;
     }
-    return '/images/default-logo.png';
+    return '/images/default-avatar.png';
 });
 
 // File input handlers

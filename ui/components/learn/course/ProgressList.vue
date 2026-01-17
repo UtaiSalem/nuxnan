@@ -164,17 +164,51 @@ const viewMemberDetails = async (member: any) => {
 // Export progress
 const exportProgress = async () => {
   try {
-    const response = await api.get(`/api/courses/${props.courseId}/progress/export`, {
-      responseType: 'blob'
+    const config = useRuntimeConfig()
+    const authStore = useAuthStore()
+    const apiBase = config.public.apiBase as string
+    
+    // Build URL with group filter
+    let exportUrl = `${apiBase}/api/courses/${props.courseId}/export/results`
+    if (activeTab.value !== 'all') {
+      exportUrl += `?group_id=${activeTab.value}`
+    }
+    
+    // Use native fetch for blob download (not $fetch which doesn't handle blob well)
+    const response = await fetch(exportUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+      }
     })
     
-    const url = window.URL.createObjectURL(new Blob([response as BlobPart]))
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    // Generate filename based on active group
+    let filename = `course-progress-${props.courseId}`
+    if (activeTab.value === 'all') {
+      filename += '-ทั้งหมด'
+    } else if (activeTab.value === 'ungrouped') {
+      filename += '-ไม่มีกลุ่ม'
+    } else {
+      const selectedGroup = groups.value.find(g => g.id === activeTab.value)
+      if (selectedGroup) {
+        filename += `-${selectedGroup.name}`
+      }
+    }
+    filename += '.xlsx'
+    
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', `course-progress-${props.courseId}.xlsx`)
+    link.setAttribute('download', filename)
     document.body.appendChild(link)
     link.click()
     link.remove()
+    window.URL.revokeObjectURL(url)
   } catch (error) {
     console.error('Error exporting progress:', error)
   }
@@ -295,15 +329,6 @@ onMounted(() => {
           ทั้งหมด {{ members.length }} คน
         </p>
       </div>
-      
-      <button
-        v-if="isCourseAdmin"
-        @click="exportProgress"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-      >
-        <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
-        <span>ส่งออก Excel</span>
-      </button>
     </div>
     
 <!-- Dashboard -->
@@ -539,6 +564,16 @@ onMounted(() => {
             :icon="sortOrder === 'asc' ? 'fluent:arrow-up-24-regular' : 'fluent:arrow-down-24-regular'" 
             class="w-4 h-4"
           />
+        </button>
+
+        <!-- Export Button -->
+        <button
+          v-if="isCourseAdmin"
+          @click="exportProgress"
+          class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+        >
+          <Icon icon="fluent:arrow-download-24-regular" class="w-4 h-4" />
+          <span>ส่งออก Excel</span>
         </button>
       </div>
     </div>

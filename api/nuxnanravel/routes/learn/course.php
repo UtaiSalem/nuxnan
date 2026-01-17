@@ -51,6 +51,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function () {
+    Route::get('/search', [CourseController::class, 'searchCourses'])->name('courses.search');
     Route::get('/filters', [CourseController::class, 'getSearchFilterOptions'])->name('courses.filters');
     Route::get('/favorites', [CourseController::class, 'getFavoriteCourses'])->name('courses.favorites');
     Route::get('/', [CourseController::class, 'index'])->name('courses');
@@ -204,6 +205,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}')->group(
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::get('/quizzes/get-quizzes', [CourseQuizController::class, 'getQuizzes'])->name('course.quizzes.getQuizzes');
+    Route::get('/quizzes/search', [CourseQuizController::class, 'searchQuizzes'])->name('course.quizzes.search');
     Route::post('/quizzes/{quiz}/duplicate', [CourseQuizController::class, 'duplicateQuiz'])->name('course.quizzes.duplicateQuizzes');
 });
 
@@ -218,6 +220,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/members')
     Route::post('/{member}/set-active-tab', [CourseMemberController::class, 'setActiveTab']);
     Route::post('/{member}/set-active-group-tab', [CourseMemberController::class, 'setActiveGroupTab']);
     Route::patch('/{member}/update', [CourseMemberController::class, 'update']);
+    Route::patch('/{member}/update-own-profile', [CourseMemberController::class, 'updateOwnProfile'])->name('course.member.update-own-profile');
     Route::patch('/{member}/bonus-points', [CourseMemberController::class, 'updateBonusPoints']);
     Route::patch('/{member}/grade_progress', [CourseMemberController::class, 'updateGradeProgress']);
     Route::patch('/{member}/notes-comments', [CourseMemberController::class, 'updateNotesComments']);

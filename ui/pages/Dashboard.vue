@@ -179,6 +179,18 @@ const getTypeLabel = (type: string): string => {
   return labels[type] || type
 }
 
+// สีนุ่มนวลสบายตาสำหรับอันดับ (Muted/Pastel colors)
+const getRankBadgeClass = (index: number): string => {
+  const classes = [
+    'bg-gradient-to-br from-amber-400 to-amber-500 text-white',      // 1st - ทองนุ่มนวล
+    'bg-gradient-to-br from-slate-300 to-slate-400 text-white',      // 2nd - เงินนุ่มนวล
+    'bg-gradient-to-br from-orange-300 to-orange-400 text-white',    // 3rd - ทองแดงนุ่มนวล
+    'bg-sky-400 text-white',                                          // 4th - ฟ้านุ่มนวล
+    'bg-emerald-400 text-white',                                      // 5th - เขียวนุ่มนวล
+  ]
+  return classes[index] || 'bg-slate-300 text-gray-700'
+}
+
 const getRewardTypeIcon = (type: string): string => {
   const icons: Record<string, string> = {
     wallet: 'mdi:wallet',
@@ -615,12 +627,7 @@ onMounted(() => {
               >
                 <div 
                   class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-                  :class="{
-                    'bg-gradient-to-br from-yellow-400 to-amber-500 text-white': index === 0,
-                    'bg-gradient-to-br from-gray-300 to-gray-400 text-white': index === 1,
-                    'bg-gradient-to-br from-amber-600 to-amber-700 text-white': index === 2,
-                    'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300': index > 2
-                  }"
+                  :class="getRankBadgeClass(index)"
                 >
                   {{ index + 1 }}
                 </div>

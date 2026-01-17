@@ -305,10 +305,12 @@ onMounted(loadData)
                   <div 
                     class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
                     :class="{
-                      'bg-yellow-400 text-white': index === 0,
-                      'bg-gray-300 text-white': index === 1,
+                      'bg-amber-500 text-white': index === 0,
+                      'bg-slate-400 text-white': index === 1,
                       'bg-orange-400 text-white': index === 2,
-                      'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300': index > 2
+                      'bg-sky-400 text-white': index === 3,
+                      'bg-emerald-400 text-white': index === 4,
+                      'bg-slate-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300': index > 4
                     }"
                   >
                     {{ index + 1 }}

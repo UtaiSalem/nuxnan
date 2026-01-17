@@ -22,6 +22,42 @@ const fetchLeaderboard = async () => {
   }
 }
 
+// สีนุ่มนวลสบายตาสำหรับอันดับต่างๆ (Muted/Pastel colors)
+const getRankColor = (index) => {
+  const colors = [
+    'bg-amber-500',      // 1st - ทองนุ่มนวล
+    'bg-slate-400',      // 2nd - เงินนุ่มนวล
+    'bg-orange-400',     // 3rd - ทองแดงนุ่มนวล
+    'bg-sky-400',        // 4th - ฟ้านุ่มนวล
+    'bg-emerald-400',    // 5th - เขียวนุ่มนวล
+    'bg-violet-400',     // 6th - ม่วงนุ่มนวล
+    'bg-rose-400',       // 7th - ชมพูนุ่มนวล
+    'bg-teal-400',       // 8th - เขียวน้ำทะเลนุ่มนวล
+    'bg-indigo-400',     // 9th - คราม นุ่มนวล
+    'bg-cyan-400'        // 10th - ฟ้าอมเขียวนุ่มนวล
+  ]
+  return colors[index] || 'bg-slate-400'
+}
+
+// สีพื้นหลัง avatar นุ่มนวลสบายตา (hex without #)
+const getAvatarUrl = (user, index = 0) => {
+  if (user.avatar) return user.avatar
+  const bgColors = [
+    '94a3b8', // slate-400
+    '64748b', // slate-500
+    '78716c', // stone-500
+    '6b7280', // gray-500
+    '71717a', // zinc-500
+    '737373', // neutral-500
+    'a3a3a3', // neutral-400
+    '9ca3af', // gray-400
+    'a1a1aa', // zinc-400
+    'a8a29e', // stone-400
+  ]
+  const bgColor = bgColors[index % bgColors.length]
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=${bgColor}&color=fff`
+}
+
 // Drawer states
 const isLeftDrawerOpen = ref(false)
 const isRightDrawerOpen = ref(false)
@@ -993,11 +1029,11 @@ const onQRActionComplete = (result) => {
               :class="isDarkMode ? 'hover:bg-vikinger-dark-200' : 'hover:bg-gray-100'"
             >
               <div class="relative">
-                <img :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`" class="w-10 h-10 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" />
+                <img :src="getAvatarUrl(user, index)" class="w-10 h-10 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" />
                 <div
                   class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
                   :class="[
-                    index === 0 ? 'bg-vikinger-yellow' : index === 1 ? 'bg-gray-300' : index === 2 ? 'bg-orange-400' : 'bg-vikinger-purple',
+                    getRankColor(index),
                     isDarkMode ? 'border-vikinger-dark-100' : 'border-white'
                   ]"
                 >
@@ -1038,11 +1074,11 @@ const onQRActionComplete = (result) => {
             class="relative cursor-pointer transition-transform hover:scale-110 group"
             :title="`Rank ${index + 1}: ${user.name}`"
           >
-            <img :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`" class="w-11 h-11 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" />
+            <img :src="getAvatarUrl(user, index)" class="w-11 h-11 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" />
             <div
               class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
               :class="[
-                index === 0 ? 'bg-vikinger-yellow' : index === 1 ? 'bg-gray-300' : index === 2 ? 'bg-orange-400' : 'bg-vikinger-purple',
+                getRankColor(index),
                 isDarkMode ? 'border-vikinger-dark-100' : 'border-white'
               ]"
             >

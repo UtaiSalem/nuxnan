@@ -252,7 +252,9 @@ onUnmounted(() => {
   <NuxtLayout name="main">
     <!-- Left Widgets Column -->
     <template #leftWidgets>
+      <RecentlyViewedCoursesWidget class="mb-6" />
       <MemberedCoursesWidget class="mb-6" />
+      <PopularCoursesWidget class="mb-6" />
       <ProfileCompletionWidget
         :completion="profileCompletion"
         :quests="quests"
@@ -388,8 +390,6 @@ onUnmounted(() => {
       <AllAcademiesWidget />
 
       <!-- Self-loading sidebar widgets -->
-      <PopularCoursesWidget />
-      <RecentlyViewedCoursesWidget />
       <PeopleMayKnowWidget />
       <PendingFriendsWidget />
       <DonatesWidget />

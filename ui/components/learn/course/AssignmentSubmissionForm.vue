@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
+import RichTextEditor from '~/components/RichTextEditor.vue'
 
 const props = defineProps<{
   assignment: any
@@ -20,6 +21,7 @@ const swal = useSweetAlert()
 
 const answerContent = ref('')
 const answerFiles = ref<File[]>([])
+const imagePreviews = ref<string[]>([]) // เก็บ preview URLs
 const existingImages = ref<any[]>([])
 const deletedImageIds = ref<number[]>([])
 const isSubmitting = ref(false)
@@ -38,12 +40,25 @@ watch(() => props.existingAnswer, (newVal) => {
 const handleFileSelect = (event: Event) => {
   const input = event.target as HTMLInputElement
   if (input.files) {
-    answerFiles.value = [...answerFiles.value, ...Array.from(input.files)]
+    const newFiles = Array.from(input.files)
+    answerFiles.value = [...answerFiles.value, ...newFiles]
+    
+    // สร้าง preview URLs สำหรับรูปใหม่
+    newFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        imagePreviews.value.push(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    })
   }
+  // Reset input เพื่อให้สามารถเลือกไฟล์เดิมซ้ำได้
+  input.value = ''
 }
 
 const removeFile = (index: number) => {
   answerFiles.value.splice(index, 1)
+  imagePreviews.value.splice(index, 1)
 }
 
 const removeExistingImage = (imageId: number) => {
@@ -81,6 +96,7 @@ const submitAnswer = async () => {
         // Reset form
         answerContent.value = ''
         answerFiles.value = []
+        imagePreviews.value = []
         deletedImageIds.value = []
     } catch (error) {
         console.error('Submission error:', error)
@@ -99,12 +115,11 @@ const submitAnswer = async () => {
        </h3>
        
        <div class="space-y-4">
-          <textarea 
+          <RichTextEditor 
              v-model="answerContent"
-             rows="4"
-             class="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all outline-none"
              placeholder="พิมพ์คำตอบของคุณ..."
-          ></textarea>
+             class="min-h-[120px]"
+          />
 
           <div>
               <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">แนบรูปภาพผลงาน</label>
@@ -119,20 +134,54 @@ const submitAnswer = async () => {
               </div>
           </div>
 
-           <!-- Selected Files -->
-          <div v-if="answerFiles.length" class="flex flex-wrap gap-2">
-             <div v-for="(file, i) in answerFiles" :key="i" class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm flex items-center gap-2">
-                <span class="truncate max-w-xs">{{ file.name }}</span>
-                <button @click="removeFile(i)" class="text-red-500 hover:bg-red-50 rounded-full p-0.5"><Icon icon="fluent:dismiss-16-regular" /></button>
+           <!-- Selected Files - แสดงเป็น Preview รูปภาพ -->
+          <div v-if="imagePreviews.length" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+             <div 
+               v-for="(preview, i) in imagePreviews" 
+               :key="i" 
+               class="relative group aspect-square rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900"
+             >
+               <img :src="preview" class="w-full h-full object-cover" :alt="answerFiles[i]?.name || 'preview'" />
+               <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                 <button 
+                   @click="removeFile(i)" 
+                   class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                 >
+                   <Icon icon="fluent:delete-16-filled" class="w-5 h-5" />
+                 </button>
+               </div>
+               <!-- ชื่อไฟล์ -->
+               <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                 <p class="text-white text-xs truncate">{{ answerFiles[i]?.name }}</p>
+               </div>
              </div>
           </div>
 
-           <div v-if="existingImages.length" class="flex flex-wrap gap-2">
-             <div v-for="img in existingImages" :key="img.id" class="relative group w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                <img :src="img.full_url || img.image_url" class="w-full h-full object-cover" />
-                <button @click="removeExistingImage(img.id)" class="absolute top-1 right-1 bg-red-500/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><Icon icon="fluent:delete-16-regular" /></button>
+           <!-- Existing Images - รูปที่เคยอัปโหลดแล้ว -->
+           <div v-if="existingImages.length" class="space-y-2">
+             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">รูปภาพที่อัปโหลดแล้ว:</p>
+             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+               <div 
+                 v-for="img in existingImages" 
+                 :key="img.id" 
+                 class="relative group aspect-square rounded-xl overflow-hidden border-2 border-green-200 dark:border-green-700 bg-gray-100 dark:bg-gray-900"
+               >
+                 <img :src="img.full_url || img.image_url" class="w-full h-full object-cover" />
+                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                   <button 
+                     @click="removeExistingImage(img.id)" 
+                     class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                   >
+                     <Icon icon="fluent:delete-16-filled" class="w-5 h-5" />
+                   </button>
+                 </div>
+                 <!-- Badge ว่าอัปโหลดแล้ว -->
+                 <div class="absolute top-2 left-2">
+                   <span class="px-2 py-0.5 bg-green-500 text-white text-[10px] font-bold rounded-full">อัปโหลดแล้ว</span>
+                 </div>
+               </div>
              </div>
-          </div>
+           </div>
        </div>
        
        <div class="mt-6 flex gap-3 justify-end">

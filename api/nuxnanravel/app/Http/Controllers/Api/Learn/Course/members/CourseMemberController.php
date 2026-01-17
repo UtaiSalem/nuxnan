@@ -1051,4 +1051,33 @@ class CourseMemberController extends Controller
         }
     }
 
+    /**
+     * Update own profile - allows students to update their own member information
+     */
+    public function updateOwnProfile(Course $course, CourseMember $member, Request $request)
+    {
+        // Check if the authenticated user is the owner of this member record
+        if ($member->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'member_name'   => 'nullable|string|max:255',
+            'order_number'  => 'nullable|integer',
+            'member_code'   => 'nullable|string|max:50',
+        ]);
+
+        $member->update([
+            'member_name'   => $request->member_name,
+            'order_number'  => $request->order_number,
+            'member_code'   => $request->member_code,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully',
+            'data' => $member->fresh()
+        ], 200);
+    }
+
 }

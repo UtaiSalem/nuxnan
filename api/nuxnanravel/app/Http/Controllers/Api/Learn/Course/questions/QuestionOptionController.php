@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\QuestionOption;
 use App\Models\UserAnswerQuestion;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\QuestionOptionResource;
+use App\Http\Resources\Learn\Course\questions\QuestionOptionResource;
 
 class QuestionOptionController extends Controller
 {
@@ -36,6 +36,7 @@ class QuestionOptionController extends Controller
     {
         $option = $question->options()->create([
             'text' => $request->text,
+            'is_correct' => $request->is_correct ? true : false,
         ]);
 
         if($request->hasFile('images')) {
@@ -76,9 +77,17 @@ class QuestionOptionController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, QuestionOption $questionOption)
+    public function update(Request $request, Question $question = null, QuestionOption $option)
     {
-        //
+        $option->update([
+            'text' => $request->text ?? $option->text,
+            'is_correct' => $request->has('is_correct') ? ($request->is_correct ? true : false) : $option->is_correct,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'option' => new QuestionOptionResource($option),
+        ], 200);
     }
 
     /**

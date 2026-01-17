@@ -241,8 +241,8 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-if="assignment.description" class="prose prose-sm dark:prose-invert max-w-none mt-6">
-           <RichTextViewer :content="assignment.description" />
+        <div v-if="assignment.description" class="mt-6">
+           <RichTextEditor :model-value="assignment.description" disabled class="!min-h-0" />
         </div>
         
         <div v-if="assignment.images?.length" class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -283,8 +283,8 @@ onMounted(() => {
               </button>
            </div>
            
-           <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50 shadow-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-              {{ userAnswer.content }}
+           <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50 shadow-sm text-gray-800 dark:text-gray-200">
+              <RichTextViewer :content="userAnswer.content" />
            </div>
 
            <div v-if="userAnswer.images?.length" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">

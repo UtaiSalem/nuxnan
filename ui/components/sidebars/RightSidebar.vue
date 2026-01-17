@@ -39,9 +39,40 @@ const fetchLeaderboard = async () => {
   }
 }
 
-const getAvatarUrl = (user) => {
+const getAvatarUrl = (user, index = 0) => {
   if (user.profile_photo_url) return user.profile_photo_url
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_name)}&background=random&color=fff`
+  // สีพื้นหลัง pastel นุ่มนวลสบายตาสำหรับ avatar (hex without #)
+  const bgColors = [
+    '94a3b8', // slate-400
+    '64748b', // slate-500
+    '78716c', // stone-500
+    '6b7280', // gray-500
+    '71717a', // zinc-500
+    '737373', // neutral-500
+    'a3a3a3', // neutral-400
+    '9ca3af', // gray-400
+    'a1a1aa', // zinc-400
+    'a8a29e', // stone-400
+  ]
+  const bgColor = bgColors[index % bgColors.length]
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_name)}&background=${bgColor}&color=fff`
+}
+
+// สีนุ่มนวลสบายตาสำหรับอันดับต่างๆ (Muted/Pastel colors)
+const getRankColor = (index) => {
+  const colors = [
+    'bg-amber-500',      // 1st - ทองนุ่มนวล
+    'bg-slate-400',      // 2nd - เงินนุ่มนวล
+    'bg-orange-400',     // 3rd - ทองแดงนุ่มนวล
+    'bg-sky-400',        // 4th - ฟ้านุ่มนวล
+    'bg-emerald-400',    // 5th - เขียวนุ่มนวล
+    'bg-violet-400',     // 6th - ม่วงนุ่มนวล
+    'bg-rose-400',       // 7th - ชมพูนุ่มนวล
+    'bg-teal-400',       // 8th - เขียวน้ำทะเลนุ่มนวล
+    'bg-indigo-400',     // 9th - คราม นุ่มนวล
+    'bg-cyan-400'        // 10th - ฟ้าอมเขียวนุ่มนวล
+  ]
+  return colors[index] || 'bg-slate-400'
 }
 
 onMounted(() => {
@@ -188,10 +219,10 @@ const getStatusColor = (status) => {
           class="flex items-center gap-3 p-2 rounded-vikinger hover:bg-vikinger-light-300 dark:hover:bg-vikinger-dark-200 cursor-pointer transition-colors group"
         >
           <div class="relative shrink-0">
-            <img :src="getAvatarUrl(user)" class="w-9 h-9 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" :alt="user.user_name" />
+            <img :src="getAvatarUrl(user, index)" class="w-9 h-9 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" :alt="user.user_name" />
             <span 
               class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 border-white dark:border-vikinger-dark-100 flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
-              :class="index === 0 ? 'bg-vikinger-yellow' : index === 1 ? 'bg-gray-300' : index === 2 ? 'bg-orange-400' : 'bg-vikinger-purple'"
+              :class="getRankColor(index)"
             >
               {{ index + 1 }}
             </span>

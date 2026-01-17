@@ -16,10 +16,9 @@
                                {{ q.points }} คะแนน
                            </div>
     
-                           <!-- Edit Cost / Fine (if > 0) -->
-                           <div v-if="q.points > 0" class="text-xs font-medium bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 px-2 py-1 rounded-md border border-orange-100 dark:border-orange-800 flex items-center gap-1">
-                               <span v-if="q.pp_fine > 0">{{ q.pp_fine }} แต้ม</span>
-                               <span v-else>{{ q.points }} แต้ม</span>
+                           <!-- PP Fine (แต้มค่าปรับสำหรับแก้ไขคำตอบ) -->
+                           <div class="text-xs font-medium bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 px-2 py-1 rounded-md border border-orange-100 dark:border-orange-800 flex items-center gap-1">
+                               <span>{{ q.pp_fine || 0 }} แต้ม</span>
                            </div>
                       </div>
                   </div>

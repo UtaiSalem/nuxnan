@@ -13,6 +13,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const route = useRoute()
+const api = useApi()
+const courseMemberStore = useCourseMemberStore()
 
 // Determine active tab based on current route
 const activeTab = computed(() => {
@@ -33,6 +35,28 @@ const activeTab = computed(() => {
   // Default to info tab for base course page
   if (path.endsWith(`/courses/${props.courseId}`) || path.endsWith(`/courses/${props.courseId}/`)) return 12
   return 12
+})
+
+// Save last accessed tab when tab changes
+let isSavingTab = false
+watch(activeTab, async (newTab, oldTab) => {
+  // Only save if member exists and tab actually changed
+  if (!props.courseMemberOfAuth?.id || newTab === oldTab || isSavingTab) return
+  
+  isSavingTab = true
+  try {
+    await api.post(`/api/courses/${props.courseId}/members/${props.courseMemberOfAuth.id}/set-active-tab`, {
+      tab: newTab
+    })
+    // Update local store
+    if (courseMemberStore.member) {
+      courseMemberStore.member.last_accessed_tab = newTab
+    }
+  } catch (error) {
+    console.error('Error saving last accessed tab:', error)
+  } finally {
+    isSavingTab = false
+  }
 })
 </script>
 

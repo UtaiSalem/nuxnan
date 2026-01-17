@@ -225,6 +225,46 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * Search courses where user is admin for quiz duplication
+     */
+    public function searchCourses(Request $request)
+    {
+        $query = $request->input('q', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json([
+                'success' => true,
+                'courses' => [],
+            ]);
+        }
+
+        $user = auth()->user();
+        
+        // Get courses where user is admin
+        $courses = Course::where(function($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhereHas('courseMembers', function($q2) use ($user) {
+                  $q2->where('user_id', $user->id)
+                     ->whereIn('role', ['admin', 'teacher', 'instructor']);
+              });
+        })
+        ->where(function($q) use ($query) {
+            $q->where('name', 'like', '%' . $query . '%')
+              ->orWhere('title', 'like', '%' . $query . '%')
+              ->orWhere('code', 'like', '%' . $query . '%');
+        })
+        ->select(['id', 'name', 'title', 'code', 'cover_image'])
+        ->orderBy('updated_at', 'desc')
+        ->limit(10)
+        ->get();
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+        ]);
+    }
+
     public function getAuthMemberedCourses(User $user, Request $request)
     {
         $perPage = $request->input('per_page', 8); // Default to 8 if not specified

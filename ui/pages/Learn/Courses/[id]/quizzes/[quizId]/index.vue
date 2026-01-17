@@ -2,6 +2,7 @@
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import RadialProgress from '~/components/Common/RadialProgress.vue';
+import QuizDuplicateModal from '~/components/learn/course/quiz/QuizDuplicateModal.vue';
 
 const route = useRoute()
 const courseId = route.params.id
@@ -9,6 +10,20 @@ const quizId = route.params.quizId
 const api = useApi()
 
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
+
+// Duplicate Modal State
+const showDuplicateModal = ref(false)
+
+const openDuplicateModal = () => {
+  showDuplicateModal.value = true
+}
+
+const handleDuplicated = (newQuiz: any) => {
+  // If duplicated to same course, could navigate to new quiz
+  if (newQuiz && newQuiz.course_id === Number(courseId)) {
+    refresh()
+  }
+}
 
 // Fetch quiz details
 const { data: quiz, refresh, pending } = await useAsyncData(
@@ -92,6 +107,13 @@ const getStatusBadge = computed(() => {
         </button>
 
         <div v-if="isCourseAdmin" class="flex items-center gap-2">
+          <button 
+            @click="openDuplicateModal"
+            class="px-4 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30 transition-colors flex items-center gap-2"
+          >
+            <Icon icon="fluent:copy-24-regular" class="w-5 h-5" />
+            คัดลอก
+          </button>
           <button 
             @click="editQuiz"
             class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-2"
@@ -317,5 +339,13 @@ const getStatusBadge = computed(() => {
       </button>
     </div>
 
+    <!-- Duplicate Modal -->
+    <QuizDuplicateModal
+      :show="showDuplicateModal"
+      :quiz="quiz"
+      :current-course-id="courseId"
+      @close="showDuplicateModal = false"
+      @duplicated="handleDuplicated"
+    />
   </div>
 </template>

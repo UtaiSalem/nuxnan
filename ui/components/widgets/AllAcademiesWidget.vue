@@ -12,29 +12,21 @@ const isLoading = ref(true)
 
 const fetchAllAcademies = async () => {
   if (!user.value) {
-    console.log('No user, skipping fetch all academies')
     return
   }
   
-  console.log('Fetching all academies...')
   try {
     const response: any = await api.get('/api/academies/all-academies', {
       params: { per_page: 5 }
     })
 
-    console.log('All academies response:', response)
-
     if (response.success) {
       const allAcademies = response.academies?.data || response.academies || []
-      console.log('Academies loaded:', allAcademies)
       // Deep clone to fix prototype chain for Pinia serialization
       academies.value = JSON.parse(JSON.stringify(allAcademies.slice(0, 5)))
-    } else {
-      console.warn('Response success is false:', response)
     }
   } catch (error: any) {
-    console.error('Failed to fetch all academies:', error)
-    console.error('Error details:', error?.data, error?.statusCode, error?.message)
+    // Error handled silently
   } finally {
     isLoading.value = false
   }

@@ -68,12 +68,7 @@
           <!-- Rank Badge -->
           <div 
             class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
-            :class="{
-              'bg-gradient-to-br from-yellow-400 to-amber-500 text-white': index === 0,
-              'bg-gradient-to-br from-gray-300 to-gray-400 text-white': index === 1,
-              'bg-gradient-to-br from-orange-400 to-orange-600 text-white': index === 2,
-              'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300': index > 2
-            }"
+            :class="getRankBadgeClass(index)"
           >
             {{ index + 1 }}
           </div>
@@ -81,18 +76,14 @@
           <!-- Avatar -->
           <div class="relative">
             <img 
-              :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`" 
+              :src="getAvatarUrl(user, index)" 
               :alt="user.name"
               class="w-10 h-10 rounded-full object-cover"
             >
             <div 
               v-if="index < 3"
               class="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
-              :class="{
-                'bg-yellow-400': index === 0,
-                'bg-gray-300': index === 1,
-                'bg-orange-400': index === 2
-              }"
+              :class="getRankCrownClass(index)"
             >
               <Icon icon="mdi:crown" class="w-3 h-3 text-white" />
             </div>
@@ -148,6 +139,43 @@ const types = [
 const type = ref('points')
 const leaderboard = ref<any[]>([])
 const userRank = ref<any>(null)
+
+// สีนุ่มนวลสบายตาสำหรับอันดับต่างๆ (Muted/Pastel colors)
+const getRankBadgeClass = (index: number): string => {
+  const classes = [
+    'bg-gradient-to-br from-amber-400 to-amber-500 text-white',      // 1st
+    'bg-gradient-to-br from-slate-300 to-slate-400 text-white',      // 2nd
+    'bg-gradient-to-br from-orange-300 to-orange-400 text-white',    // 3rd
+    'bg-sky-400 text-white',                                          // 4th
+    'bg-emerald-400 text-white',                                      // 5th
+    'bg-violet-400 text-white',                                       // 6th
+    'bg-rose-400 text-white',                                         // 7th
+    'bg-teal-400 text-white',                                         // 8th
+    'bg-indigo-400 text-white',                                       // 9th
+    'bg-cyan-400 text-white'                                          // 10th
+  ]
+  return classes[index] || 'bg-slate-400 text-white'
+}
+
+const getRankCrownClass = (index: number): string => {
+  const classes = [
+    'bg-amber-400',     // 1st
+    'bg-slate-300',     // 2nd
+    'bg-orange-300'     // 3rd
+  ]
+  return classes[index] || ''
+}
+
+// สีพื้นหลัง avatar นุ่มนวลสบายตา
+const getAvatarUrl = (user: any, index: number = 0): string => {
+  if (user.avatar) return user.avatar
+  const bgColors = [
+    '94a3b8', '64748b', '78716c', '6b7280', '71717a',
+    '737373', 'a3a3a3', '9ca3af', 'a1a1aa', 'a8a29e'
+  ]
+  const bgColor = bgColors[index % bgColors.length]
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=${bgColor}&color=fff`
+}
 
 // Load leaderboard
 const loadLeaderboard = async () => {

@@ -2,6 +2,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
+import RichTextEditor from '~/components/RichTextEditor.vue'
 
 interface Props {
   assignment: any
@@ -175,8 +176,8 @@ export default {
        </div>
 
        <!-- Description -->
-       <div v-if="assignment.description" class="prose prose-sm dark:prose-invert max-w-none mb-6">
-          <RichTextViewer :content="assignment.description" />
+       <div v-if="assignment.description" class="mb-6">
+          <RichTextEditor :model-value="assignment.description" disabled class="!min-h-0" />
        </div>
 
 
@@ -203,8 +204,8 @@ export default {
            </div>
            
            <!-- Answer Content (Read-only) -->
-           <div v-if="answerContent && !isEditingGraded" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap mb-4 leading-relaxed font-sans bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-               {{ answerContent }}
+           <div v-if="answerContent && !isEditingGraded" class="text-sm text-gray-700 dark:text-gray-300 mb-4 leading-relaxed font-sans bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+               <RichTextViewer :content="answerContent" />
            </div>
 
            <div v-if="answerImages.length && !isEditingGraded" class="flex flex-wrap gap-3">

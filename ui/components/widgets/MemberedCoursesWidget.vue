@@ -69,7 +69,7 @@ onMounted(() => {
     <div class="divide-y divide-gray-100 dark:divide-gray-700">
       <template v-if="isLoading && courses.length === 0">
         <div v-for="i in 3" :key="i" class="p-4 flex gap-3 animate-pulse">
-          <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+          <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg shrink-0"></div>
           <div class="flex-1 space-y-2">
             <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
             <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
@@ -84,42 +84,19 @@ onMounted(() => {
           :to="`/courses/${course.id}`"
           class="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
         >
-          <!-- Radial Progress / Avatar -->
-          <div class="relative w-14 h-14 flex-shrink-0">
-            <!-- Student: Show Progress Ring -->
-            <template v-if="!course.isCourseAdmin">
-               <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <!-- Background Ring -->
-                <circle
-                  cx="18" cy="18" r="16"
-                  fill="none"
-                  stroke-width="2"
-                  class="stroke-gray-200 dark:stroke-gray-700"
-                />
-                <!-- Progress Ring -->
-                <circle
-                  cx="18" cy="18" r="16"
-                  fill="none"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  :class="getProgressColor(course.auth_progress || 0)"
-                  :stroke-dasharray="`${(course.auth_progress || 0) * 100 / 100} 100`" 
-                />
-              </svg>
-            </template>
-            
-            <!-- Admin: Simple Border Ring -->
-            <template v-else>
-               <div class="absolute inset-0 rounded-full border-2 border-blue-500"></div>
-            </template>
-
-            <!-- Cover Image (Centered) -->
-            <div class="absolute inset-[4px] rounded-full overflow-hidden bg-gray-100">
-              <img 
-                :src="getCoverUrl(course)" 
-                :alt="course.name"
-                class="w-full h-full object-cover"
-              />
+          <!-- Course Cover Image -->
+          <div class="relative shrink-0 w-12 h-12">
+            <img 
+              :src="getCoverUrl(course)" 
+              :alt="course.name"
+              class="w-full h-full object-cover rounded-lg shadow-sm"
+            />
+            <!-- Admin Badge Overlay -->
+            <div 
+              v-if="course.isCourseAdmin"
+              class="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center"
+            >
+              <Icon icon="fluent:shield-checkmark-16-filled" class="w-3 h-3 text-white" />
             </div>
           </div>
 

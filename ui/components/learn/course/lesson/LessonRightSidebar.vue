@@ -14,6 +14,17 @@ const props = withDefaults(defineProps<Props>(), {
   leaderboard: () => [],
   deadlines: () => []
 })
+
+// สีพื้นหลัง avatar นุ่มนวลสบายตา
+const getAvatarUrl = (user: any, index: number = 0): string => {
+  if (user.avatar) return user.avatar
+  const bgColors = [
+    '94a3b8', '64748b', '78716c', '6b7280', '71717a',
+    '737373', 'a3a3a3', '9ca3af', 'a1a1aa', 'a8a29e'
+  ]
+  const bgColor = bgColors[index % bgColors.length]
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=${bgColor}&color=fff`
+}
 </script>
 
 <template>
@@ -147,7 +158,7 @@ const props = withDefaults(defineProps<Props>(), {
 
           <!-- Avatar -->
           <img
-            :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`"
+            :src="getAvatarUrl(user, index)"
             :alt="user.name"
             class="w-8 h-8 rounded-full object-cover"
           >

@@ -58,6 +58,13 @@
         class="absolute bottom-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0"
       >
         <button
+          @click.stop="handleDuplicate"
+          class="p-2.5 bg-white text-gray-700 rounded-xl hover:bg-purple-50 hover:text-purple-600 transition-colors shadow-lg"
+          title="คัดลอก"
+        >
+          <Icon icon="fluent:copy-24-filled" class="w-5 h-5" />
+        </button>
+        <button
           @click.stop="handleEdit"
           class="p-2.5 bg-white text-gray-700 rounded-xl hover:bg-gray-50 hover:text-blue-600 transition-colors shadow-lg"
           title="แก้ไข"
@@ -223,6 +230,7 @@ const emit = defineEmits<{
   delete: [quizId: number]
   start: [quiz: any]
   view: [quiz: any]
+  duplicate: [quiz: any]
 }>()
 
 // Computed Status
@@ -297,4 +305,5 @@ const handleEdit = () => emit('edit', props.quiz)
 const handleDelete = () => emit('delete', props.quiz.id)
 const handleStart = () => emit('start', props.quiz)
 const handleView = () => emit('view', props.quiz)
+const handleDuplicate = () => emit('duplicate', props.quiz)
 </script>

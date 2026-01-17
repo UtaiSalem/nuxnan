@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import QuizPost from '~/components/learn/course/quiz/QuizPost.vue'
+import QuizDuplicateModal from '~/components/learn/course/quiz/QuizDuplicateModal.vue'
+import QuizCreateModal from '~/components/learn/course/quiz/QuizCreateModal.vue'
 import ContentLoader from '@/components/accessories/ContentLoader.vue'
 
 // Inject course data from parent
@@ -14,6 +16,13 @@ const quizzes = ref<any[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const showScrollButton = ref(false)
+
+// Duplicate Modal State
+const showDuplicateModal = ref(false)
+const quizToDuplicate = ref<any>(null)
+
+// Create Modal State
+const showCreateModal = ref(false)
 
 // Determine if at root route
 const isRoot = computed(() => {
@@ -38,7 +47,15 @@ const fetchQuizzes = async () => {
 
 // Handlers
 const handleCreate = () => {
-  navigateTo(`/courses/${course?.value?.id}/quizzes/create`)
+  showCreateModal.value = true
+}
+
+// Handle quiz created from modal
+const handleQuizCreated = (newQuiz: any) => {
+  // Add to list without re-fetching
+  if (newQuiz) {
+    quizzes.value.unshift(newQuiz)
+  }
 }
 
 const handleEdit = (quiz: any) => {
@@ -63,6 +80,19 @@ const handleStart = (quiz: any) => {
 
 const handleView = (quiz: any) => {
   navigateTo(`/courses/${course?.value?.id}/quizzes/${quiz.id}`)
+}
+
+// Handle Duplicate
+const handleDuplicate = (quiz: any) => {
+  quizToDuplicate.value = quiz
+  showDuplicateModal.value = true
+}
+
+const handleDuplicated = async (newQuiz: any) => {
+  // If duplicated to same course, refresh list
+  if (newQuiz && newQuiz.course_id === course?.value?.id) {
+    await fetchQuizzes()
+  }
 }
 
 const scrollToTop = () => {
@@ -166,6 +196,7 @@ onUnmounted(() => {
             @delete="handleDelete"
             @start="handleStart"
             @view="handleView"
+            @duplicate="handleDuplicate"
           />
         </div>
       </template>
@@ -189,5 +220,22 @@ onUnmounted(() => {
         <Icon icon="fluent:arrow-up-24-filled" class="w-6 h-6" />
       </button>
     </transition>
+
+    <!-- Duplicate Modal -->
+    <QuizDuplicateModal
+      :show="showDuplicateModal"
+      :quiz="quizToDuplicate"
+      :current-course-id="course?.id"
+      @close="showDuplicateModal = false"
+      @duplicated="handleDuplicated"
+    />
+
+    <!-- Create Modal -->
+    <QuizCreateModal
+      :show="showCreateModal"
+      :course-id="course?.id"
+      @close="showCreateModal = false"
+      @created="handleQuizCreated"
+    />
   </div>
 </template>

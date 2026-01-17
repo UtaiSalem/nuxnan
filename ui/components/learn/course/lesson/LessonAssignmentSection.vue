@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
+import RichTextEditor from '~/components/RichTextEditor.vue'
 
 interface Props {
   assignments: any[]
@@ -355,8 +356,8 @@ const formatDate = (date: string) => {
         </div>
 
         <!-- Description -->
-        <div v-if="activeAssignment.description" class="mb-4 prose prose-sm dark:prose-invert max-w-none">
-          <RichTextViewer :content="activeAssignment.description" />
+        <div v-if="activeAssignment.description" class="mb-4">
+          <RichTextEditor :model-value="activeAssignment.description" disabled class="!min-h-0" />
         </div>
 
         <!-- Meta Info -->
@@ -526,7 +527,9 @@ const formatDate = (date: string) => {
             </button>
           </div>
         </div>
-        <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-2">{{ userAnswer.content }}</p>
+        <div class="text-gray-700 dark:text-gray-300 mt-2">
+          <RichTextViewer :content="userAnswer.content" />
+        </div>
         
         <!-- Answer Images -->
         <div v-if="userAnswer.images?.length" class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -574,11 +577,10 @@ const formatDate = (date: string) => {
         </div>
 
         <!-- Text Answer -->
-        <textarea
+        <RichTextEditor
           v-model="answerContent"
-          rows="4"
-          class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none transition-all"
           placeholder="พิมพ์คำตอบของคุณที่นี่..."
+          class="min-h-[120px]"
         />
 
         <!-- File Upload -->

@@ -136,27 +136,97 @@ const handleUpdate = async () => {
 // Question Management
 const questionModal = ref(false)
 const editingQuestion = ref<any>(null)
+const isSavingQuestion = ref(false)
+const questionMediaFile = ref<File | null>(null)
+const questionMediaPreview = ref<string | null>(null)
+const optionMediaFiles = ref<Record<number, File | null>>({})
+const optionMediaPreviews = ref<Record<number, string | null>>({})
 const questionForm = reactive({
     text: '',
     points: 1,
+    pp_fine: 0,
+    media_url: null as string | null,
     options: [
-        { text: '', is_correct: false },
-        { text: '', is_correct: false },
-        { text: '', is_correct: false },
-        { text: '', is_correct: false }
+        { text: '', is_correct: false, media_url: null as string | null },
+        { text: '', is_correct: false, media_url: null as string | null }
     ]
 })
+
+// File upload handlers
+const handleQuestionMediaChange = (event: Event) => {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (file) {
+        questionMediaFile.value = file
+        questionMediaPreview.value = URL.createObjectURL(file)
+    }
+}
+
+const removeQuestionMedia = () => {
+    questionMediaFile.value = null
+    questionMediaPreview.value = null
+    questionForm.media_url = null
+}
+
+const handleOptionMediaChange = (event: Event, index: number) => {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (file) {
+        optionMediaFiles.value[index] = file
+        optionMediaPreviews.value[index] = URL.createObjectURL(file)
+    }
+}
+
+const removeOptionMedia = (index: number) => {
+    optionMediaFiles.value[index] = null
+    optionMediaPreviews.value[index] = null
+    questionForm.options[index].media_url = null
+}
+
+// Add/Remove options
+const addOption = () => {
+    questionForm.options.push({ text: '', is_correct: false, media_url: null })
+}
+
+const removeOption = (index: number) => {
+    if (questionForm.options.length > 2) {
+        questionForm.options.splice(index, 1)
+        // Clean up media for removed option
+        delete optionMediaFiles.value[index]
+        delete optionMediaPreviews.value[index]
+        // Reindex remaining media
+        const newFiles: Record<number, File | null> = {}
+        const newPreviews: Record<number, string | null> = {}
+        Object.keys(optionMediaFiles.value).forEach(key => {
+            const oldIndex = parseInt(key)
+            if (oldIndex > index) {
+                newFiles[oldIndex - 1] = optionMediaFiles.value[oldIndex]
+                newPreviews[oldIndex - 1] = optionMediaPreviews.value[oldIndex]
+            } else {
+                newFiles[oldIndex] = optionMediaFiles.value[oldIndex]
+                newPreviews[oldIndex] = optionMediaPreviews.value[oldIndex]
+            }
+        })
+        optionMediaFiles.value = newFiles
+        optionMediaPreviews.value = newPreviews
+    }
+}
 
 const openAddQuestion = () => {
     editingQuestion.value = null
     questionForm.text = ''
     questionForm.points = 1
+    questionForm.pp_fine = 0
+    questionForm.media_url = null
     questionForm.options = [
-        { text: '', is_correct: false },
-        { text: '', is_correct: false },
-        { text: '', is_correct: false },
-        { text: '', is_correct: false }
+        { text: '', is_correct: false, media_url: null },
+        { text: '', is_correct: false, media_url: null }
     ]
+    // Reset media files
+    questionMediaFile.value = null
+    questionMediaPreview.value = null
+    optionMediaFiles.value = {}
+    optionMediaPreviews.value = {}
     questionModal.value = true
 }
 
@@ -164,29 +234,50 @@ const openEditQuestion = (q: any) => {
     editingQuestion.value = q
     questionForm.text = q.text
     questionForm.points = q.points
+    questionForm.pp_fine = q.pp_fine || 0
+    questionForm.media_url = q.media_url || null
+    // Reset media files
+    questionMediaFile.value = null
+    questionMediaPreview.value = q.media_url || null
+    optionMediaFiles.value = {}
+    optionMediaPreviews.value = {}
     // Mapping options if available, else default
     if (q.options && q.options.length) {
-        questionForm.options = q.options.map((opt: any) => ({
-            id: opt.id,
-            text: opt.text,
-            is_correct: !!opt.is_correct
-        }))
+        questionForm.options = q.options.map((opt: any, idx: number) => {
+            if (opt.media_url) {
+                optionMediaPreviews.value[idx] = opt.media_url
+            }
+            return {
+                id: opt.id,
+                text: opt.text,
+                is_correct: !!opt.is_correct,
+                media_url: opt.media_url || null
+            }
+        })
     } else {
         questionForm.options = [
-            { text: '', is_correct: false },
-            { text: '', is_correct: false },
-            { text: '', is_correct: false },
-            { text: '', is_correct: false }
+            { text: '', is_correct: false, media_url: null },
+            { text: '', is_correct: false, media_url: null }
         ]
     }
     questionModal.value = true
 }
 
-const setCorrectOption = (index: number) => {
-    // Single choice for now, unless multiple choice allowed later
-    questionForm.options.forEach((opt, i) => {
-        opt.is_correct = i === index
-    })
+const toggleCorrectOption = (index: number) => {
+    // Multiple choice support - toggle the selected option
+    questionForm.options[index].is_correct = !questionForm.options[index].is_correct
+}
+
+const uploadMedia = async (file: File): Promise<string | null> => {
+    try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await api.post('/api/upload/media', formData)
+        return res.url || res.data?.url || null
+    } catch (err) {
+        console.error('Upload failed', err)
+        return null
+    }
 }
 
 const saveQuestion = async () => {
@@ -196,15 +287,78 @@ const saveQuestion = async () => {
         return
     }
 
+    isSavingQuestion.value = true
     try {
+        // Upload question media if new file selected
+        let questionMediaUrl = questionForm.media_url
+        if (questionMediaFile.value) {
+            questionMediaUrl = await uploadMedia(questionMediaFile.value)
+        }
+
         if (editingQuestion.value) {
-            // Update logic here (omitted for now as backend might need specific logic)
-             Swal.fire('Info', 'User update logic not fully implemented in this demo', 'info')
+            // Update existing question
+            const qId = editingQuestion.value.id
+            await api.patch(`/api/courses/${courseId}/quizzes/${quizId}/questions/${qId}`, {
+                text: questionForm.text,
+                points: questionForm.points,
+                pp_fine: questionForm.pp_fine,
+                media_url: questionMediaUrl
+            })
+
+            // Update options
+            const validOptions = questionForm.options.filter(o => o.text.trim() !== '')
+            
+            // Delete removed options
+            if (editingQuestion.value.options) {
+                const currentOptionIds = validOptions.filter(o => o.id).map(o => o.id)
+                for (const oldOpt of editingQuestion.value.options) {
+                    if (!currentOptionIds.includes(oldOpt.id)) {
+                        try {
+                            await api.delete(`/api/questions/${qId}/options/${oldOpt.id}`)
+                        } catch (e) {
+                            console.error('Failed to delete option', e)
+                        }
+                    }
+                }
+            }
+            
+            for (let i = 0; i < validOptions.length; i++) {
+                const opt = validOptions[i]
+                // Upload option media if new file
+                let optMediaUrl = opt.media_url
+                if (optionMediaFiles.value[i]) {
+                    optMediaUrl = await uploadMedia(optionMediaFiles.value[i]!)
+                }
+                
+                if (opt.id) {
+                    // Update existing option
+                    await api.patch(`/api/questions/${qId}/options/${opt.id}`, {
+                        text: opt.text,
+                        is_correct: opt.is_correct ? 1 : 0,
+                        media_url: optMediaUrl
+                    })
+                } else {
+                    // Create new option
+                    await api.post(`/api/questions/${qId}/options`, {
+                        text: opt.text,
+                        is_correct: opt.is_correct ? 1 : 0,
+                        media_url: optMediaUrl
+                    })
+                }
+            }
+
+            // Reload Data
+            await fetchData()
+            questionModal.value = false
+            editingQuestion.value = null
+            Swal.fire('Success', 'แก้ไขคำถามเรียบร้อย', 'success')
         } else {
             // Create Question
             const qRes = await api.post(`/api/courses/${courseId}/quizzes/${quizId}/questions`, {
                 text: questionForm.text,
-                points: questionForm.points
+                points: questionForm.points,
+                pp_fine: questionForm.pp_fine,
+                media_url: questionMediaUrl
             })
 
             if (qRes.success && qRes.question) {
@@ -214,10 +368,18 @@ const saveQuestion = async () => {
                 // Filter out empty options
                 const validOptions = questionForm.options.filter(o => o.text.trim() !== '')
                 
-                for (const opt of validOptions) {
+                for (let i = 0; i < validOptions.length; i++) {
+                    const opt = validOptions[i]
+                    // Upload option media if new file
+                    let optMediaUrl = opt.media_url
+                    if (optionMediaFiles.value[i]) {
+                        optMediaUrl = await uploadMedia(optionMediaFiles.value[i]!)
+                    }
+                    
                     await api.post(`/api/questions/${newQ.id}/options`, {
                         text: opt.text,
-                        is_correct: opt.is_correct ? 1 : 0
+                        is_correct: opt.is_correct ? 1 : 0,
+                        media_url: optMediaUrl
                     })
                 }
 
@@ -230,6 +392,8 @@ const saveQuestion = async () => {
     } catch (err) {
         console.error(err)
         Swal.fire('Error', 'ไม่สามารถบันทึกคำถามได้', 'error')
+    } finally {
+        isSavingQuestion.value = false
     }
 }
 
@@ -376,7 +540,14 @@ const deleteQuestion = async (qId: number) => {
                 </label>
             </div>
 
-            <div class="flex justify-end pt-4">
+            <div class="flex justify-end gap-3 pt-4">
+                <button 
+                  @click="$router.back()"
+                  class="px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  :disabled="isSaving"
+                >
+                  ยกเลิก
+                </button>
                 <button 
                   @click="handleUpdate"
                   class="px-6 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
@@ -430,12 +601,13 @@ const deleteQuestion = async (qId: number) => {
                             </div>
                         </div>
                         <div class="flex items-center gap-1">
-                            <span class="text-xs font-bold px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-gray-600 dark:text-gray-300 mr-2">{{ q.points }} คะแนน</span>
-                            <!-- <button @click="openEditQuestion(q)" class="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors">
-                                <Icon icon="fluent:edit-20-regular" />
-                            </button> -->
-                            <button @click="deleteQuestion(q.id)" class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors">
-                                <Icon icon="fluent:delete-20-regular" />
+                            <span class="text-xs font-bold px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded text-blue-600 dark:text-blue-300 mr-1">{{ q.points }} คะแนน</span>
+                            <span class="text-xs font-bold px-2 py-1 bg-orange-100 dark:bg-orange-900/30 rounded text-orange-600 dark:text-orange-300 mr-2">{{ q.pp_fine || 0 }} แต้ม</span>
+                            <button @click="openEditQuestion(q)" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors" title="แก้ไขคำถาม">
+                                <Icon icon="fluent:edit-20-regular" class="w-5 h-5" />
+                            </button>
+                            <button @click="deleteQuestion(q.id)" class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors" title="ลบคำถาม">
+                                <Icon icon="fluent:delete-20-regular" class="w-5 h-5" />
                             </button>
                         </div>
                     </div>
@@ -458,41 +630,125 @@ const deleteQuestion = async (qId: number) => {
             </div>
             
             <div class="p-6 overflow-y-auto flex-1 space-y-6">
+                <!-- คำถาม -->
                 <div>
                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำถาม</label>
                      <textarea v-model="questionForm.text" rows="3" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"></textarea>
+                     
+                     <!-- แนบไฟล์คำถาม -->
+                     <div class="mt-3">
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">แนบรูปภาพ/ไฟล์ประกอบคำถาม</label>
+                        <div v-if="questionMediaPreview || questionForm.media_url" class="relative inline-block mb-2">
+                            <img :src="questionMediaPreview || questionForm.media_url" class="h-24 w-auto rounded-lg object-cover" alt="Question media" />
+                            <button 
+                                @click="removeQuestionMedia" 
+                                type="button"
+                                class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                            >
+                                <Icon icon="fluent:dismiss-12-regular" class="w-4 h-4" />
+                            </button>
+                        </div>
+                        <label v-else class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors w-fit">
+                            <Icon icon="fluent:image-add-20-regular" class="w-5 h-5" />
+                            <span class="text-sm">เลือกไฟล์</span>
+                            <input type="file" accept="image/*,video/*,audio/*" class="hidden" @change="handleQuestionMediaChange" />
+                        </label>
+                     </div>
                 </div>
                 
-                <div>
-                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คะแนน</label>
-                     <input v-model.number="questionForm.points" type="number" min="1" class="w-24 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                <!-- คะแนนและแต้มค่าปรับ -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คะแนน</label>
+                        <input v-model.number="questionForm.points" type="number" min="1" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            แต้มค่าปรับ (PP Fine)
+                            <Icon icon="fluent:info-16-regular" class="inline w-4 h-4 text-gray-400 ml-1" title="จำนวนแต้มที่ผู้ใช้ต้องใช้เพื่อแก้ไขคำตอบหลังส่ง (0 = ฟรี)" />
+                        </label>
+                        <input v-model.number="questionForm.pp_fine" type="number" min="0" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                        <p class="text-xs text-gray-500 mt-1">0 = แก้ไขได้ฟรี</p>
+                    </div>
                 </div>
 
+                <!-- ตัวเลือก -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ตัวเลือก (คลิกที่วงกลมเพื่อเลือกข้อที่ถูก)</label>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">ตัวเลือก (คลิกเพื่อเลือกข้อที่ถูก - เลือกได้มากกว่า 1 ข้อ)</label>
+                        <button 
+                            @click="addOption" 
+                            type="button"
+                            class="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 flex items-center gap-1"
+                        >
+                            <Icon icon="fluent:add-circle-16-regular" class="w-4 h-4" />
+                            เพิ่มตัวเลือก
+                        </button>
+                    </div>
                     <div class="space-y-3">
-                        <div v-for="(opt, i) in questionForm.options" :key="i" class="flex items-center gap-3">
-                            <button @click="setCorrectOption(i)" class="focus:outline-none">
-                                <Icon 
-                                    :icon="opt.is_correct ? 'fluent:radio-button-24-filled' : 'fluent:radio-button-24-regular'" 
-                                    class="w-6 h-6 transition-colors"
-                                    :class="opt.is_correct ? 'text-green-500' : 'text-gray-400 hover:text-gray-600'" 
-                                />
-                            </button>
-                            <input 
-                                v-model="opt.text" 
-                                type="text" 
-                                :placeholder="`ตัวเลือกที่ ${i + 1}`"
-                                class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            />
+                        <div v-for="(opt, i) in questionForm.options" :key="i" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                            <div class="flex items-start gap-3">
+                                <button @click="toggleCorrectOption(i)" class="focus:outline-none mt-2.5" type="button" title="คลิกเพื่อเลือก/ยกเลิกคำตอบที่ถูกต้อง">
+                                    <div 
+                                        class="w-6 h-6 rounded border-2 flex items-center justify-center transition-colors duration-200"
+                                        :class="opt.is_correct ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-600 hover:border-green-400'"
+                                    >
+                                        <Icon v-if="opt.is_correct" icon="fluent:checkmark-16-filled" class="w-4 h-4" />
+                                    </div>
+                                </button>
+                                <div class="flex-1 space-y-2">
+                                    <input 
+                                        v-model="opt.text" 
+                                        type="text" 
+                                        :placeholder="`ตัวเลือกที่ ${i + 1}`"
+                                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        :class="{'border-green-500 ring-1 ring-green-500': opt.is_correct}"
+                                    />
+                                    <!-- แนบไฟล์ตัวเลือก -->
+                                    <div class="flex items-center gap-2">
+                                        <div v-if="optionMediaPreviews[i] || opt.media_url" class="relative inline-block">
+                                            <img :src="optionMediaPreviews[i] || opt.media_url" class="h-16 w-auto rounded object-cover" :alt="`Option ${i+1} media`" />
+                                            <button 
+                                                @click="removeOptionMedia(i)" 
+                                                type="button"
+                                                class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                                            >
+                                                <Icon icon="fluent:dismiss-12-regular" class="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                        <label v-else class="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors text-xs">
+                                            <Icon icon="fluent:image-add-20-regular" class="w-4 h-4" />
+                                            <span>แนบรูป</span>
+                                            <input type="file" accept="image/*" class="hidden" @change="handleOptionMediaChange($event, i)" />
+                                        </label>
+                                    </div>
+                                </div>
+                                <!-- ปุ่มลบตัวเลือก -->
+                                <button 
+                                    v-if="questionForm.options.length > 2"
+                                    @click="removeOption(i)" 
+                                    type="button"
+                                    class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors mt-1"
+                                    title="ลบตัวเลือกนี้"
+                                >
+                                    <Icon icon="fluent:delete-20-regular" class="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
                     </div>
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        <Icon icon="fluent:info-16-regular" class="inline w-3.5 h-3.5 mr-1" />
+                        สามารถเลือกคำตอบที่ถูกต้องได้มากกว่า 1 ข้อ
+                    </p>
                 </div>
             </div>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex justify-end gap-3">
-                <button @click="questionModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">ยกเลิก</button>
-                <button @click="saveQuestion" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">บันทึก</button>
+                <button @click="questionModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" :disabled="isSavingQuestion">ยกเลิก</button>
+                <button @click="saveQuestion" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 flex items-center gap-2" :disabled="isSavingQuestion">
+                    <Icon v-if="isSavingQuestion" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+                    <span>{{ isSavingQuestion ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
+                </button>
             </div>
         </div>
     </div>

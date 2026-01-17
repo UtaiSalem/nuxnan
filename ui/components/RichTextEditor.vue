@@ -237,18 +237,18 @@ onBeforeUnmount(() => {
     <!-- Editor -->
     <div
       ref="editorRef"
-      contenteditable="true"
+      :contenteditable="!disabled"
       @input="handleInput"
       :class="[
         'editor-content',
-        'min-h-[300px] max-h-[600px] overflow-y-auto',
+        disabled ? 'min-h-[50px]' : 'min-h-[300px] max-h-[600px] overflow-y-auto',
         'p-4 bg-white dark:bg-gray-900',
         'border border-gray-300 dark:border-gray-600',
-        disabled ? 'rounded-xl' : 'rounded-b-xl border-t-0',
-        'focus:outline-none focus:ring-2 focus:ring-blue-500',
+        disabled ? 'rounded-xl cursor-default' : 'rounded-b-xl border-t-0',
+        !disabled && 'focus:outline-none focus:ring-2 focus:ring-blue-500',
         'prose prose-lg dark:prose-invert max-w-none'
       ]"
-      :data-placeholder="placeholder"
+      :data-placeholder="disabled ? '' : placeholder"
     />
   </div>
 </template>

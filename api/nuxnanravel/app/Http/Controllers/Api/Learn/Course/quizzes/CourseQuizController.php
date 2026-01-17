@@ -219,12 +219,54 @@ class CourseQuizController extends Controller
         ], 200);
     }
 
+    /**
+     * Search quizzes across all courses that user has admin access to
+     */
+    public function searchQuizzes(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = $request->input('q', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json([
+                'success' => true,
+                'quizzes' => [],
+            ]);
+        }
+
+        $user = auth()->user();
+        
+        // Get course IDs where user is admin
+        $adminCourseIds = Course::where(function($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhereHas('courseMembers', function($q2) use ($user) {
+                  $q2->where('user_id', $user->id)
+                     ->whereIn('role', ['admin', 'teacher', 'instructor']);
+              });
+        })->pluck('id');
+
+        // Search quizzes from courses user can admin
+        $quizzes = CourseQuiz::with(['course:id,name,code'])
+            ->whereIn('course_id', $adminCourseIds)
+            ->where('title', 'like', '%' . $query . '%')
+            ->select(['id', 'title', 'course_id', 'total_score', 'time_limit', 'passing_score', 'is_active'])
+            ->withCount('questions')
+            ->orderBy('updated_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'quizzes' => $quizzes,
+        ]);
+    }
+
     public function duplicateQuiz(CourseQuiz $quiz, Request $request): \Illuminate\Http\JsonResponse
     {
         try {
             DB::beginTransaction();
             
-            $newQuiz = $this->createDuplicateQuiz($quiz, $request->course_id);
+            $customTitle = $request->input('title');
+            $newQuiz = $this->createDuplicateQuiz($quiz, $request->course_id, $customTitle);
             $this->duplicateQuestions($quiz, $newQuiz);
             $this->updateCourseTotalScore($newQuiz, $quiz->total_score);
             
@@ -246,10 +288,13 @@ class CourseQuizController extends Controller
         }
     }
     
-    private function createDuplicateQuiz(CourseQuiz $quiz, int $courseId): CourseQuiz
+    private function createDuplicateQuiz(CourseQuiz $quiz, int $courseId, ?string $customTitle = null): CourseQuiz
     {
         $newQuiz = $quiz->replicate();
         $newQuiz->course_id = $courseId;
+        if ($customTitle) {
+            $newQuiz->title = $customTitle;
+        }
         $newQuiz->save();
         
         return $newQuiz;

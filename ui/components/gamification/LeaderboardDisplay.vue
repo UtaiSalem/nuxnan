@@ -40,7 +40,7 @@
           
           <div class="item-user">
             <img 
-              :src="item.profile_photo_path || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user_name)}&background=random`" 
+              :src="getAvatarUrl(item, index)" 
               :alt="item.user_name"
               class="user-avatar"
             >
@@ -83,7 +83,7 @@
           
           <div class="item-user">
             <img 
-              :src="item.profile_photo_path || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user_name)}&background=random`" 
+              :src="getAvatarUrl(item, index)" 
               :alt="item.user_name"
               class="user-avatar"
             >
@@ -131,7 +131,7 @@
           
           <div class="item-user">
             <img 
-              :src="item.profile_photo_path || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user_name)}&background=random`" 
+              :src="getAvatarUrl(item, index)" 
               :alt="item.user_name"
               class="user-avatar"
             >
@@ -255,6 +255,17 @@ const currentUserId = computed(() => authStore.user?.id || 0)
 
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('th-TH').format(num)
+}
+
+// สีพื้นหลัง avatar นุ่มนวลสบายตา
+const getAvatarUrl = (item: any, index: number = 0): string => {
+  if (item.profile_photo_path) return item.profile_photo_path
+  const bgColors = [
+    '94a3b8', '64748b', '78716c', '6b7280', '71717a',
+    '737373', 'a3a3a3', '9ca3af', 'a1a1aa', 'a8a29e'
+  ]
+  const bgColor = bgColors[index % bgColors.length]
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user_name)}&background=${bgColor}&color=fff`
 }
 
 // Tabs configuration
