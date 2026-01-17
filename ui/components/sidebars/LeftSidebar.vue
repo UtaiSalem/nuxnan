@@ -38,6 +38,7 @@ const menuItems = [
   { name: 'Newsfeed', href: '/play/newsfeed', icon: 'mdi:message-outline' },
   { name: 'Overview', href: '/overview', icon: 'mdi:chart-bar' },
   { name: 'Groups', href: '/play/groups', icon: 'mdi:account-group-outline' },
+  { name: 'Schools', href: '/academies', icon: 'mdi:school-outline' },
   { name: 'Members', href: '/members', icon: 'mdi:account-outline' },
   { name: 'Badges', href: '/badges', icon: 'mdi:medal-outline' },
   { name: 'Quests', href: '/quests', icon: 'mdi:star-outline' },

@@ -20,7 +20,16 @@ use App\Http\Controllers\Api\Admin\DepositRequestController;
 |
 */
 
-Route::middleware('auth:sanctum')->group(function () {
+// Public Gamification Routes (no auth required)
+Route::prefix('gamification')->group(function () {
+    Route::get('/leaderboard/points', [GamificationController::class, 'getPointsLeaderboard']);
+    Route::get('/leaderboard/streak', [GamificationController::class, 'getStreakLeaderboard']);
+    Route::get('/leaderboard/achievements', [GamificationController::class, 'getAchievementLeaderboard']);
+    Route::get('/leaderboard/level', [GamificationController::class, 'getLevelLeaderboard']);
+    Route::get('/leaderboard/summary', [GamificationController::class, 'getLeaderboardSummary']);
+});
+
+Route::middleware('auth:api')->group(function () {
     // Points Routes
     Route::prefix('points')->group(function () {
         Route::get('/balance', [PointsController::class, 'balance']);
@@ -55,18 +64,13 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    // Gamification Routes
+    // Gamification Routes (require auth)
     Route::prefix('gamification')->group(function () {
         Route::post('/login', [GamificationController::class, 'recordLogin']);
         Route::get('/streak', [GamificationController::class, 'getStreakInfo']);
         Route::get('/achievements', [GamificationController::class, 'getAchievements']);
         Route::get('/achievements/available', [GamificationController::class, 'getAvailableAchievements']);
         Route::get('/achievements/stats', [GamificationController::class, 'getAchievementStats']);
-        Route::get('/leaderboard/points', [GamificationController::class, 'getPointsLeaderboard']);
-        Route::get('/leaderboard/streak', [GamificationController::class, 'getStreakLeaderboard']);
-        Route::get('/leaderboard/achievements', [GamificationController::class, 'getAchievementLeaderboard']);
-        Route::get('/leaderboard/level', [GamificationController::class, 'getLevelLeaderboard']);
-        Route::get('/leaderboard/summary', [GamificationController::class, 'getLeaderboardSummary']);
     });
 
     // Rewards Routes

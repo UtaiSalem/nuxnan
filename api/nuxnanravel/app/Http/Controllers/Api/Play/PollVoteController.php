@@ -1,3 +1,7 @@
+<?php
+
+namespace App\Http\Controllers\Api\Play;
+
 use App\Http\Controllers\Controller;
 use App\Models\Poll;
 use App\Models\PollVote;

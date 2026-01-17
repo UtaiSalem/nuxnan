@@ -40,7 +40,7 @@
           
           <div class="item-user">
             <img 
-              :src="item.profile_photo_path || '/images/default-avatar.png'" 
+              :src="item.profile_photo_path || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user_name)}&background=random`" 
               :alt="item.user_name"
               class="user-avatar"
             >
@@ -83,7 +83,7 @@
           
           <div class="item-user">
             <img 
-              :src="item.profile_photo_path || '/images/default-avatar.png'" 
+              :src="item.profile_photo_path || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user_name)}&background=random`" 
               :alt="item.user_name"
               class="user-avatar"
             >
@@ -131,7 +131,7 @@
           
           <div class="item-user">
             <img 
-              :src="item.profile_photo_path || '/images/default-avatar.png'" 
+              :src="item.profile_photo_path || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user_name)}&background=random`" 
               :alt="item.user_name"
               class="user-avatar"
             >
@@ -252,6 +252,10 @@ const leaderboardData = ref({
 })
 
 const currentUserId = computed(() => authStore.user?.id || 0)
+
+const formatNumber = (num: number) => {
+  return new Intl.NumberFormat('th-TH').format(num)
+}
 
 // Tabs configuration
 const tabs = [

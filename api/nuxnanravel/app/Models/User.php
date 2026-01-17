@@ -230,7 +230,12 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     //get profile photo url
     public function getProfilePhotoUrlAttribute()
     {
-        return $this->profile_photo_path;
+        if ($this->profile_photo_path) {
+            // Return full URL with storage path
+            return url('storage/' . $this->profile_photo_path);
+        }
+        
+        return null;
     }
 
     /**
@@ -529,6 +534,30 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function dailyPointLimits()
     {
         return $this->hasMany(\App\Models\DailyPointLimit::class);
+    }
+
+    /**
+     * Get coupons created by the user.
+     */
+    public function coupons()
+    {
+        return $this->hasMany(\App\Models\Coupon::class);
+    }
+
+    /**
+     * Get coupons redeemed by the user.
+     */
+    public function redeemedCoupons()
+    {
+        return $this->hasMany(\App\Models\Coupon::class, 'redeemed_by');
+    }
+
+    /**
+     * Get coupon redemptions by the user.
+     */
+    public function couponRedemptions()
+    {
+        return $this->hasMany(\App\Models\CouponRedemption::class);
     }
 
 }

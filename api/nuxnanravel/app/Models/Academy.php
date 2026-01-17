@@ -59,6 +59,11 @@ class Academy extends Model
         return $this->hasMany(AcademyMember::class);
     }
 
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
+    }
+
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'academy_members', 'academy_id', 'user_id')->withPivot('status');

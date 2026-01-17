@@ -17,8 +17,18 @@ class AcademyMemberResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-           'academy' => Academy::find($this->academy_id)
-        //    'academy' => $this->academies
+            'id' => $this->id,
+            'academy_id' => $this->academy_id,
+            'user_id' => $this->user_id,
+            'student_id' => $this->student_id,
+            'member_code' => $this->member_code,
+            'role' => $this->role,
+            'status' => $this->status,
+            'member_name' => $this->member_name,
+            'member_avatar' => $this->member_avatar,
+            'user' => $this->whenLoaded('user'),
+            'student' => $this->whenLoaded('student'),
+            'academy' => new AcademyResource($this->whenLoaded('academy')),
         ];
     }
 }

@@ -15,7 +15,7 @@ const { getPointsLeaderboard, isLoading: isGamificationLoading } = useGamificati
 const leaderboard = ref([])
 const fetchLeaderboard = async () => {
   try {
-    const data = await getPointsLeaderboard({ limit: 8 })
+    const data = await getPointsLeaderboard({ limit: 10 })
     leaderboard.value = data.leaderboard
   } catch (error) {
     console.error('Failed to fetch leaderboard:', error)
@@ -48,6 +48,7 @@ const toggleEarnMenu = () => {
 const earnSubmenu = [
   { name: 'Points', href: '/earn/points', icon: 'fluent:coin-stack-24-regular' },
   { name: 'Wallet', href: '/earn/wallet', icon: 'fluent:wallet-24-regular' },
+  { name: 'Coupons', href: '/earn/coupons', icon: 'fluent:ticket-diagonal-24-regular' },
   { name: 'Rewards', href: '/earn/rewards', icon: 'fluent:gift-24-regular' },
   { name: 'Achievements', href: '/earn/gamification', icon: 'fluent:trophy-24-regular' },
 ]
@@ -93,6 +94,7 @@ const authUser = computed(() => {
 // Navigation
 const navigation = [
   { name: 'กระดานข่าว', href: '/play/newsfeed', icon: 'fluent:feed-24-regular' },
+  { name: 'โรงเรียน', href: '/academies', icon: 'mdi:school-outline' },
   { name: 'รายวิชา', href: '/learn/courses', icon: 'fluent-mdl2:publish-course' },
   { name: 'สะสมแต้ม', href: '/earn/donates', icon: 'mdi:hand-coin-outline' },
   { name: 'ดูสินค้า', href: '/earn/advertise', icon: 'eos-icons:product-subscriptions-outlined' },
@@ -195,10 +197,34 @@ const settingsUrl = computed(() => {
 })
 provide('toggleTheme', toggleTheme)
 
+// Format number to K/M format
+const formatNumber = (num) => {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+  }
+  return num.toLocaleString()
+}
 
 // For testing point changes
 const handleTestChangePoints = () => {
   authStore.addPoints(100)
+}
+
+// Universal QR Scanner Modal
+const isQRScannerOpen = ref(false)
+
+const openQRScanner = () => {
+  isQRScannerOpen.value = true
+}
+
+const onQRActionComplete = (result) => {
+  // Refresh leaderboard after any QR action
+  if (result.success) {
+    fetchLeaderboard()
+  }
 }
 
 </script>
@@ -303,39 +329,61 @@ const handleTestChangePoints = () => {
         
 
         <!-- Right: Points + Wallet + Avatar + Settings -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
           <!-- Points -->
           <NuxtLink
             to="/earn/points"
-            class="hidden sm:flex items-center gap-1 px-3 py-1 rounded-lg transition-colors"
+            class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all hover:scale-105"
             :class="
               isDarkMode
-                ? 'bg-vikinger-dark-200 hover:bg-vikinger-purple/10'
-                : 'bg-gray-100 hover:bg-gray-200'
+                ? 'bg-gradient-to-r from-amber-900/40 to-orange-900/30 hover:from-amber-900/60 hover:to-orange-900/50 border border-amber-500/30'
+                : 'bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200'
             "
           >
-            <img src="/storage/images/badge/completedq.png" alt="points" class="w-6 h-6" />
-            <span class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              {{ authUser.pp.toLocaleString() }}
+            <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+              <Icon icon="fluent:star-24-filled" class="w-3.5 h-3.5 text-white" />
+            </div>
+            <span class="font-bold text-sm" :class="isDarkMode ? 'text-amber-400' : 'text-amber-600'">
+              {{ formatNumber(authUser.pp) }}
             </span>
           </NuxtLink>
 
           <!-- Wallet -->
           <NuxtLink
             to="/earn/wallet"
-            class="hidden sm:flex items-center gap-1 px-3 py-1 rounded-lg transition-colors cursor-pointer hover:opacity-80"
-            :class="isDarkMode ? 'bg-vikinger-dark-200 hover:bg-vikinger-dark-300' : 'bg-gray-100 hover:bg-gray-200'"
+            class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all hover:scale-105"
+            :class="
+              isDarkMode
+                ? 'bg-gradient-to-r from-emerald-900/40 to-green-900/30 hover:from-emerald-900/60 hover:to-green-900/50 border border-emerald-500/30'
+                : 'bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 border border-emerald-200'
+            "
           >
-            <img src="/storage/images/badge/goldc.png" alt="wallet" class="w-6 h-6" />
-            <span class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              {{ authUser.wallet.toLocaleString() }}
+            <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center">
+              <Icon icon="fluent:money-24-filled" class="w-3.5 h-3.5 text-white" />
+            </div>
+            <span class="font-bold text-sm" :class="isDarkMode ? 'text-emerald-400' : 'text-emerald-600'">
+              ฿{{ formatNumber(authUser.wallet) }}
             </span>
           </NuxtLink>
 
+          <!-- Scan QR Button -->
+          <button
+            @click="openQRScanner"
+            class="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 hover:scale-110"
+            :class="
+              isDarkMode
+                ? 'bg-gradient-to-br from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 shadow-lg shadow-purple-500/30'
+                : 'bg-gradient-to-br from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400 shadow-lg shadow-purple-500/30'
+            "
+            title="สแกน QR Code"
+          >
+            <Icon icon="fluent:qr-code-24-filled" class="w-5 h-5 text-white" />
+          </button>
+
           <!-- Avatar -->
-          <NuxtLink to="/profile">
+          <NuxtLink to="/profile" class="group">
             <div
-              class="w-10 h-10 rounded-full overflow-hidden border-2 border-vikinger-purple shadow-lg"
+              class="w-10 h-10 rounded-full overflow-hidden border-2 border-vikinger-cyan shadow-lg group-hover:border-vikinger-purple group-hover:scale-110 transition-all"
             >
               <img
                 :src="authUser.profile_photo_url"
@@ -618,6 +666,20 @@ const handleTestChangePoints = () => {
               <span class="font-semibold">Newsfeed</span>
             </NuxtLink>
             <NuxtLink
+              to="/academies"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
+              :class="
+                route.path.startsWith('/academies')
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
+              "
+            >
+              <Icon icon="mdi:school-outline" class="w-5 h-5" />
+              <span class="font-semibold">Schools</span>
+            </NuxtLink>
+            <NuxtLink
               to="/Learn/Courses"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
               :class="
@@ -745,6 +807,20 @@ const handleTestChangePoints = () => {
             :title="'Newsfeed'"
           >
             <Icon icon="fluent:chat-bubbles-question-24-regular" class="w-6 h-6" />
+          </NuxtLink>
+          <NuxtLink
+            to="/academies"
+            class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
+            :class="
+              route.path.startsWith('/academies')
+                ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                : isDarkMode
+                ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
+            "
+            :title="'Schools'"
+          >
+            <Icon icon="mdi:school-outline" class="w-6 h-6" />
           </NuxtLink>
           <NuxtLink
             to="/Learn/Courses"
@@ -900,7 +976,7 @@ const handleTestChangePoints = () => {
 
           <!-- Online Friends (Ranked) -->
           <div v-if="isGamificationLoading && !leaderboard.length" class="space-y-3 animate-pulse">
-            <div v-for="i in 8" :key="i" class="flex items-center gap-3 p-2">
+            <div v-for="i in 10" :key="i" class="flex items-center gap-3 p-2">
               <div class="w-10 h-10 bg-gray-200 dark:bg-vikinger-dark-200 rounded-full"></div>
               <div class="flex-1 space-y-2">
                 <div class="h-3 bg-gray-200 dark:bg-vikinger-dark-200 rounded w-2/3"></div>
@@ -912,12 +988,12 @@ const handleTestChangePoints = () => {
           <div v-else class="space-y-3">
             <div
               v-for="(user, index) in leaderboard"
-              :key="user.user_id"
+              :key="user.id"
               class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors group"
               :class="isDarkMode ? 'hover:bg-vikinger-dark-200' : 'hover:bg-gray-100'"
             >
               <div class="relative">
-                <img :src="user.profile_photo_url || '/images/default-avatar.png'" class="w-10 h-10 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors" />
+                <img :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`" class="w-10 h-10 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" />
                 <div
                   class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
                   :class="[
@@ -933,16 +1009,12 @@ const handleTestChangePoints = () => {
                   class="text-sm font-semibold truncate"
                   :class="isDarkMode ? 'text-white' : 'text-gray-900'"
                 >
-                  {{ user.user_name }}
+                  {{ user.name }}
                 </div>
                 <div class="flex items-center gap-3 mt-1">
                   <div class="flex items-center gap-1 text-[10px] font-bold text-vikinger-purple" title="แต้มสะสม (PP)">
                     <img src="/storage/images/badge/completedq.png" class="w-3.5 h-3.5" alt="pp" />
-                    {{ Number(user.pp).toLocaleString() }}
-                  </div>
-                  <div class="flex items-center gap-1 text-[10px] font-bold text-vikinger-yellow" title="เงินในวอลเล็ต (Gold)">
-                    <img src="/storage/images/badge/goldc.png" class="w-3.5 h-3.5" alt="gold" />
-                    {{ Number(user.wallet).toLocaleString() }}
+                    {{ formatNumber(user.points || 0) }}
                   </div>
                 </div>
               </div>
@@ -961,12 +1033,12 @@ const handleTestChangePoints = () => {
         <div v-if="!isRightDrawerOpen" key="collapsed-right" class="p-2 pt-6 space-y-3 flex flex-col items-center">
           <!-- Top Ranked Icons (Collapsed) -->
           <div
-            v-for="(user, index) in leaderboard.slice(0, 6)"
-            :key="user.user_id"
+            v-for="(user, index) in leaderboard.slice(0, 10)"
+            :key="user.id"
             class="relative cursor-pointer transition-transform hover:scale-110 group"
-            :title="`Rank ${index + 1}: ${user.user_name}`"
+            :title="`Rank ${index + 1}: ${user.name}`"
           >
-            <img :src="user.profile_photo_url || '/images/default-avatar.png'" class="w-11 h-11 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors" />
+            <img :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`" class="w-11 h-11 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" />
             <div
               class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
               :class="[
@@ -1068,6 +1140,20 @@ const handleTestChangePoints = () => {
               <span class="font-semibold">Newsfeed</span>
             </NuxtLink>
             <NuxtLink
+              to="/academies"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+              :class="
+                route.path.startsWith('/academies')
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-vikinger-purple/10'
+                  : 'text-gray-700 hover:bg-gray-100'
+              "
+            >
+              <Icon icon="mdi:school-outline" class="w-5 h-5" />
+              <span class="font-semibold">Schools</span>
+            </NuxtLink>
+            <NuxtLink
               to="/Learn/Courses"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
               :class="
@@ -1159,6 +1245,12 @@ const handleTestChangePoints = () => {
         </div>
       </aside>
     </div>
+    
+    <!-- Universal QR Scanner Modal -->
+    <QrUniversalQRModal 
+      v-model="isQRScannerOpen" 
+      @action-complete="onQRActionComplete"
+    />
   </div>
 </template>
 

@@ -32,11 +32,16 @@ const onlineFriends = ref([
 const leaderboard = ref([])
 const fetchLeaderboard = async () => {
   try {
-    const data = await getPointsLeaderboard({ limit: 5 })
+    const data = await getPointsLeaderboard({ limit: 10 })
     leaderboard.value = data.leaderboard
   } catch (error) {
     console.error('Failed to fetch leaderboard:', error)
   }
+}
+
+const getAvatarUrl = (user) => {
+  if (user.profile_photo_url) return user.profile_photo_url
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_name)}&background=random&color=fff`
 }
 
 onMounted(() => {
@@ -167,7 +172,7 @@ const getStatusColor = (status) => {
       
       <!-- Loading State -->
       <div v-if="isGamificationLoading && !leaderboard.length" class="space-y-3 animate-pulse">
-        <div v-for="i in 5" :key="i" class="flex items-center gap-3 p-2">
+        <div v-for="i in 10" :key="i" class="flex items-center gap-3 p-2">
           <div class="w-9 h-9 bg-gray-200 dark:bg-vikinger-dark-200 rounded-full"></div>
           <div class="flex-1 space-y-2">
             <div class="h-3 bg-gray-200 dark:bg-vikinger-dark-200 rounded w-2/3"></div>
@@ -183,7 +188,7 @@ const getStatusColor = (status) => {
           class="flex items-center gap-3 p-2 rounded-vikinger hover:bg-vikinger-light-300 dark:hover:bg-vikinger-dark-200 cursor-pointer transition-colors group"
         >
           <div class="relative shrink-0">
-            <img :src="user.profile_photo_url || '/images/default-avatar.png'" class="w-9 h-9 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors" :alt="user.user_name" />
+            <img :src="getAvatarUrl(user)" class="w-9 h-9 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" :alt="user.user_name" />
             <span 
               class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 border-white dark:border-vikinger-dark-100 flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
               :class="index === 0 ? 'bg-vikinger-yellow' : index === 1 ? 'bg-gray-300' : index === 2 ? 'bg-orange-400' : 'bg-vikinger-purple'"
@@ -214,7 +219,6 @@ const getStatusColor = (status) => {
           ยังไม่มีข้อมูลลำดับ
         </div>
       </div>
-
       <div class="mt-3 relative">
         <input 
           type="text" 

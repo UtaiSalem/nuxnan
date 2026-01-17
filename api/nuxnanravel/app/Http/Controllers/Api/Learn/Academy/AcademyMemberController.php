@@ -11,6 +11,8 @@ use App\Models\AcademyMember;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 
+use App\Http\Resources\Learn\Academy\AcademyMemberResource;
+
 class AcademyMemberController extends Controller
 {
     public function __construct()
@@ -125,10 +127,10 @@ class AcademyMemberController extends Controller
 
     public function memberlist(Academy $academy)
     {
-        $members = $academy->academyMembers()->with('user')->get();
+        $members = $academy->academyMembers()->with(['user', 'student'])->get();
         return response()->json([
             'success' => true,
-            'members'  => $members,
+            'members'  => AcademyMemberResource::collection($members),
         ], 200);
     }
 
@@ -142,12 +144,11 @@ class AcademyMemberController extends Controller
     }
 
     public function getAcademyMembers(Academy $academy) {
-        // $members = AcademyMember::where('user_id', auth()->id())->with('academy')->get();
-        $members = $academy->members()->get();
+        $members = $academy->academyMembers()->with(['user', 'student'])->get();
 
         return response()->json([
             'success' => true,
-            'members'  => $members,
+            'members'  => AcademyMemberResource::collection($members),
         ], 200);
     }
 

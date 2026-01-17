@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Academy;
+use App\Models\User;
 
 /**
  * Student Model - Core Entity for New Normalized Structure
@@ -13,6 +16,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Student extends Model
 {
     use HasFactory;
+
+    protected $guarded = [];
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function academyMember(): HasOne
+    {
+        return $this->hasOne(AcademyMember::class, 'student_id');
+    }
 
     protected $fillable = [
         'student_id',

@@ -233,6 +233,12 @@ require __DIR__ . '/api_shares.php';
 // Points & Wallet system routes
 require __DIR__ . '/api-points-wallet.php';
 
+// Coupons system routes
+require __DIR__ . '/api-coupons.php';
+
+// Universal QR Code system routes
+require __DIR__ . '/api-qr.php';
+
 // Photos & Albums system routes
 require __DIR__ . '/api-photos.php';
 

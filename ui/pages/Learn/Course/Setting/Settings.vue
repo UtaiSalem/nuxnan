@@ -1,6 +1,6 @@
 <script setup>
 
-import CourseLayout from '@/Layouts/CourseLayout.vue';
+import CourseLayout from '@/layouts/CourseLayout.vue';
 import CourseSettings from '@/components/learn/course/CourseSettings.vue';
 
 const props = defineProps({
@@ -29,6 +29,7 @@ async function onUpdateCourseHandler(courseData){
         courseUpdateForm.append('saleable', courseData.saleable);
         courseUpdateForm.append('price', courseData.price);
         courseUpdateForm.append('status', courseData.status);
+        courseUpdateForm.append('academy_id', courseData.academy_id);
         
         courseData.cover ? courseUpdateForm.append('cover', courseData.cover): null;
         courseUpdateForm.append('_method', 'put');

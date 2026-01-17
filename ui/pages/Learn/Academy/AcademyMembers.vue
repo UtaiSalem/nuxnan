@@ -1,11 +1,10 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import { Icon } from '@iconify/vue';
 import Swal from 'sweetalert2';
 import MainLayout from '~/layouts/main.vue';
 import AcademyCoverProfile from '@/components/learn/academy/AcademyCoverProfile.vue';
-import CourseCard from '@/components/learn/course/CourseCard.vue';
 import AcademyNavbarTab from '@/components/learn/academy/AcademyNavbarTab.vue';
 
 const props = defineProps({
@@ -16,21 +15,57 @@ const props = defineProps({
 });
 
 const isDarkMode = ref(false);
+const members = ref([]);
+const isLoading = ref(true);
 
 const tempLogo = ref(props.academy.data.logo? '/storage/images/academies/logos/' + props.academy.data.logo:'/storage/images/academies/logos/default_logo.png');
-// const tempLogo = ref(props.app_url + '/storage/images/academies/logos/' + props.academy.data.logo  || props.app_url + '/storage/images/academies/logos/default_logo.png');
-// const tempCover = ref(props.app_url + '/storage/images/academies/covers/' + props.academy.data.cover || props.app_url + '/storage/images/academies/covers/default_cover.png');
 const tempCover = ref(props.academy.data.cover? '/storage/images/academies/covers/' + props.academy.data.cover : '/storage/images/academies/covers/default_cover.png');
-const tempHeader = ref(props.academy.data.name);
+consttempHeader = ref(props.academy.data.name);
 const tempSubheader = ref(props.academy.data.slogan);
 
-const formAcademyUpdate = useForm({
-    name:'', 
-    slogan:'', 
-    address:'', 
-    cover:null, 
-    logo:null,
+async function fetchMembers() {
+    isLoading.value = true;
+    try {
+        const response = await axios.get(`/api/academies/${props.academy.data.id}/members`);
+        if (response.data.success) {
+            // Handle both paginated and non-paginated responses
+            if (response.data.members && response.data.members.data) {
+                members.value = response.data.members.data;
+            } else {
+                members.value = response.data.members || [];
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching members:", error);
+    } finally {
+        isLoading.value = false;
+    }
+}
+
+onMounted(() => {
+    fetchMembers();
 });
+
+// Helper to get display name
+const getMemberName = (member) => {
+    if (member.user) return member.user.name;
+    if (member.student) return `${member.student.first_name_th} ${member.student.last_name_th}`;
+    return 'Unknown Member';
+};
+
+// Helper to get avatar
+const getMemberAvatar = (member) => {
+    if (member.user && member.user.profile_photo_url) return member.user.profile_photo_url;
+    // Fallback/Default
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(getMemberName(member))}&color=7F9CF5&background=EBF4FF`;
+};
+
+// Helper to get code/id
+const getMemberCode = (member) => {
+    if (member.student) return member.student.student_id;
+    if (member.member_code) return member.member_code;
+    return '-';
+};
 
 async function onCoverImageChange(coverFile) {
     const academyCoverUpdate = new FormData();
@@ -60,30 +95,21 @@ async function onRequestToBeAMember(){
         if (memberResp.data.success) {
             props.academy.data.isMember=memberResp.data.isMember;
             props.academy.data.total_students = memberResp.data.totalStudents;
-            if (memberResp.data.isMember) {
-                Swal.fire(
-                    'เสร็จสิ้น',
-                    'ขอเป็นสมาชิกเรียบร้อยแล้ว',
-                    'success'
-                )
-            }else{
-                Swal.fire(
-                    'เสร็จสิ้น',
-                    'ออกจากการเป็นสมาชิกเรียบร้อยแล้ว',
-                    'success'
-                )
+            fetchMembers(); // Refresh list
+             if (memberResp.data.isMember) {
+                Swal.fire('เสร็จสิ้น', 'ขอเป็นสมาชิกเรียบร้อยแล้ว', 'success');
+            } else {
+                Swal.fire('เสร็จสิ้น', 'ออกจากการเป็นสมาชิกเรียบร้อยแล้ว', 'success');
             }
         }
     } catch (error) {
         // Handle error silently
     }
 }
-
-
 </script>
 
 <template>
-    <MainLayout title="Academy" :appUrl="props.app_url">
+    <MainLayout title="Academy Members" :appUrl="props.app_url">
         <template #coverProfileCard>
             <div class="">
                 <AcademyCoverProfile :coverImage="tempCover" :logoImage="tempLogo" v-model:coverHeader="tempHeader"
@@ -96,33 +122,47 @@ async function onRequestToBeAMember(){
                     @header-change="(data)=>{ onHeaderChange(data) }"
                     @subheader-change="(data)=>{ onSubheaderChange(data) }"
                     @request-tobe-member="onRequestToBeAMember()"></AcademyCoverProfile>
-
             </div>
 
-            <AcademyNavbarTab :academy="props.academy" :activeTab="2" />
-            
+            <AcademyNavbarTab :academy="props.academy" :activeTab="3" />
         </template>
-        <template #leftSideWidget>
-            <div>
-
-            </div>
-        </template>
-
+        
         <template #mainContent>
-            <!-- <div class="section-header my-4 p-4 bg-white rounded-xl shadow-lg">
+            <div class="section-header my-4 p-4 bg-white rounded-xl shadow-lg flex justify-between items-center">
                 <div class="section-header-info">
-                    <h2 class="section-title font-prompt">รายวิชาทั้งหมด
-                        {{ ' ' + props.courses.data.length + ' วิชา' || 'ยังไม่มีรายวิชา' }}</h2>
+                    <h2 class="section-title font-prompt text-xl font-bold">สมาชิกทั้งหมด
+                        <span class="text-indigo-600 ml-2">{{ members.length }} คน</span>
+                    </h2>
                 </div>
-            </div> -->
+            </div>
 
-            <!-- <div class="flex flex-wrap justify-between gap-4 ">
-                <div v-for="(course, index) in props.courses.data" :key="index" class="w-full sm:w-[48%]">
-                    <CourseCard :course="course" />
+            <div v-if="isLoading" class="flex justify-center p-8">
+                <Icon icon="svg-spinners:3-dots-scale" class="w-10 h-10 text-indigo-500" />
+            </div>
+
+            <div v-else-if="members.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div v-for="member in members" :key="member.id" 
+                    class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 flex items-center space-x-4 hover:shadow-md transition-shadow">
+                    <img :src="getMemberAvatar(member)" alt="Avatar" class="w-12 h-12 rounded-full object-cover ring-2 ring-indigo-100">
+                    <div class="overflow-hidden">
+                        <h3 class="font-bold text-gray-800 dark:text-gray-200 truncate">{{ getMemberName(member) }}</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <Icon icon="heroicons:identification" class="w-3 h-3" />
+                            {{ getMemberCode(member) }}
+                        </p>
+                        <span class="inline-block mt-1 px-2 py-0.5 text-[10px] rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                            {{ member.role || 'Student' }}
+                        </span>
+                    </div>
                 </div>
-            </div> -->
+            </div>
+
+            <div v-else class="flex flex-col items-center justify-center p-12 bg-white dark:bg-gray-800 rounded-xl shadow text-center">
+                <Icon icon="heroicons:users" class="w-16 h-16 text-gray-300 mb-4" />
+                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">ยังไม่มีสมาชิก</h3>
+                <p class="text-gray-500 text-sm mt-1">คลิก "เชิญสมาชิก" เพื่อเชิญผู้ใช้เข้าร่วม (ถ้ามีสิทธิ์)</p>
+            </div>
         </template>
-
     </MainLayout>
 </template>
 

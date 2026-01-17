@@ -9,11 +9,15 @@ import AcademyPostViewer from '@/components/learn/academy/posts/AcademyPostViewe
 const props = defineProps({
     academy: Object,
     isAcademyAdmin: Boolean,
-    activities: Array,
+    activities: Object,
 });
 
+import AcademyInfoWidget from '@/components/learn/academy/widgets/AcademyInfoWidget.vue';
+import AcademyActivityWidget from '@/components/learn/academy/widgets/AcademyActivityWidget.vue';
+import AcademyAnnouncementWidget from '@/components/learn/academy/widgets/AcademyAnnouncementWidget.vue';
+
 const isLoadingAcademyPosts = ref(false);
-const academyActivities = ref(props.activities.data);
+const academyActivities = ref(props.activities?.data || []);
 
 </script>
 
@@ -22,6 +26,12 @@ const academyActivities = ref(props.activities.data);
             :academy
             :isAcademyAdmin
         >
+            <template #leftSideWidget>
+                <div class="space-y-4">
+                    <AcademyInfoWidget :academy="props.academy" />
+                    <AcademyAnnouncementWidget :academyId="props.academy.data.id" />
+                </div>
+            </template>
 
             <template #academyContent>
                 <div class="mt-4">
@@ -43,6 +53,12 @@ const academyActivities = ref(props.activities.data);
                         </div>
                     </div>
 
+                </div>
+            </template>
+
+            <template #rightSideWidget>
+                <div class="space-y-4">
+                    <AcademyActivityWidget :academyId="props.academy.data.id" />
                 </div>
             </template>
         </AcademyLayout>

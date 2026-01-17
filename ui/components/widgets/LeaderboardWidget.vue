@@ -81,7 +81,7 @@
           <!-- Avatar -->
           <div class="relative">
             <img 
-              :src="user.avatar || '/images/default-avatar.png'" 
+              :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`" 
               :alt="user.name"
               class="w-10 h-10 rounded-full object-cover"
             >

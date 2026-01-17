@@ -128,7 +128,7 @@ const props = withDefaults(defineProps<Props>(), {
       </h3>
       <div class="space-y-2">
         <div
-          v-for="(user, index) in leaderboard.slice(0, 5)"
+          v-for="(user, index) in leaderboard.slice(0, 10)"
           :key="user.id"
           class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
@@ -147,7 +147,7 @@ const props = withDefaults(defineProps<Props>(), {
 
           <!-- Avatar -->
           <img
-            :src="user.avatar"
+            :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`"
             :alt="user.name"
             class="w-8 h-8 rounded-full object-cover"
           >
