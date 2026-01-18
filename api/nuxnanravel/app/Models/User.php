@@ -18,7 +18,7 @@ use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Support\Facades\Auth;
 
 use Carbon\Carbon;
-use App\Models\User;
+// use App\Models\User; // Recursive import removed
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Academy;
@@ -121,9 +121,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'level' => 'integer',
             'xp_for_next_level' => 'integer',
             'current_xp' => 'integer',
-            // 'no_of_ref' => 'integer',
-            // 'pp' => 'decimal:2',
-            // 'wallet' => 'decimal:2',
+            'no_of_ref' => 'integer',
+            'pp' => 'decimal:2',
+            'wallet' => 'decimal:2',
         ];
     }
 
@@ -414,7 +414,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 
     public function getCreatedAtAttribute($value)
     {
-        return date('dd-mm-Y H:i:s', strtotime($value));
+        return $value ? date('d-m-Y H:i:s', strtotime($value)) : null;
     }
 
     public function memberAcademies(): HasMany

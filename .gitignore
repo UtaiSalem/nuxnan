@@ -1,0 +1,13 @@
+# =============================================================================
+# STRICT WHITELIST MODE
+# =============================================================================
+
+# Ignore everything by default
+*
+
+# Unignore specific directories
+!api/
+!ui/
+
+# Unignore gitignore itself
+!.gitignore

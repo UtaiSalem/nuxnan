@@ -1182,7 +1182,7 @@ onMounted(async () => {
                   <div class="flex-grow">
                     <p class="font-medium text-gray-900 dark:text-white">{{ selectedRecipient.name || selectedRecipient.username }}</p>
                     <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedRecipient.email }}</p>
-                    <p v-if="selectedRecipient.reference_code" class="text-xs text-primary-500">{{ selectedRecipient.reference_code }}</p>
+                    <p v-if="selectedRecipient.personal_code" class="text-xs text-primary-500">{{ selectedRecipient.personal_code }}</p>
                   </div>
                   <button 
                     type="button"
@@ -1231,6 +1231,7 @@ onMounted(async () => {
                     <div class="flex-grow">
                       <p class="font-medium text-gray-900 dark:text-white">{{ user.name || user.username }}</p>
                       <p class="text-xs text-gray-500">{{ user.email }}</p>
+                      <p v-if="user.personal_code" class="text-xs text-primary-500">{{ user.personal_code }}</p>
                     </div>
                     <Icon icon="mdi:chevron-right" class="w-5 h-5 text-gray-400" />
                   </div>

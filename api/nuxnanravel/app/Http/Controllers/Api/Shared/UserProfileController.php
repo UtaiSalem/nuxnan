@@ -550,19 +550,23 @@ class UserProfileController extends \App\Http\Controllers\Controller
             'name', 
             'email', 
             'reference_code', 
-            'profile_photo_url',
+            'personal_code',
             'profile_photo_path'
         ])
         ->limit($limit)
         ->get()
         ->map(function ($user) {
+            $avatar = $user->profile_photo_url 
+                ?: 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=random&color=fff';
+            
             return [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $this->maskEmail($user->email),
                 'reference_code' => $user->reference_code,
-                'profile_photo_url' => $user->profile_photo_url,
-                'avatar' => $user->profile_photo_url,
+                'personal_code' => $user->personal_code,
+                'profile_photo_url' => $avatar,
+                'avatar' => $avatar,
             ];
         });
         
