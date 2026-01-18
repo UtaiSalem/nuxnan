@@ -201,40 +201,98 @@ const loadImageAsBase64 = async (url: string): Promise<string> => {
 }
 
 // Helper function to convert SVG to base64 PNG
-const svgToBase64Png = async (svgUrl: string): Promise<string> => {
+const svgToBase64Png = async (svgUrl: string, couponCode?: string): Promise<string> => {
   return new Promise(async (resolve, reject) => {
     try {
-      const response = await fetch(svgUrl)
-      const svgText = await response.text()
+      // Add timestamp to prevent caching issues
+      const cleanUrl = svgUrl.split('?')[0] + '?t=' + new Date().getTime()
+      
+      console.log('Fetching SVG for PDF:', cleanUrl)
+      
+      const response = await fetch(cleanUrl)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch SVG: ${response.status} ${response.statusText}`)
+      }
+      
+      let svgText = await response.text()
+      
+      // Basic validation
+      if (!svgText.includes('<svg') || !svgText.includes('</svg>')) {
+        throw new Error('Content is not a valid SVG')
+      }
+
+      // Inject dimensions if missing to ensure canvas rendering works
+      if (!svgText.includes('width=') || !svgText.includes('height=')) {
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(svgText, 'image/svg+xml')
+        const svgElement = doc.querySelector('svg')
+        if (svgElement) {
+          if (!svgElement.hasAttribute('width')) svgElement.setAttribute('width', '300')
+          if (!svgElement.hasAttribute('height')) svgElement.setAttribute('height', '300')
+          // Ensure viewbox exists for scaling
+          if (!svgElement.hasAttribute('viewBox')) {
+            svgElement.setAttribute('viewBox', '0 0 300 300') // Assumption based on generation
+          }
+          svgText = new XMLSerializer().serializeToString(svgElement)
+        }
+      }
       
       const img = new Image()
+      img.crossOrigin = 'anonymous' // Important for CORS if applicable
+      
       const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(svgBlob)
       
       img.onload = () => {
         const canvas = document.createElement('canvas')
-        canvas.width = 150
-        canvas.height = 150
+        canvas.width = 300 // Higher resolution for print
+        canvas.height = 300
         const ctx = canvas.getContext('2d')
         if (ctx) {
-          ctx.fillStyle = 'white'
+          // Fill white background (transparent SVGs might look bad in PDF)
+          ctx.fillStyle = '#FFFFFF'
           ctx.fillRect(0, 0, canvas.width, canvas.height)
-          ctx.drawImage(img, 0, 0, 150, 150)
+          ctx.drawImage(img, 0, 0, 300, 300)
           URL.revokeObjectURL(url)
           resolve(canvas.toDataURL('image/png'))
         } else {
           reject(new Error('Could not get canvas context'))
         }
       }
-      img.onerror = () => {
+      
+      img.onerror = (e) => {
+        console.error('Image load error, trying fallback:', e)
         URL.revokeObjectURL(url)
-        reject(new Error('Could not load SVG'))
+        // Fallback to local generation if image load fails
+        generateLocalQr(couponCode).then(resolve).catch(reject)
       }
+      
       img.src = url
     } catch (error) {
-      reject(error)
+      console.error('SVG conversion error, trying fallback:', error)
+      if (couponCode) {
+         generateLocalQr(couponCode).then(resolve).catch((err) => {
+            console.error('Fallback generation failed:', err)
+            resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=')
+         })
+      } else {
+         // Return a transparent 1x1 pixel as fallback to prevent PDF crash
+         resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=')
+      }
     }
   })
+}
+
+// Fallback QR generator using qrcode package
+const generateLocalQr = async (text?: string): Promise<string> => {
+  if (!text) throw new Error('No text for QR generation')
+  try {
+     const QRCode = await import('qrcode')
+     return await QRCode.toDataURL(text, { width: 300, margin: 2 })
+  } catch (e) {
+     console.error('QRCode library not found', e)
+     throw e
+  }
 }
 
 // Download PDF with coupon cards
@@ -303,7 +361,10 @@ const downloadPDF = async () => {
       if (coupon.qr_code_path) {
         try {
           const qrUrl = `${apiBaseUrl}/storage/${coupon.qr_code_path}`
-          const qrBase64 = await svgToBase64Png(qrUrl)
+          // Pass coupon code for fallback generation if fetch fails
+          // Format based on backend: COUPON:code
+          const qrData = `COUPON:${coupon.coupon_code}`
+          const qrBase64 = await svgToBase64Png(qrUrl, qrData)
           doc.addImage(qrBase64, 'PNG', qrX, qrY, qrSize, qrSize)
         } catch (error) {
           // Draw placeholder if QR fails to load
