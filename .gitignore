@@ -42,3 +42,4 @@ yarn-error.log*
 # .env                    # Uncomment ถ้าต้องการ ignore .env files
 # .env.local
 # .env.*.local
+resources/
