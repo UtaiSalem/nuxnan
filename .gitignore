@@ -1,45 +1,13 @@
 # =============================================================================
-# PRODUCTION IGNORE - ไฟล์ที่ไม่จำเป็นสำหรับ production
+# STRICT WHITELIST MODE
 # =============================================================================
 
-# Documentation (ไม่จำเป็นสำหรับ production)
-docs/
-plans/
+# Ignore everything by default
+*
 
-# Markdown files (เอกสาร)
-*.md
-!api/nuxnanravel/README.md
+# Unignore specific directories
+!api/
+!ui/
 
-# =============================================================================
-# DEVELOPMENT FILES
-# =============================================================================
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# =============================================================================
-# ENVIRONMENT FILES (ไม่ควร commit ไฟล์ที่มี secrets)
-# =============================================================================
-# .env                    # Uncomment ถ้าต้องการ ignore .env files
-# .env.local
-# .env.*.local
-resources/
+# Unignore gitignore itself
+!.gitignore
