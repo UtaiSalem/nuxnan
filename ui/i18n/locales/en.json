@@ -24,19 +24,30 @@
     "success": "Success"
   },
   "nav": {
+    "dashboard": "Dashboard",
     "newsfeed": "Newsfeed",
     "timeline": "Timeline",
     "friends": "Friends",
     "messages": "Messages",
     "notifications": "Notifications",
+    "schools": "Schools",
     "courses": "Courses",
     "lessons": "Lessons",
+    "earn": "Earn",
+    "points": "Points",
+    "wallet": "Wallet",
+    "coupons": "Coupons",
+    "rewards": "Rewards",
+    "achievements": "Achievements",
+    "settings": "Settings",
     "community": "Community",
     "about": "About",
     "contact": "Contact",
     "help": "Help",
     "privacy": "Privacy",
-    "terms": "Terms of Service"
+    "terms": "Terms of Service",
+    "leaderboard": "Leaderboard",
+    "topLearners": "Top Learners"
   },
   "auth": {
     "loginTitle": "Login",
@@ -104,7 +115,9 @@
     "following": "Following",
     "posts": "Posts",
     "photos": "Photos",
-    "videos": "Videos"
+    "videos": "Videos",
+    "friends": "Friends",
+    "visits": "Visits"
   },
   "post": {
     "whatsOnYourMind": "What's on your mind?",

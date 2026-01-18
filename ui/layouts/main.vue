@@ -82,11 +82,11 @@ const toggleEarnMenu = () => {
 
 // Earn submenu items
 const earnSubmenu = [
-  { name: 'Points', href: '/earn/points', icon: 'fluent:coin-stack-24-regular' },
-  { name: 'Wallet', href: '/earn/wallet', icon: 'fluent:wallet-24-regular' },
-  { name: 'Coupons', href: '/earn/coupons', icon: 'fluent:ticket-diagonal-24-regular' },
-  { name: 'Rewards', href: '/earn/rewards', icon: 'fluent:gift-24-regular' },
-  { name: 'Achievements', href: '/earn/gamification', icon: 'fluent:trophy-24-regular' },
+  { name: 'คะแนน', href: '/earn/points', icon: 'fluent:coin-stack-24-regular' },
+  { name: 'กระเป๋าเงิน', href: '/earn/wallet', icon: 'fluent:wallet-24-regular' },
+  { name: 'คูปอง', href: '/earn/coupons', icon: 'fluent:ticket-diagonal-24-regular' },
+  { name: 'รางวัล', href: '/earn/rewards', icon: 'fluent:gift-24-regular' },
+  { name: 'ความสำเร็จ', href: '/earn/gamification', icon: 'fluent:trophy-24-regular' },
 ]
 
 // Theme state
@@ -644,7 +644,7 @@ const onQRActionComplete = (result) => {
                 class="text-xs uppercase"
                 :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
               >
-                Posts
+                โพสต์
               </div>
             </div>
             <div>
@@ -655,7 +655,7 @@ const onQRActionComplete = (result) => {
                 class="text-xs uppercase"
                 :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
               >
-                Friends
+                เพื่อน
               </div>
             </div>
             <div>
@@ -666,7 +666,7 @@ const onQRActionComplete = (result) => {
                 class="text-xs uppercase"
                 :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
               >
-                Visits
+                เยี่ยมชม
               </div>
             </div>
           </div>
@@ -685,7 +685,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:grid-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Dashboard</span>
+              <span class="font-semibold">แดชบอร์ด</span>
             </NuxtLink>
             <NuxtLink
               to="/play/newsfeed"
@@ -699,7 +699,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:chat-bubbles-question-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Newsfeed</span>
+              <span class="font-semibold">ฟีดข่าว</span>
             </NuxtLink>
             <NuxtLink
               to="/academies"
@@ -713,7 +713,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="mdi:school-outline" class="w-5 h-5" />
-              <span class="font-semibold">Schools</span>
+              <span class="font-semibold">โรงเรียน</span>
             </NuxtLink>
             <NuxtLink
               to="/Learn/Courses"
@@ -727,7 +727,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:book-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Courses</span>
+              <span class="font-semibold">คอร์สเรียน</span>
             </NuxtLink>
             <!-- Earn Menu with Submenu -->
             <div>
@@ -744,7 +744,7 @@ const onQRActionComplete = (result) => {
               >
                 <div class="flex items-center gap-3">
                   <Icon icon="fluent:wallet-24-regular" class="w-5 h-5" />
-                  <span class="font-semibold">Earn</span>
+                  <span class="font-semibold">รายได้</span>
                 </div>
                 <Icon 
                   :icon="isEarnMenuOpen ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
@@ -785,7 +785,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:alert-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Notifications</span>
+              <span class="font-semibold">การแจ้งเตือน</span>
             </NuxtLink>
             <NuxtLink
               :to="settingsUrl"
@@ -799,7 +799,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:settings-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Settings</span>
+              <span class="font-semibold">ตั้งค่า</span>
             </NuxtLink>
           </div>
         </div>
@@ -826,7 +826,7 @@ const onQRActionComplete = (result) => {
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Dashboard'"
+            :title="'แดชบอร์ด'"
           >
             <Icon icon="fluent:grid-24-regular" class="w-6 h-6" />
           </NuxtLink>
@@ -840,7 +840,7 @@ const onQRActionComplete = (result) => {
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Newsfeed'"
+            :title="'ฟีดข่าว'"
           >
             <Icon icon="fluent:chat-bubbles-question-24-regular" class="w-6 h-6" />
           </NuxtLink>
@@ -854,7 +854,7 @@ const onQRActionComplete = (result) => {
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Schools'"
+            :title="'โรงเรียน'"
           >
             <Icon icon="mdi:school-outline" class="w-6 h-6" />
           </NuxtLink>
@@ -868,7 +868,7 @@ const onQRActionComplete = (result) => {
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Courses'"
+            :title="'คอร์สเรียน'"
           >
             <Icon icon="fluent:book-24-regular" class="w-6 h-6" />
           </NuxtLink>
@@ -882,7 +882,7 @@ const onQRActionComplete = (result) => {
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Earn'"
+            :title="'รายได้'"
           >
             <Icon icon="fluent:wallet-24-regular" class="w-6 h-6" />
           </NuxtLink>
@@ -896,7 +896,7 @@ const onQRActionComplete = (result) => {
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Notifications'"
+            :title="'การแจ้งเตือน'"
           >
             <Icon icon="fluent:alert-24-regular" class="w-6 h-6" />
           </NuxtLink>
@@ -910,7 +910,7 @@ const onQRActionComplete = (result) => {
                 ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
                 : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
             "
-            :title="'Settings'"
+            :title="'ตั้งค่า'"
           >
             <Icon icon="fluent:settings-24-regular" class="w-6 h-6" />
           </NuxtLink>
@@ -986,9 +986,9 @@ const onQRActionComplete = (result) => {
         <div v-if="isRightDrawerOpen" key="expanded-right" class="p-6 space-y-6">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              Leaderboard
+              กระดานผู้นำ
             </h3>
-            <span class="px-2 py-1 rounded-lg bg-vikinger-purple text-white text-[10px] font-bold uppercase tracking-wider">Top Learners</span>
+            <span class="px-2 py-1 rounded-lg bg-vikinger-purple text-white text-[10px] font-bold uppercase tracking-wider">นักเรียนยอดเยี่ยม</span>
           </div>
 
           <!-- Search -->
@@ -1133,15 +1133,15 @@ const onQRActionComplete = (result) => {
           <div class="flex justify-center gap-6 py-3 border-y" :class="isDarkMode ? 'border-vikinger-dark-50/30' : 'border-gray-200'">
             <div class="text-center">
               <div class="font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ authUser.posts }}</div>
-              <div class="text-xs uppercase" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Posts</div>
+              <div class="text-xs uppercase" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">โพสต์</div>
             </div>
             <div class="text-center">
               <div class="font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ authUser.friends }}</div>
-              <div class="text-xs uppercase" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Friends</div>
+              <div class="text-xs uppercase" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">เพื่อน</div>
             </div>
             <div class="text-center">
               <div class="font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ authUser.visits }}</div>
-              <div class="text-xs uppercase" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Visits</div>
+              <div class="text-xs uppercase" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">เยี่ยมชม</div>
             </div>
           </div>
 
@@ -1159,7 +1159,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:grid-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Dashboard</span>
+              <span class="font-semibold">แดชบอร์ด</span>
             </NuxtLink>
             <NuxtLink
               to="/play/newsfeed"
@@ -1173,7 +1173,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:chat-bubbles-question-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Newsfeed</span>
+              <span class="font-semibold">ฟีดข่าว</span>
             </NuxtLink>
             <NuxtLink
               to="/academies"
@@ -1187,7 +1187,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="mdi:school-outline" class="w-5 h-5" />
-              <span class="font-semibold">Schools</span>
+              <span class="font-semibold">โรงเรียน</span>
             </NuxtLink>
             <NuxtLink
               to="/Learn/Courses"
@@ -1201,7 +1201,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:book-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Courses</span>
+              <span class="font-semibold">คอร์สเรียน</span>
             </NuxtLink>
 
             <!-- Earn with Submenu -->
@@ -1219,7 +1219,7 @@ const onQRActionComplete = (result) => {
               >
                 <div class="flex items-center gap-3">
                   <Icon icon="fluent:wallet-24-regular" class="w-5 h-5" />
-                  <span class="font-semibold">Earn</span>
+                  <span class="font-semibold">รายได้</span>
                 </div>
                 <Icon 
                   :icon="isEarnMenuOpen ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
@@ -1261,7 +1261,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:alert-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Notifications</span>
+              <span class="font-semibold">การแจ้งเตือน</span>
             </NuxtLink>
             <NuxtLink
               :to="settingsUrl"
@@ -1275,7 +1275,7 @@ const onQRActionComplete = (result) => {
               "
             >
               <Icon icon="fluent:settings-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">Settings</span>
+              <span class="font-semibold">ตั้งค่า</span>
             </NuxtLink>
           </nav>
         </div>

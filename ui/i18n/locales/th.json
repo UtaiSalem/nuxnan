@@ -24,19 +24,30 @@
     "success": "สำเร็จ"
   },
   "nav": {
+    "dashboard": "แดชบอร์ด",
     "newsfeed": "ฟีดข่าว",
     "timeline": "ไทม์ไลน์",
     "friends": "เพื่อน",
     "messages": "ข้อความ",
     "notifications": "การแจ้งเตือน",
+    "schools": "โรงเรียน",
     "courses": "คอร์สเรียน",
     "lessons": "บทเรียน",
+    "earn": "รายได้",
+    "points": "คะแนน",
+    "wallet": "กระเป๋าเงิน",
+    "coupons": "คูปอง",
+    "rewards": "รางวัล",
+    "achievements": "ความสำเร็จ",
+    "settings": "ตั้งค่า",
     "community": "ชุมชน",
     "about": "เกี่ยวกับ",
     "contact": "ติดต่อ",
     "help": "ช่วยเหลือ",
     "privacy": "ความเป็นส่วนตัว",
-    "terms": "เงื่อนไขการใช้งาน"
+    "terms": "เงื่อนไขการใช้งาน",
+    "leaderboard": "กระดานผู้นำ",
+    "topLearners": "นักเรียนยอดเยี่ยม"
   },
   "auth": {
     "loginTitle": "เข้าสู่ระบบ",
@@ -104,7 +115,9 @@
     "following": "กำลังติดตาม",
     "posts": "โพสต์",
     "photos": "รูปภาพ",
-    "videos": "วิดีโอ"
+    "videos": "วิดีโอ",
+    "friends": "เพื่อน",
+    "visits": "เยี่ยมชม"
   },
   "post": {
     "whatsOnYourMind": "คุณกำลังคิดอะไรอยู่?",
