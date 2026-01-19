@@ -155,20 +155,20 @@ class RewardController extends Controller
     }
 
     /**
-     * Get reward statistics (Admin only).
+     * Get reward statistics for the current user.
      */
     public function stats(Request $request): JsonResponse
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
+                'message' => 'User not authenticated',
+            ], 401);
         }
 
-        $stats = $this->rewardService->getRewardStats();
+        $stats = $this->rewardService->getRewardStats($user);
 
         return response()->json([
             'success' => true,

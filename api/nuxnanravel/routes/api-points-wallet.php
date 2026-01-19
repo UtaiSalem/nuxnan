@@ -76,11 +76,11 @@ Route::middleware('auth:api')->group(function () {
     // Rewards Routes
     Route::prefix('rewards')->group(function () {
         Route::get('/', [RewardController::class, 'index']);
-        Route::get('/{id}', [RewardController::class, 'show']);
-        Route::post('/redeem', [RewardController::class, 'redeem']);
-        Route::post('/{id}/claim', [RewardController::class, 'claim']);
         Route::get('/my', [RewardController::class, 'myRewards']);
         Route::get('/stats', [RewardController::class, 'stats']);
+        Route::post('/redeem', [RewardController::class, 'redeem']);
+        Route::get('/{id}', [RewardController::class, 'show']);
+        Route::post('/{id}/claim', [RewardController::class, 'claim']);
         
         // Admin routes
         Route::middleware('role:admin')->group(function () {

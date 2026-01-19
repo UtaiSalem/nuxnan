@@ -271,20 +271,20 @@ class RewardService
     }
 
     /**
-     * Get reward statistics.
+     * Get reward statistics for a user.
      */
-    public function getRewardStats(): array
+    public function getRewardStats(User $user): array
     {
         $totalRewards = Reward::active()->count();
-        $totalRedemptions = UserReward::claimed()->count();
-        $totalPointsSpent = UserReward::claimed()->sum('points_spent');
+        $userRedemptions = UserReward::where('user_id', $user->id)->count();
+        $userPointsSpent = UserReward::where('user_id', $user->id)->sum('points_spent');
 
         return [
             'total_rewards' => $totalRewards,
-            'total_redemptions' => $totalRedemptions,
-            'total_points_spent' => $totalPointsSpent,
-            'average_points_per_redemption' => $totalRedemptions > 0 
-                ? round($totalPointsSpent / $totalRedemptions, 2)
+            'total_redeemed' => $userRedemptions,
+            'total_points_spent' => $userPointsSpent,
+            'average_points_per_redemption' => $userRedemptions > 0 
+                ? round($userPointsSpent / $userRedemptions, 2)
                 : 0,
         ];
     }
