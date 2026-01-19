@@ -1,5 +1,5 @@
 # Nuxt dev/build outputs
-.output
+# .output  # Removed to allow pushing build output
 .data
 .nuxt
 .nitro

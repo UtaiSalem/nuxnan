@@ -307,13 +307,27 @@ class GamificationController extends Controller
                 ->limit($limit)
                 ->get(['id', 'name', 'pp', 'profile_photo_path'])
                 ->map(function ($user, $index) {
+<<<<<<< HEAD
+=======
+                    $avatar = null;
+                    if ($user->profile_photo_path) {
+                        $avatar = url('storage/' . $user->profile_photo_path);
+                    } else {
+                        $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&color=7F9CF5&background=EBF4FF';
+                    }
+                    
+>>>>>>> 5ed8ae5ee03d613348c6dd66c126f35faf728793
                     return [
                         'rank' => $index + 1,
                         'id' => $user->id,
                         'name' => $user->name,
                         'username' => $user->name,
                         'points' => $user->pp ?? 0,
+<<<<<<< HEAD
                         'avatar' => $user->profile_photo_url,
+=======
+                        'avatar' => $avatar,
+>>>>>>> 5ed8ae5ee03d613348c6dd66c126f35faf728793
                     ];
                 });
 
@@ -324,11 +338,19 @@ class GamificationController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+<<<<<<< HEAD
             \Log::error('Error fetching points leaderboard: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch leaderboard',
                 'error' => config('app.debug') ? $e->getMessage() : null,
+=======
+            \Log::error('Gamification leaderboard error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch leaderboard',
+                'error' => config('app.debug') ? $e->getMessage() : 'Server error',
+>>>>>>> 5ed8ae5ee03d613348c6dd66c126f35faf728793
             ], 500);
         }
     }
