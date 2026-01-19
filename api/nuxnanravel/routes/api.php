@@ -63,7 +63,7 @@ Route::get('/debug-data', function () {
 })->middleware('auth:api');
 
 // Simple ping test
-Route::get('/ping', function() {
+Route::get('/ping', function () {
     \Log::info('Ping endpoint called');
     return response()->json([
         'status' => 'ok',
@@ -77,15 +77,15 @@ if (env('APP_DEBUG')) {
     Route::post('/test-login-now', function (Request $request) {
         $loginInput = $request->input('login', '0938403000');
         $password = $request->input('password', 'password');
-        
+
         $user = \App\Models\User::where('email', $loginInput)
             ->orWhere('phone_number', $loginInput)
             ->orWhere('personal_code', $loginInput)
             ->orWhere('name', $loginInput)
             ->first();
-        
+
         $result = ['input' => $loginInput, 'user_found' => $user ? true : false];
-        
+
         if ($user) {
             $result['user'] = [
                 'id' => $user->id,
@@ -94,10 +94,10 @@ if (env('APP_DEBUG')) {
                 'phone' => $user->phone_number,
                 'has_password' => !empty($user->password),
             ];
-            
+
             $passwordMatch = \Hash::check($password, $user->password);
             $result['password_matches'] = $passwordMatch;
-            
+
             if ($passwordMatch) {
                 try {
                     $token = \Auth::guard('api')->login($user);
@@ -111,12 +111,18 @@ if (env('APP_DEBUG')) {
                 }
             }
         }
-        
+
         return response()->json($result, 200);
     });
 }
 
 // Auth Routes (API)
+Route::get('/login', function () {
+    return response()->json([
+        'success' => false,
+        'message' => 'Unauthenticated. Please login first.',
+    ], 401);
+})->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/validate-referral-code', [AuthController::class, 'validateReferralCode']);
@@ -134,7 +140,7 @@ Route::middleware('web')->group(function () {
 
 // Protected Routes
 Route::middleware(['auth:api'])->group(function () {
-    
+
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
@@ -154,9 +160,9 @@ Route::middleware(['auth:api'])->group(function () {
             'isPlearndAdmin' => auth()->user()->isPlearndAdmin()
         ]);
     })->name('dashboard');
-    
-    Route::get('/newsfeed', [NewsfeedController::class, 'index'] )->name('newsfeed');
-    Route::get('/newsfeed/activities', [ActivityController::class, 'newsfeed'] )->name('newsfeed.activities');
+
+    Route::get('/newsfeed', [NewsfeedController::class, 'index'])->name('newsfeed');
+    Route::get('/newsfeed/activities', [ActivityController::class, 'newsfeed'])->name('newsfeed.activities');
     Route::apiResource('activities', ActivityController::class)->only(['index', 'show', 'destroy']);
     Route::get('/users/{user:reference_code}/profile', [UserProfileController::class, 'index'])->name('user.profile');
 
@@ -170,10 +176,10 @@ Route::middleware(['auth:api'])->group(function () {
         Route::put('/privacy', [UserProfileController::class, 'updatePrivacy'])->name('profile.privacy');
         Route::get('/stats', [UserProfileController::class, 'stats'])->name('profile.stats');
     });
-    
+
     // User search for transfer (must be before {identifier} routes)
     Route::get('/users/search', [UserProfileController::class, 'search'])->name('users.search');
-    
+
     // User profile by identifier (supports ID, reference_code, or username)
     Route::get('/users/{identifier}/show', [UserProfileController::class, 'show'])->name('user.profile.show');
     Route::get('/users/{identifier}/stats', [UserProfileController::class, 'stats'])->name('user.stats');
@@ -197,7 +203,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('/friends/pending', [FriendController::class, 'pendingRequests'])->name('friends.pending');
     Route::get('/friends/search', [FriendController::class, 'search'])->name('friends.search');
     Route::post('/friends/{recipient}', [FriendController::class, 'addFriendRequest'])->name('friend-request');
-    Route::delete('/friends/{friend}', [FriendController::class, 'deleteFriendRequest'])->name('delete-friend-request');   
+    Route::delete('/friends/{friend}', [FriendController::class, 'deleteFriendRequest'])->name('delete-friend-request');
     Route::patch('/friends/{friend}/accept', [FriendController::class, 'acceptFriendRequest'])->name('accept-friend-request');
     Route::post('/friends/{friend}/deny', [FriendController::class, 'denyFriendRequest'])->name('deny-friend-request');
     Route::post('/friends/{friend}/unfriend', [FriendController::class, 'unfriend'])->name('unfriend');

@@ -295,30 +295,42 @@ class GamificationController extends Controller
     /**
      * Get points leaderboard.
      */
+    /**
+     * Get points leaderboard.
+     */
     public function getPointsLeaderboard(Request $request): JsonResponse
     {
-        $limit = $request->input('limit', 10);
+        try {
+            $limit = $request->input('limit', 10);
 
-        $users = \App\Models\User::orderBy('pp', 'desc')
-            ->limit($limit)
-            ->get(['id', 'name', 'pp', 'profile_photo_path'])
-            ->map(function ($user, $index) {
-                return [
-                    'rank' => $index + 1,
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'username' => $user->name,
-                    'points' => $user->pp,
-                    'avatar' => $user->profile_photo_url,
-                ];
-            });
+            $users = \App\Models\User::orderBy('pp', 'desc')
+                ->limit($limit)
+                ->get(['id', 'name', 'pp', 'profile_photo_path'])
+                ->map(function ($user, $index) {
+                    return [
+                        'rank' => $index + 1,
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'username' => $user->name,
+                        'points' => $user->pp ?? 0,
+                        'avatar' => $user->profile_photo_url,
+                    ];
+                });
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'leaderboard' => $users,
-            ],
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'leaderboard' => $users,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching points leaderboard: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch leaderboard',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
     }
 
     /**

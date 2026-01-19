@@ -5,15 +5,15 @@ export const useWallet = () => {
   const authStore = useAuthStore()
   const config = useRuntimeConfig()
   const apiBase = computed(() => config.public.apiBase || '')
-  
+
   // Reactive state
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-  
+
   // Computed properties
   const wallet = computed(() => authStore.user?.wallet || 0)
   const user = computed(() => authStore.user)
-  
+
   /**
    * Get wallet balance
    */
@@ -21,28 +21,29 @@ export const useWallet = () => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const response = await $fetch(`${apiBase.value}/api/wallet/balance`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
         },
       }) as any
-      
+
       if (response.success) {
         return response.data
       } else {
         throw new Error(response.message || 'Failed to get wallet balance')
       }
     } catch (err: any) {
-      error.value = err.message || 'Failed to get wallet balance'
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to get wallet balance'
+      error.value = msg
       console.error('Get wallet balance error:', err)
-      throw err
+      throw new Error(msg)
     } finally {
       isLoading.value = false
     }
   }
-  
+
   /**
    * Deposit money to wallet
    */
@@ -56,7 +57,7 @@ export const useWallet = () => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const response = await $fetch(`${apiBase.value}/api/wallet/deposit`, {
         method: 'POST',
         headers: {
@@ -64,21 +65,22 @@ export const useWallet = () => {
         },
         body: data,
       }) as any
-      
+
       if (response.success) {
         return response.data
       } else {
         throw new Error(response.message || 'Failed to deposit money')
       }
     } catch (err: any) {
-      error.value = err.message || 'Failed to deposit money'
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to deposit money'
+      error.value = msg
       console.error('Deposit error:', err)
-      throw err
+      throw new Error(msg)
     } finally {
       isLoading.value = false
     }
   }
-  
+
   /**
    * Withdraw money from wallet
    */
@@ -95,7 +97,7 @@ export const useWallet = () => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const response = await $fetch(`${apiBase.value}/api/wallet/withdraw`, {
         method: 'POST',
         headers: {
@@ -103,21 +105,22 @@ export const useWallet = () => {
         },
         body: data,
       }) as any
-      
+
       if (response.success) {
         return response.data
       } else {
         throw new Error(response.message || 'Failed to withdraw money')
       }
     } catch (err: any) {
-      error.value = err.message || 'Failed to withdraw money'
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to withdraw money'
+      error.value = msg
       console.error('Withdraw error:', err)
-      throw err
+      throw new Error(msg)
     } finally {
       isLoading.value = false
     }
   }
-  
+
   /**
    * Transfer money to another user
    */
@@ -129,7 +132,7 @@ export const useWallet = () => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const response = await $fetch(`${apiBase.value}/api/wallet/transfer`, {
         method: 'POST',
         headers: {
@@ -137,21 +140,22 @@ export const useWallet = () => {
         },
         body: data,
       }) as any
-      
+
       if (response.success) {
         return response.data
       } else {
         throw new Error(response.message || 'Failed to transfer money')
       }
     } catch (err: any) {
-      error.value = err.message || 'Failed to transfer money'
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to transfer money'
+      error.value = msg
       console.error('Transfer error:', err)
-      throw err
+      throw new Error(msg)
     } finally {
       isLoading.value = false
     }
   }
-  
+
   /**
    * Get wallet transactions
    */
@@ -165,35 +169,36 @@ export const useWallet = () => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const queryParams = new URLSearchParams()
       if (params.type) queryParams.append('type', params.type)
       if (params.date_from) queryParams.append('date_from', params.date_from)
       if (params.date_to) queryParams.append('date_to', params.date_to)
       if (params.page) queryParams.append('page', params.page.toString())
       if (params.per_page) queryParams.append('per_page', params.per_page.toString())
-      
+
       const response = await $fetch(`${apiBase.value}/api/wallet/transactions?${queryParams.toString()}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
         },
       }) as any
-      
+
       if (response.success) {
         return response.data
       } else {
         throw new Error(response.message || 'Failed to get transactions')
       }
     } catch (err: any) {
-      error.value = err.message || 'Failed to get transactions'
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to get transactions'
+      error.value = msg
       console.error('Get transactions error:', err)
-      throw err
+      throw new Error(msg)
     } finally {
       isLoading.value = false
     }
   }
-  
+
   /**
    * Format money amount
    */
@@ -203,21 +208,21 @@ export const useWallet = () => {
       currency: 'THB',
     }).format(value)
   }
-  
+
   /**
    * Check if user can withdraw
    */
   const canWithdraw = (amount: number): boolean => {
     return wallet.value >= amount
   }
-  
+
   /**
    * Calculate withdrawal fee
    */
   const calculateFee = (amount: number): number => {
     return Math.max(amount * 0.005, 10) // 0.5% min 10 THB
   }
-  
+
   /**
    * Create deposit request with transfer slip
    */
@@ -225,7 +230,7 @@ export const useWallet = () => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const response = await $fetch(`${apiBase.value}/api/wallet/deposit-request`, {
         method: 'POST',
         headers: {
@@ -233,16 +238,17 @@ export const useWallet = () => {
         },
         body: formData,
       }) as any
-      
+
       if (response.success) {
         return response.data
       } else {
         throw new Error(response.message || 'ไม่สามารถสร้างคำขอเติมเงินได้')
       }
     } catch (err: any) {
-      error.value = err.message || 'ไม่สามารถสร้างคำขอเติมเงินได้'
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'ไม่สามารถสร้างคำขอเติมเงินได้'
+      error.value = msg
       console.error('Create deposit request error:', err)
-      throw err
+      throw new Error(msg)
     } finally {
       isLoading.value = false
     }
@@ -255,28 +261,29 @@ export const useWallet = () => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const queryParams = new URLSearchParams()
       if (params.status) queryParams.append('status', params.status)
       if (params.page) queryParams.append('page', params.page.toString())
       if (params.per_page) queryParams.append('per_page', params.per_page.toString())
-      
+
       const response = await $fetch(`${apiBase.value}/api/wallet/deposit-requests?${queryParams}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
         },
       }) as any
-      
+
       if (response.success) {
         return response.data
       } else {
         throw new Error(response.message || 'ไม่สามารถดึงข้อมูลคำขอเติมเงินได้')
       }
     } catch (err: any) {
-      error.value = err.message || 'ไม่สามารถดึงข้อมูลคำขอเติมเงินได้'
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'ไม่สามารถดึงข้อมูลคำขอเติมเงินได้'
+      error.value = msg
       console.error('Get deposit requests error:', err)
-      throw err
+      throw new Error(msg)
     } finally {
       isLoading.value = false
     }
@@ -289,23 +296,24 @@ export const useWallet = () => {
     try {
       isLoading.value = true
       error.value = null
-      
+
       const response = await $fetch(`${apiBase.value}/api/wallet/deposit-requests/${requestId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
         },
       }) as any
-      
+
       if (response.success) {
         return response.data
       } else {
         throw new Error(response.message || 'ไม่สามารถยกเลิกคำขอได้')
       }
     } catch (err: any) {
-      error.value = err.message || 'ไม่สามารถยกเลิกคำขอได้'
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'ไม่สามารถยกเลิกคำขอได้'
+      error.value = msg
       console.error('Cancel deposit request error:', err)
-      throw err
+      throw new Error(msg)
     } finally {
       isLoading.value = false
     }
@@ -352,9 +360,10 @@ export const useWallet = () => {
         throw new Error(response.message || 'Failed to convert wallet to points')
       }
     } catch (err: any) {
-      error.value = err.message || 'Failed to convert wallet to points'
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to convert wallet to points'
+      error.value = msg
       console.error('Convert wallet to points error:', err)
-      throw err
+      throw new Error(msg)
     } finally {
       isLoading.value = false
     }
@@ -374,7 +383,7 @@ export const useWallet = () => {
     transfer,
     convertToPoints,
     getTransactions,
-    
+
     // Deposit Request Methods
     createDepositRequest,
     getDepositRequests,

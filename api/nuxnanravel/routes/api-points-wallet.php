@@ -22,11 +22,11 @@ use App\Http\Controllers\Api\Admin\DepositRequestController;
 
 // Public Gamification Routes (no auth required)
 Route::prefix('gamification')->group(function () {
-    Route::get('/leaderboard/points', [GamificationController::class, 'getPointsLeaderboard']);
-    Route::get('/leaderboard/streak', [GamificationController::class, 'getStreakLeaderboard']);
-    Route::get('/leaderboard/achievements', [GamificationController::class, 'getAchievementLeaderboard']);
-    Route::get('/leaderboard/level', [GamificationController::class, 'getLevelLeaderboard']);
-    Route::get('/leaderboard/summary', [GamificationController::class, 'getLeaderboardSummary']);
+    Route::get('/leaderboard/points', [GamificationController::class, 'getPointsLeaderboard'])->name('gamification.leaderboard.points');
+    Route::get('/leaderboard/streak', [GamificationController::class, 'getStreakLeaderboard'])->name('gamification.leaderboard.streak');
+    Route::get('/leaderboard/achievements', [GamificationController::class, 'getAchievementLeaderboard'])->name('gamification.leaderboard.achievements');
+    Route::get('/leaderboard/level', [GamificationController::class, 'getLevelLeaderboard'])->name('gamification.leaderboard.level');
+    Route::get('/leaderboard/summary', [GamificationController::class, 'getLeaderboardSummary'])->name('gamification.leaderboard.summary');
 });
 
 Route::middleware('auth:api')->group(function () {
@@ -51,12 +51,12 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/convert-points', [WalletController::class, 'convertPoints']);
         Route::post('/convert-to-points', [WalletController::class, 'convertToPoints']);
         Route::get('/transactions', [WalletController::class, 'transactions']);
-        
+
         // Deposit Request Routes (User)
         Route::post('/deposit-request', [WalletController::class, 'createDepositRequest']);
         Route::get('/deposit-requests', [WalletController::class, 'getDepositRequests']);
         Route::delete('/deposit-requests/{id}', [WalletController::class, 'cancelDepositRequest']);
-        
+
         // Admin routes
         Route::middleware('role:admin')->group(function () {
             Route::post('/withdrawals/{id}/approve', [WalletController::class, 'approveWithdrawal']);
@@ -81,7 +81,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/{id}/claim', [RewardController::class, 'claim']);
         Route::get('/my', [RewardController::class, 'myRewards']);
         Route::get('/stats', [RewardController::class, 'stats']);
-        
+
         // Admin routes
         Route::middleware('role:admin')->group(function () {
             Route::post('/', [RewardController::class, 'store']);

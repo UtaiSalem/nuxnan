@@ -47,6 +47,10 @@ const menuItems = [
 ]
 
 const isActive = (href) => route.path === href || route.path.startsWith(href + '/')
+
+const logout = async () => {
+  await authStore.logout()
+}
 </script>
 
 <template>
@@ -129,6 +133,15 @@ const isActive = (href) => route.path === href || route.path.startsWith(href + '
         <Icon :icon="item.icon" class="nav-icon" />
         <span class="nav-text">{{ item.name }}</span>
       </NuxtLink>
+      
+      <!-- Logout Button -->
+      <button 
+        @click="logout"
+        class="nav-item logout-button"
+      >
+        <Icon icon="mdi:logout" class="nav-icon" />
+        <span class="nav-text">Logout</span>
+      </button>
     </nav>
   </div>
 </template>
@@ -363,6 +376,26 @@ const isActive = (href) => route.path === href || route.path.startsWith(href + '
 
 .nav-item-active .nav-icon {
   opacity: 1;
+}
+
+/* Logout Button */
+.logout-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 14px 18px;
+}
+
+.logout-button:hover {
+  background: rgba(255, 85, 85, 0.1) !important;
+  color: #ff5555 !important;
+}
+
+.logout-button:hover .nav-icon {
+  opacity: 1;
+  color: #ff5555;
 }
 
 /* Light Mode Overrides */
