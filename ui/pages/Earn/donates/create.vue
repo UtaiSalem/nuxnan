@@ -31,6 +31,12 @@ const inputSlip = ref<HTMLInputElement | null>(null)
 const errorMessage = ref('')
 const isManualOverride = ref(false)
 
+// Name search state
+const searchQuery = ref('')
+const searchResults = ref<any[]>([])
+const showSearchDropdown = ref(false)
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+
 // Form Errors
 const errors = ref({
   personalCode: '',
@@ -155,6 +161,8 @@ const deleteImage = () => {
 const handlePersonalcodeInput = async () => {
   isManualOverride.value = true
   errors.value.personalCode = ''
+  showSearchDropdown.value = false
+  
   if (personalCode.value.length === 8) {
     isLoadingDonor.value = true
     try {
@@ -177,6 +185,56 @@ const handlePersonalcodeInput = async () => {
   } else {
     donor.value = null
   }
+}
+
+// Search users by name/email
+const searchUsers = async () => {
+  if (searchQuery.value.length < 2) {
+    searchResults.value = []
+    showSearchDropdown.value = false
+    return
+  }
+  
+  isLoadingDonor.value = true
+  try {
+    const response = await $fetch<any>(`${config.public.apiBase}/api/users/search`, {
+      method: 'GET',
+      headers: authStore.token ? { 'Authorization': `Bearer ${authStore.token}` } : {},
+      params: {
+        q: searchQuery.value,
+        limit: 10
+      }
+    })
+    
+    if (response.success) {
+      searchResults.value = response.data || []
+      showSearchDropdown.value = searchResults.value.length > 0
+    }
+  } catch (err) {
+    console.error('Search users error:', err)
+    searchResults.value = []
+  } finally {
+    isLoadingDonor.value = false
+  }
+}
+
+// Debounced search
+const debouncedSearch = () => {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    searchUsers()
+  }, 300)
+}
+
+// Select user from search results
+const selectDonor = (user: any) => {
+  donor.value = user
+  personalCode.value = user.personal_code || ''
+  searchQuery.value = ''
+  searchResults.value = []
+  showSearchDropdown.value = false
+  isManualOverride.value = true
+  errors.value.personalCode = ''
 }
 
 // Clear donor
@@ -376,25 +434,91 @@ watch(() => authStore.user, async (user) => {
 
           <form @submit.prevent="submitForm" class="space-y-6">
             <!-- Donor Section -->
-            <div v-if="!donor" class="space-y-2">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                รหัสประจำตัวสมาชิก (ถ้ามี)
-              </label>
-              <div class="relative">
-                <input
-                  v-model="personalCode"
-                  @input="handlePersonalcodeInput"
-                  type="text"
-                  maxlength="8"
-                  placeholder="กรอกรหัส 8 หลัก"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
-                  :class="{ 'border-red-500 focus:ring-red-500': errors.personalCode }"
-                />
-                <Icon v-if="isLoadingDonor" icon="mdi:loading" class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-500 animate-spin" />
+            <div v-if="!donor" class="space-y-4">
+              <!-- Search by Name -->
+              <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  ค้นหาสมาชิก (ชื่อ, อีเมล หรือรหัส)
+                </label>
+                <div class="relative">
+                  <input
+                    v-model="searchQuery"
+                    @input="debouncedSearch"
+                    @focus="showSearchDropdown = searchResults.length > 0"
+                    type="text"
+                    placeholder="พิมพ์ชื่อ, อีเมล หรือรหัสสมาชิก..."
+                    class="w-full px-4 py-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
+                  />
+                  <Icon 
+                    :icon="isLoadingDonor ? 'mdi:loading' : 'mdi:magnify'" 
+                    class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                    :class="{ 'animate-spin': isLoadingDonor }"
+                  />
+                  
+                  <!-- Search Results Dropdown -->
+                  <div 
+                    v-if="showSearchDropdown && searchResults.length > 0"
+                    class="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-64 overflow-y-auto"
+                  >
+                    <div 
+                      v-for="user in searchResults" 
+                      :key="user.id"
+                      class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                      @click="selectDonor(user)"
+                    >
+                      <img 
+                        :src="user.avatar || user.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`" 
+                        :alt="user.name"
+                        class="w-10 h-10 rounded-full object-cover"
+                      >
+                      <div class="flex-grow">
+                        <p class="font-medium text-gray-900 dark:text-white">{{ user.name }}</p>
+                        <p class="text-xs text-gray-500">{{ user.email }}</p>
+                        <p v-if="user.personal_code" class="text-xs text-purple-500">{{ user.personal_code }}</p>
+                      </div>
+                      <Icon icon="mdi:chevron-right" class="w-5 h-5 text-gray-400" />
+                    </div>
+                  </div>
+                  
+                  <!-- No Results -->
+                  <div 
+                    v-if="showSearchDropdown && searchQuery.length >= 2 && searchResults.length === 0 && !isLoadingDonor"
+                    class="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg p-4 text-center"
+                  >
+                    <Icon icon="mdi:account-search" class="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p class="text-gray-500 dark:text-gray-400">ไม่พบสมาชิก</p>
+                  </div>
+                </div>
               </div>
               
-              <!-- Use My Info Button (only if logged in and in manual mode) -->
-              <div v-if="authStore.user" class="flex justify-end mt-1">
+              <!-- Divider -->
+              <div class="flex items-center gap-3">
+                <div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+                <span class="text-xs text-gray-400">หรือ</span>
+                <div class="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+              </div>
+              
+              <!-- Search by Personal Code -->
+              <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  รหัสประจำตัวสมาชิก (8 หลัก)
+                </label>
+                <div class="relative">
+                  <input
+                    v-model="personalCode"
+                    @input="handlePersonalcodeInput"
+                    type="text"
+                    maxlength="8"
+                    placeholder="กรอกรหัส 8 หลัก"
+                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
+                    :class="{ 'border-red-500 focus:ring-red-500': errors.personalCode }"
+                  />
+                  <Icon v-if="isLoadingDonor" icon="mdi:loading" class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-500 animate-spin" />
+                </div>
+              </div>
+              
+              <!-- Use My Info Button -->
+              <div v-if="authStore.user" class="flex justify-end">
                 <button 
                   type="button"
                   @click="handleUseCurrentUser"
@@ -405,12 +529,12 @@ watch(() => authStore.user, async (user) => {
                 </button>
               </div>
 
-              <p v-if="errors.personalCode" class="text-xs text-red-500 mt-1 flex items-center gap-1">
+              <p v-if="errors.personalCode" class="text-xs text-red-500 flex items-center gap-1">
                  <Icon icon="mdi:alert-circle" class="w-4 h-4" /> {{ errors.personalCode }}
               </p>
-              <p v-else class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+              <p v-else class="text-xs text-gray-500 flex items-center gap-1">
                 <Icon icon="mdi:information-outline" class="w-3 h-3" />
-                หากไม่ระบุรหัสสมาชิก ระบบจะบันทึกในชื่อ "ไม่ประสงค์ออกนาม"
+                ไม่จำเป็นต้องระบุสมาชิก หากไม่ระบุ ระบบจะกำหนดให้เป็น "ไม่ประสงค์ออกนาม"
               </p>
             </div>
 
@@ -430,7 +554,7 @@ watch(() => authStore.user, async (user) => {
                 @click="handleEmptyDonor"
                 type="button"
                 class="absolute top-2 right-2 p-2 bg-white dark:bg-gray-700 rounded-full shadow hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                title="ไม่ประสงค์ออกนาม"
+                title="เปลี่ยนสมาชิก"
               >
                 <Icon icon="mdi:close" class="w-4 h-4 text-red-500" />
               </button>
@@ -446,14 +570,6 @@ watch(() => authStore.user, async (user) => {
                   <p class="text-sm text-gray-600 dark:text-gray-400">
                     รหัสประจำตัว: <span class="font-semibold">{{ donor.personal_code }}</span>
                   </p>
-                  <button 
-                    @click="handleEmptyDonor"
-                    type="button"
-                    class="text-xs text-red-500 hover:text-red-700 hover:underline mt-1 flex items-center gap-1"
-                  >
-                    <Icon icon="mdi:incognito" class="w-3 h-3" />
-                    ไม่ประสงค์ออกนาม
-                  </button>
                 </div>
               </div>
             </div>
