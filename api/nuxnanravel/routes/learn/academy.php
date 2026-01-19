@@ -10,7 +10,7 @@ use App\Http\Controllers\Api\Learn\Academy\AcademyActivityController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyGroupController;
 
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->prefix('/academies')->group(function () {
+Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::get('/', [AcademyController::class, 'index'])->name('academies');
     Route::post('/', [AcademyController::class, 'store'])->name('academies.store');
     Route::get('/create', [AcademyController::class, 'create'])->name('academy.create');
@@ -62,7 +62,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->
 });
 
 // API Routes - Additional routes for API (Note: routes/api.php already has /api prefix from RouteServiceProvider)
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->prefix('/academies')->group(function () {
+Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Academy Groups API - specific routes first
     Route::get('/groups/{academyGroup}', [AcademyGroupController::class, 'show'])->name('api.academy.groups.show');
     Route::delete('/groups/{academyGroup}', [AcademyGroupController::class, 'destroy'])->name('api.academy.groups.destroy');
