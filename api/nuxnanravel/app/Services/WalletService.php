@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\WalletTransaction;
+use App\Models\PointsTransaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -176,97 +177,49 @@ class WalletService
     }
 
     /**
-     * Convert points to wallet money
+     * Add wallet balance from points conversion (called by PointsService)
+     * Only handles Wallet side - Points side is handled by PointsService
      */
-    public function convertPointsToWallet(User $user, int $points): array
+    public function addFromPointsConversion(User $user, float $walletAmount, int $points, int $exchangeRate): array
     {
-        return DB::transaction(function () use ($user, $points) {
-            $exchangeRate = 1200; // 1 THB = 1200 points (points to money conversion)
-            $walletAmount = $points / $exchangeRate;
+        $walletBalanceBefore = $user->wallet;
+        $walletBalanceAfter = $walletBalanceBefore + $walletAmount;
 
-            $pointsBalanceBefore = $user->pp;
+        // Update user wallet
+        $user->update([
+            'wallet' => $walletBalanceAfter,
+        ]);
 
-            // Check if user has enough points
-            if ($pointsBalanceBefore < $points) {
-                return [
-                    'success' => false,
-                    'message' => 'แต้มของคุณไม่เพียงพอ',
-                ];
-            }
+        // Create wallet transaction (WalletService responsibility)
+        $walletTransaction = WalletTransaction::create([
+            'user_id' => $user->id,
+            'transaction_type' => 'conversion',
+            'amount' => $walletAmount,
+            'balance_before' => $walletBalanceBefore,
+            'balance_after' => $walletBalanceAfter,
+            'currency' => 'THB',
+            'description' => "รับจากการแปลง {$points} แต้ม",
+            'metadata' => [
+                'exchange_rate' => $exchangeRate,
+                'conversion_type' => 'points_to_money',
+                'points_amount' => $points,
+            ],
+            'status' => 'completed',
+        ]);
 
-            $pointsBalanceAfter = $pointsBalanceBefore - $points;
-            $walletBalanceBefore = $user->wallet;
-            $walletBalanceAfter = $walletBalanceBefore + $walletAmount;
-
-            // Update user points
-            $user->update([
-                'pp' => $pointsBalanceAfter,
-                'total_points_spent' => $user->total_points_spent + $points,
-            ]);
-
-            // Update user wallet
-            $user->update([
-                'wallet' => $walletBalanceAfter,
-            ]);
-
-            // Create points transaction
-            $pointsTransaction = PointsTransaction::create([
-                'user_id' => $user->id,
-                'transaction_type' => 'conversion',
-                'amount' => $points,
-                'balance_before' => $pointsBalanceBefore,
-                'balance_after' => $pointsBalanceAfter,
-                'source_type' => 'points_to_wallet',
-                'description' => "แปลง {$points} แต้มเป็น " . number_format($walletAmount, 2) . " บาท",
-                'metadata' => [
-                    'exchange_rate' => $exchangeRate,
-                    'conversion_type' => 'points_to_money',
-                    'wallet_amount' => $walletAmount,
-                ],
-                'status' => 'completed',
-            ]);
-
-            // Create wallet transaction
-            $walletTransaction = WalletTransaction::create([
-                'user_id' => $user->id,
-                'transaction_type' => 'conversion',
-                'amount' => $walletAmount,
-                'balance_before' => $walletBalanceBefore,
-                'balance_after' => $walletBalanceAfter,
-                'currency' => 'THB',
-                'description' => "รับจากการแปลง {$points} แต้ม",
-                'metadata' => [
-                    'exchange_rate' => $exchangeRate,
-                    'points_amount' => $points,
-                ],
-                'status' => 'completed',
-            ]);
-
-            Log::info('Points converted to wallet', [
-                'user_id' => $user->id,
-                'points' => $points,
-                'wallet_amount' => $walletAmount,
-            ]);
-
-            return [
-                'success' => true,
-                'points_converted' => $points,
-                'wallet_amount' => $walletAmount,
-                'new_points_balance' => $pointsBalanceAfter,
-                'new_wallet_balance' => $walletBalanceAfter,
-                'points_transaction_id' => $pointsTransaction->id,
-                'wallet_transaction_id' => $walletTransaction->id,
-            ];
-        });
+        return [
+            'new_balance' => $walletBalanceAfter,
+            'transaction_id' => $walletTransaction->id,
+        ];
     }
 
     /**
-     * Convert wallet money to points (for advertising support)
+     * Convert wallet money to points - handles Wallet side, delegates Points side to PointsService
      */
     public function convertWalletToPoints(User $user, float $amount): array
     {
         return DB::transaction(function () use ($user, $amount) {
-            $exchangeRate = 1080; // 1 THB = 1080 points (money to points conversion for advertising support)
+            $exchangeRate = 1080; // 1 THB = 1080 points
             $pointsAmount = $amount * $exchangeRate;
 
             $walletBalanceBefore = $user->wallet;
@@ -280,21 +233,13 @@ class WalletService
             }
 
             $walletBalanceAfter = $walletBalanceBefore - $amount;
-            $pointsBalanceBefore = $user->pp;
-            $pointsBalanceAfter = $pointsBalanceBefore + $pointsAmount;
 
             // Update user wallet
             $user->update([
                 'wallet' => $walletBalanceAfter,
             ]);
 
-            // Update user points
-            $user->update([
-                'pp' => $pointsBalanceAfter,
-                'total_points_earned' => $user->total_points_earned + $pointsAmount,
-            ]);
-
-            // Create wallet transaction
+            // Create wallet transaction (WalletService responsibility)
             $walletTransaction = WalletTransaction::create([
                 'user_id' => $user->id,
                 'transaction_type' => 'conversion',
@@ -311,22 +256,9 @@ class WalletService
                 'status' => 'completed',
             ]);
 
-            // Create points transaction
-            $pointsTransaction = PointsTransaction::create([
-                'user_id' => $user->id,
-                'transaction_type' => 'conversion',
-                'amount' => $pointsAmount,
-                'balance_before' => $pointsBalanceBefore,
-                'balance_after' => $pointsBalanceAfter,
-                'source_type' => 'wallet_to_points',
-                'description' => "รับจากการแปลง " . number_format($amount, 2) . " บาท",
-                'metadata' => [
-                    'exchange_rate' => $exchangeRate,
-                    'conversion_type' => 'money_to_points',
-                    'wallet_amount' => $amount,
-                ],
-                'status' => 'completed',
-            ]);
+            // Delegate points addition to PointsService
+            $pointsService = new \App\Services\PointsService();
+            $pointsResult = $pointsService->addFromWalletConversion($user, $pointsAmount, $amount, $exchangeRate);
 
             Log::info('Wallet converted to points', [
                 'user_id' => $user->id,
@@ -339,9 +271,9 @@ class WalletService
                 'wallet_amount' => $amount,
                 'points_received' => $pointsAmount,
                 'new_wallet_balance' => $walletBalanceAfter,
-                'new_points_balance' => $pointsBalanceAfter,
+                'new_points_balance' => $pointsResult['new_balance'],
                 'wallet_transaction_id' => $walletTransaction->id,
-                'points_transaction_id' => $pointsTransaction->id,
+                'points_transaction_id' => $pointsResult['transaction_id'],
             ];
         });
     }

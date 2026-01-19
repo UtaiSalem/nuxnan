@@ -302,8 +302,92 @@ const getTransactionColor = (type: string) => {
   return isPositive ? 'text-green-500' : 'text-red-500'
 }
 
-const isPositiveTransaction = (type: string) => {
-  return ['earn', 'transfer_in', 'refund', 'bonus', 'reward'].includes(type)
+const isPositiveTransaction = (tx: any) => {
+  const type = tx.transaction_type || tx.type
+  if (['earn', 'transfer_in', 'refund', 'bonus', 'reward'].includes(type)) return true
+  if (['spend', 'transfer_out', 'payment', 'purchase', 'donation'].includes(type)) return false
+  
+  // Handle conversion based on source_type
+  if (type === 'conversion') {
+    return tx.source_type === 'wallet_to_points' || tx.metadata?.conversion_type === 'money_to_points'
+  }
+  
+  // Fallback to amount if it's signed (though usually it's not)
+  return tx.amount > 0
+}
+
+// Get display title - for transfers, show description with name, otherwise show type label
+const getTransactionDisplayTitle = (tx: any) => {
+  const type = tx.transaction_type || tx.type
+  // For transfer types, show description which contains the name
+  if ((type === 'transfer_in' || type === 'transfer_out') && tx.description) {
+    return tx.description
+  }
+  return getTransactionTypeLabel(type)
+}
+
+// Get display subtitle - for transfers show type label, otherwise show description
+const getTransactionDisplaySubtitle = (tx: any) => {
+  const type = tx.transaction_type || tx.type
+  // For transfer types, show description which contains the name, so no subtitle needed
+  if (type === 'transfer_in' || type === 'transfer_out') {
+    return null // Already shown in title
+  }
+  // For other types, show description if available
+  return tx.description || null
+}
+
+// Check if transaction should show in 3-column layout
+const isThreeColumnTransaction = (tx: any) => {
+  const type = tx.transaction_type || tx.type
+  return type === 'transfer_in' || type === 'transfer_out' || type === 'conversion'
+}
+
+// Get default avatar URL with soft pastel color
+const getDefaultAvatar = (name: string) => {
+  // Use soft light blue-gray color that's easy on the eyes
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e2e8f0&color=64748b`
+}
+
+// Get account owner info (current logged-in user)
+const getOwnerInfo = () => {
+  return {
+    name: authStore.user?.name || 'ฉัน',
+    avatar: authStore.user?.profile_photo_url || getDefaultAvatar(authStore.user?.name || 'User')
+  }
+}
+
+// Get transaction partner info (the other party in the transaction)
+const getPartnerInfo = (tx: any) => {
+  const type = tx.transaction_type || tx.type
+  if (type === 'transfer_in') {
+    // User received points - partner is the sender
+    return tx.sender || null
+  } else if (type === 'transfer_out') {
+    // User sent points - partner is the receiver
+    return tx.receiver || null
+  } else if (type === 'conversion') {
+    // Conversion Me -> My Wallet/Points
+    const isPointsToWallet = tx.source_type === 'points_to_wallet' || tx.metadata?.conversion_type === 'points_to_money'
+    return {
+      name: isPointsToWallet ? 'กระเป๋าเงิน' : 'กระเป๋าพอยท์',
+      avatar: null, // Will use icon fallback
+      isSystem: true
+    }
+  }
+  return null
+}
+
+// Get transaction type label for 3-column layout
+const getThreeColumnLabel = (tx: any) => {
+  const type = tx.transaction_type || tx.type
+  if (type === 'transfer_in') return 'รับแต้มจาก'
+  if (type === 'transfer_out') return 'โอนแต้มให้'
+  if (type === 'conversion') {
+    const isPointsToWallet = tx.source_type === 'points_to_wallet' || tx.metadata?.conversion_type === 'points_to_money'
+    return isPointsToWallet ? 'แปลงเป็นเงิน' : 'แปลงจากเงิน'
+  }
+  return ''
 }
 
 const formatDate = (dateString: string) => {
@@ -543,39 +627,140 @@ onMounted(async () => {
               <Icon icon="mdi:loading" class="w-8 h-8 text-amber-500 animate-spin mx-auto" />
             </div>
             
-            <div v-else-if="transactions.length > 0" class="space-y-3">
-              <div 
-                v-for="tx in transactions.slice(0, 5)" 
-                :key="tx.id"
-                class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl"
-              >
+            <div v-else-if="transactions.length > 0" class="space-y-4">
+              <template v-for="tx in transactions.slice(0, 5)" :key="tx.id">
+                <!-- Premium Transaction Card -->
                 <div 
-                  class="w-10 h-10 rounded-full flex items-center justify-center"
-                  :class="isPositiveTransaction(tx.transaction_type || tx.type) ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'"
+                  class="group relative overflow-hidden p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-md hover:border-amber-200 dark:hover:border-amber-900/50 transition-all duration-300"
                 >
-                  <Icon 
-                    :icon="getTransactionIcon(tx.transaction_type || tx.type)" 
-                    :class="getTransactionColor(tx.transaction_type || tx.type)" 
-                    class="w-5 h-5" 
-                  />
+                  <!-- Background Glow for Positive Amount -->
+                  <div 
+                    v-if="isPositiveTransaction(tx)"
+                    class="absolute -right-10 -top-10 w-32 h-32 bg-green-500/5 blur-3xl pointer-events-none group-hover:bg-green-500/10 transition-colors"
+                  ></div>
+                  <!-- Background Glow for Negative Amount -->
+                  <div 
+                    v-else
+                    class="absolute -right-10 -top-10 w-32 h-32 bg-red-500/5 blur-3xl pointer-events-none group-hover:bg-red-500/10 transition-colors"
+                  ></div>
+
+                  <div class="flex items-center justify-between gap-4 relative z-10">
+                    <!-- Visualization: Source/Destination OR Activity Icon -->
+                    <div class="flex items-center gap-4 flex-grow">
+                      <!-- Case 1: 3-Column Style (Transfers/Conversions) -->
+                      <template v-if="isThreeColumnTransaction(tx)">
+                        <div class="flex items-center gap-2 sm:gap-4 flex-grow max-w-[80%]">
+                          <!-- Source -->
+                          <div class="flex flex-col items-center text-center min-w-[64px]">
+                            <img 
+                              :src="getOwnerInfo().avatar" 
+                              :alt="getOwnerInfo().name"
+                              class="w-12 h-12 rounded-full object-cover ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700 shadow-sm"
+                            >
+                            <span class="text-[10px] sm:text-xs font-medium text-gray-500 mt-1 truncate max-w-[64px]">
+                              {{ getOwnerInfo().name.split(' ')[0] }}
+                            </span>
+                          </div>
+
+                          <!-- Connection -->
+                          <div class="flex-grow flex flex-col items-center justify-center -mt-4 px-1">
+                            <div class="w-full h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent relative">
+                              <Icon 
+                                :icon="isPositiveTransaction(tx) ? 'mdi:chevron-left' : 'mdi:chevron-right'"
+                                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5"
+                                :class="isPositiveTransaction(tx) ? 'text-green-500 animate-pulse' : 'text-amber-500'"
+                              />
+                            </div>
+                            <span 
+                              class="text-[9px] uppercase tracking-wider font-bold mt-2"
+                              :class="isPositiveTransaction(tx) ? 'text-green-600' : 'text-amber-600'"
+                            >
+                              {{ getThreeColumnLabel(tx) }}
+                            </span>
+                          </div>
+
+                          <!-- Destination -->
+                          <div class="flex flex-col items-center text-center min-w-[64px]">
+                            <template v-if="getPartnerInfo(tx)?.isSystem">
+                              <div class="w-12 h-12 rounded-full flex items-center justify-center bg-gray-50 dark:bg-gray-800 ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700 shadow-sm transition-transform group-hover:scale-105">
+                                <Icon 
+                                  :icon="getPartnerInfo(tx)?.name === 'กระเป๋าเงิน' ? 'mdi:wallet-outline' : 'mdi:star-circle-outline'" 
+                                  class="w-7 h-7"
+                                  :class="getPartnerInfo(tx)?.name === 'กระเป๋าเงิน' ? 'text-indigo-500' : 'text-amber-500'" 
+                                />
+                              </div>
+                            </template>
+                            <template v-else-if="getPartnerInfo(tx)">
+                              <img 
+                                :src="getPartnerInfo(tx)?.avatar || getDefaultAvatar(getPartnerInfo(tx)?.name || 'User')" 
+                                :alt="getPartnerInfo(tx)?.name"
+                                class="w-12 h-12 rounded-full object-cover ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700 shadow-sm transition-transform group-hover:scale-105"
+                              >
+                            </template>
+                            <template v-else>
+                              <div class="w-12 h-12 rounded-full flex items-center justify-center bg-gray-50 dark:bg-gray-800 ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700">
+                                <Icon icon="mdi:account-question-outline" class="w-7 h-7 text-gray-400" />
+                              </div>
+                            </template>
+                            <span class="text-[10px] sm:text-xs font-medium text-gray-500 mt-1 truncate max-w-[64px]">
+                              {{ (getPartnerInfo(tx)?.name || '?').split(' ')[0] }}
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+
+                      <!-- Case 2: Activity Style (Earn/Spend) -->
+                      <template v-else>
+                        <div class="flex items-center gap-4">
+                          <div 
+                            class="w-12 h-12 rounded-2xl flex items-center justify-center transform transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm"
+                            :class="isPositiveTransaction(tx) 
+                              ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-800' 
+                              : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800'"
+                          >
+                            <Icon 
+                              :icon="getTransactionIcon(tx.transaction_type || tx.type)" 
+                              class="w-6 h-6" 
+                            />
+                          </div>
+                          <div class="max-w-[180px] sm:max-w-none">
+                            <p class="font-bold text-gray-900 dark:text-white leading-tight">
+                              {{ getTransactionDisplayTitle(tx) }}
+                            </p>
+                            <p v-if="getTransactionDisplaySubtitle(tx)" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mt-1 line-clamp-1">
+                              {{ getTransactionDisplaySubtitle(tx) }}
+                            </p>
+                            <div class="flex items-center gap-2 mt-1.5">
+                              <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase">
+                                {{ getTransactionTypeLabel(tx.transaction_type || tx.type) }}
+                              </span>
+                              <span class="text-[10px] text-gray-400">{{ formatDate(tx.created_at) }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+
+                    <!-- Amount and Balance -->
+                    <div class="text-right flex flex-col items-end min-w-[100px]">
+                      <div 
+                        class="flex items-center font-black text-lg sm:text-xl"
+                        :class="isPositiveTransaction(tx) ? 'text-green-500' : 'text-red-500'"
+                      >
+                        <span class="text-base mr-0.5">{{ isPositiveTransaction(tx) ? '+' : '-' }}</span>
+                        {{ formatPoints(Math.abs(tx.amount)) }}
+                      </div>
+                      <div class="flex flex-col items-end mt-1">
+                        <div class="text-[10px] font-medium text-gray-400 dark:text-gray-500 flex items-center gap-1 bg-gray-50 dark:bg-gray-900/50 px-2 py-0.5 rounded-lg border border-gray-100 dark:border-gray-800">
+                          <span>คงเหลือ:</span>
+                          <span class="text-gray-600 dark:text-gray-300">{{ formatPoints(tx.balance_after || 0) }}</span>
+                        </div>
+                        <p v-if="isThreeColumnTransaction(tx)" class="text-[9px] text-gray-400 mt-1">{{ formatDate(tx.created_at) }}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                <div class="flex-grow">
-                  <p class="font-medium text-gray-900 dark:text-white">
-                    {{ getTransactionTypeLabel(tx.transaction_type || tx.type) }}
-                  </p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(tx.created_at) }}</p>
-                </div>
-                
-                <div class="text-right">
-                  <p 
-                    class="font-semibold"
-                    :class="isPositiveTransaction(tx.transaction_type || tx.type) ? 'text-green-500' : 'text-red-500'"
-                  >
-                    {{ isPositiveTransaction(tx.transaction_type || tx.type) ? '+' : '-' }}{{ formatPoints(Math.abs(tx.amount)) }}
-                  </p>
-                </div>
-              </div>
+              </template>
             </div>
             
             <div v-else class="py-8 text-center text-gray-500 dark:text-gray-400">
@@ -875,42 +1060,137 @@ onMounted(async () => {
             <p class="text-gray-500 mt-2">กำลังโหลด...</p>
           </div>
           
-          <div v-else-if="transactions.length > 0" class="space-y-3">
-            <div 
-              v-for="tx in transactions" 
-              :key="tx.id"
-              class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-            >
+          <div v-else-if="transactions.length > 0" class="space-y-4">
+            <template v-for="tx in transactions" :key="tx.id">
+              <!-- Premium Transaction Card -->
               <div 
-                class="w-10 h-10 rounded-full flex items-center justify-center"
-                :class="isPositiveTransaction(tx.transaction_type || tx.type) ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'"
+                class="group relative overflow-hidden p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-md hover:border-amber-200 dark:hover:border-amber-900/50 transition-all duration-300"
               >
-                <Icon 
-                  :icon="getTransactionIcon(tx.transaction_type || tx.type)" 
-                  :class="getTransactionColor(tx.transaction_type || tx.type)" 
-                  class="w-5 h-5" 
-                />
+                <!-- Background Glow for Positive Amount -->
+                <div 
+                  v-if="isPositiveTransaction(tx)"
+                  class="absolute -right-10 -top-10 w-32 h-32 bg-green-500/5 blur-3xl pointer-events-none group-hover:bg-green-500/10 transition-colors"
+                ></div>
+                <!-- Background Glow for Negative Amount -->
+                <div 
+                  v-else
+                  class="absolute -right-10 -top-10 w-32 h-32 bg-red-500/5 blur-3xl pointer-events-none group-hover:bg-red-500/10 transition-colors"
+                ></div>
+
+                <div class="flex items-center justify-between gap-4 relative z-10">
+                  <!-- Visualization -->
+                  <div class="flex items-center gap-4 flex-grow">
+                    <!-- Case 1: 3-Column Style -->
+                    <template v-if="isThreeColumnTransaction(tx)">
+                      <div class="flex items-center gap-4 flex-grow max-w-[80%]">
+                        <div class="flex flex-col items-center text-center min-w-[72px]">
+                          <img 
+                            :src="getOwnerInfo().avatar" 
+                            :alt="getOwnerInfo().name"
+                            class="w-14 h-14 rounded-full object-cover ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700 shadow-sm"
+                          >
+                          <span class="text-xs font-medium text-gray-500 mt-1 truncate max-w-[72px]">
+                            {{ getOwnerInfo().name }}
+                          </span>
+                        </div>
+
+                        <div class="flex-grow flex flex-col items-center justify-center -mt-4 px-2">
+                          <div class="w-full h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent relative">
+                            <Icon 
+                              :icon="isPositiveTransaction(tx) ? 'mdi:chevron-left' : 'mdi:chevron-right'"
+                              class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6"
+                              :class="isPositiveTransaction(tx) ? 'text-green-500 animate-pulse' : 'text-amber-500'"
+                            />
+                          </div>
+                          <span 
+                            class="text-[10px] uppercase tracking-wider font-bold mt-2"
+                            :class="isPositiveTransaction(tx) ? 'text-green-600' : 'text-amber-600'"
+                          >
+                            {{ getThreeColumnLabel(tx) }}
+                          </span>
+                        </div>
+
+                        <div class="flex flex-col items-center text-center min-w-[72px]">
+                          <template v-if="getPartnerInfo(tx)?.isSystem">
+                            <div class="w-14 h-14 rounded-full flex items-center justify-center bg-gray-50 dark:bg-gray-800 ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700 shadow-sm">
+                              <Icon 
+                                :icon="getPartnerInfo(tx)?.name === 'กระเป๋าเงิน' ? 'mdi:wallet-outline' : 'mdi:star-circle-outline'" 
+                                class="w-8 h-8"
+                                :class="getPartnerInfo(tx)?.name === 'กระเป๋าเงิน' ? 'text-indigo-500' : 'text-amber-500'" 
+                              />
+                            </div>
+                          </template>
+                          <template v-else-if="getPartnerInfo(tx)">
+                            <img 
+                              :src="getPartnerInfo(tx)?.avatar || getDefaultAvatar(getPartnerInfo(tx)?.name || 'User')" 
+                              :alt="getPartnerInfo(tx)?.name"
+                              class="w-14 h-14 rounded-full object-cover ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700 shadow-sm"
+                            >
+                          </template>
+                          <template v-else>
+                            <div class="w-14 h-14 rounded-full flex items-center justify-center bg-gray-50 dark:bg-gray-800 ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700">
+                              <Icon icon="mdi:account-question-outline" class="w-8 h-8 text-gray-400" />
+                            </div>
+                          </template>
+                          <span class="text-xs font-medium text-gray-500 mt-1 truncate max-w-[72px]">
+                            {{ getPartnerInfo(tx)?.name || '?' }}
+                          </span>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- Case 2: Activity Style -->
+                    <template v-else>
+                      <div class="flex items-center gap-4">
+                        <div 
+                          class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm"
+                          :class="isPositiveTransaction(tx) 
+                            ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-800' 
+                            : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800'"
+                        >
+                          <Icon 
+                            :icon="getTransactionIcon(tx.transaction_type || tx.type)" 
+                            class="w-6 h-6" 
+                          />
+                        </div>
+                        <div>
+                          <p class="font-bold text-gray-900 dark:text-white leading-tight">
+                            {{ getTransactionDisplayTitle(tx) }}
+                          </p>
+                          <p v-if="getTransactionDisplaySubtitle(tx)" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mt-1">
+                            {{ getTransactionDisplaySubtitle(tx) }}
+                          </p>
+                          <div class="flex items-center gap-2 mt-1.5">
+                            <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase">
+                              {{ getTransactionTypeLabel(tx.transaction_type || tx.type) }}
+                            </span>
+                            <span class="text-[10px] text-gray-400">{{ formatDate(tx.created_at) }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- Amount and Balance -->
+                  <div class="text-right flex flex-col items-end min-w-[120px]">
+                    <div 
+                      class="flex items-center font-black text-xl"
+                      :class="isPositiveTransaction(tx) ? 'text-green-500' : 'text-red-500'"
+                    >
+                      <span class="text-base mr-0.5">{{ isPositiveTransaction(tx) ? '+' : '-' }}</span>
+                      {{ formatPoints(Math.abs(tx.amount)) }}
+                    </div>
+                    <div class="flex flex-col items-end mt-1">
+                      <div class="text-xs font-medium text-gray-400 dark:text-gray-500 flex items-center gap-1 bg-gray-50 dark:bg-gray-900/50 px-3 py-1 rounded-lg border border-gray-100 dark:border-gray-800 mt-1">
+                        <span>ยอดคงเหลือ:</span>
+                        <span class="text-gray-700 dark:text-gray-200 font-bold">{{ formatPoints(tx.balance_after || 0) }}</span>
+                      </div>
+                      <p v-if="isThreeColumnTransaction(tx)" class="text-[10px] text-gray-400 mt-1.5">{{ formatDate(tx.created_at) }}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              
-              <div class="flex-grow">
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ getTransactionTypeLabel(tx.transaction_type || tx.type) }}
-                </p>
-                <p v-if="tx.description" class="text-xs text-gray-500 dark:text-gray-400">{{ tx.description }}</p>
-                <p class="text-xs text-gray-400">{{ formatDate(tx.created_at) }}</p>
-              </div>
-              
-              <div class="text-right">
-                <p 
-                  class="font-semibold text-lg"
-                  :class="isPositiveTransaction(tx.transaction_type || tx.type) ? 'text-green-500' : 'text-red-500'"
-                >
-                  {{ isPositiveTransaction(tx.transaction_type || tx.type) ? '+' : '-' }}{{ formatPoints(Math.abs(tx.amount)) }}
-                </p>
-                <p class="text-xs text-gray-500">ยอดคงเหลือ: {{ formatPoints(tx.balance_after || 0) }}</p>
-              </div>
-            </div>
-            
+            </template>
             <!-- Pagination -->
             <div v-if="transactionsPagination.total_pages > 1" class="flex justify-center gap-2 mt-6">
               <button 

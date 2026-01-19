@@ -114,6 +114,8 @@ class PointsTransaction extends Model
             'spend' => 'การใช้แต้ม',
             'refund' => 'การคืนแต้ม',
             'transfer' => 'การโอนแต้ม',
+            'transfer_in' => 'รับโอนแต้ม',
+            'transfer_out' => 'โอนแต้มออก',
             'admin_adjust' => 'การปรับจาก Admin',
             'conversion' => 'การแปลงแต้ม',
             default => $this->transaction_type,

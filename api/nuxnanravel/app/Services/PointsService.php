@@ -181,28 +181,28 @@ class PointsService
             // Create sender transaction
             PointsTransaction::create([
                 'user_id' => $fromUser->id,
-                'transaction_type' => 'transfer',
+                'transaction_type' => 'transfer_out',
                 'amount' => $amount,
                 'balance_before' => $fromBalanceBefore,
                 'balance_after' => $fromBalanceAfter,
                 'source_type' => 'user_transfer',
                 'source_id' => $toUser->id,
-                'description' => $message ?? "โอนแต้มให้ {$toUser->username}",
-                'metadata' => ['to_user_id' => $toUser->id],
+                'description' => $message ?? "โอนแต้มให้ {$toUser->name}",
+                'metadata' => ['to_user_id' => $toUser->id, 'to_user_name' => $toUser->name],
                 'status' => 'completed',
             ]);
 
             // Create receiver transaction
             PointsTransaction::create([
                 'user_id' => $toUser->id,
-                'transaction_type' => 'transfer',
+                'transaction_type' => 'transfer_in',
                 'amount' => $amount,
                 'balance_before' => $toBalanceBefore,
                 'balance_after' => $toBalanceAfter,
                 'source_type' => 'user_transfer',
                 'source_id' => $fromUser->id,
-                'description' => $message ?? "รับแต้มจาก {$fromUser->username}",
-                'metadata' => ['from_user_id' => $fromUser->id],
+                'description' => "รับแต้มจาก {$fromUser->name}",
+                'metadata' => ['from_user_id' => $fromUser->id, 'from_user_name' => $fromUser->name],
                 'status' => 'completed',
             ]);
 
@@ -407,11 +407,105 @@ class PointsService
     }
 
     /**
-     * Convert points to wallet (alias for WalletService)
+     * Convert points to wallet - handles Points side, delegates Wallet side to WalletService
      */
     public function convertPointsToWallet(User $user, int $points): array
     {
-        $walletService = new \App\Services\WalletService();
-        return $walletService->convertPointsToWallet($user, $points);
+        return DB::transaction(function () use ($user, $points) {
+            $exchangeRate = 1200; // 1 THB = 1200 points
+            $walletAmount = $points / $exchangeRate;
+
+            $pointsBalanceBefore = $user->pp;
+
+            // Check if user has enough points
+            if ($pointsBalanceBefore < $points) {
+                return [
+                    'success' => false,
+                    'message' => 'แต้มของคุณไม่เพียงพอ',
+                ];
+            }
+
+            $pointsBalanceAfter = $pointsBalanceBefore - $points;
+
+            // Update user points
+            $user->update([
+                'pp' => $pointsBalanceAfter,
+                'total_points_spent' => $user->total_points_spent + $points,
+            ]);
+
+            // Create points transaction (PointsService responsibility)
+            $pointsTransaction = PointsTransaction::create([
+                'user_id' => $user->id,
+                'transaction_type' => 'conversion',
+                'amount' => $points,
+                'balance_before' => $pointsBalanceBefore,
+                'balance_after' => $pointsBalanceAfter,
+                'source_type' => 'points_to_wallet',
+                'description' => "แปลง {$points} แต้มเป็น " . number_format($walletAmount, 2) . " บาท",
+                'metadata' => [
+                    'exchange_rate' => $exchangeRate,
+                    'conversion_type' => 'points_to_money',
+                    'wallet_amount' => $walletAmount,
+                ],
+                'status' => 'completed',
+            ]);
+
+            // Delegate wallet addition to WalletService
+            $walletService = new \App\Services\WalletService();
+            $walletResult = $walletService->addFromPointsConversion($user, $walletAmount, $points, $exchangeRate);
+
+            Log::info('Points converted to wallet', [
+                'user_id' => $user->id,
+                'points' => $points,
+                'wallet_amount' => $walletAmount,
+            ]);
+
+            return [
+                'success' => true,
+                'points_converted' => $points,
+                'wallet_amount' => $walletAmount,
+                'new_points_balance' => $pointsBalanceAfter,
+                'new_wallet_balance' => $walletResult['new_balance'],
+                'points_transaction_id' => $pointsTransaction->id,
+                'wallet_transaction_id' => $walletResult['transaction_id'],
+            ];
+        });
+    }
+
+    /**
+     * Add points from wallet conversion (called by WalletService)
+     */
+    public function addFromWalletConversion(User $user, int $points, float $walletAmount, int $exchangeRate): array
+    {
+        $pointsBalanceBefore = $user->pp;
+        $pointsBalanceAfter = $pointsBalanceBefore + $points;
+
+        // Update user points
+        $user->update([
+            'pp' => $pointsBalanceAfter,
+            'total_points_earned' => $user->total_points_earned + $points,
+        ]);
+
+        // Create points transaction
+        $pointsTransaction = PointsTransaction::create([
+            'user_id' => $user->id,
+            'transaction_type' => 'conversion',
+            'amount' => $points,
+            'balance_before' => $pointsBalanceBefore,
+            'balance_after' => $pointsBalanceAfter,
+            'source_type' => 'wallet_to_points',
+            'description' => "รับจากการแปลง " . number_format($walletAmount, 2) . " บาท",
+            'metadata' => [
+                'exchange_rate' => $exchangeRate,
+                'conversion_type' => 'money_to_points',
+                'wallet_amount' => $walletAmount,
+            ],
+            'status' => 'completed',
+        ]);
+
+        return [
+            'new_balance' => $pointsBalanceAfter,
+            'transaction_id' => $pointsTransaction->id,
+        ];
     }
 }

@@ -355,16 +355,62 @@ class PointsController extends Controller
 
         $transactions = $query->paginate($perPage, ['*'], 'page', $page);
 
+        // Transform transactions to include sender/receiver info for transfers
+        $transformedTransactions = collect($transactions->items())->map(function ($tx) use ($user) {
+            $txArray = $tx->toArray();
+            
+            // For transfer transactions, include sender and receiver info
+            if (in_array($tx->transaction_type, ['transfer_in', 'transfer_out']) && $tx->source_id) {
+                $relatedUser = User::find($tx->source_id);
+                
+                if ($tx->transaction_type === 'transfer_in') {
+                    // User received points - sender is related user, receiver is current user
+                    $txArray['sender'] = $relatedUser ? [
+                        'id' => $relatedUser->id,
+                        'name' => $relatedUser->name,
+                        'avatar' => $relatedUser->profile_photo_url ?? $this->getUiAvatarUrl($relatedUser->name),
+                    ] : null;
+                    $txArray['receiver'] = [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'avatar' => $user->profile_photo_url ?? $this->getUiAvatarUrl($user->name),
+                    ];
+                } else {
+                    // User sent points - sender is current user, receiver is related user
+                    $txArray['sender'] = [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'avatar' => $user->profile_photo_url ?? $this->getUiAvatarUrl($user->name),
+                    ];
+                    $txArray['receiver'] = $relatedUser ? [
+                        'id' => $relatedUser->id,
+                        'name' => $relatedUser->name,
+                        'avatar' => $relatedUser->profile_photo_url ?? $this->getUiAvatarUrl($relatedUser->name),
+                    ] : null;
+                }
+            }
+            
+            return $txArray;
+        });
+
         return response()->json([
             'success' => true,
             'data' => [
-                'transactions' => $transactions->items(),
+                'transactions' => $transformedTransactions,
                 'current_page' => $transactions->currentPage(),
                 'total_pages' => $transactions->lastPage(),
                 'per_page' => $transactions->perPage(),
                 'total' => $transactions->total(),
             ],
         ]);
+    }
+
+    /**
+     * Get UI Avatar URL for fallback
+     */
+    private function getUiAvatarUrl(string $name): string
+    {
+        return 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=random&color=fff';
     }
 
     /**
