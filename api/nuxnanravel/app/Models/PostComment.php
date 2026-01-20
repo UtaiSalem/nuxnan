@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Post;
-use App\Models\PostComment;
+
 use App\Models\PostCommentImage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;

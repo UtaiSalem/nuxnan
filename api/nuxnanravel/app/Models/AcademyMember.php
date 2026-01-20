@@ -5,7 +5,7 @@ namespace App\Models;
 
 use App\Models\User;
 use App\Models\Academy;
-use App\Models\AcademyMember;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,7 +36,7 @@ class AcademyMember extends Model
         return $this->belongsTo(User::class, 'invited_by');
     }
 
-    public function members():HasMany
+    public function members(): HasMany
     {
         return $this->hasMany(User::class);
     }

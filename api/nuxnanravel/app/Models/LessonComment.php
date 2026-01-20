@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Models\User;
 use App\Models\Lesson;
-use App\Models\LessonComment;
+
 use App\Models\LessonCommentImage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -37,13 +37,13 @@ class LessonComment extends Model
         static::deleting(function (LessonComment $comment) {
             // Delete all likes
             $comment->likeComment()->detach();
-            
+
             // Delete all dislikes
             $comment->dislikeComment()->detach();
-            
+
             // Delete all images
             $comment->lessonCommentImages()->delete();
-            
+
             // Delete all replies (child comments)
             $comment->replies()->each(function ($reply) {
                 $reply->delete(); // This will trigger cascade for each reply
