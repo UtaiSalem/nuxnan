@@ -122,7 +122,7 @@ Route::get('/login', function () {
         'success' => false,
         'message' => 'Unauthenticated. Please login first.',
     ], 401);
-})->name('login');
+})->name('api.login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/validate-referral-code', [AuthController::class, 'validateReferralCode']);
