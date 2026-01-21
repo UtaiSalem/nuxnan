@@ -23,6 +23,8 @@ const lastPage = ref(1)
 const hasLoadedAnswers = ref(false)
 const totalAnswers = ref(0)
 const showGradedSection = ref(false)
+const searchQuery = ref('')
+const statusFilter = ref<'all' | 'ungraded' | 'graded' | 'failed'>('all')
 
 const fetchGroups = async () => {
     isLoadingGroups.value = true
@@ -70,18 +72,18 @@ const fetchAllAnswers = async (page = 1, reset = false) => {
     
     // Map response.data - Admin Grading View expansion logic:
     // - Ungraded (points = null) -> expanded (needs grading)
-    // - Graded but failed (points < passing_score) -> expanded (may need review)
-    // - Graded and passed (points >= passing_score) -> collapsed (done)
-    const passingScore = props.assignment.passing_score || 0
+    // - Graded but score < half of total points -> expanded (may need review)
+    // - Graded and score >= half of total points -> collapsed (good enough)
+    const halfPoints = (props.assignment.points || 0) / 2
     const newAnswers = (response.data || []).map((a: any) => {
       const isGraded = a.points !== null && a.points !== undefined
-      const isPassed = isGraded && a.points >= passingScore
+      const hasGoodScore = isGraded && a.points >= halfPoints
       return {
         ...a,
         points: a.points, 
         originalPoints: a.points,
         isUpdating: false,
-        isExpanded: !isPassed // Expand if NOT passed (ungraded or failed), collapse if passed
+        isExpanded: !hasGoodScore // Expand if NOT graded or score < half, collapse if score >= half
       }
     })
 
@@ -103,10 +105,53 @@ const fetchAllAnswers = async (page = 1, reset = false) => {
   }
 }
 
+// Computed: Filter answers based on search query and status filter
+const filteredAnswers = computed(() => {
+  let result = allAnswers.value
+  
+  // Apply status filter
+  const halfPoints = (props.assignment.points || 0) / 2
+  if (statusFilter.value === 'ungraded') {
+    result = result.filter(a => a.points === null || a.points === undefined)
+  } else if (statusFilter.value === 'graded') {
+    result = result.filter(a => a.points !== null && a.points !== undefined && a.points >= halfPoints)
+  } else if (statusFilter.value === 'failed') {
+    result = result.filter(a => a.points !== null && a.points !== undefined && a.points < halfPoints)
+  }
+  
+  // Apply search query
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.trim().toLowerCase()
+    result = result.filter(answer => {
+      // Search by name (member_name or student username)
+      const name = (answer.member_name || answer.student?.username || '').toLowerCase()
+      // Search by number (เลขที่)
+      const memberNumber = String(answer.member_number || answer.student?.member_number || '')
+      // Search by student ID (รหัสประจำตัว)
+      const studentId = String(answer.student_id || answer.student?.student_id || answer.student?.id || '')
+      
+      return name.includes(query) || memberNumber.includes(query) || studentId.includes(query)
+    })
+  }
+  
+  return result
+})
+
+// Computed: Count for each status
+const statusCounts = computed(() => {
+  const halfPoints = (props.assignment.points || 0) / 2
+  return {
+    all: allAnswers.value.length,
+    ungraded: allAnswers.value.filter(a => a.points === null || a.points === undefined).length,
+    graded: allAnswers.value.filter(a => a.points !== null && a.points !== undefined && a.points >= halfPoints).length,
+    failed: allAnswers.value.filter(a => a.points !== null && a.points !== undefined && a.points < halfPoints).length
+  }
+})
+
 // Computed: Separate ungraded and graded based on points
 // No points = ungraded, Has points = graded
-const ungradedAnswers = computed(() => allAnswers.value.filter(a => a.points === null || a.points === undefined))
-const gradedAnswers = computed(() => allAnswers.value.filter(a => a.points !== null && a.points !== undefined))
+const ungradedAnswers = computed(() => filteredAnswers.value.filter(a => a.points === null || a.points === undefined))
+const gradedAnswers = computed(() => filteredAnswers.value.filter(a => a.points !== null && a.points !== undefined))
 
 // Watch group - fetch answers and save selection to database
 watch(selectedGroup, async (newGroupId, oldGroupId) => {
@@ -139,9 +184,9 @@ const updateGrade = async (answer: any) => {
     answer.status = 'graded' // Mark as graded in local state
     answer.isUpdating = false
     
-    // Only collapse if PASSED (points >= passing_score), keep expanded if failed
-    const passingScore = props.assignment.passing_score || 0
-    answer.isExpanded = answer.points < passingScore // Failed = stay expanded, Passed = collapse
+    // Collapse if score >= half of total points, stay expanded if score < half
+    const halfPoints = (props.assignment.points || 0) / 2
+    answer.isExpanded = answer.points < halfPoints // Score < half = stay expanded, Score >= half = collapse
     
     swal.toast('บันทึกคะแนนเรียบร้อย', 'success')
   } catch (error) {
@@ -172,15 +217,15 @@ const isLate = (answer: any) => {
 const userAvatar = (user: any) => getAvatarUrl(user)
 
 const getAnswerCardClass = (answer: any) => {
-   // No points = ungraded (white background)
+   // No points = ungraded (gray background)
    if (answer.points === null || answer.points === undefined) {
-     return 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+     return 'bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600'
    }
-   // Has points = graded (green/red based on passing score)
-   const passing = props.assignment.passing_score ?? 0
-   return answer.points >= passing 
-      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-      : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+   // Has points = graded (green/red based on half of total points)
+   const halfPoints = (props.assignment.points || 0) / 2
+   return answer.points >= halfPoints 
+      ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+      : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
 }
 
 onMounted(() => {
@@ -215,6 +260,26 @@ const scrollToTop = () => {
             </h2>
         </div>
 
+        <!-- Search Box -->
+        <div class="relative mb-4">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Icon icon="fluent:search-24-regular" class="w-5 h-5 text-gray-400" />
+            </div>
+            <input 
+                v-model="searchQuery"
+                type="text"
+                placeholder="ค้นหาด้วย ชื่อ, เลขที่ หรือรหัสนักเรียน..."
+                class="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+            />
+            <button 
+                v-if="searchQuery"
+                @click="searchQuery = ''"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            >
+                <Icon icon="fluent:dismiss-circle-24-filled" class="w-5 h-5" />
+            </button>
+        </div>
+
         <!-- Group Tabs -->
         <div v-if="groups && groups.length > 0" class="flex flex-wrap gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
             <button 
@@ -239,6 +304,54 @@ const scrollToTop = () => {
             </button>
         </div>
 
+        <!-- Status Filter Tabs -->
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button 
+                @click="statusFilter = 'all'"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                :class="statusFilter === 'all' 
+                    ? 'bg-gray-700 text-white shadow-md' 
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
+            >
+                <Icon icon="fluent:list-24-regular" class="w-4 h-4" />
+                ทั้งหมด
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20">{{ statusCounts.all }}</span>
+            </button>
+            <button 
+                @click="statusFilter = 'ungraded'"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                :class="statusFilter === 'ungraded' 
+                    ? 'bg-gray-500 text-white shadow-md' 
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'"
+            >
+                <Icon icon="fluent:clock-24-regular" class="w-4 h-4" />
+                รอตรวจ
+                <span class="px-1.5 py-0.5 rounded-full text-[10px]" :class="statusFilter === 'ungraded' ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-700'">{{ statusCounts.ungraded }}</span>
+            </button>
+            <button 
+                @click="statusFilter = 'graded'"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                :class="statusFilter === 'graded' 
+                    ? 'bg-green-600 text-white shadow-md' 
+                    : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40'"
+            >
+                <Icon icon="fluent:checkmark-circle-24-regular" class="w-4 h-4" />
+                ผ่าน
+                <span class="px-1.5 py-0.5 rounded-full text-[10px]" :class="statusFilter === 'graded' ? 'bg-white/20' : 'bg-green-100 dark:bg-green-900/40'">{{ statusCounts.graded }}</span>
+            </button>
+            <button 
+                @click="statusFilter = 'failed'"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                :class="statusFilter === 'failed' 
+                    ? 'bg-red-600 text-white shadow-md' 
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40'"
+            >
+                <Icon icon="fluent:dismiss-circle-24-regular" class="w-4 h-4" />
+                ไม่ผ่าน
+                <span class="px-1.5 py-0.5 rounded-full text-[10px]" :class="statusFilter === 'failed' ? 'bg-white/20' : 'bg-red-100 dark:bg-red-900/40'">{{ statusCounts.failed }}</span>
+            </button>
+        </div>
+
         <!-- Loading -->
         <div v-if="isFetchingAnswers && allAnswers.length === 0" class="flex justify-center py-8">
              <Icon icon="eos-icons:loading" class="w-8 h-8 text-orange-500" />
@@ -249,10 +362,21 @@ const scrollToTop = () => {
             {{ selectedGroup ? 'ไม่มีงานที่ส่งในกลุ่มนี้' : 'ยังไม่มีนักเรียนส่งงาน' }}
         </div>
 
+        <!-- No Search Results -->
+        <div v-else-if="filteredAnswers.length === 0 && searchQuery" class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 text-center text-gray-500 border border-dashed border-gray-300 dark:border-gray-700 text-sm">
+            <Icon icon="fluent:search-24-regular" class="w-8 h-8 mx-auto mb-2 text-gray-400" />
+            <p>ไม่พบผลลัพธ์สำหรับ "{{ searchQuery }}"</p>
+        </div>
+
         <div v-else class="space-y-3">
+            <!-- Search Results Count -->
+            <p v-if="searchQuery" class="text-sm text-gray-500 dark:text-gray-400">
+                พบ {{ filteredAnswers.length }} รายการ
+            </p>
+            
             <!-- All Answers List (Unified) -->
             <div class="grid gap-3">
-                <div v-for="answer in allAnswers" :key="answer.id" 
+                <div v-for="answer in filteredAnswers" :key="answer.id" 
                      class="rounded-xl p-4 border shadow-sm transition-shadow hover:shadow-md"
                      :class="getAnswerCardClass(answer)"
                 >

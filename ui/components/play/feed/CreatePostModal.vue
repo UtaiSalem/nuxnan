@@ -521,19 +521,6 @@ const removeTaggedFriend = (friendId) => {
                 <!-- Hidden file input -->
                 <input type="file" ref="imageInput" class="hidden" accept="image/*" multiple @change="handleImageSelect" />
 
-                <!-- User & Privacy -->
-                <div class="flex items-center gap-3 mb-4">
-                  <img :src="currentUserAvatar" class="w-10 h-10 rounded-full object-cover" />
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-800 dark:text-white">{{ authStore.user?.name }}</div>
-                    <button @click="showPrivacyOptions = !showPrivacyOptions" class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
-                      <Icon :icon="currentPrivacy.icon" class="w-3 h-3" />
-                      <span>{{ currentPrivacy.label }}</span>
-                      <Icon icon="mdi:chevron-down" class="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-
                 <!-- Privacy Options -->
                 <div v-if="showPrivacyOptions" class="mb-4 p-3 bg-gray-50 dark:bg-vikinger-dark-200 rounded-lg">
                   <div class="space-y-2">

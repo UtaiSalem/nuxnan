@@ -177,6 +177,17 @@ const getProgressBarColor = (score, max) => {
     return 'bg-gradient-to-r from-red-400 to-red-500';
 };
 
+// Check if score should be shown
+const canShowScore = computed(() => {
+    // Admin can always see
+    if (isCourseAdmin.value) return true;
+    
+    // Student must have order_number
+    if (data.value?.member?.order_number) return true;
+    
+    return false;
+});
+
 // Tabs
 const activeTab = ref('lessons');
 const tabs = [
@@ -254,8 +265,18 @@ const tabs = [
                 </div>
              </div>
 
-             <!-- Header Stats -->
-             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+             <!-- Warning for No Order Number -->
+             <div v-if="!canShowScore" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 text-center mb-8">
+                 <Icon icon="fluent:warning-24-filled" class="w-12 h-12 text-yellow-500 mx-auto mb-2" />
+                 <h3 class="text-lg font-bold text-yellow-800 dark:text-yellow-200">ยังไม่มีเลขที่ (Order Number)</h3>
+                 <p class="text-yellow-700 dark:text-yellow-300 mt-1">
+                     กรุณาระบุเลขที่ของคุณ หรือติดต่อผู้สอนเพื่อตรวจสอบข้อมูล <br>
+                     (ระบบแสดงคะแนนสำหรับนักเรียนที่มีเลขที่แล้วเท่านั้น)
+                 </p>
+             </div>
+
+             <!-- Header Stats (Only Show if canShowScore) -->
+             <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
                     <div class="text-sm text-gray-500 mb-2">เกรดปัจจุบัน</div>
                      <RadialProgress 
@@ -393,7 +414,7 @@ const tabs = [
                                               ส่งเมื่อ: {{ new Date(assign.submitted_at).toLocaleDateString('th-TH') }}
                                           </div>
                                       </div>
-                                      <div class="text-right flex-shrink-0">
+                                      <div class="text-right flex-shrink-0" v-if="canShowScore">
                                           <div class="font-bold text-lg" :class="getScoreColor(assign.score, assign.max_score)">
                                               {{ assign.score !== null ? assign.score : '-' }}
                                           </div>
@@ -421,9 +442,23 @@ const tabs = [
                                               </button>
                                           </div>
                                       </div>
+                                      <div class="text-right flex-shrink-0" v-else>
+                                          <div class="text-xs text-gray-400 italic">ซ่อนคะแนน</div>
+                                          
+                                          <!-- Buttons (Still allow submit if enabled) -->
+                                          <div class="mt-2 text-right">
+                                              <button 
+                                                  v-if="!isCourseAdmin && !assign.submitted"
+                                                  @click="toggleAssignment(assign)"
+                                                  class="text-xs px-3 py-1.5 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                                              >
+                                                  {{ expandedAssignmentId === assign.id ? 'ปิด' : 'ส่งงาน' }}
+                                              </button>
+                                          </div>
+                                      </div>
                                   </div>
                                   <!-- Progress Bar -->
-                                  <div v-if="assign.max_score > 0" class="mt-2">
+                                  <div v-if="assign.max_score > 0 && canShowScore" class="mt-2">
                                       <div class="flex items-center justify-between mb-1">
                                           <span class="text-xs text-gray-500">ความคืบหน้า</span>
                                           <span class="text-xs font-medium" :class="getScoreColor(assign.score, assign.max_score)">
@@ -520,10 +555,14 @@ const tabs = [
                                           </div>
                                       </div>
                                       <div class="text-right flex-shrink-0">
-                                          <div class="font-bold text-lg" :class="getScoreColor(quiz.score, quiz.max_score)">
-                                              {{ quiz.score !== null ? quiz.score : '-' }}
-                                          </div>
-                                          <div class="text-xs text-gray-400">เต็ม {{ quiz.max_score }}</div>
+                                          <template v-if="canShowScore">
+                                              <div class="font-bold text-lg" :class="getScoreColor(quiz.score, quiz.max_score)">
+                                                  {{ quiz.score !== null ? quiz.score : '-' }}
+                                              </div>
+                                              <div class="text-xs text-gray-400">เต็ม {{ quiz.max_score }}</div>
+                                          </template>
+                                          <div v-else class="text-xs text-gray-400 italic mb-2">ซ่อนคะแนน</div>
+                                          
                                           <div v-if="!quiz.passed">
                                              <NuxtLink :to="`/courses/${courseId}/quizzes/${quiz.id}`" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors">
                                                  ทำแบบทดสอบ
@@ -532,7 +571,7 @@ const tabs = [
                                       </div>
                                   </div>
                                   <!-- Progress Bar -->
-                                  <div v-if="quiz.completed && quiz.max_score > 0" class="mt-2">
+                                  <div v-if="quiz.completed && quiz.max_score > 0 && canShowScore" class="mt-2">
                                       <div class="flex items-center justify-between mb-1">
                                           <span class="text-xs text-gray-500">ความคืบหน้า</span>
                                           <span class="text-xs font-medium" :class="getScoreColor(quiz.score, quiz.max_score)">
@@ -545,16 +584,6 @@ const tabs = [
                                               :class="getProgressBarColor(quiz.score, quiz.max_score)"
                                               :style="{ width: `${Math.min((quiz.score / quiz.max_score) * 100, 100)}%` }"
                                           ></div>
-                                      </div>
-                                  </div>
-                                  <!-- Progress Bar for not completed quiz (show 0%) -->
-                                  <div v-else-if="!quiz.completed && quiz.max_score > 0" class="mt-2">
-                                      <div class="flex items-center justify-between mb-1">
-                                          <span class="text-xs text-gray-500">ความคืบหน้า</span>
-                                          <span class="text-xs font-medium text-gray-400">0%</span>
-                                      </div>
-                                      <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
-                                          <div class="h-full bg-gray-400 dark:bg-gray-600 rounded-full" style="width: 0%"></div>
                                       </div>
                                   </div>
                               </div>

@@ -18,8 +18,11 @@ const isUserDropdownOpen = ref(false)
 // Current user
 const currentUser = computed(() => authStore.user)
 
+// Check if user is super admin
+const isSuperAdmin = computed(() => authStore.user?.is_super_admin === true)
+
 // Navigation items
-const navItems = [
+const allNavItems = [
   {
     name: 'แดชบอร์ด',
     icon: 'fluent:grid-24-regular',
@@ -69,9 +72,21 @@ const navItems = [
   {
     name: 'ตั้งค่าระบบ',
     icon: 'fluent:settings-24-regular',
-    href: '/nuxnan-admin/settings'
+    href: '/nuxnan-admin/settings',
+    superAdminOnly: true
   }
 ]
+
+// Filter navigation items based on user role
+const navItems = computed(() => {
+  return allNavItems.filter(item => {
+    // If item requires super admin and user is not super admin, hide it
+    if (item.superAdminOnly && !isSuperAdmin.value) {
+      return false
+    }
+    return true
+  })
+})
 
 // Check if route is active
 const isActiveRoute = (item: any) => {

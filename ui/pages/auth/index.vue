@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center h-screen w-full relative py-4 overflow-hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center min-h-screen w-full relative py-4 overflow-hidden">
     <!-- Loading Overlay -->
     <Transition name="fade">
       <div

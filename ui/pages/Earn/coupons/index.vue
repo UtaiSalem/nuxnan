@@ -2,6 +2,8 @@
 import { Icon } from '@iconify/vue'
 import CouponCard from '~/components/coupons/CouponCard.vue'
 import jsPDF from 'jspdf'
+import QRCode from 'qrcode'
+import QrcodeVue3 from 'qrcode-vue3'
 
 definePageMeta({
   layout: 'main',
@@ -23,6 +25,8 @@ const activeView = ref<'card' | 'table'>('card')
 const showRedeemModal = ref(false)
 const redeemCode = ref('')
 const isRedeeming = ref(false)
+const showQrModal = ref(false)
+const selectedCouponForQr = ref<any>(null)
 
 // Fetch coupons
 const fetchCoupons = async () => {
@@ -72,35 +76,8 @@ const handleCouponCancelled = (couponId: number) => {
 
 // Show QR Code modal
 const showQrCode = (coupon: any) => {
-  const apiBaseUrl = useRuntimeConfig().public.apiBase || ''
-  const qrUrl = coupon.qr_code_path ? `${apiBaseUrl}/storage/${coupon.qr_code_path}` : ''
-  
-  // Create a simple modal to show the QR code
-  const modal = document.createElement('div')
-  modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
-  modal.onclick = (e) => {
-    if (e.target === modal) modal.remove()
-  }
-  
-  modal.innerHTML = `
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-white">QR Code</h3>
-        <button class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" onclick="this.closest('.fixed').remove()">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
-      </div>
-      <div class="flex flex-col items-center">
-        <img src="${qrUrl}" alt="QR Code" class="w-48 h-48 mb-4" />
-        <p class="text-sm font-mono font-bold text-gray-900 dark:text-white mb-2">${coupon.coupon_code}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400">${coupon.coupon_type === 'wallet' ? '฿' : ''}${coupon.amount.toLocaleString()}</p>
-      </div>
-    </div>
-  `
-  
-  document.body.appendChild(modal)
+  selectedCouponForQr.value = coupon
+  showQrModal.value = true
 }
 
 // Cancel coupon (for table view)
@@ -287,7 +264,6 @@ const svgToBase64Png = async (svgUrl: string, couponCode?: string): Promise<stri
 const generateLocalQr = async (text?: string): Promise<string> => {
   if (!text) throw new Error('No text for QR generation')
   try {
-     const QRCode = await import('qrcode')
      return await QRCode.toDataURL(text, { width: 300, margin: 2 })
   } catch (e) {
      console.error('QRCode library not found', e)
@@ -446,86 +422,86 @@ const downloadPDF = async () => {
         <p class="text-gray-500 dark:text-gray-400 mt-1">จัดการคูปองแต้มและเงินของคุณ</p>
       </div>
       
-      <div class="flex gap-3">
+      <div class="flex flex-wrap gap-2 md:gap-3">
         <button
           @click="showRedeemModal = true"
-          class="px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 font-bold"
+          class="p-2.5 md:px-4 md:py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 font-bold"
         >
           <Icon icon="fluent:qr-code-24-regular" class="w-5 h-5" />
-          แลกคูปอง
+          <span class="hidden md:inline">แลกคูปอง</span>
         </button>
         <button
           @click="downloadPDF"
           :disabled="isDownloading || coupons.length === 0"
           :class="[
-            'px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all flex items-center gap-2 font-bold',
+            'p-2.5 md:px-4 md:py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all flex items-center gap-2 font-bold',
             (isDownloading || coupons.length === 0) ? 'opacity-50 cursor-not-allowed' : ''
           ]"
         >
           <Icon v-if="isDownloading" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
           <Icon v-else icon="fluent:document-pdf-24-regular" class="w-5 h-5" />
-          {{ isDownloading ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลด PDF' }}
+          <span class="hidden md:inline">{{ isDownloading ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลด PDF' }}</span>
         </button>
         <NuxtLink 
           to="/earn/coupons/create"
-          class="px-4 py-2.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl hover:opacity-90 transition-all flex items-center gap-2 font-bold shadow-lg"
+          class="p-2.5 md:px-4 md:py-2.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl hover:opacity-90 transition-all flex items-center gap-2 font-bold shadow-lg"
         >
           <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
-          สร้างคูปอง
+          <span class="hidden md:inline">สร้างคูปอง</span>
         </NuxtLink>
       </div>
     </div>
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" v-if="statistics">
-      <div class="vikinger-card !p-4 flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-md">
-          <Icon icon="fluent:ticket-diagonal-24-filled" class="w-6 h-6 text-white" />
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6" v-if="statistics">
+      <div class="vikinger-card !p-3 sm:!p-4 flex items-center gap-2 sm:gap-3">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-md flex-shrink-0">
+          <Icon icon="fluent:ticket-diagonal-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
-        <div>
-          <p class="text-2xl font-black text-gray-900 dark:text-white">{{ statistics.total || 0 }}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">คูปองทั้งหมด</p>
-        </div>
-      </div>
-      
-      <div class="vikinger-card !p-4 flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-md">
-          <Icon icon="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <p class="text-2xl font-black text-gray-900 dark:text-white">{{ statistics.active || 0 }}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">ใช้งานได้</p>
+        <div class="min-w-0">
+          <p class="text-lg sm:text-2xl font-black text-gray-900 dark:text-white truncate">{{ statistics.total || 0 }}</p>
+          <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">คูปองทั้งหมด</p>
         </div>
       </div>
       
-      <div class="vikinger-card !p-4 flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md">
-          <Icon icon="fluent:star-24-filled" class="w-6 h-6 text-white" />
+      <div class="vikinger-card !p-3 sm:!p-4 flex items-center gap-2 sm:gap-3">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-md flex-shrink-0">
+          <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
-        <div>
-          <p class="text-2xl font-black text-gray-900 dark:text-white">{{ formatNumber(statistics.total_points || 0) }}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">แต้มทั้งหมด</p>
+        <div class="min-w-0">
+          <p class="text-lg sm:text-2xl font-black text-gray-900 dark:text-white truncate">{{ statistics.active || 0 }}</p>
+          <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">ใช้งานได้</p>
         </div>
       </div>
       
-      <div class="vikinger-card !p-4 flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-md">
-          <Icon icon="fluent:money-24-filled" class="w-6 h-6 text-white" />
+      <div class="vikinger-card !p-3 sm:!p-4 flex items-center gap-2 sm:gap-3">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md flex-shrink-0">
+          <Icon icon="fluent:star-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
-        <div>
-          <p class="text-2xl font-black text-gray-900 dark:text-white">฿{{ formatNumber(statistics.total_wallet || 0) }}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">เงินทั้งหมด</p>
+        <div class="min-w-0">
+          <p class="text-lg sm:text-2xl font-black text-gray-900 dark:text-white truncate">{{ formatNumber(statistics.total_points || 0) }}</p>
+          <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">แต้มทั้งหมด</p>
+        </div>
+      </div>
+      
+      <div class="vikinger-card !p-3 sm:!p-4 flex items-center gap-2 sm:gap-3">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-md flex-shrink-0">
+          <Icon icon="fluent:money-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        </div>
+        <div class="min-w-0">
+          <p class="text-lg sm:text-2xl font-black text-gray-900 dark:text-white truncate">฿{{ formatNumber(statistics.total_wallet || 0) }}</p>
+          <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">เงินทั้งหมด</p>
         </div>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="vikinger-card !p-4 mb-6">
-      <div class="flex flex-col md:flex-row gap-4">
+    <div class="vikinger-card !p-3 sm:!p-4 mb-6">
+      <div class="flex flex-col gap-3 sm:gap-4">
         <!-- Status Filter -->
-        <div class="flex-1">
-          <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wider">สถานะ</p>
-          <div class="flex flex-wrap gap-2">
+        <div>
+          <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wider">สถานะ</p>
+          <div class="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
             <button
               v-for="status in [
                 { key: 'all', label: 'ทั้งหมด', icon: 'fluent:apps-24-regular' },
@@ -537,70 +513,73 @@ const downloadPDF = async () => {
               :key="status.key"
               @click="activeFilter = status.key as any"
               :class="[
-                'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all',
+                'px-2.5 py-1.5 sm:px-3 rounded-lg text-[10px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition-all whitespace-nowrap flex-shrink-0',
                 activeFilter === status.key
                   ? 'bg-vikinger-purple text-white shadow-md'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               ]"
             >
-              <Icon :icon="status.icon" class="w-4 h-4" />
+              <Icon :icon="status.icon" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {{ status.label }}
             </button>
           </div>
         </div>
         
-        <!-- Type Filter -->
-        <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wider">ประเภท</p>
-          <div class="flex gap-2">
-            <button
-              v-for="type in [
-                { key: 'all', label: 'ทั้งหมด' },
-                { key: 'points', label: '🎯 แต้ม' },
-                { key: 'wallet', label: '💰 เงิน' },
-              ]"
-              :key="type.key"
-              @click="activeType = type.key as any"
-              :class="[
-                'px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                activeType === type.key
-                  ? 'bg-vikinger-cyan text-white shadow-md'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              ]"
-            >
-              {{ type.label }}
-            </button>
+        <!-- Type Filter & View Toggle Row -->
+        <div class="flex flex-wrap items-end gap-3 sm:gap-4">
+          <!-- Type Filter -->
+          <div class="flex-1 min-w-[120px]">
+            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wider">ประเภท</p>
+            <div class="flex gap-1.5 sm:gap-2">
+              <button
+                v-for="type in [
+                  { key: 'all', label: 'ทั้งหมด' },
+                  { key: 'points', label: '🎯 แต้ม' },
+                  { key: 'wallet', label: '💰 เงิน' },
+                ]"
+                :key="type.key"
+                @click="activeType = type.key as any"
+                :class="[
+                  'px-2.5 py-1.5 sm:px-3 rounded-lg text-[10px] sm:text-xs font-bold transition-all whitespace-nowrap',
+                  activeType === type.key
+                    ? 'bg-vikinger-cyan text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ]"
+              >
+                {{ type.label }}
+              </button>
+            </div>
           </div>
-        </div>
 
-        <!-- View Toggle -->
-        <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wider">มุมมอง</p>
-          <div class="flex gap-2">
-            <button
-              @click="activeView = 'card'"
-              :class="[
-                'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all',
-                activeView === 'card'
-                  ? 'bg-vikinger-purple text-white shadow-md'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              ]"
-            >
-              <Icon icon="fluent:grid-24-regular" class="w-4 h-4" />
-              การ์ด
-            </button>
-            <button
-              @click="activeView = 'table'"
-              :class="[
-                'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all',
-                activeView === 'table'
-                  ? 'bg-vikinger-purple text-white shadow-md'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              ]"
-            >
-              <Icon icon="fluent:table-24-regular" class="w-4 h-4" />
-              ตาราง
-            </button>
+          <!-- View Toggle -->
+          <div>
+            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wider">มุมมอง</p>
+            <div class="flex gap-1.5 sm:gap-2">
+              <button
+                @click="activeView = 'card'"
+                :class="[
+                  'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition-all',
+                  activeView === 'card'
+                    ? 'bg-vikinger-purple text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ]"
+              >
+                <Icon icon="fluent:grid-24-regular" class="w-4 h-4" />
+                <span class="hidden sm:inline">การ์ด</span>
+              </button>
+              <button
+                @click="activeView = 'table'"
+                :class="[
+                  'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition-all',
+                  activeView === 'table'
+                    ? 'bg-vikinger-purple text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ]"
+              >
+                <Icon icon="fluent:table-24-regular" class="w-4 h-4" />
+                <span class="hidden sm:inline">ตาราง</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -755,36 +734,36 @@ const downloadPDF = async () => {
     </div>
 
     <!-- Redeem Coupon Modal -->
-    <div v-if="showRedeemModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showRedeemModal = false">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl" @click.stop>
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-vikinger-purple to-vikinger-cyan flex items-center justify-center shadow-md">
-              <Icon icon="fluent:qr-code-24-filled" class="w-5 h-5 text-white" />
+    <div v-if="showRedeemModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" @click.self="showRedeemModal = false">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+        <div class="flex justify-between items-center mb-4 sm:mb-6">
+          <h3 class="text-base sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-vikinger-purple to-vikinger-cyan flex items-center justify-center shadow-md flex-shrink-0">
+              <Icon icon="fluent:qr-code-24-filled" class="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             แลกคูปองรับแต้ม
           </h3>
-          <button @click="showRedeemModal = false" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
-            <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6" />
+          <button @click="showRedeemModal = false" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1">
+            <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
         
-        <div class="space-y-4">
+        <div class="space-y-3 sm:space-y-4">
           <div>
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">รหัสคูปอง</label>
-            <div class="flex gap-2">
+            <label class="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">รหัสคูปอง</label>
+            <div class="flex flex-col sm:flex-row gap-2">
               <input
                 v-model="redeemCode"
                 type="text"
                 placeholder="กรอกรหัสคูปองที่ต้องการแลก"
-                class="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-vikinger-purple focus:border-transparent transition-all"
+                class="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-vikinger-purple focus:border-transparent transition-all"
                 @keyup.enter="redeemCoupon"
               />
               <button
                 @click="redeemCoupon"
                 :disabled="isRedeeming || !redeemCode.trim()"
                 :class="[
-                  'px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2',
+                  'px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 w-full sm:w-auto',
                   (isRedeeming || !redeemCode.trim()) 
                     ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed' 
                     : 'bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:opacity-90 shadow-lg'
@@ -792,14 +771,63 @@ const downloadPDF = async () => {
               >
                 <Icon v-if="isRedeeming" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
                 <Icon v-else icon="fluent:checkmark-24-regular" class="w-5 h-5" />
-                {{ isRedeeming ? 'กำลังแลก...' : 'แลกคูปอง' }}
+                <span class="text-sm">{{ isRedeeming ? 'กำลังแลก...' : 'แลกคูปอง' }}</span>
               </button>
             </div>
           </div>
           
-          <p class="text-xs text-gray-500 dark:text-gray-400">
-            <Icon icon="fluent:info-24-regular" class="w-4 h-4 inline mr-1" />
+          <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+            <Icon icon="fluent:info-24-regular" class="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" />
             ป้อนรหัสคูปองที่ต้องการแลกเพื่อรับแต้ม ระบบจะตรวจสอบและเพิ่มแต้มให้โดยอัตโนมี
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div v-if="showQrModal && selectedCouponForQr" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" @click.self="showQrModal = false">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 max-w-[280px] sm:max-w-sm w-full shadow-2xl" @click.stop>
+        <div class="flex justify-between items-center mb-3 sm:mb-4">
+          <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-vikinger-purple to-vikinger-cyan flex items-center justify-center">
+              <Icon icon="fluent:qr-code-24-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+            </div>
+            QR Code
+          </h3>
+          <button @click="showQrModal = false" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1">
+            <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+        </div>
+        <div class="flex flex-col items-center">
+          <div class="p-3 sm:p-4 bg-white rounded-xl shadow-inner mb-3 sm:mb-4">
+            <QrcodeVue3
+              :value="selectedCouponForQr.coupon_code"
+              :width="160"
+              :height="160"
+              class="sm:!w-[200px] sm:!h-[200px]"
+              :qr-options="{ errorCorrectionLevel: 'H' }"
+              :dots-options="{
+                type: 'rounded',
+                color: '#581c87'
+              }"
+              :corners-square-options="{
+                type: 'extra-rounded',
+                color: '#0891b2'
+              }"
+              :corners-dot-options="{
+                type: 'dot',
+                color: '#581c87'
+              }"
+              :background-options="{
+                color: '#ffffff'
+              }"
+              image-options="{ hideBackgroundDots: true, imageSize: 0.4, margin: 0 }"
+            />
+          </div>
+          <p class="text-xs sm:text-sm font-mono font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">{{ selectedCouponForQr.coupon_code }}</p>
+          <p class="text-base sm:text-lg font-bold text-vikinger-purple dark:text-vikinger-cyan">
+            {{ selectedCouponForQr.coupon_type === 'wallet' ? '฿' : '' }}{{ selectedCouponForQr.amount?.toLocaleString() }}
+            <span class="text-[10px] sm:text-xs text-gray-500">{{ selectedCouponForQr.coupon_type === 'points' ? 'แต้ม' : 'บาท' }}</span>
           </p>
         </div>
       </div>

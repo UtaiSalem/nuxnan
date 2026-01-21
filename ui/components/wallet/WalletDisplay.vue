@@ -153,10 +153,10 @@
                 id="withdraw-amount"
                 v-model.number="withdrawAmount"
                 :max="wallet"
-                :min="10"
-                step="10"
+                :min="25"
+                step="1"
                 class="form-control"
-                placeholder="ระบุจำนวนเงิน"
+                placeholder="ระบุจำนวนเงิน (ขั้นต่ำ 25 บาท)"
               >
               <span class="currency-label">บาท</span>
             </div>

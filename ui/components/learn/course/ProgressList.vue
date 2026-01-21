@@ -214,16 +214,12 @@ const exportProgress = async () => {
   }
 }
 
-// Update bonus points
+// Update bonus points (allow negative for deductions)
 const updateBonusPoints = async (member: any) => {
-  const newValue = member.scores?.bonus_points || 0
-  const oldValue = member.scores?.original_bonus || 0
+  const newValue = member.scores?.bonus_points ?? 0
+  const oldValue = member.scores?.original_bonus ?? 0
   
   if (newValue === oldValue) return
-  if (newValue < 0) {
-      member.scores.bonus_points = oldValue
-      return
-  }
 
   try {
     const response: any = await api.patch(`/api/courses/${props.courseId}/members/${member.id}/bonus-points`, {
@@ -285,12 +281,31 @@ const gradeDistribution = computed(() => {
   return distribution
 })
 
-// Top Performers (top 5 by overall progress)
-const topPerformers = computed(() => {
-  return [...members.value]
-    .sort((a, b) => (b.overall_progress || 0) - (a.overall_progress || 0))
-    .slice(0, 5)
-})
+// Top Performers state (loaded from API to get all students, not just current page)
+const topPerformers = ref<any[]>([])
+const loadingTopPerformers = ref(false)
+
+// Fetch Top Performers from API
+const fetchTopPerformers = async () => {
+  loadingTopPerformers.value = true
+  try {
+    const response: any = await api.get(`/api/courses/${props.courseId}/top-performers`, {
+      params: { limit: 5 }
+    })
+    
+    if (response.data || response.topPerformers) {
+      topPerformers.value = response.topPerformers || response.data || []
+    }
+  } catch (error) {
+    console.error('Error fetching top performers:', error)
+    // Fallback: use current page members sorted by total_score
+    topPerformers.value = [...members.value]
+      .sort((a, b) => (b.scores?.total_score || 0) - (a.scores?.total_score || 0))
+      .slice(0, 5)
+  } finally {
+    loadingTopPerformers.value = false
+  }
+}
 
 // At-Risk Students (less than 50% overall progress)
 const atRiskStudents = computed(() => {
@@ -314,6 +329,7 @@ const passRate = computed(() => {
 // Init
 onMounted(() => {
   fetchProgress()
+  fetchTopPerformers()
 })
 </script>
 
@@ -326,7 +342,7 @@ onMounted(() => {
           ความคืบหน้าของผู้เรียน
         </h3>
         <p class="text-sm text-gray-500 dark:text-gray-400">
-          ทั้งหมด {{ members.length }} คน
+          ทั้งหมด {{ pagination.total }} คน
         </p>
       </div>
     </div>
@@ -642,7 +658,6 @@ onMounted(() => {
                             type="number" 
                             v-model.number="member.scores.bonus_points"
                             class="w-16 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            min="0"
                         >
                         <button 
                             v-if="member.scores.bonus_points !== member.scores.original_bonus"

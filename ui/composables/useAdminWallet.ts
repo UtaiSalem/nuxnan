@@ -147,10 +147,9 @@ export const useAdminWallet = () => {
 
   // Calculate withdrawal fee
   const calculateFee = (amount: number) => {
-    const feePercentage = 0.005 // 0.5%
-    const minFee = 10 // 10 THB
+    const feePercentage = 0.13 // 13%
     const calculatedFee = amount * feePercentage
-    return Math.max(calculatedFee, minFee)
+    return calculatedFee
   }
 
   // Calculate net amount after fee

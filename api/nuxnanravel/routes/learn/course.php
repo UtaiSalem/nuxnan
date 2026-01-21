@@ -62,6 +62,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
     Route::patch('/{course}', [CourseController::class, 'update'])->name('course.part.update');
     Route::delete('/{course}', [CourseController::class, 'destroy'])->name('course.destroy');
     Route::get('/{course}/progress', [CourseController::class, 'progress'])->name('course.progress');
+    Route::get('/{course}/top-performers', [CourseController::class, 'topPerformers'])->name('course.top-performers');
     Route::get('/{course}/export/results', [CourseController::class, 'exportLearningResults'])->name('course.export.results');
     Route::post('/{course}/favorite', [CourseController::class, 'toggleFavorite'])->name('course.favorite');
     

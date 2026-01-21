@@ -6,8 +6,8 @@ export default defineNuxtRouteMiddleware((to, from) => {
     return navigateTo('/nuxnan-admin/login')
   }
 
-  // Check if user is a Nuxnan Admin or Super Admin
-  if (!authStore.user?.is_nuxnan_admin && !authStore.user?.is_super_admin) {
+  // Check if user is a Plearnd Admin or Super Admin
+  if (!authStore.user?.is_plearnd_admin && !authStore.user?.is_super_admin) {
     // Redirect to login with error
     return navigateTo('/nuxnan-admin/login?error=unauthorized')
   }

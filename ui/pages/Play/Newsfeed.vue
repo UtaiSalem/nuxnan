@@ -34,7 +34,6 @@ const activities = ref([])
 const isLoading = ref(true)
 const isLoadingMore = ref(false)
 const error = ref(null)
-const activeTab = ref('all')
 
 // Pagination for activities
 const pagination = ref({
@@ -86,14 +85,7 @@ const featuredBadges = ref([
   { id: 2, name: 'Shield', icon: '🛡️', color: 'from-blue-400 to-blue-600' },
 ])
 
-// Tabs
-const tabs = [
-  { id: 'all', label: 'All Updates', icon: 'fluent:feed-24-regular' },
-  { id: 'mentions', label: 'Mentions', icon: 'fluent:mention-24-regular' },
-  { id: 'friends', label: 'Friends', icon: 'fluent:people-24-regular' },
-  { id: 'groups', label: 'Groups', icon: 'fluent:people-community-24-regular' },
-  { id: 'blogs', label: 'Blog Posts', icon: 'fluent:document-text-24-regular' },
-]
+
 
 // Note: Sidebar widgets (PeopleMayKnow, PendingFriends, Donates, Advertises)
 // now load their own data independently for better UX and performance
@@ -267,26 +259,6 @@ onUnmounted(() => {
     <div class="space-y-6">
       <!-- Create Post Box -->
       <CreatePostBox @post-created="handlePostCreated" />
-
-      <!-- Feed Tabs -->
-      <div
-        class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide"
-      >
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          @click="activeTab = tab.id"
-          class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300"
-          :class="
-            activeTab === tab.id
-              ? 'bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white shadow-vikinger'
-              : 'bg-white dark:bg-vikinger-dark-200 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-vikinger-dark-100'
-          "
-        >
-          <Icon :icon="tab.icon" class="w-4 h-4" />
-          {{ tab.label }}
-        </button>
-      </div>
 
       <!-- Error State -->
       <div v-if="error && !isLoading" class="bg-red-50 dark:bg-red-900/20 rounded-xl p-6 text-center">

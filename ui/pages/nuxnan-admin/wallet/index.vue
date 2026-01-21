@@ -209,7 +209,12 @@ onMounted(() => {
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
             <tr v-for="tx in walletTransactions" :key="tx.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
               <td class="px-6 py-4 text-gray-600 dark:text-gray-300">#{{ tx.id }}</td>
-              <td class="px-6 py-4 font-medium text-gray-800 dark:text-white">{{ tx.user }}</td>
+              <td class="px-6 py-4 font-medium text-gray-800 dark:text-white">
+                <div class="flex flex-col">
+                  <span class="font-medium">{{ typeof tx.user === 'object' ? tx.user.name : tx.user }}</span>
+                  <span v-if="typeof tx.user === 'object' && tx.user.email" class="text-xs text-gray-500">{{ tx.user.email }}</span>
+                </div>
+              </td>
               <td class="px-6 py-4">
                 <span :class="[getTypeBadge(tx.type), 'px-2.5 py-1 rounded-full text-xs font-medium']">
                   {{ getTypeLabel(tx.type) }}

@@ -251,6 +251,9 @@ require __DIR__ . '/api-photos.php';
 // Videos system routes
 require __DIR__ . '/api-videos.php';
 
+// Admin panel routes
+require __DIR__ . '/api-admin.php';
+
 // Debug routes (remove in production)
 if (env('APP_DEBUG')) {
     require __DIR__ . '/debug_login.php';

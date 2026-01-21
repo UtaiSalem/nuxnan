@@ -1,5 +1,5 @@
 <template>
-  <form @submit.prevent="handleSubmit" class="space-y-5 w-full min-w-[400px]">
+  <form @submit.prevent="handleSubmit" class="space-y-5 w-full">
     <div class="space-y-4">
       <InputText
         v-model="form.login"

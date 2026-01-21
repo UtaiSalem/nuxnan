@@ -554,6 +554,15 @@ const tabs = [
   { key: 'cart', label: 'Cart', icon: 'fluent:cart-24-regular' },
 ]
 
+// Mobile bottom tabs - show only main tabs for mobile
+const mobileBottomTabs = [
+  { key: 'timeline', label: 'Timeline', icon: 'fluent:timeline-24-filled' },
+  { key: 'about', label: 'About', icon: 'fluent:person-info-24-filled' },
+  { key: 'friends', label: 'Friends', icon: 'fluent:people-24-filled' },
+  { key: 'photos', label: 'Photos', icon: 'fluent:image-24-filled' },
+  { key: 'badges', label: 'Badges', icon: 'fluent:trophy-24-filled' },
+]
+
 // Social media icons mapping
 const socialIcons: Record<string, { icon: string; color: string }> = {
   facebook: { icon: 'ri:facebook-fill', color: '#1877f2' },
@@ -566,7 +575,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto">
+  <div class="max-w-6xl mx-auto pb-20 md:pb-0">
     <!-- Loading State -->
     <template v-if="isLoading">
       <BaseCard class="bg-gray-800 border-gray-700 animate-pulse">
@@ -755,8 +764,8 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
         </div>
       </div>
 
-      <!-- Tabs Navigation Bar - Premium Carousel Style -->
-      <div class="vikinger-card relative overflow-hidden !rounded-2xl !p-0 dark:!bg-gradient-to-br dark:!from-gray-900 dark:!via-gray-800 dark:!to-gray-900 mb-6">
+      <!-- Tabs Navigation Bar - Premium Carousel Style (Desktop Only) -->
+      <div class="hidden md:block vikinger-card relative overflow-hidden !rounded-2xl !p-0 dark:!bg-gradient-to-br dark:!from-gray-900 dark:!via-gray-800 dark:!to-gray-900 mb-6">
         <!-- Background Pattern -->
         <div class="absolute inset-0 pointer-events-none opacity-50">
           <div class="absolute inset-0 bg-[url('/images/patterns/circuit.svg')] bg-repeat opacity-5"></div>
@@ -1951,6 +1960,42 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Mobile Bottom Tab Bar -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 safe-area-bottom">
+      <div class="flex items-center justify-around px-2 py-2">
+        <button
+          v-for="tab in mobileBottomTabs"
+          :key="tab.key"
+          @click="activeTab = tab.key"
+          :class="[
+            'flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all flex-1 max-w-[72px]',
+            activeTab === tab.key 
+              ? 'text-vikinger-purple dark:text-vikinger-cyan bg-vikinger-purple/10 dark:bg-vikinger-cyan/10' 
+              : 'text-gray-500 dark:text-gray-400'
+          ]"
+        >
+          <div 
+            :class="[
+              'w-8 h-8 rounded-lg flex items-center justify-center mb-0.5 transition-all',
+              activeTab === tab.key 
+                ? 'bg-gradient-to-br from-vikinger-purple to-vikinger-cyan text-white scale-110' 
+                : 'bg-transparent'
+            ]"
+          >
+            <Icon :icon="tab.icon" class="w-5 h-5" />
+          </div>
+          <span 
+            :class="[
+              'text-[10px] font-bold truncate max-w-full',
+              activeTab === tab.key ? 'text-vikinger-purple dark:text-vikinger-cyan' : ''
+            ]"
+          >
+            {{ tab.label }}
+          </span>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -2117,5 +2162,17 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
 /* Level progress glow */
 .level-glow {
   filter: drop-shadow(0 0 8px rgba(97, 93, 250, 0.5));
+}
+
+/* Mobile tab bar safe area */
+@media (max-width: 767px) {
+  .mobile-tab-spacer {
+    padding-bottom: 80px;
+  }
+}
+
+/* Safe area for devices with notches/home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 </style>

@@ -1283,10 +1283,13 @@ const onQRActionComplete = (result) => {
     </div>
     
     <!-- Universal QR Scanner Modal -->
-    <QrUniversalQRModal 
-      v-model="isQRScannerOpen" 
+    <QrUniversalQRModal
+      v-model="isQRScannerOpen"
       @action-complete="onQRActionComplete"
     />
+
+    <!-- Bottom Mobile Navigation -->
+    <LayoutBottomNav />
   </div>
 </template>
 

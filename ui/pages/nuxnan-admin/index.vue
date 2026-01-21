@@ -9,37 +9,38 @@ definePageMeta({
 })
 
 const authStore = useAuthStore()
+const config = useRuntimeConfig()
 
 // Dashboard stats
 const stats = ref([
   {
     title: 'ผู้ใช้งานทั้งหมด',
-    value: '12,458',
-    change: '+12%',
+    value: '...',
+    change: '0%',
     isPositive: true,
     icon: 'fluent:people-24-regular',
     color: 'bg-blue-500'
   },
   {
     title: 'คอร์สเรียนทั้งหมด',
-    value: '245',
-    change: '+8%',
+    value: '...',
+    change: '0%',
     isPositive: true,
     icon: 'fluent:hat-graduation-24-regular',
     color: 'bg-green-500'
   },
   {
     title: 'อะคาเดมี',
-    value: '58',
-    change: '+5%',
+    value: '...',
+    change: '0%',
     isPositive: true,
     icon: 'fluent:building-24-regular',
     color: 'bg-purple-500'
   },
   {
-    title: 'รายได้เดือนนี้',
-    value: '฿125,840',
-    change: '+18%',
+    title: 'รายได้รวม',
+    value: '...',
+    change: '0%',
     isPositive: true,
     icon: 'fluent:money-24-regular',
     color: 'bg-yellow-500'
@@ -47,53 +48,98 @@ const stats = ref([
 ])
 
 // Recent activities
-const recentActivities = ref([
-  {
-    id: 1,
-    user: 'สมชาย ใจดี',
-    action: 'สมัครเรียนคอร์ส',
-    target: 'Python สำหรับผู้เริ่มต้น',
-    time: '5 นาทีที่แล้ว',
-    icon: 'fluent:book-24-regular',
-    color: 'text-blue-500'
-  },
-  {
-    id: 2,
-    user: 'สุดา สวยงาม',
-    action: 'สร้างอะคาเดมีใหม่',
-    target: 'Digital Marketing Academy',
-    time: '15 นาทีที่แล้ว',
-    icon: 'fluent:building-24-regular',
-    color: 'text-purple-500'
-  },
-  {
-    id: 3,
-    user: 'วิชัย มั่นคง',
-    action: 'เติมเงิน Wallet',
-    target: '฿500',
-    time: '30 นาทีที่แล้ว',
-    icon: 'fluent:wallet-24-regular',
-    color: 'text-green-500'
-  },
-  {
-    id: 4,
-    user: 'พิมพ์ใจ รักเรียน',
-    action: 'แลก Points เป็นคูปอง',
-    target: '500 Points',
-    time: '1 ชั่วโมงที่แล้ว',
-    icon: 'fluent:gift-24-regular',
-    color: 'text-yellow-500'
-  },
-  {
-    id: 5,
-    user: 'ชาติชาย เก่งมาก',
-    action: 'สอบผ่านคอร์ส',
-    target: 'JavaScript Advanced',
-    time: '2 ชั่วโมงที่แล้ว',
-    icon: 'fluent:checkmark-circle-24-regular',
-    color: 'text-emerald-500'
-  }
-])
+const recentActivities = ref<any[]>([])
+// Top courses
+const topCourses = ref<any[]>([])
+
+interface StatsResponse {
+    success: boolean
+    data: {
+        total_users: number
+        active_users: number
+        users_growth: number
+        total_courses: number
+        courses_growth: number
+        total_academies: number
+        academies_growth: number
+        total_revenue: number
+        revenue_growth: number
+    }
+}
+
+interface ActivitiesResponse {
+    success: boolean
+    data: any[]
+}
+
+interface CoursesResponse {
+    success: boolean
+    data: any[]
+}
+
+// Fetch Data
+const fetchData = async () => {
+    try {
+        const [statsRes, activitiesRes, coursesRes] = await Promise.all([
+            useFetch<StatsResponse>('/api/admin/stats'),
+            useFetch<ActivitiesResponse>('/api/admin/dashboard/activities'),
+            useFetch<CoursesResponse>('/api/admin/dashboard/top-courses')
+        ])
+
+        if (statsRes.data.value?.success) {
+            const d = statsRes.data.value.data
+            stats.value = [
+                {
+                    title: 'ผู้ใช้งานทั้งหมด',
+                    value: d.total_users.toLocaleString(),
+                    change: `+${d.users_growth || 0}%`,
+                    isPositive: true,
+                    icon: 'fluent:people-24-regular',
+                    color: 'bg-blue-500'
+                },
+                {
+                    title: 'คอร์สเรียนทั้งหมด',
+                    value: d.total_courses.toLocaleString(),
+                    change: `+${d.courses_growth || 0}%`,
+                    isPositive: true,
+                    icon: 'fluent:hat-graduation-24-regular',
+                    color: 'bg-green-500'
+                },
+                {
+                    title: 'อะคาเดมี',
+                    value: d.total_academies.toLocaleString(),
+                    change: `+${d.academies_growth || 0}%`,
+                    isPositive: true,
+                    icon: 'fluent:building-24-regular',
+                    color: 'bg-purple-500'
+                },
+                {
+                    title: 'รายได้รวม', // Changed from "Month" to "Total" as per backend logic
+                    value: `฿${Number(d.total_revenue).toLocaleString()}`,
+                    change: `+${d.revenue_growth || 0}%`,
+                    isPositive: true,
+                    icon: 'fluent:money-24-regular',
+                    color: 'bg-yellow-500'
+                }
+            ]
+        }
+
+        if (activitiesRes.data.value?.success) {
+            recentActivities.value = activitiesRes.data.value.data
+        }
+
+        if (coursesRes.data.value?.success) {
+            topCourses.value = coursesRes.data.value.data
+        }
+
+    } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+    }
+}
+
+onMounted(() => {
+    fetchData()
+})
 
 // Quick actions
 const quickActions = [
@@ -126,15 +172,6 @@ const quickActions = [
     color: 'from-orange-500 to-orange-600'
   }
 ]
-
-// Top courses
-const topCourses = ref([
-  { name: 'Python สำหรับผู้เริ่มต้น', enrollments: 1245, revenue: 62250 },
-  { name: 'JavaScript Advanced', enrollments: 892, revenue: 53520 },
-  { name: 'React.js Complete Guide', enrollments: 756, revenue: 45360 },
-  { name: 'Digital Marketing 101', enrollments: 634, revenue: 38040 },
-  { name: 'UI/UX Design Basics', enrollments: 521, revenue: 31260 }
-])
 </script>
 
 <template>

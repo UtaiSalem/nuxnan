@@ -3,7 +3,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
 
   // If user is already authenticated and is an admin, redirect to admin dashboard
   if (authStore.isAuthenticated) {
-    if (authStore.user?.is_nuxnan_admin || authStore.user?.is_super_admin) {
+    if (authStore.user?.is_plearnd_admin || authStore.user?.is_super_admin) {
       return navigateTo('/nuxnan-admin')
     }
     // If authenticated but not admin, stay on login page to show error

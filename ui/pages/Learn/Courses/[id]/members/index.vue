@@ -18,6 +18,7 @@ const searchQuery = ref('')
 const activeGroupTab = ref(0) // 0 = all, 1+ = group index
 const viewMode = ref<'grid' | 'list'>('grid')
 const isSavingGroupTab = ref(false)
+const sortBy = ref<'number' | 'score'>('number') // 'number' | 'score'
 
 // Get initial group tab based on last_accessed_group_tab
 const getInitialGroupTab = () => {
@@ -102,8 +103,17 @@ const members = computed(() => {
         )
     }
 
-    // Sort by order_number
+    // Sort by order_number or score
     list.sort((a, b) => {
+        if (sortBy.value === 'score') {
+            const scoreA = Number(a.achieved_score || 0)
+            const scoreB = Number(b.achieved_score || 0)
+            if (scoreA !== scoreB) {
+                return scoreB - scoreA // Descending score
+            }
+        }
+        
+        // Default / Fallback to order_number
         const orderA = a.order_number != null ? Number(a.order_number) : Infinity
         const orderB = b.order_number != null ? Number(b.order_number) : Infinity
         return orderA - orderB
@@ -186,15 +196,36 @@ const handleRequestUnmember = async ({ memberId, memberName }: { memberId: numbe
                 </p>
             </div>
 
-            <!-- Search -->
-            <div class="relative w-full md:w-64">
-                <Icon icon="heroicons:magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input 
-                    v-model="searchQuery"
-                    type="text" 
-                    placeholder="ค้นหาชื่อ, รหัสนักศึกษา..." 
-                    class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-white"
-                >
+            <!-- Search and Sort -->
+            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <!-- Sort Tabs -->
+                <div class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                    <button 
+                        @click="sortBy = 'number'"
+                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-all"
+                        :class="sortBy === 'number' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                    >
+                        เรียงตามเลขที่
+                    </button>
+                    <button 
+                        @click="sortBy = 'score'"
+                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-all"
+                        :class="sortBy === 'score' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                    >
+                        เรียงตามคะแนน
+                    </button>
+                </div>
+
+                <!-- Search -->
+                <div class="relative w-full sm:w-64">
+                    <Icon icon="heroicons:magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input 
+                        v-model="searchQuery"
+                        type="text" 
+                        placeholder="ค้นหาชื่อ, รหัสนักศึกษา..." 
+                        class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-white"
+                    >
+                </div>
             </div>
         </div>
 

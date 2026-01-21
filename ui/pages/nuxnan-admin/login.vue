@@ -45,7 +45,7 @@ const handleLogin = async () => {
     })
 
     // Check if user is admin
-    if (!authStore.user?.is_nuxnan_admin && !authStore.user?.is_super_admin) {
+    if (!authStore.user?.is_plearnd_admin && !authStore.user?.is_super_admin) {
       await authStore.logout()
       errorMessage.value = 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงระบบผู้ดูแล'
       return

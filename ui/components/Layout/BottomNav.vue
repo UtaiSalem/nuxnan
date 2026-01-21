@@ -1,63 +1,62 @@
 <template>
   <div
-    class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-secondary-200 dark:border-gray-700 shadow-lg md:hidden transition-colors duration-300"
+    class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-secondary-200 dark:border-gray-700 shadow-lg md:hidden transition-colors duration-300 safe-area-inset-bottom"
   >
-    <div class="flex items-center justify-between px-4 py-2">
-      <!-- Left Menu -->
-      <div class="flex items-center space-x-6">
-        <NuxtLink
-          to="/play/newsfeed"
-          class="relative p-2 hover:bg-secondary-100 rounded-full transition-colors duration-200"
-          :class="{ 'text-primary-600': isActive('/play/newsfeed') }"
-        >
-          <Icon icon="mdi:home" class="w-6 h-6" />
-        </NuxtLink>
+    <div class="flex items-center justify-around px-2 py-2 pb-safe">
+      <!-- News (ข่าว) -->
+      <NuxtLink
+        to="/play/newsfeed"
+        class="flex flex-col items-center justify-center gap-1 min-w-[60px] p-3 hover:bg-secondary-100 rounded-xl transition-colors duration-200 active:scale-95"
+        :class="{ 'text-primary-600 bg-primary-50': isActive('/play/newsfeed') }"
+        aria-label="ข่าว"
+      >
+        <Icon icon="mdi:newspaper" class="w-6 h-6" />
+        <span class="text-xs font-medium mt-0.5">ข่าว</span>
+      </NuxtLink>
 
-        <NuxtLink
-          to="/notifications"
-          class="relative p-2 hover:bg-secondary-100 rounded-full transition-colors duration-200"
-          :class="{ 'text-primary-600': isActive('/notifications') }"
-        >
-          <Icon icon="mdi:bell" class="w-6 h-6" />
-          <span
-            v-if="notificationCount > 0"
-            class="absolute top-0 right-0 w-5 h-5 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center font-bold"
-          >
-            {{ notificationCount }}
-          </span>
-        </NuxtLink>
-      </div>
+      <!-- Schools/Academies (โรงเรียน) -->
+      <NuxtLink
+        to="/academies"
+        class="flex flex-col items-center justify-center gap-1 min-w-[60px] p-3 hover:bg-secondary-100 rounded-xl transition-colors duration-200 active:scale-95"
+        :class="{ 'text-primary-600 bg-primary-50': isActive('/academies') }"
+        aria-label="โรงเรียน"
+      >
+        <Icon icon="mdi:school" class="w-6 h-6" />
+        <span class="text-xs font-medium mt-0.5">โรงเรียน</span>
+      </NuxtLink>
 
-      <!-- Menu Button (Hamburger) -->
-      <button @click="toggleMenu" class="relative p-2" :class="{ active: menuOpen }">
-        <div class="hamburger-menu">
-          <span class="hamburger-line"></span>
-          <span class="hamburger-line"></span>
-          <span class="hamburger-line"></span>
-          <span class="hamburger-line"></span>
-          <span class="hamburger-line"></span>
-          <span class="hamburger-line"></span>
-        </div>
-      </button>
+      <!-- Courses (รายวิชา) -->
+      <NuxtLink
+        to="/courses"
+        class="flex flex-col items-center justify-center gap-1 min-w-[60px] p-3 hover:bg-secondary-100 rounded-xl transition-colors duration-200 active:scale-95"
+        :class="{ 'text-primary-600 bg-primary-50': isActive('/courses') }"
+        aria-label="รายวิชา"
+      >
+        <Icon icon="mdi:book-open-variant" class="w-6 h-6" />
+        <span class="text-xs font-medium mt-0.5">รายวิชา</span>
+      </NuxtLink>
 
-      <!-- Right Menu -->
-      <div class="flex items-center space-x-6">
-        <NuxtLink
-          to="/play/messages"
-          class="relative p-2 hover:bg-secondary-100 rounded-full transition-colors duration-200"
-          :class="{ 'text-primary-600': isActive('/play/messages') }"
-        >
-          <Icon icon="mdi:message" class="w-6 h-6" />
-        </NuxtLink>
+      <!-- Groups (สะสมแต้ม) -->
+      <NuxtLink
+        to="/play/groups"
+        class="flex flex-col items-center justify-center gap-1 min-w-[60px] p-3 hover:bg-secondary-100 rounded-xl transition-colors duration-200 active:scale-95"
+        :class="{ 'text-primary-600 bg-primary-50': isActive('/play/groups') }"
+        aria-label="สะสมแต้ม"
+      >
+        <Icon icon="mdi:account-group" class="w-6 h-6" />
+        <span class="text-xs font-medium mt-0.5">สะสมแต้ม</span>
+      </NuxtLink>
 
-        <NuxtLink
-          to="/timeline"
-          class="relative p-2 hover:bg-secondary-100 rounded-full transition-colors duration-200"
-          :class="{ 'text-primary-600': isActive('/timeline') }"
-        >
-          <Icon icon="mdi:account" class="w-6 h-6" />
-        </NuxtLink>
-      </div>
+      <!-- Live/Streams (ดูโฆษณา) -->
+      <NuxtLink
+        to="/play/streams"
+        class="flex flex-col items-center justify-center gap-1 min-w-[60px] p-3 hover:bg-secondary-100 rounded-xl transition-colors duration-200 active:scale-95"
+        :class="{ 'text-primary-600 bg-primary-50': isActive('/play/streams') }"
+        aria-label="ดูโฆษณา"
+      >
+        <Icon icon="mdi:video" class="w-6 h-6" />
+        <span class="text-xs font-medium mt-0.5">ดูโฆษณา</span>
+      </NuxtLink>
     </div>
   </div>
 </template>
@@ -66,43 +65,28 @@
 import { Icon } from '@iconify/vue'
 
 const route = useRoute()
-const menuOpen = ref(false)
-const notificationCount = ref(3)
 
 const isActive = (path: string) => {
-  return route.path === path
-}
-
-const toggleMenu = () => {
-  menuOpen.value = !menuOpen.value
-  // TODO: Emit event to parent to toggle sidebar
+  return route.path === path || route.path.startsWith(path + '/')
 }
 </script>
 
 <style scoped>
-.hamburger-menu {
-  @apply w-6 h-6 relative flex flex-col justify-between;
+/* Safe area for mobile devices with notches/home indicators */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
-.hamburger-line {
-  @apply w-full h-0.5 bg-secondary-700 transition-all duration-300;
+/* Active state animation */
+.active\:scale-95 {
+  transform: scale(0.95);
 }
 
-.active .hamburger-line:nth-child(1) {
-  @apply transform rotate-45 translate-y-2;
-}
-
-.active .hamburger-line:nth-child(2) {
-  @apply opacity-0;
-}
-
-.active .hamburger-line:nth-child(3) {
-  @apply transform -rotate-45 -translate-y-2;
-}
-
-.active .hamburger-line:nth-child(4),
-.active .hamburger-line:nth-child(5),
-.active .hamburger-line:nth-child(6) {
-  @apply hidden;
+/* Touch-friendly tap targets */
+.min-w-\[60px\] {
+  min-width: 60px;
+  min-height: 60px;
 }
 </style>

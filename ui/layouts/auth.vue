@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen w-full bg-black relative overflow-y-auto scrollbar-hide">
+  <div class="min-h-screen w-full bg-black relative overflow-y-auto scrollbar-hide">
     <!-- Space Background with Stars -->
     <div class="absolute inset-0 z-0">
       <!-- Deep space gradient -->
@@ -33,7 +33,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="relative z-10 min-h-screen flex items-center justify-center p-4 lg:p-8">
+    <div class="relative z-10 min-h-screen flex items-center justify-center p-4 lg:p-8 py-12">
       <div class="w-full max-w-7xl mx-auto">
         <slot />
       </div>

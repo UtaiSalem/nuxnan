@@ -803,6 +803,127 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * Get top performers for a course (sorted by total_score)
+     */
+    public function topPerformers(Course $course, Request $request)
+    {
+        $limit = $request->get('limit', 5);
+        
+        // Fetch all course members with user info
+        $courseMembers = $course->courseMembers()
+            ->with('user')
+            ->get();
+        
+        if ($courseMembers->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'topPerformers' => []
+            ]);
+        }
+        
+        // Fetch related data for score calculation
+        $courseAssignments = $course->courseAssignments;
+        $courseQuizzes = $course->courseQuizzes;
+        $lessons = $course->courseLessons()->with(['assignments', 'questions'])->get();
+        
+        $lessonAssignments = $lessons->flatMap->assignments;
+        $lessonQuestions = $lessons->flatMap->questions;
+
+        $courseAssignmentIds = $courseAssignments->pluck('id');
+        $lessonAssignmentIds = $lessonAssignments->pluck('id');
+        $lessonQuestionIds = $lessonQuestions->pluck('id');
+        
+        $memberUserIds = $courseMembers->pluck('user_id');
+
+        // Get all graded assignment answers
+        $allAssignmentAnswers = \App\Models\AssignmentAnswer::whereIn('assignment_id', $courseAssignmentIds->merge($lessonAssignmentIds))
+            ->whereIn('user_id', $memberUserIds)
+            ->where(function($query) {
+                $query->where('status', 'graded')
+                      ->orWhereNotNull('points');
+            })
+            ->get()
+            ->groupBy('user_id');
+
+        // Get quiz results
+        $allQuizResults = \App\Models\CourseQuizResult::where('course_id', $course->id)
+            ->whereIn('user_id', $memberUserIds)
+            ->get()
+            ->groupBy('user_id');
+
+        // Get lesson question answers
+        $allQuestionAnswers = \App\Models\UserAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
+            ->whereIn('user_id', $memberUserIds)
+            ->with('question')
+            ->get()
+            ->groupBy('user_id');
+
+        // Calculate scores for each member
+        $membersWithScores = [];
+        foreach ($courseMembers as $member) {
+            $userId = $member->user_id;
+
+            $courseAssignScore = isset($allAssignmentAnswers[$userId]) 
+                ? $allAssignmentAnswers[$userId]->whereIn('assignment_id', $courseAssignmentIds)->sum('points') 
+                : 0;
+
+            $lessonAssignScore = isset($allAssignmentAnswers[$userId]) 
+                ? $allAssignmentAnswers[$userId]->whereIn('assignment_id', $lessonAssignmentIds)->sum('points') 
+                : 0;
+
+            $courseQuizScore = isset($allQuizResults[$userId]) 
+                ? $allQuizResults[$userId]->sum('score') 
+                : 0;
+
+            $lessonTestScore = 0;
+            if (isset($allQuestionAnswers[$userId])) {
+                foreach ($allQuestionAnswers[$userId] as $ans) {
+                    if ($ans->question && $ans->answer_id == $ans->question->correct_option_id) {
+                        $lessonTestScore += $ans->question->points ?? 1;
+                    }
+                }
+            }
+
+            $totalScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
+            
+            // Calculate grade
+            $percentage = ($course->total_score > 0) ? ($totalScore / $course->total_score) * 100 : 0;
+            $grade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
+            $finalGrade = $member->edited_grade ?? $grade;
+            $gradeName = \App\Models\CourseMember::getGradeNameFromGrade($finalGrade);
+
+            $membersWithScores[] = [
+                'id' => $member->id,
+                'user' => [
+                    'id' => $member->user->id,
+                    'name' => $member->user->name,
+                    'avatar' => $member->user->avatar ?? $member->user->profile_photo_url,
+                ],
+                'overall_progress' => round($percentage),
+                'scores' => [
+                    'total_score' => $totalScore,
+                    'bonus_points' => $member->bonus_points ?? 0,
+                    'grade_progress' => $finalGrade,
+                    'grade_name' => $gradeName,
+                ]
+            ];
+        }
+        
+        // Sort by total_score descending
+        usort($membersWithScores, function($a, $b) {
+            return ($b['scores']['total_score'] ?? 0) - ($a['scores']['total_score'] ?? 0);
+        });
+        
+        // Take top N
+        $topPerformers = array_slice($membersWithScores, 0, $limit);
+        
+        return response()->json([
+            'success' => true,
+            'topPerformers' => $topPerformers
+        ]);
+    }
+
     public function settings(Course $course)
     {
         return response()->json([

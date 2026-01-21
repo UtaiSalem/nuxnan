@@ -4,22 +4,25 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 class EnsurePlearndAdmin
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
+     * @return mixed
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next): mixed
     {
-        $user = $request->user();
-        
-        if (!$user || !$user->isPlearndAdmin()) {
+        $user = auth()->user();
+
+        // Check if user is authenticated and is a Plearnd Admin or Super Admin
+        if (!$user || (!$user->isPlearndAdmin() && !$user->isSuperAdmin())) {
             return response()->json([
-                'message' => 'Unauthorized. Plearnd Admin access required.',
+                'success' => false,
+                'message' => 'Unauthorized. Plearnd Admin or Super Admin access required.'
             ], 403);
         }
 

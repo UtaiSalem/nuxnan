@@ -210,17 +210,17 @@ export const useWallet = () => {
   }
 
   /**
-   * Check if user can withdraw
+   * Check if user can withdraw (minimum 25 THB)
    */
   const canWithdraw = (amount: number): boolean => {
-    return wallet.value >= amount
+    return amount >= 25 && wallet.value >= amount
   }
 
   /**
    * Calculate withdrawal fee
    */
   const calculateFee = (amount: number): number => {
-    return Math.max(amount * 0.005, 10) // 0.5% min 10 THB
+    return amount * 0.13 // 13%
   }
 
   /**

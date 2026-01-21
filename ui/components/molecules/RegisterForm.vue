@@ -1,5 +1,5 @@
 <template>
-  <form @submit.prevent="handleSubmit" class="space-y-6 w-full min-w-[400px]">
+  <form @submit.prevent="handleSubmit" class="space-y-6 w-full">
     <!-- Step 1: Referral Code Input -->
     <div v-if="!referralCodeValidated" class="space-y-4">
       <div class="text-center mb-4">
