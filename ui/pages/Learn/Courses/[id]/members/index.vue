@@ -66,6 +66,7 @@ async function setActiveGroupTab(tabIndex: number) {
 }
 
 import MemberCard from '~/components/learn/course/MemberCard.vue'
+import TopPerformers from '~/components/learn/course/TopPerformers.vue'
 
 // Computed Members
 const members = computed(() => {
@@ -229,74 +230,84 @@ const handleRequestUnmember = async ({ memberId, memberName }: { memberId: numbe
             </div>
         </div>
 
-        <!-- Group Tabs -->
-        <div v-if="isCourseAdmin && courseGroupStore.groups.length > 0" class="mb-6">
-            <div class="flex flex-wrap items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <!-- All Groups Tab -->
-                <button 
-                    @click="setActiveGroupTab(0)"
-                    class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
-                    :class="activeGroupTab === 0
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
-                >
-                    <Icon icon="heroicons:users" class="w-4 h-4 mr-2" />
-                    ทั้งหมด ({{ courseGroupStore.groups.reduce((sum, g) => sum + (g.members?.length || 0), 0) }})
-                </button>
 
-                <!-- Group Tabs -->
-                <button 
-                    v-for="(group, index) in courseGroupStore.groups" 
-                    :key="group.id"
-                    @click="setActiveGroupTab(index + 1)"
-                    class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
-                    :class="activeGroupTab === index + 1
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
-                >
-                    {{ group.name }} ({{ group.members?.length || 0 }})
-                </button>
-            </div>
-        </div>
+        <!-- Layout with Leaderboard -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Main Content: Member List -->
+            <div class="lg:col-span-3 order-2 lg:order-1">
+                <!-- Group Tabs (Moved here for better flow) -->
+                <div v-if="isCourseAdmin && courseGroupStore.groups.length > 0" class="mb-6">
+                    <div class="flex flex-wrap items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                        <button 
+                            @click="setActiveGroupTab(0)"
+                            class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
+                            :class="activeGroupTab === 0
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                        >
+                            <Icon icon="heroicons:users" class="w-4 h-4 mr-2" />
+                            ทั้งหมด ({{ courseGroupStore.groups.reduce((sum, g) => sum + (g.members?.length || 0), 0) }})
+                        </button>
 
-        <!-- Student View: Show only their group -->
-        <div v-else-if="!isCourseAdmin && courseMemberStore.member?.group_id" class="mb-6">
-            <div class="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-100 dark:border-blue-800">
-                <Icon icon="heroicons:user-group-solid" class="w-5 h-5 text-blue-500" />
-                <span class="text-sm font-medium text-blue-700 dark:text-blue-300">
-                    กลุ่มเรียน: {{ courseGroupStore.groups.find(g => g.id === courseMemberStore.member?.group_id)?.name || 'ไม่ระบุ' }}
-                </span>
-            </div>
-        </div>
+                        <button 
+                            v-for="(group, index) in courseGroupStore.groups" 
+                            :key="group.id"
+                            @click="setActiveGroupTab(index + 1)"
+                            class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
+                            :class="activeGroupTab === index + 1
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                        >
+                            {{ group.name }} ({{ group.members?.length || 0 }})
+                        </button>
+                    </div>
+                </div>
 
-        <!-- content -->
-        <div v-if="isLoading" class="flex justify-center py-20">
-            <div class="flex flex-col items-center gap-3">
-                <Icon icon="svg-spinners:ring-resize" class="w-10 h-10 text-blue-500" />
-                <span class="text-gray-500 animate-pulse">กำลังโหลดข้อมูลสมาชิก...</span>
-            </div>
-        </div>
+                <!-- Student View: Show only their group -->
+                <div v-else-if="!isCourseAdmin && courseMemberStore.member?.group_id" class="mb-6">
+                    <div class="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-100 dark:border-blue-800">
+                        <Icon icon="heroicons:user-group-solid" class="w-5 h-5 text-blue-500" />
+                        <span class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            กลุ่มเรียน: {{ courseGroupStore.groups.find(g => g.id === courseMemberStore.member?.group_id)?.name || 'ไม่ระบุ' }}
+                        </span>
+                    </div>
+                </div>
 
-        <div v-else-if="members.length > 0">
-            <!-- Unified List View -->
-            <ul class="flex flex-col gap-3">
-                <MemberCard 
-                    v-for="(member, index) in members" 
-                    :key="member.id"
-                    :member="member"
-                    :data-index="index"
-                    @request-unmember-course="handleRequestUnmember"
-                />
-            </ul>
-        </div>
-        
-        <!-- Empty State -->
-        <div v-else class="text-center py-20 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
-            <div class="inline-flex p-4 rounded-full bg-gray-50 dark:bg-gray-900 mb-4">
-                <Icon icon="ph:users-three-duotone" class="w-12 h-12 text-gray-400" />
+                <!-- Content -->
+                <div v-if="isLoading" class="flex justify-center py-20">
+                    <div class="flex flex-col items-center gap-3">
+                        <Icon icon="svg-spinners:ring-resize" class="w-10 h-10 text-blue-500" />
+                        <span class="text-gray-500 animate-pulse">กำลังโหลดข้อมูลสมาชิก...</span>
+                    </div>
+                </div>
+
+                <div v-else-if="members.length > 0">
+                    <!-- Unified List View -->
+                    <ul class="flex flex-col gap-3">
+                        <MemberCard 
+                            v-for="(member, index) in members" 
+                            :key="member.id"
+                            :member="member"
+                            :data-index="index"
+                            @request-unmember-course="handleRequestUnmember"
+                        />
+                    </ul>
+                </div>
+                
+                <!-- Empty State -->
+                <div v-else class="text-center py-20 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                    <div class="inline-flex p-4 rounded-full bg-gray-50 dark:bg-gray-900 mb-4">
+                        <Icon icon="ph:users-three-duotone" class="w-12 h-12 text-gray-400" />
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">ไม่พบสมาชิก</h3>
+                    <p class="text-gray-500">ลองเปลี่ยนคำค้นหา หรือตัวกรองกลุ่มเรียน</p>
+                </div>
             </div>
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">ไม่พบสมาชิก</h3>
-            <p class="text-gray-500">ลองเปลี่ยนคำค้นหา หรือตัวกรองกลุ่มเรียน</p>
+
+            <!-- Sidebar: Leaderboard -->
+            <div class="lg:col-span-1 order-1 lg:order-2">
+                <TopPerformers v-if="members.length > 0" :members="members" />
+            </div>
         </div>
     </div>
 </template>

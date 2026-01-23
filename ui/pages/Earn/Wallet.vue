@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useAuthStore } from '~/stores/auth'
-import { useWallet } from '~/composables/useWallet'
+// If using Nuxt 3 with Pinia, the correct path is usually '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
+// If your store is in a different location, update the path accordingly.
+import { useWallet } from '@/composables/useWallet'
 import { usePoints } from '~/composables/usePoints'
+import { useApi } from '~/composables/useApi'
 import BaseCard from '~/components/atoms/BaseCard.vue'
 import UnifiedTransactionCard from '~/components/Common/UnifiedTransactionCard.vue'
 
@@ -17,6 +20,7 @@ useHead({
 })
 
 const authStore = useAuthStore()
+const { get } = useApi()
 const {
   wallet,
   isLoading,
@@ -88,28 +92,30 @@ const searchUsers = async () => {
     userSearchResults.value = []
     return
   }
-  
+
   try {
     userSearchLoading.value = true
-    const response = await $fetch(`${apiBase.value}/api/users/search`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`,
-      },
+    const response = await get('/api/users/search', {
       params: {
         q: userSearchQuery.value,
         limit: 10
       }
     }) as any
-    
+
     if (response.success) {
       // Filter out current user
       userSearchResults.value = (response.data || []).filter((u: any) => u.id !== authStore.user?.id)
       showUserDropdown.value = true
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Search users error:', err)
     userSearchResults.value = []
+
+    // Handle authentication errors
+    if (err.statusCode === 401 || err.message?.includes('Unauthenticated')) {
+      processMessage.value = 'กรุณาเข้าสู่ระบบเพื่อค้นหาผู้ใช้'
+      processSuccess.value = false
+    }
   } finally {
     userSearchLoading.value = false
   }
