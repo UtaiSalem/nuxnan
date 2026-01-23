@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
-import RichTextEditor from '~/components/RichTextEditor.vue'
+import RichTextEditor from '../../RichTextEditor.vue'
 
 const props = defineProps<{
   assignment: any

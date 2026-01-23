@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import RichTextViewer from '~/components/RichTextViewer.vue'
-import RichTextEditor from '~/components/RichTextEditor.vue'
+import RichTextViewer from '../../RichTextViewer.vue'
+import RichTextEditor from '../../RichTextEditor.vue'
+import AssignmentGradingView from './AssignmentGradingView.vue'
+import AssignmentSubmissionForm from './AssignmentSubmissionForm.vue'
 
 interface Props {
   assignment: any
@@ -91,17 +93,7 @@ const handleGradedEditSubmit = () => {
 }
 </script>
 
-<script lang="ts">
-import AssignmentGradingView from './AssignmentGradingView.vue'
-import AssignmentSubmissionForm from './AssignmentSubmissionForm.vue'
 
-export default {
-    components: {
-        AssignmentGradingView,
-        AssignmentSubmissionForm
-    }
-}
-</script>
 
 <template>
   <article 
