@@ -231,10 +231,12 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function getProfilePhotoUrlAttribute()
     {
         if ($this->profile_photo_path) {
+            // Replace 'avatars/' with 'profile-photos/' in the path
+            $path = str_replace('avatars/', 'profile-photos/', $this->profile_photo_path);
             // Return full URL with storage path
-            return url('storage/' . $this->profile_photo_path);
+            return url('storage/' . $path);
         }
-        
+
         return null;
     }
 
@@ -558,6 +560,78 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function couponRedemptions()
     {
         return $this->hasMany(\App\Models\CouponRedemption::class);
+    }
+
+    /**
+     * Get users that this user is following.
+     */
+    public function following()
+    {
+        return $this->hasMany(\App\Models\Follow::class, 'follower_id');
+    }
+
+    /**
+     * Get users that are following this user.
+     */
+    public function followers()
+    {
+        return $this->hasMany(\App\Models\Follow::class, 'followed_id');
+    }
+
+    /**
+     * Check if this user is following another user.
+     */
+    public function isFollowing(User $user): bool
+    {
+        return $this->following()->where('followed_id', $user->id)->exists();
+    }
+
+    /**
+     * Check if this user is followed by another user.
+     */
+    public function isFollowedBy(User $user): bool
+    {
+        return $this->followers()->where('follower_id', $user->id)->exists();
+    }
+
+    /**
+     * Follow a user.
+     */
+    public function follow(User $user): bool
+    {
+        if ($this->id === $user->id) {
+            return false; // Cannot follow yourself
+        }
+
+        if ($this->isFollowing($user)) {
+            return false; // Already following
+        }
+
+        return $this->following()->create([
+            'followed_id' => $user->id,
+        ]);
+    }
+
+    /**
+     * Unfollow a user.
+     */
+    public function unfollow(User $user): bool
+    {
+        return $this->following()->where('followed_id', $user->id)->delete() > 0;
+    }
+
+    /**
+     * Toggle follow status for a user.
+     */
+    public function toggleFollow(User $user): array
+    {
+        if ($this->isFollowing($user)) {
+            $this->unfollow($user);
+            return ['following' => false, 'followers_count' => $user->followers()->count()];
+        } else {
+            $this->follow($user);
+            return ['following' => true, 'followers_count' => $user->followers()->count()];
+        }
     }
 
 }

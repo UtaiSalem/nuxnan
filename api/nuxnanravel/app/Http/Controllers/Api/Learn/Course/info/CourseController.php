@@ -564,7 +564,8 @@ class CourseController extends Controller
                     $uq->where('name', 'like', $searchTerm)
                        ->orWhere('username', 'like', $searchTerm)
                        ->orWhere('email', 'like', $searchTerm);
-                })->orWhere('member_code', 'like', $searchTerm);
+                })->orWhere('member_code', 'like', $searchTerm)
+                  ->orWhereRaw('order_number LIKE ?', ["%{$request->search}%"]);
             });
         }
 

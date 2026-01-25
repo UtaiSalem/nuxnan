@@ -69,6 +69,30 @@ const statusBadge = computed(() => {
   if (p >= 50) return { text: 'ปกติ', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800' }
   return { text: 'ต้องปรับปรุง', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800' }
 })
+
+// สีพื้นหลัง avatar นุ่มนวลสบายตา (hex without #)
+const getAvatarUrl = (user: any) => {
+  if (user?.avatar) return user.avatar
+  
+  // Use user id or name to determine color index consistently
+  const index = user?.id || user?.name?.length || 0
+  
+  const textColors = [
+    'f59e0b', // amber-500
+    '64748b', // slate-500
+    'f97316', // orange-500
+    '0ea5e9', // sky-500
+    '10b981', // emerald-500
+    '8b5cf6', // violet-500
+    'f43f5e', // rose-500
+    '14b8a6', // teal-500
+    '6366f1', // indigo-500
+    '06b6d4', // cyan-500
+  ]
+  const color = textColors[index % textColors.length]
+  // Background: Soft White / AliceBlue-ish
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=eff6ff&color=${color}&font-size=0.4`
+}
 </script>
 
 <template>
@@ -79,17 +103,27 @@ const statusBadge = computed(() => {
     <!-- Member Info -->
     <div class="flex items-start gap-3">
       <img
-        :src="member.user?.avatar || '/images/default-avatar.png'"
+        :src="getAvatarUrl(member.user)"
         :alt="member.user?.name"
         class="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
       />
       
       <div class="flex-1 min-w-0">
         <h4 class="font-medium text-gray-900 dark:text-white truncate">
-          {{ member.user?.name }}
+          {{ member.member_name || member.user?.name }}
         </h4>
-        <p class="text-sm text-gray-500 dark:text-gray-400 truncate">
-          @{{ member.user?.username }}
+        <p class="text-sm text-gray-500 dark:text-gray-400 truncate flex flex-wrap items-center gap-1">
+          <!-- Order Number (No.) -->
+          <span v-if="member.order_number" class="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-xs font-mono font-bold text-blue-700 dark:text-blue-300">
+            No. {{ member.order_number }}
+          </span>
+          
+          <!-- Member Code (ID) -->
+          <span v-if="member.member_code" class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs font-mono font-medium text-gray-600 dark:text-gray-300">
+            {{ member.member_code }}
+          </span>
+
+          <span v-if="!member.order_number && !member.member_code">@{{ member.user?.username }}</span>
         </p>
         <!-- Status Badge -->
         <div class="mt-1">

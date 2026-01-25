@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\PointsController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\GamificationController;
 use App\Http\Controllers\Api\RewardController;
+use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\AdminPointsController;
 use App\Http\Controllers\Api\AdminWalletController;
 use App\Http\Controllers\Api\Admin\DepositRequestController;
@@ -71,6 +72,15 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/achievements', [GamificationController::class, 'getAchievements']);
         Route::get('/achievements/available', [GamificationController::class, 'getAvailableAchievements']);
         Route::get('/achievements/stats', [GamificationController::class, 'getAchievementStats']);
+    });
+
+    // Follower Routes
+    Route::prefix('follow')->group(function () {
+        Route::post('/toggle', [FollowController::class, 'toggleFollow']);
+        Route::get('/is-following', [FollowController::class, 'isFollowing']);
+        Route::get('/users/{userId}/followers', [FollowController::class, 'followers']);
+        Route::get('/users/{userId}/following', [FollowController::class, 'following']);
+        Route::get('/users/{userId}/stats', [FollowController::class, 'stats']);
     });
 
     // Rewards Routes

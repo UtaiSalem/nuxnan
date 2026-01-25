@@ -309,7 +309,8 @@ class GamificationController extends Controller
                 ->map(function ($user, $index) {
                     $avatar = null;
                     if ($user->profile_photo_path) {
-                        $avatar = url('storage/' . $user->profile_photo_path);
+                        $path = str_replace('avatars/', 'profile-photos/', $user->profile_photo_path);
+                        $avatar = url('storage/' . $path);
                     } else {
                         $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&color=7F9CF5&background=EBF4FF';
                     }

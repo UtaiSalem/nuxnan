@@ -21,6 +21,7 @@ class CourseMemberResource extends JsonResource
             'course_id'             =>  $this->course_id,
             'user'                  =>  new UserResource($this->user),
             'member_name'           =>  $this->member_name,
+            'member_email'          =>  $this->member_email,
             'group'                 =>  $this->group,
             'access_expiry_date'    =>  $this->access_expiry_date,
             'completion_date'       =>  $this->completion_date,

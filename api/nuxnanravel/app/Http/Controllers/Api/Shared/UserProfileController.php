@@ -375,30 +375,61 @@ class UserProfileController extends \App\Http\Controllers\Controller
         }
 
         // ใช้ Eloquent ORM เพื่อดึงกิจกรรมจากตาราง activities
-        // ตรวจสอบ privacy_settings จาก activities table โดยตรง
+        // ตรวจสอบ privacy_settings จากตาราง Posts หรือ CoursePosts แทน
         $activities = Activity::with([
                 'user',
                 'activityable',
                 'activityable.user',
             ])
             ->where('user_id', $user->id)
-            ->whereIn('privacy_settings', $privacySettings)
+            ->where(function ($query) use ($privacySettings) {
+                 $query->whereHasMorph('activityable',
+                     ['App\Models\Post', 'App\Models\CoursePost'],
+                     function ($q) use ($privacySettings) {
+                         $q->whereIn('privacy_settings', $privacySettings);
+                     }
+                 )
+                 ->orWhereNotIn('activityable_type', ['App\Models\Post', 'App\Models\CoursePost']);
+            })
             ->latest()
             ->paginate(10);
         
         // Eager load specific relationships based on activityable type
-        // This avoids loading non-existent relationships on models like DonateRecipient
         $activities->getCollection()->each(function ($activity) {
             $activityable = $activity->activityable;
             if ($activityable) {
                 // Load postImages if the relationship exists
                 if (method_exists($activityable, 'postImages')) {
                     $activityable->load('postImages');
+                } else if ($activity->activityable_type === 'App\Models\CoursePost') {
+                    // CoursePost uses 'post_images' relation name in some contexts, but let's check standard
+                     $activityable->load('post_images');
                 }
+
                 // Load postComments if the relationship exists
                 if (method_exists($activityable, 'postComments')) {
                     $activityable->load('postComments');
                 }
+
+                // Load Polls for Post and CoursePost
+                if (in_array($activity->activityable_type, ['App\Models\Post', 'App\Models\CoursePost'])) {
+                     $activityable->load(['poll.options', 'poll.user']);
+                }
+            }
+            
+            // Load specific types
+            if ($activity->activityable_type === 'App\Models\DonateRecipient' && $activity->activityable) {
+                $activity->activityable->load(['reciever', 'donation']);
+            }
+            
+            // Load Share comments for Share activities
+            if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {
+                $activity->activityable->load([
+                    'shareComments' => function($query) {
+                        $query->with('user')->latest()->limit(3);
+                    },
+                    'shareable.user' // Load original post and its author
+                ]);
             }
         });
 

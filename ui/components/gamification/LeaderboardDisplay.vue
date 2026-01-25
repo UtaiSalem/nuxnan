@@ -48,8 +48,14 @@
           </div>
           
           <div class="item-points">{{ formatNumber(item.total_points) }} แต้ม</div>
-          
-          <div class="item-level">Lv. {{ item.level }}</div>
+
+          <div class="item-level">
+            <div class="level-info">Lv. {{ item.level }}</div>
+            <div class="follower-info" v-if="item.followers_count !== undefined">
+              <i class="lni lni-users"></i>
+              {{ formatNumber(item.followers_count) }}
+            </div>
+          </div>
         </div>
         
         <!-- Empty State -->
@@ -95,8 +101,14 @@
             <span class="streak-days">{{ item.current_streak }} วัน</span>
           </div>
           
-          <div class="item-level" :style="{ color: item.streak_level_color }">
-            {{ item.streak_level }}
+          <div class="item-level">
+            <div class="level-info" :style="{ color: item.streak_level_color }">
+              {{ item.streak_level }}
+            </div>
+            <div class="follower-info" v-if="item.followers_count !== undefined">
+              <i class="lni lni-users"></i>
+              {{ formatNumber(item.followers_count) }}
+            </div>
           </div>
         </div>
         
@@ -139,8 +151,14 @@
           </div>
           
           <div class="item-achievements">{{ formatNumber(item.achievement_count) }} ความ</div>
-          
-          <div class="item-level">Lv. {{ item.level }}</div>
+
+          <div class="item-level">
+            <div class="level-info">Lv. {{ item.level }}</div>
+            <div class="follower-info" v-if="item.followers_count !== undefined">
+              <i class="lni lni-users"></i>
+              {{ formatNumber(item.followers_count) }}
+            </div>
+          </div>
         </div>
         
         <!-- Empty State -->
@@ -173,16 +191,22 @@
           </div>
           
           <div class="item-user">
-            <img 
-              :src="item.profile_photo_path || '/images/default-avatar.png'" 
+            <img
+              :src="item.avatar || '/images/default-avatar.png'"
               :alt="item.user_name"
               class="user-avatar"
             >
             <span class="user-name">{{ item.user_name }}</span>
           </div>
           
-          <div class="item-level">Lv. {{ item.level }}</div>
-          
+          <div class="item-level">
+            <div class="level-info">Lv. {{ item.level }}</div>
+            <div class="follower-info" v-if="item.followers_count !== undefined">
+              <i class="lni lni-users"></i>
+              {{ formatNumber(item.followers_count) }}
+            </div>
+          </div>
+
           <div class="item-points">{{ formatNumber(item.total_points) }} แต้ม</div>
         </div>
         
@@ -259,7 +283,7 @@ const formatNumber = (num: number) => {
 
 // สีพื้นหลัง avatar นุ่มนวลสบายตา
 const getAvatarUrl = (item: any, index: number = 0): string => {
-  if (item.profile_photo_path) return item.profile_photo_path
+  if (item.avatar) return item.avatar
   const bgColors = [
     '94a3b8', '64748b', '78716c', '6b7280', '71717a',
     '737373', 'a3a3a3', '9ca3af', 'a1a1aa', 'a8a29e'
@@ -498,6 +522,29 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 600;
   color: #4b5563;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.level-info {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.follower-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.follower-info i {
+  font-size: 10px;
 }
 
 .streak-icon {

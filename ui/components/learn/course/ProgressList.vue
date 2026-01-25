@@ -19,8 +19,8 @@ const api = useApi()
 const members = ref<any[]>([])
 const loading = ref(true)
 const searchQuery = ref('')
-const sortBy = ref<'name' | 'progress' | 'last_activity'>('progress')
-const sortOrder = ref<'asc' | 'desc'>('desc')
+const sortBy = ref<'name' | 'progress' | 'last_activity' | 'order_number' | 'member_code'>('order_number')
+const sortOrder = ref<'asc' | 'desc'>('asc')
 const showDetailsModal = ref(false)
 const selectedMember = ref<any>(null)
 const memberDetails = ref<any>(null)
@@ -258,8 +258,51 @@ const updateEditedGrade = async (member: any) => {
     console.error('Error updating edited grade:', error)
   }
 }
+
+const updateMemberCode = async (member: any) => {
+    try {
+        await api.patch(`/api/courses/${props.courseId}/members/${member.id}/member-code`, {
+            member_code: member.member_code
+        })
+        // Show success toast or notification if needed
+    } catch (error) {
+        console.error('Error updating member code:', error)
+    }
+}
+
+const updateOrderNumber = async (member: any) => {
+    try {
+        await api.patch(`/api/courses/${props.courseId}/members/${member.id}/order-number`, {
+            order_number: member.order_number
+        })
+    } catch (error) {
+        console.error('Error updating order number:', error)
+    }
+}
+
+const updateMemberStatus = async (member: any) => {
+    try {
+        await api.patch(`/api/courses/${props.courseId}/members/${member.id}/update`, {
+            course_member_status: member.course_member_status
+        })
+    } catch (error) {
+        console.error('Error updating member status:', error)
+    }
+}
+
+const updateMemberProfile = async (member: any) => {
+    try {
+        await api.patch(`/api/courses/${props.courseId}/members/${member.id}/update`, {
+            member_name: member.member_name,
+            member_email: member.member_email
+        })
+    } catch (error) {
+        console.error('Error updating member profile:', error)
+    }
+}
+
 // Toggle sort
-const toggleSort = (field: 'name' | 'progress' | 'last_activity') => {
+const toggleSort = (field: 'name' | 'progress' | 'last_activity' | 'order_number' | 'member_code') => {
   if (sortBy.value === field) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
   } else {
@@ -325,6 +368,47 @@ const passRate = computed(() => {
   const passed = members.value.filter((m: any) => (m.overall_progress || 0) >= 50).length
   return Math.round((passed / members.value.length) * 100)
 })
+
+// สีพื้นหลัง avatar นุ่มนวลสบายตา (hex without #)
+const getAvatarUrl = (user: any, index = 0) => {
+  if (user?.avatar) return user.avatar
+  
+  // Use user id or name to determine color index consistently
+  const colorIndex = user?.id || index || user?.name?.length || 0
+  
+  const textColors = [
+    'f59e0b', // amber-500
+    '64748b', // slate-500
+    'f97316', // orange-500
+    '0ea5e9', // sky-500
+    '10b981', // emerald-500
+    '8b5cf6', // violet-500
+    'f43f5e', // rose-500
+    '14b8a6', // teal-500
+    '6366f1', // indigo-500
+    '06b6d4', // cyan-500
+  ]
+  const color = textColors[colorIndex % textColors.length]
+  // Background: Soft White / AliceBlue-ish (f0f9ff is sky-50, eff6ff is blue-50)
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=eff6ff&color=${color}&font-size=0.4`
+}
+
+// สีนุ่มนวลสบายตาสำหรับอันดับต่างๆ (Muted/Pastel colors)
+const getRankColor = (index: number) => {
+  const colors = [
+    'bg-amber-500',      // 1st - ทองนุ่มนวล
+    'bg-slate-400',      // 2nd - เงินนุ่มนวล
+    'bg-orange-400',     // 3rd - ทองแดงนุ่มนวล
+    'bg-sky-400',        // 4th - ฟ้านุ่มนวล
+    'bg-emerald-400',    // 5th - เขียวนุ่มนวล
+    'bg-violet-400',     // 6th - ม่วงนุ่มนวล
+    'bg-rose-400',       // 7th - ชมพูนุ่มนวล
+    'bg-teal-400',       // 8th - เขียวน้ำทะเลนุ่มนวล
+    'bg-indigo-400',     // 9th - คราม นุ่มนวล
+    'bg-cyan-400'        // 10th - ฟ้าอมเขียวนุ่มนวล
+  ]
+  return colors[index] || 'bg-slate-400'
+}
 
 // Init
 onMounted(() => {
@@ -441,8 +525,9 @@ onMounted(() => {
                   class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
                   @click="viewMemberDetails(student)">
                 <div class="relative">
-                    <img :src="student.user?.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full object-cover border border-gray-200">
-                    <div v-if="index < 3" class="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-white">
+                    <img :src="getAvatarUrl(student.user, index)" class="w-10 h-10 rounded-full object-cover border border-gray-200">
+                    <div v-if="index < 3" class="absolute -top-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-white"
+                         :class="getRankColor(index)">
                         {{ index + 1 }}
                     </div>
                 </div>
@@ -468,7 +553,7 @@ onMounted(() => {
                   <div v-for="student in atRiskStudents.slice(0, 5)" :key="student.id" 
                        class="flex items-center gap-1.5 bg-white dark:bg-gray-800 px-2 py-1 rounded-md border border-red-100 dark:border-red-900/30 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                        @click="viewMemberDetails(student)">
-                      <img :src="student.user?.avatar || '/images/default-avatar.png'" class="w-5 h-5 rounded-full">
+                      <img :src="getAvatarUrl(student.user, student.id)" class="w-5 h-5 rounded-full">
                       <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ student.user?.name }}</span>
                       <span class="text-xs text-red-500 font-bold">({{ student.overall_progress }}%)</span>
                   </div>
@@ -515,7 +600,7 @@ onMounted(() => {
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="ค้นหาผู้เรียน..."
+          placeholder="ค้นหา ชื่อ, เลขที่, Email..."
           class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
@@ -530,6 +615,23 @@ onMounted(() => {
                 <Icon icon="fluent:table-24-regular" class="w-5 h-5" />
             </button>
         </div>
+
+        <button
+          @click="toggleSort('order_number')"
+          :class="[
+            'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors',
+            sortBy === 'order_number' 
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
+              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+          ]"
+        >
+          เลขที่
+          <Icon 
+            v-if="sortBy === 'order_number'"
+            :icon="sortOrder === 'asc' ? 'fluent:arrow-up-24-regular' : 'fluent:arrow-down-24-regular'" 
+            class="w-4 h-4"
+          />
+        </button>
 
         <button
           @click="toggleSort('name')"
@@ -616,6 +718,8 @@ onMounted(() => {
             <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-300">
                 <tr>
                     <th scope="col" class="px-4 py-3 min-w-[50px]">#</th>
+                    <th scope="col" class="px-4 py-3 min-w-[60px]">เลขที่</th>
+                    <th scope="col" class="px-4 py-3 min-w-[80px]">รหัส</th>
                     <th scope="col" class="px-4 py-3 min-w-[200px]">สมาชิก</th>
                     <th scope="col" class="px-4 py-3 text-center">บทเรียน</th>
                     <th scope="col" class="px-4 py-3 text-center">งาน</th>
@@ -635,12 +739,18 @@ onMounted(() => {
             <tbody>
                 <tr v-for="(member, index) in members" :key="member.id" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td class="px-4 py-3">{{ index + 1 }}</td>
+                    <td class="px-4 py-3 font-medium text-center text-gray-900 dark:text-white">
+                        {{ member.order_number || '-' }}
+                    </td>
+                    <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-400">
+                        {{ member.member_code || '-' }}
+                    </td>
                     <td class="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
                         <div class="flex items-center gap-3">
-                            <img :src="member.user?.avatar || 'https://ui-avatars.com/api/?name='+ member.user?.name" class="w-8 h-8 rounded-full" alt="">
+                            <img :src="getAvatarUrl(member.user, index)" class="w-8 h-8 rounded-full" alt="">
                             <div class="flex flex-col">
-                                <span>{{ member.user?.name }}</span>
-                                <span class="text-xs text-gray-400">{{ member.member_code || '-' }}</span>
+                                <span>{{ member.member_name || member.user?.name }}</span>
+                                <span class="text-xs text-gray-400">{{ member.member_email || member.user?.email || '-' }}</span>
                             </div>
                         </div>
                     </td>
@@ -774,6 +884,115 @@ onMounted(() => {
       <template #content>
         <div v-if="memberDetails" class="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
           
+          <!-- Basic Info & Edit Section -->
+          <div v-if="isCourseAdmin" class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+             <div class="flex items-center justify-between mb-4">
+               <h4 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                 <Icon icon="fluent:person-edit-24-regular" class="w-5 h-5 text-blue-500" />
+                 ข้อมูลผู้เรียน
+               </h4>
+               <a 
+                 :href="`/Learn/Courses/${courseId}/my-progress?member_id=${selectedMember.id}`"
+                 target="_blank"
+                 class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1"
+               >
+                 ดูรายละเอียดทั้งหมด
+                 <Icon icon="fluent:open-24-regular" class="w-4 h-4" />
+               </a>
+             </div>
+             
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Name -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อ-สกุล (Name)</label>
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <input 
+                      v-model="selectedMember.member_name" 
+                      type="text" 
+                      class="w-full sm:flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      placeholder="ระบุชื่อ-สกุล"
+                    >
+                    <button 
+                        @click="updateMemberProfile(selectedMember)"
+                        class="w-full sm:w-auto px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    >
+                        บันทึก
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Email -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">อีเมล (Email)</label>
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <input 
+                      v-model="selectedMember.member_email" 
+                      type="email" 
+                      class="w-full sm:flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      placeholder="ระบุอีเมล"
+                    >
+                    <button 
+                        @click="updateMemberProfile(selectedMember)"
+                        class="w-full sm:w-auto px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    >
+                        บันทึก
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Order Number -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">เลขที่ (No.)</label>
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <input 
+                      v-model="selectedMember.order_number" 
+                      type="number" 
+                      class="w-full sm:flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      placeholder="ระบุเลขที่"
+                    >
+                    <button 
+                        @click="updateOrderNumber(selectedMember)"
+                        class="w-full sm:w-auto px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    >
+                        บันทึก
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Member Code -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสประจำตัว (Student ID)</label>
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <input 
+                      v-model="selectedMember.member_code" 
+                      type="text" 
+                      class="w-full sm:flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      placeholder="ระบุรหัสประจำตัว"
+                    >
+                    <button 
+                        @click="updateMemberCode(selectedMember)"
+                        class="w-full sm:w-auto px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    >
+                        บันทึก
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Status -->
+                <div class="md:col-span-2">
+                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">สถานะ</label>
+                   <select 
+                      v-model="selectedMember.course_member_status"
+                      @change="updateMemberStatus(selectedMember)"
+                      class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
+                   >
+                      <option :value="1">ปกติ (Active)</option>
+                      <option :value="0">พักการเรียน (Suspended)</option>
+                   </select>
+                </div>
+             </div>
+          </div>
+
           <!-- Summary Stats Section -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-xl">
             <!-- Overall Progress -->

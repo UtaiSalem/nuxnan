@@ -7,6 +7,15 @@ import { inject, type Ref } from 'vue'
 const course = inject<Ref<any>>('course')
 const courseMemberOfAuth = inject<Ref<any>>('courseMemberOfAuth')
 
+const route = useRoute()
+const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
+const targetMemberId = computed(() => {
+  if (isCourseAdmin?.value && route.query.member_id) {
+    return Number(route.query.member_id)
+  }
+  return null
+})
+
 </script>
 
 <template>
@@ -21,9 +30,9 @@ const courseMemberOfAuth = inject<Ref<any>>('courseMemberOfAuth')
 
     <!-- Details Component -->
     <MyProgressDetails 
-        v-if="course?.id && courseMemberOfAuth?.id"
+        v-if="course?.id && (targetMemberId || courseMemberOfAuth?.id)"
         :courseId="course.id" 
-        :memberId="courseMemberOfAuth.id" 
+        :memberId="targetMemberId || courseMemberOfAuth?.id" 
     />
     
     <div v-else class="text-center py-10 text-gray-500">

@@ -148,6 +148,7 @@ class GamificationService
                     default => $userItem->pp,
                 },
                 'level' => $userItem->level ?? 1,
+                'followers_count' => $userItem->followers()->count(),
             ];
         }
 

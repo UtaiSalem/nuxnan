@@ -304,6 +304,7 @@ class CourseMemberController extends Controller
 
         $request->validate([
             'member_name'   => 'nullable|string|max:255',
+            'member_email'  => 'nullable|email|max:255',
             'order_number'  => 'nullable|integer',
             'member_code'   => 'nullable|string|max:50',
             'group_id'      => 'nullable|exists:course_groups,id',
@@ -315,6 +316,7 @@ class CourseMemberController extends Controller
 
         $member->update([
             'member_name'   => $request->member_name,
+            'member_email'  => $request->member_email,
             'order_number'  => $request->order_number,
             'member_code'   => $request->member_code,
         ]);
