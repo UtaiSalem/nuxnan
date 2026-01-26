@@ -29,7 +29,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 
-const uniqueId = Math.random().toString(36).substr(2, 9)
+const uniqueId = useId()
 
 const props = defineProps({
   label: {
