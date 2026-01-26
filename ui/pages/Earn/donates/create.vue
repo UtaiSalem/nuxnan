@@ -31,6 +31,12 @@ const inputSlip = ref<HTMLInputElement | null>(null)
 const errorMessage = ref('')
 const isManualOverride = ref(false)
 
+// Payment method: 'slip' | 'wallet' | 'points'
+const paymentMethod = ref<'slip' | 'wallet' | 'points'>('slip')
+
+// คำนวณแต้มที่ต้องใช้ (อัตรา 1 บาท = 100 แต้ม)
+const pointsRequired = computed(() => totalMoneySupport.value * 100)
+
 // Name search state
 const searchQuery = ref('')
 const searchResults = ref<any[]>([])
@@ -280,8 +286,12 @@ const submitForm = async () => {
   errorMessage.value = ''
 
   let hasError = false
+  const isLoggedIn = !!authStore.user
+  const hasSlip = !!slipImage.value
+  const currentPaymentMethod = isLoggedIn ? paymentMethod.value : 'slip'
 
-  if (!slipImage.value) {
+  // ตรวจสอบ slip - บังคับเมื่อเลือกชำระด้วย slip หรือ anonymous
+  if (currentPaymentMethod === 'slip' && !hasSlip) {
     errors.value.slip = 'กรุณาอัพโหลดสลิปการทำรายการ'
     hasError = true
   }
@@ -293,19 +303,122 @@ const submitForm = async () => {
 
   if (hasError) return
 
+  const amount = totalMoneySupport.value
+
+  // แสดง SweetAlert ยืนยันตาม payment method
+  if (isLoggedIn && currentPaymentMethod === 'wallet') {
+    const walletBalance = authStore.user?.wallet || 0
+    
+    if (walletBalance < amount) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ยอดเงินไม่เพียงพอ',
+        html: `ยอดเงินในกระเป๋าของคุณ: <b>${walletBalance.toLocaleString()}</b> บาท<br>จำนวนที่ต้องการสนับสนุน: <b>${amount.toLocaleString()}</b> บาท`,
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#d33',
+      })
+      return
+    }
+
+    const result = await Swal.fire({
+      icon: 'question',
+      title: 'ยืนยันการหักเงินจากกระเป๋า',
+      html: `
+        <div class="text-left">
+          <p class="mb-2">คุณต้องการหักเงินจากกระเป๋าเพื่อสนับสนุนหรือไม่?</p>
+          <div class="bg-gray-100 rounded-lg p-3 mt-3">
+            <div class="flex justify-between mb-1">
+              <span>จำนวนเงินที่สนับสนุน:</span>
+              <span class="font-bold text-green-600">${amount.toLocaleString()} บาท</span>
+            </div>
+            <div class="flex justify-between mb-1">
+              <span>แต้มที่จะแจกจ่าย:</span>
+              <span class="font-bold text-purple-600">${(amount * 1080).toLocaleString()} แต้ม</span>
+            </div>
+            <div class="flex justify-between pt-2 border-t border-gray-300">
+              <span>ยอดคงเหลือหลังหัก:</span>
+              <span class="font-bold">${(walletBalance - amount).toLocaleString()} บาท</span>
+            </div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'ยืนยันหักเงิน',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true,
+    })
+
+    if (!result.isConfirmed) return
+  }
+
+  if (isLoggedIn && currentPaymentMethod === 'points') {
+    const pointsBalance = authStore.user?.pp || 0
+    const requiredPoints = amount * 100
+
+    if (pointsBalance < requiredPoints) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'แต้มสะสมไม่เพียงพอ',
+        html: `แต้มสะสมของคุณ: <b>${pointsBalance.toLocaleString()}</b> แต้ม<br>แต้มที่ต้องใช้: <b>${requiredPoints.toLocaleString()}</b> แต้ม`,
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#d33',
+      })
+      return
+    }
+
+    const result = await Swal.fire({
+      icon: 'question',
+      title: 'ยืนยันการใช้แต้มสะสม',
+      html: `
+        <div class="text-left">
+          <p class="mb-2">คุณต้องการใช้แต้มสะสมเพื่อสนับสนุนหรือไม่?</p>
+          <div class="bg-purple-50 rounded-lg p-3 mt-3">
+            <div class="flex justify-between mb-1">
+              <span>มูลค่าการสนับสนุน:</span>
+              <span class="font-bold text-green-600">${amount.toLocaleString()} บาท</span>
+            </div>
+            <div class="flex justify-between mb-1">
+              <span>แต้มที่ต้องใช้:</span>
+              <span class="font-bold text-red-600">-${requiredPoints.toLocaleString()} แต้ม</span>
+            </div>
+            <div class="flex justify-between mb-1">
+              <span>แต้มที่จะแจกจ่าย:</span>
+              <span class="font-bold text-purple-600">${(amount * 1080).toLocaleString()} แต้ม</span>
+            </div>
+            <div class="flex justify-between pt-2 border-t border-purple-300">
+              <span>แต้มคงเหลือหลังหัก:</span>
+              <span class="font-bold">${(pointsBalance - requiredPoints).toLocaleString()} แต้ม</span>
+            </div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'ยืนยันใช้แต้ม',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#8b5cf6',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true,
+    })
+
+    if (!result.isConfirmed) return
+  }
+
   isLoading.value = true
   
   try {
     const formData = new FormData()
-    // Use authStore.user.id for user_id (Creator) if logged in, otherwise empty (Controller defaults to System)
-    formData.append('user_id', authStore.user?.id || '')
     formData.append('user_id', authStore.user?.id || '')
     formData.append('donor_id', donor.value?.id || '')
     formData.append('donor_name', donor.value?.name || donor.value?.username || 'ไม่ระบุนาม')
-    formData.append('amounts', String(totalMoneySupport.value))
+    formData.append('amounts', String(amount))
     formData.append('transfer_date', transferDate.value)
     formData.append('transfer_time', transferTime.value)
-    formData.append('slip', slipImage.value!.file)
+    formData.append('payment_method', currentPaymentMethod)
+    if (slipImage.value) {
+      formData.append('slip', slipImage.value.file)
+    }
 
     const response = await $fetch<any>(`${config.public.apiBase}/api/supports/donates`, {
       method: 'POST',
@@ -313,12 +426,67 @@ const submitForm = async () => {
     })
 
     if (response.success) {
-      showSuccessModal.value = true
+      // แสดง SweetAlert สำเร็จตาม payment method
+      if (currentPaymentMethod === 'wallet') {
+        Swal.fire({
+          icon: 'success',
+          title: 'สนับสนุนสำเร็จ!',
+          html: `
+            <div class="text-left">
+              <p class="mb-2">หักเงินจากกระเป๋าเรียบร้อยแล้ว</p>
+              <div class="bg-green-50 rounded-lg p-3 mt-3">
+                <div class="flex justify-between mb-1">
+                  <span>จำนวนเงินที่สนับสนุน:</span>
+                  <span class="font-bold">${amount.toLocaleString()} บาท</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>แต้มที่แจกจ่าย:</span>
+                  <span class="font-bold text-purple-600">${(amount * 1080).toLocaleString()} แต้ม</span>
+                </div>
+              </div>
+            </div>
+          `,
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#10b981',
+        })
+        if (authStore.user) {
+          authStore.user.wallet = (authStore.user.wallet || 0) - amount
+        }
+      } else if (currentPaymentMethod === 'points') {
+        const requiredPoints = amount * 100
+        Swal.fire({
+          icon: 'success',
+          title: 'สนับสนุนสำเร็จ!',
+          html: `
+            <div class="text-left">
+              <p class="mb-2">ใช้แต้มสะสมเรียบร้อยแล้ว</p>
+              <div class="bg-purple-50 rounded-lg p-3 mt-3">
+                <div class="flex justify-between mb-1">
+                  <span>แต้มที่ใช้:</span>
+                  <span class="font-bold text-red-600">-${requiredPoints.toLocaleString()} แต้ม</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>แต้มที่แจกจ่าย:</span>
+                  <span class="font-bold text-purple-600">${(amount * 1080).toLocaleString()} แต้ม</span>
+                </div>
+              </div>
+            </div>
+          `,
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#8b5cf6',
+        })
+        if (authStore.user) {
+          authStore.user.pp = (authStore.user.pp || 0) - requiredPoints
+        }
+      } else {
+        showSuccessModal.value = true
+      }
+      
       // Reset form
       slipImage.value = null
       transferDate.value = ''
       transferTime.value = ''
-      // Reset donor to current user if available, otherwise null
+      paymentMethod.value = 'slip'
       if (authStore.user) {
         donor.value = authStore.user
         personalCode.value = authStore.user.personal_code
@@ -624,8 +792,97 @@ watch(() => authStore.user, async (user) => {
               </div>
             </div>
 
-            <!-- Slip Upload -->
-            <div class="space-y-2">
+            <!-- Payment Method Selector (สำหรับผู้ใช้ที่ login) -->
+            <div v-if="authStore.user" class="space-y-3">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                วิธีการชำระ
+              </label>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <!-- Slip Option -->
+                <button
+                  type="button"
+                  @click="paymentMethod = 'slip'"
+                  :class="[
+                    'p-4 rounded-xl border-2 text-left transition-all',
+                    paymentMethod === 'slip'
+                      ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-teal-300'
+                  ]"
+                >
+                  <div class="flex items-center gap-3">
+                    <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', paymentMethod === 'slip' ? 'bg-teal-500' : 'bg-gray-200 dark:bg-gray-700']">
+                      <Icon icon="mdi:receipt" :class="['w-5 h-5', paymentMethod === 'slip' ? 'text-white' : 'text-gray-500']" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">สลิปโอนเงิน</p>
+                      <p class="text-xs text-gray-500">รอ Admin อนุมัติ</p>
+                    </div>
+                  </div>
+                </button>
+
+                <!-- Wallet Option -->
+                <button
+                  type="button"
+                  @click="paymentMethod = 'wallet'"
+                  :disabled="(authStore.user?.wallet || 0) < totalMoneySupport"
+                  :class="[
+                    'p-4 rounded-xl border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed',
+                    paymentMethod === 'wallet'
+                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-green-300'
+                  ]"
+                >
+                  <div class="flex items-center gap-3">
+                    <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', paymentMethod === 'wallet' ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700']">
+                      <Icon icon="mdi:wallet" :class="['w-5 h-5', paymentMethod === 'wallet' ? 'text-white' : 'text-gray-500']" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">กระเป๋าเงิน</p>
+                      <p class="text-xs text-green-600 dark:text-green-400 font-semibold">
+                        {{ (authStore.user?.wallet || 0).toLocaleString() }} บาท
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <!-- Points Option -->
+                <button
+                  type="button"
+                  @click="paymentMethod = 'points'"
+                  :disabled="(authStore.user?.points || 0) < pointsRequired"
+                  :class="[
+                    'p-4 rounded-xl border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed',
+                    paymentMethod === 'points'
+                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
+                  ]"
+                >
+                  <div class="flex items-center gap-3">
+                    <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', paymentMethod === 'points' ? 'bg-purple-500' : 'bg-gray-200 dark:bg-gray-700']">
+                      <Icon icon="mdi:star-circle" :class="['w-5 h-5', paymentMethod === 'points' ? 'text-white' : 'text-gray-500']" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">แต้มสะสม</p>
+                      <p class="text-xs text-purple-600 dark:text-purple-400 font-semibold">
+                        {{ (authStore.user?.points || 0).toLocaleString() }} แต้ม
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <!-- Points Required Info -->
+              <div v-if="paymentMethod === 'points'" class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-3">
+                <p class="text-sm text-purple-700 dark:text-purple-300">
+                  <Icon icon="mdi:information" class="w-4 h-4 inline mr-1" />
+                  ต้องใช้ <span class="font-bold">{{ pointsRequired.toLocaleString() }}</span> แต้ม (อัตรา 1 บาท = 100 แต้ม)
+                </p>
+              </div>
+            </div>
+
+            <!-- Slip Upload (แสดงเมื่อเลือก slip หรือ anonymous) -->
+            <div v-if="paymentMethod === 'slip' || !authStore.user" class="space-y-2">
               <div class="flex justify-between items-center">
                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   สลิปการโอนเงิน <span class="text-red-500">*</span>

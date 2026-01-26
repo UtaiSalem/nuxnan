@@ -255,8 +255,8 @@ class CourseMemberController extends Controller
     }
 
     public function destroy(Course $course, CourseMember $member)
-    {     
-        if (!$course->isAdmin(auth()->user())) {
+    {
+        if (!$course->hasPermission(auth()->user(), 'remove_members')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -298,7 +298,7 @@ class CourseMemberController extends Controller
     //function update
     public function update(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (!$course->hasPermission(auth()->user(), 'edit_member_details')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -395,7 +395,7 @@ class CourseMemberController extends Controller
     //function update member bonus points
     public function updateBonusPoints(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (!$course->hasPermission(auth()->user(), 'add_bonus_points')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -420,7 +420,7 @@ class CourseMemberController extends Controller
 
     public function updateGradeProgress(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (!$course->hasPermission(auth()->user(), 'edit_grades')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 

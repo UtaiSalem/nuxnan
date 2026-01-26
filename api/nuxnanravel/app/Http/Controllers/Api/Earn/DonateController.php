@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\Earn\DonateResource;
 use App\Http\Resources\UserResource;
 use App\Http\Resources\Play\ActivityResource;
+use Illuminate\Support\Facades\Storage;
 
 class DonateController extends \App\Http\Controllers\Controller
 {
@@ -27,6 +28,117 @@ class DonateController extends \App\Http\Controllers\Controller
         return response()->json([
             'donates' => $donatesResource,
         ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     * รองรับทั้งผู้ใช้ที่ login และไม่ได้ login (anonymous)
+     * payment_method: slip, wallet, points
+     */
+    public function store(Request $request)
+    {
+        $user = auth()->user();
+        $isAnonymous = !$user;
+        $paymentMethod = $request->input('payment_method', 'slip');
+
+        // กำหนด validation rules - anonymous ต้องมี slip เสมอ
+        $rules = [
+            'amounts' => 'required|numeric|min:1',
+            'transfer_date' => 'required',
+            'transfer_time' => 'required',
+            'payment_method' => 'nullable|in:slip,wallet,points',
+            'slip' => ($isAnonymous || $paymentMethod === 'slip') ? 'required|image|mimes:jpg,jpeg,png,gif,svg|max:2048' : 'nullable|image|mimes:jpg,jpeg,png,gif,svg|max:2048',
+        ];
+
+        $validated = $request->validate($rules);
+
+        // Anonymous ต้องใช้ slip เท่านั้น
+        if ($isAnonymous && $paymentMethod !== 'slip') {
+            return response()->json([
+                'success' => false,
+                'message' => 'กรุณาเข้าสู่ระบบเพื่อใช้วิธีการชำระนี้',
+            ], 401);
+        }
+
+        try {
+            $slip_filename = null;
+            if ($request->hasFile('slip')) {
+                $slip_file = $request->file('slip');
+                $slip_filename = uniqid() . '.' . $slip_file->getClientOriginalExtension();
+                Storage::disk('public')->putFileAs('images/donates/slips', $slip_file, $slip_filename);
+            }
+
+            $donate = new Donate();
+            
+            // กำหนดข้อมูลผู้บริจาค
+            if ($isAnonymous) {
+                $donate->user_id = null;
+                $donate->donor_id = null;
+                $donate->donor_name = 'ไม่ประสงค์ออกนาม';
+            } else {
+                $donate->user_id = $user->id;
+                $donate->donor_id = $user->id;
+                $donate->donor_name = $user->name;
+            }
+            
+            $donate->amounts = $validated['amounts'];
+            $donate->transfer_date = Carbon::parse($request->transfer_date);
+            $donate->transfer_time = $validated['transfer_time'];
+            $donate->slip = $slip_filename ?? '';
+            $donate->remaining_points = $validated['amounts'] * 1080;
+            $donate->payment_method = $paymentMethod;
+            
+            // จัดการตาม payment_method
+            switch ($paymentMethod) {
+                case 'slip':
+                    // มี slip = รอตรวจสอบจาก admin
+                    $donate->status = 0; // Pending
+                    break;
+                    
+                case 'wallet':
+                    // หักจาก wallet
+                    if ($user->wallet < $validated['amounts']) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'ยอดเงินในกระเป๋าไม่เพียงพอ',
+                            'wallet_balance' => $user->wallet,
+                        ], 402);
+                    }
+                    $user->decrement('wallet', $validated['amounts']);
+                    $donate->status = 1; // Approved
+                    break;
+                    
+                case 'points':
+                    // หักจากแต้มสะสม (pp) - อัตราแลกเปลี่ยน: 1 บาท = 100 แต้ม
+                    $pointsRequired = $validated['amounts'] * 100;
+                    if ($user->pp < $pointsRequired) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'แต้มสะสมไม่เพียงพอ',
+                            'points_balance' => $user->pp,
+                            'points_required' => $pointsRequired,
+                        ], 402);
+                    }
+                    $user->decrement('pp', $pointsRequired);
+                    $donate->status = 1; // Approved
+                    break;
+            }
+
+            $donate->save();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'สร้างการสนับสนุนสำเร็จ',
+                'donate' => new DonateResource($donate),
+                'payment_method' => $paymentMethod,
+            ]);
+
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาด: ' . $th->getMessage(),
+            ], 500);
+        }
     }
 // ... (skip unchanged methods)
     // get donor

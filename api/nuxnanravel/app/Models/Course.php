@@ -219,4 +219,46 @@ class Course extends Model
             ->where('status', 1)
             ->exists();
     }
+
+    /**
+     * Check if the given user has a specific permission for this course.
+     */
+    public function hasPermission($user, string $permission): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        // Course owner has all permissions
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        // Find the member's course membership
+        $member = $this->courseMembers()
+            ->where('user_id', $user->id)
+            ->where('status', 1)
+            ->first();
+
+        if (!$member) {
+            return false;
+        }
+
+        return $member->hasPermission($permission);
+    }
+
+    /**
+     * Get the course member record for a user.
+     */
+    public function getMember($user)
+    {
+        if (!$user) {
+            return null;
+        }
+
+        return $this->courseMembers()
+            ->where('user_id', $user->id)
+            ->where('status', 1)
+            ->first();
+    }
 }

@@ -27,18 +27,39 @@ class CourseAdminController extends Controller
             ->whereIn('role', [3, 4]) // 3: Teacher (TA), 4: Admin
             ->orderBy('role', 'desc')
             ->with('user')
-            ->get();
-            
+            ->get()
+            ->map(function ($member) {
+                return [
+                    'id' => $member->id,
+                    'user' => $member->user,
+                    'role' => $member->role,
+                    'role_name' => $member->role === 3 ? 'ผู้ช่วยสอน' : 'ผู้ดูแลระบบ',
+                    'permissions' => $member->getPermissions(),
+                    'created_at' => $member->created_at,
+                ];
+            });
+
         // Also get pending invitations
         $invitations = CourseInvitation::where('course_id', $course->id)
             ->where('status', 'pending')
             ->with('invitee')
-            ->get();
+            ->get()
+            ->map(function ($invitation) {
+                return [
+                    'id' => $invitation->id,
+                    'invitee' => $invitation->invitee,
+                    'role' => $invitation->role,
+                    'role_name' => $invitation->role === 3 ? 'ผู้ช่วยสอน' : 'ผู้ดูแลระบบ',
+                    'permissions' => json_decode($invitation->permissions ?? '[]', true),
+                    'created_at' => $invitation->created_at,
+                ];
+            });
 
         return response()->json([
             'success' => true,
-            'admins' => CourseMemberResource::collection($admins),
+            'admins' => $admins,
             'invitations' => $invitations,
+            'available_permissions' => \App\Models\CoursePermission::PERMISSIONS,
         ]);
     }
 
@@ -85,7 +106,7 @@ class CourseAdminController extends Controller
     }
 
     /**
-     * Invite a user as Admin or TA.
+     * Invite a user as Admin or TA with specific permissions.
      */
     public function store(Request $request, Course $course)
     {
@@ -95,11 +116,14 @@ class CourseAdminController extends Controller
 
         $request->validate([
             'user_id' => 'required|exists:users,id',
-            // 'role' => 'required|in:3,4', // 3: Teacher/TA, 4: Admin (Optional if we force admin)
+            'role' => 'required|in:3,4', // 3: Teacher/TA, 4: Admin
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'string|in:' . implode(',', array_keys(\App\Models\CoursePermission::PERMISSIONS)),
         ]);
 
         $userId = $request->user_id;
-        $role = $request->input('role', 4); // Default to Admin if not specified
+        $role = $request->role;
+        $permissions = $request->permissions ?? [];
 
         // Check if already a member
         if ($course->courseMembers()->where('user_id', $userId)->exists()) {
@@ -108,14 +132,17 @@ class CourseAdminController extends Controller
 
         // Check if already invited
         if (CourseInvitation::where('course_id', $course->id)->where('invitee_id', $userId)->where('status', 'pending')->exists()) {
-             return response()->json(['message' => 'User already has a pending invitation.'], 422);
+              return response()->json(['message' => 'User already has a pending invitation.'], 422);
         }
 
+        // Store permissions in invitation for later assignment
         $invitation = CourseInvitation::create([
             'course_id' => $course->id,
             'inviter_id' => auth()->id(),
             'invitee_id' => $userId,
-            'status' => 'pending'
+            'status' => 'pending',
+            'role' => $role,
+            'permissions' => json_encode($permissions),
         ]);
 
         return response()->json([
@@ -128,27 +155,42 @@ class CourseAdminController extends Controller
     public function acceptInvitation(Course $course, CourseInvitation $invitation)
     {
         if (auth()->id() !== $invitation->invitee_id) {
-             return response()->json(['success'=>false, 'message'=>'Unauthorized'], 403);
+              return response()->json(['success'=>false, 'message'=>'Unauthorized'], 403);
         }
-        
+
         if ($invitation->status !== 'pending') {
-            return response()->json(['message' => 'Invitation is valid'], 400);
+            return response()->json(['message' => 'Invitation is not valid'], 400);
         }
 
         DB::transaction(function () use ($invitation, $course) {
             $invitation->update(['status' => 'accepted']);
-            
-            // Create Course Member (Admin)
-            CourseMember::create([
+
+            // Create Course Member with specified role
+            $member = CourseMember::create([
                 'course_id' => $course->id,
                 'user_id' => $invitation->invitee_id,
-                'role' => 4, // Admin
+                'role' => $invitation->role ?? 4, // Default to Admin
                 'status' => 1, // Active
                 'course_member_status' => 1,
                 'enrollment_date' => now(),
             ]);
+
+            // Assign permissions
+            $permissions = json_decode($invitation->permissions ?? '[]', true);
+            if (!empty($permissions)) {
+                foreach ($permissions as $permission) {
+                    \App\Models\CoursePermission::create([
+                        'course_member_id' => $member->id,
+                        'permission' => $permission,
+                        'granted_by' => $invitation->inviter_id,
+                    ]);
+                }
+            } else {
+                // Grant default permissions based on role
+                $member->grantDefaultPermissions();
+            }
         });
-        
+
         return response()->json(['success'=>true, 'message'=>'Invitation accepted']);
     }
 
@@ -176,26 +218,96 @@ class CourseAdminController extends Controller
     }
 
     /**
+     * Update permissions for an admin/TA.
+     */
+    public function updatePermissions(Request $request, Course $course, CourseMember $member)
+    {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Can only manage permissions for admins/TAs, not the owner
+        if ($member->user_id == $course->user_id) {
+            return response()->json(['success' => false, 'message' => 'Cannot modify owner permissions.'], 403);
+        }
+
+        if (!in_array($member->role, [3, 4])) {
+            return response()->json(['success' => false, 'message' => 'Member is not an admin or TA.'], 403);
+        }
+
+        $request->validate([
+            'permissions' => 'required|array',
+            'permissions.*' => 'string|in:' . implode(',', array_keys(\App\Models\CoursePermission::PERMISSIONS)),
+        ]);
+
+        DB::transaction(function () use ($member, $request) {
+            // Remove existing permissions
+            $member->permissions()->delete();
+
+            // Add new permissions
+            foreach ($request->permissions as $permission) {
+                \App\Models\CoursePermission::create([
+                    'course_member_id' => $member->id,
+                    'permission' => $permission,
+                    'granted_by' => auth()->id(),
+                ]);
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Permissions updated successfully.',
+            'permissions' => $request->permissions,
+        ]);
+    }
+
+    /**
+     * Get permissions for a specific admin/TA.
+     */
+    public function getPermissions(Course $course, CourseMember $member)
+    {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $permissions = $member->getPermissions();
+        $availablePermissions = \App\Models\CoursePermission::PERMISSIONS;
+
+        return response()->json([
+            'success' => true,
+            'member' => [
+                'id' => $member->id,
+                'user' => $member->user,
+                'role' => $member->role,
+            ],
+            'permissions' => $permissions,
+            'available_permissions' => $availablePermissions,
+        ]);
+    }
+
+    /**
      * Remove admin/TA.
      */
     public function destroy(Course $course, CourseMember $member)
     {
-         // Verify admin permissions
-         if (!$course->isAdmin(auth()->user())) {
-             return response()->json(['success'=>false, 'message'=>'Unauthorized'], 403);
-         }
+          // Verify admin permissions
+          if (!$course->isAdmin(auth()->user())) {
+              return response()->json(['success'=>false, 'message'=>'Unauthorized'], 403);
+          }
 
         // Prevent removing the owner
         if ($member->user_id == $course->user_id) {
-             return response()->json(['success'=>false, 'message'=>'Cannot remove owner.'], 403);
-        }
-        
-        // Prevent removing yourself? (optional)
-        if ($member->user_id == auth()->id()) {
-             // Maybe allow "Leave Course"? But destroy implies admin action.
-             // If leaving, use 'leave' endpoint if exists.
+              return response()->json(['success'=>false, 'message'=>'Cannot remove owner.'], 403);
         }
 
+        // Prevent removing yourself? (optional)
+        if ($member->user_id == auth()->id()) {
+              // Maybe allow "Leave Course"? But destroy implies admin action.
+              // If leaving, use 'leave' endpoint if exists.
+        }
+
+        // Clean up permissions before deleting member
+        $member->permissions()->delete();
         $member->delete();
 
         return response()->json([

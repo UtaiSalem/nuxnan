@@ -17,21 +17,22 @@ class Donate extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'donor_id',
-        'doner_name',
+        'donor_name',
         'amounts',
         'slip',
         'transfer_date',
         'transfer_time',
         'donation_date',
-        'doner_email',
+        'donor_email',
         'donation_purpose',
         'payment_method',
         'transaction_id',
-        'doner_address',
+        'remaining_points',
         'status',
         'approved_by',
-        'privacy_setting',
+        'privacy_settings',
         'notes'
     ];
 

@@ -782,6 +782,7 @@ class CourseController extends Controller
 
         return response()->json([
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
+            'canViewReports' => $course->hasPermission(auth()->user(), 'view_reports'),
             'course'        => new CourseResource($course),
             'groups'        => CourseGroupResource::collection($course->courseGroups),
             'assignments'       => AssignmentResource::collection($course->courseAssignments),      
@@ -1171,7 +1172,7 @@ class CourseController extends Controller
 
     public function exportLearningResults(Course $course, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (!$course->hasPermission(auth()->user(), 'export_reports')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 

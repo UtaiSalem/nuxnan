@@ -12,6 +12,10 @@ class CourseInvitation extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'permissions' => 'array',
+    ];
+
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);

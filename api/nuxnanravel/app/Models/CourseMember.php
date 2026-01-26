@@ -62,6 +62,11 @@ class CourseMember extends Model
         return $this->hasMany(Course::class, 'id');
     }
 
+    public function permissions(): HasMany
+    {
+        return $this->hasMany(CoursePermission::class);
+    }
+
     //members accessors sort by order_number
     public function getMembersAttribute()
     {
@@ -169,8 +174,37 @@ class CourseMember extends Model
     {
         $calculatedGrade = $this->getCalculatedGrade();
         $currentGrade = $this->grade_progress;
-        
+
         // Both null or both same value
         return $calculatedGrade === $currentGrade;
+    }
+
+    /**
+     * Check if this member has a specific permission
+     */
+    public function hasPermission(string $permission): bool
+    {
+        // Course owner has all permissions
+        if ($this->course->user_id === $this->user_id) {
+            return true;
+        }
+
+        return $this->permissions()->where('permission', $permission)->exists();
+    }
+
+    /**
+     * Get all permissions for this member
+     */
+    public function getPermissions(): array
+    {
+        return $this->permissions()->pluck('permission')->toArray();
+    }
+
+    /**
+     * Grant default permissions based on role
+     */
+    public function grantDefaultPermissions(): void
+    {
+        CoursePermission::grantDefaultPermissions($this);
     }
 }

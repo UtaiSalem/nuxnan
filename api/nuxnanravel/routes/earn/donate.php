@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Earn\DonateController;
 
 
+// Public routes for creating donations - no auth required (anonymous donations allowed)
 Route::get('/supports/donates/create', [DonateController::class, 'create'])->name('support.donate.create');
 Route::post('/supports/donates', [DonateController::class, 'store'])->name('support.donate.store');
 Route::get('/supports/donates/donor/{user:personal_code}', [DonateController::class, 'getDonor'])->name('donate.get-donor');
