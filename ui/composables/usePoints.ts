@@ -165,7 +165,7 @@ export const usePoints = () => {
         throw new Error(`แต้มของคุณไม่เพียงพอ (ต้องการ ${pointsAmount} แต้ม, มีอยู่ ${points.value} แต้ม)`)
       }
       
-      const exchangeRate = 1080 // 1 THB = 1080 points
+      const exchangeRate = 1200 // 1 THB = 1200 points
       const walletAmount = pointsAmount / exchangeRate
       
       // Deduct points from auth store (optimistic update)

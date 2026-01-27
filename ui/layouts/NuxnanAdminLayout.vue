@@ -60,6 +60,11 @@ const allNavItems = [
     href: '/nuxnan-admin/wallet'
   },
   {
+    name: 'จัดการการสนับสนุน',
+    icon: 'fluent:gift-24-regular',
+    href: '/nuxnan-admin/supports'
+  },
+  {
     name: 'จัดการคูปอง',
     icon: 'fluent:ticket-diagonal-24-regular',
     href: '/nuxnan-admin/coupons'

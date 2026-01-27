@@ -31,7 +31,7 @@ const fetchInvitations = async () => {
 const respondToInvitation = async (invitation: any, accept: boolean) => {
   try {
     const action = accept ? 'accept' : 'decline'
-    const res: any = await api.post(`/api/courses/${invitation.course.id}/admins/invitations/${invitation.id}/${action}`)
+    const res: any = await api.post(`/api/courses/${invitation.course.id}/admins/invitations/${invitation.id}/${action}`, {})
     if (res.success) {
       // Remove from list
       invitations.value = invitations.value.filter(i => i.id !== invitation.id)

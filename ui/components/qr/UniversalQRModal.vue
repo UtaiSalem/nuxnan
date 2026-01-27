@@ -24,7 +24,7 @@ const {
 const toast = useToast()
 
 // State
-const mode = ref<'scan' | 'input'>('scan')
+const mode = ref<'scan' | 'input'>('input')
 const manualCode = ref('')
 const detectedType = ref<QRCodeType | null>(null)
 
@@ -146,7 +146,7 @@ watch(() => props.modelValue, (newVal) => {
       reset()
       manualCode.value = ''
       detectedType.value = null
-      mode.value = 'scan'
+      mode.value = 'input'
     }, 300)
   }
 })
@@ -350,7 +350,7 @@ onUnmounted(() => {
           <!-- ========== Scanner Form ========== -->
           <div v-else>
             <!-- Header -->
-            <div class="bg-gradient-to-r from-vikinger-purple to-vikinger-cyan p-5">
+            <div class="bg-gradient-to-r from-vikinger-purple to-vikinger-cyan p-3 md:p-5">
               <h1 class="text-xl font-black text-white flex items-center gap-2">
                 <Icon icon="fluent:qr-code-24-filled" class="w-6 h-6" />
                 สแกน QR Code
@@ -358,7 +358,7 @@ onUnmounted(() => {
               <p class="text-white/80 text-sm mt-1">สแกนหรือป้อนรหัส QR</p>
             </div>
             
-            <div class="p-5">
+            <div class="p-3 md:p-5">
               <!-- Supported Types -->
               <div class="mb-4">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">รองรับ QR Code:</p>
@@ -407,7 +407,7 @@ onUnmounted(() => {
               
               <!-- ===== Scan Mode ===== -->
               <div v-if="mode === 'scan'" class="mb-4">
-                <div class="relative aspect-square bg-gray-900 rounded-xl overflow-hidden max-h-[240px]">
+                <div class="relative aspect-square bg-gray-900 rounded-xl overflow-hidden">
                   <video 
                     ref="videoRef" 
                     class="w-full h-full object-cover"
@@ -419,11 +419,13 @@ onUnmounted(() => {
                   <!-- Overlay when not scanning -->
                   <div 
                     v-if="!isScanning" 
-                    class="absolute inset-0 bg-gray-900/80 flex flex-col items-center justify-center cursor-pointer"
+                    class="absolute inset-0 bg-gray-900/80 flex items-center justify-center p-2 cursor-pointer group"
                     @click="handleStartScan"
                   >
-                    <Icon icon="fluent:camera-24-regular" class="w-12 h-12 text-gray-400 mb-2" />
-                    <p class="text-gray-400 text-sm">คลิกเพื่อเริ่มสแกน</p>
+                    <div class="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-600 rounded-xl group-hover:border-vikinger-purple/50 group-hover:bg-white/5 transition-all">
+                      <Icon icon="fluent:camera-24-regular" class="w-12 h-12 text-gray-400 group-hover:text-vikinger-purple transition-colors mb-2" />
+                      <p class="text-gray-400 group-hover:text-gray-300 text-sm transition-colors text-center px-2">คลิกเพื่อเริ่มสแกน</p>
+                    </div>
                   </div>
                   
                   <!-- Processing overlay -->

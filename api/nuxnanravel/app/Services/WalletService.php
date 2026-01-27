@@ -219,7 +219,7 @@ class WalletService
     public function convertWalletToPoints(User $user, float $amount): array
     {
         return DB::transaction(function () use ($user, $amount) {
-            $exchangeRate = 1080; // 1 THB = 1080 points
+            $exchangeRate = 1200; // 1 THB = 1200 points
             $pointsAmount = $amount * $exchangeRate;
 
             $walletBalanceBefore = $user->wallet;

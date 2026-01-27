@@ -50,11 +50,29 @@ const handleImageError = (event: Event) => {
   // Fallback to UI Avatars
   img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&color=7F9CF5&background=EBF4FF`
 }
+
+// Scroll to end (latest attendances)
+const tableContainer = ref<HTMLElement | null>(null)
+
+const scrollToEnd = async () => {
+  await nextTick()
+  if (tableContainer.value) {
+    tableContainer.value.scrollLeft = tableContainer.value.scrollWidth
+  }
+}
+
+onMounted(() => {
+  scrollToEnd()
+})
+
+watch(() => props.attendances, () => {
+  scrollToEnd()
+}, { deep: true })
 </script>
 
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-    <div class="relative overflow-x-auto">
+    <div ref="tableContainer" class="relative overflow-x-auto">
       <table class="w-full">
         <!-- Table Header -->
         <thead class="bg-gradient-to-r from-gray-50 via-gray-100 to-slate-100 dark:from-gray-700 dark:via-gray-800 dark:to-gray-700 border-b-2 border-gray-200 dark:border-gray-600">

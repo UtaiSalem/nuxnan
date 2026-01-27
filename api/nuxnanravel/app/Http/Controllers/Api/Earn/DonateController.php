@@ -20,13 +20,27 @@ class DonateController extends \App\Http\Controllers\Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $donates = Donate::latest()->paginate();
+        $query = Donate::latest();
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $donates = $query->paginate($request->get('per_page', 15));
         $donatesResource = DonateResource::collection($donates);
+
+        $stats = [
+            'total' => Donate::count(),
+            'pending' => Donate::where('status', 0)->count(),
+            'approved' => Donate::where('status', 1)->count(),
+            'rejected' => Donate::where('status', 2)->count(),
+        ];
 
         return response()->json([
             'donates' => $donatesResource,
+            'stats' => $stats,
         ]);
     }
 

@@ -147,7 +147,7 @@ const clearRecipient = () => {
 }
 
 const convertForm = ref({
-  points: 1080
+  points: 1200
 })
 
 const convertToPointsForm = ref({
@@ -178,7 +178,7 @@ const walletBalance = computed(() => authStore.user?.wallet || 0)
 
 const conversionPreview = computed(() => {
   const pts = convertForm.value.points
-  const rate = 1080 // 1080 points = 1 THB
+  const rate = 1200 // 1200 points = 1 THB
   return {
     points: pts,
     money: pts / rate,
@@ -188,7 +188,7 @@ const conversionPreview = computed(() => {
 
 const convertToPointsPreview = computed(() => {
   const amount = convertToPointsForm.value.amount
-  const rate = 1080 // 1 THB = 1080 points
+  const rate = 1200 // 1 THB = 1200 points
   return {
     amount: amount,
     points: amount * rate,
@@ -1313,7 +1313,7 @@ onMounted(async () => {
                 <Icon icon="mdi:information" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
                 <div>
                   <p class="font-medium text-amber-800 dark:text-amber-300">อัตราแลกเปลี่ยน</p>
-                  <p class="text-sm text-amber-700 dark:text-amber-400">1,080 แต้ม = 1 บาท</p>
+                  <p class="text-sm text-amber-700 dark:text-amber-400">1,200 แต้ม = 1 บาท</p>
                 </div>
               </div>
             </div>
@@ -1325,9 +1325,9 @@ onMounted(async () => {
                 <input
                   v-model.number="convertForm.points"
                   type="number"
-                  min="1080"
+                  min="1200"
                   :max="points"
-                  step="1080"
+                  step="1200"
                   class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="ระบุจำนวนแต้ม"
                 >
@@ -1373,7 +1373,7 @@ onMounted(async () => {
                 <Icon icon="mdi:information" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                 <div>
                   <p class="font-medium text-emerald-800 dark:text-emerald-300">อัตราแลกเปลี่ยน</p>
-                  <p class="text-sm text-emerald-700 dark:text-emerald-400">1 บาท = 1,080 แต้ม</p>
+                  <p class="text-sm text-emerald-700 dark:text-emerald-400">1 บาท = 1,200 แต้ม</p>
                   <p class="text-xs text-emerald-600 dark:text-emerald-500 mt-1">สำหรับการสนับสนุนโฆษณา</p>
                 </div>
               </div>

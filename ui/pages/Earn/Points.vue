@@ -77,7 +77,7 @@ const processMessage = ref('')
 const quickTransferAmounts = [100, 240, 500, 1000, 2000]
 
 // Quick amounts for convert
-const quickConvertAmounts = [1200, 2400, 5400, 10800, 21600] // 1, 2, 5, 10, 20 THB
+const quickConvertAmounts = [1200, 2400, 4800, 6000, 9600, 12000, 14400, 18000, 24000, 30000, 48000, 120000] // 1, 2, 4, 5, 8, 10, 12, 15, 20, 25, 40, 100 THB
 
 // Computed
 const pointsBalance = computed(() => authStore.points || 0)
@@ -936,6 +936,23 @@ onMounted(async () => {
           </div>
           
           <div class="space-y-6">
+            <!-- Quick Amounts -->
+              <div class="flex flex-wrap gap-2 mb-4">
+                <button 
+                  v-for="amount in quickConvertAmounts"
+                  :key="amount"
+                  type="button"
+                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  :class="convertForm.points === amount 
+                    ? 'bg-amber-500 text-white' 
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                  :disabled="amount > pointsBalance"
+                  @click="convertForm.points = amount"
+                >
+                  {{ formatPoints(amount) }} ({{ (amount / 1200).toFixed(0) }}฿)
+                </button>
+              </div>
+
             <!-- Points Amount -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -956,23 +973,6 @@ onMounted(async () => {
               <p class="text-xs text-gray-500 mt-1">
                 แต้มของคุณ: {{ formatPoints(pointsBalance) }} แต้ม | ขั้นต่ำ: 1,200 แต้ม
               </p>
-              
-              <!-- Quick Amounts -->
-              <div class="flex flex-wrap gap-2 mt-3">
-                <button 
-                  v-for="amount in quickConvertAmounts"
-                  :key="amount"
-                  type="button"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="convertForm.points === amount 
-                    ? 'bg-amber-500 text-white' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
-                  :disabled="amount > pointsBalance"
-                  @click="convertForm.points = amount"
-                >
-                  {{ formatPoints(amount) }} ({{ (amount / 1200).toFixed(0) }}฿)
-                </button>
-              </div>
             </div>
             
             <!-- Conversion Preview -->
