@@ -27,3 +27,6 @@ logs
 pnpm-lock.yaml
 yarn.lock
 package-lock.json
+
+# Nuxt dev/build outputs
+.output
