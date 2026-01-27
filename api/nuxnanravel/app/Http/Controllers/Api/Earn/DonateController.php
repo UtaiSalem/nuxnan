@@ -37,8 +37,15 @@ class DonateController extends \App\Http\Controllers\Controller
      */
     public function store(Request $request)
     {
-        $user = auth()->user();
-        $isAnonymous = !$user;
+        $user = auth()->user() ?? auth('api')->user();
+        
+        // If user is not authenticated but user_id is sent (for Slip payment via Web)
+        if (!$user && $request->has('user_id') && $request->input('payment_method') === 'slip') {
+           $user = User::find($request->input('user_id'));
+        }
+
+        $isAnonymousRequested = $request->boolean('is_anonymous', false);
+        $isAnonymous = $isAnonymousRequested || !$user;
         $paymentMethod = $request->input('payment_method', 'slip');
 
         // กำหนด validation rules - anonymous ต้องมี slip เสมอ
@@ -47,6 +54,7 @@ class DonateController extends \App\Http\Controllers\Controller
             'transfer_date' => 'required',
             'transfer_time' => 'required',
             'payment_method' => 'nullable|in:slip,wallet,points',
+            'donor_name' => 'nullable|string|max:255',
             'slip' => ($isAnonymous || $paymentMethod === 'slip') ? 'required|image|mimes:jpg,jpeg,png,gif,svg|max:2048' : 'nullable|image|mimes:jpg,jpeg,png,gif,svg|max:2048',
         ];
 
@@ -65,7 +73,7 @@ class DonateController extends \App\Http\Controllers\Controller
             if ($request->hasFile('slip')) {
                 $slip_file = $request->file('slip');
                 $slip_filename = uniqid() . '.' . $slip_file->getClientOriginalExtension();
-                Storage::disk('public')->putFileAs('images/donates/slips', $slip_file, $slip_filename);
+                Storage::disk('public')->putFileAs('images/donates', $slip_file, $slip_filename);
             }
 
             $donate = new Donate();
@@ -78,7 +86,7 @@ class DonateController extends \App\Http\Controllers\Controller
             } else {
                 $donate->user_id = $user->id;
                 $donate->donor_id = $user->id;
-                $donate->donor_name = $user->name;
+                $donate->donor_name = $request->input('donor_name', $user->name);
             }
             
             $donate->amounts = $validated['amounts'];

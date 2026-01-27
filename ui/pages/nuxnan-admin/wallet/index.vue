@@ -26,6 +26,29 @@ const summary = ref({
   activeWallets: 8956
 })
 
+// Fetch summary stats
+const fetchSummaryStats = async () => {
+  try {
+    const token = useCookie('token')
+    const response = await $fetch(`${apiBase}/api/nuxnan-admin/wallet/stats`, {
+      headers: {
+        Authorization: `Bearer ${token.value}`
+      }
+    })
+
+    if (response.success) {
+      summary.value = {
+        totalDeposits: response.data.total_wallet || 0,
+        totalWithdrawals: response.data.total_withdrawals || 0,
+        pendingApprovals: (response.data.deposit_requests?.pending || 0) + (response.data.pending_withdrawals || 0),
+        activeWallets: response.data.total_users || 0
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch summary stats:', error)
+  }
+}
+
 // Transaction types
 const types = [
   { value: 'all', label: 'ทั้งหมด' },
@@ -92,6 +115,7 @@ const getStatusBadge = (status: string) => {
 
 onMounted(() => {
   fetchTransactions()
+  fetchSummaryStats()
 })
 </script>
 

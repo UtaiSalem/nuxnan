@@ -484,7 +484,7 @@ class WalletController extends Controller
         $validated = $request->validate([
             'amount' => 'required|numeric|min:10',
             'payment_method' => 'required|string|in:bank_transfer,promptpay,credit_card',
-            'bank_name' => 'required_if:payment_method,bank_transfer|nullable|string|max:100',
+            'bank_name' => 'nullable|string|max:100',
             'account_number' => 'nullable|string|max:50',
             'account_name' => 'nullable|string|max:100',
             'transfer_slip' => 'required|image|max:5120', // 5MB max

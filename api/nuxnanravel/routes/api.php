@@ -1,20 +1,24 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Models\Post;
+use App\Models\User;
 
 // Import Controllers
+use App\Models\Activity;
+use Illuminate\Http\Request;
+use App\Http\Resources\UserResource;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\WelcomeController;
+use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Play\FriendController;
+use App\Http\Controllers\Api\Play\ActivityController;
+use App\Http\Controllers\Api\Play\NewsfeedController;
 use App\Http\Controllers\Api\Shared\SuggesterController;
+use App\Http\Controllers\Api\Auth\ProviderAuthController;
 use App\Http\Controllers\Api\Shared\UserProfileController;
 use App\Http\Controllers\Api\Shared\ForgotPasswordController;
-use App\Http\Controllers\Api\Play\FriendController;
-use App\Http\Controllers\Api\Play\NewsfeedController;
-use App\Http\Controllers\Api\Play\ActivityController;
 use App\Http\Controllers\Api\Learn\Course\info\MentalMathController;
-use App\Http\Controllers\Api\Auth\ProviderAuthController;
-use App\Http\Controllers\Api\Auth\AuthController;
-use App\Http\Controllers\Api\SettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,12 +32,13 @@ use App\Http\Controllers\Api\SettingsController;
 */
 
 Route::get('/user1', function () {
-    $user1 = \App\Models\User::find(2);
-    $user1Resource = new \App\Http\Resources\UserResource($user1);
+    $user1 = User::find(2);
+    $user1Resource = new UserResource($user1);
     return response()->json([
         'user' => $user1Resource
     ]);
 });
+
 Route::get('/ping', function () {
     return response()->json([
         'status' => 'ok',
@@ -41,6 +46,7 @@ Route::get('/ping', function () {
         'timestamp' => now()->toDateTimeString()
     ]);
 });
+
 // Public Routes
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::get('/welcome', [WelcomeController::class, 'index'])->name('api.welcome');
@@ -55,10 +61,10 @@ Route::get('/mental-math', [MentalMathController::class, 'index'])->name('mental
 Route::get('/debug-data', function () {
     return response()->json([
         'user_id' => auth()->id(),
-        'activity_count' => \App\Models\Activity::count(),
-        'post_count' => \App\Models\Post::count(),
-        'my_activities' => \App\Models\Activity::where('user_id', auth()->id())->get(),
-        'all_activities' => \App\Models\Activity::latest()->take(5)->get(),
+        'activity_count' => Activity::count(),
+        'post_count' => Post::count(),
+        'my_activities' => Activity::where('user_id', auth()->id())->get(),
+        'all_activities' => Activity::latest()->take(5)->get(),
     ]);
 })->middleware('auth:api');
 
@@ -78,7 +84,7 @@ if (env('APP_DEBUG')) {
         $loginInput = $request->input('login', '0938403000');
         $password = $request->input('password', 'password');
 
-        $user = \App\Models\User::where('email', $loginInput)
+        $user = User::where('email', $loginInput)
             ->orWhere('phone_number', $loginInput)
             ->orWhere('personal_code', $loginInput)
             ->orWhere('name', $loginInput)
@@ -225,37 +231,25 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('super-admins')->group(fu
 // Include other route files
 require __DIR__ . '/earn/donate.php';
 require __DIR__ . '/earn/advert.php';
+require __DIR__ . '/earn/points-wallet.php';
+require __DIR__ . '/earn/coupons.php';
+require __DIR__ . '/earn/qr.php';
 require __DIR__ . '/play/post.php';
 require __DIR__ . '/play/game.php';
+require __DIR__ . '/play/shares.php';
+require __DIR__ . '/play/photos.php';
+require __DIR__ . '/play/videos.php';
 require __DIR__ . '/learn/academy.php';
 require __DIR__ . '/learn/course.php';
 require __DIR__ . '/learn/student.php';
 require __DIR__ . '/homevisit/homevisit.php';
 require __DIR__ . '/studentcard/studentcard.php';
-
-// Share system routes
-require __DIR__ . '/api_shares.php';
-
-// Points & Wallet system routes
-require __DIR__ . '/api-points-wallet.php';
-
-// Coupons system routes
-require __DIR__ . '/api-coupons.php';
-
-// Universal QR Code system routes
-require __DIR__ . '/api-qr.php';
-
-// Photos & Albums system routes
-require __DIR__ . '/api-photos.php';
-
-// Videos system routes
-require __DIR__ . '/api-videos.php';
-
-// Admin panel routes
-require __DIR__ . '/api-admin.php';
+require __DIR__ . '/admin/admin.php';
 
 // Debug routes (remove in production)
 if (env('APP_DEBUG')) {
-    require __DIR__ . '/debug_login.php';
-    require __DIR__ . '/test_simple.php';
+    require __DIR__ . '/debug/debug_login.php';
+    require __DIR__ . '/debug/test_simple.php';
+    require __DIR__ . '/debug/diagnostic.php';
+    require __DIR__ . '/debug/test_phone.php';
 }

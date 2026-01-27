@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
 import Swal from 'sweetalert2'
 
 const api = useApi()
 const authStore = useAuthStore()
+const config = useRuntimeConfig()
 
 interface DonorProfile {
   first_name?: string
@@ -69,6 +70,16 @@ const emit = defineEmits<{
 
 const isSendingRequest = ref(false)
 const requestSent = ref(false)
+
+// Computed property for donor avatar with fallback to correct API URL
+const donorAvatar = computed(() => {
+  const avatar = props.donate.donor?.avatar
+  // If no avatar, or avatar contains incorrect '/storages/' path, use the correct fallback
+  if (!avatar || avatar.includes('/storages/')) {
+    return `${config.public.apiBase}/storage/images/plearnd-logo.png`
+  }
+  return avatar
+})
 
 const sendFriendRequest = async () => {
   if (!props.donate.donor) return
@@ -141,7 +152,7 @@ const shouldShowAddFriend = () => {
         <div class="flex-shrink-0 relative">
           <img
             class="w-20 h-20 rounded-full border-4 border-white shadow-lg transform hover:scale-110 transition-transform duration-300"
-            :src="donate.donor ? donate.donor.avatar : '/storages/plearnd-logo.png'"
+            :src="donorAvatar"
             :alt="donate.donor ? donate.donor.username + ' photo' : 'donor-image'"
           />
           <div

@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\WalletTransaction;
+use App\Models\WalletDepositRequest;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AdminWalletController extends Controller
 {
@@ -26,7 +28,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (!$user || !$user->isPlearndAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -53,6 +55,11 @@ class AdminWalletController extends Controller
             ->where('status', 'completed')
             ->count();
 
+        // Deposit request statistics
+        $pendingDepositRequests = WalletDepositRequest::where('status', WalletDepositRequest::STATUS_PENDING)->count();
+        $approvedDepositRequests = WalletDepositRequest::where('status', WalletDepositRequest::STATUS_APPROVED)->count();
+        $rejectedDepositRequests = WalletDepositRequest::where('status', WalletDepositRequest::STATUS_REJECTED)->count();
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -63,6 +70,12 @@ class AdminWalletController extends Controller
                 'total_deposits' => $totalDeposits,
                 'total_transfers' => $totalTransfers,
                 'total_conversions' => $totalConversions,
+                'deposit_requests' => [
+                    'pending' => $pendingDepositRequests,
+                    'approved' => $approvedDepositRequests,
+                    'rejected' => $rejectedDepositRequests,
+                    'total' => $pendingDepositRequests + $approvedDepositRequests + $rejectedDepositRequests,
+                ],
             ],
         ]);
     }
@@ -74,7 +87,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (!$user || !$user->isPlearndAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -99,6 +112,42 @@ class AdminWalletController extends Controller
                     'total_pages' => $withdrawals->lastPage(),
                     'per_page' => $withdrawals->perPage(),
                     'total_items' => $withdrawals->total(),
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Get pending deposit requests.
+     */
+    public function pendingDepositRequests(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->isPlearndAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        $depositRequests = WalletDepositRequest::with('user')
+            ->where('status', WalletDepositRequest::STATUS_PENDING)
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'deposit_requests' => $depositRequests->items(),
+                'pagination' => [
+                    'current_page' => $depositRequests->currentPage(),
+                    'total_pages' => $depositRequests->lastPage(),
+                    'per_page' => $depositRequests->perPage(),
+                    'total_items' => $depositRequests->total(),
                 ],
             ],
         ]);
@@ -147,13 +196,60 @@ class AdminWalletController extends Controller
     }
 
     /**
+     * Approve deposit request.
+     */
+    public function approveDepositRequest(Request $request, int $requestId): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->isPlearndAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $depositRequest = WalletDepositRequest::find($requestId);
+
+        if (!$depositRequest) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Deposit request not found',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'admin_note' => 'nullable|string|max:500',
+        ]);
+
+        $result = $this->walletService->approveDepositRequest($depositRequest, $validated['admin_note'] ?? null);
+
+        if (!$result) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot approve this deposit request',
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Deposit request approved successfully',
+            'data' => [
+                'request_id' => $depositRequest->id,
+                'status' => 'approved',
+                'wallet_transaction_id' => $depositRequest->wallet_transaction_id,
+            ],
+        ]);
+    }
+
+    /**
      * Reject withdrawal.
      */
     public function rejectWithdrawal(Request $request, int $transactionId): JsonResponse
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (!$user || !$user->isPlearndAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -188,6 +284,58 @@ class AdminWalletController extends Controller
             'data' => [
                 'transaction_id' => $transaction->id,
                 'status' => 'cancelled',
+                'reason' => $validated['reason'],
+            ],
+        ]);
+    }
+
+    /**
+     * Reject deposit request.
+     */
+    public function rejectDepositRequest(Request $request, int $requestId): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->isPlearndAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|max:255',
+            'admin_note' => 'nullable|string|max:500',
+        ]);
+
+        $depositRequest = WalletDepositRequest::find($requestId);
+
+        if (!$depositRequest) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Deposit request not found',
+            ], 404);
+        }
+
+        $result = $this->walletService->rejectDepositRequest(
+            $depositRequest,
+            $validated['reason'],
+            $validated['admin_note'] ?? null
+        );
+
+        if (!$result) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot reject this deposit request',
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Deposit request rejected successfully',
+            'data' => [
+                'request_id' => $depositRequest->id,
+                'status' => 'rejected',
                 'reason' => $validated['reason'],
             ],
         ]);

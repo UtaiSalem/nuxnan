@@ -22,7 +22,16 @@ const fetchAdmins = async () => {
     try {
         const res: any = await api.get(`/api/courses/${courseId}/admins`)
         if (res.success) {
-            admins.value = res.admins
+            const realAdmins = res.admins.map((a: any) => ({ ...a, status: 1 }))
+            const pendingInvites = (res.invitations || []).map((i: any) => ({
+                id: `invite-${i.id}`, // Avoid key collision
+                user: i.invitee,
+                role: i.role,
+                status: 2, // 2 = Pending
+                is_invitation: true,
+                invitation_id: i.id // Keep original ID for API calls
+            }))
+            admins.value = [...realAdmins, ...pendingInvites]
         }
     } catch (e) {
         console.error('Failed to fetch admins', e)
@@ -75,23 +84,33 @@ const inviteUser = async (user: any) => {
 
 // Remove
 const removeAdmin = async (member: any) => {
+    const isInvite = member.is_invitation
+    const title = isInvite ? 'ยกเลิกคำเชิญ?' : 'ยืนยันการลบ?'
+    const text = isInvite 
+        ? `คุณต้องการยกเลิกคำเชิญ "${member.user?.name}"?` 
+        : `คุณต้องการลบ "${member.user?.name}" ออกจากผู้ดูแล?`
+        
     const result = await Swal.fire({
-        title: 'ยืนยันการลบ?',
-        text: `คุณต้องการลบ "${member.user?.name}" ออกจากผู้ดูแล?`,
+        title: title,
+        text: text,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'ลบเลย',
+        confirmButtonText: isInvite ? 'ยกเลิกคำเชิญ' : 'ลบเลย',
         cancelButtonText: 'ยกเลิก',
         confirmButtonColor: '#d33'
     })
 
     if (result.isConfirmed) {
         try {
-            await api.delete(`/api/courses/${courseId}/admins/${member.id}`)
-            Swal.fire('ลบสำเร็จ', '', 'success')
+            if (isInvite) {
+                await api.delete(`/api/courses/${courseId}/admins/invitations/${member.invitation_id}`)
+            } else {
+                await api.delete(`/api/courses/${courseId}/admins/${member.id}`)
+            }
+            Swal.fire(isInvite ? 'ยกเลิกสำเร็จ' : 'ลบสำเร็จ', '', 'success')
             fetchAdmins()
         } catch (e) {
-            Swal.fire('ผิดพลาด', 'ไม่สามารถลบได้', 'error')
+            Swal.fire('ผิดพลาด', 'ไม่สามารถดำเนินการได้', 'error')
         }
     }
 }

@@ -111,30 +111,59 @@ const getStatusInfo = (status) => {
   }
 }
 
+import Swal from 'sweetalert2'
+
 // Handle approve from table
 const handleTableApprove = async (donate) => {
   try {
-    const response = await api.patch(`/api/plearnd-admin/supports/donates/${donate.id}/recieve`, {})
-    if (response.success) {
-      handleApproved(donate.id)
+    const result = await Swal.fire({
+      title: 'ยืนยันการอนุมัติ?',
+      text: `คุณต้องการอนุมัติการสนับสนุนนี้ใช่หรือไม่ (#${donate.id})`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10B981',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'ยืนยัน, อนุมัติ!',
+      cancelButtonText: 'ยกเลิก'
+    })
+
+    if (result.isConfirmed) {
+      const response = await api.patch(`/api/plearnd-admin/supports/donates/${donate.id}/recieve`, {})
+      if (response.success) {
+        handleApproved(donate.id)
+        Swal.fire('สำเร็จ!', 'อนุมัติการสนับสนุนเรียบร้อยแล้ว', 'success')
+      }
     }
   } catch (err) {
     console.error('Failed to approve:', err)
-    alert('ไม่สามารถอนุมัติได้')
+    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถอนุมัติได้ กรุณาลองใหม่', 'error')
   }
 }
 
 // Handle reject from table
 const handleTableReject = async (donate) => {
-  if (!confirm('คุณแน่ใจหรือไม่ที่จะปฏิเสธการสนับสนุนนี้?')) return
   try {
-    const response = await api.patch(`/api/plearnd-admin/supports/donates/${donate.id}/reject`, {})
-    if (response.success) {
-      handleRejected(donate.id)
+    const result = await Swal.fire({
+      title: 'ยืนยันการปฏิเสธ?',
+      text: "คุณแน่ใจหรือไม่ที่จะปฏิเสธการสนับสนุนนี้? การกระทำนี้ไม่สามารถย้อนกลับได้",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#EF4444',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'ยืนยัน, ปฏิเสธ!',
+      cancelButtonText: 'ยกเลิก'
+    })
+
+    if (result.isConfirmed) {
+      const response = await api.patch(`/api/plearnd-admin/supports/donates/${donate.id}/reject`, {})
+      if (response.success) {
+        handleRejected(donate.id)
+        Swal.fire('เรียบร้อย', 'ปฏิเสธการสนับสนุนแล้ว', 'success')
+      }
     }
   } catch (err) {
     console.error('Failed to reject:', err)
-    alert('ไม่สามารถปฏิเสธได้')
+    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถปฏิเสธได้ กรุณาลองใหม่', 'error')
   }
 }
 

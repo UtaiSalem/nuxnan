@@ -47,6 +47,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::get('/courses/{course}/settings', [CourseController::class, 'settings'])->name('course.settings.page.show');
     Route::get('/courses/{course}/basic-info', [CourseController::class, 'basicInfo'])->name('course.basic-info.page.show');
     Route::get('/me/recent-courses', [CourseController::class, 'getRecentCourses'])->name('api.courses.recent');
+    Route::get('/me/course-invitations', [CourseAdminController::class, 'myInvitations'])->name('api.courses.my-invitations');
     Route::get('/courses/popular', [CourseController::class, 'getPopularCourses'])->name('api.courses.popular');
 });
 

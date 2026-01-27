@@ -15,6 +15,42 @@ use Illuminate\Support\Facades\DB;
 class CourseAdminController extends Controller
 {
     /**
+     * List pending invitations for the authenticated user.
+     */
+    public function myInvitations(Request $request)
+    {
+        $invitations = CourseInvitation::where('invitee_id', auth()->id())
+            ->where('status', 'pending')
+            ->with(['course', 'inviter'])
+            ->latest()
+            ->get()
+            ->map(function ($invitation) {
+                return [
+                    'id' => $invitation->id,
+                    'course' => [
+                        'id' => $invitation->course->id,
+                        'name' => $invitation->course->name,
+                        'cover' => $invitation->course->cover,
+                    ],
+                    'inviter' => [
+                        'id' => $invitation->inviter->id,
+                        'name' => $invitation->inviter->name,
+                        'avatar' => $invitation->inviter->profile_photo_url,
+                    ],
+                    'role' => $invitation->role,
+                    'role_name' => $invitation->role === 3 ? 'ผู้ช่วยสอน (TA)' : 'ผู้ดูแลระบบ (Admin)',
+                    'created_at' => $invitation->created_at,
+                    'time_ago' => $invitation->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'invitations' => $invitations,
+        ]);
+    }
+
+    /**
      * List all Admins and TAs for the course.
      */
     public function index(Course $course)

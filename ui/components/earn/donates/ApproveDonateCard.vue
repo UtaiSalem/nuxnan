@@ -40,6 +40,10 @@ const statusInfo = computed(() => {
   }
 })
 
+const donorAvatar = computed(() => {
+    return props.donate.donor?.avatar || `${config.public.apiBase}/storage/images/plearnd-logo.png`;
+})
+
 const handleApprove = async () => {
   if (isLoading.value) return
   
@@ -100,12 +104,10 @@ const handleReject = async () => {
       <div class="flex items-center gap-3">
         <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
           <img 
-            v-if="donate.donor?.avatar" 
-            :src="donate.donor.avatar" 
+            :src="donorAvatar" 
             :alt="donate.donor_name"
             class="w-full h-full object-cover"
           />
-          <Icon v-else icon="mdi:account" class="w-6 h-6 text-gray-400" />
         </div>
         <div>
           <p class="font-medium text-gray-900 dark:text-white">

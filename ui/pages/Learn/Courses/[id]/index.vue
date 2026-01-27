@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import Swal from 'sweetalert2'
 
 // Props from parent route
 const props = defineProps<{
@@ -199,6 +200,35 @@ const formatPrice = (price: number) => {
     maximumFractionDigits: 0
   }).format(price || 0)
 }
+
+const pendingInvitation = computed(() => {
+  return course.value?.pending_invitation
+})
+
+const respondToInvitation = async (accept: boolean) => {
+  if (!pendingInvitation.value) return
+  
+  try {
+    const action = accept ? 'accept' : 'decline'
+    const res: any = await api.post(`/api/courses/${course.value.id}/admins/invitations/${pendingInvitation.value.id}/${action}`)
+    if (res.success) {
+      if (accept) {
+        // Reload page to refresh permissions
+        window.location.reload() 
+      } else {
+        // Just remove the invitation data locally
+        if (course.value) {
+            course.value.pending_invitation = null
+        }
+        // Also update store
+        courseStore.updateCourse({ pending_invitation: null })
+        Swal.fire('ปฏิเสธคำเชิญแล้ว', '', 'success')
+      }
+    }
+  } catch (error: any) {
+    Swal.fire('ข้อผิดพลาด', error.response?.data?.message || 'ทำรายการไม่สำเร็จ', 'error')
+  }
+}
 </script>
 
 <template>
@@ -207,6 +237,42 @@ const formatPrice = (price: number) => {
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Left Column - Course Details -->
       <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Invitation Alert Card -->
+        <div v-if="pendingInvitation" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10">
+                <Icon icon="fluent:mail-read-24-filled" class="w-24 h-24 text-blue-600" />
+            </div>
+            <div class="relative z-10">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="p-2 bg-blue-100 dark:bg-blue-800 rounded-full">
+                        <Icon icon="fluent:person-key-20-filled" class="w-6 h-6 text-blue-600 dark:text-blue-300" />
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-900 dark:text-white">คำเชิญเป็นผู้ดูแลรายวิชา</h3>
+                        <p class="text-blue-700 dark:text-blue-300">
+                            คุณได้รับคำเชิญให้เข้าร่วมเป็น <span class="font-semibold underline">{{ pendingInvitation.role === 4 ? 'ผู้ดูแลระบบ (Admin)' : 'ผู้ช่วยสอน (TA)' }}</span>
+                        </p>
+                    </div>
+                </div>
+                
+                <p class="text-gray-600 dark:text-gray-400 mt-2 mb-4 max-w-xl">
+                    ผู้เชิญ: {{ pendingInvitation.inviter_id }} (ตรวจสอบโดยระบบ)
+                    <br>
+                    เมื่อคุณตอบรับ คุณจะได้รับสิทธิ์ในการจัดการรายวิชานี้ตามบทบาทที่ได้รับมอบหมายทันที
+                </p>
+
+                <div class="flex gap-3">
+                    <button @click="respondToInvitation(true)" class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                        ตอบรับคำเชิญ
+                    </button>
+                    <button @click="respondToInvitation(false)" class="px-6 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        ปฏิเสธ
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Description Card -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
           <div class="flex items-center justify-between mb-4">

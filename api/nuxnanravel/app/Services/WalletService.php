@@ -426,4 +426,90 @@ class WalletService
             return true;
         });
     }
+
+    /**
+     * Approve deposit request
+     */
+    public function approveDepositRequest(\App\Models\WalletDepositRequest $request, ?string $adminNote = null): bool
+    {
+        if (!$request->isPending()) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($request, $adminNote) {
+            $user = $request->user;
+            $balanceBefore = $user->wallet;
+            $balanceAfter = $balanceBefore + $request->amount;
+
+            // Update user wallet
+            $user->update([
+                'wallet' => $balanceAfter,
+            ]);
+
+            // Create wallet transaction
+            $transaction = WalletTransaction::create([
+                'user_id' => $user->id,
+                'transaction_type' => 'deposit',
+                'amount' => $request->amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'currency' => 'THB',
+                'description' => "ฝากเงินผ่าน {$request->payment_method_label}",
+                'metadata' => [
+                    'deposit_request_id' => $request->id,
+                    'payment_method' => $request->payment_method,
+                    'bank_name' => $request->bank_name,
+                    'account_number' => $request->account_number,
+                    'reference_number' => $request->reference_number,
+                ],
+                'reference_number' => $request->reference_number,
+                'status' => 'completed',
+            ]);
+
+            // Update deposit request
+            $request->update([
+                'status' => \App\Models\WalletDepositRequest::STATUS_APPROVED,
+                'reviewed_by' => auth()->id(),
+                'reviewed_at' => now(),
+                'admin_note' => $adminNote,
+                'wallet_transaction_id' => $transaction->id,
+            ]);
+
+            Log::info('Deposit request approved', [
+                'request_id' => $request->id,
+                'user_id' => $user->id,
+                'amount' => $request->amount,
+                'transaction_id' => $transaction->id,
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Reject deposit request
+     */
+    public function rejectDepositRequest(\App\Models\WalletDepositRequest $request, string $reason, ?string $adminNote = null): bool
+    {
+        if (!$request->isPending()) {
+            return false;
+        }
+
+        $request->update([
+            'status' => \App\Models\WalletDepositRequest::STATUS_REJECTED,
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+            'rejection_reason' => $reason,
+            'admin_note' => $adminNote,
+        ]);
+
+        Log::info('Deposit request rejected', [
+            'request_id' => $request->id,
+            'user_id' => $request->user_id,
+            'amount' => $request->amount,
+            'reason' => $reason,
+        ]);
+
+        return true;
+    }
 }

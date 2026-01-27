@@ -36,6 +36,8 @@ class WalletDepositRequest extends Model
         'reviewed_at' => 'datetime',
     ];
 
+    protected $appends = ['slip_url', 'status_label', 'payment_method_label'];
+
     /**
      * Status constants
      */

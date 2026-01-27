@@ -14,6 +14,36 @@ const isLoading = ref(true)
 const page = ref(1)
 const lastPage = ref(1)
 const isLoadingMore = ref(false)
+const invitations = ref<any[]>([])
+
+const fetchInvitations = async () => {
+  if (!user.value) return
+  try {
+    const res: any = await api.get('/api/me/course-invitations')
+    if (res.success) {
+      invitations.value = res.invitations
+    }
+  } catch (error) {
+    console.error('Failed to fetch invitations', error)
+  }
+}
+
+const respondToInvitation = async (invitation: any, accept: boolean) => {
+  try {
+    const action = accept ? 'accept' : 'decline'
+    const res: any = await api.post(`/api/courses/${invitation.course.id}/admins/invitations/${invitation.id}/${action}`)
+    if (res.success) {
+      // Remove from list
+      invitations.value = invitations.value.filter(i => i.id !== invitation.id)
+      // Refresh my courses if accepted
+      if (accept) {
+        fetchMyCourses()
+      }
+    }
+  } catch (error: any) {
+    alert(error.response?.data?.message || 'ทำรายการไม่สำเร็จ')
+  }
+}
 
 const fetchMyCourses = async (isLoadMore = false) => {
   if (!user.value) return
@@ -22,6 +52,11 @@ const fetchMyCourses = async (isLoadMore = false) => {
     isLoadingMore.value = true
   } else {
     isLoading.value = true
+  }
+  
+  // Fetch invitations only on initial load
+  if (!isLoadMore) {
+    fetchInvitations()
   }
 
   try {
@@ -135,6 +170,32 @@ const formatPoints = (num: number) => {
     </div>
 
     <div v-else class="space-y-4">
+      <!-- Invitations Section -->
+      <div v-if="invitations.length > 0" class="mb-4">
+        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">คำเชิญผู้ดูแล</h4>
+        <div class="space-y-2">
+          <div v-for="invitation in invitations" :key="invitation.id" class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
+            <div class="flex items-start gap-3">
+               <img
+                  :src="getCoverUrl({ cover: invitation.course.cover })"
+                  class="w-10 h-10 object-cover rounded-md flex-shrink-0"
+                />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ invitation.course.name }}</p>
+                  <p class="text-xs text-blue-600 dark:text-blue-400">
+                    เชิญเป็น: {{ invitation.role_name }}
+                  </p>
+                  <div class="flex gap-2 mt-2">
+                    <button @click="respondToInvitation(invitation, true)" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">ตอบรับ</button>
+                    <button @click="respondToInvitation(invitation, false)" class="text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded">ปฏิเสธ</button>
+                  </div>
+                </div>
+            </div>
+          </div>
+        </div>
+        <div class="h-px bg-gray-100 dark:bg-gray-700 my-4"></div>
+      </div>
+
       <template v-if="myCourses.length > 0">
         <NuxtLink
           v-for="course in myCourses"
