@@ -1,0 +1,1 @@
+import{_ as o,c as s,o as c,a as e}from"./DvtEeXFW.js";const a={},t={class:"hidden sm:block"};function d(n,r){return c(),s("div",t,[...r[0]||(r[0]=[e("div",{class:"py-8"},[e("div",{class:"border-t border-gray-200 dark:border-gray-700"})],-1)])])}const _=o(a,[["render",d]]);export{_ as S};

@@ -1,0 +1,1 @@
+import{ak as a,l as r,K as e}from"./DvtEeXFW.js";const o=a((t,i)=>{const n=r();if(!n.isAuthenticated)return e("/nuxnan-admin/login");if(!n.user?.is_plearnd_admin&&!n.user?.is_super_admin)return e("/nuxnan-admin/login?error=unauthorized")});export{o as default};

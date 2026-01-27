@@ -1,0 +1,1 @@
+import{l as c,n as s}from"./DvtEeXFW.js";const h=()=>{const t=c(),o=async r=>{try{return await t.login(r),!0}catch(e){throw e}},u=async r=>(await new Promise(e=>setTimeout(e,500)),!0),n=s(()=>t.user),a=s(()=>t.isAuthenticated);return{user:n,isAuthenticated:a,login:o,register:u}};export{h as u};
