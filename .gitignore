@@ -5,6 +5,8 @@
 # Ignore everything by default
 *
 
+# Unignore gitignore itself
+!.gitignore
 
 # Ignore vendor and node_modules in all locations
 vendor/
@@ -13,11 +15,14 @@ node_modules/
 **/node_modules/
 
 # Unignore specific directories and all subfolders/files
+!api/
 !api/**
+!ui/
 !ui/**
 
-# Unignore gitignore itself
-!.gitignore
+# Explicitly unignore ui/.output directory and contents
+!ui/.output/
+!ui/.output/**
 
 # Explicitly ignore storage
 api/nuxnanravel/storage/

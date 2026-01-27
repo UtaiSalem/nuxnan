@@ -1,0 +1,8 @@
+const GuessingNumberGame_vue_vue_type_style_index_0_scoped_2200668e_lang = '@import"https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap";body[data-v-2200668e],button[data-v-2200668e],input[data-v-2200668e]{font-family:Sarabun,sans-serif}input[data-v-2200668e]{font-size:16px;line-height:2}input[data-v-2200668e]::-moz-placeholder{font-family:Sarabun,sans-serif;line-height:1.5}input[data-v-2200668e]::placeholder{font-family:Sarabun,sans-serif;line-height:1.5}';
+
+const GuessingNumberGameStyles_BtoUdgTR = [
+  GuessingNumberGame_vue_vue_type_style_index_0_scoped_2200668e_lang
+];
+
+export { GuessingNumberGameStyles_BtoUdgTR as default };
+//# sourceMappingURL=GuessingNumberGame-styles.BtoUdgTR.mjs.map

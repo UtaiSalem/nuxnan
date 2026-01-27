@@ -1,0 +1,1 @@
+import{_ as r,I as c,f as s,g as t,o as p,m as a}from"./CHs-R6Sv.js";const i={name:"IconWrapper",components:{Icon:c},props:{icon:{type:String,required:!0}}};function _(o,m,n,I,f,u){const e=s("Icon");return p(),t(e,a({icon:n.icon},o.$attrs),null,16,["icon"])}const d=r(i,[["render",_]]);export{d as I};
