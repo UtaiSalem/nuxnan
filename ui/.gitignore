@@ -23,10 +23,3 @@ logs
 .env.*
 !.env.example
 
-# Package manager
-pnpm-lock.yaml
-yarn.lock
-package-lock.json
-
-# Nuxt dev/build outputs
-.output
