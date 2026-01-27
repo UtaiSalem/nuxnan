@@ -727,7 +727,7 @@ onMounted(async () => {
                             <p class="font-bold text-gray-900 dark:text-white leading-tight">
                               {{ getTransactionDisplayTitle(tx) }}
                             </p>
-                            <p v-if="getTransactionDisplaySubtitle(tx)" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mt-1 line-clamp-1">
+                            <p v-if="getTransactionDisplaySubtitle(tx)" class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
                               {{ getTransactionDisplaySubtitle(tx) }}
                             </p>
                             <div class="flex items-center gap-2 mt-1.5">
@@ -1157,7 +1157,7 @@ onMounted(async () => {
                           <p class="font-bold text-gray-900 dark:text-white leading-tight">
                             {{ getTransactionDisplayTitle(tx) }}
                           </p>
-                          <p v-if="getTransactionDisplaySubtitle(tx)" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mt-1">
+                          <p v-if="getTransactionDisplaySubtitle(tx)" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {{ getTransactionDisplaySubtitle(tx) }}
                           </p>
                           <div class="flex items-center gap-2 mt-1.5">
