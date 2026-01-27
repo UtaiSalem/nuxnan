@@ -149,13 +149,29 @@ const saveProfile = async () => {
     isSaving.value = true;
     saveSuccess.value = false;
     try {
-        await api.patch(`/api/courses/${props.courseId}/members/${props.memberId}/update`, form.value);
+        await api.patch(`/api/courses/${props.courseId}/members/${props.memberId}/update-own-profile`, form.value);
+        
+        // Update local data without refresh
+        if (data.value && data.value.member) {
+            Object.assign(data.value.member, form.value);
+            // Update group details if needed
+            if (form.value.group_id && data.value.groups) {
+                const group = data.value.groups.find(g => g.id === form.value.group_id);
+                if (group) data.value.member.group = group;
+            }
+        }
+
+        swal.success('บันทึกข้อมูลเรียบร้อย');
         saveSuccess.value = true;
         setTimeout(() => saveSuccess.value = false, 3000);
-        await fetchData(); // Refresh data
     } catch (e) {
         console.error(e);
-        alert('บันทึกข้อมูลไม่สำเร็จ');
+        const status = e.response?.status || e.status;
+        if (status === 403) {
+            swal.error('คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้ (Forbidden)', 'Access Denied');
+        } else {
+            swal.error(e.message || 'บันทึกข้อมูลไม่สำเร็จ', 'Error');
+        }
     } finally {
         isSaving.value = false;
     }

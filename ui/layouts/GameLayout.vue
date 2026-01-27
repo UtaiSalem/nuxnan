@@ -1,49 +1,94 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import MainLayout from '~/layouts/main.vue'
+import { Icon } from '@iconify/vue'
+
+const games = [
+  { name: 'ทายตัวเลข', path: '/play/games/guessing-number-game', icon: 'fluent:number-symbol-24-regular' },
+  { name: 'XO', path: '/play/games/xo-game', icon: 'fluent:grid-24-regular' },
+  { name: 'งู', path: '/play/games/snake-game', icon: 'fluent:animal-turtle-24-regular' },
+  { name: 'จับคู่', path: '/play/games/mental-match', icon: 'fluent:brain-circuit-24-regular' },
+]
+
+// Formatting helper
+const formatNumber = (num) => {
+  return num >= 1000 ? (num / 1000).toFixed(1) + 'k' : num
+}
 </script>
+
 <template>
-    <div class="flex h-screen bg-gray-200">
-      <!-- Sidebar -->
-      <div class="w-64 bg-blue-400 text-white p-6">
-        <h2 class="text-2xl font-bold mb-6">เมนูเกม</h2>
-        <nav>
-          <ul class="space-y-2">
-            <li>
-              <Link href="/"
-                :class="{'bg-blue-700': $page.url === '/game/guessing-number'}"
-                class="block py-2 px-4 hover:bg-blue-700 rounded">
-                หน้าแรก
-              </Link>
-            </li>
-            <li>
-              <Link href="/game/guessing-number"
-                :class="{'bg-blue-700': $page.url === '/game/guessing-number'}"
-                class="block py-2 px-4 hover:bg-blue-700 rounded">
-                เกมทายตัวเลข
-              </Link>
-            </li>
-            <li>
-              <Link href="/game/xo" 
-                :class="{'bg-blue-700': $page.url === '/game/xo'}"
-                class="block py-2 px-4 hover:bg-blue-700 rounded">
-                เกม XO
-              </Link>
-            </li>
-            <li>
-              <Link href="/game/snake" 
-                :class="{'bg-blue-700': $page.url === '/game/snake'}"
-                class="block py-2 px-4 hover:bg-blue-700 rounded">
-                เกมงู
-              </Link>
-            </li>
-            <!-- เพิ่มลิงก์เกมอื่น ๆ ตามต้องการ -->
-          </ul>
+  <MainLayout title="Games Zone">
+    <template #leftWidgets>
+      <div class="bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-lg p-5 border border-gray-200 dark:border-vikinger-dark-50 sticky top-24">
+        <!-- Header -->
+        <div class="flex items-center gap-3 mb-6">
+             <div class="w-10 h-10 rounded-lg bg-gradient-vikinger flex items-center justify-center text-white shadow-vikinger">
+                 <Icon icon="fluent:games-24-filled" class="w-6 h-6" />
+             </div>
+             <div>
+                 <h2 class="font-bold text-gray-900 dark:text-white text-lg">Game Center</h2>
+                 <p class="text-xs text-gray-500 dark:text-gray-400">ศูนย์รวมความบันเทิง</p>
+             </div>
+        </div>
+        
+        <!-- Navigation -->
+        <nav class="space-y-1">
+           <NuxtLink to="/play/games" 
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group"
+                active-class="bg-vikinger-purple/10 text-vikinger-purple dark:text-vikinger-cyan font-semibold ring-1 ring-vikinger-purple/20"
+                :class="$route.path === '/play/games' ? '' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 hover:text-gray-900 dark:hover:text-gray-200'"
+           >
+                <Icon icon="fluent:home-24-regular" class="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <span>หน้าหลักเกม</span>
+           </NuxtLink>
+
+           <div class="my-4 border-t border-gray-100 dark:border-vikinger-dark-50/50"></div>
+           <div class="px-3 mb-2 text-xs font-bold uppercase text-gray-400 tracking-wider">รายการเกม</div>
+
+           <NuxtLink v-for="game in games" :key="game.path" :to="game.path"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group"
+                active-class="bg-gradient-to-r from-vikinger-purple/10 to-transparent text-vikinger-purple dark:text-vikinger-cyan font-semibold border-l-4 border-vikinger-purple"
+                :class="$route.path === game.path ? '' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 hover:text-gray-900 dark:hover:text-gray-200 border-l-4 border-transparent'"
+           >
+                <Icon :icon="game.icon" class="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <span>{{ game.name }}</span>
+           </NuxtLink>
         </nav>
+        
+        <!-- Stats Mini Widget (Decorator) -->
+        <div class="mt-6 p-4 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-center shadow-lg relative overflow-hidden group hover:scale-[1.02] transition-transform cursor-pointer">
+             <div class="absolute top-0 right-0 p-2 opacity-20">
+                 <Icon icon="fluent:trophy-24-filled" class="w-16 h-16 transform rotate-12 group-hover:rotate-[20deg] transition-transform duration-500" />
+             </div>
+             <p class="text-xs font-medium text-white/80 mb-1">เล่นเกมสะสมแต้ม</p>
+             <h3 class="text-xl font-bold mb-2">แลกของรางวัล!</h3>
+             <div class="text-xs bg-white/20 hover:bg-white/30 backdrop-blur-sm px-3 py-1.5 rounded-lg transition-colors w-full inline-block">
+                 ดูรางวัล
+             </div>
+        </div>
       </div>
-  
-      <!-- Main content area -->
-      <div class="w-full h-full">
-        <slot></slot>
-      </div>
+    </template>
+
+    <!-- Main Content Slot -->
+    <div class="min-h-[500px] animate-fade-in-up">
+        <slot />
     </div>
-  </template>
+
+  </MainLayout>
+</template>
+
+<style scoped>
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

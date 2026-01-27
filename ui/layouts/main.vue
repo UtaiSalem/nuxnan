@@ -798,6 +798,20 @@ const onQRActionComplete = (result) => {
               <span class="font-semibold">การแจ้งเตือน</span>
             </NuxtLink>
             <NuxtLink
+              to="/play/games"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
+              :class="
+                route.path.startsWith('/play/games')
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
+              "
+            >
+              <Icon icon="fluent:game-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">เกมส์</span>
+            </NuxtLink>
+            <NuxtLink
               :to="settingsUrl"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
               :class="
@@ -909,6 +923,20 @@ const onQRActionComplete = (result) => {
             :title="'การแจ้งเตือน'"
           >
             <Icon icon="fluent:alert-24-regular" class="w-6 h-6" />
+          </NuxtLink>
+          <NuxtLink
+            to="/play/games"
+            class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
+            :class="
+              route.path.startsWith('/play/games')
+                ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                : isDarkMode
+                ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
+            "
+            :title="'เกมส์'"
+          >
+            <Icon icon="fluent:game-24-regular" class="w-6 h-6" />
           </NuxtLink>
           <NuxtLink
             :to="settingsUrl"
@@ -1272,6 +1300,20 @@ const onQRActionComplete = (result) => {
             >
               <Icon icon="fluent:alert-24-regular" class="w-5 h-5" />
               <span class="font-semibold">การแจ้งเตือน</span>
+            </NuxtLink>
+            <NuxtLink
+              to="/play/games"
+              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+              :class="
+                route.path.startsWith('/play/games')
+                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                  : isDarkMode
+                  ? 'text-gray-300 hover:bg-vikinger-purple/10'
+                  : 'text-gray-700 hover:bg-gray-100'
+              "
+            >
+              <Icon icon="fluent:game-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">เกมส์</span>
             </NuxtLink>
             <NuxtLink
               :to="settingsUrl"

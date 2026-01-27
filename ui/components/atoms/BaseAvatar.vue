@@ -1,6 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps({
   src: {
+    type: String,
+    default: ''
+  },
+  name: {
     type: String,
     default: ''
   },
@@ -38,12 +44,35 @@ const statusColor = computed(() => {
   }
   return props.status ? colors[props.status as keyof typeof colors] : ''
 })
+
+const avatarSrc = computed(() => {
+  if (props.src) return props.src
+  
+  if (props.name) {
+    const bgColors = [
+      '94a3b8', '64748b', '78716c', '6b7280', '71717a',
+      '737373', 'a3a3a3', '9ca3af', 'a1a1aa', 'a8a29e'
+    ]
+    
+    // Deterministic color based on name
+    let hash = 0
+    for (let i = 0; i < props.name.length; i++) {
+        hash = props.name.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    const index = Math.abs(hash) % bgColors.length
+    const bgColor = bgColors[index]
+    
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(props.name)}&background=${bgColor}&color=fff&size=128`
+  }
+
+  return '/images/default-avatar.png'
+})
 </script>
 
 <template>
   <div class="relative inline-block">
     <img 
-      :src="src || '/images/default-avatar.png'" 
+      :src="avatarSrc" 
       :alt="alt" 
       class="rounded-full object-cover border-2 border-white dark:border-gray-800"
       :class="sizeClasses"

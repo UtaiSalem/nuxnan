@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
+import { useAuthStore } from '~/stores/auth'
 
 const route = useRoute()
 const api = useApi()
+const authStore = useAuthStore()
 const courseId = route.params.id
 
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
@@ -123,6 +125,14 @@ const getRoleName = (admin: any) => {
     }
     return admin.role === 4 ? 'ผู้ดูแล (Admin)' : 'ผู้ช่วยสอน (TA)'
 }
+
+const getAdminAvatar = (admin: any) => {
+    if (admin.user?.avatar) return admin.user.avatar
+    if (authStore.user?.id === admin.user?.id) return authStore.user?.avatar
+    return null
+}
+
+import BaseAvatar from '~/components/atoms/BaseAvatar.vue'
 </script>
 
 <template>
@@ -159,7 +169,7 @@ const getRoleName = (admin: any) => {
                     {{ getRoleName(admin) }}
                 </div>
 
-                <img :src="admin.user?.avatar || '/images/default-avatar.png'" class="w-16 h-16 rounded-full object-cover border-2 border-gray-200" />
+                <BaseAvatar :src="getAdminAvatar(admin)" :name="admin.user?.name" size="xl" />
                 
                 <div class="flex-1 min-w-0">
                     <h3 class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ admin.user?.name || 'Unknown' }}</h3>
@@ -217,7 +227,7 @@ const getRoleName = (admin: any) => {
                         <div v-else-if="searchResults.length > 0" class="space-y-2">
                             <div v-for="user in searchResults" :key="user.id" class="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded shadow-sm hover:shadow-md transition-shadow">
                                 <div class="flex items-center gap-3">
-                                    <img :src="user.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
+                                    <BaseAvatar :src="user.avatar" :name="user.name" size="md" />
                                     <div>
                                         <p class="font-medium text-sm">{{ user.name }}</p>
                                         <p class="text-xs text-gray-500">{{ user.email }}</p>
