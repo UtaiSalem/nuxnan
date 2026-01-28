@@ -4,6 +4,8 @@ import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useGamification } from '~/composables/useGamification'
+import QrUniversalQRModal from '~/components/qr/UniversalQRModal.vue'
+import LayoutBottomNav from '~/components/layout/BottomNav.vue'
 
 const router = useRouter()
 const route = useRoute()

@@ -6,6 +6,8 @@ import MainLayout from '~/layouts/main.vue'
 import Swal from 'sweetalert2'
 import { useAuthStore } from '~/stores/auth'
 import AdvertiseItemCard from '~/components/widgets/advertises/AdvertiseItemCard.vue'
+import VueDatePicker from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
 
 const authStore = useAuthStore()
 const config = useRuntimeConfig()
