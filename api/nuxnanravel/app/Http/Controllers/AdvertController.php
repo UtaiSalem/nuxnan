@@ -116,6 +116,16 @@ class AdvertController extends Controller
             } else {
                 // Pay with Wallet
                 $user = auth()->user();
+                $expectedAmount = $validated['total_views'] * $validated['duration'] * 0.10;
+                
+                // Allow small floating point difference (e.g. 0.01)
+                if (abs($validated['amounts'] - $expectedAmount) > 0.1) {
+                     return response()->json([
+                        'success' => false,
+                        'message' => 'ยอดเงินไม่ถูกต้อง (ระบบคำนวณใหม่ได้ ' . number_format($expectedAmount, 2) . ' บาท)',
+                    ], 400);
+                }
+
                 if ($user->wallet < $validated['amounts']) {
                     return response()->json([
                         'success' => false,
@@ -147,22 +157,11 @@ class AdvertController extends Controller
 
     public function view(Advert $advert)
     {
-        if($advert->remaining_views < 1){
-            return response()->json([
-                'success' => false,
-                'advert'    => new AdvertResource($advert),
-                'message' => 'จำนวนการแสดงโฆษณาครบแล้ว',
-            ], 404);
-        }
-
         try {
-
             $authUser = auth()->user();
 
-            // Check if user has enough points (PP)
-            // Points required = duration * 20
+            // 1. Check Points (PP) required
             $pointsRequired = $advert->duration * 20;
-
             if ($authUser->pp < $pointsRequired) {
                 return response()->json([
                     'success' => false,
@@ -170,32 +169,52 @@ class AdvertController extends Controller
                 ], 402);
             }
 
-            $advert->viewers()->attach($authUser->id);
-            $advert->decrement('remaining_views', 1);
-            
-            // Deduct Points
-            $authUser->decrement('pp', $pointsRequired);
+            // 2. Atomic Check & Decrement Remaining Views
+            // Returns 1 if successful, 0 if condition failed (e.g., remaining_views was 0)
+            $affected = Advert::where('id', $advert->id)
+                ->where('remaining_views', '>', 0)
+                ->decrement('remaining_views');
 
-            // Reward Money
-            $authUser->increment('wallet', $advert->duration*0.04);
-
-            $suggesterCode = $authUser->suggester_code ?? 99999999;
-            $suggester = User::where('personal_code', $suggesterCode)->first() ?? User::where('personal_code', 99999999)->first();
-            if($suggester) {
-                $suggester->increment('wallet', $advert->duration*0.05);
+            if ($affected === 0) {
+                 return response()->json([
+                    'success' => false,
+                    'advert'    => new AdvertResource($advert),
+                    'message' => 'จำนวนการแสดงโฆษณาครบแล้ว',
+                ], 404);
             }
 
-            $activity = new Activity();
-            $activity->user_id = $authUser->id;
-            $activity->activity_type = ActivityType::VIEW_ADVERTISE->value;
-            $activity->activityable()->associate($advert->advertViewers()->where('user_id', $authUser->id)->latest()->first());
-            $activity->save();
+            // 3. Process Rewards (In Transaction to ensure consistency)
+            \DB::transaction(function() use ($authUser, $advert, $pointsRequired) {
+                 // Attach Viewer record
+                $advert->viewers()->attach($authUser->id);
+
+                // Deduct Points
+                $authUser->decrement('pp', $pointsRequired);
+
+                // Reward Viewer (0.07 THB/sec)
+                $authUser->increment('wallet', $advert->duration * 0.07);
+
+                // Reward Referrer (0.02 THB/sec)
+                $suggesterCode = $authUser->suggester_code ?? 99999999;
+                $suggester = User::where('personal_code', $suggesterCode)->first() ?? User::where('personal_code', 99999999)->first();
+                if($suggester) {
+                    $suggester->increment('wallet', $advert->duration * 0.02);
+                }
+
+                // Log Activity
+                $activity = new Activity();
+                $activity->user_id = $authUser->id;
+                $activity->activity_type = ActivityType::VIEW_ADVERTISE->value;
+                $activity->activityable()->associate($advert->advertViewers()->where('user_id', $authUser->id)->latest()->first());
+                $activity->save();
+            });
 
             return response()->json([
                 'success'   => true,
-                'advert'    => new AdvertResource($advert),
+                'advert'    => new AdvertResource($advert->refresh()),
                 'message'   => 'success'
             ], 200);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
@@ -203,7 +222,6 @@ class AdvertController extends Controller
                 'message' => $th->getMessage(),
             ], 500);
         }
-
     }
 
     public function approve(Advert $advert)

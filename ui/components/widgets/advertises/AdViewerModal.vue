@@ -122,7 +122,7 @@
 
                <div v-if="timeLeft > 0" class="space-y-2">
                    <p class="text-gray-600 dark:text-gray-300">รับชมเพื่อรับรางวัล</p>
-                   <p class="text-2xl font-bold text-amber-500">{{ (advert?.duration * 0.04).toFixed(2) }} ฿</p>
+                   <p class="text-2xl font-bold text-amber-500">{{ (advert?.duration * 0.07).toFixed(2) }} ฿</p>
                </div>
 
                <div v-if="processing" class="absolute bottom-4 left-0 right-0">
@@ -238,17 +238,25 @@ async function claimReward() {
     } catch (error) {
         console.error(error);
         const errorData = error.data || {};
-        if (error.statusCode === 402) {
+        const statusCode = error.statusCode || error.response?.status;
+
+        if (statusCode === 402) {
              Swal.fire({
-                 icon: 'error',
-                 title: 'Insufficient Points',
+                 icon: 'warning',
+                 title: 'คะแนนไม่เพียงพอ',
                  text: errorData.message || 'Points not enough',
-                 customClass: {
-                     popup: 'rounded-xl'
-                 }
+                 customClass: { popup: 'rounded-xl' }
+             });
+        } else if (statusCode === 404) {
+             maxViewsReached.value = true;
+             Swal.fire({
+                 icon: 'info',
+                 title: 'ครบจำนวนแล้ว',
+                 text: 'โฆษณานี้มีผู้รับชมครบตามจำนวนแล้ว',
+                 customClass: { popup: 'rounded-xl' }
              });
         } else {
-             Swal.fire('Error', 'Failed to claim reward', 'error');
+             Swal.fire('เกิดข้อผิดพลาด', errorData.message || 'Failed to claim reward', 'error');
         }
     } finally {
         processing.value = false;

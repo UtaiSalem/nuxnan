@@ -40,6 +40,42 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits(['update:modelValue'])
 
+/**
+ * Utility function to convert plain text to HTML
+ * Handles line breaks, multiple spaces, and preserves formatting
+ */
+const convertPlainTextToHtml = (text: string): string => {
+  if (!text) return ''
+  
+  // If the text already contains HTML tags, return as-is
+  if (/<[a-z][\s\S]*>/i.test(text)) {
+    return text
+  }
+  
+  // Convert plain text to HTML
+  // Split by double line breaks for paragraphs
+  const paragraphs = text.split(/\n\n+/)
+  
+  return paragraphs.map(paragraph => {
+    // Convert single line breaks to <br>
+    const lines = paragraph.split(/\n/)
+    const content = lines.map(line => {
+      // Preserve multiple spaces
+      return line.replace(/  +/g, match => '&nbsp;'.repeat(match.length))
+    }).join('<br>')
+    
+    // Wrap in paragraph tag
+    return `<p>${content}</p>`
+  }).join('')
+}
+
+/**
+ * Get the initial content, converting plain text if necessary
+ */
+const getInitialContent = (value: string): string => {
+  return convertPlainTextToHtml(value)
+}
+
 // Color options
 const textColors = [
   '#000000', '#374151', '#DC2626', '#EA580C', '#D97706', 
@@ -56,7 +92,7 @@ const showHighlightPicker = ref(false)
 const showTableMenu = ref(false)
 
 const editor = useEditor({
-  content: props.modelValue,
+  content: getInitialContent(props.modelValue),
   editable: props.editable,
   extensions: [
     StarterKit.configure({
@@ -95,8 +131,12 @@ const editor = useEditor({
 
 // Watch for external changes
 watch(() => props.modelValue, (newValue) => {
-  if (editor.value && newValue !== editor.value.getHTML()) {
-    editor.value.commands.setContent(newValue, false, { emitUpdate: false })
+  if (editor.value) {
+    const convertedContent = convertPlainTextToHtml(newValue)
+    const currentContent = editor.value.getHTML()
+    if (convertedContent !== currentContent) {
+      editor.value.commands.setContent(convertedContent, { emitUpdate: false })
+    }
   }
 })
 

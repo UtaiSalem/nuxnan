@@ -16,7 +16,7 @@ const courseMemberStore = useCourseMemberStore()
 // State
 const searchQuery = ref('')
 const activeGroupTab = ref(0) // 0 = all, 1+ = group index
-const viewMode = ref<'grid' | 'list'>('grid')
+const viewMode = ref<'grid' | 'list'>('list')
 const isSavingGroupTab = ref(false)
 const sortBy = ref<'number' | 'score'>('number') // 'number' | 'score'
 
@@ -59,6 +59,17 @@ async function setActiveGroupTab(tabIndex: number) {
             }
         } catch (error) {
             console.error('Error saving last accessed group tab:', error)
+            // Show error notification with SweetAlert
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: 'ไม่สามารถบันทึกกลุ่มเริ่มต้นได้',
+                text: 'กรุณาลองใหม่อีกครั้ง',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            })
         } finally {
             isSavingGroupTab.value = false
         }

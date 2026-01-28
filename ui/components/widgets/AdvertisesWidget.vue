@@ -100,7 +100,7 @@ onMounted(() => {
               เหลือ {{ advert.remaining_views?.toLocaleString() || 0 }} ครั้ง
             </span>
             <span class="text-xs font-medium text-green-600 dark:text-green-400">
-              +{{ (advert.duration * 0.04).toFixed(2) }} บาท
+              +{{ (advert.duration * 0.07).toFixed(2) }} บาท
             </span>
           </div>
         </div>

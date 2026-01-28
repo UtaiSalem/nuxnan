@@ -45,21 +45,30 @@ const timeOptions = [1, 3, 5, 10, 15, 30]
 const previewAdvert = computed(() => ({
     advertiser: authStore.user,
     media_image: mediaImage.value?.url || 'https://via.placeholder.com/300?text=Ad+Image+Preview',
-    media_type: mediaImage.value?.type,
+    media_type: mediaImage.value?.type || '',
     total_views: quantityToShowProductMedia.value,
     remaining_views: quantityToShowProductMedia.value,
+    duration: timeToShowProductMedia.value,
 }))
 
-const walletBalance = computed(() => authStore.user?.wallet || 0)
+const walletBalance = computed(() => parseFloat(authStore.user?.wallet) || 0)
 
 function computeTotalCost() {
     if(quantityToShowProductMedia.value < 0) quantityToShowProductMedia.value = 0;
-    // Formula: Money = (Quantity * Duration * 64) / 684
-    totalMoneyAdvert.value = (quantityToShowProductMedia.value * timeToShowProductMedia.value * 64) / 684;
+    // Formula: Money = Quantity * Duration * 0.10 THB
+    totalMoneyAdvert.value = quantityToShowProductMedia.value * timeToShowProductMedia.value * 0.10;
+}
+
+function computeViewsFromCost() {
+    if(totalMoneyAdvert.value < 0) totalMoneyAdvert.value = 0;
+    if(timeToShowProductMedia.value > 0) {
+        // Views = Cost / (Duration * 0.10)
+        quantityToShowProductMedia.value = Math.floor(totalMoneyAdvert.value / (timeToShowProductMedia.value * 0.10));
+    }
 }
 
 // Media Image Handlers
-const browseInputMedia = () => inputMediaImage.value.click()
+const browseInputMedia = () => inputMediaImage.value?.click()
 const onInputMediaChange = (e) => {
     if (e.target.files && e.target.files[0]) {
         mediaImage.value = {
@@ -80,10 +89,14 @@ const onDropMediaFile = (e) => {
         }
     }
 }
-const deleteMediaImage = () => mediaImage.value = null
+const deleteMediaImage = () => {
+    mediaImage.value = null;
+    // clear input value to allow re-selecting same file
+    if(inputMediaImage.value) inputMediaImage.value.value = '';
+}
 
 // Slip Handlers
-const browseInputSlip = () => inputSlip.value.click()
+const browseInputSlip = () => inputSlip.value?.click()
 const onInputSlipChange = (e) => {
     if (e.target.files && e.target.files[0]) {
         slipImage.value = {
@@ -102,12 +115,22 @@ const onDropSlipFile = (e) => {
         }
     }
 }
-const deleteSlipImage = () => slipImage.value = null
+const deleteSlipImage = () => {
+    slipImage.value = null;
+    if(inputSlip.value) inputSlip.value.value = '';
+}
 
 async function submitForm() {
     if (!authStore.isAuthenticated) {
         Swal.fire('Error', 'Please login first', 'error')
         return
+    }
+
+    // Recalculate cost one last time to be sure
+    const expectedCost = quantityToShowProductMedia.value * timeToShowProductMedia.value * 0.10;
+    // Allow small epsilon diff or just sync it
+    if(Math.abs(totalMoneyAdvert.value - expectedCost) > 0.01) {
+         totalMoneyAdvert.value = expectedCost;
     }
 
     if (!mediaImage.value) {
@@ -286,15 +309,19 @@ onMounted(() => {
                             <h2 class="text-xl font-bold text-gray-800 dark:text-white">ตั้งค่าแคมเปญ</h2>
                         </div>
 
-                        <div class="grid md:grid-cols-2 gap-6">
+                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <!-- Quantity -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">จำนวนการแสดงผล (Views)</label>
-                                <select v-model.number="quantityToShowProductMedia" @change="computeTotalCost" class="w-full rounded-xl border-gray-300 focus:border-amber-500 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white shadow-sm h-11">
-                                    <option v-for="opt in quantityOptions" :key="opt" :value="opt">{{ opt.toLocaleString() }} ครั้ง</option>
-                                    <option :value="quantityToShowProductMedia" v-if="!quantityOptions.includes(quantityToShowProductMedia)">กำหนดเอง: {{ quantityToShowProductMedia }}</option>
-                                </select>
-                                <input v-if="!quantityOptions.includes(quantityToShowProductMedia)" type="number" v-model.number="quantityToShowProductMedia" @input="computeTotalCost" class="mt-2 w-full rounded-xl border-gray-300 text-sm" placeholder="ระบุจำนวน" />
+                                <div class="relative">
+                                    <input type="number" v-model.number="quantityToShowProductMedia" @input="computeTotalCost" class="w-full rounded-xl border-gray-300 focus:border-amber-500 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white shadow-sm h-11 pr-16" placeholder="จำนวน" min="100">
+                                    <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-500 text-sm">ครั้ง</div>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <button v-for="opt in quantityOptions" :key="opt" @click="quantityToShowProductMedia = opt; computeTotalCost()" class="text-xs px-2 py-1 rounded-md border border-gray-200 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors" :class="{'bg-amber-50 border-amber-200 text-amber-700': quantityToShowProductMedia === opt}">
+                                        {{ opt.toLocaleString() }}
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Duration -->
@@ -303,6 +330,16 @@ onMounted(() => {
                                 <select v-model.number="timeToShowProductMedia" @change="computeTotalCost" class="w-full rounded-xl border-gray-300 focus:border-amber-500 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white shadow-sm h-11">
                                     <option v-for="opt in timeOptions" :key="opt" :value="opt">{{ opt }} วินาที</option>
                                 </select>
+                            </div>
+
+                            <!-- Budget (New) -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">งบประมาณ (บาท)</label>
+                                <div class="relative">
+                                    <input type="number" v-model.number="totalMoneyAdvert" @input="computeViewsFromCost" class="w-full rounded-xl border-gray-300 focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white shadow-sm h-11 pr-12" placeholder="0.00" min="0" step="0.01">
+                                    <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-500 text-sm">THB</div>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">คำนวณอัตโนมัติจาก {{ timeToShowProductMedia * 0.10 }} บาท/วิว</p>
                             </div>
                         </div>
                     </section>

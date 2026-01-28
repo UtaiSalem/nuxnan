@@ -1,1 +1,0 @@
-import{_ as r,I as c,f as s,o as t,g as p,m as a}from"./Brb_7992.js";const i={name:"IconWrapper",components:{Icon:c},props:{icon:{type:String,required:!0}}};function _(o,m,n,I,f,u){const e=s("Icon");return t(),p(e,a({icon:n.icon},o.$attrs),null,16,["icon"])}const d=r(i,[["render",_]]);export{d as I};

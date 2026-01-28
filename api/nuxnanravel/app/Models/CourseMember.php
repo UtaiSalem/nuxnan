@@ -34,6 +34,7 @@ class CourseMember extends Model
             'completion_date' => 'datetime',
             'access_expiry_date' => 'datetime',
             'last_accessed_at' => 'datetime',
+            'last_accessed_tab' => 'integer',
         ];
     }
 
