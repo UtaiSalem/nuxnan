@@ -169,6 +169,19 @@ class AdvertController extends Controller
                 ], 402);
             }
 
+            // 2. Check Daily View Limit (Max 5 times per day per advert)
+            $todayViews = $advert->advertViewers()
+                ->where('user_id', $authUser->id)
+                ->whereDate('created_at', Carbon::today())
+                ->count();
+
+            if ($todayViews >= 5) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คุณดูโฆษณานี้ครบโควต้า 5 ครั้งต่อวันแล้ว',
+                ], 429);
+            }
+
             // 2. Atomic Check & Decrement Remaining Views
             // Returns 1 if successful, 0 if condition failed (e.g., remaining_views was 0)
             $affected = Advert::where('id', $advert->id)
@@ -191,8 +204,13 @@ class AdvertController extends Controller
                 // Deduct Points
                 $authUser->decrement('pp', $pointsRequired);
 
-                // Reward Viewer (0.07 THB/sec)
-                $authUser->increment('wallet', $advert->duration * 0.07);
+                // Reward Viewer
+                // Policy: Base 0.06 THB/sec + (Points / 1200) THB
+                $baseReward = $advert->duration * 0.06;
+                $pointsReward = $pointsRequired / 1200;
+                $totalReward = $baseReward + $pointsReward;
+
+                $authUser->increment('wallet', $totalReward);
 
                 // Reward Referrer (0.02 THB/sec)
                 $suggesterCode = $authUser->suggester_code ?? 99999999;
