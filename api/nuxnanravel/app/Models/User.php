@@ -109,12 +109,12 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     protected function casts(): array
     {
         return [
-            'verified'          => 'boolean',
+            'verified' => 'boolean',
             'email_verified_at' => 'datetime',
-            'created_at'        => 'datetime:Y-m-d H:i:s',
-            'updated_at'        => 'datetime:Y-m-d H:i:s',
+            'created_at' => 'datetime:Y-m-d H:i:s',
+            'updated_at' => 'datetime:Y-m-d H:i:s',
             'phone_verified_at' => 'datetime',
-            'password'          => 'hashed',
+            'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'total_points_earned' => 'integer',
             'total_points_spent' => 'integer',
@@ -233,6 +233,10 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         if ($this->profile_photo_path) {
             // Replace 'avatars/' with 'profile-photos/' in the path
             $path = str_replace('avatars/', 'profile-photos/', $this->profile_photo_path);
+
+            // Remove any existing /storage or storage/ prefix to prevent duplication
+            $path = preg_replace('#^/?storage/#', '', $path);
+
             // Return full URL with storage path
             return url('storage/' . $path);
         }
@@ -247,14 +251,14 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     {
         $providers = [];
         $oauthProviders = ['google', 'facebook', 'twitter', 'github', 'linkedin'];
-        
+
         foreach ($oauthProviders as $provider) {
             $field = $provider . '_id';
             if (!empty($this->$field)) {
                 $providers[] = $provider;
             }
         }
-        
+
         return $providers;
     }
 
@@ -277,7 +281,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasMany(Activity::class);
     }
 
-        public function academies(): HasMany
+    public function academies(): HasMany
     {
         return $this->hasMany(Academy::class);
     }
@@ -285,23 +289,23 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function academyMembers(): BelongsToMany
     {
         return $this->belongsToMany(AcademyMember::class, 'academy_members', 'user_id', 'academy_id')
-                    ->withPivot(
-                        'status',
-                    )->withTimestamps();
+            ->withPivot(
+                'status',
+            )->withTimestamps();
     }
 
     public function academyGroupsMembers(): BelongsToMany
     {
         return $this->belongsToMany(AcademyGroup::class, 'academy_group_members', 'user_id', 'academy_group_id')
-                    ->withPivot('role')
-                    ->withTimestamps();
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     public function academyGroupsAdmins(): BelongsToMany
     {
         return $this->belongsToMany(AcademyGroup::class, 'academy_group_admins', 'user_id', 'academy_group_id')
-                    ->withPivot('role')
-                    ->withTimestamps();
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     public function academyAdmins(): BelongsToMany
@@ -335,8 +339,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function taggedInPosts(): BelongsToMany
     {
         return $this->belongsToMany(Post::class, 'post_tagged_users', 'user_id', 'post_id')
-                    ->withPivot('is_approved', 'is_notified')
-                    ->withTimestamps();
+            ->withPivot('is_approved', 'is_notified')
+            ->withTimestamps();
     }
 
     /**
@@ -345,11 +349,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function mentionedInPosts(): BelongsToMany
     {
         return $this->belongsToMany(Post::class, 'post_mentions', 'user_id', 'post_id')
-                    ->withPivot('position', 'length', 'is_notified')
-                    ->withTimestamps();
+            ->withPivot('position', 'length', 'is_notified')
+            ->withTimestamps();
     }
 
-        public function courses(): HasMany
+    public function courses(): HasMany
     {
         return $this->hasMany(Course::class);
     }
@@ -451,29 +455,29 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 
     public function friendships_status($friendId)
     {
-        if(Auth::check()){
+        if (Auth::check()) {
             $authUser = auth()->user();
             $friend = User::find($friendId);
-            if ($friend) { 
+            if ($friend) {
                 if ($authUser->isFriendWith($friend)) {
-                    return 1; 
+                    return 1;
                     //accepted
                 } elseif ($authUser->hasSentFriendRequestTo($friend)) {
-                    return 0; 
+                    return 0;
                     //pending
                 } else {
-                    return null; 
+                    return null;
                     //not friend
                 }
-            }else {
+            } else {
                 return null;
             }
-        }else {
+        } else {
             return null;
         }
 
     }
-    
+
     // has many likedLessons
     public function likeLessons(): HasMany
     {

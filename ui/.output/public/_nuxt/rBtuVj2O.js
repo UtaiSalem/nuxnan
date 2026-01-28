@@ -1,0 +1,1 @@
+import{ak as a,l as n,K as t}from"./Brb_7992.js";const u=a((r,s)=>{const e=n();if(e.isAuthenticated)return e.user?.is_plearnd_admin||e.user?.is_super_admin?t("/nuxnan-admin"):t("/play/newsfeed")});export{u as default};

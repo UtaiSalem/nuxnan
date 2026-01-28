@@ -1,0 +1,1 @@
+import{_ as o,o as s,c,a as e}from"./Brb_7992.js";const a={},t={class:"hidden sm:block"};function d(n,r){return s(),c("div",t,[...r[0]||(r[0]=[e("div",{class:"py-8"},[e("div",{class:"border-t border-gray-200 dark:border-gray-700"})],-1)])])}const _=o(a,[["render",d]]);export{_ as S};

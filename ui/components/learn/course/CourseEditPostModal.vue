@@ -23,18 +23,86 @@ const swal = useSweetAlert()
 // Form state
 const postContent = ref(props.post?.content || '')
 const isSubmitting = ref(false)
+const selectedPrivacy = ref(props.post?.privacy_settings || 3)
+
+// Image handling
+const selectedImages = ref<File[]>([])
+const imageInput = ref<HTMLInputElement | null>(null)
+const imagesToRemove = ref<number[]>([])
 
 // Watch for post changes
 watch(() => props.post, (newPost) => {
   if (newPost) {
     postContent.value = newPost.content || ''
+    selectedPrivacy.value = newPost.privacy_settings || 3
+    selectedImages.value = []
+    imagesToRemove.value = []
   }
 }, { immediate: true })
+
+// Existing images (from post data)
+const existingImages = computed(() => {
+  if (!props.post) return []
+  const images = props.post.images || props.post.media || props.post.imagesResources || []
+  return images.filter((img: any) => !imagesToRemove.value.includes(img.id))
+})
+
+// New image previews
+const imagePreviews = computed(() => {
+  if (typeof window === 'undefined') return []
+  return selectedImages.value.map(file => ({
+    file,
+    url: URL.createObjectURL(file)
+  }))
+})
+
+// Total image count
+const totalImageCount = computed(() => {
+  return existingImages.value.length + imagePreviews.value.length
+})
 
 // Close modal
 const closeModal = () => {
   emit('close')
 }
+
+// Image handling
+const handleImageSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (!target.files) return
+  
+  const files = Array.from(target.files)
+  const remaining = 10 - totalImageCount.value
+  
+  if (files.length > remaining) {
+    swal.warning(`สามารถเพิ่ม ได้อีก ${remaining} รูปเท่านั้น (สูงสุด 10 รูป)`)
+    return
+  }
+  
+  selectedImages.value = [...selectedImages.value, ...files]
+  target.value = ''
+}
+
+const removeNewImage = (index: number) => {
+  selectedImages.value.splice(index, 1)
+}
+
+const removeExistingImage = (imageId: number) => {
+  if (!imagesToRemove.value.includes(imageId)) {
+    imagesToRemove.value.push(imageId)
+  }
+}
+
+const triggerImageInput = () => {
+  imageInput.value?.click()
+}
+
+// Privacy options
+const privacyOptions = [
+  { value: 1, label: 'สาธารณะ', icon: 'fluent:globe-24-regular' },
+  { value: 2, label: 'เฉพาะสมาชิกคอร์ส', icon: 'fluent:people-24-regular' },
+  { value: 3, label: 'เฉพาะครูและผู้ดูแล', icon: 'fluent:lock-closed-24-regular' }
+]
 
 // Update post
 const updatePost = async () => {
@@ -48,14 +116,27 @@ const updatePost = async () => {
   isSubmitting.value = true
   
   try {
-    const response = await api.put(`/api/courses/${props.courseId}/posts/${props.post.id}`, {
-      content: postContent.value
+    const formData = new FormData()
+    formData.append('content', postContent.value)
+    formData.append('privacy_settings', selectedPrivacy.value.toString())
+    
+    // Add new images
+    selectedImages.value.forEach((file, index) => {
+      formData.append(`images[${index}]`, file)
     })
+    
+    // Add images to remove
+    imagesToRemove.value.forEach((imageId, index) => {
+      formData.append(`remove_images[${index}]`, imageId.toString())
+    })
+    
+    const response = await api.post(`/api/courses/${props.courseId}/posts/${props.post.id}?_method=PUT`, formData)
     
     if (response.success || response.data) {
       const updatedPost = response.data || response.post || {
         ...props.post,
         content: postContent.value,
+        privacy_settings: selectedPrivacy.value,
         is_edited: true
       }
       emit('post-updated', updatedPost)
@@ -96,20 +177,32 @@ const updatePost = async () => {
             </div>
 
             <!-- Body -->
-            <div class="p-4">
+            <div class="p-4 max-h-[70vh] overflow-y-auto">
+              <!-- Hidden file input -->
+              <input type="file" ref="imageInput" class="hidden" accept="image/*" multiple @change="handleImageSelect" />
+
               <!-- User Info -->
               <div class="flex items-center gap-3 mb-4">
                 <img 
                   :src="post.user?.avatar || post.author?.avatar || user?.avatar || '/images/default-avatar.png'" 
                   class="w-10 h-10 rounded-full object-cover" 
                 />
-                <div>
+                <div class="flex-1">
                   <div class="font-medium text-gray-800 dark:text-white">
                     {{ post.user?.name || post.author?.name || user?.name }}
                   </div>
-                  <div class="flex items-center gap-1 text-xs text-gray-500">
-                    <Icon icon="fluent:book-24-regular" class="w-3 h-3" />
-                    <span>โพสต์ในรายวิชา</span>
+                  <div class="flex items-center gap-2">
+                    <Icon icon="fluent:book-24-regular" class="w-3 h-3 text-gray-500" />
+                    <span class="text-xs text-gray-500">โพสต์ในรายวิชา</span>
+                    <!-- Privacy Selector -->
+                    <select 
+                      v-model="selectedPrivacy"
+                      class="text-xs px-2 py-0.5 rounded border border-gray-200 dark:border-vikinger-dark-50/30 bg-white dark:bg-vikinger-dark-100"
+                    >
+                      <option v-for="option in privacyOptions" :key="option.value" :value="option.value">
+                        {{ option.label }}
+                      </option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -126,17 +219,62 @@ const updatePost = async () => {
                 />
               </div>
 
-              <!-- Existing Images (read-only) -->
-              <div v-if="post.images?.length || post.media?.length" class="mb-4">
-                <p class="text-sm text-gray-500 mb-2">รูปภาพในโพสต์ (ไม่สามารถแก้ไขได้)</p>
+              <!-- Existing Images -->
+              <div v-if="existingImages.length > 0" class="mb-4">
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">รูปภาพปัจจุบัน</p>
                 <div class="flex flex-wrap gap-2">
-                  <img 
-                    v-for="(image, index) in (post.images || post.media || post.imagesResources || [])" 
-                    :key="index"
-                    :src="image.url || image"
-                    class="w-20 h-20 object-cover rounded-lg opacity-70"
-                  />
+                  <div v-for="(image, index) in existingImages" :key="image.id || index" class="relative group">
+                    <img 
+                      :src="image.url || image"
+                      class="w-24 h-24 object-cover rounded-lg border border-gray-200 dark:border-vikinger-dark-50/30"
+                    />
+                    <button 
+                      @click="removeExistingImage(image.id)"
+                      class="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-sm md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                    >
+                      <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
+              </div>
+
+              <!-- New Images Preview -->
+              <div v-if="imagePreviews.length > 0" class="mb-4">
+                <p class="text-sm font-medium text-green-600 dark:text-green-400 mb-2">รูปภาพใหม่</p>
+                <div class="flex flex-wrap gap-2">
+                  <div v-for="(preview, index) in imagePreviews" :key="index" class="relative group">
+                    <img 
+                      :src="preview.url" 
+                      class="w-24 h-24 object-cover rounded-lg border-2 border-green-400 dark:border-green-500"
+                    />
+                    <button 
+                      @click="removeNewImage(index)" 
+                      class="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-sm md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                    >
+                      <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button 
+                    v-if="totalImageCount < 10" 
+                    @click="triggerImageInput" 
+                    class="w-24 h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center hover:border-vikinger-purple hover:bg-vikinger-purple/5 transition-all"
+                  >
+                    <Icon icon="fluent:add-24-regular" class="w-8 h-8 text-gray-400" />
+                  </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">{{ totalImageCount }}/10 รูป</p>
+              </div>
+
+              <!-- Add Images Button (if no images yet) -->
+              <div v-if="imagePreviews.length === 0" class="mb-4">
+                <button 
+                  @click="triggerImageInput" 
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
+                  :disabled="totalImageCount >= 10"
+                >
+                  <Icon icon="fluent:image-24-regular" class="w-5 h-5 text-green-500" />
+                  <span class="text-sm text-gray-700 dark:text-gray-300">เพิ่มรูปภาพ</span>
+                </button>
               </div>
             </div>
 

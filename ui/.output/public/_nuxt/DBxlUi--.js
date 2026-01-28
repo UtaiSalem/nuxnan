@@ -1,0 +1,1 @@
+import{ak as t,l as a,K as r}from"./Brb_7992.js";const o=t((u,i)=>{const e=a();if(!e.isAuthenticated)return r("/auth");if(!e.user?.is_plearnd_admin&&!e.user?.is_super_admin)return r("/?error=unauthorized")});export{o as default};

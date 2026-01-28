@@ -659,7 +659,7 @@ const handlePollDelete = () => {
             class="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-vikinger-dark-300 rounded-lg shadow-lg border border-gray-200 dark:border-vikinger-dark-50/30 py-1 z-10"
           >
             <button
-              v-if="isAuthor"
+              v-if="isAuthor || isCourseAdmin"
               @click="emit('edit', post); showMenu = false"
               class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 flex items-center gap-2"
             >

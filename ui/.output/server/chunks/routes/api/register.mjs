@@ -1,4 +1,4 @@
-import { c as defineEventHandler, r as readBody, u as useRuntimeConfig, e as createError } from '../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody, u as useRuntimeConfig, c as createError } from '../../_/nitro.mjs';
 import 'node:http';
 import 'node:https';
 import 'node:events';

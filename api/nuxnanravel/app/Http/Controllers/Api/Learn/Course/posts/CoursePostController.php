@@ -28,15 +28,15 @@ class CoursePostController extends Controller
         $perPage = $request->input('per_page', 10);
         $page = $request->input('page', 1);
         $type = $request->input('type'); // discussions, questions, materials, announcements
-        
+
         $query = CoursePost::where('course_id', $course->id)
             ->with([
                 'user:id,name,email,profile_photo_path',
                 'post_images',
-                'post_comments' => function($q) {
+                'post_comments' => function ($q) {
                     $q->with(['user:id,name,email,profile_photo_path'])
-                      ->orderBy('created_at', 'desc')
-                      ->limit(3);
+                        ->orderBy('created_at', 'desc')
+                        ->limit(3);
                 },
                 'poll.options',
                 'poll.user',
@@ -44,7 +44,7 @@ class CoursePostController extends Controller
             ])
             ->withCount(['post_comments', 'post_likes', 'post_dislikes'])
             ->orderBy('created_at', 'desc');
-        
+
         // Add type filter if specified
         if ($type && $type !== 'all') {
             $query->where('post_type', $type);
@@ -57,9 +57,9 @@ class CoursePostController extends Controller
             // Optional: Exclude group posts from main course feed if desired
             // $query->whereNull('group_id');
         }
-        
+
         $posts = $query->paginate($perPage, ['*'], 'page', $page);
-        
+
         return response()->json([
             'success' => true,
             'data' => CoursePostResource::collection($posts),
@@ -88,31 +88,31 @@ class CoursePostController extends Controller
     {
         try {
             $validatedData = $request->validate([
-                'content'           => 'nullable|string|max:5000',
-                'images.*'          => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',
-                'group_id'          => 'nullable|exists:course_groups,id',
+                'content' => 'nullable|string|max:5000',
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',
+                'group_id' => 'nullable|exists:course_groups,id',
             ]);
 
             $content = $validatedData['content'] ?? '';
             $hashtags = $this->extractHashtags($content);
 
-            $post               = new CoursePost();
-            $post->user_id      = auth()->user()->id;
-            $post->course_id    = $course->id;
-            $post->group_id     = $validatedData['group_id'] ?? null;
-            $post->academy_id   = $course->academy_id ?? null;
-            $post->content      = $validatedData['content'] ?? '';
+            $post = new CoursePost();
+            $post->user_id = auth()->user()->id;
+            $post->course_id = $course->id;
+            $post->group_id = $validatedData['group_id'] ?? null;
+            $post->academy_id = $course->academy_id ?? null;
+            $post->content = $validatedData['content'] ?? '';
             $post->privacy_settings = 3;
-            $post->status       = 0;
-            $post->hashtags     = $hashtags;
+            $post->status = 0;
+            $post->hashtags = $hashtags;
 
             // Handle Poll Creation
             if ($request->has('poll_question') && $request->has('poll_options')) {
                 $pollTitle = $request->poll_question;
                 $pollOptions = $request->poll_options;
                 $pollDuration = $request->poll_duration ?? 24; // Hours
-                $pollPointsPool = (int)$request->input('poll_points_pool', 0);
-                
+                $pollPointsPool = (int) $request->input('poll_points_pool', 0);
+
                 if (!empty($pollTitle) && is_array($pollOptions) && count($pollOptions) >= 2) {
                     // Check if user has enough points for poll with reward pool
                     $totalPointsNeeded = 180 + $pollPointsPool;
@@ -124,14 +124,14 @@ class CoursePostController extends Controller
                     }
 
                     // Calculate points per vote
-                    $maxVotes = (int)$request->input('poll_max_votes', 100);
+                    $maxVotes = (int) $request->input('poll_max_votes', 100);
                     $pointsPerVote = $pollPointsPool > 0 ? floor($pollPointsPool / $maxVotes) : 0;
 
                     $poll = Poll::create([
                         'user_id' => auth()->id(),
                         'title' => $pollTitle,
                         'start_date' => now(),
-                        'end_date' => now()->addHours((int)$pollDuration),
+                        'end_date' => now()->addHours((int) $pollDuration),
                         'is_active' => true,
                         'is_public' => true,
                         'points_pool' => $pollPointsPool,
@@ -148,7 +148,7 @@ class CoursePostController extends Controller
                             ]);
                         }
                     }
-                    
+
                     $post->poll_id = $poll->id;
                     $post->post_type = 'poll';
 
@@ -160,8 +160,8 @@ class CoursePostController extends Controller
             }
 
             $post->save();
-            
-            if($request->hasFile('images')) {
+
+            if ($request->hasFile('images')) {
                 $images = $request->file('images');
                 foreach ($images as $image) {
                     $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
@@ -179,26 +179,26 @@ class CoursePostController extends Controller
             $activity->activityable()->associate($post);
             $activity->save();
 
-            auth()->user()->decrement('pp',180);
+            auth()->user()->decrement('pp', 180);
 
             // Reload the post with all necessary relationships including poll
             $post = $post->fresh(['user', 'post_images', 'post_comments.user', 'course', 'academy', 'poll.options', 'poll.user', 'poll.comments.user']);
-            
+
             // Reload activity with all relationships for poll
             $activity->load(['user', 'activityable.user', 'activityable.poll.options', 'activityable.poll.user', 'activityable.poll.comments.user']);
 
             // return to_route('course.feeds', $course->id);
             return response()->json([
-                'success'   => true,
-                'message'   => 'Course post created successfully',
-                'post'      => new CoursePostResource($post),
-                'activity'  => new ActivityResource($activity),
+                'success' => true,
+                'message' => 'Course post created successfully',
+                'post' => new CoursePostResource($post),
+                'activity' => new ActivityResource($activity),
             ], 201);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create course post'. $e->getMessage(),
+                'message' => 'Failed to create course post' . $e->getMessage(),
             ], 500);
         }
     }
@@ -211,21 +211,20 @@ class CoursePostController extends Controller
         $course_post->increment('views');
 
         $activityResource = new ActivityResource($course_post->activity);
-        
+
         return response()->json([
             'activity' => new ActivityResource($course_post->activity),
         ]);
     }
-
     /**
      * Show the form for editing the specified resource.
      */
     public function edit(Course $course, CoursePost $course_post)
     {
         $course_post->increment('views');
-        
+
         $activityResource = new ActivityResource($course_post->activity);
-        
+
         return response()->json([
             'activity' => new ActivityResource($course_post->activity),
         ]);
@@ -234,24 +233,74 @@ class CoursePostController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Course $course, CoursePost $course_post, Request $request,)
+    public function update(Course $course, CoursePost $course_post, Request $request, )
     {
+        // Authorization check: only post owner or course admin can edit
+        $user = auth()->user();
+        $isOwner = $course_post->user_id === $user->id;
+        $isCourseAdmin = $course->isAdmin($user);
+
+        if (!$isOwner && !$isCourseAdmin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขโพสต์นี้',
+            ], 403);
+        }
 
         $validatedData = $request->validate([
-            'content'           => 'required|string|max:5000',
-            'privacy_settings'  => 'required|integer|in:1,2,3',
-            'images.*'          => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',
+            'content' => 'required|string|max:5000',
+            'privacy_settings' => 'nullable|integer|in:1,2,3',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',
+            'remove_images' => 'nullable|array',
+            'remove_images.*' => 'integer',
         ]);
 
+        // Update content and privacy
         $content = $validatedData['content'];
         $hashtags = $this->extractHashtags($content);
 
         $course_post->content = $validatedData['content'];
-        $course_post->privacy_settings = $validatedData['privacy_settings'];
+        if (isset($validatedData['privacy_settings'])) {
+            $course_post->privacy_settings = $validatedData['privacy_settings'];
+        }
         $course_post->hashtags = json_encode($hashtags);
         $course_post->save();
 
-        if($request->hasFile('images')) {
+        // Handle image removal
+        if ($request->has('remove_images')) {
+            foreach ($request->remove_images as $imageId) {
+                $image = $course_post->post_images()->find($imageId);
+                if ($image) {
+                    // Delete image comments and their likes/dislikes
+                    $image->image_comments->each(function ($img_comment) {
+                        $img_comment->liked()->detach();
+                        $img_comment->disliked()->detach();
+                        $img_comment->delete();
+                    });
+
+                    // Delete image likes/dislikes
+                    $image->postImageLikes()->detach();
+                    $image->postImageDislikes()->detach();
+
+                    // Delete physical file
+                    Storage::disk('public')->delete('images/courses/posts/' . $image->filename);
+                    $image->delete();
+                }
+            }
+        }
+
+        // Handle new images - check total limit
+        if ($request->hasFile('images')) {
+            $currentImageCount = $course_post->post_images()->count();
+            $newImagesCount = count($request->file('images'));
+
+            if ($currentImageCount + $newImagesCount > 10) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'จำนวนรูปภาพรวมต้องไม่เกิน 10 รูป (ปัจจุบันมี ' . $currentImageCount . ' รูป)',
+                ], 422);
+            }
+
             $post_images = $request->file('images');
             foreach ($post_images as $image) {
                 $fileName = $course_post->id . uniqid() . '.' . $image->getClientOriginalExtension();
@@ -266,8 +315,8 @@ class CoursePostController extends Controller
         $course_post->refresh();
 
         return response()->json([
-            'success'   => true,
-            'post'      => new CoursePostResource($course_post),
+            'success' => true,
+            'post' => new CoursePostResource($course_post),
         ], 200);
     }
 
@@ -276,25 +325,37 @@ class CoursePostController extends Controller
      */
     public function destroy(Course $course, CoursePost $course_post)
     {
+        // Authorization check: only post owner or course admin can delete
+        $user = auth()->user();
+        $isOwner = $course_post->user_id === $user->id;
+        $isCourseAdmin = $course->isAdmin($user);
+
+        if (!$isOwner && !$isCourseAdmin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์ลบโพสต์นี้',
+            ], 403);
+        }
+
         try {
 
             // Delete post images
             foreach ($course_post->post_images as $cp_image) {
-                
-                $cp_image->image_comments->each(function ($img_comment){
+
+                $cp_image->image_comments->each(function ($img_comment) {
                     $img_comment->liked()->detach();
                     $img_comment->disliked()->detach();
-                    
+
                     $img_comment->delete();
                 });
 
                 $cp_image->postImageLikes()->detach();
                 $cp_image->postImageDislikes()->detach();
-                
+
                 Storage::disk('public')->delete('images/courses/posts/' . $cp_image->filename);
                 $cp_image->delete();
             }
-            
+
             // Delete post likes and dislikes
             $course_post->post_likes()->delete();
             $course_post->post_dislikes()->delete();
@@ -305,7 +366,7 @@ class CoursePostController extends Controller
             foreach ($course_post->post_comments as $comment) {
                 // Delete comment images if any
                 foreach ($comment->postCommentImages as $commentImage) {
-                    Storage::disk('public')->delete('images/courses/posts/comments/' . $commentImage->filename);                    
+                    Storage::disk('public')->delete('images/courses/posts/comments/' . $commentImage->filename);
                     $commentImage->delete();
                 }
 
@@ -314,17 +375,17 @@ class CoursePostController extends Controller
 
                 $comment->delete();
             }
-            
+
             // Delete the activity associated with the post
             $course_post->activity()->delete();
             // Finally, delete the post itself
             $course_post->delete();
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Course post and all related data deleted successfully',
             ], 200);
-    
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -332,7 +393,7 @@ class CoursePostController extends Controller
             ], 500);
         }
     }
-    
+
 
     /**
      * Extract hashtags from post content.

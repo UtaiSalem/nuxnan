@@ -1,0 +1,1 @@
+import{_ as r,o as s,c as t,a as n}from"./Brb_7992.js";const o={},c={class:"flex justify-center items-center h-40"};function a(d,e){return s(),t("div",c,[...e[0]||(e[0]=[n("div",{class:"animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"},null,-1)])])}const i=r(o,[["render",a]]);export{i as C};
