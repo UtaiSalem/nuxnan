@@ -242,7 +242,7 @@ onMounted(() => {
         </div>
 
         <div v-if="assignment.description" class="mt-6">
-           <RichTextEditor :model-value="assignment.description" disabled class="!min-h-0" />
+           <RichTextViewer :content="assignment.description" class="!min-h-0" />
         </div>
         
         <div v-if="assignment.images?.length" class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">

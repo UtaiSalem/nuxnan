@@ -6,7 +6,7 @@ import MainLayout from '~/layouts/main.vue'
 import Swal from 'sweetalert2'
 import { useAuthStore } from '~/stores/auth'
 import AdvertiseItemCard from '~/components/widgets/advertises/AdvertiseItemCard.vue'
-import VueDatePicker from '@vuepic/vue-datepicker'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 
 const authStore = useAuthStore()
@@ -380,15 +380,19 @@ onMounted(() => {
                              <div class="grid md:grid-cols-2 gap-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">วันที่โอน</label>
-                                    <VueDatePicker v-model="transferDate" :format="'dd/MM/yyyy'" :enable-time-picker="false" auto-apply class="date-picker-custom" />
+                                    <ClientOnly>
+                                        <VueDatePicker v-model="transferDate" :format="'dd/MM/yyyy'" :enable-time-picker="false" auto-apply class="date-picker-custom" />
+                                    </ClientOnly>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เวลาโอน</label>
-                                     <VueDatePicker v-model="transferTime" time-picker :format="'HH:mm'" auto-apply >
-                                         <template #input-icon>
-                                             <Icon icon="solar:clock-circle-bold" class="w-5 h-5 text-gray-400"/>
-                                         </template>
-                                     </VueDatePicker>
+                                    <ClientOnly>
+                                        <VueDatePicker v-model="transferTime" time-picker :format="'HH:mm'" auto-apply >
+                                            <template #input-icon>
+                                                <Icon icon="solar:clock-circle-bold" class="w-5 h-5 text-gray-400"/>
+                                            </template>
+                                        </VueDatePicker>
+                                    </ClientOnly>
                                 </div>
                             </div>
 

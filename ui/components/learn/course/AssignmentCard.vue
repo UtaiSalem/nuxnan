@@ -169,7 +169,7 @@ const handleGradedEditSubmit = () => {
 
        <!-- Description -->
        <div v-if="assignment.description" class="mb-6">
-          <RichTextEditor :model-value="assignment.description" disabled class="!min-h-0" />
+          <RichTextViewer :content="assignment.description" class="!min-h-0 text-gray-600 dark:text-gray-300" />
        </div>
 
 

@@ -44,6 +44,7 @@ class CourseAssignmentController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string',
+            'description' => 'nullable|string',
             'points' => 'required',
             'passing_score' => 'nullable|integer|min:0',
             'due_date' => 'nullable',
@@ -59,6 +60,7 @@ class CourseAssignmentController extends Controller
 
         $assignment = $course->assignments()->create([
             'title'             => $validated['title'],
+            'description'       => $validated['description'] ?? null,
             'points'            => $validated['points'],
             'passing_score'     => $validated['passing_score'] ?? floor($validated['points'] / 2),
             'graded_score'      => $validated['points'],
@@ -102,6 +104,7 @@ class CourseAssignmentController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string',
+            'description' => 'nullable|string',
             'points' => 'required',
             'passing_score' => 'nullable|integer|min:0',
             'due_date' => 'nullable',
@@ -117,6 +120,7 @@ class CourseAssignmentController extends Controller
 
         $assignment->update([
             'title'                 => $validated['title'],
+            'description'           => $validated['description'] ?? null,
             'points'                => $validated['points'],
             'passing_score'         => $validated['passing_score'] ?? 0,
             'graded_score'          => $validated['points'],
