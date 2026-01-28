@@ -246,7 +246,7 @@ onBeforeUnmount(() => {
         'border border-gray-300 dark:border-gray-600',
         disabled ? 'rounded-xl cursor-default' : 'rounded-b-xl border-t-0',
         !disabled && 'focus:outline-none focus:ring-2 focus:ring-blue-500',
-        'prose prose-lg dark:prose-invert max-w-none'
+        'prose prose-lg dark:prose-invert max-w-none whitespace-pre-wrap'
       ]"
       :data-placeholder="disabled ? '' : placeholder"
     />

@@ -1686,12 +1686,12 @@ const _routes = [
       {
         name: "Learn-Courses-id",
         path: "",
-        component: () => import('./index-BHXbqnf4.mjs')
+        component: () => import('./index-BimSm09e.mjs')
       },
       {
         name: "Learn-Courses-id-lessons",
         path: "lessons",
-        component: () => import('./lessons-CQfjH414.mjs'),
+        component: () => import('./lessons-D_HchPEf.mjs'),
         children: [
           {
             name: __nuxt_page_meta$K?.name,
@@ -1708,7 +1708,7 @@ const _routes = [
           {
             name: "Learn-Courses-id-lessons-lessonId",
             path: ":lessonId()",
-            component: () => import('./_lessonId_-wlF11091.mjs'),
+            component: () => import('./_lessonId_-tjxTaLfB.mjs'),
             children: [
               {
                 name: "Learn-Courses-id-lessons-lessonId-edit",
@@ -1738,7 +1738,7 @@ const _routes = [
       {
         name: "Learn-Courses-id-my-progress",
         path: "my-progress",
-        component: () => import('./my-progress-C9cvQbsL.mjs')
+        component: () => import('./my-progress-B1z5qxgS.mjs')
       },
       {
         name: "Learn-Courses-id-groups",
@@ -1776,7 +1776,7 @@ const _routes = [
       {
         name: "Learn-Courses-id-assignments",
         path: "assignments",
-        component: () => import('./index-Du-rFlyJ.mjs')
+        component: () => import('./index-BtxvEWuu.mjs')
       },
       {
         name: "Learn-Courses-id-quizzes-quizId-edit",
@@ -1797,7 +1797,7 @@ const _routes = [
       {
         name: "Learn-Courses-id-assignments-assignmentId",
         path: "assignments/:assignmentId()",
-        component: () => import('./_assignmentId_-BTwpygLv.mjs')
+        component: () => import('./_assignmentId_-u7K6WklX.mjs')
       }
     ]
   },
@@ -1868,7 +1868,7 @@ const _routes = [
   {
     name: "Learn-Lesson-Lesson",
     path: "/Learn/Lesson/Lesson",
-    component: () => import('./Lesson-DG62sQpN.mjs')
+    component: () => import('./Lesson-C-_4_zQG.mjs')
   },
   {
     name: "auth-ConfirmPassword",
@@ -2278,7 +2278,7 @@ const _routes = [
   {
     name: "Learn-Course-Progress-CourseMembersProgress",
     path: "/Learn/Course/Progress/CourseMembersProgress",
-    component: () => import('./CourseMembersProgress-VM3o_h0b.mjs')
+    component: () => import('./CourseMembersProgress-Dl4TmeCx.mjs')
   },
   {
     name: "Learn-Student-Card-Admin-StudentCardBackSide",
@@ -3398,7 +3398,7 @@ function createNuxtI18nContext(nuxt, vueI18n, defaultLocale) {
       return;
     }
     const headers = getLocaleConfig(locale)?.cacheable ? {} : { "Cache-Control": "no-cache" };
-    const messages = await $fetch(`${"/_i18n/tMULgqhl"}/${locale}/messages.json`, { headers });
+    const messages = await $fetch(`${"/_i18n/SeXYkDvK"}/${locale}/messages.json`, { headers });
     for (const k of Object.keys(messages)) {
       i18n.mergeLocaleMessage(k, messages[k]);
     }
@@ -7629,7 +7629,7 @@ const i18n_EI7LsD1KYQADczz5hrChviGQCdVM8yUkvFEZLJpmnvM = /* @__PURE__ */ defineN
     {
       localeConfigs.value = useRequestEvent().context.nuxtI18n?.localeConfigs || {};
     }
-    prerenderRoutes(localeCodes.map((locale) => `${"/_i18n/tMULgqhl"}/${locale}/messages.json`));
+    prerenderRoutes(localeCodes.map((locale) => `${"/_i18n/SeXYkDvK"}/${locale}/messages.json`));
     const i18n = createI18n(optionsI18n);
     const detectors = useDetectors(useRequestEvent(nuxt), useI18nDetection(nuxt), nuxt);
     const ctx = createNuxtI18nContext(nuxt, i18n, optionsI18n.defaultLocale);

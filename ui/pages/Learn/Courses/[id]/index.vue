@@ -132,7 +132,7 @@ const enrollCourse = async () => {
   
   isEnrolling.value = true
   try {
-    const response = await api.post(`/api/courses/${course.value.id}/members`)
+    const response = await api.post(`/api/courses/${course.value.id}/members`, {})
     if (response.success) {
       course.value.isMember = true
       course.value.member_status = response.memberStatus
@@ -155,7 +155,7 @@ const toggleWishlist = async () => {
   
   isTogglingFavorite.value = true
   try {
-    const response = await api.post(`/api/courses/${course.value.id}/favorite`) as { 
+    const response = await api.post(`/api/courses/${course.value.id}/favorite`, {}) as { 
       success: boolean
       is_favorited?: boolean
       message?: string 
@@ -210,7 +210,7 @@ const respondToInvitation = async (accept: boolean) => {
   
   try {
     const action = accept ? 'accept' : 'decline'
-    const res: any = await api.post(`/api/courses/${course.value.id}/admins/invitations/${pendingInvitation.value.id}/${action}`)
+    const res: any = await api.post(`/api/courses/${course.value.id}/admins/invitations/${pendingInvitation.value.id}/${action}`, {})
     if (res.success) {
       if (accept) {
         // Reload page to refresh permissions
@@ -292,7 +292,7 @@ const respondToInvitation = async (accept: boolean) => {
           </div>
           
           <!-- View Mode -->
-          <div v-if="!isEditingDescription" class="text-gray-600 dark:text-gray-400 leading-relaxed prose dark:prose-invert max-w-none">
+          <div v-if="!isEditingDescription" class="text-gray-600 dark:text-gray-400 leading-relaxed prose dark:prose-invert max-w-none whitespace-pre-wrap">
             <div v-if="course.description" v-html="course.description"></div>
             <p v-else class="text-gray-400 italic">ไม่มีรายละเอียด</p>
           </div>

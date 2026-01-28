@@ -296,6 +296,7 @@ class DonateController extends \App\Http\Controllers\Controller
     public function allAvailableDonates()
     {
         $donates = Donate::latest()
+            ->whereIn('status', [0, 1])
             ->with(['donor'])
             ->paginate(12);
 
