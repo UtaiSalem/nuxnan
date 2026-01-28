@@ -8,5 +8,5 @@ namespace Projects;
 public class nuxniaspire_AppHost
 {
     private nuxniaspire_AppHost() { }
-    public static string ProjectPath => """C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.AppHost""";
+    public static string ProjectPath => """C:\wamp64\www\nuxnan\api\nuxnanaspire\nuxniaspire.AppHost""";
 }

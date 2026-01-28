@@ -7,5 +7,5 @@ namespace Projects;
 [global::System.Diagnostics.DebuggerDisplay("Type = {GetType().Name,nq}, ProjectPath = {ProjectPath}")]
 public class nuxniaspire_ApiService : global::Aspire.Hosting.IProjectMetadata
 {
-    public string ProjectPath => """C:\wamp64\www\nuxni\api\nuxniaspire\nuxniaspire.ApiService\nuxniaspire.ApiService.csproj""";
+    public string ProjectPath => """C:\wamp64\www\nuxnan\api\nuxnanaspire\nuxniaspire.ApiService\nuxniaspire.ApiService.csproj""";
 }
