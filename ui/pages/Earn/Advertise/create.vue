@@ -40,7 +40,7 @@ const dragingSlip = ref(false)
 
 const totalMoneyAdvert = ref(0)
 const quantityOptions = [100, 500, 1000, 2000, 5000, 10000]
-const timeOptions = [1, 3, 5, 10, 15, 30]
+const timeOptions = [5, 10, 15, 30, 60]
 
 const previewAdvert = computed(() => ({
     advertiser: authStore.user,
