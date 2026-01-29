@@ -30,7 +30,11 @@ ui/.output/
 api/nuxnanravel/storage/
 
 # Ignore sensitive env and vendor in nuxnanravel
-nuxnan/api/nuxnanravel/.env
-nuxnan/api/nuxnanravel/vendor/
+api/nuxnanravel/.env
+api/nuxnanravel/vendor/
 
-nuxnan/api/nuxnanravel/.env.production
+api/nuxnanravel/.env.production
+
+# Ignore deployment and gitignore files in nuxnan
+nuxnan/DEPLOYMENT.md
+nuxnan/.gitignore

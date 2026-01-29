@@ -134,6 +134,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     protected $appends = [
         'connected_providers',
+        'avatar',
         'profile_photo_url',
         'referal_link',
         'is_plearnd_admin',
@@ -228,7 +229,14 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     }
 
     //get profile photo url
+    //get profile photo url
     public function getProfilePhotoUrlAttribute()
+    {
+        return $this->avatar;
+    }
+
+    // Get Avatar Attribute (New Standard)
+    public function getAvatarAttribute()
     {
         $path = $this->profile_photo_path;
 
@@ -239,7 +247,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             }
 
             // Clean up the path: remove any leading slash, 'storage/', or '/storage/' prefix
-            // This handles legacy paths like '/storage/avatars/...' or 'storage/profile-photos/...'
             $cleanPath = preg_replace('#^/?(storage/)?#', '', $path);
             
             // Return full URL using the Storage facade pointing to public disk
