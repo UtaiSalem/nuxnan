@@ -250,7 +250,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             $cleanPath = preg_replace('#^/?(storage/)?#', '', $path);
             
             // Return full URL using the Storage facade pointing to public disk
-            return url('storage/' . $cleanPath);
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($cleanPath);
         }
 
         // Fallback: UI Avatars
