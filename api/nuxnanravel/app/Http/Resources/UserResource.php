@@ -15,20 +15,8 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // Generate avatar URL
-        $avatarUrl = null;
-        if ($this->profile_photo_path) {
-            // Check if it's already a full URL (e.g., Google profile photo)
-            if (filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)) {
-                $avatarUrl = $this->profile_photo_path;
-            } else {
-                // Local storage path - prepend backend URL
-                $avatarUrl = url(Storage::url($this->profile_photo_path));
-            }
-        } else {
-            // Fallback to UI Avatars
-            $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=7F9CF5&background=EBF4FF';
-        }
+        // Generate avatar URL - trust the model accessor
+        $avatarUrl = $this->profile_photo_url;
         
         return [
             'id'                => $this->id,

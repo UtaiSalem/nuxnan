@@ -3,6 +3,8 @@
     class="hexagon-wrapper"
     :class="[wrapperClass, { 'animated': animated }]"
     :style="wrapperStyle"
+    role="img"
+    :aria-label="altText"
   >
     <!-- SVG Hexagon Border with Progress Style -->
     <svg 
@@ -63,9 +65,10 @@
       :style="innerContainerStyle"
     >
       <img 
-        v-if="src"
-        :src="src" 
-        :alt="alt"
+        v-if="imageSrc"
+        :src="imageSrc" 
+        :alt="altText"
+        :loading="lazy ? 'lazy' : 'eager'"
         class="hexagon-image"
         :style="imageStyle"
         @error="handleImageError"
@@ -75,7 +78,7 @@
         class="hexagon-fallback"
         :style="fallbackStyle"
       >
-        <Icon :name="fallbackIcon" :style="{ fontSize: fallbackIconSize }" />
+        <Icon :name="fallbackIcon" :style="{ fontSize: fallbackIconSize }" aria-hidden="true" />
       </div>
     </div>
 
@@ -111,12 +114,14 @@
       class="hexagon-status"
       :class="[isOnline ? 'online' : 'offline', statusClass]"
       :style="statusStyle"
+      :aria-label="isOnline ? 'Online' : 'Offline'"
     />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { DEFAULT_AVATAR } from '~/utils/avatarConstants'
 
 // Types
 interface GradientConfig {
@@ -183,6 +188,8 @@ const props = withDefaults(defineProps<{
   innerClass?: string
   levelBadgeClass?: string
   statusClass?: string
+  name?: string
+  lazy?: boolean
 }>(), {
   alt: 'Avatar',
   fallbackIcon: 'mdi:account',
@@ -205,6 +212,7 @@ const props = withDefaults(defineProps<{
   innerClass: '',
   levelBadgeClass: '',
   statusClass: '',
+  lazy: true,
 })
 
 const emit = defineEmits<{
@@ -392,8 +400,32 @@ const statusStyle = computed(() => {
   }
 })
 
+// Track if image failed to load
+const imageLoadFailed = ref(false)
+
+// Computed image source with fallback handling
+const imageSrc = computed(() => {
+  if (imageLoadFailed.value) return null // Show fallback icon
+  return props.src || null
+})
+
+// Computed alt text for accessibility
+const altText = computed(() => {
+  if (props.alt !== 'Avatar') return props.alt
+  if (props.name) return `Avatar of ${props.name}`
+  return 'User avatar'
+})
+
 // Event handlers
 function handleImageError(event: Event) {
+  const img = event.target as HTMLImageElement
+  // Try fallback to default avatar first
+  if (img.src !== DEFAULT_AVATAR) {
+    img.src = DEFAULT_AVATAR
+  } else {
+    // If default also fails, show fallback icon
+    imageLoadFailed.value = true
+  }
   emit('error', event)
 }
 </script>

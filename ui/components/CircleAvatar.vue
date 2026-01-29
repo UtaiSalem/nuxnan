@@ -1,5 +1,5 @@
 <template>
-  <div class="circle-avatar-wrapper" :style="wrapperStyle">
+  <div class="circle-avatar-wrapper" :style="wrapperStyle" role="img" :aria-label="altText">
     <!-- Avatar Image -->
     <div 
       class="circle-avatar"
@@ -7,14 +7,15 @@
       :style="avatarStyle"
     >
       <img 
-        v-if="src"
-        :src="src" 
-        :alt="alt"
+        v-if="imageSrc"
+        :src="imageSrc" 
+        :alt="altText"
+        :loading="lazy ? 'lazy' : 'eager'"
         class="avatar-image"
         @error="handleImageError"
       />
       <div v-else class="avatar-fallback">
-        <Icon :name="fallbackIcon" class="fallback-icon" />
+        <Icon :name="fallbackIcon" class="fallback-icon" aria-hidden="true" />
       </div>
     </div>
 
@@ -23,16 +24,19 @@
       v-if="showOnlineStatus"
       class="online-status"
       :class="{ online: isOnline }"
+      :aria-label="isOnline ? 'Online' : 'Offline'"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { DEFAULT_AVATAR } from '~/utils/avatarConstants'
 
 const props = withDefaults(defineProps<{
   src?: string | null
   alt?: string
+  name?: string
   fallbackIcon?: string
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | number
   showBorder?: boolean
@@ -40,6 +44,7 @@ const props = withDefaults(defineProps<{
   borderWidth?: number
   showOnlineStatus?: boolean
   isOnline?: boolean
+  lazy?: boolean
 }>(), {
   alt: 'Avatar',
   fallbackIcon: 'mdi:account',
@@ -49,11 +54,15 @@ const props = withDefaults(defineProps<{
   borderWidth: 3,
   showOnlineStatus: false,
   isOnline: false,
+  lazy: true,
 })
 
 const emit = defineEmits<{
   (e: 'error', event: Event): void
 }>()
+
+// Track if image failed to load
+const imageLoadFailed = ref(false)
 
 // Size presets
 const sizePresets: Record<string, number> = {
@@ -88,7 +97,28 @@ const avatarStyle = computed(() => ({
   borderWidth: props.showBorder ? `${props.borderWidth}px` : '0',
 }))
 
+// Computed image source with fallback handling
+const imageSrc = computed(() => {
+  if (imageLoadFailed.value) return null // Show fallback icon
+  return props.src || null
+})
+
+// Computed alt text for accessibility
+const altText = computed(() => {
+  if (props.alt !== 'Avatar') return props.alt
+  if (props.name) return `Avatar of ${props.name}`
+  return 'User avatar'
+})
+
 function handleImageError(event: Event) {
+  const img = event.target as HTMLImageElement
+  // Try fallback to default avatar first
+  if (img.src !== DEFAULT_AVATAR) {
+    img.src = DEFAULT_AVATAR
+  } else {
+    // If default also fails, show fallback icon
+    imageLoadFailed.value = true
+  }
   emit('error', event)
 }
 </script>

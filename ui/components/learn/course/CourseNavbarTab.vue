@@ -25,7 +25,7 @@ const activeTab = computed(() => {
   if (path.includes('/lessons')) return 1
   if (path.includes('/assignments')) return 2
   if (path.includes('/quizzes')) return 3
-  if (path.includes('/play/groups')) return 5
+  if (path.includes('/groups')) return 5
   if (path.includes('/members')) return 4
   if (path.includes('/settings')) return 8
   if (path.includes('/member-settings')) return 9

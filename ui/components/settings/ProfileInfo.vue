@@ -103,19 +103,9 @@ onMounted(async () => {
                 experience_years: p.experience_years || '',
             }
             
-            // Handle Avatar URL - check multiple possible fields
-            const avatarUrl = res.data.profile_photo_url || res.data.profile_photo_path || p.profile_picture || p.avatar
-            if (avatarUrl) {
-                if (avatarUrl.startsWith('/storage')) {
-                    avatarPreview.value = `${apiBase}${avatarUrl}`
-                } else if (avatarUrl.startsWith('http')) {
-                    avatarPreview.value = avatarUrl
-                } else {
-                    avatarPreview.value = `${apiBase}/storage/${avatarUrl}`
-                }
-            } else {
-                avatarPreview.value = '/images/default-avatar.png'
-            }
+            // Handle Avatar URL
+            // Trust the backend standardized URL
+            avatarPreview.value = res.data.profile_photo_url || res.data.avatar || '/images/default-avatar.png'
 
             // Handle Cover URL
             const coverUrl = p.cover_image || p.cover_image_url
@@ -152,12 +142,17 @@ async function onAvatarChange(e: Event) {
             headers: { Authorization: `Bearer ${authStore.token}` }
         })
         if (res.success) {
-            avatarPreview.value = res.url.startsWith('/storage') ? `${apiBase}${res.url}` : res.url
-            authStore.fetchUser()
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดรูปโปรไฟล์สำเร็จ', timer: 2000, showConfirmButton: false })
+            // Backend now returns absolute URL, handle both url and avatar keys for compatibility
+            const newAvatarUrl = res.url || res.avatar
+            avatarPreview.value = newAvatarUrl
+            await authStore.fetchUser()
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message || 'อัปโหลดรูปโปรไฟล์สำเร็จ', timer: 2000, showConfirmButton: false })
+        } else {
+            throw new Error(res.message || 'Upload failed')
         }
-    } catch (e) {
-        Swal.fire('Error', 'Avatar upload failed', 'error')
+    } catch (e: any) {
+        const errorMessage = e.data?.message || e.message || 'ไม่สามารถอัปโหลดรูปโปรไฟล์ได้'
+        Swal.fire('Error', errorMessage, 'error')
     } finally {
         isUploadingAvatar.value = false
     }
@@ -180,11 +175,15 @@ async function onCoverChange(e: Event) {
             headers: { Authorization: `Bearer ${authStore.token}` }
         })
         if (res.success) {
-            coverPreview.value = res.url.startsWith('/storage') ? `${apiBase}${res.url}` : res.url
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปโหลดภาพปกสำเร็จ', timer: 2000, showConfirmButton: false })
+            // Backend now returns absolute URL
+            coverPreview.value = res.url
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message || 'อัปโหลดภาพปกสำเร็จ', timer: 2000, showConfirmButton: false })
+        } else {
+            throw new Error(res.message || 'Upload failed')
         }
-    } catch (e) {
-        Swal.fire('Error', 'Cover upload failed', 'error')
+    } catch (e: any) {
+        const errorMessage = e.data?.message || e.message || 'ไม่สามารถอัปโหลดภาพปกได้'
+        Swal.fire('Error', errorMessage, 'error')
     } finally {
         isUploadingCover.value = false
     }

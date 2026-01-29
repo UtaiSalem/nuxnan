@@ -1,17 +1,19 @@
 /**
  * useAvatar - Composable for generating user avatar URLs
  * Generates avatar from name initials if no profile image exists
+ * 
+ * Uses centralized constants from ~/utils/avatarConstants
  */
 
-// Generate initials from name
-const getInitials = (name: string): string => {
-  if (!name) return '?'
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) {
-    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
-  }
-  return name.charAt(0).toUpperCase()
-}
+import {
+  DEFAULT_AVATAR,
+  UI_AVATARS_CONFIG,
+  AVATAR_SIZES,
+  type AvatarSize,
+  getInitialsFromName,
+  handleAvatarError,
+  getAvatarAltText,
+} from '~/utils/avatarConstants'
 
 // Generate consistent color from name
 const getColorFromName = (name: string): string => {
@@ -45,31 +47,31 @@ export const useAvatar = () => {
   const apiBase = config.public.apiBase
 
   /**
-   * Get avatar URL for a user
+   * Get avatar URL for a user with standardized size and fallback
    * @param userData - User object with possible avatar fields
-   * @param size - Size of generated avatar (default: 128)
+   * @param size - Size of avatar (default: 150 for consistency)
    * @returns Avatar URL string
    */
-  const getAvatarUrl = (userData: any, size: number = 128): string => {
+  const getAvatarUrl = (userData: any, size: number = 150): string => {
     if (!userData) return generateFromName('User', size)
-    
+
     // Check various possible avatar fields
     const avatarPath = userData.avatar || userData.profile_photo_path || userData.profile_photo_url
-    
+
     if (avatarPath) {
       // If already a full URL
       if (avatarPath.startsWith('http')) return avatarPath
-      
+
       // If starts with /storage, likely from backend
       if (avatarPath.startsWith('/storage')) return `${apiBase}${avatarPath}`
 
       // If starts with / but not storage, assume local asset
       if (avatarPath.startsWith('/')) return avatarPath
-      
+
       // Otherwise construct the storage URL
       return `${apiBase}/storage/${avatarPath}`
     }
-    
+
     // No avatar found - generate from name
     const name = userData.name || userData.username || 'User'
     return generateFromName(name, size)
@@ -83,10 +85,10 @@ export const useAvatar = () => {
    * @returns Generated avatar URL
    */
   const generateFromName = (name: string, size: number = 128): string => {
-    const initials = getInitials(name)
+    const initials = getInitialsFromName(name)
+    const { baseUrl, defaultBackground, defaultColor } = UI_AVATARS_CONFIG
     
-    // Use UI Avatars API - same style as newsfeed (light blue bg, blue text)
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&color=7F9CF5&background=EBF4FF`
+    return `${baseUrl}?name=${encodeURIComponent(initials)}&size=${size}&color=${defaultColor}&background=${defaultBackground}`
   }
 
   /**
@@ -95,7 +97,7 @@ export const useAvatar = () => {
    * @returns Initials string (1-2 characters)
    */
   const getNameInitials = (name: string): string => {
-    return getInitials(name)
+    return getInitialsFromName(name)
   }
 
   /**
@@ -107,10 +109,49 @@ export const useAvatar = () => {
     return getColorFromName(name)
   }
 
+  /**
+   * Handle image error - fallback to default avatar
+   * Use this on @error of img elements
+   * @param event - Error event from img element
+   */
+  const onImageError = (event: Event): void => {
+    handleAvatarError(event)
+  }
+
+  /**
+   * Get alt text for avatar accessibility
+   * @param name - User's name
+   * @returns Appropriate alt text
+   */
+  const getAltText = (name?: string): string => {
+    return getAvatarAltText(name)
+  }
+
+  /**
+   * Get default avatar URL
+   * @returns Standard default avatar path
+   */
+  const getDefaultAvatar = (): string => {
+    return DEFAULT_AVATAR
+  }
+
+  /**
+   * Get avatar size in pixels
+   * @param size - Size key (xs, sm, md, lg, xl, etc)
+   * @returns Size in pixels
+   */
+  const getAvatarSizePixels = (size: AvatarSize): number => {
+    return AVATAR_SIZES[size] || AVATAR_SIZES.md
+  }
+
   return {
     getAvatarUrl,
     generateFromName,
     getNameInitials,
-    getNameColor
+    getNameColor,
+    onImageError,
+    getAltText,
+    getDefaultAvatar,
+    getAvatarSizePixels,
   }
 }

@@ -1928,9 +1928,11 @@ const handlePollUpdate = (updatedPoll) => {
     <template v-else-if="isShareActivity && !isNested">
       <!-- Sharer Header -->
       <div class="flex items-center gap-3 mb-4">
-        <img :src="actionByAvatar" 
-             class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-cyan/30" 
-             :alt="actionBy?.username" />
+           <img :src="actionByAvatar"
+             :alt="`Avatar of ${actionByName}`"
+             class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-cyan/30"
+             loading="lazy"
+             @error="(e) => e.target.src = '/images/default-avatar.png'" />
         <div class="flex-1">
           <div class="flex items-center gap-2 flex-wrap">
             <NuxtLink :to="`/profile/${actionBy?.id}`" class="font-bold text-gray-800 dark:text-white hover:text-vikinger-purple transition-colors">
@@ -2211,9 +2213,12 @@ const handlePollUpdate = (updatedPoll) => {
         <div class="flex items-center gap-3">
           <!-- Avatar with badge -->
           <div class="relative flex-shrink-0">
-            <img :src="postAuthorAvatar" 
-                 class="w-12 h-12 aspect-square rounded-full object-cover ring-2 ring-vikinger-purple/30 group-hover:ring-vikinger-purple transition-all duration-300" 
-                 :alt="postAuthor?.username" />
+            <img :src="postAuthorAvatar"
+                 :alt="`Avatar of ${postAuthorName}`"
+                 class="w-12 h-12 aspect-square rounded-full object-cover ring-2 ring-vikinger-purple/30 group-hover:ring-vikinger-purple transition-all duration-300"
+                 loading="lazy"
+                 @error="(e) => e.target.src = '/images/default-avatar.png'" />
+
             <!-- Post Type Badge -->
             <div v-if="postTypeBadge && !isNested" :class="[postTypeBadge.color, 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-sm']">
               <Icon :icon="postTypeBadge.icon" class="w-3 h-3 text-white" />
@@ -2654,7 +2659,7 @@ const handlePollUpdate = (updatedPoll) => {
       <div v-if="showComments && !isNested" class="mt-4 pt-4 border-t border-gray-200 dark:border-vikinger-dark-50/30 space-y-4">
         <!-- Add Comment -->
         <div class="flex gap-3">
-          <img :src="currentUserAvatar" class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" alt="You" />
+          <img :src="currentUserAvatar" class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" alt="Your avatar" loading="lazy" @error="(e) => e.target.src = '/images/default-avatar.png'" />
           <div class="flex-1 flex gap-2">
             <input 
               v-model="newComment"

@@ -223,6 +223,13 @@ export const useAuthStore = defineStore('auth', () => {
   // Points Management
   const points = computed(() => Number(user.value?.points) || 0)
 
+  // Avatar URL - always has a value with proper fallback
+  const avatarUrl = computed(() => {
+    if (!user.value) return '/images/default-avatar.png'
+    // Use avatar field first (always set by backend), then profile_photo_url
+    return user.value.avatar || user.value.profile_photo_url || '/images/default-avatar.png'
+  })
+
   function deductPoints(amount: number): boolean {
     if (!user.value) {
       console.error('❌ deductPoints: No user')
@@ -343,5 +350,7 @@ export const useAuthStore = defineStore('auth', () => {
     addWallet,
     deductWallet,
     hasEnoughWallet,
+    // Avatar
+    avatarUrl,
   }
 })

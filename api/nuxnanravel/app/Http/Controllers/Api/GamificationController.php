@@ -307,15 +307,7 @@ class GamificationController extends Controller
                 ->limit($limit)
                 ->get(['id', 'name', 'pp', 'profile_photo_path'])
                 ->map(function ($user, $index) {
-                    $avatar = null;
-                    if ($user->profile_photo_path) {
-                        $path = str_replace('avatars/', 'profile-photos/', $user->profile_photo_path);
-                        // Remove any existing /storage or storage/ prefix to prevent duplication
-                        $path = preg_replace('#^/?storage/#', '', $path);
-                        $avatar = url('storage/' . $path);
-                    } else {
-                        $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&color=7F9CF5&background=EBF4FF';
-                    }
+                    $avatar = $user->profile_photo_url;
 
                     return [
                         'rank' => $index + 1,

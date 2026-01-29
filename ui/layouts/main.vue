@@ -103,7 +103,6 @@ const authUser = computed(() => {
       username: 'guest',
       email: '',
       avatar: '/images/default-avatar.png',
-      profile_photo_url: '/images/default-avatar.png',
       pp: 0,
       wallet: 0,
       level: 1,
@@ -113,12 +112,14 @@ const authUser = computed(() => {
     }
   }
 
+  // Use avatar first (always set by backend with fallback to UI Avatars)
+  const avatarUrl = user.avatar || user.profile_photo_url || '/images/default-avatar.png'
+
   return {
     name: user.username || user.name || 'User',
     username: user.username || user.name,
     email: user.email || '',
-    avatar: user.avatar || user.profile_photo_url || '/images/default-avatar.png',
-    profile_photo_url: user.avatar || user.profile_photo_url || '/images/default-avatar.png',
+    avatar: avatarUrl,
     pp: authStore.points, // ใช้ authStore.points (computed reactive)
     wallet: Number(user.wallet) || 0,
     level: user.level || 24,
@@ -424,7 +425,7 @@ const onQRActionComplete = (result) => {
               class="w-10 h-10 rounded-full overflow-hidden border-2 border-vikinger-cyan shadow-lg group-hover:border-vikinger-purple group-hover:scale-110 transition-all"
             >
               <img
-                :src="authUser.profile_photo_url"
+                :src="authUser.avatar"
                 :alt="authUser.name"
                 class="w-full h-full object-cover"
               />
@@ -608,7 +609,7 @@ const onQRActionComplete = (result) => {
           <div class="text-center">
             <div class="relative inline-block mb-4">
               <img
-                :src="authUser.profile_photo_url"
+                :src="authUser.avatar"
                 class="w-24 h-24 rounded-full border-4 border-vikinger-purple shadow-lg"
                 :alt="authUser.name"
               />
@@ -1151,7 +1152,7 @@ const onQRActionComplete = (result) => {
           <div class="text-center">
             <div class="relative inline-block mb-3">
               <img
-                :src="authUser.profile_photo_url"
+                :src="authUser.avatar"
                 class="w-20 h-20 rounded-full mx-auto border-4 border-vikinger-purple"
               />
               <div

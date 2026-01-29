@@ -104,9 +104,9 @@ class UserProfileResource extends JsonResource
             if (filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
                 return $user->profile_photo_path;
             }
-            return url(Storage::url($user->profile_photo_path));
+            return $user->profile_photo_url;
         }
-        
+
         // Check profile picture
         if ($this->profile_picture) {
             if (filter_var($this->profile_picture, FILTER_VALIDATE_URL)) {
@@ -114,7 +114,7 @@ class UserProfileResource extends JsonResource
             }
             return url(Storage::url($this->profile_picture));
         }
-        
+
         // Fallback to UI Avatars
         $name = trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? '')) ?: $user->name;
         return 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&color=7F9CF5&background=EBF4FF&size=200';

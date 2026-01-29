@@ -159,7 +159,7 @@ class PostService
             // Create activity
             $this->createActivity($post, ActivityType::CREATE_POST);
 
-            // Load relationships
+            // Load relationships including the activity
             $post->load([
                 'user',
                 'postImages',
@@ -168,6 +168,7 @@ class PostService
                 'postTaggedUsers.user',
                 'postLinkPreview',
                 'poll.options',
+                'activity',
             ]);
 
             return $post;

@@ -12,11 +12,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Http\Resources\Play\ActivityResource;
 use App\Http\Resources\UserProfileResource;
 use App\Http\Requests\StoreUserProfileRequest;
 use App\Http\Requests\UpdateUserProfileRequest;
 use Carbon\Carbon;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class UserProfileController extends \App\Http\Controllers\Controller
 {
@@ -206,29 +209,81 @@ class UserProfileController extends \App\Http\Controllers\Controller
      */
     public function updateAvatar(Request $request)
     {
-        $request->validate([
-            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'], // 5MB max
-        ]);
+        try {
+            $request->validate([
+                'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'], // 5MB max
+            ]);
 
-        $user = Auth::user();
+            $file = $request->file('avatar');
 
-        // Delete old avatar if exists
-        if ($user->profile_photo_path && !filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
-            Storage::disk('public')->delete($user->profile_photo_path);
+            // Additional security check: verify MIME type from file content
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $file->getPathname());
+            finfo_close($finfo);
+
+            $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+            if (!in_array($mimeType, $allowedMimeTypes)) {
+                Log::warning('Invalid MIME type for avatar upload', ['user_id' => Auth::id(), 'mime' => $mimeType]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid file type. Only images are allowed.',
+                ], 422);
+            }
+
+            // Check if file is actually an image
+            $imageInfo = getimagesize($file->getPathname());
+            if (!$imageInfo) {
+                Log::warning('Uploaded file is not a valid image', ['user_id' => Auth::id()]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Uploaded file is not a valid image.',
+                ], 422);
+            }
+
+            $user = Auth::user();
+
+            // Delete old avatar if exists
+            if ($user->profile_photo_path && !filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
+                Storage::disk('public')->delete($user->profile_photo_path);
+            }
+
+            // Resize image to 300x300 max, maintain aspect ratio
+            $manager = new ImageManager(new Driver());
+            $image = $manager->read($file);
+            $image->scaleDown(width: 300, height: 300);
+
+            // Generate filename
+            $filename = time() . '_' . uniqid() . '.jpg';
+
+            // Store path
+            $path = 'avatars/' . $user->id . '/' . $filename;
+
+            // Save resized image to storage
+            Storage::disk('public')->put($path, (string) $image->toJpeg(quality: 85));
+
+            $user->update([
+                'profile_photo_path' => $path,
+            ]);
+
+            Log::info('Avatar updated successfully', ['user_id' => $user->id, 'path' => $path]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'อัพเดทรูปโปรไฟล์สำเร็จ',
+                'avatar' => $user->profile_photo_url,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Avatar upload failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload avatar. Please try again.',
+            ], 500);
         }
-
-        // Store new avatar
-        $path = $request->file('avatar')->store('avatars/' . $user->id, 'public');
-        
-        $user->update([
-            'profile_photo_path' => $path,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'อัพเดทรูปโปรไฟล์สำเร็จ',
-            'avatar' => url(Storage::url($path)),
-        ]);
     }
 
     /**
@@ -236,37 +291,89 @@ class UserProfileController extends \App\Http\Controllers\Controller
      */
     public function updateCover(Request $request)
     {
-        $request->validate([
-            'cover' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:10240'], // 10MB max
-        ]);
-
-        $user = Auth::user();
-        $profile = $user->profile;
-
-        if (!$profile) {
-            $profile = $user->profile()->create([
-                'join_date' => $user->created_at,
+        try {
+            $request->validate([
+                'cover' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:10240'], // 10MB max
             ]);
+
+            $file = $request->file('cover');
+
+            // Additional security check: verify MIME type from file content
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $file->getPathname());
+            finfo_close($finfo);
+
+            $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+            if (!in_array($mimeType, $allowedMimeTypes)) {
+                Log::warning('Invalid MIME type for cover upload', ['user_id' => Auth::id(), 'mime' => $mimeType]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid file type. Only images are allowed.',
+                ], 422);
+            }
+
+            // Check if file is actually an image
+            $imageInfo = getimagesize($file->getPathname());
+            if (!$imageInfo) {
+                Log::warning('Uploaded file is not a valid image', ['user_id' => Auth::id()]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Uploaded file is not a valid image.',
+                ], 422);
+            }
+
+            $user = Auth::user();
+            $profile = $user->profile;
+
+            if (!$profile) {
+                $profile = $user->profile()->create([
+                    'join_date' => $user->created_at,
+                ]);
+            }
+
+            // Delete old cover if exists
+            $oldCover = $profile->cover_image ?? $profile->cover_image_url;
+            if ($oldCover && !filter_var($oldCover, FILTER_VALIDATE_URL)) {
+                Storage::disk('public')->delete($oldCover);
+            }
+
+            // Resize image to 1200x400 max, maintain aspect ratio
+            $manager = new ImageManager(new Driver());
+            $image = $manager->read($file);
+            $image->scaleDown(width: 1200, height: 400);
+
+            // Generate filename
+            $filename = time() . '_' . uniqid() . '.jpg';
+
+            // Store path
+            $path = 'covers/' . $user->id . '/' . $filename;
+
+            // Save resized image to storage
+            Storage::disk('public')->put($path, (string) $image->toJpeg(quality: 85));
+
+            $profile->update([
+                'cover_image' => $path,
+            ]);
+
+            Log::info('Cover updated successfully', ['user_id' => $user->id, 'path' => $path]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'อัพเดทรูปปกสำเร็จ',
+                'cover_image' => url(Storage::url($path)),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Cover upload failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload cover image. Please try again.',
+            ], 500);
         }
-
-        // Delete old cover if exists
-        $oldCover = $profile->cover_image ?? $profile->cover_image_url;
-        if ($oldCover && !filter_var($oldCover, FILTER_VALIDATE_URL)) {
-            Storage::disk('public')->delete($oldCover);
-        }
-
-        // Store new cover
-        $path = $request->file('cover')->store('covers/' . $user->id, 'public');
-        
-        $profile->update([
-            'cover_image' => $path,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'อัพเดทรูปปกสำเร็จ',
-            'cover_image' => url(Storage::url($path)),
-        ]);
     }
 
     /**

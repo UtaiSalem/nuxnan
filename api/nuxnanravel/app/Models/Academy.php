@@ -92,23 +92,54 @@ class Academy extends Model
 
     public function getCoverUrlAttribute()
     {
-        if (!$this->cover) {
+        $path = $this->cover;
+
+        if (!$path) {
             return null;
         }
-        if (filter_var($this->cover, FILTER_VALIDATE_URL)) {
-            return $this->cover;
+
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
         }
-        return asset('storage/images/academies/covers/' . $this->cover);
+
+        // Clean up path
+        $cleanPath = preg_replace('#^/?(storage/)?#', '', $path);
+        
+        // If it was just a filename (old behavior), prepend the old directory structure?
+        // Old structure was 'storage/images/academies/covers/'.
+        // If it's a new upload, where does it go?
+        // We aren't standardizing Academy uploads yet (only User), so we must preserve the old pathing if it assumes explicit path.
+        // But wait, the old accessor did: asset('storage/images/academies/covers/' . $this->cover);
+        // This implies $this->cover is JUST THE FILENAME.
+        // So we should construct the full path correctly.
+        
+        // Check if $cleanPath already looks like a full path (e.g. contains '/')
+        if (strpos($cleanPath, '/') !== false) {
+             return url('storage/' . $cleanPath);
+        }
+        
+        // Otherwise assume it's just a filename in the legacy folder
+        return url('storage/images/academies/covers/' . $cleanPath);
     }
 
     public function getLogoUrlAttribute()
     {
-        if (!$this->logo) {
+        $path = $this->logo;
+
+        if (!$path) {
             return null;
         }
-        if (filter_var($this->logo, FILTER_VALIDATE_URL)) {
-            return $this->logo;
+
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
         }
-        return asset('storage/images/academies/logos/' . $this->logo);
+        
+        $cleanPath = preg_replace('#^/?(storage/)?#', '', $path);
+
+        if (strpos($cleanPath, '/') !== false) {
+             return url('storage/' . $cleanPath);
+        }
+
+        return url('storage/images/academies/logos/' . $cleanPath);
     }
 }

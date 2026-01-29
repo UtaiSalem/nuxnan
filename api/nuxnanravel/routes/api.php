@@ -47,6 +47,10 @@ Route::get('/ping', function () {
     ]);
 });
 
+Route::get('/test-debug', function () {
+    return 'Hello from Debug - ' . now();
+});
+
 // Public Routes
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::get('/welcome', [WelcomeController::class, 'index'])->name('api.welcome');

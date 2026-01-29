@@ -1,3 +1,5 @@
+# Ignore node_modules in ui
+ui/node_modules/
 # =============================================================================
 # STRICT WHITELIST MODE
 # =============================================================================
@@ -20,9 +22,9 @@ node_modules/
 !ui/
 !ui/**
 
-# Explicitly unignore ui/.output directory and contents
-!ui/.output/
-!ui/.output/**
+
+# Ignore build output in ui
+ui/.output/
 
 # Explicitly ignore storage
 api/nuxnanravel/storage/

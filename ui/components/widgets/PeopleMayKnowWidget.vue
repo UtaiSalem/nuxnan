@@ -88,7 +88,7 @@ onMounted(() => {
       >
         <NuxtLink :to="`/profile/${user.reference_code}`">
           <img 
-            :src="user.avatar || '/storage/images/default-avatar.png'" 
+            :src="user.avatar || '/images/default-avatar.png'" 
             :alt="user.name"
             class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-purple/20"
           />

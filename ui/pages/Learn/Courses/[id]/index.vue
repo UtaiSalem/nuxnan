@@ -180,7 +180,7 @@ watch(() => course.value?.is_favorited, (newVal) => {
 
 // Helper functions
 const getCoverUrl = (coverPath: string | null) => {
-  if (!coverPath) return `${useRuntimeConfig().public.apiBase}/storage/images/courses/covers/default_cover.jpg`
+  if (!coverPath) return '/images/default-cover.jpg'
   if (coverPath.startsWith('http')) return coverPath
   return `${useRuntimeConfig().public.apiBase}/storage/images/courses/covers/${coverPath}`
 }

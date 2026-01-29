@@ -729,7 +729,7 @@ watch(() => authStore.user, async (user) => {
               
               <div class="flex items-center gap-4">
                 <img
-                  :src="donor.avatar || donor.profile_photo_url || `${config.public.apiBase}/storage/images/plearnd-logo.png`"
+                  :src="donor.avatar || donor.profile_photo_url || '/images/plearnd-logo.png'"
                   :alt="donor.name || donor.username"
                   class="w-16 h-16 rounded-full border-4 border-purple-500 shadow-lg object-cover"
                 />

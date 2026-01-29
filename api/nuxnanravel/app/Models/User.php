@@ -230,18 +230,25 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     //get profile photo url
     public function getProfilePhotoUrlAttribute()
     {
-        if ($this->profile_photo_path) {
-            // Replace 'avatars/' with 'profile-photos/' in the path
-            $path = str_replace('avatars/', 'profile-photos/', $this->profile_photo_path);
+        $path = $this->profile_photo_path;
 
-            // Remove any existing /storage or storage/ prefix to prevent duplication
-            $path = preg_replace('#^/?storage/#', '', $path);
+        if ($path) {
+            // Check if it's already a full valid URL (e.g. Google/Facebook social login)
+            if (filter_var($path, FILTER_VALIDATE_URL)) {
+                return $path;
+            }
 
-            // Return full URL with storage path
-            return url('storage/' . $path);
+            // Clean up the path: remove any leading slash, 'storage/', or '/storage/' prefix
+            // This handles legacy paths like '/storage/avatars/...' or 'storage/profile-photos/...'
+            $cleanPath = preg_replace('#^/?(storage/)?#', '', $path);
+            
+            // Return full URL using the Storage facade pointing to public disk
+            return url('storage/' . $cleanPath);
         }
 
-        return null;
+        // Fallback: UI Avatars
+        $name = urlencode($this->name ?? 'User');
+        return "https://ui-avatars.com/api/?name={$name}&color=7F9CF5&background=EBF4FF";
     }
 
     /**

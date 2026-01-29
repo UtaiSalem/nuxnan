@@ -152,7 +152,9 @@ class StorePostRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            $hasContent = !empty($this->content) && strlen(trim($this->content)) > 0;
+            // Use input() method which properly handles FormData
+            $content = $this->input('content');
+            $hasContent = is_string($content) && strlen(trim($content)) > 0;
             $hasImages = $this->hasFile('images') && count($this->file('images')) > 0;
             $hasPoll = !empty($this->poll_id) || (!empty($this->is_poll) && filter_var($this->is_poll, FILTER_VALIDATE_BOOLEAN));
             $hasBackground = !empty($this->background_color) || !empty($this->background_gradient) || !empty($this->background_id);
@@ -179,6 +181,8 @@ class StorePostRequest extends FormRequest
      */
     protected function prepareForValidation()
     {
+        \Illuminate\Support\Facades\Log::info('StorePostRequest data:', $this->all());
+
         // Convert boolean strings to actual booleans
         if ($this->has('comments_disabled')) {
             $this->merge([

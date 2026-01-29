@@ -71,14 +71,9 @@ const emit = defineEmits<{
 const isSendingRequest = ref(false)
 const requestSent = ref(false)
 
-// Computed property for donor avatar with fallback to correct API URL
+// Computed property for donor avatar with simple fallback
 const donorAvatar = computed(() => {
-  const avatar = props.donate.donor?.avatar
-  // If no avatar, or avatar contains incorrect '/storages/' path, use the correct fallback
-  if (!avatar || avatar.includes('/storages/')) {
-    return `${config.public.apiBase}/storage/images/plearnd-logo.png`
-  }
-  return avatar
+  return props.donate.donor?.avatar || '/images/default-avatar.png'
 })
 
 const sendFriendRequest = async () => {
