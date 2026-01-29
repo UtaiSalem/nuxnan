@@ -189,11 +189,17 @@ class SettingsController extends Controller
             $image->scaleDown(width: 300, height: 300);
 
             // Generate filename
-            $filename = time() . '_' . uniqid() . '.jpg';
+            $filename = $user->id . '_' . time() . '_' . uniqid() . '.jpg';
+
+            // Generate hashed path for sharding (Option 3)
+            // md5(1) = c4ca4238... -> avatars/c4/ca/filename.jpg
+            $hash = md5($user->id);
+            $folder1 = substr($hash, 0, 2);
+            $folder2 = substr($hash, 2, 2);
 
             // Store path (consistent with new standard)
-            // Stored in public/avatars/{user_id}/{filename}
-            $path = 'avatars/' . $user->id . '/' . $filename;
+            // Stored in public/avatars/{h1}/{h2}/{filename}
+            $path = "avatars/{$folder1}/{$folder2}/{$filename}";
 
             // Save resized image to storage
             Storage::disk('public')->put($path, (string) $image->toJpeg(quality: 85));

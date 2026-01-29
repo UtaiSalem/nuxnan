@@ -28,3 +28,9 @@ ui/.output/
 
 # Explicitly ignore storage
 api/nuxnanravel/storage/
+
+# Ignore sensitive env and vendor in nuxnanravel
+nuxnan/api/nuxnanravel/.env
+nuxnan/api/nuxnanravel/vendor/
+
+nuxnan/api/nuxnanravel/.env.production
