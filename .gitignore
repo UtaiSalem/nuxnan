@@ -1,25 +1,134 @@
-# Global ignores
-.DS_Store
-Thumbs.db
+# ===========================================
+# Global ignores for production deployment
+# ===========================================
+
+# IDE & Editors
 .idea/
 .vscode/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
 
-# Dependencies
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Dependencies (install on server)
 node_modules/
 vendor/
+jspm_packages/
 
 # Environment Variables
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# System
-.Spotlight-V100
-.Trashes
-ehthumbs.db
+# ===========================================
+# Temporary & Development files
+# ===========================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.cache
+
+# Test files & coverage
+coverage/
+.nyc_output/
+*.lcov
+.phpunit.result.cache
+phpunit.xml.bak
+
+# Development documentation (keep only essential docs)
+all_git_files.txt
+all_local_dirs.txt
+all_local_files.txt
+all_local_routes.txt
+*.md
+!README.md
+!DEPLOYMENT.md
+!PLESK_DEPLOYMENT_GUIDE.md
+
+# Images & screenshots (development only)
+image.png
+*.screenshot.png
+
+# ===========================================
+# Build outputs (rebuild on server)
+# ===========================================
+dist/
+build/
+.output/
+.nuxt/
+.nitro/
+.cache/
+.data/
+
+# ===========================================
+# Folders not needed for production
+# ===========================================
+
+# hopa folder (if not needed in production)
+hopa/
+
+# nuxnan-admin (if separate admin panel)
+# nuxnan-admin/
+
+# plans folder (development planning docs)
+plans/
+
+# docs folder (if using external documentation)
+# docs/
+
+# ===========================================
+# API Laravel specific
+# ===========================================
+api/nuxnanravel/storage/logs/*
+!api/nuxnanravel/storage/logs/.gitkeep
+api/nuxnanravel/storage/framework/cache/*
+!api/nuxnanravel/storage/framework/cache/.gitkeep
+api/nuxnanravel/storage/framework/sessions/*
+!api/nuxnanravel/storage/framework/sessions/.gitkeep
+api/nuxnanravel/storage/framework/views/*
+!api/nuxnanravel/storage/framework/views/.gitkeep
+api/nuxnanravel/storage/app/public/*
+!api/nuxnanravel/storage/app/public/.gitkeep
+api/nuxnanravel/bootstrap/cache/*.php
+api/nuxnanravel/public/hot
+api/nuxnanravel/public/storage
+api/nuxnanravel/.phpunit.result.cache
+api/nuxnanravel/Homestead.json
+api/nuxnanravel/Homestead.yaml
+
+# ===========================================
+# UI Nuxt specific
+# ===========================================
+ui/.output/
+ui/.nuxt/
+ui/.nitro/
+ui/.cache/
+ui/dist/
+ui/node_modules/
+
+# ===========================================
+# Composer & npm lock files (optional)
+# Keep lock files for consistent builds
+# ===========================================
+# package-lock.json
+# composer.lock
