@@ -811,7 +811,7 @@ const onQRActionComplete = (result) => {
                   : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
               "
             >
-              <Icon icon="fluent:game-24-regular" class="w-5 h-5" />
+              <Icon icon="fluent:games-24-regular" class="w-5 h-5" />
               <span class="font-semibold">เกมส์</span>
             </NuxtLink>
             <NuxtLink
@@ -939,7 +939,7 @@ const onQRActionComplete = (result) => {
             "
             :title="'เกมส์'"
           >
-            <Icon icon="fluent:game-24-regular" class="w-6 h-6" />
+            <Icon icon="fluent:games-24-regular" class="w-6 h-6" />
           </NuxtLink>
           <NuxtLink
             :to="settingsUrl"
@@ -1315,7 +1315,7 @@ const onQRActionComplete = (result) => {
                   : 'text-gray-700 hover:bg-gray-100'
               "
             >
-              <Icon icon="fluent:game-24-regular" class="w-5 h-5" />
+              <Icon icon="fluent:games-24-regular" class="w-5 h-5" />
               <span class="font-semibold">เกมส์</span>
             </NuxtLink>
             <NuxtLink

@@ -191,15 +191,11 @@ class SettingsController extends Controller
             // Generate filename
             $filename = $user->id . '_' . time() . '_' . uniqid() . '.jpg';
 
-            // Generate hashed path for sharding (Option 3)
-            // md5(1) = c4ca4238... -> avatars/c4/ca/filename.jpg
-            $hash = md5($user->id);
-            $folder1 = substr($hash, 0, 2);
-            $folder2 = substr($hash, 2, 2);
-
-            // Store path (consistent with new standard)
-            // Stored in public/avatars/{h1}/{h2}/{filename}
-            $path = "avatars/{$folder1}/{$folder2}/{$filename}";
+            // Generate hashed path for sharding (Option 3) -> REMOVED
+            // New Standard: public/avatars/{user_id}/{filename}
+            
+            // Store path
+            $path = "avatars/{$user->id}/{$filename}";
 
             // Save resized image to storage
             Storage::disk('public')->put($path, (string) $image->toJpeg(quality: 85));
@@ -209,12 +205,7 @@ class SettingsController extends Controller
                 'profile_photo_path' => $path,
             ]);
 
-            // Also update UserProfile if exists
-            if ($user->profile) {
-                $user->profile->update([
-                    'profile_picture' => $path,
-                ]);
-            }
+
 
             // Get clean full URL from model accessor
             // We need to refresh/reload or just use the accessor logic manually here if needed, 

@@ -13,12 +13,16 @@ const apiBase = config.public.apiBase as string
 // State
 const courses = ref([])
 const isLoading = ref(true)
+const isLoadingMore = ref(false)
 const searchQuery = ref('')
 const selectedStatus = ref('all')
 const currentPage = ref(1)
 const totalPages = ref(1)
 const perPage = ref(10)
 const totalCourses = ref(0)
+
+// Computed - Can load more?
+const hasMorePages = computed(() => currentPage.value < totalPages.value)
 
 // Status options
 const statuses = [
@@ -29,8 +33,13 @@ const statuses = [
 ]
 
 // Fetch courses
-const fetchCourses = async () => {
-  isLoading.value = true
+const fetchCourses = async (append = false) => {
+  if (append) {
+    isLoadingMore.value = true
+  } else {
+    isLoading.value = true
+  }
+  
   try {
     const token = useCookie('token')
     const params = new URLSearchParams({
@@ -47,7 +56,14 @@ const fetchCourses = async () => {
     })
 
     if (response.success) {
-      courses.value = response.data.data || response.data
+      const newCourses = response.data.data || response.data
+      
+      if (append) {
+        courses.value = [...courses.value, ...newCourses]
+      } else {
+        courses.value = newCourses
+      }
+      
       totalPages.value = response.data.last_page || 1
       totalCourses.value = response.data.total || courses.value.length
     }
@@ -55,12 +71,22 @@ const fetchCourses = async () => {
     console.error('Failed to fetch courses:', error)
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
+  }
+}
+
+// Load more courses
+const loadMore = () => {
+  if (hasMorePages.value && !isLoadingMore.value) {
+    currentPage.value++
+    fetchCourses(true)
   }
 }
 
 // Handle search
 const handleSearch = () => {
   currentPage.value = 1
+  courses.value = []
   fetchCourses()
 }
 
@@ -158,12 +184,17 @@ onMounted(() => {
         >
           <div class="flex flex-col sm:flex-row gap-4">
             <!-- Course Image -->
-            <div class="w-full sm:w-40 h-24 flex-shrink-0">
+            <div class="w-full sm:w-40 h-24 flex-shrink-0 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-xl overflow-hidden">
               <img
-                :src="course.thumbnail || '/storage/images/default-course.jpg'"
+                v-if="course.cover_url"
+                :src="course.cover_url"
                 :alt="course.title"
-                class="w-full h-full object-cover rounded-xl"
+                class="w-full h-full object-cover"
+                @error="(e) => e.target.style.display = 'none'"
               />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <Icon icon="fluent:hat-graduation-24-regular" class="w-10 h-10 text-indigo-400 dark:text-indigo-500" />
+              </div>
             </div>
 
             <!-- Course Info -->
@@ -185,11 +216,11 @@ onMounted(() => {
               <div class="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
                 <div class="flex items-center gap-1">
                   <Icon icon="fluent:person-24-regular" class="w-4 h-4" />
-                  <span>{{ course.instructor?.name || 'ไม่ระบุ' }}</span>
+                  <span>{{ course.user?.name || 'ไม่ระบุ' }}</span>
                 </div>
                 <div class="flex items-center gap-1">
                   <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
-                  <span>{{ course.enrollments_count || 0 }} ผู้เรียน</span>
+                  <span>{{ course.members_count || course.enrolled_students || 0 }} ผู้เรียน</span>
                 </div>
                 <div class="flex items-center gap-1">
                   <Icon icon="fluent:money-24-regular" class="w-4 h-4" />
@@ -220,9 +251,29 @@ onMounted(() => {
         </div>
 
         <!-- Empty State -->
-        <div v-if="courses.length === 0" class="p-8 text-center">
+        <div v-if="courses.length === 0 && !isLoading" class="p-8 text-center">
           <Icon icon="fluent:hat-graduation-24-regular" class="w-12 h-12 text-gray-300 mx-auto" />
           <p class="text-gray-500 mt-2">ไม่พบคอร์สเรียน</p>
+        </div>
+        
+        <!-- Load More Button -->
+        <div v-if="hasMorePages" class="p-4 flex justify-center border-t border-gray-100 dark:border-gray-700">
+          <button
+            @click="loadMore"
+            :disabled="isLoadingMore"
+            class="px-6 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-xl font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            <Icon v-if="isLoadingMore" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
+            <Icon v-else icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
+            <span v-if="isLoadingMore">กำลังโหลด...</span>
+            <span v-else>โหลดเพิ่มเติม ({{ courses.length }}/{{ totalCourses }})</span>
+          </button>
+        </div>
+        
+        <!-- All Loaded Indicator -->
+        <div v-else-if="courses.length > 0 && !isLoading" class="p-4 text-center text-gray-400 text-sm border-t border-gray-100 dark:border-gray-700">
+          <Icon icon="fluent:checkmark-circle-24-regular" class="w-5 h-5 inline-block mr-1" />
+          แสดงทั้งหมด {{ courses.length }} คอร์ส
         </div>
       </div>
     </div>

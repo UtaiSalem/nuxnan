@@ -354,6 +354,40 @@ class WalletController extends Controller
 
         $transactions = $query->paginate($perPage, ['*'], 'page', $page);
 
+        // Transform transactions to include sender/receiver details
+        $transactions->getCollection()->transform(function ($transaction) {
+            if ($transaction->transaction_type === 'transfer') {
+                $metadata = $transaction->metadata;
+
+                if (isset($metadata['to_user_id'])) {
+                    // Outgoing transfer
+                    $transaction->transaction_type = 'transfer_out';
+                    $receiver = User::find($metadata['to_user_id']);
+                    if ($receiver) {
+                        $transaction->receiver = [
+                            'id' => $receiver->id,
+                            'name' => $receiver->name,
+                            'username' => $receiver->username,
+                            'profile_photo_url' => $receiver->profile_photo_url,
+                        ];
+                    }
+                } elseif (isset($metadata['from_user_id'])) {
+                    // Incoming transfer
+                    $transaction->transaction_type = 'transfer_in';
+                    $sender = User::find($metadata['from_user_id']);
+                    if ($sender) {
+                        $transaction->sender = [
+                            'id' => $sender->id,
+                            'name' => $sender->name,
+                            'username' => $sender->username,
+                            'profile_photo_url' => $sender->profile_photo_url,
+                        ];
+                    }
+                }
+            }
+            return $transaction;
+        });
+
         return response()->json([
             'success' => true,
             'data' => [

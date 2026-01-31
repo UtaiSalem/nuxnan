@@ -22,13 +22,23 @@ class AdminWalletController extends Controller
     }
 
     /**
+     * Check if user is admin (SUPER_ADMIN, ADMIN, MODERATOR or Plearnd Admin)
+     */
+    protected function isAdminUser($user): bool
+    {
+        if (!$user) return false;
+        return $user->isSuperAdmin() || $user->hasAnyRole(['ADMIN', 'MODERATOR']) || $user->isPlearndAdmin();
+    }
+
+    /**
      * Get wallet statistics.
      */
     public function stats(Request $request): JsonResponse
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isPlearndAdmin()) {
+        // Allow SUPER_ADMIN, ADMIN, or Plearnd Admin
+        if (!$this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -87,7 +97,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isPlearndAdmin()) {
+        if (!$this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -124,7 +134,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isPlearndAdmin()) {
+        if (!$this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -150,6 +160,35 @@ class AdminWalletController extends Controller
                     'total_items' => $depositRequests->total(),
                 ],
             ],
+        ]);
+    }
+
+    /**
+     * Get a single deposit request details.
+     */
+    public function showDepositRequest(int $id): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$this->isAdminUser($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $depositRequest = WalletDepositRequest::with('user')->find($id);
+
+        if (!$depositRequest) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Deposit request not found',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $depositRequest,
         ]);
     }
 
@@ -202,7 +241,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isPlearndAdmin()) {
+        if (!$this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -249,7 +288,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isPlearndAdmin()) {
+        if (!$this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -296,7 +335,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isPlearndAdmin()) {
+        if (!$this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',

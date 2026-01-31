@@ -34,7 +34,7 @@ const adminNote = ref('')
 const fetchPendingWithdrawals = async () => {
   try {
     const token = useCookie('token')
-    const response = await $fetch(`${apiBase}/api/nuxnan-admin/wallet/withdrawals/pending`, {
+    const response = await $fetch(`${apiBase}/api/admin/wallet/withdrawals/pending`, {
       headers: {
         Authorization: `Bearer ${token.value}`
       }
@@ -55,7 +55,7 @@ const fetchPendingWithdrawals = async () => {
 const fetchPendingDeposits = async () => {
   try {
     const token = useCookie('token')
-    const response = await $fetch(`${apiBase}/api/nuxnan-admin/wallet/deposit-requests/pending`, {
+    const response = await $fetch(`${apiBase}/api/admin/wallet/deposit-requests/pending`, {
       headers: {
         Authorization: `Bearer ${token.value}`
       }
@@ -109,8 +109,8 @@ const approveRequest = async () => {
   try {
     const token = useCookie('token')
     const endpoint = activeTab.value === 'withdrawals'
-      ? `${apiBase}/api/nuxnan-admin/wallet/withdrawals/${selectedRequest.value.id}/approve`
-      : `${apiBase}/api/nuxnan-admin/wallet/deposit-requests/${selectedRequest.value.id}/approve`
+      ? `${apiBase}/api/admin/wallet/withdrawals/${selectedRequest.value.id}/approve`
+      : `${apiBase}/api/admin/wallet/deposit-requests/${selectedRequest.value.id}/approve`
 
     const body = activeTab.value === 'deposits' ? { admin_note: adminNote.value } : {}
 
@@ -142,8 +142,8 @@ const rejectRequest = async () => {
   try {
     const token = useCookie('token')
     const endpoint = activeTab.value === 'withdrawals'
-      ? `${apiBase}/api/nuxnan-admin/wallet/withdrawals/${selectedRequest.value.id}/reject`
-      : `${apiBase}/api/nuxnan-admin/wallet/deposit-requests/${selectedRequest.value.id}/reject`
+      ? `${apiBase}/api/admin/wallet/withdrawals/${selectedRequest.value.id}/reject`
+      : `${apiBase}/api/admin/wallet/deposit-requests/${selectedRequest.value.id}/reject`
 
     await $fetch(endpoint, {
       method: 'POST',
@@ -187,6 +187,29 @@ const formatDate = (dateStr: string) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+// Get bank name in Thai
+const getBankName = (bankCode: string) => {
+  const banks: Record<string, string> = {
+    'scb': 'ธนาคารไทยพาณิชย์',
+    'kbank': 'ธนาคารกสิกรไทย',
+    'ktb': 'ธนาคารกรุงไทย',
+    'bbl': 'ธนาคารกรุงเทพ',
+    'bay': 'ธนาคารกรุงศรีอยุธยา',
+    'tmb': 'ธนาคารทหารไทยธนชาต',
+    'ttb': 'ธนาคารทีเอ็มบีธนชาต',
+    'gsb': 'ธนาคารออมสิน',
+    'baac': 'ธนาคาร ธ.ก.ส.',
+    'uob': 'ธนาคารยูโอบี',
+    'cimb': 'ธนาคารซีไอเอ็มบี',
+    'lhbank': 'ธนาคารแลนด์ แอนด์ เฮ้าส์',
+    'tisco': 'ธนาคารทิสโก้',
+    'kkp': 'ธนาคารเกียรตินาคินภัทร',
+    'promptpay': 'พร้อมเพย์',
+    'truemoney': 'ทรูมันนี่'
+  }
+  return banks[bankCode?.toLowerCase()] || bankCode || 'ไม่ระบุ'
 }
 
 onMounted(() => {
@@ -265,39 +288,85 @@ onMounted(() => {
           :key="request.id"
           class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
         >
-          <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="flex flex-col lg:flex-row gap-4">
             <!-- User Info -->
-            <div class="flex items-center gap-3 flex-1">
-              <!-- Checkbox selection (if needed later) or just status indicator -->
-              
-              <div class="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-gray-500" />
+            <div class="flex items-start gap-3 flex-1 min-w-0">
+              <!-- Avatar -->
+              <div class="w-12 h-12 flex-shrink-0">
+                <img 
+                  v-if="request.user?.avatar || request.user?.profile_photo_url" 
+                  :src="request.user?.avatar || request.user?.profile_photo_url" 
+                  :alt="request.user?.name"
+                  class="w-12 h-12 rounded-full object-cover"
+                  @error="($event.target as HTMLImageElement).style.display = 'none'"
+                />
+                <div v-else class="w-12 h-12 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center">
+                  <Icon icon="fluent:person-24-regular" class="w-6 h-6 text-indigo-500" />
+                </div>
               </div>
-              <div class="min-w-0">
-                <p class="font-medium text-gray-800 dark:text-white truncate">
+              
+              <div class="min-w-0 flex-1">
+                <p class="font-semibold text-gray-800 dark:text-white truncate">
                   {{ request.user?.name || 'Unknown' }}
                 </p>
                 <p class="text-sm text-gray-500 truncate">
                   {{ request.user?.email || '-' }}
                 </p>
-                <!-- Show payment method for deposits -->
-                <p v-if="activeTab === 'deposits' && request.payment_method" class="text-xs text-gray-400 flex items-center gap-1">
+                <!-- Phone number -->
+                <p v-if="request.user?.phone_number" class="text-sm text-gray-500 flex items-center gap-1">
+                  <Icon icon="fluent:call-24-regular" class="w-3.5 h-3.5" />
+                  {{ request.user?.phone_number }}
+                </p>
+                
+                <!-- Payment method for deposits -->
+                <p v-if="activeTab === 'deposits' && request.payment_method" class="text-xs text-gray-400 flex items-center gap-1 mt-1">
                   <Icon icon="fluent:payment-24-regular" class="w-3 h-3" />
                   {{ request.payment_method_label || request.payment_method }}
                 </p>
               </div>
             </div>
 
-            <!-- Amount -->
-            <div class="text-right whitespace-nowrap">
-              <p class="text-lg font-bold text-gray-800 dark:text-white">
+            <!-- Bank Info (for withdrawals) -->
+            <div v-if="activeTab === 'withdrawals' && request.metadata?.bank_account" class="flex-1 min-w-0 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+              <p class="text-xs text-gray-400 mb-1">ข้อมูลบัญชีธนาคาร</p>
+              <div class="space-y-1">
+                <p class="text-sm font-medium text-gray-800 dark:text-white flex items-center gap-2">
+                  <Icon icon="fluent:building-bank-24-regular" class="w-4 h-4 text-blue-500" />
+                  {{ getBankName(request.metadata.bank_account.bank_name) }}
+                </p>
+                <p class="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                  <Icon icon="fluent:document-number-24-regular" class="w-4 h-4 text-gray-400" />
+                  {{ request.metadata.bank_account.account_number }}
+                </p>
+                <p class="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                  <Icon icon="fluent:person-24-regular" class="w-4 h-4 text-gray-400" />
+                  {{ request.metadata.bank_account.account_name }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Amount & Details -->
+            <div class="text-right whitespace-nowrap min-w-[160px]">
+              <p class="text-xl font-bold text-gray-800 dark:text-white">
                 {{ formatCurrency(request.amount) }}
               </p>
-              <p class="text-sm text-gray-500">
+              <!-- Fee & Net Amount -->
+              <div v-if="request.metadata?.fee" class="text-xs text-gray-500 mt-1">
+                <span>ค่าธรรมเนียม: {{ formatCurrency(request.metadata.fee) }}</span>
+                <p class="text-green-600 font-medium">
+                  รับจริง: {{ formatCurrency(request.metadata.net_amount) }}
+                </p>
+              </div>
+              <p class="text-sm text-gray-500 mt-1">
                 {{ formatDate(request.created_at) }}
               </p>
-              <!-- Show reference for deposits -->
-              <p v-if="activeTab === 'deposits' && request.reference_number" class="text-xs text-gray-400">
+              <!-- Wallet balance -->
+              <p v-if="request.user?.wallet !== undefined" class="text-xs text-gray-400 flex items-center justify-end gap-1 mt-1">
+                <Icon icon="fluent:wallet-24-regular" class="w-3 h-3" />
+                ยอดคงเหลือ: {{ formatCurrency(parseFloat(request.user.wallet)) }}
+              </p>
+              <!-- Reference for deposits -->
+              <p v-if="activeTab === 'deposits' && request.reference_number" class="text-xs text-gray-400 mt-1">
                 Ref: {{ request.reference_number }}
               </p>
             </div>

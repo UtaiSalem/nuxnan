@@ -1,0 +1,409 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Hope UI styles converted to Tailwind */
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    body {
+        @apply font-sans antialiased;
+        background-color: #F5F6FA;
+        color: #8A92A6;
+    }
+    
+    :focus {
+        @apply outline-none;
+    }
+}
+
+@layer components {
+    /* Card components */
+    .card {
+        @apply bg-white rounded-lg shadow-sm border border-gray-200;
+    }
+    
+    .card-header {
+        @apply px-6 py-4 border-b border-gray-200 bg-gray-50;
+    }
+    
+    .card-body {
+        @apply px-6 py-4;
+    }
+    
+    .card-title {
+        @apply text-lg font-semibold text-gray-900;
+    }
+    
+    /* Button components */
+    .btn {
+        @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
+    }
+    
+    .btn-primary {
+        @apply bg-primary text-white hover:bg-primary-600 focus:ring-primary;
+    }
+    
+    .btn-info {
+        @apply bg-info text-white hover:bg-info-600 focus:ring-info;
+    }
+    
+    .btn-success {
+        @apply bg-success text-white hover:bg-success-600 focus:ring-success;
+    }
+    
+    .btn-warning {
+        @apply bg-warning text-white hover:bg-warning-600 focus:ring-warning;
+    }
+    
+    .btn-danger {
+        @apply bg-danger text-white hover:bg-danger-600 focus:ring-danger;
+    }
+    
+    .btn-secondary {
+        @apply bg-secondary text-white hover:bg-secondary-600 focus:ring-secondary;
+    }
+    
+    .btn-light {
+        @apply bg-light text-dark hover:bg-gray-200 focus:ring-gray-300;
+    }
+    
+    .btn-outline-primary {
+        @apply border border-primary text-primary hover:bg-primary hover:text-white focus:ring-primary;
+    }
+    
+    /* Badge components */
+    .badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    }
+    
+    .badge-primary {
+        @apply bg-primary text-white;
+    }
+    
+    .badge-info {
+        @apply bg-info text-white;
+    }
+    
+    .badge-success {
+        @apply bg-success text-white;
+    }
+    
+    .badge-warning {
+        @apply bg-warning text-white;
+    }
+    
+    .badge-danger {
+        @apply bg-danger text-white;
+    }
+    
+    .badge-secondary {
+        @apply bg-secondary text-white;
+    }
+    
+    .badge-light {
+        @apply bg-light text-dark;
+    }
+    
+    /* Alert components */
+    .alert {
+        @apply p-4 rounded-lg border;
+    }
+    
+    .alert-primary {
+        @apply bg-blue-50 border-blue-200 text-blue-800;
+    }
+    
+    .alert-info {
+        @apply bg-cyan-50 border-cyan-200 text-cyan-800;
+    }
+    
+    .alert-success {
+        @apply bg-green-50 border-green-200 text-green-800;
+    }
+    
+    .alert-warning {
+        @apply bg-yellow-50 border-yellow-200 text-yellow-800;
+    }
+    
+    .alert-danger {
+        @apply bg-red-50 border-red-200 text-red-800;
+    }
+    
+    /* Progress components */
+    .progress {
+        @apply w-full bg-gray-200 rounded-full h-2;
+    }
+    
+    .progress-bar {
+        @apply bg-primary h-2 rounded-full transition-all duration-300;
+    }
+    
+    /* Table components */
+    .table {
+        @apply w-full text-sm text-left text-gray-500;
+    }
+    
+    .table th {
+        @apply px-6 py-3 text-xs font-medium text-gray-700 uppercase tracking-wider bg-gray-50;
+    }
+    
+    .table td {
+        @apply px-6 py-4 whitespace-nowrap;
+    }
+    
+    .table-striped tbody tr:nth-child(odd) {
+        @apply bg-gray-50;
+    }
+    
+    /* Form components */
+    .form-control {
+        @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm;
+    }
+    
+    .form-label {
+        @apply block text-sm font-medium text-gray-700 mb-1;
+    }
+    
+    /* Dropdown components */
+    .dropdown-menu {
+        @apply absolute right-0 z-10 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none;
+    }
+    
+    .dropdown-item {
+        @apply block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900;
+    }
+    
+    /* Navigation components */
+    .navbar {
+        @apply bg-white shadow-sm border-b border-gray-200;
+    }
+    
+    .sidebar {
+        @apply bg-white shadow-lg border-r border-gray-200;
+    }
+    
+    /* Custom Hope UI specific components */
+    .sign-bg {
+        @apply absolute left-0 top-0;
+    }
+    
+    .sign-bg.sign-bg-right {
+        @apply left-auto right-0;
+    }
+    
+    .gradient-main {
+        @apply h-full w-full object-cover;
+    }
+    
+    .login-bottom {
+        @apply mt-[-12.5rem];
+    }
+    
+    .iq-dashed-border {
+        @apply p-6 rounded-lg border border-dashed border-gray-300;
+    }
+    
+    .iq-icon-box-2 {
+        @apply h-9 w-9 min-w-[36px] leading-9 bg-gray-50 text-center text-base no-underline rounded-lg;
+    }
+    
+    .iq-media-group-1 .iq-media-1 {
+        @apply ml-[-1.25rem] relative z-0;
+    }
+    
+    .iq-media-group-1 .iq-media-1:hover {
+        @apply z-10;
+    }
+    
+    .iq-media-group-1 .iq-media-1 img {
+        @apply border-2 border-gray-200;
+    }
+    
+    .iq-media-group-1 .iq-media-1:first-child {
+        @apply ml-0;
+    }
+    
+    .iq-media-group-1 .iq-media.border {
+        @apply border-2 border-gray-200;
+    }
+    
+    .iq-media-1 {
+        @apply inline-flex bg-no-repeat bg-center bg-cover rounded;
+    }
+    
+    .iq-media-1:hover {
+        @apply no-underline;
+    }
+    
+    /* Pricing components */
+    .prc-box {
+        @apply bg-blue-50 p-4 relative rounded-lg cursor-pointer;
+    }
+    
+    .type {
+        @apply absolute bg-primary px-6 py-2 text-white top-[-15px] left-1/2 transform -translate-x-1/2 font-medium;
+    }
+    
+    .type:before {
+        content: '';
+        @apply absolute w-0 h-0 right-[-15px] top-0 border-l-[15px] border-l-blue-900 border-t-[15px] border-t-transparent;
+    }
+    
+    .type:after {
+        content: '';
+        @apply absolute w-0 h-0 left-[-15px] top-0 border-r-[15px] border-r-blue-900 border-t-[15px] border-t-transparent;
+    }
+    
+    .prc-box.active {
+        @apply bg-primary;
+    }
+    
+    .prc-box.active .h3 {
+        @apply text-white;
+    }
+    
+    .prc-box.active .type {
+        @apply bg-blue-50 text-gray-900;
+    }
+    
+    .prc-box.active .type:before {
+        @apply border-l-[16px] border-l-blue-900 right-[-16px];
+    }
+    
+    .prc-box.active .type:after {
+        @apply border-r-[16px] border-r-blue-900 left-[-16px];
+    }
+    
+    .prc-wrap {
+        @apply border-b-0;
+    }
+    
+    .child-cell.active {
+        @apply text-primary stroke-primary;
+    }
+    
+    .line-around {
+        @apply border-b border-gray-300 leading-[0.1em] my-2.5 mx-0;
+    }
+    
+    .line-around .line-around-1 {
+        @apply uppercase bg-white px-2.5 py-0 pr-0;
+    }
+    
+    .iq-single-card {
+        @apply rounded-r-lg rounded-l-none;
+    }
+    
+    /* Progress widget */
+    .progress-widget {
+        @apply flex items-center justify-between;
+    }
+    
+    .circle-progress {
+        @apply relative inline-flex items-center justify-center;
+    }
+    
+    .progress-detail {
+        @apply ml-4;
+    }
+    
+    .card-slide {
+        @apply transition-transform duration-300 hover:transform hover:scale-105;
+    }
+    
+    /* Credit card widget */
+    .credit-card-widget {
+        @apply bg-gradient-to-r from-primary to-primary-600;
+    }
+    
+    .primary-gradient-card {
+        @apply bg-gradient-to-r from-primary to-primary-600 p-4 rounded-lg border border-white;
+    }
+    
+    .master-card-1, .master-card-2 {
+        @apply opacity-80;
+    }
+    
+    .master-card-2 {
+        @apply ml-[-2rem];
+    }
+    
+    /* Profile dots */
+    .profile-dots-pills {
+        @apply w-2 h-2 rounded-full border-2 border-primary;
+    }
+    
+    .profile-media {
+        @apply flex items-start;
+    }
+    
+    /* Responsive utilities */
+    @media (max-width: 575.98px) {
+        .login-header {
+            @apply h-[12.5rem] !important;
+        }
+        .login-bottom {
+            @apply mt-[-6.25rem];
+        }
+        .iq-single-card {
+            @apply rounded-lg;
+        }
+    }
+    
+    @media (max-width: 767.98px) {
+        .iq-single-card {
+            @apply rounded-lg;
+        }
+    }
+    
+    @media (min-width: 1400px) {
+        .auth-card {
+            @apply px-[6.25rem];
+        }
+    }
+}
+
+@layer utilities {
+    .text-gradient {
+        @apply bg-gradient-to-r from-primary to-primary-600 bg-clip-text text-transparent;
+    }
+    
+    .bg-soft-primary {
+        @apply bg-blue-50;
+    }
+    
+    .bg-soft-info {
+        @apply bg-cyan-50;
+    }
+    
+    .bg-soft-success {
+        @apply bg-green-50;
+    }
+    
+    .bg-soft-warning {
+        @apply bg-yellow-50;
+    }
+    
+    .bg-soft-danger {
+        @apply bg-red-50;
+    }
+    
+    .bg-soft-secondary {
+        @apply bg-gray-100;
+    }
+    
+    .shadow-soft-primary {
+        @apply shadow-soft-primary;
+    }
+    
+    .shadow-soft-info {
+        @apply shadow-soft-info;
+    }
+    
+    .shadow-soft-success {
+        @apply shadow-soft-success;
+    }
+}

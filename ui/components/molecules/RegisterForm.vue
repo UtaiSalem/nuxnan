@@ -163,9 +163,7 @@
         >
       </div>
 
-      <Checkbox v-model="form.newsletter" label="Send me news and updates via email" />
 
-      <div v-if="error" class="text-red-500 text-sm text-center font-medium">{{ error }}</div>
       <div v-if="success" class="text-green-500 text-sm text-center font-medium">{{ success }}</div>
 
       <AppButton
@@ -192,8 +190,7 @@
       />
 
       <p class="text-xs text-center text-gray-500 font-medium leading-relaxed">
-        You'll receive a confirmation email in your inbox with a link to activate your account. If you
-        have any problems, <a href="#" class="text-vikinger-blue font-bold">contact us</a>!
+        If you have any problems, <a href="#" class="text-vikinger-blue font-bold">contact us</a>!
       </p>
     </div>
   </form>
@@ -292,7 +289,7 @@ const validateReferralCode = async () => {
         personal_code: string
         avatar?: string
       }
-    }>('/api/validate-referral-code', {
+    }>(`${config.public.apiBase}/api/validate-referral-code`, {
       method: 'POST',
       body: {
         reference_code: referralCode.value,

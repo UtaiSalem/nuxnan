@@ -53,6 +53,51 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Admin-specific login using the admin API endpoint
+  async function adminLogin(credentials: { email: string; password: string }) {
+    isLoading.value = true
+    try {
+      const response = await $fetch<any>(`${apiBase}/api/admin/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        body: {
+          login: credentials.email, // Backend expects 'login' field, not 'email'
+          password: credentials.password,
+        },
+      })
+
+      if (response.success) {
+        const accessToken = response.data?.token
+        const userData = response.data?.user
+
+        if (accessToken && userData) {
+          token.value = accessToken
+          user.value = userData
+          
+          // Also store admin token in separate cookie
+          const adminToken = useCookie('admin_token', {
+            maxAge: 60 * 60 * 24, // 1 day for admin sessions
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+          })
+          adminToken.value = accessToken
+        } else {
+          throw new Error('Invalid response from server')
+        }
+      } else {
+        throw new Error(response.message || 'Admin login failed')
+      }
+
+      return response
+    } catch (e: any) {
+      console.error('Admin login error:', e)
+      const errorMessage = e.data?.message || e.statusMessage || e.message || 'Admin login failed'
+      throw new Error(errorMessage)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function register(userData: any) {
     isLoading.value = true
     try {
@@ -326,6 +371,7 @@ export const useAuthStore = defineStore('auth', () => {
     isRefreshing,
     isLoading,
     login,
+    adminLogin,
     register,
     fetchUser,
     refreshToken,

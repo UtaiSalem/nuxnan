@@ -248,7 +248,8 @@ require __DIR__ . '/learn/course.php';
 require __DIR__ . '/learn/student.php';
 require __DIR__ . '/homevisit/homevisit.php';
 require __DIR__ . '/studentcard/studentcard.php';
-require __DIR__ . '/admin/admin.php';
+// Note: Admin routes are loaded in bootstrap/app.php with /api/admin prefix
+// Do not include them here to avoid route conflicts
 
 // Debug routes (remove in production)
 if (env('APP_DEBUG')) {

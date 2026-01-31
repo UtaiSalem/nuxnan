@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
 
 const props = defineProps<{
   assignment: any
@@ -25,6 +26,19 @@ const totalAnswers = ref(0)
 const showGradedSection = ref(false)
 const searchQuery = ref('')
 const statusFilter = ref<'all' | 'ungraded' | 'graded' | 'failed'>('all')
+
+// Image Gallery State
+const showGallery = ref(false)
+const galleryImages = ref([])
+const galleryStartIndex = ref(0)
+const galleryTitle = ref('')
+
+const openGallery = (images: any[], index: number, title: string = '') => {
+    galleryImages.value = images
+    galleryStartIndex.value = index
+    galleryTitle.value = title
+    showGallery.value = true
+}
 
 const fetchGroups = async () => {
     isLoadingGroups.value = true
@@ -409,7 +423,13 @@ const scrollToTop = () => {
                                <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap border border-gray-100 dark:border-gray-800">
                                   {{ answer.content }}
                                   <div v-if="answer.images?.length" class="mt-3 flex flex-wrap gap-2">
-                                     <img v-for="img in answer.images" :key="img.id" :src="img.full_url || img.image_url" class="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer" />
+                                     <img 
+                                        v-for="(img, idx) in answer.images" 
+                                        :key="img.id" 
+                                        :src="img.full_url || img.image_url" 
+                                        class="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                                        @click.stop="openGallery(answer.images, idx, `งานของ ${answer.member_name || 'นักเรียน'}`)"
+                                     />
                                   </div>
                                </div>
                           </div>
@@ -474,5 +494,14 @@ const scrollToTop = () => {
              </button>
         </transition>
     </div>
+
+    <ImageGalleryModal 
+        :show="showGallery"
+        :images="galleryImages"
+        :start-index="galleryStartIndex"
+        :title="galleryTitle"
+        @close="showGallery = false"
+    />
+
 </template>
 

@@ -104,10 +104,12 @@ class UserProfileResource extends JsonResource
             if (filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
                 return $user->profile_photo_path;
             }
-            return $user->profile_photo_url;
+            // Use the standard accessor logic from User model if path exists
+             return $user->avatar;
         }
 
-        // Check profile picture
+        // Legacy Support: Check profile picture in UserProfile table
+        // We only check this if the main user table is empty, as a migration strategy
         if ($this->profile_picture) {
             if (filter_var($this->profile_picture, FILTER_VALIDATE_URL)) {
                 return $this->profile_picture;

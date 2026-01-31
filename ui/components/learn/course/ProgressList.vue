@@ -26,7 +26,7 @@ const selectedMember = ref<any>(null)
 const memberDetails = ref<any>(null)
 const groups = ref<any[]>([])
 const activeTab = ref<string | number>('all')
-const viewMode = ref<'grid' | 'table'>('grid')
+const viewMode = ref<'grid' | 'table'>('table')
 
 // Pagination State
 const pagination = ref({

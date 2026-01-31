@@ -2,103 +2,130 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminAuthController;
+use App\Http\Controllers\Api\AdminRoleController;
+use App\Http\Controllers\Api\AdminPermissionController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\AdminPointsController;
 use App\Http\Controllers\Api\AdminWalletController;
 
 /*
 |--------------------------------------------------------------------------
-| Admin Routes
+| Admin Routes (Enhanced)
 |--------------------------------------------------------------------------
 |
-| Routes for Super Admin panel to manage users, settings, etc.
-| All routes require authentication and super-admin middleware.
+| Routes for Admin panel to manage users, roles, permissions, etc.
+| All routes require authentication and admin middleware with granular permissions.
+|
+| Middleware:
+| - admin: Requires SUPER_ADMIN, ADMIN, MODERATOR, or INSTRUCTOR role
+| - permission:xxx: Requires specific permission for the action
 |
 */
 
-Route::middleware(['auth:api', 'super-admin'])->prefix('admin')->group(function () {
-    // User Management
-    Route::get('/users', [AdminController::class, 'index'])->name('admin.users.index');
-    Route::post('/users', [AdminController::class, 'store'])->name('admin.users.store');
-    Route::get('/users/{id}', [AdminController::class, 'show'])->name('admin.users.show');
-    Route::put('/users/{id}', [AdminController::class, 'update'])->name('admin.users.update');
-    Route::delete('/users/{id}', [AdminController::class, 'destroy'])->name('admin.users.destroy');
+// Health Check (public)
+Route::get('/health', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'Admin API is running',
+        'version' => '2.0.0',
+        'timestamp' => now()->toDateTimeString()
+    ]);
+});
+
+// Auth Routes (public - no middleware)
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AdminAuthController::class, 'login']);
     
-    // Verify Email (Admin can verify on behalf of user)
-    Route::post('/users/{id}/verify-email', function ($id) {
-        $user = \App\Models\User::findOrFail($id);
-        
-        if ($user->email_verified_at) {
-            return response()->json([
-                'success' => false,
-                'message' => 'อีเมลของผู้ใช้นี้ได้รับการยืนยันแล้ว'
-            ], 400);
-        }
-        
-        $user->email_verified_at = now();
-        $user->save();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'ยืนยันอีเมลสำเร็จ',
-            'data' => $user
-        ]);
-    })->name('admin.users.verify-email');
+    // Protected auth routes
+    Route::middleware(['auth:api', 'admin'])->group(function () {
+        Route::post('/logout', [AdminAuthController::class, 'logout']);
+        Route::post('/refresh', [AdminAuthController::class, 'refresh']);
+        Route::get('/me', [AdminAuthController::class, 'me']);
+    });
+});
+
+// Protected Admin Routes
+Route::middleware(['auth:api', 'admin'])->group(function () {
     
-    // Unverify Email (Admin can revoke verification)
-    Route::post('/users/{id}/unverify-email', function ($id) {
-        $user = \App\Models\User::findOrFail($id);
-        
-        if (!$user->email_verified_at) {
-            return response()->json([
-                'success' => false,
-                'message' => 'อีเมลของผู้ใช้นี้ยังไม่ได้รับการยืนยัน'
-            ], 400);
-        }
-        
-        $user->email_verified_at = null;
-        $user->save();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'ยกเลิกการยืนยันอีเมลสำเร็จ',
-            'data' => $user
-        ]);
-    })->name('admin.users.unverify-email');
-    
-    // Dashboard Stats
-    // Dashboard Stats
+    // =====================================================
+    // Dashboard
+    // =====================================================
     Route::get('/stats', function () {
-        // Calculate revenue (deposits + course purchases)
-        // For now using deposits as primary revenue indicator until course purchase transaction type is confirmed
         $revenue = \App\Models\WalletTransaction::whereIn('transaction_type', ['deposit', 'purchase'])
             ->where('status', 'completed')
             ->sum('amount');
+
+        $lastMonth = now()->subMonth();
+        $usersLastMonth = \App\Models\User::whereMonth('created_at', $lastMonth->month)
+            ->whereYear('created_at', $lastMonth->year)->count();
+        $usersThisMonth = \App\Models\User::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)->count();
+
+        $usersGrowth = $usersLastMonth > 0 
+            ? round((($usersThisMonth - $usersLastMonth) / $usersLastMonth) * 100, 1)
+            : 100;
 
         return response()->json([
             'success' => true,
             'data' => [
                 'total_users' => \App\Models\User::count(),
-                'active_users' => \App\Models\User::whereNotNull('email_verified_at')->count(),
+                'verified_users' => \App\Models\User::whereNotNull('email_verified_at')->count(),
                 'new_users_today' => \App\Models\User::whereDate('created_at', today())->count(),
-                'new_users_week' => \App\Models\User::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+                'new_users_this_week' => \App\Models\User::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+                'new_users_this_month' => $usersThisMonth,
                 'total_courses' => \App\Models\Course::count(),
                 'total_academies' => \App\Models\Academy::count(),
                 'total_revenue' => $revenue,
-                // Calculate growth (mock logic for now, or compare with last month)
-                'users_growth' => 12, // Example fixed value or implement comparison logic
-                'courses_growth' => 5,
-                'academies_growth' => 2,
-                'revenue_growth' => 8,
+                'users_growth' => $usersGrowth,
             ]
         ]);
     })->name('admin.stats');
 
-    // Dashboard Recent Activities (Aggregated)
+    Route::get('/dashboard/recent-users', function () {
+        $users = \App\Models\User::with('roles')
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => $user->avatar,
+                    'roles' => $user->roles->pluck('name'),
+                    'verified' => $user->email_verified_at !== null,
+                    'created_at' => $user->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['success' => true, 'data' => $users]);
+    });
+
+    Route::get('/dashboard/recent-courses', function () {
+        $courses = \App\Models\Course::with('creator')
+            ->withCount('members')
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function ($course) {
+                return [
+                    'id' => $course->id,
+                    'title' => $course->title,
+                    'creator' => $course->creator->name ?? 'Unknown',
+                    'members_count' => $course->members_count,
+                    'price' => $course->price,
+                    'created_at' => $course->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['success' => true, 'data' => $courses]);
+    });
+
     Route::get('/dashboard/activities', function () {
         $activities = collect();
 
-        // 1. New Users
+        // New Users
         $users = \App\Models\User::latest()
             ->take(5)
             ->get()
@@ -116,7 +143,7 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('admin')->group(function 
             });
         $activities = $activities->merge($users);
 
-        // 2. New Courses
+        // New Courses
         $courses = \App\Models\Course::with('creator')
             ->latest()
             ->take(5)
@@ -135,7 +162,7 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('admin')->group(function 
             });
         $activities = $activities->merge($courses);
 
-        // 3. New Academies
+        // New Academies
         $academies = \App\Models\Academy::with('owner')
             ->latest()
             ->take(5)
@@ -154,43 +181,18 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('admin')->group(function 
             });
         $activities = $activities->merge($academies);
 
-        // 4. Wallet Transactions (Deposits only for significance)
-        $transactions = \App\Models\WalletTransaction::with('user')
-            ->where('transaction_type', 'deposit')
-            ->latest()
-            ->take(5)
-            ->get()
-            ->map(function ($tx) {
-                return [
-                    'id' => 'tx_' . $tx->id,
-                    'type' => 'transaction',
-                    'user' => $tx->user->name ?? 'Unknown',
-                    'action' => 'เติมเงิน',
-                    'target' => '฿' . number_format($tx->amount),
-                    'timestamp' => $tx->created_at,
-                    'icon' => 'fluent:wallet-24-regular',
-                    'color' => 'text-yellow-500'
-                ];
-            });
-        $activities = $activities->merge($transactions);
-
-        // Sort by timestamp desc and take top 10
+        // Sort and take top 10
         $sorted = $activities->sortByDesc('timestamp')->values()->take(10);
-
-        // Format time for frontend
         $formatted = $sorted->map(function ($item) {
             $item['time'] = \Carbon\Carbon::parse($item['timestamp'])->diffForHumans();
-            unset($item['timestamp']); // cleanup
+            unset($item['timestamp']);
             return $item;
         });
 
         return response()->json(['success' => true, 'data' => $formatted]);
     })->name('admin.dashboard.activities');
 
-    // Dashboard Top Courses
     Route::get('/dashboard/top-courses', function () {
-        // Sort by enrollments (assuming enrollments count or member relationship)
-        // If enrolled_students column exists and is maintained:
         $courses = \App\Models\Course::withCount('members')
             ->orderBy('members_count', 'desc')
             ->take(5)
@@ -209,144 +211,206 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('admin')->group(function 
         return response()->json(['success' => true, 'data' => $courses]);
     })->name('admin.dashboard.top-courses');
 
+    // =====================================================
+    // User Management
+    // =====================================================
+    Route::prefix('users')->group(function () {
+        Route::get('/', [AdminController::class, 'index'])->name('admin.users.index');
+        Route::get('/datatable', [AdminController::class, 'datatable'])->name('admin.users.datatable');
+        Route::get('/statistics', [AdminController::class, 'statistics'])->name('admin.users.statistics');
+        Route::post('/', [AdminController::class, 'store'])->middleware('permission:user-create')->name('admin.users.store');
+        Route::get('/{id}', [AdminController::class, 'show'])->name('admin.users.show');
+        Route::put('/{id}', [AdminController::class, 'update'])->middleware('permission:user-edit')->name('admin.users.update');
+        Route::delete('/{id}', [AdminController::class, 'destroy'])->middleware('permission:user-delete')->name('admin.users.destroy');
+        Route::post('/{id}/verify-email', [AdminController::class, 'verifyEmail'])->middleware('permission:user-edit')->name('admin.users.verify-email');
+        Route::post('/{id}/unverify-email', [AdminController::class, 'unverifyEmail'])->middleware('permission:user-edit')->name('admin.users.unverify-email');
+        Route::post('/{id}/toggle-ban', [AdminController::class, 'toggleBan'])->middleware('permission:user-edit')->name('admin.users.toggle-ban');
+    });
+
+    // =====================================================
+    // Role Management (Super Admin only for write operations)
+    // =====================================================
+    Route::prefix('roles')->group(function () {
+        Route::get('/', [AdminRoleController::class, 'index'])->name('admin.roles.index');
+        Route::get('/datatable', [AdminRoleController::class, 'datatable'])->name('admin.roles.datatable');
+        Route::get('/permissions', [AdminRoleController::class, 'permissions'])->name('admin.roles.permissions');
+        Route::post('/', [AdminRoleController::class, 'store'])->middleware('admin:SUPER_ADMIN')->name('admin.roles.store');
+        Route::get('/{id}', [AdminRoleController::class, 'show'])->name('admin.roles.show');
+        Route::put('/{id}', [AdminRoleController::class, 'update'])->middleware('admin:SUPER_ADMIN')->name('admin.roles.update');
+        Route::delete('/{id}', [AdminRoleController::class, 'destroy'])->middleware('admin:SUPER_ADMIN')->name('admin.roles.destroy');
+    });
+
+    // =====================================================
+    // Permission Management (Super Admin only)
+    // =====================================================
+    Route::prefix('permissions')->middleware('admin:SUPER_ADMIN')->group(function () {
+        Route::get('/', [AdminPermissionController::class, 'index'])->name('admin.permissions.index');
+        Route::get('/groups', [AdminPermissionController::class, 'groups'])->name('admin.permissions.groups');
+        Route::post('/', [AdminPermissionController::class, 'store'])->name('admin.permissions.store');
+        Route::post('/bulk', [AdminPermissionController::class, 'bulkCreate'])->name('admin.permissions.bulk');
+        Route::get('/{id}', [AdminPermissionController::class, 'show'])->name('admin.permissions.show');
+        Route::put('/{id}', [AdminPermissionController::class, 'update'])->name('admin.permissions.update');
+        Route::delete('/{id}', [AdminPermissionController::class, 'destroy'])->name('admin.permissions.destroy');
+    });
+
+    // =====================================================
     // Courses Management
-    Route::get('/courses', function (\Illuminate\Http\Request $request) {
-        $query = \App\Models\Course::with(['creator', 'category']);
+    // =====================================================
+    Route::prefix('courses')->group(function () {
+        Route::get('/', function (\Illuminate\Http\Request $request) {
+            $query = \App\Models\Course::with(['user'])->withCount('members');
+            
+            if ($request->has('search') && $request->search) {
+                $query->where('title', 'like', '%' . $request->search . '%');
+            }
+            
+            $courses = $query->orderBy('created_at', 'desc')
+                ->paginate($request->get('per_page', 10));
+            
+            // Append cover_url attribute
+            $courses->getCollection()->transform(function ($course) {
+                $course->append('cover_url');
+                return $course;
+            });
+            
+            return response()->json(['success' => true, 'data' => $courses]);
+        })->name('admin.courses.index');
         
-        if ($request->has('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%');
-        }
+        Route::post('/', function (\Illuminate\Http\Request $request) {
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'category_id' => 'nullable|exists:course_categories,id',
+                'price' => 'nullable|numeric|min:0',
+                'status' => 'nullable|in:draft,pending,published,archived',
+            ]);
+            
+            $course = \App\Models\Course::create([
+                ...$validated,
+                'creator_id' => auth()->id(),
+            ]);
+            
+            return response()->json(['success' => true, 'data' => $course], 201);
+        })->middleware('permission:course-create')->name('admin.courses.store');
         
-        $courses = $query->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 10));
+        Route::get('/{id}', function ($id) {
+            $course = \App\Models\Course::with(['user'])->findOrFail($id);
+            return response()->json(['success' => true, 'data' => $course]);
+        })->name('admin.courses.show');
         
-        return response()->json(['success' => true, 'data' => $courses]);
-    })->name('admin.courses.index');
-    
-    Route::post('/courses', function (\Illuminate\Http\Request $request) {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category_id' => 'nullable|exists:course_categories,id',
-            'price' => 'nullable|numeric|min:0',
-            'status' => 'nullable|in:draft,pending,published,archived',
-        ]);
+        Route::put('/{id}', function (\Illuminate\Http\Request $request, $id) {
+            $course = \App\Models\Course::findOrFail($id);
+            $course->update($request->all());
+            return response()->json(['success' => true, 'data' => $course]);
+        })->middleware('permission:course-edit')->name('admin.courses.update');
         
-        $course = \App\Models\Course::create([
-            ...$validated,
-            'creator_id' => auth()->id(),
-        ]);
-        
-        return response()->json(['success' => true, 'data' => $course], 201);
-    })->name('admin.courses.store');
-    
-    Route::get('/courses/{id}', function ($id) {
-        $course = \App\Models\Course::with(['creator', 'category'])->findOrFail($id);
-        return response()->json(['success' => true, 'data' => $course]);
-    })->name('admin.courses.show');
-    
-    Route::put('/courses/{id}', function (\Illuminate\Http\Request $request, $id) {
-        $course = \App\Models\Course::findOrFail($id);
-        $course->update($request->all());
-        return response()->json(['success' => true, 'data' => $course]);
-    })->name('admin.courses.update');
-    
-    Route::delete('/courses/{id}', function ($id) {
-        $course = \App\Models\Course::findOrFail($id);
-        $course->delete();
-        return response()->json(['success' => true, 'message' => 'Course deleted']);
-    })->name('admin.courses.destroy');
+        Route::delete('/{id}', function ($id) {
+            $course = \App\Models\Course::findOrFail($id);
+            $course->delete();
+            return response()->json(['success' => true, 'message' => 'ลบคอร์สสำเร็จ']);
+        })->middleware('permission:course-delete')->name('admin.courses.destroy');
+    });
 
+    // =====================================================
     // Academies Management
-    Route::get('/academies', function (\Illuminate\Http\Request $request) {
-        $academies = \App\Models\Academy::with('owner')
-            ->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 10));
+    // =====================================================
+    Route::prefix('academies')->group(function () {
+        Route::get('/', function (\Illuminate\Http\Request $request) {
+            $academies = \App\Models\Academy::with('owner')
+                ->orderBy('created_at', 'desc')
+                ->paginate($request->get('per_page', 10));
+            
+            return response()->json(['success' => true, 'data' => $academies]);
+        })->name('admin.academies.index');
         
-        return response()->json(['success' => true, 'data' => $academies]);
-    })->name('admin.academies.index');
-    
-    Route::post('/academies', function (\Illuminate\Http\Request $request) {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-        ]);
+        Route::post('/', function (\Illuminate\Http\Request $request) {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+            ]);
+            
+            $academy = \App\Models\Academy::create([
+                ...$validated,
+                'owner_id' => auth()->id(),
+            ]);
+            
+            return response()->json(['success' => true, 'data' => $academy], 201);
+        })->middleware('permission:academy-create')->name('admin.academies.store');
         
-        $academy = \App\Models\Academy::create([
-            ...$validated,
-            'owner_id' => auth()->id(),
-        ]);
+        Route::get('/{id}', function ($id) {
+            $academy = \App\Models\Academy::with('owner')->findOrFail($id);
+            return response()->json(['success' => true, 'data' => $academy]);
+        })->name('admin.academies.show');
         
-        return response()->json(['success' => true, 'data' => $academy], 201);
-    })->name('admin.academies.store');
-    
-    Route::get('/academies/{id}', function ($id) {
-        $academy = \App\Models\Academy::with('owner')->findOrFail($id);
-        return response()->json(['success' => true, 'data' => $academy]);
-    })->name('admin.academies.show');
-    
-    Route::put('/academies/{id}', function (\Illuminate\Http\Request $request, $id) {
-        $academy = \App\Models\Academy::findOrFail($id);
-        $academy->update($request->all());
-        return response()->json(['success' => true, 'data' => $academy]);
-    })->name('admin.academies.update');
-    
-    Route::delete('/academies/{id}', function ($id) {
-        $academy = \App\Models\Academy::findOrFail($id);
-        $academy->delete();
-        return response()->json(['success' => true, 'message' => 'Academy deleted']);
-    })->name('admin.academies.destroy');
+        Route::put('/{id}', function (\Illuminate\Http\Request $request, $id) {
+            $academy = \App\Models\Academy::findOrFail($id);
+            $academy->update($request->all());
+            return response()->json(['success' => true, 'data' => $academy]);
+        })->middleware('permission:academy-edit')->name('admin.academies.update');
+        
+        Route::delete('/{id}', function ($id) {
+            $academy = \App\Models\Academy::findOrFail($id);
+            $academy->delete();
+            return response()->json(['success' => true, 'message' => 'ลบอะคาเดมีสำเร็จ']);
+        })->middleware('permission:academy-delete')->name('admin.academies.destroy');
+    });
 
+    // =====================================================
     // Coupons Management
-    Route::get('/coupons', function (\Illuminate\Http\Request $request) {
-        $query = \App\Models\Coupon::with(['creator', 'usedBy']);
+    // =====================================================
+    Route::prefix('coupons')->group(function () {
+        Route::get('/', function (\Illuminate\Http\Request $request) {
+            $query = \App\Models\Coupon::with(['creator', 'usedBy']);
+            
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+            
+            $coupons = $query->orderBy('created_at', 'desc')
+                ->paginate($request->get('per_page', 10));
+            
+            return response()->json(['success' => true, 'data' => $coupons]);
+        })->name('admin.coupons.index');
         
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
+        Route::post('/', function (\Illuminate\Http\Request $request) {
+            $validated = $request->validate([
+                'code' => 'required|string|unique:coupons,code',
+                'type' => 'required|in:points,wallet',
+                'amount' => 'required|numeric|min:0',
+                'description' => 'nullable|string',
+                'expires_at' => 'nullable|date',
+            ]);
+            
+            $coupon = \App\Models\Coupon::create([
+                ...$validated,
+                'creator_id' => auth()->id(),
+                'status' => 'unused',
+            ]);
+            
+            return response()->json(['success' => true, 'data' => $coupon], 201);
+        })->middleware('permission:coupon-create')->name('admin.coupons.store');
         
-        $coupons = $query->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 10));
+        Route::get('/{id}', function ($id) {
+            $coupon = \App\Models\Coupon::with(['creator', 'usedBy'])->findOrFail($id);
+            return response()->json(['success' => true, 'data' => $coupon]);
+        })->name('admin.coupons.show');
         
-        return response()->json(['success' => true, 'data' => $coupons]);
-    })->name('admin.coupons.index');
-    
-    Route::post('/coupons', function (\Illuminate\Http\Request $request) {
-        $validated = $request->validate([
-            'code' => 'required|string|unique:coupons,code',
-            'type' => 'required|in:points,wallet',
-            'amount' => 'required|numeric|min:0',
-            'description' => 'nullable|string',
-            'expires_at' => 'nullable|date',
-        ]);
+        Route::put('/{id}', function (\Illuminate\Http\Request $request, $id) {
+            $coupon = \App\Models\Coupon::findOrFail($id);
+            $coupon->update($request->all());
+            return response()->json(['success' => true, 'data' => $coupon]);
+        })->middleware('permission:coupon-edit')->name('admin.coupons.update');
         
-        $coupon = \App\Models\Coupon::create([
-            ...$validated,
-            'creator_id' => auth()->id(),
-            'status' => 'unused',
-        ]);
-        
-        return response()->json(['success' => true, 'data' => $coupon], 201);
-    })->name('admin.coupons.store');
-    
-    Route::get('/coupons/{id}', function ($id) {
-        $coupon = \App\Models\Coupon::with(['creator', 'usedBy'])->findOrFail($id);
-        return response()->json(['success' => true, 'data' => $coupon]);
-    })->name('admin.coupons.show');
-    
-    Route::put('/coupons/{id}', function (\Illuminate\Http\Request $request, $id) {
-        $coupon = \App\Models\Coupon::findOrFail($id);
-        $coupon->update($request->all());
-        return response()->json(['success' => true, 'data' => $coupon]);
-    })->name('admin.coupons.update');
-    
-    Route::delete('/coupons/{id}', function ($id) {
-        $coupon = \App\Models\Coupon::findOrFail($id);
-        $coupon->delete();
-        return response()->json(['success' => true, 'message' => 'Coupon deleted']);
-    })->name('admin.coupons.destroy');
+        Route::delete('/{id}', function ($id) {
+            $coupon = \App\Models\Coupon::findOrFail($id);
+            $coupon->delete();
+            return response()->json(['success' => true, 'message' => 'ลบคูปองสำเร็จ']);
+        })->middleware('permission:coupon-delete')->name('admin.coupons.destroy');
+    });
 
-    // Points Transactions
+    // =====================================================
+    // Transactions
+    // =====================================================
     Route::get('/points-transactions', function (\Illuminate\Http\Request $request) {
         $query = \App\Models\PointsTransaction::with(['user', 'targetUser']);
         
@@ -360,7 +424,6 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('admin')->group(function 
         return response()->json(['success' => true, 'data' => $transactions]);
     })->name('admin.points-transactions.index');
 
-    // Wallet Transactions
     Route::get('/wallet-transactions', function (\Illuminate\Http\Request $request) {
         $query = \App\Models\WalletTransaction::with(['user']);
         
@@ -378,7 +441,9 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('admin')->group(function 
         return response()->json(['success' => true, 'data' => $transactions]);
     })->name('admin.wallet-transactions.index');
 
-    // Activities Log
+    // =====================================================
+    // Activities & Content
+    // =====================================================
     Route::get('/activities', function (\Illuminate\Http\Request $request) {
         $query = \App\Models\ActivityLog::with('user');
         
@@ -396,9 +461,7 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('admin')->group(function 
         return response()->json(['success' => true, 'data' => $activities]);
     })->name('admin.activities.index');
 
-    // Content Management
     Route::get('/content', function (\Illuminate\Http\Request $request) {
-        // Return combined content from different sources
         return response()->json([
             'success' => true,
             'data' => [
@@ -407,4 +470,34 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('admin')->group(function 
             ]
         ]);
     })->name('admin.content.index');
+
+    // =====================================================
+    // Wallet Management
+    // =====================================================
+    Route::prefix('wallet')->group(function () {
+        Route::get('/stats', [AdminWalletController::class, 'stats'])->name('admin.wallet.stats');
+        Route::get('/withdrawals/pending', [AdminWalletController::class, 'pendingWithdrawals'])->name('admin.wallet.withdrawals.pending');
+        Route::get('/deposit-requests/pending', [AdminWalletController::class, 'pendingDepositRequests'])->name('admin.wallet.deposits.pending');
+        Route::post('/withdrawals/{id}/approve', [AdminWalletController::class, 'approveWithdrawal'])->name('admin.wallet.withdrawals.approve');
+        Route::post('/withdrawals/{id}/reject', [AdminWalletController::class, 'rejectWithdrawal'])->name('admin.wallet.withdrawals.reject');
+        Route::post('/deposit-requests/{id}/approve', [AdminWalletController::class, 'approveDepositRequest'])->name('admin.wallet.deposits.approve');
+        Route::post('/deposit-requests/{id}/reject', [AdminWalletController::class, 'rejectDepositRequest'])->name('admin.wallet.deposits.reject');
+    });
+
+    // =====================================================
+    // System Settings (Super Admin only)
+    // =====================================================
+    Route::prefix('settings')->middleware('admin:SUPER_ADMIN')->group(function () {
+        Route::get('/', function () {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'app_name' => config('app.name'),
+                    'app_url' => config('app.url'),
+                    'app_env' => config('app.env'),
+                    'app_debug' => config('app.debug'),
+                ]
+            ]);
+        });
+    });
 });

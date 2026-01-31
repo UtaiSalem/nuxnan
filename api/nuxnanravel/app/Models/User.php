@@ -38,6 +38,7 @@ use App\Models\AssignmentAnswer;
 use App\Models\CourseQuizResult;
 use App\Models\CourseGroupMember;
 use App\Models\UserAnswerQuestion;
+use App\Models\Permission;
 
 use Illuminate\Support\Str;
 // use Laravel\Sanctum\HasApiTokens;
@@ -182,6 +183,87 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         if ($role) {
             $this->roles()->syncWithoutDetaching([$role->id]);
         }
+    }
+
+    /**
+     * Remove a role from the user.
+     */
+    public function removeRole(string $roleName): void
+    {
+        $role = Role::where('name', $roleName)->first();
+        if ($role) {
+            $this->roles()->detach($role->id);
+        }
+    }
+
+    /**
+     * Sync roles for the user.
+     */
+    public function syncRoles(array $roleNames): void
+    {
+        $roleIds = Role::whereIn('name', $roleNames)->pluck('id');
+        $this->roles()->sync($roleIds);
+    }
+
+    /**
+     * Get direct permissions assigned to the user.
+     */
+    public function permissions(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions');
+    }
+
+    /**
+     * Check if user has a specific permission (via roles or direct).
+     */
+    public function hasPermission(string $permissionName): bool
+    {
+        // Super Admin has all permissions
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        // Check direct permissions
+        if ($this->permissions()->where('name', $permissionName)->exists()) {
+            return true;
+        }
+
+        // Check permissions via roles
+        foreach ($this->roles as $role) {
+            if ($role->hasPermission($permissionName)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user has any of the given permissions.
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get all permissions (direct + via roles).
+     */
+    public function getAllPermissions(): array
+    {
+        $directPermissions = $this->permissions()->pluck('name')->toArray();
+        
+        $rolePermissions = [];
+        foreach ($this->roles as $role) {
+            $rolePermissions = array_merge($rolePermissions, $role->permissions()->pluck('name')->toArray());
+        }
+
+        return array_unique(array_merge($directPermissions, $rolePermissions));
     }
 
     /**

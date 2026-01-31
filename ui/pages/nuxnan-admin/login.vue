@@ -39,12 +39,13 @@ const handleLogin = async () => {
   errorMessage.value = ''
 
   try {
-    await authStore.login({
+    // Use adminLogin which calls the new admin API endpoint
+    await authStore.adminLogin({
       email: form.value.email,
       password: form.value.password
     })
 
-    // Check if user is admin
+    // Check if user is admin (backend already validates this, but double-check)
     if (!authStore.user?.is_plearnd_admin && !authStore.user?.is_super_admin) {
       await authStore.logout()
       errorMessage.value = 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงระบบผู้ดูแล'

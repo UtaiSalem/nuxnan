@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\RewardController;
 use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\AdminPointsController;
 use App\Http\Controllers\Api\AdminWalletController;
-use App\Http\Controllers\Api\Admin\DepositRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -129,12 +128,12 @@ Route::middleware('auth:api')->group(function () {
             Route::get('/analytics', [AdminWalletController::class, 'analytics']);
         });
 
-        // Admin Deposit Request Routes
+        // Admin Deposit Request Routes (using AdminWalletController)
         Route::prefix('deposit-requests')->group(function () {
-            Route::get('/', [DepositRequestController::class, 'index']);
-            Route::get('/{id}', [DepositRequestController::class, 'show']);
-            Route::post('/{id}/approve', [DepositRequestController::class, 'approve']);
-            Route::post('/{id}/reject', [DepositRequestController::class, 'reject']);
+            Route::get('/', [AdminWalletController::class, 'pendingDepositRequests']);
+            Route::get('/{id}', [AdminWalletController::class, 'showDepositRequest']);
+            Route::post('/{id}/approve', [AdminWalletController::class, 'approveDepositRequest']);
+            Route::post('/{id}/reject', [AdminWalletController::class, 'rejectDepositRequest']);
         });
     });
 });

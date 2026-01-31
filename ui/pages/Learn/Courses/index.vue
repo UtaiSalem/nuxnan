@@ -112,11 +112,14 @@ const fetchCourses = async (page = 1, append = false) => {
 
     const response: any = await api.get(`/api/courses?${params.toString()}`)
 
-    // Response could be { courses: [...] } or { success: true, courses: [...] }
-    if (response.courses) {
-      const newCourses = Array.isArray(response.courses)
-        ? response.courses
-        : response.courses.data || []
+    // Response could be { courses: {...} } or { success: true, data: {...} }
+    // Handle both response formats for backward compatibility
+    const coursesData = response.courses || response.data
+    
+    if (coursesData) {
+      const newCourses = Array.isArray(coursesData)
+        ? coursesData
+        : coursesData.data || []
 
       if (append) {
         courses.value = [...courses.value, ...newCourses]
@@ -127,12 +130,12 @@ const fetchCourses = async (page = 1, append = false) => {
       }
 
       // Update pagination
-      if (response.courses.current_page !== undefined) {
+      if (coursesData.current_page !== undefined) {
         pagination.value = {
-          currentPage: response.courses.current_page || page,
-          lastPage: response.courses.last_page || 1,
-          total: response.courses.total || 0,
-          perPage: response.courses.per_page || 8,
+          currentPage: coursesData.current_page || page,
+          lastPage: coursesData.last_page || 1,
+          total: coursesData.total || 0,
+          perPage: coursesData.per_page || 8,
         }
       } else {
         pagination.value.currentPage = page

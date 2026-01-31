@@ -30,7 +30,7 @@ const summary = ref({
 const fetchSummaryStats = async () => {
   try {
     const token = useCookie('token')
-    const response = await $fetch(`${apiBase}/api/nuxnan-admin/wallet/stats`, {
+    const response = await $fetch(`${apiBase}/api/admin/wallet/stats`, {
       headers: {
         Authorization: `Bearer ${token.value}`
       }

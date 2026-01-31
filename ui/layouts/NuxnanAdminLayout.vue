@@ -35,6 +35,18 @@ const allNavItems = [
     href: '/nuxnan-admin/users'
   },
   {
+    name: 'จัดการบทบาท',
+    icon: 'fluent:shield-24-regular',
+    href: '/nuxnan-admin/roles',
+    superAdminOnly: true
+  },
+  {
+    name: 'Permission Matrix',
+    icon: 'fluent:key-multiple-24-regular',
+    href: '/nuxnan-admin/permissions',
+    superAdminOnly: true
+  },
+  {
     name: 'จัดการคอร์ส',
     icon: 'fluent:hat-graduation-24-regular',
     href: '/nuxnan-admin/courses'

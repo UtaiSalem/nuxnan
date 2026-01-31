@@ -77,14 +77,10 @@ class CourseController extends Controller
         ]);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        // $courses = $activities = $this->getMoreCourses();
-        $courses =  $this->getMoreCourses();
-        
-        return response()->json([
-            'courses'       => $courses->original['courses'],
-        ]);
+        // Directly call getMoreCourses which returns a properly formatted JSON response
+        return $this->getMoreCourses($request);
     }
 
     public function getFavoriteCourses(Request $request)
@@ -180,10 +176,19 @@ class CourseController extends Controller
         }
         
         $perPage = $request->input('per_page', 15);
+        $paginated = $query->paginate($perPage);
 
         return response()->json([
             'success'       => true,
-            'courses'       => CourseResource::collection($query->paginate($perPage)),
+            'courses'       => [
+                'data' => CourseResource::collection($paginated),
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'to' => $paginated->lastItem(),
+            ],
         ], 200);
     }
 

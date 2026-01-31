@@ -35,7 +35,8 @@
     31 => 'Termwind\\Laravel\\TermwindServiceProvider',
     32 => 'PHPOpenSourceSaver\\JWTAuth\\Providers\\LaravelServiceProvider',
     33 => 'SimpleSoftwareIO\\QrCode\\QrCodeServiceProvider',
-    34 => 'App\\Providers\\AppServiceProvider',
+    34 => 'Yajra\\DataTables\\DataTablesServiceProvider',
+    35 => 'App\\Providers\\AppServiceProvider',
   ),
   'eager' => 
   array (
@@ -57,7 +58,8 @@
     15 => 'Termwind\\Laravel\\TermwindServiceProvider',
     16 => 'PHPOpenSourceSaver\\JWTAuth\\Providers\\LaravelServiceProvider',
     17 => 'SimpleSoftwareIO\\QrCode\\QrCodeServiceProvider',
-    18 => 'App\\Providers\\AppServiceProvider',
+    18 => 'Yajra\\DataTables\\DataTablesServiceProvider',
+    19 => 'App\\Providers\\AppServiceProvider',
   ),
   'deferred' => 
   array (
