@@ -2077,6 +2077,7 @@ const handlePollUpdate = (updatedPoll) => {
               :src="currentUserAvatar" 
               class="w-8 h-8 rounded-full object-cover flex-shrink-0" 
               alt="Your avatar"
+              @error="(e) => e.target.src = '/images/default-avatar.png'"
             />
             <div class="flex-1 relative">
               <textarea
@@ -2116,6 +2117,7 @@ const handlePollUpdate = (updatedPoll) => {
                 :src="getCommentAvatar(comment)" 
                 class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" 
                 :alt="comment.user?.username"
+                @error="(e) => e.target.src = '/images/default-avatar.png'"
               />
               <div class="flex-1">
                 <div class="bg-gray-100 dark:bg-vikinger-dark-200 rounded-2xl p-3">
@@ -2685,7 +2687,8 @@ const handlePollUpdate = (updatedPoll) => {
           <div v-for="comment in displayedComments" :key="comment.id" class="flex gap-3 group">
             <img :src="getCommentAvatar(comment)" 
                  class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" 
-                 :alt="comment.user?.username || comment.author?.username" />
+                 :alt="comment.user?.username || comment.author?.username"
+                 @error="(e) => e.target.src = '/images/default-avatar.png'" />
             <div class="flex-1">
               <div class="bg-gray-100 dark:bg-vikinger-dark-200 rounded-2xl p-3">
                 <h6 class="font-semibold text-sm text-gray-800 dark:text-white">{{ comment.user?.username || comment.author?.username }}</h6>
@@ -2764,6 +2767,7 @@ const handlePollUpdate = (updatedPoll) => {
                   :src="currentUserAvatar" 
                   class="w-8 h-8 rounded-full object-cover flex-shrink-0"
                   alt="You"
+                  @error="(e) => e.target.src = '/images/default-avatar.png'"
                 />
                 <div class="flex-1 flex gap-2">
                   <input
@@ -2814,6 +2818,7 @@ const handlePollUpdate = (updatedPoll) => {
                       :src="getCommentAvatar(reply)" 
                       class="w-8 h-8 flex-shrink-0 rounded-full object-cover"
                       :alt="reply.user?.username"
+                      @error="(e) => e.target.src = '/images/default-avatar.png'"
                     />
                     <div class="flex-1">
                       <div class="bg-gray-100 dark:bg-vikinger-dark-300 rounded-xl p-2.5">

@@ -428,6 +428,7 @@ const onQRActionComplete = (result) => {
                 :src="authUser.avatar"
                 :alt="authUser.name"
                 class="w-full h-full object-cover"
+                @error="(e) => e.target.src = '/images/default-avatar.png'"
               />
             </div>
           </NuxtLink>
@@ -612,6 +613,7 @@ const onQRActionComplete = (result) => {
                 :src="authUser.avatar"
                 class="w-24 h-24 rounded-full border-4 border-vikinger-purple shadow-lg"
                 :alt="authUser.name"
+                @error="(e) => e.target.src = '/images/default-avatar.png'"
               />
               <div
                 class="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-vikinger rounded-full flex items-center justify-center text-white font-bold border-4 transition-colors duration-300"
@@ -1070,7 +1072,7 @@ const onQRActionComplete = (result) => {
               :class="isDarkMode ? 'hover:bg-vikinger-dark-200' : 'hover:bg-gray-100'"
             >
               <div class="relative">
-                <img :src="getAvatarUrl(user, index)" class="w-10 h-10 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" />
+                <img :src="getAvatarUrl(user, index)" class="w-10 h-10 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" @error="(e) => e.target.src = '/images/default-avatar.png'" />
                 <div
                   class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
                   :class="[
@@ -1115,7 +1117,7 @@ const onQRActionComplete = (result) => {
             class="relative cursor-pointer transition-transform hover:scale-110 group"
             :title="`Rank ${index + 1}: ${user.name}`"
           >
-            <img :src="getAvatarUrl(user, index)" class="w-11 h-11 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" />
+            <img :src="getAvatarUrl(user, index)" class="w-11 h-11 rounded-full border-2 border-transparent group-hover:border-vikinger-purple transition-colors bg-white object-cover" @error="(e) => e.target.src = '/images/default-avatar.png'" />
             <div
               class="absolute -top-1 -left-1 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
               :class="[
@@ -1154,6 +1156,7 @@ const onQRActionComplete = (result) => {
               <img
                 :src="authUser.avatar"
                 class="w-20 h-20 rounded-full mx-auto border-4 border-vikinger-purple"
+                @error="(e) => e.target.src = '/images/default-avatar.png'"
               />
               <div
                 class="absolute -bottom-1 -right-1 w-8 h-8 bg-gradient-vikinger rounded-full flex items-center justify-center text-white text-xs font-bold border-2"

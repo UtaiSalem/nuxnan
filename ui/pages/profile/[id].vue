@@ -656,6 +656,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   :src="profile.avatar || '/images/default-avatar.png'"
                   :alt="displayName"
                   class="w-full h-full object-cover"
+                  @error="(e) => e.target.src = '/images/default-avatar.png'"
                 />
               </div>
               
