@@ -20,7 +20,7 @@
     "@nuxtjs/i18n": "^10.2.1",
     "@nuxtjs/tailwindcss": "^6.12.2",
     "@pinia/nuxt": "^0.8.0",
-    "@primevue/themes": "^4.5.0",
+    "@primeuix/themes": "^1.0.0",
     "@tiptap/extension-code-block-lowlight": "^3.14.0",
     "@tiptap/extension-color": "^3.14.0",
     "@tiptap/extension-highlight": "^3.14.0",
@@ -52,7 +52,7 @@
     "jspdf": "^2.5.1",
     "jsqr": "^1.4.0",
     "lowlight": "^3.3.0",
-    "nuxt": "^3.15.1",
+    "nuxt": "^4.3.0",
     "pinia": "^2.3.0",
     "plyr": "^3.8.3",
     "postcss-color-function": "^4.1.0",
@@ -60,7 +60,7 @@
     "postcss-custom-properties": "^14.0.6",
     "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",
-    "primevue": "^4.5.0",
+    "primevue": "^4.3.0",
     "qrcode": "^1.5.4",
     "qrcode-reader-vue3": "^4.1.0",
     "qrcode-vue3": "^1.7.1",
@@ -75,7 +75,8 @@
   "overrides": {
     "vite": "^6.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
-    "@vitejs/plugin-vue-jsx": "^4.0.0"
+    "@vitejs/plugin-vue-jsx": "^4.0.0",
+    "rollup": "^4.48.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

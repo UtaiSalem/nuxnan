@@ -331,8 +331,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             // Clean up the path: remove any leading slash, 'storage/', or '/storage/' prefix
             $cleanPath = preg_replace('#^/?(storage/)?#', '', $path);
             
-            // Return full URL using the Storage facade pointing to public disk
-            return \Illuminate\Support\Facades\Storage::disk('public')->url($cleanPath);
+            // Build the URL manually for better cross-environment support
+            $appUrl = rtrim(config('app.url'), '/');
+            return $appUrl . '/storage/' . ltrim($cleanPath, '/');
         }
 
         // Fallback: UI Avatars
