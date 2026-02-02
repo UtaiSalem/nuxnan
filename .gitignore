@@ -27,6 +27,7 @@
 /api/nuxnanravel/node_modules/
 /api/nuxnanravel/.env
 /api/nuxnanravel/.env.*
+/api/nuxnanravel/production.env
 !/api/nuxnanravel/.env.example
 /api/nuxnanravel/storage/logs/*
 !/api/nuxnanravel/storage/logs/.gitkeep
