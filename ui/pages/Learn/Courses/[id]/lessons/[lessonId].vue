@@ -19,8 +19,8 @@ const lessonId = computed(() => route.params.lessonId as string)
 
 // Check if we're on a child route (e.g., /edit)
 const isChildRoute = computed(() => {
-  const path = route.path
-  const lessonPath = `/courses/${courseId.value}/lessons/${lessonId.value}`
+  const path = route.path.toLowerCase()
+  const lessonPath = `/learn/courses/${courseId.value}/lessons/${lessonId.value}`.toLowerCase()
   return path !== lessonPath && path.startsWith(lessonPath + '/')
 })
 

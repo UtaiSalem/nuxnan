@@ -5,6 +5,7 @@ namespace App\Http\Resources\Learn\Course\lessons;
 use Illuminate\Http\Request;
 use App\Http\Resources\UserResource;
 use App\Http\Resources\Learn\Course\lessons\TopicResource;
+use App\Http\Resources\Learn\Course\lessons\LessonImageResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 use App\Http\Resources\Learn\Course\lessons\LessonCommentResource;
@@ -47,7 +48,7 @@ class LessonResource extends JsonResource
             'assigned_groups'       => $this->assigned_groups,
             'point_tuition_fee'     => $this->point_tuition_fee,
             'order'                 => $this->order,
-            'images'                => $this->images,
+            'images'                => LessonImageResource::collection($this->images),
             'topics'                => TopicResource::collection($this->topics),
             'created_at'            => $this->created_at->format('Y-m-d H:i:s'),
             'created_at_for_humans' => $this->created_at->diffForHumans(),

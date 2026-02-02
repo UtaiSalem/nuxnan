@@ -86,7 +86,6 @@ const handleScroll = () => {
 }
 
 onMounted(() => {
-  console.log('Lessons Mounted. Name:', route.name)
   fetchLessons()
   window.addEventListener('scroll', handleScroll)
 })

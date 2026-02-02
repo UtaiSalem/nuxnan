@@ -20,6 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const api = useApi()
+const swal = useSweetAlert()
 
 // Form state
 const form = ref({
@@ -99,14 +100,16 @@ const deleteTempImage = (index: number) => {
 }
 
 const deleteExistingImage = async (index: number, imageId: number) => {
-  if (!confirm('ต้องการลบรูปภาพนี้หรือไม่?')) return
+  const confirmed = await swal.confirmDelete('รูปภาพนี้')
+  if (!confirmed) return
 
   try {
     await api.delete(`/api/lessons/${props.lesson.id}/images/${imageId}`)
     existingImages.value.splice(index, 1)
+    swal.toast('ลบรูปภาพสำเร็จ', 'success')
   } catch (err) {
     console.error('Failed to delete image:', err)
-    alert('ไม่สามารถลบรูปภาพได้')
+    swal.error('ไม่สามารถลบรูปภาพได้')
   }
 }
 
@@ -157,13 +160,14 @@ const handleSubmit = async () => {
       response = await api.post(`/api/courses/${props.courseId}/lessons`, formData)
     }
 
+    swal.success(props.isEdit ? 'แก้ไขบทเรียนสำเร็จ' : 'สร้างบทเรียนสำเร็จ')
     emit('submit', response)
   } catch (err: any) {
     console.error('Failed to save lesson:', err)
     if (err.data?.errors) {
       errors.value = err.data.errors
     }
-    alert(err.data?.message || 'ไม่สามารถบันทึกบทเรียนได้')
+    swal.error(err.data?.message || 'ไม่สามารถบันทึกบทเรียนได้')
   } finally {
     isSubmitting.value = false
   }

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Learn\Course\lessons\images;
 
 use App\Http\Controllers\Controller;
 use App\Models\Lesson;
-use App\Models\images\LessonImage;
+use App\Models\LessonImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
