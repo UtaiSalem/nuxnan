@@ -79,12 +79,12 @@ const filteredLessons = computed(() => {
 
 // Navigate to lesson
 const navigateToLesson = (lesson: any) => {
-  navigateTo(`/courses/${props.courseId}/lessons/${lesson.id}`)
+  navigateTo(`/Learn/Courses/${props.courseId}/lessons/${lesson.id}`)
 }
 
 // Edit lesson
 const editLesson = (lesson: any) => {
-  navigateTo(`/courses/${props.courseId}/lessons/${lesson.id}/edit`)
+  navigateTo(`/Learn/Courses/${props.courseId}/lessons/${lesson.id}/edit`)
 }
 
 // Delete lesson

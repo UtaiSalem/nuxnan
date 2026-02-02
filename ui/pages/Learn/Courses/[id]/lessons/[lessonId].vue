@@ -97,20 +97,25 @@ const fetchLesson = async () => {
 
 // Handler functions
 const handleEdit = (lessonData: any) => {
-  router.push(`/courses/${courseId.value}/lessons/${lessonData.id}/edit`)
+  router.push(`/Learn/Courses/${courseId.value}/lessons/${lessonData.id}/edit`)
 }
 
 const handleDelete = async (lessonIdToDelete: number) => {
-  const result = await swal.confirm('คุณแน่ใจหรือไม่ที่จะลบบทเรียนนี้? การกระทำนี้ไม่สามารถย้อนกลับได้', 'ลบบทเรียน')
+  const lessonTitle = lesson.value?.title || 'บทเรียนนี้'
+  
+  const result = await swal.confirm(
+    `คุณแน่ใจหรือไม่ที่จะลบ "${lessonTitle}"?\n\nการกระทำนี้จะลบข้อมูลทั้งหมดที่เกี่ยวข้อง รวมถึง:\n• หัวข้อย่อยทั้งหมด\n• แบบฝึกหัดและคำถาม\n• ความคิดเห็น\n• ความคืบหน้าผู้เรียน\n\nการกระทำนี้ไม่สามารถย้อนกลับได้`,
+    'ยืนยันการลบบทเรียน'
+  )
   
   if (result) {
     try {
-      await api.delete(`/api/lessons/${lessonIdToDelete}`)
-      swal.success('บทเรียนถูกลบแล้ว', 'สำเร็จ')
-      router.push(`/courses/${courseId.value}/lessons`)
+      const response = await api.delete(`/api/courses/${courseId.value}/lessons/${lessonIdToDelete}`) as any
+      swal.success(response.message || 'ลบบทเรียนสำเร็จ', 'สำเร็จ')
+      router.push(`/Learn/Courses/${courseId.value}/lessons`)
     } catch (err: any) {
       console.error('Failed to delete lesson:', err)
-      swal.error(err.data?.message || 'ไม่สามารถลบบทเรียนได้')
+      swal.error(err.data?.message || err.message || 'ไม่สามารถลบบทเรียนได้')
     }
   }
 }
@@ -163,6 +168,16 @@ onMounted(async () => {
 // Reload lesson when route changes (navigation)
 watch(lessonId, async () => {
   await fetchLesson()
+})
+
+// Reload lesson when returning from edit page (updated query param)
+watch(() => route.query.updated, async (newVal) => {
+  if (newVal) {
+    await fetchLesson()
+    await fetchAllLessons()
+    // Clean up the query param without triggering navigation
+    router.replace({ path: route.path, query: {} })
+  }
 })
 
 // Set page title

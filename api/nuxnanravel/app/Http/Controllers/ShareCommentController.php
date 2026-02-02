@@ -124,14 +124,49 @@ class ShareCommentController extends Controller
     }
 
     /**
-     * Delete a comment
+     * Update a comment
      */
-    public function destroy($commentId)
+    public function update(Request $request, $commentId)
     {
         $comment = ShareComment::findOrFail($commentId);
         
         // Check if user owns the comment
         if ($comment->user_id !== Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้'
+            ], 403);
+        }
+
+        $request->validate([
+            'content' => 'required|string|max:1000'
+        ]);
+
+        $comment->update([
+            'content' => $request->content
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'แก้ไขความคิดเห็นสำเร็จ',
+            'comment' => [
+                'id' => $comment->id,
+                'content' => $comment->content,
+                'updated_at' => $comment->updated_at,
+            ]
+        ]);
+    }
+
+    /**
+     * Delete a comment
+     */
+    public function destroy($commentId)
+    {
+        $comment = ShareComment::findOrFail($commentId);
+        $share = $comment->share;
+        
+        // Check if user owns the comment OR owns the share
+        if ($comment->user_id !== Auth::id() && $share->user_id !== Auth::id()) {
             return response()->json([
                 'success' => false,
                 'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้'
@@ -140,7 +175,9 @@ class ShareCommentController extends Controller
 
         DB::beginTransaction();
         try {
-            $share = $comment->share;
+            // Delete likes and dislikes
+            DB::table('share_comment_likes')->where('share_comment_id', $comment->id)->delete();
+            DB::table('share_comment_dislikes')->where('share_comment_id', $comment->id)->delete();
             
             // Delete comment
             $comment->delete();

@@ -105,6 +105,6 @@ export default defineNuxtConfig({
   },
 
   build: {
-    transpile: [], // Force transpile for named export
+    // transpile: ['lowlight', 'highlight.js'], // Force transpile for named export
   },
 })

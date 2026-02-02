@@ -108,18 +108,67 @@ class PostImageController extends \App\Http\Controllers\Controller
         ], 200);
     }
 
-    //delete comment
-    public function destroyComment(PostImageComment $post_image_comment)
+    /**
+     * Update a comment on a post image
+     */
+    public function updateComment(Request $request, PostImageComment $post_image_comment)
     {
-        // $comment = $post_image->image_comments()->find($comment_id);
+        // Check authorization - only comment owner can update
+        if ($post_image_comment->user_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้'
+            ], 403);
+        }
 
-        // if ($comment) {
-            $post_image_comment->delete();
-            $post_image_comment->postImage()->decrement('comments');
-        // }
+        $request->validate([
+            'content' => 'required|string'
+        ]);
+
+        $post_image_comment->update([
+            'content' => $request->content
+        ]);
 
         return response()->json([
             'success' => true,
+            'message' => 'แก้ไขความคิดเห็นสำเร็จ',
+            'comment' => new PostImageCommentResource($post_image_comment->fresh()),
+        ], 200);
+    }
+
+    /**
+     * Delete a comment on a post image
+     */
+    public function destroyComment(PostImageComment $post_image_comment)
+    {
+        // Check authorization - comment owner or post image owner can delete
+        $postImage = $post_image_comment->postImage;
+        $postOwnerId = $postImage?->post?->user_id ?? null;
+        
+        if ($post_image_comment->user_id !== auth()->id() && $postOwnerId !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้'
+            ], 403);
+        }
+
+        // Detach likes and dislikes
+        $post_image_comment->liked()->detach();
+        $post_image_comment->disliked()->detach();
+        
+        // Store reference to post image before delete
+        $postImageRef = $post_image_comment->postImage;
+        
+        $post_image_comment->delete();
+        
+        // Decrement comments count
+        if ($postImageRef) {
+            $postImageRef->decrement('comments');
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ลบความคิดเห็นสำเร็จ'
         ], 200);
     }
 }

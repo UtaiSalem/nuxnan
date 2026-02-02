@@ -7,6 +7,56 @@
     @apply font-sans text-gray-700 bg-vikinger-light dark:bg-vikinger-dark dark:text-gray-200 transition-colors duration-300;
   }
 
+  /* ========================
+     Glass Morphism Base Styles
+     ======================== */
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl;
+  }
+
+  .glass-card-hover {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl 
+           transition-all duration-300;
+  }
+
+  .glass-card-hover:hover {
+    @apply bg-white/10 border-white/20 -translate-y-1;
+    box-shadow: 0 20px 40px rgba(97, 93, 250, 0.2);
+  }
+
+  /* Glass Card Light Mode */
+  .glass-card-light {
+    @apply bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-xl;
+  }
+
+  .glass-card-light-hover {
+    @apply bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-xl 
+           transition-all duration-300;
+  }
+
+  .glass-card-light-hover:hover {
+    @apply bg-white/90 border-gray-300/70 -translate-y-1;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-vikinger-cyan to-vikinger-purple;
+  }
+
+  .gradient-text-pink {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-vikinger-pink to-vikinger-purple;
+  }
+
+  /* Section Reveal Animation */
+  .section-reveal {
+    @apply opacity-0 translate-y-8 transition-all duration-700 ease-out;
+  }
+
+  .section-reveal.revealed {
+    @apply opacity-100 translate-y-0;
+  }
+
   /* Scrollbar Styling */
   ::-webkit-scrollbar {
     width: 8px;

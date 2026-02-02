@@ -566,7 +566,8 @@ const deleteComment = async (comment: any) => {
   if (!confirmed) return
   
   try {
-    const response = await api.call(`/api/courses/posts/comments/${comment.id}`, {
+    const postId = comment.course_post_id || props.post.id
+    const response = await api.call(`/api/courses/${props.courseId}/posts/${postId}/comments/${comment.id}`, {
       method: 'DELETE'
     })
     

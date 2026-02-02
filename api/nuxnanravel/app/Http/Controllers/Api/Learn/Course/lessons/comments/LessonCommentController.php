@@ -56,9 +56,48 @@ class LessonCommentController extends Controller
         ]);
     }
 
-    // destroy a comment by comment id
+    /**
+     * Update a comment
+     */
+    public function update(Request $request, Lesson $lesson, LessonComment $comment)
+    {
+        // Check authorization - only comment owner can update
+        if ($comment->user_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้'
+            ], 403);
+        }
+
+        $validatedData = $request->validate([
+            'content' => 'required|string',
+        ]);
+
+        $comment->update([
+            'content' => $validatedData['content']
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'แก้ไขความคิดเห็นสำเร็จ',
+            'comment' => new LessonCommentResource($comment->fresh())
+        ]);
+    }
+
+    /**
+     * Destroy a comment by comment id
+     */
     public function destroy(Lesson $lesson, LessonComment $comment)
     {
+        // Check authorization - comment owner or lesson owner can delete
+        $lessonOwnerId = $lesson->course?->user_id ?? null;
+        if ($comment->user_id !== auth()->id() && $lessonOwnerId !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้'
+            ], 403);
+        }
+
         // Delete images if any
         $images = $comment->lessonCommentImages;
         if ($images && $images->count() > 0) {

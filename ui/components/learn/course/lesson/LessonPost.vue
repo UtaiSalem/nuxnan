@@ -366,17 +366,25 @@ const handleTopicComplete = (topicId: number) => {
       </div>
 
       <!-- Description -->
-      <div
-        v-if="lesson.description"
-        class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800"
-      >
-        <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
-          {{ lesson.description }}
-        </p>
+      <!-- Description -->
+      <div v-if="lesson.description" class="mb-8">
+        <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-3">
+          <Icon icon="fluent:text-description-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          คำอธิบาย
+        </h3>
+        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+          <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
+            {{ lesson.description }}
+          </p>
+        </div>
       </div>
 
       <!-- Main Content -->
       <div class="relative">
+        <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <Icon icon="fluent:document-text-24-filled" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+          เนื้อหาบทเรียน
+        </h3>
         <div
           ref="contentRef"
           :class="[
@@ -514,7 +522,7 @@ const handleTopicComplete = (topicId: number) => {
         <!-- Previous Lesson -->
         <NuxtLink
           v-if="prevLesson"
-          :to="`/courses/${lesson.course_id}/lessons/${prevLesson.id}`"
+          :to="`/Learn/Courses/${lesson.course_id}/lessons/${prevLesson.id}`"
           class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white dark:bg-gray-700 shadow-md hover:shadow-lg transition-all group hover:-translate-x-1"
         >
           <Icon icon="fluent:chevron-left-24-filled" class="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
@@ -539,7 +547,7 @@ const handleTopicComplete = (topicId: number) => {
         <!-- Next Lesson -->
         <NuxtLink
           v-if="nextLesson"
-          :to="`/courses/${lesson.course_id}/lessons/${nextLesson.id}`"
+          :to="`/Learn/Courses/${lesson.course_id}/lessons/${nextLesson.id}`"
           class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white dark:bg-gray-700 shadow-md hover:shadow-lg transition-all group hover:translate-x-1"
         >
           <div class="text-right">

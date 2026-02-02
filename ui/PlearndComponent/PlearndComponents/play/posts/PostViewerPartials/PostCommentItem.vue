@@ -21,6 +21,35 @@ const isDeleting = ref(false);
 const isCommentOwner = computed(()=> props.comment.user.id === authUser.id);
 const isNotCommentOwner = computed(()=> props.comment.user.id !== authUser.id); 
 
+const isEditing = ref(false);
+const editContent = ref('');
+const isUpdating = ref(false);
+
+const onEditComment = () => {
+    editContent.value = refComment.value.content;
+    isEditing.value = true;
+};
+
+const handleUpdateComment = async () => {
+    if (!editContent.value.trim()) return;
+    
+    try {
+        isUpdating.value = true;
+        let resp = await axios.patch(`/posts/${props.comment.post_id}/comments/${props.comment.id}`, {
+            content: editContent.value
+        });
+        
+        if (resp.data.success) {
+            refComment.value.content = editContent.value;
+            isEditing.value = false;
+        }
+        isUpdating.value = false;
+    } catch (error) {
+        console.log(error);
+        isUpdating.value = false;
+    }
+}; 
+
 const handleLikesComment = async () => {
  
     try {
@@ -109,10 +138,20 @@ const handleDeleteComment = () => {
                         <h6 class="mb-0">{{ comment.user.name }}</h6>
                         <span class="text-gray-600 text-sm">{{ comment.create_at }}</span>
                     </div>
-                    <CommentSettingMenu @delete-comment="handleDeleteComment" v-if="!isNotCommentOwner || isPostOwner" />
+                    <CommentSettingMenu @delete-comment="handleDeleteComment" @edit-comment="onEditComment" v-if="!isNotCommentOwner || isPostOwner" />
                 </div>
-                <p v-if="comment.content" class="text-gray-700 text-sm bg-slate-50 border-[1.5px] border-gray-200 p-1 ml-auto rounded-lg my-2">
-                    {{ comment.content }}
+                
+                <div v-if="isEditing" class="w-full my-2">
+                    <textarea v-model="editContent" rows="2" class="w-full p-2 text-sm border rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"></textarea>
+                    <div class="flex gap-2 justify-end mt-1">
+                        <button @click="isEditing = false" class="px-3 py-1 text-xs text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200">ยกเลิก</button>
+                        <button @click="handleUpdateComment" :disabled="isUpdating" class="px-3 py-1 text-xs text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300">
+                            {{ isUpdating ? 'บันทึก...' : 'บันทึก' }}
+                        </button>
+                    </div>
+                </div>
+                <p v-else-if="refComment.content" class="text-gray-700 text-sm bg-slate-50 border-[1.5px] border-gray-200 p-1 ml-auto rounded-lg my-2">
+                    {{ refComment.content }}
                 </p>
                 <div v-if="comment.images.length > 0" class="flex flex-wrap gap-2">
                     <div v-for="image in comment.images" :key="image.id" class="relative">

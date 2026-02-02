@@ -25,7 +25,7 @@ definePageMeta({
       }
       
       if (!courseStore.isCourseAdmin) {
-          return navigateTo(`/courses/${to.params.id}`)
+          return navigateTo(`/Learn/Courses/${to.params.id}`)
       }
   }]
 })
@@ -76,8 +76,12 @@ onMounted(async () => {
 
 // Handle form submit
 const handleSubmit = (response: any) => {
-  // Navigate back to lesson detail or lessons list
-  router.push(`/courses/${courseId.value}/lessons/${lessonId.value}`)
+  // Navigate back to lesson detail with refresh flag
+  // Use replace to prevent back button issues and add timestamp to force refresh
+  router.replace({
+    path: `/Learn/Courses/${courseId.value}/lessons/${lessonId.value}`,
+    query: { updated: Date.now().toString() }
+  })
 }
 
 // Handle cancel
@@ -100,14 +104,14 @@ watch(lesson, (newLesson) => {
     <!-- Breadcrumb -->
     <nav class="flex items-center gap-2 text-sm mb-6">
       <NuxtLink
-        :to="`/courses/${courseId}`"
+        :to="`/Learn/Courses/${courseId}`"
         class="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
       >
         {{ course?.name || 'รายวิชา' }}
       </NuxtLink>
       <Icon icon="fluent:chevron-right-16-regular" class="w-4 h-4 text-gray-400" />
       <NuxtLink
-        :to="`/courses/${courseId}/lessons`"
+        :to="`/Learn/Courses/${courseId}/lessons`"
         class="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
       >
         บทเรียน
@@ -115,7 +119,7 @@ watch(lesson, (newLesson) => {
       <Icon icon="fluent:chevron-right-16-regular" class="w-4 h-4 text-gray-400" />
       <NuxtLink
         v-if="lesson"
-        :to="`/courses/${courseId}/lessons/${lessonId}`"
+        :to="`/Learn/Courses/${courseId}/lessons/${lessonId}`"
         class="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
       >
         {{ lesson.title }}
@@ -148,7 +152,7 @@ watch(lesson, (newLesson) => {
       <h3 class="text-xl font-bold text-red-700 dark:text-red-400 mb-2">ไม่มีสิทธิ์เข้าถึง</h3>
       <p class="text-red-600 dark:text-red-400 mb-4">คุณไม่มีสิทธิ์ในการแก้ไขบทเรียน</p>
       <NuxtLink
-        :to="`/courses/${courseId}/lessons`"
+        :to="`/Learn/Courses/${courseId}/lessons`"
         class="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />

@@ -174,66 +174,197 @@ class LessonController extends Controller
     }
 
     /**
+     * Helper method to delete assignment and its related data
+     */
+    private function deleteAssignment($assignment): void
+    {
+        // Delete assignment images
+        if ($assignment->images && $assignment->images->count() > 0) {
+            foreach ($assignment->images as $image) {
+                Storage::disk('public')->delete('images/lessons/assignments/' . $image->image_url);
+                $image->delete();
+            }
+        }
+
+        // Delete assignment answers and their images
+        if ($assignment->answers && $assignment->answers->count() > 0) {
+            foreach ($assignment->answers as $answer) {
+                if ($answer->images && $answer->images->count() > 0) {
+                    foreach ($answer->images as $answerImage) {
+                        Storage::disk('public')->delete($answerImage->image_url);
+                        $answerImage->delete();
+                    }
+                }
+                $answer->delete();
+            }
+        }
+
+        $assignment->delete();
+    }
+
+    /**
+     * Helper method to delete question and its related data
+     */
+    private function deleteQuestion($question): void
+    {
+        // Delete question images
+        if ($question->images && $question->images->count() > 0) {
+            foreach ($question->images as $image) {
+                Storage::disk('public')->delete($image->image_url ?? $image->filename ?? '');
+                $image->delete();
+            }
+        }
+
+        // Delete question options and their images
+        if ($question->options && $question->options->count() > 0) {
+            foreach ($question->options as $option) {
+                if (method_exists($option, 'images') && $option->images && $option->images->count() > 0) {
+                    foreach ($option->images as $optImage) {
+                        Storage::disk('public')->delete($optImage->image_url ?? $optImage->filename ?? '');
+                        $optImage->delete();
+                    }
+                }
+                $option->delete();
+            }
+        }
+
+        // Delete user answers
+        if ($question->userAnswers && $question->userAnswers->count() > 0) {
+            $question->userAnswers()->delete();
+        }
+
+        $question->delete();
+    }
+
+    /**
+     * Helper method to delete topic and its related data
+     */
+    private function deleteTopic($topic): void
+    {
+        // Delete topic images
+        if ($topic->images && $topic->images->count() > 0) {
+            foreach ($topic->images as $topic_image) {
+                Storage::disk('public')->delete('images/courses/lessons/topics/' . $topic_image->filename);
+                $topic_image->delete();
+            }
+        }
+
+        // Delete topic assignments
+        if ($topic->assignments && $topic->assignments->count() > 0) {
+            foreach ($topic->assignments as $assignment) {
+                $this->deleteAssignment($assignment);
+            }
+        }
+
+        // Delete topic questions
+        if ($topic->questions && $topic->questions->count() > 0) {
+            foreach ($topic->questions as $question) {
+                $this->deleteQuestion($question);
+            }
+        }
+
+        $topic->delete();
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Lesson $lesson)
     {
         if (!$lesson->course->isAdmin(auth()->user())) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์ลบบทเรียนนี้'
+            ], 403);
         }
 
         try {
-        // delete lesson comments if exist
-            if ($lesson->comments->count() > 0) {
+            $course = $lesson->course;
+            
+            \DB::beginTransaction();
+
+            // 1. Delete lesson comments and their related data
+            if ($lesson->comments && $lesson->comments->count() > 0) {
                 foreach ($lesson->comments as $comment) {
-                    if ($comment->lessonCommentImages->count() > 0) {
-                            foreach ($comment->lessonCommentImages() as $comment_image) {
-                            Storage::disk('public')->delete('images/courses/lessons/comments/'. $comment_image->filename);
+                    // Delete comment images (fixed: removed () from lessonCommentImages)
+                    if ($comment->lessonCommentImages && $comment->lessonCommentImages->count() > 0) {
+                        foreach ($comment->lessonCommentImages as $comment_image) {
+                            Storage::disk('public')->delete('images/courses/lessons/comments/' . $comment_image->filename);
                             $comment_image->delete();
                         }
                     }
+                    // Delete comment reactions
                     $comment->likeComment()->detach();
                     $comment->dislikeComment()->detach();
+                    $comment->delete();
                 }
-                $lesson->comments()->delete();
             }
 
-            // delete lesson topics if exist
-            if ($lesson->topics->count() > 0) {
+            // 2. Delete lesson topics and their related data (including assignments/questions)
+            if ($lesson->topics && $lesson->topics->count() > 0) {
                 foreach ($lesson->topics as $topic) {
-                    if ($topic->images->count() > 0) {
-                        foreach ($topic->images as $topic_image) {
-                            Storage::disk('public')->delete('images/courses/lessons/topics/'. $topic_image->filename);
-                            $topic_image->delete();
-                        }
-                    }
+                    $this->deleteTopic($topic);
                 }
-                $lesson->topics()->delete();
             }
 
-            if ($lesson->images->count() > 0) {
+            // 3. Delete lesson assignments (direct assignments on lesson)
+            if ($lesson->assignments && $lesson->assignments->count() > 0) {
+                foreach ($lesson->assignments as $assignment) {
+                    $this->deleteAssignment($assignment);
+                }
+            }
+
+            // 4. Delete lesson questions (direct questions on lesson)
+            if ($lesson->questions && $lesson->questions->count() > 0) {
+                foreach ($lesson->questions as $question) {
+                    $this->deleteQuestion($question);
+                }
+            }
+
+            // 5. Delete lesson images
+            if ($lesson->images && $lesson->images->count() > 0) {
                 foreach ($lesson->images as $lesson_image) {
-                    Storage::disk('public')->delete('images/courses/lessons/'. $lesson_image->filename);
+                    Storage::disk('public')->delete('images/courses/lessons/' . $lesson_image->filename);
                     $lesson_image->delete();
                 }
             }
 
-            // delete lesson likes if exist
-            if ($lesson->likes) {
-                $lesson->likeLesson()->detach();
-            }
-            // delete lesson dislikes if exist
-            if ($lesson->dislikes) {
-                $lesson->dislikeLesson()->detach();
+            // 6. Delete lesson progress records
+            if ($lesson->progress && $lesson->progress->count() > 0) {
+                $lesson->progress()->delete();
             }
 
+            // 7. Delete lesson bookmarks
+            if ($lesson->bookmarks && $lesson->bookmarks->count() > 0) {
+                $lesson->bookmarks()->delete();
+            }
+
+            // 8. Delete lesson reactions
+            $lesson->likeLesson()->detach();
+            $lesson->dislikeLesson()->detach();
+
+            // 9. Delete the lesson
             $lesson->delete();
 
+            // 10. Decrement course lessons count
+            $course->decrement('lessons');
+
+            \DB::commit();
+
             return response()->json([
-                'success' => true
+                'success' => true,
+                'message' => 'ลบบทเรียนสำเร็จ'
             ], 200);
-        } catch (\Throwable $th) {
-        //throw $th;
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Error deleting lesson: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาดในการลบบทเรียน',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
         }
     }
 

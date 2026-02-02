@@ -93,6 +93,46 @@ class CoursePostCommentController extends Controller
     }
 
     /**
+     * Update the specified comment in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\CoursePostComment  $comment
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, Course $course, CoursePost $course_post, CoursePostComment $comment)
+    {
+        try {
+            // Check authorization - only comment owner can update
+            if ($comment->user_id !== auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้'
+                ], 403);
+            }
+
+            $validatedData = $request->validate([
+                'content' => 'required|string',
+            ]);
+
+            $comment->update([
+                'content' => $validatedData['content']
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'แก้ไขความคิดเห็นสำเร็จ',
+                'comment' => new CoursePostCommentResource($comment->fresh())
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Remove the specified comment from storage.
      *
      * @param  \App\Models\CoursePostComment  $comment
@@ -101,12 +141,35 @@ class CoursePostCommentController extends Controller
     public function destroy(Course $course, CoursePost $course_post, CoursePostComment $comment)
     {
         try {
+            // Check authorization - comment owner or post owner can delete
+            if ($comment->user_id !== auth()->id() && $course_post->user_id !== auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้'
+                ], 403);
+            }
+
+            // Detach likes and dislikes
+            $comment->comment_likes()->detach();
+            $comment->comment_dislikes()->detach();
             
+            // Delete images
             $post_comment_images = $comment->postCommentImages;
             foreach ($post_comment_images as $image) {
                 Storage::disk('public')->delete('images/courses/posts/comments/' . $image->filename);
                 $image->delete();
             }
+
+            // Delete replies if any
+            $comment->replies()->each(function ($reply) {
+                $reply->comment_likes()->detach();
+                $reply->comment_dislikes()->detach();
+                $reply->postCommentImages()->each(function ($image) {
+                    Storage::disk('public')->delete('images/courses/posts/comments/' . $image->filename);
+                    $image->delete();
+                });
+                $reply->delete();
+            });
 
             $comment->delete();
 
@@ -114,14 +177,14 @@ class CoursePostCommentController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Comment deleted successfully',
+                'message' => 'ลบความคิดเห็นสำเร็จ',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage(),
-            ], 404);
+            ], 500);
         }
     }
 }

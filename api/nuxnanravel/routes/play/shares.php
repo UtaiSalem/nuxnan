@@ -37,7 +37,8 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
     // Delete share
     Route::delete('/shares/{id}', [ShareController::class, 'destroy'])->name('shares.destroy');
     
-    // Delete comment
+    // Update and Delete comment
+    Route::patch('/share-comments/{id}', [ShareCommentController::class, 'update'])->name('shares.comments.update');
     Route::delete('/share-comments/{id}', [ShareCommentController::class, 'destroy'])->name('shares.comments.destroy');
     
 });

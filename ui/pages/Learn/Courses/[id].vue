@@ -104,7 +104,7 @@ watch(course, (newCourse) => {
 onMounted(() => {
   fetchCourse().then(() => {
     // If the user is a member/admin and just entered the base course URL, redirect based on last_accessed_tab
-    const isBaseUrl = route.path === `/courses/${courseId.value}` || route.path === `/courses/${courseId.value}/`
+    const isBaseUrl = route.path === `/Learn/Courses/${courseId.value}` || route.path === `/Learn/Courses/${courseId.value}/`
     if (isBaseUrl) {
       if (courseMemberOfAuth.value) {
         // Get last accessed tab or default to feeds (11)
@@ -132,18 +132,18 @@ onMounted(() => {
         const adminOnlyTabs = [8, 10, 13] // settings, progress (admin), admin
         if (adminOnlyTabs.includes(lastTab) && !isCourseAdmin.value) {
           // Redirect to feeds instead
-          navigateTo(`/courses/${courseId.value}/feeds`)
+          navigateTo(`/Learn/Courses/${courseId.value}/feeds`)
         } else if (targetRoute === '') {
           // Stay on base info page (no redirect needed)
         } else if (targetRoute) {
-          navigateTo(`/courses/${courseId.value}/${targetRoute}`)
+          navigateTo(`/Learn/Courses/${courseId.value}/${targetRoute}`)
         } else {
           // Default to feeds
-          navigateTo(`/courses/${courseId.value}/feeds`)
+          navigateTo(`/Learn/Courses/${courseId.value}/feeds`)
         }
       } else {
         // Non-member: Redirect to feeds
-        navigateTo(`/courses/${courseId.value}/feeds`)
+        navigateTo(`/Learn/Courses/${courseId.value}/feeds`)
       }
     }
   })

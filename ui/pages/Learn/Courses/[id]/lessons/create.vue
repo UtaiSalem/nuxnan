@@ -26,13 +26,23 @@ onMounted(async () => {
   }
 })
 
-// Debug log
-console.log('Create page - course:', course?.value, 'isCourseAdmin:', isCourseAdmin?.value)
+
 
 // Handle form submit
 const handleSubmit = (response: any) => {
-  // Navigate back to lessons list
-  router.push(`/courses/${courseId}/lessons`)
+  // Navigate to the new lesson or back to lessons list with refresh signal
+  if (response?.newLesson?.id || response?.lesson?.id) {
+    const newLessonId = response.newLesson?.id || response.lesson?.id
+    router.push({
+      path: `/Learn/Courses/${courseId}/lessons/${newLessonId}`,
+      query: { created: Date.now().toString() }
+    })
+  } else {
+    router.push({
+      path: `/Learn/Courses/${courseId}/lessons`,
+      query: { refresh: Date.now().toString() }
+    })
+  }
 }
 
 // Handle cancel
@@ -54,14 +64,14 @@ useHead({
     <!-- Breadcrumb -->
     <nav class="flex items-center gap-2 text-sm mb-6">
       <NuxtLink
-        :to="`/courses/${courseId}`"
+        :to="`/Learn/Courses/${courseId}`"
         class="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
       >
         {{ courseName }}
       </NuxtLink>
       <Icon icon="fluent:chevron-right-16-regular" class="w-4 h-4 text-gray-400" />
       <NuxtLink
-        :to="`/courses/${courseId}/lessons`"
+        :to="`/Learn/Courses/${courseId}/lessons`"
         class="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
       >
         บทเรียน

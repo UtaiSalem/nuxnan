@@ -137,7 +137,9 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/lessons')
 
 Route::middleware(['auth:api', 'verified'])->prefix('/lessons/{lesson}')->group(function () {
     Route::resource('/comments', LessonCommentController::class);
-
+    
+    // Lesson Comment Update route
+    Route::patch('/comments/{comment}', [LessonCommentController::class, 'update'])->name('lesson.comments.update');
 
     Route::post('/comments/{lesson_comment}/like', [LessonCommentReactionController::class, 'toggleLike'])->name('lesson.comments.like.toggle');
     Route::post('/comments/{lesson_comment}/dislike', [LessonCommentReactionController::class, 'toggleDislike'])->name('lesson.comments.dislike.toggle');
@@ -318,6 +320,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/posts')->
     
     Route::get('/{course_post}/comments', [CoursePostCommentController::class, 'index'])->name('course.post.comments.index');
     Route::post('/{course_post}/comments', [CoursePostCommentController::class, 'store'])->name('course.post.comments.store');
+    Route::patch('/{course_post}/comments/{comment}', [CoursePostCommentController::class, 'update'])->name('course.post.comments.update');
     Route::delete('/{course_post}/comments/{comment}', [CoursePostCommentController::class, 'destroy'])->name('course.post.comments.destroy');
 
     Route::post('/{course_post}/images/{image}/like', [CoursePostImageController::class, 'toggleLike'])->name('course.post.images.toggle-like');

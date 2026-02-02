@@ -161,12 +161,48 @@ class PollReactionController extends Controller
         }
     }
 
-    public function destroyComment(PollComment $comment)
+    /**
+     * Update a poll comment
+     */
+    public function updateComment(Request $request, PollComment $comment)
     {
         $user = auth()->user();
         
+        // Only comment author can update
+        if ($user->id !== $comment->user_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้',
+            ], 403);
+        }
+
+        $request->validate(['content' => 'required|string']);
+
+        try {
+            $comment->update([
+                'content' => $request->content
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'แก้ไขความคิดเห็นสำเร็จ',
+                'comment' => new PollCommentResource($comment->fresh()->load('user'))
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Delete a poll comment
+     */
+    public function destroyComment(PollComment $comment)
+    {
+        $user = auth()->user();
+        $poll = $comment->poll;
+        
         // Only comment author or poll author can delete
-        if ($user->id !== $comment->user_id && $user->id !== $comment->poll->user_id) {
+        if ($user->id !== $comment->user_id && $user->id !== $poll->user_id) {
             return response()->json([
                 'success' => false,
                 'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้',
@@ -175,7 +211,16 @@ class PollReactionController extends Controller
 
         try {
             $comment->delete();
-            return response()->json(['success' => true]);
+            
+            // Decrement poll comments count if exists
+            if ($poll && isset($poll->comments_count)) {
+                $poll->decrement('comments_count');
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'ลบความคิดเห็นสำเร็จ'
+            ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }

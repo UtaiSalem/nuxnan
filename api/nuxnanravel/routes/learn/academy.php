@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Api\Learn\Academy\AcademyController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyPostController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyPostCommentController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyCourseController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyMemberController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyActivityController;
@@ -83,6 +84,12 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::get('/{academy}/activities', [AcademyActivityController::class, 'getActivities'])->name('api.academy.activities.getActivities');
     Route::get('/{academy}/groups', [AcademyGroupController::class, 'index'])->name('api.academy.groups.index');
     Route::post('/{academy}/groups', [AcademyGroupController::class, 'store'])->name('api.academy.groups.store');
+    
+    // Academy Post Comments Routes
+    Route::get('/{academy}/posts/{academy_post}/comments', [AcademyPostCommentController::class, 'index'])->name('api.academy.posts.comments.index');
+    Route::post('/{academy}/posts/{academy_post}/comments', [AcademyPostCommentController::class, 'store'])->name('api.academy.posts.comments.store');
+    Route::patch('/{academy}/posts/{academy_post}/comments/{comment}', [AcademyPostCommentController::class, 'update'])->name('api.academy.posts.comments.update');
+    Route::delete('/{academy}/posts/{academy_post}/comments/{comment}', [AcademyPostCommentController::class, 'destroy'])->name('api.academy.posts.comments.destroy');
     
     // Academy Member Invitation API Routes
     Route::post('/{academy}/invite', [AcademyMemberController::class, 'inviteMember'])->name('api.academy.invite');

@@ -1,21 +1,24 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, inject } from 'vue'
+import { ref, computed, onMounted, onUnmounted, inject, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useApi } from '~/composables/useApi'
+import { useSweetAlert } from '~/composables/useSweetAlert'
 import ContentLoader from '~/components/accessories/ContentLoader.vue'
 import LessonPost from '~/components/learn/course/lesson/LessonPost.vue'
 
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
+const swal = useSweetAlert()
 
 const course = inject<Ref<any>>('course')
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin') as Ref<boolean>
 
 const lessons = ref<any[]>([])
 const isLoading = ref(true)
+const isDeleting = ref(false)
 const error = ref<string | null>(null)
 const showScrollButton = ref(false)
 
@@ -39,21 +42,34 @@ const fetchLessons = async () => {
 }
 
 const handleCreateLesson = () => {
-    router.push(`/courses/${course.value.id}/lessons/create`)
+    router.push(`/Learn/Courses/${course.value.id}/lessons/create`)
 }
 
 const handleEditLesson = (lesson: any) => {
-    router.push(`/courses/${course.value.id}/lessons/${lesson.id}/edit`)
+    router.push(`/Learn/Courses/${course.value.id}/lessons/${lesson.id}/edit`)
 }
 
 const handleDeleteLesson = async (id: number) => {
-    if (!confirm('ยืนยันการลบบทเรียน?')) return
+    const lesson = lessons.value.find(l => l.id === id)
+    const lessonTitle = lesson?.title || 'บทเรียนนี้'
+    
+    const result = await swal.confirm(
+        `คุณแน่ใจหรือไม่ที่จะลบ "${lessonTitle}"?\n\nการกระทำนี้จะลบข้อมูลทั้งหมดที่เกี่ยวข้อง รวมถึง:\n• หัวข้อย่อยทั้งหมด\n• แบบฝึกหัดและคำถาม\n• ความคิดเห็น\n• ความคืบหน้าผู้เรียน\n\nการกระทำนี้ไม่สามารถย้อนกลับได้`,
+        'ยืนยันการลบบทเรียน'
+    )
+    
+    if (!result) return
+    
+    isDeleting.value = true
     try {
-        await api.delete(`/api/courses/${course.value.id}/lessons/${id}`)
+        const response = await api.delete(`/api/courses/${course.value.id}/lessons/${id}`) as any
+        swal.success(response.message || 'ลบบทเรียนสำเร็จ', 'สำเร็จ')
         await fetchLessons()
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error deleting lesson', err)
-        alert('เกิดข้อผิดพลาดในการลบ')
+        swal.error(err.data?.message || err.message || 'เกิดข้อผิดพลาดในการลบบทเรียน')
+    } finally {
+        isDeleting.value = false
     }
 }
 
@@ -74,7 +90,7 @@ const handleShareLesson = (lesson: any) => {
 }
 
 const handleCommentLesson = (lesson: any) => {
-    router.push(`/courses/${course.value.id}/lessons/${lesson.id}#comments`)
+    router.push(`/Learn/Courses/${course.value.id}/lessons/${lesson.id}#comments`)
 }
 
 const scrollToTop = () => {
@@ -92,6 +108,22 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
+})
+
+// Watch for refresh signal from create/edit pages
+watch(() => route.query.refresh, async (newVal) => {
+  if (newVal) {
+    await fetchLessons()
+    // Clean up the query param
+    router.replace({ path: route.path, query: {} })
+  }
+})
+
+// Re-fetch when returning to this page (handles back navigation)
+watch(isRoot, async (newVal) => {
+  if (newVal) {
+    await fetchLessons()
+  }
 })
 </script>
 

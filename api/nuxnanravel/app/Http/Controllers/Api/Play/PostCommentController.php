@@ -98,17 +98,24 @@ class PostCommentController extends \App\Http\Controllers\Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Post $post, PostComment $comment)
     {
-        $comment = Comment::findOrFail($id);
-        $comment->content = $request->input('content');
-        // Update other attributes for the comment as needed
+        if ($comment->user_id !== auth()->id()) {
+             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
-        $comment->save();
+        $validatedData = $request->validate([
+            'content' => 'required|string',
+        ]);
+
+        $comment->update([
+            'content' => $validatedData['content']
+        ]);
 
         return response()->json([
+            'success' => true,
             'message' => 'Comment updated successfully',
-            'comment' => $comment
+            'comment' => new PostCommentResource($comment)
         ]);
     }
 
@@ -120,7 +127,15 @@ class PostCommentController extends \App\Http\Controllers\Controller
      */
     public function destroy(Post $post, PostComment $comment)
     {
-        // $comment = Comment::findOrFail($id);
+        if ($comment->user_id !== auth()->id() && $post->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+       }
+
+        // Clean up likes and dislikes
+        $comment->likedPostComment()->detach();
+        $comment->dislikedPostComment()->detach();
+
+        // Delete images
         $comment_images = $comment->postCommentImages;
         if ($comment_images->count() > 0) {
             foreach ($comment_images as $image) {
@@ -129,7 +144,21 @@ class PostCommentController extends \App\Http\Controllers\Controller
             }
         }
 
+        // Delete replies
+        $comment->replies()->each(function ($reply) {
+            $reply->likedPostComment()->detach();
+            $reply->dislikedPostComment()->detach();
+            $reply->postCommentImages()->each(function ($image) {
+                Storage::disk('public')->delete('images/posts/comments/' . $image->filename);
+                $image->delete();
+            });
+            $reply->delete();
+        });
+
         $comment->delete();
+
+        // Decrement comments count
+        $post->decrement('comments');
 
         return response()->json([
             'success' => true,

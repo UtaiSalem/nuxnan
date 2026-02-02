@@ -33,7 +33,7 @@ const activeTab = computed(() => {
   if (path.includes('/progress')) return 10
   if (path.includes('/admin')) return 13
   // Default to info tab for base course page
-  if (path.endsWith(`/courses/${props.courseId}`) || path.endsWith(`/courses/${props.courseId}/`)) return 12
+  if (path.endsWith(`/Learn/Courses/${props.courseId}`) || path.endsWith(`/Learn/Courses/${props.courseId}/`)) return 12
   return 12
 })
 
@@ -65,7 +65,7 @@ watch(activeTab, async (newTab, oldTab) => {
     <div class="flex flex-row justify-around relative">
       
       <!-- ข้อมูลทั่วไป -->
-      <NuxtLink :to="`/courses/${courseId}`"
+      <NuxtLink :to="`/Learn/Courses/${courseId}`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 12, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 12 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -76,7 +76,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- กระดาน -->
-      <NuxtLink :to="`/courses/${courseId}/feeds`"
+      <NuxtLink :to="`/Learn/Courses/${courseId}/feeds`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 11, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 11 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -87,7 +87,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- การเข้าเรียน -->
-      <NuxtLink v-if="isCourseAdmin || courseMemberOfAuth" :to="`/courses/${courseId}/attendances`"
+      <NuxtLink v-if="isCourseAdmin || courseMemberOfAuth" :to="`/Learn/Courses/${courseId}/attendances`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 7, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 7 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -98,7 +98,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- บทเรียน -->
-      <NuxtLink :to="`/courses/${courseId}/lessons`"
+      <NuxtLink :to="`/Learn/Courses/${courseId}/lessons`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 1, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 1 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -109,7 +109,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- ภาระงาน -->
-      <NuxtLink :to="`/courses/${courseId}/assignments`"
+      <NuxtLink :to="`/Learn/Courses/${courseId}/assignments`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 2, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 2 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -120,7 +120,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- ทดสอบ -->
-      <NuxtLink v-if="courseMemberOfAuth || isCourseAdmin" :to="`/courses/${courseId}/quizzes`"
+      <NuxtLink v-if="courseMemberOfAuth || isCourseAdmin" :to="`/Learn/Courses/${courseId}/quizzes`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 3, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 3 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -131,7 +131,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- กลุ่ม -->
-      <NuxtLink :to="`/courses/${courseId}/groups`"
+      <NuxtLink :to="`/Learn/Courses/${courseId}/groups`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 5, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 5 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -142,7 +142,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- สมาชิก -->
-      <NuxtLink v-if="courseMemberOfAuth !== null" :to="`/courses/${courseId}/members`"
+      <NuxtLink v-if="courseMemberOfAuth !== null" :to="`/Learn/Courses/${courseId}/members`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 4, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 4 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -153,7 +153,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- ตั้งค่า (Admin) -->
-      <NuxtLink v-if="isCourseAdmin" :to="`/courses/${courseId}/settings`"
+      <NuxtLink v-if="isCourseAdmin" :to="`/Learn/Courses/${courseId}/settings`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 8, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 8 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -164,7 +164,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- ผลการเรียน (Member) -->
-      <NuxtLink v-if="!isCourseAdmin && courseMemberOfAuth" :to="`/courses/${courseId}/my-progress`"
+      <NuxtLink v-if="!isCourseAdmin && courseMemberOfAuth" :to="`/Learn/Courses/${courseId}/my-progress`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 9, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 9 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -175,7 +175,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- ผลการเรียน (Admin) -->
-      <NuxtLink v-if="isCourseAdmin" :to="`/courses/${courseId}/progress`"
+      <NuxtLink v-if="isCourseAdmin" :to="`/Learn/Courses/${courseId}/progress`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 10, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 10 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
@@ -186,7 +186,7 @@ watch(activeTab, async (newTab, oldTab) => {
       </NuxtLink>
 
       <!-- Admin (ผู้ดูแล) -->
-      <NuxtLink v-if="isCourseAdmin" :to="`/courses/${courseId}/admin`"
+      <NuxtLink v-if="isCourseAdmin" :to="`/Learn/Courses/${courseId}/admin`"
         class="flex-row justify-center w-full text-center border-b-4 rounded-none tab-item hover:border-gray-400 transition-all duration-300 ease-in-out transform hover:scale-105"
         :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 13, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 13 }">
         <div class="flex flex-col items-center justify-center py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">

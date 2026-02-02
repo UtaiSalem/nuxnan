@@ -3,9 +3,15 @@ import { reactive } from 'vue';
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
 import { Icon } from '@iconify/vue';
 
-const emit = defineEmits(['delete-comment']);
+const emit = defineEmits(['delete-comment', 'edit-comment']);
 
 const commentSettingMenus = reactive([
+    { 
+        name: 'แก้ไขความคิดเห็น', 
+        icon: 'fa-regular:edit', 
+        action: 'edit', 
+        color: 'blue-500'
+    },
     { 
         name: 'ลบความคิดเห็น', 
         icon: 'fa-solid:trash-alt', 
@@ -13,6 +19,14 @@ const commentSettingMenus = reactive([
         color: 'red-500'
     },
 ]);
+
+const handleMenuAction = (action) => {
+    if (action === 'delete') {
+        emit('delete-comment');
+    } else if (action === 'edit') {
+        emit('edit-comment');
+    }
+};
 
 </script>
 
@@ -29,13 +43,13 @@ const commentSettingMenus = reactive([
                 leave-to-class="transform opacity-0 scale-95">
                 <MenuItems class="absolute right-0 z-10 mt-2 min-w-fit origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                     <div class="py-1">
-                        <MenuItem v-slot="{ active }">
-                            <button @click.prevent="emit('delete-comment');"
-                                :class="[active ? 'bg-gray-100 ' : commentSettingMenus[0].color]"
-                                class="flex items-start justify-start gap-2 p-2 px-5 transition-colors duration-300 hover:bg-emerald-50 focus:bg-emerald-50 focus:text-emerald-600 focus:outline-none focus-visible:outline-none">
-                                <Icon :icon="commentSettingMenus[0].icon" class="w-4 h-4" :class="'text-' + commentSettingMenus[0].color" />
+                        <MenuItem v-slot="{ active }" v-for="(item, index) in commentSettingMenus" :key="index">
+                            <button @click.prevent="handleMenuAction(item.action)"
+                                :class="[active ? 'bg-gray-100 ' : item.color]"
+                                class="flex w-full items-start justify-start gap-2 p-2 px-5 transition-colors duration-300 hover:bg-emerald-50 focus:bg-emerald-50 focus:text-emerald-600 focus:outline-none focus-visible:outline-none">
+                                <Icon :icon="item.icon" class="w-4 h-4" :class="'text-' + item.color" />
                                 <span class="flex flex-col gap-1 overflow-hidden whitespace-nowrap">
-                                    <span class="" :class="'text-'+commentSettingMenus[0].color">{{ commentSettingMenus[0].name }}</span>
+                                    <span class="" :class="'text-'+item.color">{{ item.name }}</span>
                                 </span>
                             </button>
                         </MenuItem>
