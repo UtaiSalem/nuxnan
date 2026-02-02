@@ -16,9 +16,21 @@ const courseMemberStore = useCourseMemberStore()
 // State
 const searchQuery = ref('')
 const activeGroupTab = ref(0) // 0 = all, 1+ = group index
-const viewMode = ref<'grid' | 'list'>('list')
+const viewMode = ref<'card' | 'table' | 'list'>('card') // Default to card view
 const isSavingGroupTab = ref(false)
 const sortBy = ref<'number' | 'score'>('number') // 'number' | 'score'
+const selectedMemberIds = ref<number[]>([])
+
+// Persist view mode preference
+const savedViewMode = useCookie<'card' | 'table' | 'list'>('course-members-view-mode')
+onMounted(() => {
+  if (savedViewMode.value) {
+    viewMode.value = savedViewMode.value
+  }
+})
+watch(viewMode, (val) => {
+  savedViewMode.value = val
+})
 
 // Get initial group tab based on last_accessed_group_tab
 const getInitialGroupTab = () => {
@@ -77,6 +89,7 @@ async function setActiveGroupTab(tabIndex: number) {
 }
 
 import MemberCard from '~/components/learn/course/MemberCard.vue'
+import MemberListView from '~/components/learn/course/MemberListView.vue'
 import TopPerformers from '~/components/learn/course/TopPerformers.vue'
 
 // Computed Members
@@ -189,6 +202,18 @@ const handleRequestUnmember = async ({ memberId, memberName }: { memberId: numbe
         }
     }
 }
+
+// Handler for viewing member details
+const handleViewMember = (member: any) => {
+    // Navigate to member profile or show modal
+    navigateTo(`/Learn/Courses/${course?.value?.id}/members/${member.id}`)
+}
+
+// Handler for editing member
+const handleEditMember = (member: any) => {
+    // Navigate to member edit page or show modal
+    navigateTo(`/Learn/Courses/${course?.value?.id}/members/${member.id}/edit`)
+}
 </script>
 
 <template>
@@ -210,6 +235,34 @@ const handleRequestUnmember = async ({ memberId, memberName }: { memberId: numbe
 
             <!-- Search and Sort -->
             <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <!-- View Mode Toggle -->
+                <div class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                    <button 
+                        @click="viewMode = 'card'"
+                        class="p-2 rounded-md transition-all"
+                        :class="viewMode === 'card' ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                        title="มุมมองการ์ด"
+                    >
+                        <Icon icon="fluent:grid-24-regular" class="w-5 h-5" />
+                    </button>
+                    <button 
+                        @click="viewMode = 'table'"
+                        class="p-2 rounded-md transition-all"
+                        :class="viewMode === 'table' ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                        title="มุมมองตาราง"
+                    >
+                        <Icon icon="fluent:table-24-regular" class="w-5 h-5" />
+                    </button>
+                    <button 
+                        @click="viewMode = 'list'"
+                        class="p-2 rounded-md transition-all"
+                        :class="viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                        title="มุมมองรายการ"
+                    >
+                        <Icon icon="fluent:list-24-regular" class="w-5 h-5" />
+                    </button>
+                </div>
+
                 <!-- Sort Tabs -->
                 <div class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                     <button 
@@ -217,14 +270,14 @@ const handleRequestUnmember = async ({ memberId, memberName }: { memberId: numbe
                         class="px-3 py-1.5 text-sm font-medium rounded-md transition-all"
                         :class="sortBy === 'number' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                     >
-                        เรียงตามเลขที่
+                        เลขที่
                     </button>
                     <button 
                         @click="sortBy = 'score'"
                         class="px-3 py-1.5 text-sm font-medium rounded-md transition-all"
                         :class="sortBy === 'score' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                     >
-                        เรียงตามคะแนน
+                        คะแนน
                     </button>
                 </div>
 
@@ -234,7 +287,7 @@ const handleRequestUnmember = async ({ memberId, memberName }: { memberId: numbe
                     <input 
                         v-model="searchQuery"
                         type="text" 
-                        placeholder="ค้นหาชื่อ, รหัสนักศึกษา..." 
+                        placeholder="ค้นหาชื่อ, รหัส..." 
                         class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-white"
                     >
                 </div>
@@ -293,8 +346,20 @@ const handleRequestUnmember = async ({ memberId, memberName }: { memberId: numbe
                 </div>
 
                 <div v-else-if="members.length > 0">
-                    <!-- Unified List View -->
-                    <ul class="flex flex-col gap-3">
+                    <!-- Card/Table View using new component -->
+                    <MemberListView
+                        v-if="viewMode === 'card' || viewMode === 'table'"
+                        :members="members"
+                        :view-mode="viewMode === 'card' ? 'card' : 'table'"
+                        :course-total-score="course?.total_score || 100"
+                        :is-course-admin="isCourseAdmin"
+                        @request-unmember="handleRequestUnmember"
+                        @view-member="handleViewMember"
+                        @edit-member="handleEditMember"
+                    />
+
+                    <!-- List View (original MemberCard) -->
+                    <ul v-else class="flex flex-col gap-3">
                         <MemberCard 
                             v-for="(member, index) in members" 
                             :key="member.id"

@@ -114,6 +114,7 @@ onMounted(async () => {
 </script>
 
 <template>
+    <div>
     <!-- Enhanced Loading State -->
     <div v-if="isLoadingAttendances && currentPage === 1" class="flex justify-center items-center py-20">
         <div class="text-center">
@@ -331,5 +332,6 @@ onMounted(async () => {
             <Icon icon="heroicons:check-circle" class="h-8 w-8 text-green-600" />
             <span class="text-lg font-black text-green-700">แสดงข้อมูลทั้งหมดแล้ว</span>
         </div>
+    </div>
     </div>
 </template>

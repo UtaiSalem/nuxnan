@@ -4,7 +4,7 @@ namespace App\Http\Resources\Learn\Academy;
 
 use App\Models\Academy;
 use Illuminate\Http\Request;
-use App\Http\Resources\AcademyResource;
+use App\Http\Resources\Learn\Academy\AcademyResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class AcademyMemberResource extends JsonResource
@@ -24,11 +24,85 @@ class AcademyMemberResource extends JsonResource
             'member_code' => $this->member_code,
             'role' => $this->role,
             'status' => $this->status,
+            'status_text' => $this->getStatusText(),
             'member_name' => $this->member_name,
             'member_avatar' => $this->member_avatar,
-            'user' => $this->whenLoaded('user'),
-            'student' => $this->whenLoaded('student'),
+            'role_display_name' => $this->role_display_name,
+            'enrollment_date' => $this->enrollment_date,
+            'graduation_date' => $this->graduation_date,
+            'note_comment' => $this->note_comment,
+            'invited_by' => $this->invited_by,
+            
+            // Academy Role Information
+            'academy_role_id' => $this->academy_role_id,
+            'academy_role' => $this->whenLoaded('academyRole', function () {
+                return [
+                    'id' => $this->academyRole->id,
+                    'name' => $this->academyRole->name,
+                    'display_name_th' => $this->academyRole->display_name_th,
+                    'display_name_en' => $this->academyRole->display_name_en,
+                    'color' => $this->academyRole->color,
+                    'icon' => $this->academyRole->icon,
+                    'permissions' => $this->academyRole->permissions,
+                ];
+            }),
+            
+            // Role checks
+            'is_admin' => $this->isAdmin(),
+            'is_teacher' => $this->isTeacher(),
+            'is_student' => $this->isStudent(),
+            'is_parent' => $this->isParent(),
+            
+            // Relations
+            'user' => $this->whenLoaded('user', function () {
+                return [
+                    'id' => $this->user->id,
+                    'name' => $this->user->name,
+                    'email' => $this->user->email,
+                    'profile_photo_url' => $this->user->profile_photo_url,
+                    'reference_code' => $this->user->reference_code,
+                ];
+            }),
+            'student' => $this->whenLoaded('student', function () {
+                return [
+                    'id' => $this->student->id,
+                    'student_id' => $this->student->student_id,
+                    'full_name_th' => $this->student->full_name_th,
+                    'full_name_en' => $this->student->full_name_en,
+                    'nickname' => $this->student->nickname,
+                    'profile_image' => $this->student->profile_image,
+                    'class_level' => $this->student->class_level,
+                    'class_section' => $this->student->class_section,
+                    'current_classroom' => $this->student->current_classroom,
+                ];
+            }),
+            'inviter' => $this->whenLoaded('inviter', function () {
+                return [
+                    'id' => $this->inviter->id,
+                    'name' => $this->inviter->name,
+                    'profile_photo_url' => $this->inviter->profile_photo_url,
+                ];
+            }),
             'academy' => new AcademyResource($this->whenLoaded('academy')),
+            
+            // Timestamps
+            'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
+            'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
         ];
+    }
+
+    /**
+     * Get human-readable status text
+     */
+    protected function getStatusText(): string
+    {
+        return match($this->status) {
+            1 => 'รอการอนุมัติ',
+            2 => 'สมาชิก',
+            3 => 'ถูกปฏิเสธ',
+            4 => 'ได้รับเชิญ',
+            5 => 'ระงับ',
+            default => 'ไม่ทราบ'
+        };
     }
 }

@@ -1929,7 +1929,7 @@ const handlePollUpdate = (updatedPoll) => {
       <!-- Sharer Header -->
       <div class="flex items-center gap-3 mb-4">
            <img :src="actionByAvatar"
-             :alt="`Avatar of ${actionByName}`"
+             :alt="`Avatar of ${actionBy?.name || actionBy?.username || 'User'}`"
              class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-cyan/30"
              loading="lazy"
              @error="(e) => e.target.src = '/images/default-avatar.png'" />
@@ -2216,7 +2216,7 @@ const handlePollUpdate = (updatedPoll) => {
           <!-- Avatar with badge -->
           <div class="relative flex-shrink-0">
             <img :src="postAuthorAvatar"
-                 :alt="`Avatar of ${postAuthorName}`"
+                 :alt="`Avatar of ${postAuthor?.name || postAuthor?.username || 'User'}`"
                  class="w-12 h-12 aspect-square rounded-full object-cover ring-2 ring-vikinger-purple/30 group-hover:ring-vikinger-purple transition-all duration-300"
                  loading="lazy"
                  @error="(e) => e.target.src = '/images/default-avatar.png'" />

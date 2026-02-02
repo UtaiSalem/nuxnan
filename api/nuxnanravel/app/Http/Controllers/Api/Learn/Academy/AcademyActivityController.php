@@ -39,7 +39,8 @@ class AcademyActivityController extends Controller
         // $activities = Activity::whereHasMorph('activityable', ['App\Models\AcademyPost'], function ($query) use ($academy) {
         //         $query->where('academy_id', $academy->id);
         // })->latest()->paginate();
-        $activities = Activity::whereHasMorph('activityable', [AcademyPost::class], function ($query) use ($academy) {
+        $activities = Activity::with(['user', 'activityable'])
+        ->whereHasMorph('activityable', [AcademyPost::class], function ($query) use ($academy) {
                 $query->where('academy_id', $academy->id);
         })->latest()->paginate();
 

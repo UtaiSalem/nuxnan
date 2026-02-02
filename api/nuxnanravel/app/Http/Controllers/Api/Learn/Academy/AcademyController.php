@@ -129,10 +129,52 @@ class AcademyController extends Controller
     {
         $isAcademyAdmin = $academy->user_id == auth()->id();
         
+        // Get user's membership and role in this academy
+        $membership = null;
+        $myRole = null;
+        
+        if (auth()->check()) {
+            $membership = AcademyMember::where('academy_id', $academy->id)
+                ->where('user_id', auth()->id())
+                ->with('academyRole')
+                ->first();
+            
+            if ($membership && $membership->academyRole) {
+                $myRole = [
+                    'id' => $membership->academyRole->id,
+                    'name' => $membership->academyRole->name,
+                    'display_name' => $membership->academyRole->display_name_th,
+                    'display_name_en' => $membership->academyRole->display_name_en,
+                    'permissions' => $membership->academyRole->permissions,
+                    'color' => $membership->academyRole->color,
+                    'icon' => $membership->academyRole->icon,
+                    'is_system' => $membership->academyRole->is_system,
+                ];
+            } elseif ($isAcademyAdmin) {
+                // Academy owner automatically has owner role
+                $myRole = [
+                    'name' => 'owner',
+                    'display_name' => 'เจ้าของสถาบัน',
+                    'display_name_en' => 'Owner',
+                    'permissions' => ['*'], // Full access
+                    'color' => 'bg-purple-100 text-purple-700',
+                    'icon' => 'fluent:crown-24-filled',
+                    'is_system' => true,
+                ];
+            }
+        }
+        
         return response()->json([
             'success' => true,
             'academy' => new AcademyResource($academy),
             'isAcademyAdmin' => $isAcademyAdmin,
+            'membership' => $membership ? [
+                'id' => $membership->id,
+                'status' => $membership->status,
+                'role' => $membership->role,
+                'joined_at' => $membership->created_at,
+            ] : null,
+            'myRole' => $myRole,
         ]);
     }
 
@@ -399,8 +441,91 @@ class AcademyController extends Controller
         }
     }
 
+    /**
+     * Update academy settings
+     */
+    public function updateSettings(Academy $academy, Request $request)
+    {
+        // Check if user is owner or has permission
+        if ($academy->user_id !== auth()->id()) {
+            $member = AcademyMember::where('academy_id', $academy->id)
+                ->where('user_id', auth()->id())
+                ->with('academyRole')
+                ->first();
+                
+            if (!$member || !$member->hasPermission('settings.manage')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คุณไม่มีสิทธิ์แก้ไขการตั้งค่าโรงเรียน'
+                ], 403);
+            }
+        }
 
+        try {
+            // Update basic info
+            $academy->fill($request->only([
+                'name', 'name_en', 'description', 'description_en',
+                'email', 'phone', 'website', 'address', 'province', 'country'
+            ]));
 
+            // Generate slug if name changed
+            if ($request->has('name') && $academy->isDirty('name')) {
+                $academy->name_slug = \Str::slug($request->name);
+            }
 
+            // Handle avatar upload
+            if ($request->hasFile('avatar')) {
+                $avatar = $request->file('avatar');
+                $avatar_name = uniqid() . '.' . $avatar->getClientOriginalExtension();
+                $avatar_url = Storage::disk('public')->putFileAs('images/academies/logos', $avatar, $avatar_name);
+                $academy->logo = Storage::disk('public')->url($avatar_url);
+            }
 
+            // Handle cover upload
+            if ($request->hasFile('cover')) {
+                $cover = $request->file('cover');
+                $cover_name = uniqid() . '.' . $cover->getClientOriginalExtension();
+                $cover_url = Storage::disk('public')->putFileAs('images/academies/covers', $cover, $cover_name);
+                $academy->cover = Storage::disk('public')->url($cover_url);
+            }
+
+            $academy->save();
+
+            // Update academy settings
+            $setting = $academy->academySetting;
+            if ($setting) {
+                if ($request->has('privacy')) {
+                    $setting->privacy = $request->privacy;
+                }
+                if ($request->has('join_mode')) {
+                    $setting->auto_accept_members = $request->join_mode === 'open' ? 1 : 0;
+                }
+                if ($request->has('allow_student_registration')) {
+                    $setting->allow_student_registration = $request->boolean('allow_student_registration');
+                }
+                if ($request->has('allow_parent_registration')) {
+                    $setting->allow_parent_registration = $request->boolean('allow_parent_registration');
+                }
+                if ($request->has('show_member_list')) {
+                    $setting->show_member_list = $request->boolean('show_member_list');
+                }
+                if ($request->has('show_course_list')) {
+                    $setting->show_course_list = $request->boolean('show_course_list');
+                }
+                $setting->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'บันทึกการตั้งค่าเรียบร้อยแล้ว',
+                'academy' => new AcademyResource($academy->fresh()),
+            ], 200);
+
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
 }

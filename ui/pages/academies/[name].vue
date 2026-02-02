@@ -37,6 +37,14 @@ const showInviteMemberModal = ref(false)
 const pendingRequests = ref<any[]>([])
 const isLoadingPendingRequests = ref(false)
 
+// Pagination State
+const membersPagination = ref({
+  current_page: 1,
+  last_page: 1,
+  total: 0
+})
+const isLoadingMoreMembers = ref(false)
+
 // Computed
 const academyName = computed(() => route.params.name as string)
 
@@ -62,11 +70,15 @@ const coverUrl = computed(() => {
 
 const memberStatusText = computed(() => {
   if (!academy.value) return null
+  
+  // Don't show member status for admins/owners
+  if (academy.value.authIsAcademyAdmin) return null
+
   const status = academy.value.memberStatus
   if (status === null || status === undefined) return null
   if (status === 0 || status === 'pending') return { text: 'รอการอนุมัติ', color: 'bg-yellow-500' }
-  if (status === 1 || status === 'approved') return { text: 'รอการอนุมัติ', color: 'bg-yellow-500' }
-  if (status === 2 || status === 'member') return { text: 'สมาชิก', color: 'bg-green-500' }
+  if (status === 1 || status === 'approved' || status === 'member') return { text: 'สมาชิก', color: 'bg-green-500' }
+  if (status === 2 || status === 'rejected') return { text: 'ถูกปฏิเสธ', color: 'bg-red-500' }
   return null
 })
 
@@ -126,19 +138,43 @@ const fetchCourses = async () => {
   }
 }
 
-const fetchMembers = async () => {
+const fetchMembers = async (page = 1) => {
   if (!academy.value) return
   
-  isLoadingTab.value = true
+  if (page === 1) {
+    isLoadingTab.value = true
+  } else {
+    isLoadingMoreMembers.value = true
+  }
+
   try {
-    const response: any = await api.get(`/api/academies/${academy.value.id}/members`)
+    const response: any = await api.get(`/api/academies/${academy.value.id}/members?page=${page}`)
     if (response.success) {
-      members.value = JSON.parse(JSON.stringify(response.members || []))
+      // Handle potential different response structures (paginated object vs array)
+      const data = response.members?.data || response.members || []
+      const newMembers = JSON.parse(JSON.stringify(data))
+      
+      if (page === 1) {
+        members.value = newMembers
+      } else {
+        members.value = [...members.value, ...newMembers]
+      }
+
+      if (response.pagination) {
+        membersPagination.value = response.pagination
+      }
     }
   } catch (err) {
     console.error('Failed to fetch members:', err)
   } finally {
     isLoadingTab.value = false
+    isLoadingMoreMembers.value = false
+  }
+}
+
+const loadMoreMembers = () => {
+  if (membersPagination.value.current_page < membersPagination.value.last_page) {
+    fetchMembers(membersPagination.value.current_page + 1)
   }
 }
 
@@ -217,7 +253,7 @@ const fetchPendingRequests = async () => {
 // Accept member request
 const acceptMemberRequest = async (request: any) => {
   try {
-    const response: any = await api.post(`/api/academies/${academy.value.id}/members/${request.id}/accept`)
+    const response: any = await api.post(`/api/academies/${academy.value.id}/members/${request.id}/accept`, {})
     if (response.success) {
       // Remove from pending and add to members
       pendingRequests.value = pendingRequests.value.filter(r => r.id !== request.id)
@@ -256,7 +292,7 @@ const rejectMemberRequest = async (request: any) => {
   if (!result.isConfirmed) return
   
   try {
-    const response: any = await api.post(`/api/academies/${academy.value.id}/members/${request.id}/reject`)
+    const response: any = await api.post(`/api/academies/${academy.value.id}/members/${request.id}/reject`, {})
     if (response.success) {
       pendingRequests.value = pendingRequests.value.filter(r => r.id !== request.id)
       
@@ -297,7 +333,7 @@ const requestMembership = async () => {
   
   isMemberActionLoading.value = true
   try {
-    const response: any = await api.post(`/api/academies/${academy.value.id}/members`)
+    const response: any = await api.post(`/api/academies/${academy.value.id}/members`, {})
     if (response.success) {
       academy.value.memberStatus = response.memberStatus
       academy.value.total_students = response.totalStudents
@@ -343,7 +379,7 @@ const cancelMembership = async () => {
   
   isMemberActionLoading.value = true
   try {
-    const response: any = await api.post(`/api/academies/${academy.value.id}/unmembers`)
+    const response: any = await api.post(`/api/academies/${academy.value.id}/unmembers`, {})
     if (response.success) {
       if (academy.value.memberStatus === 2) {
         academy.value.total_students--
@@ -530,14 +566,15 @@ onMounted(() => {
                 {{ memberStatusText.text }}
               </span>
               
-              <!-- Admin Badge -->
-              <span 
+              <!-- Admin Badge & Button -->
+              <NuxtLink 
                 v-if="academy.authIsAcademyAdmin" 
-                class="px-3 py-1.5 rounded-full text-sm font-medium bg-vikinger-purple text-white flex items-center gap-1.5"
+                :to="`/academies/${academyName}/admin`"
+                class="px-4 py-2 rounded-lg text-sm font-medium bg-vikinger-purple text-white flex items-center gap-2 hover:bg-vikinger-purple/90 transition-colors"
               >
-                <Icon icon="fluent:shield-checkmark-24-regular" class="w-4 h-4" />
-                ผู้ดูแล
-              </span>
+                <Icon icon="fluent:settings-24-regular" class="w-4 h-4" />
+                จัดการโรงเรียน
+              </NuxtLink>
               
               <!-- Join Button -->
               <button
@@ -856,12 +893,14 @@ onMounted(() => {
                           <span 
                             :class="[
                               'px-2 py-0.5 rounded-full text-xs font-medium',
+                              member.status == 1 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' :
+                              member.status == 3 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
                               member.role === 'admin' ? 'bg-vikinger-purple/10 text-vikinger-purple' :
                               member.role === 'teacher' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
-                              'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                              'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
                             ]"
                           >
-                            {{ member.role === 'admin' ? 'ผู้ดูแล' : member.role === 'teacher' ? 'ครูผู้สอน' : 'นักเรียน' }}
+                            {{ member.status == 1 ? 'รออนุมัติ' : member.status == 3 ? 'ถูกปฏิเสธ' : member.role === 'admin' ? 'ผู้ดูแล' : member.role === 'teacher' ? 'ครูผู้สอน' : 'นักเรียน' }}
                           </span>
                           <span v-if="member.joined_at" class="text-gray-400">เข้าร่วมเมื่อ {{ formatDate(member.joined_at) }}</span>
                         </div>
@@ -891,9 +930,14 @@ onMounted(() => {
             </div>
             
             <!-- Load More -->
-            <div v-if="members.length >= 10" class="text-center">
-              <button class="text-vikinger-purple hover:text-vikinger-purple/80 font-medium text-sm">
-                โหลดเพิ่มเติม
+            <div v-if="membersPagination.current_page < membersPagination.last_page" class="text-center mt-4 pb-4">
+              <button 
+                @click="loadMoreMembers"
+                :disabled="isLoadingMoreMembers"
+                class="text-vikinger-purple hover:text-vikinger-purple/80 font-medium text-sm flex items-center justify-center gap-2 mx-auto disabled:opacity-50"
+              >
+                <Icon v-if="isLoadingMoreMembers" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <span>{{ isLoadingMoreMembers ? 'กำลังโหลด...' : 'โหลดเพิ่มเติม' }}</span>
               </button>
             </div>
           </div>

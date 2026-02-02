@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Learn\Academy\AcademyCourseController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyMemberController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyActivityController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyGroupController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyRoleController;
 
 
 Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
@@ -47,7 +48,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::patch('/{academy}/update', [AcademyController::class, 'update'])->name('academy.update');
 
     // Route::get('/{academy}/members', [AcademyMemberController::class, 'index'])->name('academy.members');
-    Route::get('/{academy}/members', [AcademyMemberController::class, 'index'])->name('academy.members');
+    // Route::get('/{academy}/members', [AcademyMemberController::class, 'index'])->name('academy.members');
+    // Route::get('/{academy}/members', [AcademyMemberController::class, 'index'])->name('academy.members');
     Route::post('/{academy}/members', [AcademyMemberController::class, 'storemember']);
     Route::post('/{academy}/unmembers', [AcademyMemberController::class, 'unmember']);
     
@@ -88,8 +90,41 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::post('/{academy}/decline-invite', [AcademyMemberController::class, 'declineInvitation'])->name('api.academy.decline-invite');
     Route::get('/{academy}/pending-requests', [AcademyMemberController::class, 'getPendingRequests'])->name('api.academy.pending-requests');
     
-    // Member management (accept/reject requests)
+    // ============================================
+    // Enhanced Member Management Routes
+    // ============================================
+    Route::get('/{academy}/members/search', [AcademyMemberController::class, 'searchMembers'])->name('api.academy.members.search');
+    Route::get('/{academy}/members/stats', [AcademyMemberController::class, 'getMemberStats'])->name('api.academy.members.stats');
+    
+    // Member management (accept/reject/suspend/remove)
     Route::post('/{academy}/members/{member}/accept', [AcademyMemberController::class, 'acceptmember'])->name('api.academy.members.accept');
     Route::post('/{academy}/members/{member}/reject', [AcademyMemberController::class, 'rejectmember'])->name('api.academy.members.reject');
+    Route::delete('/{academy}/members/{member}', [AcademyMemberController::class, 'removeMember'])->name('api.academy.members.remove');
+    Route::post('/{academy}/members/{member}/suspend', [AcademyMemberController::class, 'suspendMember'])->name('api.academy.members.suspend');
+    Route::post('/{academy}/members/{member}/unsuspend', [AcademyMemberController::class, 'unsuspendMember'])->name('api.academy.members.unsuspend');
+    Route::patch('/{academy}/members/{member}', [AcademyMemberController::class, 'updateMember'])->name('api.academy.members.update');
+    
+    // Bulk invite members
+    Route::post('/{academy}/members/invite', [AcademyMemberController::class, 'bulkInviteMembers'])->name('api.academy.members.bulkInvite');
+    
+    // Academy Settings
+    Route::post('/{academy}/settings', [AcademyController::class, 'updateSettings'])->name('api.academy.settings.update');
+    
+    // ============================================
+    // Academy Roles & Permissions Routes
+    // ============================================
+    Route::get('/{academy}/roles', [AcademyRoleController::class, 'index'])->name('api.academy.roles.index');
+    Route::get('/{academy}/roles/available', [AcademyRoleController::class, 'available'])->name('api.academy.roles.available');
+    Route::get('/{academy}/my-role', [AcademyRoleController::class, 'myRole'])->name('api.academy.roles.my');
+    Route::post('/{academy}/roles', [AcademyRoleController::class, 'store'])->name('api.academy.roles.store');
+    Route::put('/{academy}/roles/{role}', [AcademyRoleController::class, 'update'])->name('api.academy.roles.update');
+    Route::delete('/{academy}/roles/{role}', [AcademyRoleController::class, 'destroy'])->name('api.academy.roles.destroy');
+    
+    // Assign role to member
+    Route::post('/{academy}/members/{member}/role', [AcademyRoleController::class, 'assignRole'])->name('api.academy.members.assignRole');
+    Route::post('/{academy}/members/bulk-role', [AcademyRoleController::class, 'bulkAssignRole'])->name('api.academy.members.bulkAssignRole');
+    
+    // Get all available permissions (for role creation UI)
+    Route::get('/permissions/all', [AcademyRoleController::class, 'permissions'])->name('api.academy.permissions.all');
 });
 

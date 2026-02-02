@@ -4,7 +4,25 @@ import { useApi } from '~/composables/useApi';
 import { Icon } from '@iconify/vue';
 import RadialProgress from "vue3-radial-progress";
 import AssignmentSubmissionForm from '~/components/learn/course/AssignmentSubmissionForm.vue';
+import ImageGalleryModal from '~/components/ImageGalleryModal.vue';
 import { inject } from 'vue';
+
+// Image Gallery State
+const showGallery = ref(false);
+const galleryImages = ref([]);
+const galleryStartIndex = ref(0);
+const galleryTitle = ref('');
+
+const openGallery = (images, index = 0, title = '') => {
+    galleryImages.value = images;
+    galleryStartIndex.value = index;
+    galleryTitle.value = title;
+    showGallery.value = true;
+};
+
+const closeGallery = () => {
+    showGallery.value = false;
+};
 
 
 const props = defineProps({
@@ -511,7 +529,13 @@ const tabs = [
                                               <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl mb-4 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
                                                   {{ gradingAnswer.content }}
                                                   <div v-if="gradingAnswer.images?.length" class="mt-3 flex flex-wrap gap-2">
-                                                      <img v-for="img in gradingAnswer.images" :key="img.id" :src="img.full_url || img.image_url" class="w-20 h-20 object-cover rounded-lg border cursor-pointer" />
+                                                      <img 
+                                                          v-for="(img, index) in gradingAnswer.images" 
+                                                          :key="img.id" 
+                                                          :src="img.full_url || img.image_url" 
+                                                          class="w-20 h-20 object-cover rounded-lg border cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-blue-500 transition-all" 
+                                                          @click="openGallery(gradingAnswer.images, index, 'รูปภาพจากงานที่ส่ง')"
+                                                      />
                                                   </div>
                                               </div>
                                               
@@ -614,5 +638,14 @@ const tabs = [
             <p>ไม่สามารถโหลดข้อมูลได้</p>
             <button @click="fetchData" class="mt-2 text-blue-600 hover:underline">ลองใหม่</button>
         </div>
+
+        <!-- Image Gallery Modal -->
+        <ImageGalleryModal 
+            :show="showGallery"
+            :images="galleryImages"
+            :start-index="galleryStartIndex"
+            :title="galleryTitle"
+            @close="closeGallery"
+        />
     </div>
 </template>
