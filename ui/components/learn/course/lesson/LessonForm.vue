@@ -21,6 +21,21 @@ const emit = defineEmits<{
 
 const api = useApi()
 const swal = useSweetAlert()
+const config = useRuntimeConfig()
+
+// Helper function to get image URL
+const getImageUrl = (image: any): string => {
+  if (image.full_url) return image.full_url
+  if (image.url) return image.url
+  if (image.filename) return `${config.public.apiBase}/storage/images/courses/lessons/${image.filename}`
+  return ''
+}
+
+// Handle image load error
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.src = '/images/placeholder-image.png'
+}
 
 // Form state
 const form = ref({
@@ -160,6 +175,16 @@ const handleSubmit = async () => {
       response = await api.post(`/api/courses/${props.courseId}/lessons`, formData)
     }
 
+    // Update existingImages with newly uploaded images from response
+    const updatedLesson = response.lesson || response.newLesson || response
+    if (updatedLesson?.images) {
+      existingImages.value = updatedLesson.images
+    }
+    
+    // Clear temp images after successful upload
+    tempImages.value.forEach((img) => URL.revokeObjectURL(img.url))
+    tempImages.value = []
+
     swal.success(props.isEdit ? 'แก้ไขบทเรียนสำเร็จ' : 'สร้างบทเรียนสำเร็จ')
     emit('submit', response)
   } catch (err: any) {
@@ -252,9 +277,10 @@ const handleCancel = () => {
         <div v-if="existingImages.length > 0" class="mb-4 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div v-for="(image, index) in existingImages" :key="image.id" class="relative group">
             <img
-              :src="image.full_url"
+              :src="getImageUrl(image)"
               :alt="`Image ${index + 1}`"
               class="w-full h-32 object-cover rounded-lg"
+              @error="handleImageError"
             />
             <button
               type="button"

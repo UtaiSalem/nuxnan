@@ -22,6 +22,9 @@ export const useApi = () => {
     // Build full URL - use apiBase for API calls
     const url = endpoint.startsWith('http') ? endpoint : `${apiBase}${endpoint}`
 
+    // Check if body is FormData - don't set Content-Type for FormData
+    const isFormData = options.body instanceof FormData
+    
     try {
       const response = await $fetch(url, {
         ...options,
@@ -29,6 +32,8 @@ export const useApi = () => {
           ...options.headers,
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
+          // Don't set Content-Type for FormData - browser will set it with boundary
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         },
       })
 

@@ -24,6 +24,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
         }
 
         $images = $request->file('images');
+        
         foreach ($images as $image) {
             $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
             Storage::disk('public')->putFileAs('images/courses/lessons', $image, $fileName);

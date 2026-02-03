@@ -40,6 +40,8 @@ const showFullContent = ref(false)
 const showTopics = ref(false)
 const completedTopics = ref<number[]>([]) // Track completed topic IDs
 const showVideoModal = ref(false) // Video modal state
+const showImagePreview = ref(false) // Image preview modal state
+const previewIndex = ref(0) // Current preview image index
 
 // Content overflow detection
 const contentRef = ref<HTMLElement | null>(null)
@@ -100,6 +102,7 @@ const statusText = computed(() => {
 })
 
 const hasTopics = computed(() => props.lesson.topics && props.lesson.topics.length > 0)
+const hasImages = computed(() => props.lesson.images && props.lesson.images.length > 0)
 const hasAssignments = computed(
   () => props.lesson.assignments && props.lesson.assignments.length > 0
 )
@@ -178,6 +181,22 @@ const openVideoModal = () => {
 
 const closeVideoModal = () => {
   showVideoModal.value = false
+}
+
+// Image preview methods
+const openImagePreview = (index: number) => {
+  previewIndex.value = index
+  showImagePreview.value = true
+}
+
+const closeImagePreview = () => {
+  showImagePreview.value = false
+}
+
+const handleImageError = (event: Event, index: number) => {
+  const img = event.target as HTMLImageElement
+  img.src = '/images/placeholder-lesson.png'
+  img.alt = `รูปภาพ ${index + 1} ไม่สามารถโหลดได้`
 }
 
 // Methods
@@ -419,6 +438,89 @@ const handleTopicComplete = (topicId: number) => {
           <Icon icon="fluent:chevron-up-24-regular" class="w-4 h-4 inline ml-1" />
         </button>
       </div>
+
+      <!-- Image Gallery Section -->
+      <div v-if="hasImages" class="mt-6">
+        <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <Icon
+            icon="fluent:image-multiple-24-filled"
+            class="w-6 h-6 text-indigo-600 dark:text-indigo-400"
+          />
+          รูปภาพประกอบบทเรียน
+        </h3>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div
+            v-for="(image, index) in lesson.images"
+            :key="image.id"
+            class="relative aspect-square rounded-xl overflow-hidden cursor-pointer group shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
+            @click="openImagePreview(index)"
+          >
+            <img
+              :src="image.full_url || image.url"
+              :alt="`รูปที่ ${index + 1}`"
+              class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              @error="handleImageError($event, index)"
+            />
+            <!-- Hover Overlay -->
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                <Icon icon="fluent:zoom-in-24-filled" class="w-6 h-6 text-gray-700" />
+              </div>
+            </div>
+            <!-- Image Number Badge -->
+            <div class="absolute bottom-2 right-2 px-2 py-1 bg-black/60 rounded-md text-xs text-white font-medium">
+              {{ index + 1 }}/{{ lesson.images.length }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Image Preview Modal -->
+      <Teleport to="body">
+        <div 
+          v-if="showImagePreview" 
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          @click.self="closeImagePreview"
+        >
+          <!-- Close Button -->
+          <button
+            @click="closeImagePreview"
+            class="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10"
+          >
+            <Icon icon="fluent:dismiss-24-filled" class="w-8 h-8 text-white" />
+          </button>
+
+          <!-- Navigation Arrows -->
+          <button
+            v-if="previewIndex > 0"
+            @click.stop="previewIndex--"
+            class="absolute left-4 p-3 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10"
+          >
+            <Icon icon="fluent:chevron-left-24-filled" class="w-8 h-8 text-white" />
+          </button>
+          <button
+            v-if="previewIndex < lesson.images.length - 1"
+            @click.stop="previewIndex++"
+            class="absolute right-4 p-3 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10"
+          >
+            <Icon icon="fluent:chevron-right-24-filled" class="w-8 h-8 text-white" />
+          </button>
+
+          <!-- Image -->
+          <div class="max-w-[90vw] max-h-[85vh] relative">
+            <img
+              :src="lesson.images[previewIndex]?.full_url || lesson.images[previewIndex]?.url"
+              :alt="`รูปที่ ${previewIndex + 1}`"
+              class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            />
+            <!-- Image Counter -->
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 rounded-full text-white font-medium">
+              {{ previewIndex + 1 }} / {{ lesson.images.length }}
+            </div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- Video Section - Show YouTube video thumbnail below content -->
       <div v-if="hasYoutubeVideo" class="mt-6">
