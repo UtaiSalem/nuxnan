@@ -93,6 +93,37 @@ const handleCommentLesson = (lesson: any) => {
     router.push(`/Learn/Courses/${course.value.id}/lessons/${lesson.id}#comments`)
 }
 
+// Handle topic created - add to lesson topics immediately
+const handleTopicCreated = (lessonId: number, newTopic: any) => {
+  const lesson = lessons.value.find(l => l.id === lessonId)
+  if (lesson) {
+    if (lesson.topics) {
+      lesson.topics.push(newTopic)
+    } else {
+      lesson.topics = [newTopic]
+    }
+  }
+}
+
+// Handle topic updated - update in lesson topics immediately
+const handleTopicUpdated = (lessonId: number, updatedTopic: any) => {
+  const lesson = lessons.value.find(l => l.id === lessonId)
+  if (lesson && lesson.topics) {
+    const index = lesson.topics.findIndex((t: any) => t.id === updatedTopic.id)
+    if (index !== -1) {
+      lesson.topics[index] = updatedTopic
+    }
+  }
+}
+
+// Handle topic deleted - remove from lesson topics immediately
+const handleTopicDeleted = (lessonId: number, topicId: number) => {
+  const lesson = lessons.value.find(l => l.id === lessonId)
+  if (lesson && lesson.topics) {
+    lesson.topics = lesson.topics.filter((t: any) => t.id !== topicId)
+  }
+}
+
 const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -210,6 +241,9 @@ watch(isRoot, async (newVal) => {
             @bookmark="handleBookmarkLesson"
             @share="handleShareLesson"
             @comment="handleCommentLesson"
+            @topic-created="(topic) => handleTopicCreated(lesson.id, topic)"
+            @topic-updated="(topic) => handleTopicUpdated(lesson.id, topic)"
+            @topic-deleted="(topicId) => handleTopicDeleted(lesson.id, topicId)"
           />
         </div>
       </template>

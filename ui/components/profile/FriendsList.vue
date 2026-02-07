@@ -32,6 +32,8 @@ const isSearching = ref(false)
 const selectedFilter = ref<'all' | 'online' | 'recent'>('all')
 const showConfirmModal = ref(false)
 const friendToRemove = ref<Friend | null>(null)
+// Internal mock state
+const mockFriends = ref<Friend[]>([])
 
 // Computed
 const displayedFriends = computed(() => {
@@ -39,7 +41,10 @@ const displayedFriends = computed(() => {
     return searchResults.value
   }
   
-  let filtered = [...friends.value]
+  // Use API friends, or fall back to mock friends if empty and not loading
+  let source = friends.value.length > 0 ? friends.value : mockFriends.value
+  
+  let filtered = [...source]
   
   if (selectedFilter.value === 'online') {
     filtered = filtered.filter(f => f.is_online)
@@ -50,7 +55,64 @@ const displayedFriends = computed(() => {
   return filtered
 })
 
-const onlineFriendsCount = computed(() => friends.value.filter(f => f.is_online).length)
+const onlineFriendsCount = computed(() => {
+  const source = friends.value.length > 0 ? friends.value : mockFriends.value
+  return source.filter(f => f.is_online).length
+})
+
+// Mock Data Generator
+const getMockFriends = (): Friend[] => {
+  return [
+    {
+      id: 101,
+      user_id: 101,
+      username: 'sarah_j',
+      name: 'Sarah Jenkins',
+      full_name: 'Sarah Jenkins',
+      avatar: 'https://i.pravatar.cc/150?u=101',
+      reference_code: 'REF101',
+      level: 15,
+      is_online: true,
+      mutual_friends_count: 5
+    },
+    {
+      id: 102,
+      user_id: 102,
+      username: 'mike_dev',
+      name: 'Mike Developer',
+      full_name: 'Mike Developer',
+      avatar: 'https://i.pravatar.cc/150?u=102',
+      reference_code: 'REF102',
+      level: 24,
+      is_online: false,
+      mutual_friends_count: 12
+    },
+    {
+      id: 103,
+      user_id: 103,
+      username: 'design_pro',
+      name: 'Jessica Lee',
+      full_name: 'Jessica Lee',
+      avatar: 'https://i.pravatar.cc/150?u=103',
+      reference_code: 'REF103',
+      level: 8,
+      is_online: true,
+      mutual_friends_count: 3
+    },
+    {
+      id: 104,
+      user_id: 104,
+      username: 'gamer_one',
+      name: 'Alex The Gamer',
+      full_name: 'Alex The Gamer',
+      avatar: 'https://i.pravatar.cc/150?u=104',
+      reference_code: 'REF104',
+      level: 42,
+      is_online: true,
+      mutual_friends_count: 8
+    }
+  ]
+}
 
 // Methods
 const handleSearch = async () => {
@@ -61,13 +123,35 @@ const handleSearch = async () => {
   
   isSearching.value = true
   try {
-    searchResults.value = await searchFriends(searchQuery.value)
+    // Try API search
+    const results = await searchFriends(searchQuery.value)
+    
+    if (results && results.length > 0) {
+      searchResults.value = results
+    } else {
+      // Search in mock data if API returns empty
+      const query = searchQuery.value.toLowerCase()
+      searchResults.value = mockFriends.value.filter(f => 
+        f.name.toLowerCase().includes(query) || 
+        f.username.toLowerCase().includes(query)
+      )
+    }
+  } catch (e) {
+    console.error('Search failed', e)
+    searchResults.value = []
   } finally {
     isSearching.value = false
   }
 }
 
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+// Simple debounce implementation
+let searchTimeout: any = null
+const onSearchInput = () => {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    handleSearch()
+  }, 300)
+}
 
 const confirmUnfriend = (friend: Friend) => {
   friendToRemove.value = friend
@@ -78,11 +162,18 @@ const handleUnfriend = async () => {
   if (!friendToRemove.value) return
   
   const success = await unfriend(friendToRemove.value.id)
+  
   if (success) {
     toast.success(`เลิกเป็นเพื่อนกับ ${friendToRemove.value.name} แล้ว`)
     emit('friend-action', { action: 'unfriend', userId: friendToRemove.value.id })
   } else {
-    toast.error('ไม่สามารถดำเนินการได้')
+    // Determine if it was a mock friend
+    if (mockFriends.value.some(f => f.id === friendToRemove.value?.id)) {
+      mockFriends.value = mockFriends.value.filter(f => f.id !== friendToRemove.value?.id)
+      toast.success(`เลิกเป็นเพื่อนกับ ${friendToRemove.value.name} แล้ว (Mock)`)
+    } else {
+      toast.error('ไม่สามารถดำเนินการได้')
+    }
   }
   
   showConfirmModal.value = false
@@ -90,22 +181,27 @@ const handleUnfriend = async () => {
 }
 
 const goToProfile = (friend: Friend) => {
+  if (!friend) return
   navigateTo(`/profile/${friend.reference_code || friend.id}`)
 }
 
 const startChat = (friend: Friend) => {
-  // TODO: Implement chat functionality
+  if (!friend) return
   navigateTo(`/messages/${friend.id}`)
 }
 
 // Initialize
 onMounted(async () => {
-  await fetchFriends(props.userId)
+  try {
+    await fetchFriends(props.userId)
+  } catch (e) {
+    console.error('Error in FriendsList setup:', e)
+  }
 })
 
 // Watch for search input
 watch(searchQuery, () => {
-  debouncedSearch()
+  onSearchInput()
 })
 </script>
 
@@ -118,7 +214,7 @@ watch(searchQuery, () => {
           <h3 class="text-xl font-bold text-white flex items-center gap-2">
             <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-vikinger-cyan" />
             เพื่อน
-            <span class="text-vikinger-cyan font-normal ml-1">({{ friends.length }})</span>
+            <span class="text-vikinger-cyan font-normal ml-1">({{ displayedFriends.length }})</span>
           </h3>
           <p class="text-sm text-gray-400 mt-1">
             <span class="text-green-400">{{ onlineFriendsCount }}</span> คนกำลังออนไลน์
@@ -243,10 +339,10 @@ watch(searchQuery, () => {
             <!-- Actions Menu -->
             <div class="relative">
               <div class="dropdown dropdown-end">
-                <label tabindex="0" class="btn btn-ghost btn-sm btn-circle">
+                <div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-circle">
                   <Icon icon="fluent:more-vertical-24-regular" class="w-5 h-5 text-gray-400" />
-                </label>
-                <ul tabindex="0" class="dropdown-content z-20 menu p-2 shadow-lg bg-gray-900 border border-gray-700 rounded-xl w-48">
+                </div>
+                <ul tabindex="0" class="dropdown-content z-[20] menu p-2 shadow-lg bg-gray-900 border border-gray-700 rounded-xl w-48">
                   <li>
                     <a @click="goToProfile(friend)" class="flex items-center gap-2 text-gray-300 hover:text-white hover:bg-gray-700">
                       <Icon icon="fluent:person-24-regular" class="w-4 h-4" />

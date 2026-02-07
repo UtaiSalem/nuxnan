@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\Learn\Course\lessons\LessonProgressController;
 use App\Http\Controllers\CoursePostShareController;
 use App\Http\Controllers\Api\Learn\Course\admins\CourseAdminController;
 use App\Http\Controllers\Api\Learn\Course\reviews\CourseReviewController;
+use App\Http\Controllers\Api\Learn\Course\CoursePurchaseController;
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::get('/courses/{course}/settings', [CourseController::class, 'settings'])->name('course.settings.page.show');
@@ -71,6 +72,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
     Route::get('/users/{user}/member', [CourseController::class, 'getAuthMemberCourses'])->name('auth.member.courses');
     Route::get('/users/{user}/membered', [CourseController::class, 'getAuthMemberedCourses'])->name('api.courses.member');
     Route::get('/users/{user}/my-courses', [CourseController::class, 'getMyCourses'])->name('api.courses.my-courses');
+    Route::get('/users/{user}/membered-courses', [CourseController::class, 'getUserMemberedCourses'])->name('user.membered.courses');
 
     Route::get('/{course}/groups/{group}/member-requesters', [CourseGroupMemberController::class, 'getRequesters']);
     Route::post('/{course}/groups/{group}/members/{member}/approve', [CourseGroupMemberController::class, 'approveRequest']);
@@ -371,4 +373,19 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/reviews')
     Route::get('/{review}', [CourseReviewController::class, 'show'])->name('course.reviews.show');
     Route::put('/{review}', [CourseReviewController::class, 'update'])->name('course.reviews.update');
     Route::delete('/{review}', [CourseReviewController::class, 'destroy'])->name('course.reviews.destroy');
+});
+
+// Course Purchase Routes
+Route::middleware(['auth:api', 'verified'])->group(function () {
+    // Check purchase eligibility and pricing
+    Route::get('/courses/{course}/purchase/check', [CoursePurchaseController::class, 'checkPurchase'])->name('course.purchase.check');
+    
+    // User purchase history
+    Route::get('/courses/purchases/history', [CoursePurchaseController::class, 'getPurchaseHistory'])->name('course.purchases.history');
+    
+    // Sales analytics for course owners
+    Route::get('/courses/sales/analytics', [CoursePurchaseController::class, 'getSalesAnalytics'])->name('course.sales.analytics');
+    
+    // Refund (admin/owner only)
+    Route::post('/courses/{course}/purchase/refund', [CoursePurchaseController::class, 'refundPurchase'])->name('course.purchase.refund');
 });

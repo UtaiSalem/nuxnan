@@ -54,6 +54,7 @@ const pagination = ref({
 const showRoleModal = ref(false)
 const showManageModal = ref(false)
 const showInviteModal = ref(false)
+const showImportModal = ref(false)
 const selectedMember = ref<AcademyMember | null>(null)
 
 // Stats
@@ -198,6 +199,11 @@ onMounted(() => {
   fetchStats()
   fetchRoles()
 })
+
+// Export members
+function exportMembers() {
+  window.location.href = `/api/academies/${props.academyId}/members/export`
+}
 </script>
 
 <template>
@@ -257,97 +263,85 @@ onMounted(() => {
         />
       </div>
 
-      <UButton
-        v-if="isAdmin"
-        icon="i-heroicons-user-plus"
-        color="primary"
-        @click="showInviteModal = true"
-      >
-        เชิญสมาชิก
-      </UButton>
+      <div v-if="isAdmin" class="flex gap-2">
+        <UButton
+          icon="i-heroicons-arrow-down-tray"
+          color="gray"
+          variant="soft"
+          @click="exportMembers"
+        >
+          <span class="hidden sm:inline">ส่งออก</span>
+        </UButton>
+        <UButton
+          icon="i-heroicons-arrow-up-tray"
+          color="gray"
+          variant="soft"
+          @click="showImportModal = true"
+        >
+          <span class="hidden sm:inline">นำเข้า</span>
+        </UButton>
+        <UButton
+          icon="i-heroicons-user-plus"
+          color="primary"
+          @click="showInviteModal = true"
+        >
+          เชิญสมาชิก
+        </UButton>
+      </div>
     </div>
 
-    <!-- Members Table -->
+    <!-- Members View -->
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div v-if="loading" class="flex justify-center items-center py-12">
         <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-primary-500" />
       </div>
 
-      <table v-else class="w-full">
-        <thead class="bg-gray-50 dark:bg-gray-900">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              สมาชิก
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              รหัส
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              บทบาท
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              สถานะ
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              วันที่เข้าร่วม
-            </th>
-            <th v-if="isAdmin" class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              การจัดการ
-            </th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <tr 
+      <template v-else>
+        <!-- Mobile Card View -->
+        <div class="block md:hidden divide-y divide-gray-200 dark:divide-gray-700">
+          <div 
             v-for="member in members" 
-            :key="member.id"
-            class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
+            :key="'card-' + member.id"
+            class="p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
           >
-            <td class="px-4 py-4">
-              <div class="flex items-center gap-3">
-                <UAvatar
-                  :src="member.member_avatar"
-                  :alt="member.member_name"
-                  size="sm"
-                />
-                <div>
-                  <p class="font-medium text-gray-900 dark:text-white">
+            <div class="flex items-start gap-3">
+              <UAvatar
+                :src="member.member_avatar"
+                :alt="member.member_name"
+                size="md"
+              />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="font-medium text-gray-900 dark:text-white truncate">
                     {{ member.member_name }}
                   </p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ member.user?.email || '-' }}
-                  </p>
+                  <UBadge :color="getStatusColor(member.status)" size="xs">
+                    {{ member.status_text }}
+                  </UBadge>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                  {{ member.user?.email || member.member_code || '-' }}
+                </p>
+                <div class="flex items-center gap-2 mt-2">
+                  <UBadge 
+                    v-if="member.academy_role"
+                    :color="getRoleColor(member.academy_role)"
+                    size="xs"
+                  >
+                    {{ member.academy_role.display_name_th }}
+                  </UBadge>
+                  <span class="text-xs text-gray-400">
+                    {{ member.enrollment_date || member.created_at?.split(' ')[0] || '' }}
+                  </span>
                 </div>
               </div>
-            </td>
-            <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
-              {{ member.member_code || member.student?.student_id || '-' }}
-            </td>
-            <td class="px-4 py-4">
-              <UBadge 
-                v-if="member.academy_role"
-                :color="getRoleColor(member.academy_role)"
-                size="sm"
-              >
-                {{ member.academy_role.display_name_th }}
-              </UBadge>
-              <span v-else class="text-sm text-gray-500">{{ member.role || '-' }}</span>
-            </td>
-            <td class="px-4 py-4">
-              <UBadge :color="getStatusColor(member.status)" size="sm">
-                {{ member.status_text }}
-              </UBadge>
-            </td>
-            <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
-              {{ member.enrollment_date || member.created_at?.split(' ')[0] || '-' }}
-            </td>
-            <td v-if="isAdmin" class="px-4 py-4">
-              <div class="flex justify-end gap-2">
+              <!-- Mobile Actions -->
+              <div v-if="isAdmin" class="flex flex-col gap-1">
                 <UButton
                   icon="i-heroicons-user-circle"
                   color="gray"
                   variant="ghost"
                   size="xs"
-                  title="กำหนดบทบาท"
                   @click="openRoleModal(member)"
                 />
                 <UButton
@@ -355,21 +349,117 @@ onMounted(() => {
                   color="gray"
                   variant="ghost"
                   size="xs"
-                  title="จัดการสมาชิก"
                   @click="openManageModal(member)"
                 />
               </div>
-            </td>
-          </tr>
+            </div>
+          </div>
+          
+          <div v-if="members.length === 0" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+            <UIcon name="i-heroicons-users" class="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>ไม่พบสมาชิก</p>
+          </div>
+        </div>
 
-          <tr v-if="members.length === 0">
-            <td :colspan="isAdmin ? 6 : 5" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
-              <UIcon name="i-heroicons-users" class="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>ไม่พบสมาชิก</p>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <!-- Desktop Table View -->
+        <table class="hidden md:table w-full">
+          <thead class="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                สมาชิก
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                รหัส
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                บทบาท
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                สถานะ
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                วันที่เข้าร่วม
+              </th>
+              <th v-if="isAdmin" class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                การจัดการ
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr 
+              v-for="member in members" 
+              :key="member.id"
+              class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
+            >
+              <td class="px-4 py-4">
+                <div class="flex items-center gap-3">
+                  <UAvatar
+                    :src="member.member_avatar"
+                    :alt="member.member_name"
+                    size="sm"
+                  />
+                  <div>
+                    <p class="font-medium text-gray-900 dark:text-white">
+                      {{ member.member_name }}
+                    </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      {{ member.user?.email || '-' }}
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                {{ member.member_code || member.student?.student_id || '-' }}
+              </td>
+              <td class="px-4 py-4">
+                <UBadge 
+                  v-if="member.academy_role"
+                  :color="getRoleColor(member.academy_role)"
+                  size="sm"
+                >
+                  {{ member.academy_role.display_name_th }}
+                </UBadge>
+                <span v-else class="text-sm text-gray-500">{{ member.role || '-' }}</span>
+              </td>
+              <td class="px-4 py-4">
+                <UBadge :color="getStatusColor(member.status)" size="sm">
+                  {{ member.status_text }}
+                </UBadge>
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                {{ member.enrollment_date || member.created_at?.split(' ')[0] || '-' }}
+              </td>
+              <td v-if="isAdmin" class="px-4 py-4">
+                <div class="flex justify-end gap-2">
+                  <UButton
+                    icon="i-heroicons-user-circle"
+                    color="gray"
+                    variant="ghost"
+                    size="xs"
+                    title="กำหนดบทบาท"
+                    @click="openRoleModal(member)"
+                  />
+                  <UButton
+                    icon="i-heroicons-cog-6-tooth"
+                    color="gray"
+                    variant="ghost"
+                    size="xs"
+                    title="จัดการสมาชิก"
+                    @click="openManageModal(member)"
+                  />
+                </div>
+              </td>
+            </tr>
+
+            <tr v-if="members.length === 0">
+              <td :colspan="isAdmin ? 6 : 5" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                <UIcon name="i-heroicons-users" class="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>ไม่พบสมาชิก</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </template>
 
       <!-- Pagination -->
       <div v-if="pagination.total > pagination.perPage" class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
@@ -403,6 +493,12 @@ onMounted(() => {
       v-model="showInviteModal"
       :academy-id="academyId"
       @member-invited="handleMemberInvited"
+    />
+
+    <AcademyMemberMemberImportModal
+      v-model="showImportModal"
+      :academy-id="academyId"
+      @imported="() => { fetchMembers(); fetchStats(); }"
     />
   </div>
 </template>

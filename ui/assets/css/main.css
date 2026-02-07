@@ -84,10 +84,11 @@
      Vikinger Card Styles
      ======================== */
   .vikinger-card {
-    @apply bg-white dark:bg-vikinger-dark-100 rounded-vikinger-lg p-5 
-           shadow-card dark:shadow-card-dark 
-           border border-vikinger-light-400 dark:border-vikinger-dark-50/30
-           transition-all duration-300;
+    @apply bg-white dark:bg-vikinger-dark-100 rounded-lg sm:rounded-xl md:rounded-vikinger-lg 
+           p-2 sm:p-3 md:p-4 
+           shadow-sm sm:shadow-card dark:shadow-card-dark 
+           border-0 sm:border border-gray-100 dark:border-vikinger-dark-50/20
+           transition-all duration-200;
   }
 
   .vikinger-card-hover:hover {

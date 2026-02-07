@@ -208,6 +208,30 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/forgot-password/exchange/{user}', [ForgotPasswordController::class, 'exchangeMoney'])->name('forgot-pasword.exchange');
     Route::delete('/forgot-password/users/{user}', [ForgotPasswordController::class, 'destroy']);
 
+    // Cart Routes
+    Route::get('/cart', [\App\Http\Controllers\Api\Shopping\CartController::class, 'index']);
+    Route::post('/cart/add', [\App\Http\Controllers\Api\Shopping\CartController::class, 'add']);
+    Route::post('/cart/update', [\App\Http\Controllers\Api\Shopping\CartController::class, 'update']);
+    Route::post('/cart/remove', [\App\Http\Controllers\Api\Shopping\CartController::class, 'remove']);
+
+    // User Groups Routes
+    Route::get('/users/{user}/groups', [\App\Http\Controllers\Api\Learn\Academy\AcademyGroupController::class, 'getUserGroups']);
+    Route::get('/profile/groups', function(\Illuminate\Http\Request $request) {
+        return app(\App\Http\Controllers\Api\Learn\Academy\AcademyGroupController::class)->getUserGroups($request->user());
+    });
+
+    // Events Routes
+    Route::get('/users/{user}/events', [\App\Http\Controllers\Api\Play\EventController::class, 'getUserEvents']);
+    Route::get('/profile/events', function(\Illuminate\Http\Request $request) {
+        return app(\App\Http\Controllers\Api\Play\EventController::class)->getUserEvents($request->user());
+    });
+
+    // Badges Routes
+    Route::get('/users/{user}/badges', [\App\Http\Controllers\Api\Play\BadgeController::class, 'getUserBadges']);
+    Route::get('/profile/badges', function(\Illuminate\Http\Request $request) {
+        return app(\App\Http\Controllers\Api\Play\BadgeController::class)->getUserBadges($request->user());
+    });
+
     // Friends
     Route::get('/friends/suggestions', [FriendController::class, 'suggestions'])->name('friends.suggestions');
     Route::get('/friends/pending', [FriendController::class, 'pendingRequests'])->name('friends.pending');
@@ -219,6 +243,19 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/friends/{friend}/unfriend', [FriendController::class, 'unfriend'])->name('unfriend');
     Route::get('/friends', [FriendController::class, 'index'])->name('friends');
     Route::get('/users/{identifier}/friends', [FriendController::class, 'userFriends'])->name('user.friends');
+
+    // ===========================================
+    // Notifications
+    // ===========================================
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Play\NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/recent', [\App\Http\Controllers\Api\Play\NotificationController::class, 'recent'])->name('notifications.recent');
+        Route::get('/unread-count', [\App\Http\Controllers\Api\Play\NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+        Route::post('/mark-all-read', [\App\Http\Controllers\Api\Play\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+        Route::delete('/read', [\App\Http\Controllers\Api\Play\NotificationController::class, 'deleteAllRead'])->name('notifications.delete-read');
+        Route::post('/{notification}/read', [\App\Http\Controllers\Api\Play\NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+        Route::delete('/{notification}', [\App\Http\Controllers\Api\Play\NotificationController::class, 'destroy'])->name('notifications.destroy');
+    });
 
     // Super Admin Check (any authenticated user can check their own status)
     Route::get('/super-admins/check', [\App\Http\Controllers\Api\SuperAdminController::class, 'check'])->name('super-admin.check');

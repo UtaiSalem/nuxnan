@@ -432,6 +432,7 @@ const olderComments = ref([])       // Comments loaded from API (older than pre-
 const isLoadingComments = ref(false)
 const currentPage = ref(1)
 const hasMorePages = ref(true)      // Assume more until API says otherwise
+const deletedCommentIds = ref(new Set())
 
 // Pre-loaded comments from post or share
 const preLoadedComments = computed(() => {
@@ -446,6 +447,7 @@ const preLoadedComments = computed(() => {
 // All displayed comments: user's new comments + pre-loaded + older loaded
 const displayedComments = computed(() => {
   return [...newlyAddedComments.value, ...preLoadedComments.value, ...olderComments.value]
+    .filter(c => !deletedCommentIds.value.has(c.id))
 })
 
 // Check if there are more comments to load
@@ -545,6 +547,10 @@ const loadMoreComments = async () => {
     else if (actionTo.value === 'CoursePost' && postData.value.course_id) {
       apiUrl = `${config.public.apiBase}/api/courses/${postData.value.course_id}/posts/${postData.value.id}/comments`
     }
+    // For Academy Posts
+    else if (actionTo.value === 'AcademyPost' && postData.value.academy?.id) {
+      apiUrl = `${config.public.apiBase}/api/academies/${postData.value.academy.id}/posts/${postData.value.id}/comments`
+    }
     // For regular Posts
     else {
       apiUrl = `${config.public.apiBase}/api/posts/${postData.value.id}/comments`
@@ -591,6 +597,10 @@ const addComment = async () => {
     // For Course Posts
     else if (actionTo.value === 'CoursePost' && postData.value.course_id) {
       apiUrl = `${config.public.apiBase}/api/courses/${postData.value.course_id}/posts/${postData.value.id}/comments`
+    }
+    // For Academy Posts
+    else if (actionTo.value === 'AcademyPost' && postData.value.academy?.id) {
+      apiUrl = `${config.public.apiBase}/api/academies/${postData.value.academy.id}/posts/${postData.value.id}/comments`
     }
     // For regular Posts
     else {
@@ -697,6 +707,8 @@ const handleLike = async () => {
     let apiUrl = ''
     if (actionTo.value === 'CoursePost' && postData.value.course_id) {
       apiUrl = `/api/courses/${postData.value.course_id}/posts/${postData.value.id}/like`
+    } else if (actionTo.value === 'AcademyPost' && postData.value.academy?.id) {
+      apiUrl = `/api/academies/${postData.value.academy.id}/posts/${postData.value.id}/like`
     } else {
       apiUrl = `/api/posts/${postData.value.id}/like`
     }
@@ -803,6 +815,8 @@ const handleDislike = async () => {
     let apiUrl = ''
     if (actionTo.value === 'CoursePost' && postData.value.course_id) {
       apiUrl = `/api/courses/${postData.value.course_id}/posts/${postData.value.id}/dislike`
+    } else if (actionTo.value === 'AcademyPost' && postData.value.academy?.id) {
+      apiUrl = `/api/academies/${postData.value.academy.id}/posts/${postData.value.id}/dislike`
     } else {
       apiUrl = `/api/posts/${postData.value.id}/dislike`
     }
@@ -1484,6 +1498,47 @@ const handleShareDislike = async () => {
   }
 }
 
+// Delete Comment (for regular/course/academy posts)
+const deleteComment = async (commentId) => {
+  const confirmed = await swal.confirmDelete('ความคิดเห็นนี้')
+  if (!confirmed) return
+
+  try {
+    const config = useRuntimeConfig()
+    const postId = postData.value.id
+    
+    // Determine API endpoint
+    let apiUrl = ''
+    if (actionTo.value === 'CoursePost' && postData.value.course_id) {
+      apiUrl = `${config.public.apiBase}/api/courses/${postData.value.course_id}/posts/${postId}/comments/${commentId}`
+    } else if (actionTo.value === 'AcademyPost' && postData.value.academy?.id) {
+      apiUrl = `${config.public.apiBase}/api/academies/${postData.value.academy.id}/posts/${postId}/comments/${commentId}`
+    } else {
+      apiUrl = `${config.public.apiBase}/api/posts/${postId}/comments/${commentId}`
+    }
+
+    const response = await $fetch(apiUrl, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${authStore.token}` }
+    })
+
+    if (response.success) {
+      // Add to deleted set to hide from view
+      deletedCommentIds.value.add(commentId)
+      
+      // Update count
+      localCommentsCount.value--
+      
+      swal.toast('ลบความคิดเห็นสำเร็จ', 'success')
+    } else {
+      swal.error(response.message || 'ไม่สามารถลบความคิดเห็นได้')
+    }
+  } catch (error) {
+    console.error('Failed to delete comment:', error)
+    toast.error('เกิดข้อผิดพลาดในการลบความคิดเห็น')
+  }
+}
+
 // ======== Share Comments ========
 const showShareComments = ref(true)  // ✅ เปลี่ยนเป็น true เพื่อแสดงทันที
 const newShareComment = ref('')
@@ -1902,10 +1957,10 @@ const handlePollUpdate = (updatedPoll) => {
 <template>
   <div :class="[
     isNested 
-      ? 'border border-gray-200 dark:border-vikinger-dark-50/30 rounded-xl p-4 bg-gray-50 dark:bg-vikinger-dark-200/50' 
+      ? 'rounded-lg p-2 bg-gray-50/80 dark:bg-vikinger-dark-200/50 -mx-1' 
       : isPollOnlyActivity
         ? '' 
-        : 'vikinger-card group hover:shadow-lg transition-shadow duration-300'
+        : 'vikinger-card group'
   ]">
     <!-- ========================================
          LAYOUT 0: Standalone Poll Activity
@@ -1927,34 +1982,34 @@ const handlePollUpdate = (updatedPoll) => {
          ======================================== -->
     <template v-else-if="isShareActivity && !isNested">
       <!-- Sharer Header -->
-      <div class="flex items-center gap-3 mb-4">
+      <div class="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
            <img :src="actionByAvatar"
              :alt="`Avatar of ${actionBy?.name || actionBy?.username || 'User'}`"
-             class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-cyan/30"
+             class="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-vikinger-cyan/30"
              loading="lazy"
              @error="(e) => e.target.src = '/images/default-avatar.png'" />
-        <div class="flex-1">
-          <div class="flex items-center gap-2 flex-wrap">
-            <NuxtLink :to="`/profile/${actionBy?.id}`" class="font-bold text-gray-800 dark:text-white hover:text-vikinger-purple transition-colors">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap text-sm sm:text-base">
+            <NuxtLink :to="`/profile/${actionBy?.id}`" class="font-bold text-gray-800 dark:text-white hover:text-vikinger-purple transition-colors truncate max-w-[100px] sm:max-w-none">
               {{ actionBy?.username || 'ผู้ใช้' }}
             </NuxtLink>
-            <span class="text-gray-600 dark:text-gray-400">แชร์โพสต์ของ</span>
-            <NuxtLink :to="`/profile/${postAuthor?.id}`" class="font-semibold text-vikinger-cyan hover:underline">
+            <span class="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">แชร์โพสต์ของ</span>
+            <NuxtLink :to="`/profile/${postAuthor?.id}`" class="font-semibold text-vikinger-cyan hover:underline truncate max-w-[80px] sm:max-w-none">
               {{ postAuthor?.username || 'ผู้ใช้' }}
             </NuxtLink>
           </div>
-          <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <Icon icon="fluent:share-24-regular" class="w-3.5 h-3.5" />
+          <div class="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+            <Icon icon="fluent:share-20-regular" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span>{{ props.post.diff_humans_created_at || 'เมื่อสักครู่' }}</span>
           </div>
         </div>
         <!-- More Options Dropdown -->
-        <div class="relative">
+        <div class="relative flex-shrink-0">
           <button 
             @click.stop="showOptionsMenu = !showOptionsMenu"
-            class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+            class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
           >
-            <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <Icon icon="fluent:more-horizontal-20-regular" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
           
           <!-- Dropdown Menu -->
@@ -1962,23 +2017,23 @@ const handlePollUpdate = (updatedPoll) => {
             <div 
               v-if="showOptionsMenu" 
               v-click-outside="() => showOptionsMenu = false"
-              class="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-lg border border-gray-200 dark:border-vikinger-dark-50/30 overflow-hidden z-50"
+              class="absolute right-0 top-full mt-2 w-44 sm:w-48 bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-lg border border-gray-200 dark:border-vikinger-dark-50/30 overflow-hidden z-50"
             >
               <!-- Delete Share (only for share owner) -->
               <button
                 v-if="isOwnShare"
                 @click="deleteShare"
                 :disabled="isDeletingShare"
-                class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left text-red-500"
+                class="w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left text-red-500"
               >
                 <Icon 
                   v-if="!isDeletingShare"
-                  icon="fluent:delete-24-regular" 
+                  icon="fluent:delete-20-regular" 
                   class="w-5 h-5" 
                 />
                 <Icon 
                   v-else 
-                  icon="fluent:spinner-ios-20-regular" 
+                  icon="fluent:spinner-ios-16-regular" 
                   class="w-5 h-5 animate-spin" 
                 />
                 <span class="text-sm font-medium">ลบการแชร์</span>
@@ -1986,9 +2041,9 @@ const handlePollUpdate = (updatedPoll) => {
               
               <!-- Other options can be added here -->
               <button
-                class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 transition-colors text-left"
+                class="w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 transition-colors text-left"
               >
-                <Icon icon="fluent:flag-24-regular" class="w-5 h-5 text-gray-500" />
+                <Icon icon="fluent:flag-20-regular" class="w-5 h-5 text-gray-500" />
                 <span class="text-sm text-gray-700 dark:text-gray-300">รายงาน</span>
               </button>
             </div>
@@ -1997,7 +2052,7 @@ const handlePollUpdate = (updatedPoll) => {
       </div>
       
       <!-- Share Comment (if any) -->
-      <p v-if="shareComment" class="text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-wrap">
+      <p v-if="shareComment" class="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-2 sm:mb-3 whitespace-pre-wrap">
         {{ shareComment }}
       </p>
       
@@ -2009,68 +2064,67 @@ const handlePollUpdate = (updatedPoll) => {
       />
       
       <!-- Debug: Show if shareable is missing -->
-      <div v-else class="p-4 bg-gray-100 dark:bg-vikinger-dark-100 rounded-lg text-gray-500">
-        <Icon icon="fluent:warning-24-regular" class="w-5 h-5 inline-block mr-2" />
+      <div v-else class="p-3 bg-gray-100 dark:bg-vikinger-dark-100 rounded-lg text-gray-500 text-sm">
+        <Icon icon="fluent:warning-20-regular" class="w-4 h-4 inline-block mr-1.5" />
         ไม่พบโพสต์ต้นฉบับ
       </div>
       
-      <!-- Share Actions (minimal) -->
-      <div class="mt-4 pt-3 border-t border-gray-200 dark:border-vikinger-dark-50/30">
-        <!-- Share Stats -->
-        <div class="flex items-center gap-4 mb-3 text-sm text-gray-600 dark:text-gray-400">
-          <span v-if="localShareLikes > 0" class="flex items-center gap-1">
-            <Icon icon="fluent:thumb-like-24-filled" class="w-4 h-4 text-vikinger-purple" />
-            {{ localShareLikes }}
-          </span>
-          <span v-if="localShareDislikes > 0" class="flex items-center gap-1">
-            <Icon icon="fluent:thumb-dislike-24-filled" class="w-4 h-4 text-red-500" />
-            {{ localShareDislikes }}
-          </span>
-          <span v-if="localShareComments > 0" class="flex items-center gap-1">
-            <Icon icon="fluent:comment-24-filled" class="w-4 h-4 text-vikinger-cyan" />
-            {{ localShareComments }}
-          </span>
-        </div>
+      <!-- Share Actions (Modern Inline Style) -->
+      <div class="mt-3 pt-3 border-t border-gray-100 dark:border-vikinger-dark-50/20">
+        <!-- Combined Stats & Actions Row -->
+        <div class="flex items-center justify-between">
+          <!-- Left: Stats -->
+          <div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+            <span v-if="localShareLikes > 0" class="flex items-center gap-1">
+              <Icon icon="fluent:thumb-like-16-filled" class="w-3.5 h-3.5 text-vikinger-purple" />
+              {{ localShareLikes }}
+            </span>
+            <span v-if="localShareDislikes > 0" class="flex items-center gap-1">
+              <Icon icon="fluent:thumb-dislike-16-filled" class="w-3.5 h-3.5 text-red-500" />
+              {{ localShareDislikes }}
+            </span>
+            <span v-if="localShareComments > 0" class="flex items-center gap-1">
+              <Icon icon="fluent:comment-16-filled" class="w-3.5 h-3.5 text-vikinger-cyan" />
+              {{ localShareComments }}
+            </span>
+          </div>
         
-        <!-- Share Action Buttons -->
-        <div class="flex items-center gap-4">
-          <button 
-            @click="handleShareLike" 
-            :disabled="isShareLiking"
-            :class="[
-              'flex items-center gap-2 transition-colors',
-              localShareIsLiked 
-                ? 'text-vikinger-purple dark:text-vikinger-purple' 
-                : 'text-gray-500 dark:text-gray-400 hover:text-vikinger-purple'
-            ]"
-          >
-            <Icon :icon="localShareIsLiked ? 'fluent:thumb-like-24-filled' : 'fluent:thumb-like-24-regular'" class="w-5 h-5" />
-            <span class="text-sm">{{ localShareIsLiked ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
-          </button>
-          <button 
-            @click="handleShareDislike" 
-            :disabled="isShareDisliking"
-            :class="[
-              'flex items-center gap-2 transition-colors',
-              localShareIsDisliked 
-                ? 'text-red-500 dark:text-red-500' 
-                : 'text-gray-500 dark:text-gray-400 hover:text-red-500'
-            ]"
-          >
-            <Icon :icon="localShareIsDisliked ? 'fluent:thumb-dislike-24-filled' : 'fluent:thumb-dislike-24-regular'" class="w-5 h-5" />
-            <span class="text-sm">{{ localShareIsDisliked ? 'ไม่ถูกใจแล้ว' : 'ไม่ถูกใจ' }}</span>
-          </button>
-          <button 
-            @click="toggleShareComments" 
-            class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-vikinger-cyan transition-colors"
-          >
-            <Icon icon="fluent:comment-24-regular" class="w-5 h-5" />
-            <span class="text-sm">แสดงความคิดเห็น</span>
-          </button>
+          <!-- Right: Action Buttons (Inline) -->
+          <div class="flex items-center gap-1">
+            <button 
+              @click="handleShareLike" 
+              :disabled="isShareLiking"
+              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200"
+              :class="localShareIsLiked 
+                ? 'bg-vikinger-purple/15 text-vikinger-purple' 
+                : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-500 dark:text-gray-400'"
+            >
+              <Icon :icon="localShareIsLiked ? 'fluent:thumb-like-20-filled' : 'fluent:thumb-like-20-regular'" class="w-[18px] h-[18px]" />
+              <span class="text-xs font-medium hidden sm:inline">{{ localShareIsLiked ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
+            </button>
+            <button 
+              @click="handleShareDislike" 
+              :disabled="isShareDisliking"
+              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200"
+              :class="localShareIsDisliked 
+                ? 'bg-red-500/15 text-red-500' 
+                : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-500 dark:text-gray-400'"
+            >
+              <Icon :icon="localShareIsDisliked ? 'fluent:thumb-dislike-20-filled' : 'fluent:thumb-dislike-20-regular'" class="w-[18px] h-[18px]" />
+              <span class="text-xs font-medium hidden sm:inline">{{ localShareIsDisliked ? 'ไม่ถูกใจ' : 'ไม่ถูกใจ' }}</span>
+            </button>
+            <button 
+              @click="toggleShareComments" 
+              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-500 dark:text-gray-400 transition-all duration-200"
+            >
+              <Icon icon="fluent:comment-20-regular" class="w-[18px] h-[18px]" />
+              <span class="text-xs font-medium hidden sm:inline">ตอบ</span>
+            </button>
+          </div>
         </div>
 
         <!-- Share Comments Section -->
-        <div v-if="showShareComments" class="mt-4 space-y-3">
+        <div v-if="showShareComments" class="mt-3 space-y-2.5">
           <!-- Add Comment Box -->
           <div class="flex gap-2">
             <img 
@@ -2169,7 +2223,7 @@ const handlePollUpdate = (updatedPoll) => {
                     <span>{{ comment.is_disliked_by_auth ? 'ไม่ถูกใจแล้ว' : 'ไม่ถูกใจ' }}</span>
                   </button>
                   <button 
-                    v-if="comment.user?.id === authStore.user?.id"
+                    v-if="isOwnShare || comment.user?.id === authStore.user?.id"
                     @click="deleteShareComment(comment.id)"
                     class="flex items-center gap-1 hover:text-red-500 font-medium transition-colors"
                   >
@@ -2211,84 +2265,83 @@ const handlePollUpdate = (updatedPoll) => {
          ======================================== -->
     <template v-else>
       <!-- Post Header -->
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-3">
+      <div class="flex items-start justify-between mb-3 sm:mb-4">
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <!-- Avatar with badge -->
           <div class="relative flex-shrink-0">
             <img :src="postAuthorAvatar"
                  :alt="`Avatar of ${postAuthor?.name || postAuthor?.username || 'User'}`"
-                 class="w-12 h-12 aspect-square rounded-full object-cover ring-2 ring-vikinger-purple/30 group-hover:ring-vikinger-purple transition-all duration-300"
+                 class="w-10 h-10 sm:w-12 sm:h-12 aspect-square rounded-full object-cover ring-2 ring-vikinger-purple/30 group-hover:ring-vikinger-purple transition-all duration-300"
                  loading="lazy"
                  @error="(e) => e.target.src = '/images/default-avatar.png'" />
 
             <!-- Post Type Badge -->
-            <div v-if="postTypeBadge && !isNested" :class="[postTypeBadge.color, 'absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-sm']">
-              <Icon :icon="postTypeBadge.icon" class="w-3 h-3 text-white" />
+            <div v-if="postTypeBadge && !isNested" :class="[postTypeBadge.color, 'absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center shadow-sm']">
+              <Icon :icon="postTypeBadge.icon" class="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
             </div>
           </div>
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <NuxtLink :to="`/profile/${postAuthor?.id}`" class="font-bold text-gray-800 dark:text-white hover:text-vikinger-purple cursor-pointer transition-colors">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <NuxtLink :to="`/profile/${postAuthor?.id}`" class="font-bold text-sm sm:text-base text-gray-800 dark:text-white hover:text-vikinger-purple cursor-pointer transition-colors truncate max-w-[120px] sm:max-w-none">
                 {{ postAuthor?.username || 'Unknown User' }}
               </NuxtLink>
-              <Icon v-if="postAuthor?.verified" icon="fluent:checkmark-circle-24-filled" class="w-4 h-4 text-green-500" />
+              <Icon v-if="postAuthor?.verified" icon="fluent:checkmark-circle-20-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
               
-              <!-- Feeling/Activity Display -->
-              <span v-if="feelingDisplay" class="text-gray-600 dark:text-gray-400 text-sm">
+              <!-- Feeling/Activity Display (hidden on xs, shown on sm+) -->
+              <span v-if="feelingDisplay" class="hidden sm:inline text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
                 — {{ feelingDisplay }}
               </span>
               
               <!-- Inline Action Text (for same actor activities) -->
               <template v-if="isActivity && isSameActor && actionTextShort">
-                <span class="text-gray-500 dark:text-gray-400">{{ actionTextShort }}</span>
-                <span v-if="modelTypeText" class="text-vikinger-cyan font-medium">{{ modelTypeText }}</span>
+                <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{{ actionTextShort }}</span>
+                <span v-if="modelTypeText" class="text-xs sm:text-sm text-vikinger-cyan font-medium truncate max-w-[100px] sm:max-w-none">{{ modelTypeText }}</span>
               </template>
               
-              <!-- Context Badge (Course/Academy) with Links -->
-              <div v-if="contextInfo" class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-vikinger-dark-200 text-xs">
-                <Icon :icon="contextInfo.icon" :class="['w-3.5 h-3.5', contextInfo.color]" />
+              <!-- Context Badge (Course/Academy) with Links - Responsive -->
+              <div v-if="contextInfo" class="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-vikinger-dark-200 text-xs">
+                <Icon :icon="contextInfo.icon" :class="['w-3 h-3 sm:w-3.5 sm:h-3.5', contextInfo.color]" />
                 <NuxtLink 
                   v-if="contextInfo.link" 
                   :to="contextInfo.link" 
-                  :class="['hover:underline font-medium transition-colors', contextInfo.color]"
+                  :class="['hover:underline font-medium transition-colors truncate max-w-[80px]', contextInfo.color]"
                 >
                   {{ contextInfo.name }}
                 </NuxtLink>
-                <span v-else class="text-gray-600 dark:text-gray-300">{{ contextInfo.name }}</span>
+                <span v-else class="text-gray-600 dark:text-gray-300 truncate max-w-[80px]">{{ contextInfo.name }}</span>
                 <template v-if="contextInfo.academy">
-                  <span class="text-gray-400">•</span>
+                  <span class="text-gray-400 hidden md:inline">•</span>
                   <NuxtLink 
                     v-if="contextInfo.academyLink" 
                     :to="contextInfo.academyLink" 
-                    class="text-purple-500 hover:underline font-medium transition-colors"
+                    class="hidden md:inline text-purple-500 hover:underline font-medium transition-colors truncate max-w-[80px]"
                   >
                     {{ contextInfo.academy }}
                   </NuxtLink>
-                  <span v-else class="text-gray-400">{{ contextInfo.academy }}</span>
                 </template>
               </div>
             </div>
-            <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <div class="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               <span class="flex items-center gap-1">
-                <Icon :icon="privacyIcon" class="w-3.5 h-3.5" />
+                <Icon :icon="privacyIcon" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 {{ createdTime }}
               </span>
-              <!-- Location -->
-              <span v-if="location" class="flex items-center gap-1 text-vikinger-cyan">
-                <Icon icon="fluent:location-24-regular" class="w-3.5 h-3.5" />
-                {{ location }}
+              <!-- Location (hidden on xs) -->
+              <span v-if="location" class="hidden sm:flex items-center gap-1 text-vikinger-cyan">
+                <Icon icon="fluent:location-20-regular" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span class="truncate max-w-[100px]">{{ location }}</span>
               </span>
             </div>
           </div>
         </div>
         
         <!-- More Options -->
-        <div v-if="!isNested" class="relative">
+        <div v-if="!isNested" class="relative flex-shrink-0">
           <button 
             @click.stop="showPostOptionsMenu = !showPostOptionsMenu"
-            class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+            class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
           >
-            <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <Icon icon="fluent:more-horizontal-20-regular" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
           
           <!-- Dropdown Menu -->
@@ -2296,23 +2349,23 @@ const handlePollUpdate = (updatedPoll) => {
             <div
               v-if="showPostOptionsMenu"
               v-click-outside="() => showPostOptionsMenu = false"
-              class="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-lg border border-gray-200 dark:border-vikinger-dark-50/30 overflow-hidden z-50"
+              class="absolute right-0 top-full mt-2 w-44 sm:w-48 bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-lg border border-gray-200 dark:border-vikinger-dark-50/30 overflow-hidden z-50"
             >
               <!-- Poll-specific options -->
               <template v-if="hasPoll && isPollOwner">
                 <!-- Edit Poll -->
                 <button
-                  class="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left text-blue-600"
+                  class="w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left text-blue-600"
                 >
-                  <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
+                  <Icon icon="fluent:edit-20-regular" class="w-5 h-5" />
                   <span class="text-sm font-medium">แก้ไขโพล</span>
                 </button>
                 
                 <!-- Close Poll -->
                 <button
-                  class="w-full flex items-center gap-3 px-4 py-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors text-left text-yellow-600"
+                  class="w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors text-left text-yellow-600"
                 >
-                  <Icon icon="fluent:checkmark-circle-24-regular" class="w-5 h-5" />
+                  <Icon icon="fluent:checkmark-circle-20-regular" class="w-5 h-5" />
                   <span class="text-sm font-medium">ปิดโพล</span>
                 </button>
                 
@@ -2486,137 +2539,92 @@ const handlePollUpdate = (updatedPoll) => {
         </div>
       </div>
 
-      <!-- Post Stats -->
+      <!-- Modern Post Stats & Actions Combined (Inline Style) -->
       <div :class="[
-        'flex items-center justify-between border-t border-gray-200 dark:border-vikinger-dark-50/30 text-gray-500 dark:text-gray-400',
-        isNested ? 'py-2 text-xs border-b-0' : 'py-3 text-sm border-b'
+        'flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-vikinger-dark-50/20',
+        isNested ? 'text-xs' : 'text-sm'
       ]">
-        <div class="flex items-center gap-4">
-          <span v-if="!isNested" class="flex items-center gap-1.5 hover:text-vikinger-purple cursor-pointer transition-colors">
-            <Icon icon="fluent:eye-24-regular" class="w-4 h-4" />
-            <span class="font-medium">{{ views }}</span>
+        <!-- Left Side: Stats -->
+        <div class="flex items-center gap-3 sm:gap-4 text-gray-500 dark:text-gray-400">
+          <span v-if="!isNested && views > 0" class="flex items-center gap-1 opacity-70">
+            <Icon icon="fluent:eye-16-regular" class="w-4 h-4" />
+            <span>{{ views }}</span>
           </span>
-          <span 
-            :class="[
-              'flex items-center gap-1.5 transition-colors',
-              isNested ? '' : 'hover:text-vikinger-cyan cursor-pointer'
-            ]"
-            @click="!isNested && toggleComments()"
-          >
-            <Icon icon="fluent:comment-24-regular" :class="isNested ? 'w-3.5 h-3.5' : 'w-4 h-4'" />
-            <span class="font-medium">{{ localCommentsCount }}</span>
-          </span>
-          <span 
-            :class="[
-              'flex items-center gap-1.5 transition-colors',
-              isNested ? '' : 'hover:text-vikinger-purple cursor-pointer',
-              { 'text-vikinger-purple': localIsLiked && !isNested }
-            ]"
-            @click="!isNested && handleLike()"
-          >
-            <Icon :icon="localIsLiked ? 'fluent:thumb-like-24-filled' : 'fluent:thumb-like-24-regular'" :class="isNested ? 'w-3.5 h-3.5' : 'w-4 h-4'" />
-            <span class="font-medium">{{ localLikes }}</span>
-          </span>
-          <span 
-            :class="[
-              'flex items-center gap-1.5 transition-colors',
-              isNested ? '' : 'hover:text-red-500 cursor-pointer',
-              { 'text-red-500': localIsDisliked && !isNested }
-            ]"
-            @click="!isNested && handleDislike()"
-          >
-            <Icon :icon="localIsDisliked ? 'fluent:thumb-dislike-24-filled' : 'fluent:thumb-dislike-24-regular'" :class="isNested ? 'w-3.5 h-3.5' : 'w-4 h-4'" />
-            <span class="font-medium">{{ localDislikes }}</span>
-          </span>
-          <span v-if="!isNested" class="flex items-center gap-1.5 hover:text-vikinger-green cursor-pointer transition-colors">
-            <Icon icon="fluent:share-24-regular" class="w-4 h-4" />
-            <span class="font-medium">{{ localShares }}</span>
+          <span v-if="localCommentsCount > 0" class="flex items-center gap-1">
+            <Icon icon="fluent:comment-16-regular" :class="isNested ? 'w-3.5 h-3.5' : 'w-4 h-4'" />
+            <span>{{ localCommentsCount }}</span>
           </span>
         </div>
         
-        <!-- View Original Post Link (for nested posts) -->
-        <NuxtLink 
-          v-if="isNested && postData.post_url"
-          :to="postData.post_url"
-          class="flex items-center gap-1.5 text-vikinger-purple hover:text-vikinger-cyan transition-colors"
-        >
-          <span class="text-xs font-medium">ดูโพสต์ต้นฉบับ</span>
-          <Icon icon="fluent:arrow-right-24-regular" class="w-3.5 h-3.5" />
-        </NuxtLink>
-      </div>
-
-      <!-- Post Actions (only for non-nested posts) -->
-      <div v-if="!isNested" :class="[
-        'flex items-center gap-2',
-        isNested ? 'mt-2' : 'mt-4'
-      ]">
-        <!-- Like Button -->
-        <button 
-          @click="handleLike"
-          :disabled="isLiking || isOwnPost"
-          class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all duration-300"
-          :class="localIsLiked 
-            ? 'bg-vikinger-purple/10 text-vikinger-purple' 
-            : isOwnPost 
-              ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-600'
-              : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-600 dark:text-gray-300'"
-        >
-          <Icon 
-            v-if="!isLiking"
-            :icon="localIsLiked ? 'fluent:thumb-like-24-filled' : 'fluent:thumb-like-24-regular'" 
-            class="w-5 h-5 transition-transform hover:scale-110"
-          />
-          <Icon v-else icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
-          <span class="text-sm font-medium">{{ localIsLiked ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
-        </button>
-        
-        <!-- Dislike Button -->
-        <button 
-          @click="handleDislike"
-          :disabled="isDisliking || isOwnPost"
-          class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all duration-300"
-          :class="localIsDisliked 
-            ? 'bg-red-500/10 text-red-500' 
-            : isOwnPost
-              ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-600'
-              : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-600 dark:text-gray-300'"
-        >
-          <Icon 
-            v-if="!isDisliking"
-            :icon="localIsDisliked ? 'fluent:thumb-dislike-24-filled' : 'fluent:thumb-dislike-24-regular'" 
-            class="w-5 h-5 transition-transform hover:scale-110"
-          />
-          <Icon v-else icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
-          <span class="text-sm font-medium">{{ localIsDisliked ? 'ไม่ถูกใจแล้ว' : 'ไม่ถูกใจ' }}</span>
-        </button>
-        
-        <!-- Comment Button -->
-        <button 
-          @click="toggleComments" 
-          class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 transition-colors group"
-        >
-          <Icon icon="fluent:comment-24-regular" class="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-vikinger-cyan transition-colors" />
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">ความคิดเห็น</span>
-        </button>
-        
-        <!-- Share Button (Hybrid) -->
-        <div class="flex-1 relative">
+        <!-- Right Side: Action Buttons (Modern Inline Style) -->
+        <div v-if="!isNested" class="flex items-center gap-1">
+          <!-- Like -->
           <button 
-            @click="showShareMenu = !showShareMenu"
-            :disabled="isSharing || isOwnPost"
-            class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg transition-colors group"
-            :class="isOwnPost 
-              ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-600'
-              : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200'"
+            @click="handleLike"
+            :disabled="isLiking || isOwnPost"
+            class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200"
+            :class="localIsLiked 
+              ? 'bg-vikinger-purple/15 text-vikinger-purple' 
+              : isOwnPost 
+                ? 'opacity-40 cursor-not-allowed text-gray-400'
+                : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-600 dark:text-gray-300'"
           >
             <Icon 
-              v-if="!isSharing"
-              icon="fluent:share-24-regular" 
-              class="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-vikinger-green transition-colors" 
+              v-if="!isLiking"
+              :icon="localIsLiked ? 'fluent:thumb-like-20-filled' : 'fluent:thumb-like-20-regular'" 
+              class="w-[18px] h-[18px] sm:w-5 sm:h-5"
             />
-            <Icon v-else icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">แชร์</span>
+            <Icon v-else icon="fluent:spinner-ios-16-regular" class="w-4 h-4 animate-spin" />
+            <span v-if="localLikes > 0" class="text-xs sm:text-sm font-medium">{{ localLikes }}</span>
           </button>
+          
+          <!-- Dislike -->
+          <button 
+            @click="handleDislike"
+            :disabled="isDisliking || isOwnPost"
+            class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200"
+            :class="localIsDisliked 
+              ? 'bg-red-500/15 text-red-500' 
+              : isOwnPost
+                ? 'opacity-40 cursor-not-allowed text-gray-400'
+                : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-600 dark:text-gray-300'"
+          >
+            <Icon 
+              v-if="!isDisliking"
+              :icon="localIsDisliked ? 'fluent:thumb-dislike-20-filled' : 'fluent:thumb-dislike-20-regular'" 
+              class="w-[18px] h-[18px] sm:w-5 sm:h-5"
+            />
+            <Icon v-else icon="fluent:spinner-ios-16-regular" class="w-4 h-4 animate-spin" />
+            <span v-if="localDislikes > 0" class="text-xs sm:text-sm font-medium">{{ localDislikes }}</span>
+          </button>
+          
+          <!-- Comment -->
+          <button 
+            @click="toggleComments" 
+            class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 transition-all duration-200 text-gray-600 dark:text-gray-300"
+          >
+            <Icon icon="fluent:comment-20-regular" class="w-[18px] h-[18px] sm:w-5 sm:h-5" />
+            <span class="text-xs sm:text-sm font-medium hidden sm:inline">ตอบ</span>
+          </button>
+          
+          <!-- Share -->
+          <div class="relative">
+            <button 
+              @click="showShareMenu = !showShareMenu"
+              :disabled="isSharing || isOwnPost"
+              class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200"
+              :class="isOwnPost 
+                ? 'opacity-40 cursor-not-allowed text-gray-400'
+                : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-600 dark:text-gray-300'"
+            >
+              <Icon 
+                v-if="!isSharing"
+                icon="fluent:share-20-regular" 
+                class="w-[18px] h-[18px] sm:w-5 sm:h-5" 
+              />
+              <Icon v-else icon="fluent:spinner-ios-16-regular" class="w-4 h-4 animate-spin" />
+              <span v-if="localShares > 0" class="text-xs sm:text-sm font-medium">{{ localShares }}</span>
+            </button>
           
           <!-- Share Menu -->
           <Transition name="dropdown">
@@ -2643,56 +2651,56 @@ const handlePollUpdate = (updatedPoll) => {
               </button>
             </div>
           </Transition>
-        </div>
-      </div>
-
-      <!-- Reactions Display -->
-      <div v-if="post.reactions && !isNested" class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-vikinger-dark-50/30">
-        <div class="flex -space-x-1">
-          <div v-for="reaction in reactions.slice(0, 3)" :key="reaction.id" 
-               class="w-7 h-7 rounded-full bg-white dark:bg-vikinger-dark-200 flex items-center justify-center text-sm border-2 border-white dark:border-vikinger-dark-100 shadow-sm">
-            {{ reaction.icon }}
           </div>
         </div>
-        <span class="text-sm text-gray-500 dark:text-gray-400 font-medium">{{ post.reactions.total || '10+' }} คนถูกใจ</span>
+        
+        <!-- View Original (nested only) -->
+        <NuxtLink 
+          v-if="isNested && postData.post_url"
+          :to="postData.post_url"
+          class="flex items-center gap-1 text-vikinger-purple hover:text-vikinger-cyan transition-colors ml-auto"
+        >
+          <span class="text-xs font-medium">ดูต้นฉบับ</span>
+          <Icon icon="fluent:arrow-right-16-regular" class="w-3.5 h-3.5" />
+        </NuxtLink>
       </div>
 
       <!-- Comments Section -->
-      <div v-if="showComments && !isNested" class="mt-4 pt-4 border-t border-gray-200 dark:border-vikinger-dark-50/30 space-y-4">
+      <div v-if="showComments && !isNested" class="mt-3 pt-3 border-t border-gray-100 dark:border-vikinger-dark-50/20 space-y-3">
         <!-- Add Comment -->
-        <div class="flex gap-3">
-          <img :src="currentUserAvatar" class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" alt="Your avatar" loading="lazy" @error="(e) => e.target.src = '/images/default-avatar.png'" />
-          <div class="flex-1 flex gap-2">
+        <div class="flex gap-2">
+          <img :src="currentUserAvatar" class="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 aspect-square rounded-full object-cover" alt="Your avatar" loading="lazy" @error="(e) => e.target.src = '/images/default-avatar.png'" />
+          <div class="flex-1 flex gap-1.5">
             <input 
               v-model="newComment"
               type="text" 
               placeholder="เขียนความคิดเห็น..." 
-              class="flex-1 px-4 py-2.5 rounded-full bg-gray-100 dark:bg-vikinger-dark-200 border-none outline-none text-gray-800 dark:text-white focus:ring-2 focus:ring-vikinger-purple/30 transition-all"
+              class="flex-1 w-full min-w-0 px-3 py-2 text-sm rounded-full bg-gray-100 dark:bg-vikinger-dark-200 border-none outline-none text-gray-800 dark:text-white focus:ring-2 focus:ring-vikinger-purple/30 transition-all"
               :disabled="isCommenting"
               @keydown.enter="addComment"
             />
             <button 
               @click="addComment" 
               :disabled="isCommenting || !newComment.trim()"
-              class="p-2.5 rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-shrink-0 p-2 rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Icon v-if="!isCommenting" icon="fluent:send-24-filled" class="w-5 h-5" />
-              <Icon v-else icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
+              <Icon v-if="!isCommenting" icon="fluent:send-20-filled" class="w-4 h-4 sm:w-5 sm:h-5" />
+              <Icon v-else icon="fluent:spinner-ios-16-regular" class="w-4 h-4 animate-spin" />
             </button>
           </div>
         </div>
 
         <!-- Existing Comments -->
-        <div v-if="displayedComments.length" class="space-y-3">
-          <div v-for="comment in displayedComments" :key="comment.id" class="flex gap-3 group">
+        <div v-if="displayedComments.length" class="space-y-2.5">
+          <div v-for="comment in displayedComments" :key="comment.id" class="flex gap-2 group">
             <img :src="getCommentAvatar(comment)" 
-                 class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" 
+                 class="w-8 h-8 flex-shrink-0 aspect-square rounded-full object-cover" 
                  :alt="comment.user?.username || comment.author?.username"
                  @error="(e) => e.target.src = '/images/default-avatar.png'" />
-            <div class="flex-1">
-              <div class="bg-gray-100 dark:bg-vikinger-dark-200 rounded-2xl p-3">
-                <h6 class="font-semibold text-sm text-gray-800 dark:text-white">{{ comment.user?.username || comment.author?.username }}</h6>
-                <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">{{ comment.content }}</p>
+            <div class="flex-1 min-w-0">
+              <div class="bg-gray-100 dark:bg-vikinger-dark-200 rounded-2xl px-3 py-2">
+                <h6 class="font-semibold text-xs sm:text-sm text-gray-800 dark:text-white">{{ comment.user?.username || comment.author?.username }}</h6>
+                <p class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 mt-0.5 break-words">{{ comment.content }}</p>
               </div>
               
               <!-- Comment Stats -->
@@ -2741,6 +2749,14 @@ const handlePollUpdate = (updatedPoll) => {
                 >
                   <Icon icon="fluent:arrow-reply-20-regular" class="w-3.5 h-3.5" />
                   <span class="hidden sm:inline">ตอบกลับ</span>
+                </button>
+                <button 
+                  v-if="isOwnPost || authStore.user?.id === (comment.user?.id || comment.author?.id)"
+                  @click="deleteComment(comment.id)"
+                  class="flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-gray-100 dark:hover:bg-vikinger-dark-300 hover:text-red-500"
+                >
+                  <Icon icon="fluent:delete-20-regular" class="w-3.5 h-3.5" />
+                  <span class="hidden sm:inline">ลบ</span>
                 </button>
                 <!-- View Replies Toggle -->
                 <button 

@@ -61,7 +61,7 @@ const calculatedGrade = computed(() => {
     
     // Check if score is below passing threshold (50% of total score)
     const passingThreshold = props.course.data.total_score / 2;
-    if (totalAchievedScore.value <= passingThreshold) {
+    if (totalAchievedScore.value < passingThreshold) {
         return { grade: '0', label: '0 (ไม่ผ่านเกณฑ์)', status: 'fail' };
     }
     
@@ -74,7 +74,8 @@ const calculatedGrade = computed(() => {
     if (percentage >= 75) return { grade: '2.5', label: '2.5 (ค่อนข้างดี)', status: 'fairly-good' };
     if (percentage >= 70) return { grade: '2.0', label: '2.0 (พอใช้)', status: 'fair' };
     if (percentage >= 60) return { grade: '1.5', label: '1.5 (ผ่านขั้นต่ำ)', status: 'minimum-pass' };
-    if (percentage > passingThreshold / props.course.data.total_score * 100) return { grade: '1.0', label: '1.0 (ผ่าน)', status: 'pass' };
+    // if (percentage > passingThreshold / props.course.data.total_score * 100) return { grade: '1.0', label: '1.0 (ผ่าน)', status: 'pass' };
+    if (percentage >= (passingThreshold / props.course.data.total_score * 100)) return { grade: '1.0', label: '1.0 (ผ่าน)', status: 'pass' };
     
     return { grade: '0', label: '0 (ไม่ผ่าน)', status: 'fail' };
 });
@@ -82,7 +83,7 @@ const calculatedGrade = computed(() => {
 // Determine pass/fail status
 const passFailStatus = computed(() => {
     const passingThreshold = props.course.data.total_score / 2;
-    return totalAchievedScore.value > passingThreshold ? 'ผ่าน' : 'ไม่ผ่าน';
+    return totalAchievedScore.value >= passingThreshold ? 'ผ่าน' : 'ไม่ผ่าน';
 });
 
 // Get grade color based on status

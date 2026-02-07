@@ -74,6 +74,24 @@ const menuGroups = computed(() => [
         to: `/academies/${props.academyName}/admin/roles`, 
         permission: 'roles.view' 
       },
+      { 
+        icon: 'fluent:link-24-regular', 
+        label: 'ลิงก์เชิญสมาชิก', 
+        to: `/academies/${props.academyName}/admin/invite-links`, 
+        permission: 'members.manage' 
+      },
+      { 
+        icon: 'fluent:tag-24-regular', 
+        label: 'แท็กสมาชิก', 
+        to: `/academies/${props.academyName}/admin/member-tags`, 
+        permission: 'members.manage' 
+      },
+      { 
+        icon: 'fluent:people-community-24-regular', 
+        label: 'ผู้ปกครอง', 
+        to: `/academies/${props.academyName}/admin/guardians`, 
+        permission: 'members.view' 
+      },
     ]
   },
   {
@@ -86,9 +104,21 @@ const menuGroups = computed(() => [
         permission: 'courses.view' 
       },
       { 
+        icon: 'fluent:book-globe-24-regular', 
+        label: 'หลักสูตร', 
+        to: `/academies/${props.academyName}/admin/curriculums`, 
+        permission: 'courses.view' 
+      },
+      { 
         icon: 'fluent:people-team-24-regular', 
-        label: 'กลุ่มเรียน', 
-        to: `/academies/${props.academyName}/admin/groups`, 
+        label: 'ห้องเรียน', 
+        to: `/academies/${props.academyName}/admin/classrooms`, 
+        permission: 'groups.view' 
+      },
+      { 
+        icon: 'fluent:organization-24-regular', 
+        label: 'ฝ่าย/แผนก', 
+        to: `/academies/${props.academyName}/admin/departments`, 
         permission: 'groups.view' 
       },
       { 
@@ -120,6 +150,23 @@ const menuGroups = computed(() => [
         to: `/academies/${props.academyName}/admin/grades`, 
         permission: 'grades.view' 
       },
+      { 
+        icon: 'fluent:home-person-24-regular', 
+        label: 'เยี่ยมบ้าน', 
+        to: `/academies/${props.academyName}/admin/home-visits`, 
+        permission: 'home_visits.view' 
+      },
+    ]
+  },
+  {
+    title: 'บุคลากร',
+    items: [
+      { 
+        icon: 'fluent:person-board-24-regular', 
+        label: 'ข้อมูลบุคลากร', 
+        to: `/academies/${props.academyName}/admin/staff`, 
+        permission: 'staff.view' 
+      },
     ]
   },
   {
@@ -142,11 +189,23 @@ const menuGroups = computed(() => [
         to: `/academies/${props.academyName}/admin/reports`, 
         permission: 'reports.view' 
       },
+      { 
+        icon: 'fluent:history-24-regular', 
+        label: 'ประวัติกิจกรรม', 
+        to: `/academies/${props.academyName}/admin/activity-log`, 
+        permission: 'reports.view' 
+      },
     ]
   },
   {
     title: 'ตั้งค่า',
     items: [
+      { 
+        icon: 'fluent:building-24-regular', 
+        label: 'ระบบบริหารโรงเรียน', 
+        to: `/academies/${props.academyName}/admin/school-management`, 
+        permission: 'settings.manage' 
+      },
       { 
         icon: 'fluent:settings-24-regular', 
         label: 'ตั้งค่าโรงเรียน', 

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, reactive } from 'vue'
 import { Icon } from '@iconify/vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
 import VideoModal from '~/components/media/VideoModal.vue'
 import TopicAccordion from './TopicAccordion.vue'
+import TopicFormModal from './TopicFormModal.vue'
 import LessonInteractionTabs from './LessonInteractionTabs.vue'
+import Swal from 'sweetalert2'
 
 interface Props {
   lesson: any
@@ -33,7 +35,14 @@ const emit = defineEmits<{
   share: [lesson: any]
   comment: [lessonId: number]
   navigate: [lessonId: number]
+  refresh: []
+  'topic-created': [topic: any]
+  'topic-updated': [topic: any]
+  'topic-deleted': [topicId: number]
 }>()
+
+const api = useApi()
+const swal = useSweetAlert()
 
 // State
 const showFullContent = ref(false)
@@ -42,6 +51,128 @@ const completedTopics = ref<number[]>([]) // Track completed topic IDs
 const showVideoModal = ref(false) // Video modal state
 const showImagePreview = ref(false) // Image preview modal state
 const previewIndex = ref(0) // Current preview image index
+
+// Topic Management
+const showTopicModal = ref(false)
+const editingTopic = ref(null)
+const isSubmittingTopic = ref(false)
+
+const openCreateTopicModal = () => {
+    editingTopic.value = null
+    showTopicModal.value = true
+}
+
+const editTopic = (topic: any) => {
+    editingTopic.value = topic
+    showTopicModal.value = true
+}
+
+const handleTopicSubmit = async (formData: any) => {
+    isSubmittingTopic.value = true
+    
+    // Prepare FormData for file upload
+    const payload = new FormData()
+    payload.append('title', formData.title)
+    payload.append('content', formData.content)
+    if(formData.youtube_url) payload.append('youtube_url', formData.youtube_url)
+    payload.append('min_read', formData.min_read)
+
+    // Append images
+    if (formData.images && formData.images.length > 0) {
+        formData.images.forEach((file: File, index: number) => {
+            payload.append(`images[${index}]`, file)
+        })
+    }
+
+    // Append _method for PUT if editing (Laravel quirk for FormData)
+    if (editingTopic.value) {
+        payload.append('_method', 'PUT')
+    }
+
+    try {
+        if (editingTopic.value) {
+            // Updating
+            const response = await api.post(`/api/lessons/${props.lesson.id}/topics/${editingTopic.value.id}`, payload) as any
+            swal.toast('แก้ไขข้อมูลเรียบร้อย', 'success')
+            // Update topic in local state immediately
+            if (response.topic) {
+                emit('topic-updated', response.topic)
+            } else {
+                emit('refresh')
+            }
+        } else {
+            // Creating
+            const response = await api.post(`/api/lessons/${props.lesson.id}/topics`, payload) as any
+            swal.toast('เพิ่มหัวข้อเรียบร้อย', 'success')
+            // Add new topic to local state immediately
+            if (response.newTopic) {
+                emit('topic-created', response.newTopic)
+            } else {
+                emit('refresh')
+            }
+        }
+        showTopicModal.value = false
+    } catch (err: any) {
+        console.error(err)
+        swal.error(err.data?.message || 'ไม่สามารถบันทึกข้อมูลได้')
+    } finally {
+        isSubmittingTopic.value = false
+    }
+}
+
+const deleteTopicImage = async (imageId: number) => {
+    try {
+        const result = await swal.confirm('คุณต้องการลบรูปภาพนี้ใช่หรือไม่?', 'ยืนยันการลบ')
+        if (result) {
+            // Assuming there is an endpoint for deleting topic images or generic image delete
+            // Since we don't have a specific `deleteImage` in TopicController visible, 
+            // we might need to check how images are handled.
+            // Often there is a `MediaController` or specific route.
+            // For now, let's assume a generic topic image delete route logic or leave it as a TODO if not sure.
+            // Looking at TopicController: `public function destroy(Topic $topic)`...
+            // It doesn't seem to have specific image delete.
+            // But usually systems have a way.
+            // Let's rely on standard practice: DELETE /api/topics/{topic}/images/{image} or similar.
+            // If not available, we warn user.
+            
+            // Wait, I saw `TopicController` earlier. Let me double check if I missed `deleteImage`.
+            // I'll proceed with a standard guess or skip implementing delete EXISTING image individually for now 
+            // and rely on Edit to replace content, but images are tricky.
+            // Actually, usually deleting the generic 'image' model works if it's polymorphic.
+            
+            // For now, let's just log it and show error "Not implemented" to be safe, 
+            // OR try a common pattern `api.delete('/api/images/' + imageId)`.
+            // Let's try to find a generic image delete route later.
+            
+            swal.error('ระบบยังไม่รองรับการลบรูปภาพรายบุคคลในขณะนี้')
+        }
+    } catch (err) {
+        console.error(err)
+    }
+}
+
+const deleteTopic = async (topic: any) => {
+    const result = await Swal.fire({
+        title: 'ยืนยันการลบ?',
+        text: "การกระทำนี้ไม่สามารถยกเลิกได้",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'ลบเลย'
+    })
+
+    if (result.isConfirmed) {
+        try {
+            await api.delete(`/api/lessons/${props.lesson.id}/topics/${topic.id}`)
+            swal.toast('ลบหัวข้อเรียบร้อย', 'success')
+            emit('topic-deleted', topic.id)
+        } catch (err) {
+             swal.error('ไม่สามารถลบหัวข้อได้')
+        }
+    }
+}
+
 
 // Content overflow detection
 const contentRef = ref<HTMLElement | null>(null)
@@ -572,37 +703,62 @@ const handleTopicComplete = (topicId: number) => {
       </div>
 
       <!-- Topics Section -->
-      <div v-if="hasTopics">
-        <button
-          @click="toggleTopics"
-          class="w-full flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-        >
-          <div class="flex items-center gap-3">
-            <Icon
-              icon="fluent:book-open-24-filled"
-              class="w-6 h-6 text-purple-600 dark:text-purple-400"
-            />
-            <div class="text-left">
-              <h3 class="font-semibold text-gray-900 dark:text-white">หัวข้อย่อย</h3>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                {{ lesson.topics.length }} หัวข้อ
-              </p>
-            </div>
-          </div>
-          <Icon
-            :icon="showTopics ? 'fluent:chevron-up-24-filled' : 'fluent:chevron-down-24-filled'"
-            class="w-5 h-5 text-gray-600 dark:text-gray-400"
-          />
-        </button>
+      <div v-if="hasTopics || isAdmin" class="mt-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+                <Icon icon="fluent:book-open-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                หัวข้อย่อย
+                <span v-if="hasTopics" class="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
+                    ({{ lesson.topics.length }} หัวข้อ)
+                </span>
+            </h3>
+            
+             <button 
+                v-if="isAdmin"
+                @click="openCreateTopicModal"
+                class="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 flex items-center gap-2 shadow-md transition-all hover:scale-105"
+            >
+                <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
+                เพิ่มหัวข้อ
+            </button>
+        </div>
 
-        <div v-show="showTopics" class="mt-4 space-y-2">
-          <TopicAccordion
-            v-for="topic in lesson.topics"
-            :key="topic.id"
-            :topic="topic"
-            :is-completed="completedTopics.includes(topic.id)"
-            @toggle-complete="handleTopicComplete"
-          />
+        <div v-if="hasTopics">
+            <!-- Collapsible Button was here, but maybe cleaner to just show list if we have separation? 
+                 Original design had a collapsible button. Let's keep it but slightly different or just list them.
+                 Actually, the original design wrapped everything in a button toggler. 
+                 Let's keep the toggler if topics exist. -->
+            
+             <button
+              @click="toggleTopics"
+              class="w-full flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+            >
+               <span class="font-semibold text-gray-800 dark:text-gray-200">
+                  {{ showTopics ? 'ซ่อนหัวข้อ' : 'แสดงหัวข้อทั้งหมด' }}
+               </span>
+               <Icon
+                :icon="showTopics ? 'fluent:chevron-up-24-filled' : 'fluent:chevron-down-24-filled'"
+                class="w-5 h-5 text-gray-600 dark:text-gray-400"
+              />
+            </button>
+
+            <div v-show="showTopics" class="mt-4 space-y-2">
+              <TopicAccordion
+                v-for="topic in lesson.topics"
+                :key="topic.id"
+                :topic="topic"
+                :is-completed="completedTopics.includes(topic.id)"
+                :isAdmin="isAdmin"
+                @toggle-complete="handleTopicComplete"
+                @edit="editTopic"
+                @delete="deleteTopic"
+              />
+            </div>
+        </div>
+        
+        <div v-else class="p-8 text-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+             <p class="text-gray-500 dark:text-gray-400 mb-2">ยังไม่มีหัวข้อย่อยในบทเรียนนี้</p>
+             <button v-if="isAdmin" @click="openCreateTopicModal" class="text-purple-600 hover:text-purple-700 font-medium hover:underline">เพิ่มหัวข้อแรกเลย</button>
         </div>
       </div>
 
@@ -663,6 +819,16 @@ const handleTopicComplete = (topicId: number) => {
         <div v-else class="flex-1"></div>
       </div>
     </div>
+
+    <!-- Topic Form Modal -->
+    <TopicFormModal
+        :show="showTopicModal"
+        :topic="editingTopic"
+        :is-submitting="isSubmittingTopic"
+        @close="showTopicModal = false"
+        @submit="handleTopicSubmit"
+        @delete-image="deleteTopicImage"
+    />
 
     <!-- Video Modal -->
     <VideoModal

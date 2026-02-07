@@ -74,6 +74,8 @@ class AcademyMemberResource extends JsonResource
                     'class_level' => $this->student->class_level,
                     'class_section' => $this->student->class_section,
                     'current_classroom' => $this->student->current_classroom,
+                    'gender' => $this->student->gender,
+                    'gender_text' => $this->student->gender_text,
                 ];
             }),
             'inviter' => $this->whenLoaded('inviter', function () {
@@ -82,6 +84,15 @@ class AcademyMemberResource extends JsonResource
                     'name' => $this->inviter->name,
                     'profile_photo_url' => $this->inviter->profile_photo_url,
                 ];
+            }),
+            'tags' => $this->whenLoaded('tags', function () {
+                return $this->tags->map(function ($tag) {
+                    return [
+                        'id' => $tag->id,
+                        'name' => $tag->name,
+                        'color' => $tag->color,
+                    ];
+                });
             }),
             'academy' => new AcademyResource($this->whenLoaded('academy')),
             

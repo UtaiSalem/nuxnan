@@ -62,6 +62,23 @@ export interface UserProfile {
   last_login: string | null
   is_verified: boolean
   is_plearnd_admin: boolean
+  // Gamification & Social Stats (Optional as they might not always be present or computed on fly)
+  quests_completed?: number
+  quests_total?: number
+  badges_unlocked?: number
+  badges_total?: number
+  badges_count?: number
+  streak?: number
+  likes_received?: number
+  comments_count?: number
+  shares_count?: number
+  mutual_friends?: number
+  online_friends?: number
+  new_friends?: number
+  pp?: number // Points alias
+  level_progress?: number
+  groups_count?: number
+  photos_count?: number
   created_at: string
   updated_at: string
 }

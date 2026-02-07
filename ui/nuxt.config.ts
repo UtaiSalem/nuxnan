@@ -11,6 +11,22 @@ export default defineNuxtConfig({
         '@inertiajs/vue3': fileURLToPath(new URL('./shims/inertia-vue3', import.meta.url)),
       },
     },
+    // Optimize Vite build for memory efficiency
+    build: {
+      chunkSizeWarningLimit: 1500,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-vue': ['vue', 'vue-router'],
+            'vendor-ui': ['@headlessui/vue', '@iconify/vue'],
+            'vendor-editor': ['@tiptap/vue-3', '@tiptap/starter-kit'],
+          },
+        },
+      },
+    },
+    optimizeDeps: {
+      include: ['vue', 'vue-router', 'pinia'],
+    },
   },
 
   // Configure Vue to recognize Vidstack custom elements

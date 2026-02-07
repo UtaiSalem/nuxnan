@@ -43,10 +43,12 @@ const academy = computed(() => props.academy || injectedAcademy?.value || course
 const isCourseAdmin = computed(() => props.isCourseAdmin || injectedIsCourseAdmin?.value || courseStore.isCourseAdmin)
 
 const api = useApi()
+const router = useRouter()
 const isEnrolling = ref(false)
 const isWishlisted = ref(false)
 const isTogglingFavorite = ref(false)
 const expandedSections = ref<number[]>([0])
+const showPurchaseModal = ref(false)
 
 // Description editing state
 const isEditingDescription = ref(false)
@@ -126,8 +128,32 @@ const toggleSection = (index: number) => {
   }
 }
 
-// Enroll in course
+// Calculate course price
+const coursePrice = computed(() => {
+  const price = course.value?.tuition_fees ?? course.value?.price ?? 0
+  const discount = course.value?.discount ?? 0
+  if (price > 0 && discount > 0) {
+    return price - (price * discount / 100)
+  }
+  return price
+})
+
+// Enroll in course - shows purchase modal for paid courses
 const enrollCourse = async () => {
+  if (!course.value) return
+  
+  // Show purchase confirmation for paid courses
+  if (coursePrice.value > 0) {
+    showPurchaseModal.value = true
+    return
+  }
+  
+  // Free courses - enroll directly
+  await processEnrollment()
+}
+
+// Process the actual enrollment
+const processEnrollment = async () => {
   if (!course.value) return
   
   isEnrolling.value = true
@@ -141,12 +167,38 @@ const enrollCourse = async () => {
         isMember: true, 
         member_status: response.memberStatus 
       })
+      
+      // Show success message for paid purchases
+      if (response.paid) {
+        Swal.fire({
+          icon: 'success',
+          title: 'ซื้อรายวิชาสำเร็จ!',
+          text: `หักเงินจำนวน ฿${response.amount_paid} เรียบร้อยแล้ว`,
+          timer: 3000,
+          showConfirmButton: false
+        })
+      }
     }
   } catch (err: any) {
-    alert(err.data?.msg || 'ไม่สามารถสมัครเรียนได้')
+    Swal.fire({
+      icon: 'error',
+      title: 'ไม่สามารถสมัครเรียนได้',
+      text: err.data?.msg || 'กรุณาลองใหม่อีกครั้ง'
+    })
   } finally {
     isEnrolling.value = false
   }
+}
+
+// Handle purchase confirmation from modal
+const onPurchaseConfirm = async () => {
+  showPurchaseModal.value = false
+  await processEnrollment()
+}
+
+// Redirect to wallet topup
+const goToTopup = () => {
+  router.push('/wallet')
 }
 
 // Toggle wishlist
@@ -536,5 +588,13 @@ const respondToInvitation = async (accept: boolean) => {
         </div>
       </div>
     </div>
+    
+    <!-- Purchase Modal -->
+    <LearnCourseCoursePurchaseModal
+      v-model="showPurchaseModal"
+      :course="course"
+      @confirm="onPurchaseConfirm"
+      @topup="goToTopup"
+    />
   </div>
 </template>

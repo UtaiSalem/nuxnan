@@ -34,24 +34,28 @@ class AcademyPostController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Academy $academy, Request $request)
     {
-
         $validatedData = $request->validate([
             'content'   => 'nullable|string|max:1000',
             'images'    => 'array|max:4',
-            'images.*'  => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'images.*'  => 'image|mimes:jpeg,png,jpg,gif,svg|max:5120',
         ]);
+
+        if (empty($validatedData['content']) && !$request->hasFile('images')) {
+            return response()->json(['message' => 'Post cannot be empty.'], 422);
+        }
 
         $content = $validatedData['content'] ?? '';
         $hashtags = $this->extractHashtags($content);
 
-        // $request->all()->dd();
-
         $post = new AcademyPost();
         $post->user_id = auth()->user()->id;
         $post->academy_id = $academy->id;
-        $post->content = $validatedData['content'] ?? '';
+        $post->content = $content;
         $post->hashtags = json_encode($hashtags);
         $post->save();
         
@@ -59,10 +63,12 @@ class AcademyPostController extends Controller
             $images = $request->file('images');
             foreach ($images as $image) {
                 $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
-                Storage::disk('public')->putFileAs('images/academies/posts', $image, $fileName);
+                $path = $image->storeAs('images/academies/posts', $fileName, 'public');
 
                 $post->images()->create([
                     'filename' => $fileName,
+                    'path' => $path,
+                    'url' => Storage::url($path),
                 ]);
             }
         }
@@ -73,20 +79,26 @@ class AcademyPostController extends Controller
         $activity->activityable()->associate($post);
         $activity->save();
 
-        auth()->user()->decrement('pp',36);
+        // Load the activity with all necessary relationships for FeedPost component
+        $activity->load(['user', 'activityable.user', 'activityable.academy', 'activityable.images']);
 
         return response()->json([
             'success' => true,
             'message' => 'Post created successfully.',
+            'post' => $post->load('images', 'user', 'academy'),
+            'activity' => new \App\Http\Resources\Play\ActivityResource($activity),
         ], 200);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(AcademyPost $academyPost)
+    public function show(Academy $academy, AcademyPost $post)
     {
-        //
+         return response()->json([
+            'success' => true,
+            'post' => $post->load('images', 'user', 'comments'),
+        ]);
     }
 
     /**
@@ -100,17 +112,62 @@ class AcademyPostController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateAcademyPostRequest $request, AcademyPost $academyPost)
+    public function update(Request $request, Academy $academy, AcademyPost $post)
     {
-        //
+        if ($post->user_id !== auth()->id()) {
+             // Check academy admin?
+             if ($academy->user_id !== auth()->id()) {
+                 return response()->json(['message' => 'Unauthorized'], 403);
+             }
+        }
+
+        $validatedData = $request->validate([
+            'content'   => 'nullable|string|max:1000',
+        ]);
+
+        $content = $validatedData['content'] ?? '';
+        $hashtags = $this->extractHashtags($content);
+
+        $post->content = $content;
+        $post->hashtags = json_encode($hashtags);
+        $post->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Post updated successfully.',
+            'post' => $post,
+        ]);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(AcademyPost $academyPost)
+    public function destroy(Academy $academy, AcademyPost $post)
     {
-        //
+        if ($post->user_id !== auth()->id()) {
+             // Check academy admin?
+             // For now simple check
+             if ($academy->user_id !== auth()->id()) {
+                 return response()->json(['message' => 'Unauthorized'], 403);
+             }
+        }
+
+        // Delete images
+        foreach ($post->images as $image) {
+            Storage::disk('public')->delete('images/academies/posts/' . $image->filename);
+            $image->delete();
+        }
+
+        // Delete Activity
+        $post->activity()->delete();
+
+        // Delete Post
+        $post->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Post deleted successfully.',
+        ]);
     }
 
     private function extractHashtags($content)

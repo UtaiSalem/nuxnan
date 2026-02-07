@@ -14,11 +14,6 @@ use App\Http\Resources\Play\ActivityResource;
 
 class AcademyActivityController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:sanctum');
-    }
-
     public function index(Academy $academy)
     {
         $isAcademyAdmin = $academy->user_id == auth()->id();
@@ -34,31 +29,37 @@ class AcademyActivityController extends Controller
         ]);
     }
 
-    public function getActivities(Academy $academy)
+    public function getActivities(Academy $academy, Request $request)
     {
-        // $activities = Activity::whereHasMorph('activityable', ['App\Models\AcademyPost'], function ($query) use ($academy) {
-        //         $query->where('academy_id', $academy->id);
-        // })->latest()->paginate();
-        $activities = Activity::with(['user', 'activityable'])
+        $perPage = $request->input('per_page', 15);
+        
+        // Eager load all necessary relationships for FeedPost component
+        $activities = Activity::with([
+            'user',
+            'activityable.user',
+            'activityable.academy',
+            'activityable.images',
+            'activityable.comments' => function ($cq) {
+                $cq->with('user')->latest()->limit(3);
+            },
+        ])
         ->whereHasMorph('activityable', [AcademyPost::class], function ($query) use ($academy) {
-                $query->where('academy_id', $academy->id);
-        })->latest()->paginate();
+            $query->where('academy_id', $academy->id);
+        })
+        ->latest()
+        ->paginate($perPage);
 
         return response()->json([
             'success' => true,
-            'activities' => ActivityResource::collection($activities),
+            'activities' => [
+                'data' => ActivityResource::collection($activities->items()),
+                'current_page' => $activities->currentPage(),
+                'last_page' => $activities->lastPage(),
+                'total' => $activities->total(),
+                'per_page' => $activities->perPage(),
+                'next_page_url' => $activities->nextPageUrl(),
+                'prev_page_url' => $activities->previousPageUrl(),
+            ],
         ]);
-        // {
-        //     $activities = Activity::whereHasMorph('activityable', 
-        //         ['App\Models\AcademyPost'],
-        //         function ($query) {
-        //         $query->whereIn('privacy_settings', [2,3]);
-        //     })->latest()->paginate();
-    
-        //     return response()->json([
-        //         'success' => true,
-        //         'activities' => ActivityResource::collection($activities),
-        //     ]);
-        // }
     }
 }

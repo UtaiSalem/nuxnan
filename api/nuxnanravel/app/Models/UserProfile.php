@@ -29,6 +29,7 @@ class UserProfile extends Model
         'friends',
         'join_date',
         'last_login',
+        'visits',
         'metadata',
         // Personal Information
         'phone_number',
@@ -65,6 +66,7 @@ class UserProfile extends Model
         'privacy_settings' => 'array',
         'interests' => 'array',
         'metadata' => 'array',
+        'visits' => 'integer',
         'followers' => 'integer',
         'following' => 'integer',
         'friends' => 'integer',

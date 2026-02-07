@@ -106,6 +106,59 @@ export const useApi = () => {
     return call(endpoint, { ...options, method: 'DELETE' })
   }
 
+  /**
+   * Download a file as Blob (for PDF/Excel exports)
+   */
+  const getBlob = async (endpoint: string, options: any = {}) => {
+    const token = authStore.token
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase as string
+
+    if (!token) {
+      throw new Error('No authentication token available')
+    }
+
+    const url = endpoint.startsWith('http') ? endpoint : `${apiBase}${endpoint}`
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/octet-stream, application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ...options.headers,
+        },
+      })
+
+      if (!response.ok) {
+        // Try to get error message from response
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Failed to download file')
+        }
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      
+      // Get filename from Content-Disposition header if available
+      const contentDisposition = response.headers.get('Content-Disposition')
+      let filename = 'download'
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+        if (filenameMatch) {
+          filename = filenameMatch[1].replace(/['"]/g, '')
+        }
+      }
+
+      return { blob, filename }
+    } catch (error: any) {
+      console.error('Blob download error:', error)
+      throw error
+    }
+  }
+
   return {
     call,
     get,
@@ -113,5 +166,6 @@ export const useApi = () => {
     put,
     patch,
     delete: del,
+    getBlob,
   }
 }

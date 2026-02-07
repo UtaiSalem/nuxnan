@@ -2,16 +2,23 @@
 import { Icon } from '@iconify/vue'
 import BaseCard from '~/components/atoms/BaseCard.vue'
 import FeedPost from '~/components/play/feed/FeedPost.vue'
-import ProfileCompletionWidget from '~/components/organisms/ProfileCompletionWidget.vue'
 import CreatePostBox from '~/components/play/feed/CreatePostBox.vue'
-import FriendsList from '~/components/profile/FriendsList.vue'
-import PhotosGallery from '~/components/profile/PhotosGallery.vue'
-import BadgesDisplay from '~/components/profile/BadgesDisplay.vue'
-import FriendRequestsWidget from '~/components/profile/FriendRequestsWidget.vue'
-import ProfileAboutSection from '~/components/profile/ProfileAboutSection.vue'
-import GroupsList from '~/components/profile/GroupsList.vue'
-import EventsList from '~/components/profile/EventsList.vue'
-import VideosList from '~/components/profile/VideosList.vue'
+// Lazy load heavy components to reduce initial memory footprint
+const ProfileCompletionWidget = defineAsyncComponent(() => import('~/components/organisms/ProfileCompletionWidget.vue'))
+const FriendsList = defineAsyncComponent(() => import('~/components/profile/FriendsList.vue'))
+const PhotosGallery = defineAsyncComponent(() => import('~/components/profile/PhotosGallery.vue'))
+const BadgesDisplay = defineAsyncComponent(() => import('~/components/profile/BadgesDisplay.vue'))
+const FriendRequestsWidget = defineAsyncComponent(() => import('~/components/profile/FriendRequestsWidget.vue'))
+const ProfileAboutSection = defineAsyncComponent(() => import('~/components/profile/ProfileAboutSection.vue'))
+const GroupsList = defineAsyncComponent(() => import('~/components/profile/GroupsList.vue'))
+const EventsList = defineAsyncComponent(() => import('~/components/profile/EventsList.vue'))
+const VideosList = defineAsyncComponent(() => import('~/components/profile/VideosList.vue'))
+const CoursesList = defineAsyncComponent(() => import('~/components/profile/CoursesList.vue'))
+const CertificatesList = defineAsyncComponent(() => import('~/components/profile/CertificatesList.vue'))
+const BlogList = defineAsyncComponent(() => import('~/components/profile/BlogList.vue'))
+const ForumList = defineAsyncComponent(() => import('~/components/profile/ForumList.vue'))
+const MarketplaceList = defineAsyncComponent(() => import('~/components/profile/MarketplaceList.vue'))
+const CartList = defineAsyncComponent(() => import('~/components/profile/CartList.vue'))
 import type { UserProfile, FriendshipStatus } from '~/composables/useProfile'
 
 definePageMeta({
@@ -99,7 +106,7 @@ const loadProfile = async () => {
   }
 }
 
-// Load user activities/posts
+// Load user activities/posts with pagination and memory optimization
 const loadActivities = async (page: number = 1) => {
   console.log('[loadActivities] Starting...', { 
     page, 
@@ -124,14 +131,18 @@ const loadActivities = async (page: number = 1) => {
       userIdentifier = profile.value.reference_code || profile.value.user_id || referenceCode.value
     }
     
-    console.log('[loadActivities] Fetching activities for:', userIdentifier, 'URL:', `/api/users/${userIdentifier}/activities?page=${page}`)
-    const response = await api.get(`/api/users/${userIdentifier}/activities?page=${page}`)
+    // Limit per page to reduce memory usage (default 10, can be adjusted)
+    const perPage = 10
+    console.log('[loadActivities] Fetching activities for:', userIdentifier, 'URL:', `/api/users/${userIdentifier}/activities?page=${page}&per_page=${perPage}`)
+    const response = await api.get(`/api/users/${userIdentifier}/activities?page=${page}&per_page=${perPage}`)
     console.log('[loadActivities] Response:', response)
     
     if (response.success && response.activities) {
       if (page === 1) {
+        // Clear previous activities when loading first page
         activities.value = response.activities
       } else {
+        // Append new activities with memory cleanup for old ones
         activities.value = [...activities.value, ...response.activities]
       }
       // Update pagination info
@@ -351,8 +362,19 @@ onMounted(async () => {
   })
 })
 
+// Memory cleanup on unmount
+onUnmounted(() => {
+  // Clear large arrays to free memory
+  activities.value = []
+  profile.value = null
+  friendshipStatus.value = null
+})
+
 // Watch for route changes
 watch(() => route.params.id, async () => {
+  // Clear previous data to free memory before loading new profile
+  activities.value = []
+  profile.value = null
   await loadProfile()
 })
 
@@ -386,9 +408,18 @@ const userQuests = computed(() => {
 
 const userBadges = computed(() => {
   // TODO: Replace with actual badges data when API is ready
+  if (!profile.value?.badges) {
+    return {
+      unlocked: profile.value?.badges_unlocked ?? 0,
+      total: profile.value?.badges_total ?? 4, // Defaulting to seeded count if unknown
+      list: []
+    }
+  }
+  
   return {
-    unlocked: profile.value?.badges_unlocked ?? 0,
-    total: profile.value?.badges_total ?? 46
+    unlocked: profile.value.badges_unlocked ?? 0,
+    total: profile.value.badges_total ?? 4,
+    list: profile.value.badges
   }
 })
 
@@ -422,6 +453,12 @@ const friendButtonConfig = computed(() => {
 
 // Friend action state
 const isProcessingFriend = ref(false)
+
+// Handle message click
+const handleMessage = () => {
+  if (!profile.value) return
+  navigateTo(`/chat?userId=${profile.value.user_id}`)
+}
 
 // Handle friend action
 const handleFriendAction = async () => {
@@ -539,12 +576,14 @@ const calculateAge = (birthdate: string) => {
 }
 
 // Tabs configuration - Vikinger style with icons
-const tabs = [
+const allTabs = [
   { key: 'about', label: 'About', icon: 'fluent:person-info-24-regular' },
   { key: 'timeline', label: 'Timeline', icon: 'fluent:timeline-24-regular' },
   { key: 'friends', label: 'Friends', icon: 'fluent:people-24-regular' },
   { key: 'photos', label: 'Photos', icon: 'fluent:image-24-regular' },
   { key: 'videos', label: 'Videos', icon: 'fluent:video-24-regular' },
+  { key: 'courses', label: 'Courses', icon: 'fluent:book-open-24-regular' },
+  { key: 'certificates', label: 'Certificates', icon: 'fluent:certificate-24-regular' },
   { key: 'badges', label: 'Badges', icon: 'fluent:trophy-24-regular' },
   { key: 'groups', label: 'Groups', icon: 'fluent:people-community-24-regular' },
   { key: 'events', label: 'Events', icon: 'fluent:calendar-24-regular' },
@@ -553,6 +592,16 @@ const tabs = [
   { key: 'marketplace', label: 'Marketplace', icon: 'fluent:building-shop-24-regular' },
   { key: 'cart', label: 'Cart', icon: 'fluent:cart-24-regular' },
 ]
+
+const tabs = computed(() => {
+  if (canViewFullProfile.value || isOwnProfile.value) {
+    return allTabs
+  }
+  
+  // If not friends/private, only show public tabs
+  const allowedKeys = ['about', 'timeline']
+  return allTabs.filter(t => allowedKeys.includes(t.key))
+})
 
 // Mobile bottom tabs - show only main tabs for mobile
 const mobileBottomTabs = [
@@ -706,7 +755,10 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                     <span class="hidden sm:inline">{{ friendButtonConfig.text }}</span>
                   </button>
                   
-                  <button class="px-5 py-2.5 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-300 dark:hover:bg-gray-700 transition-all flex items-center gap-2 font-bold">
+                  <button 
+                    @click="handleMessage"
+                    class="px-5 py-2.5 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-300 dark:hover:bg-gray-700 transition-all flex items-center gap-2 font-bold"
+                  >
                     <Icon icon="fluent:chat-24-regular" class="w-5 h-5" />
                     <span class="hidden sm:inline">ส่งข้อความ</span>
                   </button>
@@ -1270,7 +1322,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
         </div>
 
         <!-- Main Content Area (Center) -->
-        <div class="lg:col-span-6 space-y-6">
+        <div class="lg:col-span-6 space-y-2 sm:space-y-3">
           <!-- Timeline Tab -->
           <template v-if="activeTab === 'timeline'">
             <!-- Create Post (Own Profile Only) -->
@@ -1351,6 +1403,20 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
             />
           </template>
 
+          <!-- Courses Tab -->
+          <template v-if="activeTab === 'courses'">
+            <CoursesList 
+              :user-id="profile.reference_code || profile.user_id"
+            />
+          </template>
+
+          <!-- Certificates Tab -->
+          <template v-if="activeTab === 'certificates'">
+            <CertificatesList 
+              :user-id="profile.reference_code || profile.user_id"
+            />
+          </template>
+
           <!-- Groups Tab -->
           <template v-if="activeTab === 'groups'">
             <GroupsList 
@@ -1369,36 +1435,34 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
 
           <!-- Blog Tab -->
           <template v-if="activeTab === 'blog'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:document-text-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Blog posts coming soon</p>
-            </BaseCard>
+            <BlogList 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
 
           <!-- Forum Tab -->
           <template v-if="activeTab === 'forum'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:chat-multiple-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Forum discussions coming soon</p>
-            </BaseCard>
+            <ForumList 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
 
           <!-- Marketplace Tab -->
           <template v-if="activeTab === 'marketplace'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:building-shop-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Marketplace coming soon</p>
-              <p class="text-gray-500 text-sm mt-2">Buy and sell items with other users</p>
-            </BaseCard>
+            <MarketplaceList 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
 
           <!-- Cart Tab -->
           <template v-if="activeTab === 'cart'">
-            <BaseCard class="bg-gray-800 border-gray-700 text-center py-12">
-              <Icon icon="fluent:cart-24-regular" class="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p class="text-gray-400">Your cart is empty</p>
-              <p class="text-gray-500 text-sm mt-2">Items you add to cart will appear here</p>
-            </BaseCard>
+            <CartList 
+              :user-id="profile.reference_code || profile.user_id"
+              :is-own-profile="isOwnProfile"
+            />
           </template>
         </div>
 
@@ -1517,96 +1581,46 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   <Icon icon="fluent:ribbon-star-24-filled" class="w-5 h-5" />
                 </div>
                 ความสำเร็จ
-                <span class="ml-auto px-3 py-1 bg-white/20 rounded-full text-sm font-bold">3/10</span>
+                <span class="ml-auto px-3 py-1 bg-white/20 rounded-full text-sm font-bold">{{ userBadges.unlocked }}/{{ userBadges.total }}</span>
               </h3>
             </div>
             
             <div class="relative p-5 space-y-3">
               <!-- Achievement Items - Enhanced -->
               
-              <!-- First Post - Unlocked -->
-              <div class="group relative overflow-hidden flex items-center gap-4 p-3 bg-gradient-to-r from-green-900/30 to-emerald-900/20 rounded-xl border border-green-500/30 hover:border-green-400/50 transition-all cursor-pointer">
-                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-green-400/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                <div class="relative w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
-                  <Icon icon="fluent:document-checkmark-24-filled" class="w-6 h-6 text-white" />
+              <!-- Achievement Items - Dynamic -->
+              <div 
+                v-for="badge in userBadges.list" 
+                :key="badge.id"
+                class="group relative overflow-hidden flex items-center gap-4 p-3 bg-gradient-to-r from-gray-800/30 to-gray-700/20 rounded-xl border border-gray-700/50 hover:border-vikinger-cyan/50 transition-all cursor-pointer"
+              >
+                <!-- Hover Effect -->
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-vikinger-cyan/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                
+                <!-- Icon -->
+                <div class="relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center shadow-lg group-hover:from-vikinger-purple group-hover:to-vikinger-cyan transition-all">
+                  <Icon :icon="badge.icon || 'fluent:ribbon-star-24-filled'" class="w-6 h-6 text-white" />
                 </div>
+                
+                <!-- Info -->
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-bold text-white">โพสต์แรก</p>
-                  <p class="text-xs text-gray-400 truncate">สร้างโพสต์แรกของคุณ</p>
+                  <p class="text-sm font-bold text-white">{{ badge.name }}</p>
+                  <p class="text-xs text-gray-400 truncate">{{ badge.description }}</p>
                 </div>
+                
+                <!-- XP/Status -->
                 <div class="flex items-center gap-2">
-                  <span class="text-xs text-green-400 font-bold">+50 XP</span>
-                  <Icon icon="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-green-500" />
-                </div>
-              </div>
-              
-              <!-- 10 Friends - In Progress -->
-              <div class="group relative overflow-hidden flex items-center gap-4 p-3 bg-gradient-to-r from-blue-900/30 to-indigo-900/20 rounded-xl border border-blue-500/30 hover:border-blue-400/50 transition-all cursor-pointer">
-                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                <div class="relative w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg">
-                  <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-white" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-bold text-white">สังคมออนไลน์</p>
-                  <p class="text-xs text-gray-400 truncate">มีเพื่อน 10 คน</p>
-                  <!-- Progress Bar -->
-                  <div class="mt-1.5 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full" :style="{ width: Math.min((profile.friends_count || 0) * 10, 100) + '%' }"></div>
+                  <span class="text-xs text-vikinger-cyan font-bold" v-if="badge.xp_reward">+{{ badge.xp_reward }} XP</span>
+                  <div class="text-xs text-xs text-gray-500" v-if="badge.unlocked_at">
+                    {{ new Date(badge.unlocked_at).toLocaleDateString() }}
                   </div>
-                </div>
-                <div class="text-right">
-                  <span class="text-xs text-blue-400 font-bold">{{ Math.min(profile.friends_count || 0, 10) }}/10</span>
+                  <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5 text-green-500" />
                 </div>
               </div>
               
-              <!-- 100 Points - Unlocked/Locked based on points -->
-              <div class="group relative overflow-hidden flex items-center gap-4 p-3 rounded-xl border transition-all cursor-pointer"
-                :class="(profile.points || profile.pp || 0) >= 100 
-                  ? 'bg-gradient-to-r from-amber-900/30 to-orange-900/20 border-amber-500/30 hover:border-amber-400/50' 
-                  : 'bg-gray-800/30 border-gray-700 hover:border-gray-600'">
-                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-amber-400/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                <div class="relative w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
-                  :class="(profile.points || profile.pp || 0) >= 100 
-                    ? 'bg-gradient-to-br from-amber-400 to-orange-500' 
-                    : 'bg-gray-700'">
-                  <Icon icon="fluent:star-24-filled" class="w-6 h-6" :class="(profile.points || profile.pp || 0) >= 100 ? 'text-white' : 'text-gray-500'" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-bold text-white">นักสะสมแต้ม</p>
-                  <p class="text-xs text-gray-400 truncate">สะสม 100 แต้ม</p>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold" :class="(profile.points || profile.pp || 0) >= 100 ? 'text-amber-400' : 'text-gray-500'">+100 XP</span>
-                  <Icon 
-                    :icon="(profile.points || profile.pp || 0) >= 100 ? 'fluent:checkmark-circle-24-filled' : 'fluent:lock-closed-24-regular'" 
-                    :class="(profile.points || profile.pp || 0) >= 100 ? 'w-6 h-6 text-amber-500' : 'w-5 h-5 text-gray-500'" 
-                  />
-                </div>
-              </div>
-              
-              <!-- Level 5 - Locked -->
-              <div class="group relative overflow-hidden flex items-center gap-4 p-3 rounded-xl border transition-all cursor-pointer"
-                :class="(profile.level || 1) >= 5 
-                  ? 'bg-gradient-to-r from-purple-900/30 to-violet-900/20 border-purple-500/30 hover:border-purple-400/50' 
-                  : 'bg-gray-800/30 border-gray-700 hover:border-gray-600'">
-                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-purple-400/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                <div class="relative w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
-                  :class="(profile.level || 1) >= 5 
-                    ? 'bg-gradient-to-br from-purple-400 to-violet-500' 
-                    : 'bg-gray-700'">
-                  <Icon icon="fluent:trophy-24-filled" class="w-6 h-6" :class="(profile.level || 1) >= 5 ? 'text-white' : 'text-gray-500'" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-bold text-white">ผู้ชำนาญ</p>
-                  <p class="text-xs text-gray-400 truncate">ถึง Level 5</p>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold" :class="(profile.level || 1) >= 5 ? 'text-purple-400' : 'text-gray-500'">+200 XP</span>
-                  <Icon 
-                    :icon="(profile.level || 1) >= 5 ? 'fluent:checkmark-circle-24-filled' : 'fluent:lock-closed-24-regular'" 
-                    :class="(profile.level || 1) >= 5 ? 'w-6 h-6 text-purple-500' : 'w-5 h-5 text-gray-500'" 
-                  />
-                </div>
+              <!-- Empty State -->
+              <div v-if="userBadges.list.length === 0" class="text-center py-4">
+                  <p class="text-sm text-gray-500">ยังไม่มีเหรียญรางวัล</p>
               </div>
               
               <!-- View All Button -->

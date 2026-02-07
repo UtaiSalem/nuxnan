@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
+import FeedPost from '~/components/play/feed/FeedPost.vue'
 
 definePageMeta({
   layout: 'main',
@@ -45,6 +46,15 @@ const membersPagination = ref({
 })
 const isLoadingMoreMembers = ref(false)
 
+// Activities pagination state
+const activitiesPagination = ref({
+  current_page: 1,
+  last_page: 1,
+  total: 0
+})
+const isLoadingMoreActivities = ref(false)
+const activitiesNextPageUrl = ref<string | null>(null)
+
 // Computed
 const academyName = computed(() => route.params.name as string)
 
@@ -76,9 +86,13 @@ const memberStatusText = computed(() => {
 
   const status = academy.value.memberStatus
   if (status === null || status === undefined) return null
-  if (status === 0 || status === 'pending') return { text: 'รอการอนุมัติ', color: 'bg-yellow-500' }
-  if (status === 1 || status === 'approved' || status === 'member') return { text: 'สมาชิก', color: 'bg-green-500' }
-  if (status === 2 || status === 'rejected') return { text: 'ถูกปฏิเสธ', color: 'bg-red-500' }
+  
+  // Status values: 1=Pending, 2=Approved, 3=Rejected, 4=Invited, 5=Suspended
+  if (status === 1 || status === 'pending') return { text: 'รอการอนุมัติ', color: 'bg-yellow-500' }
+  if (status === 2 || status === 'approved' || status === 'member') return { text: 'สมาชิก', color: 'bg-green-500' }
+  if (status === 3 || status === 'rejected') return { text: 'ถูกปฏิเสธ', color: 'bg-red-500' }
+  if (status === 4 || status === 'invited') return { text: 'ได้รับเชิญ', color: 'bg-blue-500' }
+  if (status === 5 || status === 'suspended') return { text: 'ถูกระงับ', color: 'bg-gray-500' }
   return null
 })
 
@@ -111,6 +125,9 @@ const fetchAcademy = async () => {
     if (response.success) {
       academy.value = JSON.parse(JSON.stringify(response.academy))
       isAcademyAdmin.value = response.isAcademyAdmin || false
+      
+      // Auto-fetch activities for the default tab (feed)
+      await fetchActivities()
     } else {
       error.value = response.message || 'ไม่พบข้อมูลโรงเรียน'
     }
@@ -194,21 +211,53 @@ const fetchGroups = async () => {
   }
 }
 
-const fetchActivities = async () => {
+const fetchActivities = async (page = 1, append = false) => {
   if (!academy.value) return
   
-  isLoadingTab.value = true
+  if (page === 1) {
+    isLoadingTab.value = true
+  } else {
+    isLoadingMoreActivities.value = true
+  }
+  
   try {
-    const response: any = await api.get(`/api/academies/${academy.value.id}/activities`)
+    const response: any = await api.get(`/api/academies/${academy.value.id}/activities?page=${page}`)
     if (response.success) {
-      activities.value = JSON.parse(JSON.stringify(response.activities || []))
+      const newActivities = JSON.parse(JSON.stringify(response.activities?.data || response.activities || []))
+      
+      if (append) {
+        activities.value = [...activities.value, ...newActivities]
+      } else {
+        activities.value = newActivities
+      }
+      
+      // Update pagination info
+      if (response.activities?.current_page) {
+        activitiesPagination.value = {
+          current_page: response.activities.current_page,
+          last_page: response.activities.last_page,
+          total: response.activities.total
+        }
+        activitiesNextPageUrl.value = response.activities.next_page_url || null
+      }
     }
   } catch (err) {
     console.error('Failed to fetch activities:', err)
   } finally {
     isLoadingTab.value = false
+    isLoadingMoreActivities.value = false
   }
 }
+
+const loadMoreActivities = () => {
+  if (activitiesPagination.value.current_page < activitiesPagination.value.last_page) {
+    fetchActivities(activitiesPagination.value.current_page + 1, true)
+  }
+}
+
+const hasMoreActivities = computed(() => {
+  return activitiesPagination.value.current_page < activitiesPagination.value.last_page
+})
 
 const switchTab = async (tabId: string) => {
   currentTab.value = tabId
@@ -325,6 +374,39 @@ const handleAcademyPostCreated = async (post: any) => {
   } else {
     // Refresh activities if post data not returned
     await fetchActivities()
+  }
+}
+
+// Handle post deleted from feed
+const handlePostDeleted = (deletedPost: any) => {
+  const postId = deletedPost?.id || deletedPost?.target_resource?.id
+  if (postId) {
+    activities.value = activities.value.filter((activity: any) => {
+      const activityPostId = activity.target_resource?.id || activity.id
+      return activityPostId !== postId
+    })
+  }
+}
+
+// Handle post updated in feed
+const handlePostUpdated = (updatedPost: any) => {
+  const postId = updatedPost?.id || updatedPost?.target_resource?.id
+  if (postId) {
+    const index = activities.value.findIndex((activity: any) => {
+      const activityPostId = activity.target_resource?.id || activity.id
+      return activityPostId === postId
+    })
+    if (index !== -1) {
+      // Update the activity with new data
+      if (activities.value[index].target_resource) {
+        activities.value[index].target_resource = {
+          ...activities.value[index].target_resource,
+          ...updatedPost
+        }
+      } else {
+        activities.value[index] = { ...activities.value[index], ...updatedPost }
+      }
+    }
   }
 }
 
@@ -588,17 +670,15 @@ onMounted(() => {
                 เข้าร่วมโรงเรียน
               </button>
               
-              <!-- Leave Button -->
-              <button
+              <!-- Member Settings Button (replaces Leave button) -->
+              <NuxtLink
                 v-if="canLeave"
-                @click="cancelMembership"
-                :disabled="isMemberActionLoading"
-                class="px-5 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                :to="`/academies/${academy.name}/my-settings`"
+                class="px-5 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
               >
-                <Icon v-if="isMemberActionLoading" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-                <Icon v-else icon="fluent:person-subtract-24-regular" class="w-4 h-4" />
-                ออกจากโรงเรียน
-              </button>
+                <Icon icon="fluent:settings-24-regular" class="w-4 h-4" />
+                ตั้งค่าการเป็นสมาชิก
+              </NuxtLink>
             </div>
           </div>
         </div>
@@ -634,7 +714,7 @@ onMounted(() => {
           </div>
           
           <!-- Feed Tab -->
-          <div v-else-if="currentTab === 'feed'" class="space-y-4">
+          <div v-else-if="currentTab === 'feed'" class="space-y-1.5 sm:space-y-2 md:space-y-3">
             <!-- Post Composer (for members & admins only) - Using CreatePostBox -->
             <PlayFeedCreatePostBox 
               v-if="academy.memberStatus === 2 || academy.authIsAcademyAdmin"
@@ -647,70 +727,29 @@ onMounted(() => {
             <div v-if="activities.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
               <Icon icon="fluent:feed-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p class="text-gray-500 dark:text-gray-400">ยังไม่มีกิจกรรม</p>
+              <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">เริ่มโพสต์เพื่อแชร์ข่าวสารให้กับสมาชิก</p>
             </div>
             
-            <!-- Activity/Post Cards -->
-            <div 
+            <!-- Activity/Post Cards - Using FeedPost Component -->
+            <FeedPost 
               v-for="activity in activities" 
               :key="activity.id"
-              class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm overflow-hidden"
-            >
-              <!-- Post Header -->
-              <div class="p-4 flex items-start gap-3">
-                <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
-                  <img 
-                    v-if="activity.user?.avatar" 
-                    :src="activity.user.avatar" 
-                    :alt="activity.user?.name"
-                    class="w-full h-full object-cover"
-                  />
-                  <Icon v-else icon="fluent:person-24-regular" class="w-full h-full p-2 text-gray-400" />
-                </div>
-                <div class="flex-1">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <h4 class="font-medium text-gray-900 dark:text-white">{{ activity.user?.name || 'ผู้ใช้' }}</h4>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(activity.created_at) }}</p>
-                    </div>
-                    <span 
-                      v-if="activity.type" 
-                      class="text-xs px-2 py-1 rounded-full bg-vikinger-purple/10 text-vikinger-purple"
-                    >
-                      {{ activity.type }}
-                    </span>
-                  </div>
-                  
-                  <!-- Content -->
-                  <div class="mt-3">
-                    <p class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ activity.description || activity.content }}</p>
-                  </div>
-                  
-                  <!-- Images if any -->
-                  <div v-if="activity.images?.length" class="mt-3 grid gap-2" :class="activity.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'">
-                    <img 
-                      v-for="(img, idx) in activity.images.slice(0, 4)" 
-                      :key="idx"
-                      :src="img"
-                      class="rounded-lg w-full h-48 object-cover"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Post Actions -->
-              <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700/50 flex items-center gap-4">
-                <button class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-vikinger-purple transition-colors">
-                  <Icon icon="fluent:heart-24-regular" class="w-5 h-5" />
-                  <span class="text-sm">{{ activity.likes_count || 0 }}</span>
-                </button>
-                <button class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-vikinger-purple transition-colors">
-                  <Icon icon="fluent:comment-24-regular" class="w-5 h-5" />
-                  <span class="text-sm">{{ activity.comments_count || 0 }}</span>
-                </button>
-                <button class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-vikinger-purple transition-colors ml-auto">
-                  <Icon icon="fluent:share-24-regular" class="w-5 h-5" />
-                </button>
-              </div>
+              :post="activity"
+              @delete-success="handlePostDeleted"
+              @post-updated="handlePostUpdated"
+            />
+            
+            <!-- Load More Button -->
+            <div v-if="hasMoreActivities" class="text-center py-4">
+              <button
+                @click="loadMoreActivities"
+                :disabled="isLoadingMoreActivities"
+                class="px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+              >
+                <Icon v-if="isLoadingMoreActivities" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:arrow-download-24-regular" class="w-4 h-4" />
+                {{ isLoadingMoreActivities ? 'กำลังโหลด...' : 'โหลดเพิ่มเติม' }}
+              </button>
             </div>
           </div>
           
@@ -880,29 +919,30 @@ onMounted(() => {
                     <div class="flex items-center gap-3">
                       <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden ring-2 ring-white dark:ring-vikinger-dark-200">
                         <img 
-                          v-if="member.user?.avatar || member.avatar" 
-                          :src="member.user?.avatar || member.avatar" 
-                          :alt="member.user?.name || member.name"
+                          v-if="member.member_avatar || member.user?.profile_photo_url" 
+                          :src="member.member_avatar || member.user?.profile_photo_url" 
+                          :alt="member.member_name"
                           class="w-full h-full object-cover"
                         />
                         <Icon v-else icon="fluent:person-24-regular" class="w-full h-full p-2 text-gray-400" />
                       </div>
                       <div>
-                        <h4 class="font-medium text-gray-900 dark:text-white">{{ member.user?.name || member.name }}</h4>
+                        <h4 class="font-medium text-gray-900 dark:text-white">{{ member.member_name || member.user?.name || 'ไม่ทราบชื่อ' }}</h4>
                         <div class="flex items-center gap-2 text-sm">
                           <span 
                             :class="[
                               'px-2 py-0.5 rounded-full text-xs font-medium',
                               member.status == 1 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' :
                               member.status == 3 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
-                              member.role === 'admin' ? 'bg-vikinger-purple/10 text-vikinger-purple' :
-                              member.role === 'teacher' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                              member.is_admin ? 'bg-vikinger-purple/10 text-vikinger-purple' :
+                              member.is_teacher ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
                               'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
                             ]"
                           >
-                            {{ member.status == 1 ? 'รออนุมัติ' : member.status == 3 ? 'ถูกปฏิเสธ' : member.role === 'admin' ? 'ผู้ดูแล' : member.role === 'teacher' ? 'ครูผู้สอน' : 'นักเรียน' }}
+                            {{ member.status == 1 ? 'รออนุมัติ' : member.status == 3 ? 'ถูกปฏิเสธ' : member.role_display_name || 'นักเรียน' }}
                           </span>
-                          <span v-if="member.joined_at" class="text-gray-400">เข้าร่วมเมื่อ {{ formatDate(member.joined_at) }}</span>
+                          <span v-if="member.student?.class_level" class="text-gray-400">{{ member.student.class_level }}{{ member.student.class_section ? '/' + member.student.class_section : '' }}</span>
+                          <span v-else-if="member.enrollment_date" class="text-gray-400">เข้าร่วมเมื่อ {{ formatDate(member.enrollment_date) }}</span>
                         </div>
                       </div>
                     </div>

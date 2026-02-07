@@ -52,15 +52,17 @@ class Post extends Model
         });
     }
 
-    // protected $fillable = [
-    //     'user_id',
-    //     'content',
-    //     'status',
-    //     'public',
-    //     'meta',
-    // ];
+    protected $fillable = [
+        'user_id',
+        'content',
+        'status',
+        'public',
+        'meta',
+        'post_type', // added
+        'price', // added for Marketplace
+    ];
 
-    protected $guarded = [];
+    // protected $guarded = [];
 
     protected $appends = ['post_url'];
 

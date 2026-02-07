@@ -35,8 +35,8 @@ class TopicController extends \App\Http\Controllers\Controller
             'user_id'       => auth()->user()->id,
             'course_id'     => $lesson->course_id,
             'title'         => $validatedData['title'],
-            'content'       => $validatedData['content'] === "null" ? null : $validatedData['content'],
-            'youtube_url'   => $validatedData['youtube_url'] === "null" ? null : $validatedData['youtube_url'],
+            'content'       => ($validatedData['content'] ?? null) === "null" ? null : ($validatedData['content'] ?? null),
+            'youtube_url'   => ($validatedData['youtube_url'] ?? null) === "null" ? null : ($validatedData['youtube_url'] ?? null),
             'min_read'      => $validatedData['min_read'],
         ]);
 
@@ -112,8 +112,8 @@ class TopicController extends \App\Http\Controllers\Controller
 
         $topic->update([
             'title'         => $request->title,
-            'content'       => $validatedData['content'] === "null" ? null : $validatedData['content'],
-            'youtube_url'   => $validatedData['youtube_url'] === "null" ? null : $validatedData['youtube_url'],
+            'content'       => ($validatedData['content'] ?? null) === "null" ? null : ($validatedData['content'] ?? null),
+            'youtube_url'   => ($validatedData['youtube_url'] ?? null) === "null" ? null : ($validatedData['youtube_url'] ?? null),
             'min_read'      => $request->min_read
         ]);
 

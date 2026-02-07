@@ -156,6 +156,32 @@ const handleShare = (lessonData: any) => {
   swal.toast('คัดลอกลิงก์แล้ว', 'success')
 }
 
+// Handle topic created - add to lesson topics immediately
+const handleTopicCreated = (newTopic: any) => {
+  if (lesson.value && lesson.value.topics) {
+    lesson.value.topics.push(newTopic)
+  } else if (lesson.value) {
+    lesson.value.topics = [newTopic]
+  }
+}
+
+// Handle topic updated - update in lesson topics immediately
+const handleTopicUpdated = (updatedTopic: any) => {
+  if (lesson.value && lesson.value.topics) {
+    const index = lesson.value.topics.findIndex((t: any) => t.id === updatedTopic.id)
+    if (index !== -1) {
+      lesson.value.topics[index] = updatedTopic
+    }
+  }
+}
+
+// Handle topic deleted - remove from lesson topics immediately
+const handleTopicDeleted = (topicId: number) => {
+  if (lesson.value && lesson.value.topics) {
+    lesson.value.topics = lesson.value.topics.filter((t: any) => t.id !== topicId)
+  }
+}
+
 // Load data on mount
 onMounted(async () => {
   await ensureCourseLoaded()
@@ -235,6 +261,10 @@ watch(lesson, (newLesson) => {
           @dislike="handleDislike"
           @bookmark="handleBookmark"
           @share="handleShare"
+          @refresh="fetchLesson"
+          @topic-created="handleTopicCreated"
+          @topic-updated="handleTopicUpdated"
+          @topic-deleted="handleTopicDeleted"
         />
       </div>
     </template>

@@ -35,6 +35,8 @@ class Course extends Model
         'enrolled_students' => 'integer',
         'rating' => 'integer',
         'discount' => 'integer',
+        'certificate_download_cost' => 'decimal:2',
+        'certificate_free_download' => 'boolean',
     ];
 
     public function courseSettings(): HasOne

@@ -3,66 +3,164 @@
 namespace App\Http\Controllers\Api\Play;
 
 use App\Http\Controllers\Controller;
-
 use App\Models\Notification;
-use App\Http\Requests\StoreNotificationRequest;
-use App\Http\Requests\UpdateNotificationRequest;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class NotificationController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Get notifications for the authenticated user
      */
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        //
+        $query = Notification::forUser($request->user()->id)
+            ->with('sender:id,name,avatar')
+            ->orderBy('created_at', 'desc');
+
+        // Filter by read status
+        if ($request->has('unread_only') && $request->unread_only) {
+            $query->unread();
+        }
+
+        // Filter by type
+        if ($request->type) {
+            $query->ofType($request->type);
+        }
+
+        $notifications = $query->paginate($request->per_page ?? 20);
+
+        // Add computed attributes
+        $notifications->getCollection()->transform(function ($notification) {
+            $notification->icon = $notification->icon;
+            $notification->color = $notification->color;
+            return $notification;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $notifications,
+        ]);
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Get unread count
      */
-    public function create()
+    public function unreadCount(Request $request): JsonResponse
     {
-        //
+        $count = Notification::forUser($request->user()->id)
+            ->unread()
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'count' => $count,
+            ],
+        ]);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Get recent notifications (for dropdown)
      */
-    public function store(StoreNotificationRequest $request)
+    public function recent(Request $request): JsonResponse
     {
-        //
+        $notifications = Notification::forUser($request->user()->id)
+            ->with('sender:id,name,avatar')
+            ->orderBy('created_at', 'desc')
+            ->limit($request->limit ?? 10)
+            ->get();
+
+        // Add computed attributes
+        $notifications->transform(function ($notification) {
+            $notification->icon = $notification->icon;
+            $notification->color = $notification->color;
+            return $notification;
+        });
+
+        $unreadCount = Notification::forUser($request->user()->id)
+            ->unread()
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount,
+            ],
+        ]);
     }
 
     /**
-     * Display the specified resource.
+     * Mark notification as read
      */
-    public function show(Notification $notification)
+    public function markAsRead(Request $request, Notification $notification): JsonResponse
     {
-        //
+        // Verify ownership
+        if ($notification->user_id !== $request->user()->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่มีสิทธิ์',
+            ], 403);
+        }
+
+        $notification->markAsRead();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'อ่านแล้ว',
+        ]);
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Mark all notifications as read
      */
-    public function edit(Notification $notification)
+    public function markAllAsRead(Request $request): JsonResponse
     {
-        //
+        Notification::forUser($request->user()->id)
+            ->unread()
+            ->update(['read_status' => true]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'อ่านทั้งหมดแล้ว',
+        ]);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Delete a notification
      */
-    public function update(UpdateNotificationRequest $request, Notification $notification)
+    public function destroy(Request $request, Notification $notification): JsonResponse
     {
-        //
+        // Verify ownership
+        if ($notification->user_id !== $request->user()->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่มีสิทธิ์',
+            ], 403);
+        }
+
+        $notification->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ลบแล้ว',
+        ]);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Delete all read notifications
      */
-    public function destroy(Notification $notification)
+    public function deleteAllRead(Request $request): JsonResponse
     {
-        //
+        $deleted = Notification::forUser($request->user()->id)
+            ->read()
+            ->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "ลบ {$deleted} รายการ",
+            'data' => ['deleted_count' => $deleted],
+        ]);
     }
 }

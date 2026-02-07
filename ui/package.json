@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
+    "build": "npx --node-options=--max-old-space-size=4096 nuxt build",
+    "dev": "npx --node-options=--max-old-space-size=4096 nuxt dev",
+    "generate": "npx --node-options=--max-old-space-size=4096 nuxt generate",
+    "preview": "npx --node-options=--max-old-space-size=2048 nuxt preview",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {

@@ -152,9 +152,101 @@ class AcademyMemberController extends Controller
         ], 200);
     }
 
+    /**
+     * Get available filter options for members (class levels, sections, etc.)
+     */
+    public function getFilterOptions(Academy $academy)
+    {
+        // Get distinct class levels from students linked to this academy's members
+        $classLevels = Student::whereIn('id', function ($query) use ($academy) {
+                $query->select('student_id')
+                    ->from('academy_members')
+                    ->where('academy_id', $academy->id)
+                    ->whereNotNull('student_id');
+            })
+            ->whereNotNull('class_level')
+            ->where('class_level', '!=', '')
+            ->distinct()
+            ->orderBy('class_level')
+            ->pluck('class_level')
+            ->map(fn($level) => ['value' => $level, 'label' => $level])
+            ->values();
+
+        // Get distinct class sections
+        $classSections = Student::whereIn('id', function ($query) use ($academy) {
+                $query->select('student_id')
+                    ->from('academy_members')
+                    ->where('academy_id', $academy->id)
+                    ->whereNotNull('student_id');
+            })
+            ->whereNotNull('class_section')
+            ->where('class_section', '!=', '')
+            ->distinct()
+            ->orderBy('class_section')
+            ->pluck('class_section')
+            ->map(fn($section) => ['value' => $section, 'label' => 'ห้อง ' . $section])
+            ->values();
+
+        // Get classroom summary (class_level + section combinations with count)
+        $classrooms = \DB::table('students')
+            ->join('academy_members', 'students.id', '=', 'academy_members.student_id')
+            ->where('academy_members.academy_id', $academy->id)
+            ->whereNotNull('students.class_level')
+            ->select(
+                'students.class_level',
+                'students.class_section',
+                \DB::raw('COUNT(*) as student_count')
+            )
+            ->groupBy('students.class_level', 'students.class_section')
+            ->orderBy('students.class_level')
+            ->orderBy('students.class_section')
+            ->get()
+            ->map(function ($item) {
+                $label = $item->class_level;
+                if ($item->class_section) {
+                    $label .= '/' . $item->class_section;
+                }
+                return [
+                    'class_level' => $item->class_level,
+                    'class_section' => $item->class_section,
+                    'label' => $label,
+                    'count' => $item->student_count,
+                ];
+            });
+
+        // Gender options
+        $genderCounts = \DB::table('students')
+            ->join('academy_members', 'students.id', '=', 'academy_members.student_id')
+            ->where('academy_members.academy_id', $academy->id)
+            ->select(
+                'students.gender',
+                \DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('students.gender')
+            ->get()
+            ->keyBy('gender');
+
+        $genders = [
+            ['value' => 1, 'label' => 'ชาย', 'count' => $genderCounts->get(1)?->count ?? 0],
+            ['value' => 0, 'label' => 'หญิง', 'count' => $genderCounts->get(0)?->count ?? 0],
+        ];
+
+        return response()->json([
+            'success' => true,
+            'filters' => [
+                'class_levels' => $classLevels,
+                'class_sections' => $classSections,
+                'classrooms' => $classrooms,
+                'genders' => $genders,
+            ],
+        ], 200);
+    }
+
     public function getAcademyMembers(Academy $academy) {
         $perPage = request()->get('per_page', 20);
-        $members = $academy->academyMembers()->with(['user', 'student'])->paginate($perPage);
+        $members = $academy->academyMembers()
+            ->with(['user', 'student', 'academyRole'])
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -352,14 +444,59 @@ class AcademyMemberController extends Controller
             $query->where('academy_role_id', $request->academy_role_id);
         }
 
+        // Filter by tag
+        if ($request->has('tag_id') && $request->tag_id) {
+            $query->whereHas('tags', function ($q) use ($request) {
+                $q->where('member_tags.id', $request->tag_id);
+            });
+        }
+
+        // Filter by class_level (ชั้นเรียน)
+        if ($request->has('class_level') && $request->class_level) {
+            $query->whereHas('student', function ($q) use ($request) {
+                $q->where('class_level', $request->class_level);
+            });
+        }
+
+        // Filter by class_section (ห้อง)
+        if ($request->has('class_section') && $request->class_section) {
+            $query->whereHas('student', function ($q) use ($request) {
+                $q->where('class_section', $request->class_section);
+            });
+        }
+
+        // Filter by gender (เพศ)
+        if ($request->has('gender') && $request->gender !== null && $request->gender !== '') {
+            $query->whereHas('student', function ($q) use ($request) {
+                $q->where('gender', $request->gender);
+            });
+        }
+
+        // Filter by member_type (user หรือ student)
+        if ($request->has('member_type') && $request->member_type) {
+            if ($request->member_type === 'student') {
+                $query->whereNotNull('student_id');
+            } elseif ($request->member_type === 'user') {
+                $query->whereNotNull('user_id')->whereNull('student_id');
+            }
+        }
+
         // Sort
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
+        
+        // Special sorting for student fields
+        if (in_array($sortBy, ['class_level', 'class_section', 'student_id'])) {
+            $query->leftJoin('students', 'academy_members.student_id', '=', 'students.id')
+                ->select('academy_members.*')
+                ->orderBy('students.' . $sortBy, $sortOrder);
+        } else {
+            $query->orderBy($sortBy, $sortOrder);
+        }
 
         // Pagination
         $perPage = min($request->get('per_page', 20), 100);
-        $members = $query->with(['user', 'student', 'academyRole', 'inviter'])->paginate($perPage);
+        $members = $query->with(['user', 'student', 'academyRole', 'inviter', 'tags'])->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -599,6 +736,131 @@ class AcademyMemberController extends Controller
     }
 
     /**
+     * Get detailed member profile
+     */
+    public function getMemberProfile(Academy $academy, AcademyMember $member)
+    {
+        // Check if member belongs to this academy
+        if ($member->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+            ], 404);
+        }
+
+        // Load relationships
+        $member->load(['user', 'student', 'academyRole', 'inviter']);
+
+        // Get course statistics
+        $enrolledCoursesCount = 0;
+        $completedCoursesCount = 0;
+        
+        if ($member->user_id) {
+            $enrolledCoursesCount = \App\Models\CourseMember::whereHas('course', function($q) use ($academy) {
+                $q->where('academy_id', $academy->id);
+            })->where('user_id', $member->user_id)->where('status', 2)->count();
+
+            $completedCoursesCount = \App\Models\CourseMember::whereHas('course', function($q) use ($academy) {
+                $q->where('academy_id', $academy->id);
+            })->where('user_id', $member->user_id)->where('is_completed', true)->count();
+        }
+
+        $memberData = (new AcademyMemberResource($member))->toArray(request());
+        $memberData['enrolled_courses_count'] = $enrolledCoursesCount;
+        $memberData['completed_courses_count'] = $completedCoursesCount;
+        $memberData['attendance_rate'] = null; // TODO: Calculate from attendance records
+        $memberData['gpa'] = null; // TODO: Calculate from grades
+
+        return response()->json([
+            'success' => true,
+            'member' => $memberData,
+        ], 200);
+    }
+
+    /**
+     * Get member's enrolled courses
+     */
+    public function getMemberCourses(Academy $academy, AcademyMember $member)
+    {
+        if ($member->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+            ], 404);
+        }
+
+        $courses = [];
+        
+        if ($member->user_id) {
+            $courseMembers = \App\Models\CourseMember::with('course')
+                ->whereHas('course', function($q) use ($academy) {
+                    $q->where('academy_id', $academy->id);
+                })
+                ->where('user_id', $member->user_id)
+                ->where('status', 2)
+                ->get();
+
+            foreach ($courseMembers as $cm) {
+                if ($cm->course) {
+                    $courses[] = [
+                        'id' => $cm->course->id,
+                        'name' => $cm->course->name,
+                        'cover_image' => $cm->course->cover_image,
+                        'progress' => $cm->progress ?? 0,
+                        'status' => $cm->is_completed ? 'completed' : 'in_progress',
+                        'enrolled_at' => $cm->created_at?->format('Y-m-d'),
+                    ];
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+        ], 200);
+    }
+
+    /**
+     * Get member's activity log
+     */
+    public function getMemberActivity(Academy $academy, AcademyMember $member)
+    {
+        if ($member->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+            ], 404);
+        }
+
+        // For now, return basic activities based on member history
+        // In future, this can be extended with a proper activity log table
+        $activities = [];
+
+        // Add enrollment activity
+        $activities[] = [
+            'id' => 1,
+            'description' => 'เข้าร่วมเป็นสมาชิกโรงเรียน',
+            'icon' => 'fluent:person-add-24-regular',
+            'created_at' => $member->created_at?->toISOString(),
+        ];
+
+        // Add role assignment if has role
+        if ($member->academy_role_id) {
+            $activities[] = [
+                'id' => 2,
+                'description' => 'ได้รับบทบาท ' . ($member->academyRole->display_name_th ?? 'สมาชิก'),
+                'icon' => 'fluent:person-tag-24-regular',
+                'created_at' => $member->updated_at?->toISOString(),
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'activities' => $activities,
+        ], 200);
+    }
+
+    /**
      * Bulk invite members to the academy
      * Accepts user IDs and/or email addresses
      */
@@ -689,5 +951,393 @@ class AcademyMemberController extends Controller
             'skipped_count' => $skippedCount,
             'errors' => $errors,
         ], 200);
+    }
+
+    /**
+     * Import members from CSV file
+     * CSV should have columns: email (required), role (optional), member_code (optional)
+     */
+    public function importMembersFromCsv(Academy $academy, Request $request)
+    {
+        // Check permission
+        if (!$this->canManageMembers($academy)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์นำเข้าสมาชิก'
+            ], 403);
+        }
+
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:5120', // 5MB max
+            'default_role' => 'nullable|string|in:student,parent,teacher,staff,admin',
+            'auto_approve' => 'nullable|boolean',
+        ]);
+
+        $file = $request->file('file');
+        $defaultRole = $request->get('default_role', 'student');
+        $autoApprove = $request->boolean('auto_approve', false);
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+        $rows = [];
+
+        // Parse CSV
+        $handle = fopen($file->getRealPath(), 'r');
+        $headers = fgetcsv($handle);
+        
+        // Normalize headers (lowercase, trim)
+        $headers = array_map(function($h) {
+            return strtolower(trim($h));
+        }, $headers);
+
+        // Find required column indexes
+        $emailIndex = array_search('email', $headers);
+        $roleIndex = array_search('role', $headers);
+        $memberCodeIndex = array_search('member_code', $headers);
+        $referenceCodeIndex = array_search('reference_code', $headers);
+
+        if ($emailIndex === false && $referenceCodeIndex === false) {
+            fclose($handle);
+            return response()->json([
+                'success' => false,
+                'message' => 'ไฟล์ CSV ต้องมีคอลัมน์ email หรือ reference_code'
+            ], 422);
+        }
+
+        $lineNumber = 1;
+        while (($row = fgetcsv($handle)) !== false) {
+            $lineNumber++;
+            
+            $email = $emailIndex !== false ? trim($row[$emailIndex] ?? '') : null;
+            $referenceCode = $referenceCodeIndex !== false ? trim($row[$referenceCodeIndex] ?? '') : null;
+            $role = $roleIndex !== false ? trim($row[$roleIndex] ?? '') : $defaultRole;
+            $memberCode = $memberCodeIndex !== false ? trim($row[$memberCodeIndex] ?? '') : null;
+
+            // Validate role
+            if (!in_array($role, ['student', 'parent', 'teacher', 'staff', 'admin'])) {
+                $role = $defaultRole;
+            }
+
+            // Find user by email or reference_code
+            $user = null;
+            if ($email) {
+                $user = \App\Models\User::where('email', $email)->first();
+            }
+            if (!$user && $referenceCode) {
+                $user = \App\Models\User::where('reference_code', $referenceCode)->first();
+            }
+
+            if (!$user) {
+                $identifier = $email ?: $referenceCode;
+                $errors[] = "บรรทัด {$lineNumber}: ไม่พบผู้ใช้ {$identifier}";
+                $skipped++;
+                continue;
+            }
+
+            // Check if already a member
+            $existingMember = AcademyMember::where('academy_id', $academy->id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($existingMember) {
+                $skipped++;
+                continue;
+            }
+
+            // Create member
+            $status = $autoApprove ? 2 : 4; // 2 = approved, 4 = invited
+            
+            AcademyMember::create([
+                'academy_id' => $academy->id,
+                'user_id' => $user->id,
+                'role' => $role,
+                'member_code' => $memberCode,
+                'status' => $status,
+                'invited_by' => auth()->id(),
+                'invited_at' => now(),
+            ]);
+
+            if ($autoApprove) {
+                $academy->increment('total_students');
+            }
+
+            $imported++;
+        }
+
+        fclose($handle);
+
+        $statusText = $autoApprove ? 'เพิ่มสมาชิก' : 'ส่งคำเชิญ';
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$statusText}เรียบร้อย {$imported} คน",
+            'imported_count' => $imported,
+            'skipped_count' => $skipped,
+            'errors' => $errors,
+            'total_students' => $academy->total_students,
+        ], 200);
+    }
+
+    /**
+     * Bulk action on members
+     * Actions: approve, reject, suspend, unsuspend, remove
+     */
+    public function bulkAction(Academy $academy, Request $request)
+    {
+        // Check permission
+        if (!$this->canManageMembers($academy)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์ดำเนินการนี้'
+            ], 403);
+        }
+
+        $request->validate([
+            'member_ids' => 'required|array|min:1',
+            'member_ids.*' => 'integer|exists:academy_members,id',
+            'action' => 'required|string|in:approve,reject,suspend,unsuspend,remove',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $memberIds = $request->member_ids;
+        $action = $request->action;
+        $reason = $request->get('reason', '');
+        
+        $successCount = 0;
+        $failedCount = 0;
+        $errors = [];
+
+        foreach ($memberIds as $memberId) {
+            $member = AcademyMember::where('id', $memberId)
+                ->where('academy_id', $academy->id)
+                ->first();
+
+            if (!$member) {
+                $failedCount++;
+                $errors[] = "ไม่พบสมาชิก ID: {$memberId}";
+                continue;
+            }
+
+            // Cannot modify academy owner
+            if ($member->user_id === $academy->user_id) {
+                $failedCount++;
+                $errors[] = "ไม่สามารถดำเนินการกับเจ้าของโรงเรียนได้";
+                continue;
+            }
+
+            try {
+                switch ($action) {
+                    case 'approve':
+                        if ($member->status !== 2) {
+                            $previousStatus = $member->status;
+                            $member->update(['status' => 2]);
+                            if ($previousStatus !== 2) {
+                                $academy->increment('total_students');
+                            }
+                            $successCount++;
+                        }
+                        break;
+
+                    case 'reject':
+                        if ($member->status !== 3) {
+                            if ($member->status === 2) {
+                                $academy->decrement('total_students');
+                            }
+                            $member->update([
+                                'status' => 3,
+                                'note_comment' => $reason ?: 'ถูกปฏิเสธโดยผู้ดูแล'
+                            ]);
+                            $successCount++;
+                        }
+                        break;
+
+                    case 'suspend':
+                        if ($member->status !== 5) {
+                            if ($member->status === 2) {
+                                $academy->decrement('total_students');
+                            }
+                            $member->update([
+                                'status' => 5,
+                                'note_comment' => $reason ?: 'ถูกระงับโดยผู้ดูแล'
+                            ]);
+                            $successCount++;
+                        }
+                        break;
+
+                    case 'unsuspend':
+                        if ($member->status === 5) {
+                            $member->update([
+                                'status' => 2,
+                                'note_comment' => null
+                            ]);
+                            $academy->increment('total_students');
+                            $successCount++;
+                        }
+                        break;
+
+                    case 'remove':
+                        if ($member->status === 2) {
+                            $academy->decrement('total_students');
+                        }
+                        $member->delete();
+                        $successCount++;
+                        break;
+                }
+            } catch (\Exception $e) {
+                $failedCount++;
+                $errors[] = "เกิดข้อผิดพลาดกับสมาชิก ID: {$memberId}";
+            }
+        }
+
+        $actionLabels = [
+            'approve' => 'อนุมัติ',
+            'reject' => 'ปฏิเสธ',
+            'suspend' => 'ระงับ',
+            'unsuspend' => 'ยกเลิกการระงับ',
+            'remove' => 'ลบ',
+        ];
+
+        return response()->json([
+            'success' => $successCount > 0,
+            'message' => "{$actionLabels[$action]}สำเร็จ {$successCount} รายการ" . ($failedCount > 0 ? ", ล้มเหลว {$failedCount} รายการ" : ''),
+            'success_count' => $successCount,
+            'failed_count' => $failedCount,
+            'errors' => $errors,
+            'total_students' => $academy->fresh()->total_students,
+        ], 200);
+    }
+
+    /**
+     * Export selected members to CSV
+     */
+    public function exportSelectedMembers(Academy $academy, Request $request)
+    {
+        // Check permission
+        if (!$this->canManageMembers($academy)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์ส่งออกข้อมูลสมาชิก'
+            ], 403);
+        }
+
+        $request->validate([
+            'member_ids' => 'nullable|array',
+            'member_ids.*' => 'integer',
+        ]);
+
+        $memberIds = $request->member_ids;
+
+        $query = AcademyMember::where('academy_id', $academy->id)
+            ->with(['user:id,email,name,reference_code', 'student', 'academyRole']);
+
+        // If specific IDs provided, filter by them
+        if (!empty($memberIds)) {
+            $query->whereIn('id', $memberIds);
+        }
+
+        $members = $query->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="academy_members_' . date('Y-m-d_His') . '.csv"',
+        ];
+
+        $callback = function() use ($members) {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // CSV header
+            fputcsv($file, [
+                'รหัสสมาชิก',
+                'ชื่อ',
+                'อีเมล',
+                'รหัสอ้างอิง',
+                'บทบาท',
+                'สถานะ',
+                'วันที่สมัคร',
+            ]);
+
+            $statusLabels = [
+                1 => 'รอการอนุมัติ',
+                2 => 'สมาชิก',
+                3 => 'ถูกปฏิเสธ',
+                4 => 'ได้รับเชิญ',
+                5 => 'ถูกระงับ',
+            ];
+
+            foreach ($members as $member) {
+                fputcsv($file, [
+                    $member->member_code ?? '-',
+                    $member->member_name ?? '-',
+                    $member->user->email ?? '-',
+                    $member->user->reference_code ?? '-',
+                    $member->academyRole->display_name_th ?? $member->role ?? 'สมาชิก',
+                    $statusLabels[$member->status] ?? 'ไม่ทราบ',
+                    $member->created_at?->format('Y-m-d') ?? '-',
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Export members to CSV
+     */
+    public function exportMembersToCsv(Academy $academy)
+    {
+        // Check permission
+        if (!$this->canManageMembers($academy)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์ส่งออกข้อมูลสมาชิก'
+            ], 403);
+        }
+
+        $members = AcademyMember::where('academy_id', $academy->id)
+            ->with(['user:id,email,name,reference_code', 'student'])
+            ->where('status', 2) // Only approved members
+            ->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="academy_members_' . $academy->id . '.csv"',
+        ];
+
+        $callback = function() use ($members) {
+            $file = fopen('php://output', 'w');
+            
+            // CSV header
+            fputcsv($file, [
+                'member_code',
+                'name',
+                'email',
+                'reference_code',
+                'role',
+                'status',
+                'enrollment_date',
+            ]);
+
+            foreach ($members as $member) {
+                fputcsv($file, [
+                    $member->member_code ?? '',
+                    $member->member_name ?? '',
+                    $member->user->email ?? '',
+                    $member->user->reference_code ?? '',
+                    $member->role ?? 'student',
+                    $member->status_text ?? '',
+                    $member->enrollment_date ?? $member->created_at?->format('Y-m-d'),
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

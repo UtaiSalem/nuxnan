@@ -371,7 +371,7 @@ const handleCancel = () => {
       </div>
 
       <!-- Settings Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- Point Fee -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -379,6 +379,19 @@ const handleCancel = () => {
           </label>
           <input
             v-model.number="form.point_tuition_fee"
+            type="number"
+            min="0"
+            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
+          />
+        </div>
+
+        <!-- Min Read -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            เวลาอ่าน (นาที)
+          </label>
+          <input
+            v-model.number="form.min_read"
             type="number"
             min="0"
             class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"

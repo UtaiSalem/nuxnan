@@ -6,14 +6,18 @@ import RichTextViewer from '~/components/RichTextViewer.vue'
 interface Props {
   topic: any
   isCompleted?: boolean
+  isAdmin?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isCompleted: false
+  isCompleted: false,
+  isAdmin: false
 })
 
 const emit = defineEmits<{
   'toggleComplete': [topicId: number]
+  'edit': [topic: any]
+  'delete': [topic: any]
 }>()
 
 const isExpanded = ref(false)
@@ -25,6 +29,16 @@ const toggleExpand = () => {
 const handleCheckboxClick = (e: Event) => {
   e.stopPropagation()
   emit('toggleComplete', props.topic.id)
+}
+
+const handleEditClick = (e: Event) => {
+  e.stopPropagation()
+  emit('edit', props.topic)
+}
+
+const handleDeleteClick = (e: Event) => {
+  e.stopPropagation()
+  emit('delete', props.topic)
 }
 </script>
 
@@ -69,7 +83,7 @@ const handleCheckboxClick = (e: Event) => {
 
         <!-- Title -->
         <h4 
-          class="text-left font-medium transition-colors"
+          class="text-left font-medium transition-colors line-clamp-1"
           :class="[
             isCompleted 
               ? 'text-green-900 dark:text-green-100 line-through' 
@@ -78,6 +92,24 @@ const handleCheckboxClick = (e: Event) => {
         >
           {{ topic.title }}
         </h4>
+
+        <!-- Admin Actions -->
+        <div v-if="isAdmin" class="flex items-center gap-1 ml-2" @click.stop>
+            <button 
+                @click="handleEditClick"
+                class="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors"
+                title="แก้ไข"
+            >
+                <Icon icon="fluent:edit-20-regular" class="w-4 h-4" />
+            </button>
+            <button 
+                @click="handleDeleteClick"
+                class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                title="ลบ"
+            >
+                <Icon icon="fluent:delete-20-regular" class="w-4 h-4" />
+            </button>
+        </div>
       </div>
 
       <!-- Expand Icon -->

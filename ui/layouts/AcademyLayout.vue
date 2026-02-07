@@ -219,7 +219,7 @@ async function onRequestToBeUnmember(){
                         @request-tobe-unmember="onRequestToBeUnmember"
                     ></AcademyCoverProfile>
 
-                    <AcademyNavbarTab :academy="academy" :activeTab="0" />
+                    <AcademyNavbarTab :academy="academy" :activeTab="0" :isAcademyAdmin="props.isAcademyAdmin" />
 
         </template>
 

@@ -189,4 +189,30 @@ class AcademyGroupController extends Controller
             'groups' => $groups
         ]);
     }
+    /**
+     * Get groups for a specific user.
+     */
+    public function getUserGroups(\App\Models\User $user)
+    {
+        $groups = \App\Models\AcademyGroup::whereHas('members', function($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })->withCount('members')->take(20)->get();
+
+        return response()->json([
+            'success' => true,
+            'groups' => $groups->map(function($group) use ($user) {
+                return [
+                    'id' => $group->id,
+                    'name' => $group->name,
+                    'slug' => (string)$group->id,
+                    'description' => $group->description,
+                    'members_count' => $group->members_count,
+                    'category' => $group->type,
+                    'privacy' => 'public',
+                    'is_member' => true,
+                    'is_admin' => $group->admins()->where('users.id', $user->id)->exists(),
+                ];
+            })
+        ]);
+    }
 }

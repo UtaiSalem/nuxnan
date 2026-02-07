@@ -1,0 +1,845 @@
+﻿
+  GET|HEAD        / ........................................................................ 
+  GET|HEAD        api ................................ welcome ΓÇ║ Api\WelcomeController@index
+  GET|HEAD        api/academies ...... academies ΓÇ║ Api\Learn\Academy\AcademyController@index
+  POST            api/academies academies.store ΓÇ║ Api\Learn\Academy\AcademyController@store
+  GET|HEAD        api/academies/all-academies academies.all-academies ΓÇ║ Api\Learn\Academy\AΓÇª
+  GET|HEAD        api/academies/by-id/{academy} academy.showById ΓÇ║ Api\Learn\Academy\AcademΓÇª
+  GET|HEAD        api/academies/create academy.create ΓÇ║ Api\Learn\Academy\AcademyControllerΓÇª
+  GET|HEAD        api/academies/groups/{academyGroup} api.academy.groups.show ΓÇ║ Api\Learn\AΓÇª
+  PATCH           api/academies/groups/{academyGroup} academy.groups.update ΓÇ║ Api\Learn\AcaΓÇª
+  DELETE          api/academies/groups/{academyGroup} api.academy.groups.destroy ΓÇ║ Api\LearΓÇª
+  GET|HEAD        api/academies/groups/{academyGroup}/members api.academy.groups.members ΓÇ║ ΓÇª
+  POST            api/academies/groups/{academyGroup}/members api.academy.groups.members.adΓÇª
+  DELETE          api/academies/groups/{academyGroup}/members api.academy.groups.members.reΓÇª
+  PATCH           api/academies/groups/{academyGroup}/members/role api.academy.groups.membeΓÇª
+  GET|HEAD        api/academies/my-invitations api.academy.my-invitations ΓÇ║ Api\Learn\AcadeΓÇª
+  GET|HEAD        api/academies/permissions/all api.academy.permissions.all ΓÇ║ Api\Learn\AcaΓÇª
+  GET|HEAD        api/academies/users/{user}/membered-academies academies.membered ΓÇ║ Api\LeΓÇª
+  GET|HEAD        api/academies/users/{user}/my-academies academies.my-academies ΓÇ║ Api\LearΓÇª
+  GET|HEAD        api/academies/{academy} academy.show ΓÇ║ Api\Learn\Academy\AcademyControlleΓÇª
+  POST            api/academies/{academy}/accept-invite api.academy.accept-invite ΓÇ║ Api\LeaΓÇª
+  GET|HEAD        api/academies/{academy}/activities api.academy.activities.getActivities  ΓÇª
+  GET|HEAD        api/academies/{academy}/courses api.academy.courses.getAcademyCourses ΓÇ║ AΓÇª
+  POST            api/academies/{academy}/courses academy.courses.store ΓÇ║ Api\Learn\AcademyΓÇª
+  GET|HEAD        api/academies/{academy}/courses/create academy.courses.create ΓÇ║ Api\LearnΓÇª
+  POST            api/academies/{academy}/decline-invite api.academy.decline-invite ΓÇ║ Api\LΓÇª
+  GET|HEAD        api/academies/{academy}/feeds academy.feeds ΓÇ║ Api\Learn\Academy\AcademyAcΓÇª
+  GET|HEAD        api/academies/{academy}/groups api.academy.groups.index ΓÇ║ Api\Learn\AcadeΓÇª
+  POST            api/academies/{academy}/groups api.academy.groups.store ΓÇ║ Api\Learn\AcadeΓÇª
+  GET|HEAD        api/academies/{academy}/groups/type/{type} academy.groups.byType ΓÇ║ Api\LeΓÇª
+  POST            api/academies/{academy}/invite api.academy.invite ΓÇ║ Api\Learn\Academy\AcaΓÇª
+  POST            api/academies/{academy}/members Api\Learn\Academy\AcademyMemberControllerΓÇª
+  GET|HEAD        api/academies/{academy}/members api.academy.members.list ΓÇ║ Api\Learn\AcadΓÇª
+  POST            api/academies/{academy}/members/bulk-role api.academy.members.bulkAssignRΓÇª
+  POST            api/academies/{academy}/members/invite api.academy.members.bulkInvite ΓÇ║ AΓÇª
+  GET|HEAD        api/academies/{academy}/members/search api.academy.members.search ΓÇ║ Api\LΓÇª
+  GET|HEAD        api/academies/{academy}/members/stats api.academy.members.stats ΓÇ║ Api\LeaΓÇª
+  DELETE          api/academies/{academy}/members/{member} api.academy.members.remove ΓÇ║ ApiΓÇª
+  PATCH           api/academies/{academy}/members/{member} api.academy.members.update ΓÇ║ ApiΓÇª
+  POST            api/academies/{academy}/members/{member}/accept api.academy.members.accepΓÇª
+  POST            api/academies/{academy}/members/{member}/reject api.academy.members.rejecΓÇª
+  POST            api/academies/{academy}/members/{member}/role api.academy.members.assignRΓÇª
+  POST            api/academies/{academy}/members/{member}/suspend api.academy.members.suspΓÇª
+  POST            api/academies/{academy}/members/{member}/unsuspend api.academy.members.unΓÇª
+  GET|HEAD        api/academies/{academy}/my-role api.academy.roles.my ΓÇ║ Api\Learn\Academy\ΓÇª
+  GET|HEAD        api/academies/{academy}/pending-requests api.academy.pending-requests ΓÇ║ AΓÇª
+  POST            api/academies/{academy}/posts api.academy.posts.store ΓÇ║ Api\Learn\AcademyΓÇª
+  GET|HEAD        api/academies/{academy}/posts/{academy_post}/comments api.academy.posts.cΓÇª
+  POST            api/academies/{academy}/posts/{academy_post}/comments api.academy.posts.cΓÇª
+  PATCH           api/academies/{academy}/posts/{academy_post}/comments/{comment} api.acadeΓÇª
+  DELETE          api/academies/{academy}/posts/{academy_post}/comments/{comment} api.acadeΓÇª
+  GET|HEAD        api/academies/{academy}/posts/{post} academy_post.show ΓÇ║ Api\Learn\AcademΓÇª
+  GET|HEAD        api/academies/{academy}/roles api.academy.roles.index ΓÇ║ Api\Learn\AcademyΓÇª
+  POST            api/academies/{academy}/roles api.academy.roles.store ΓÇ║ Api\Learn\AcademyΓÇª
+  GET|HEAD        api/academies/{academy}/roles/available api.academy.roles.available ΓÇ║ ApiΓÇª
+  PUT             api/academies/{academy}/roles/{role} api.academy.roles.update ΓÇ║ Api\LearnΓÇª
+  DELETE          api/academies/{academy}/roles/{role} api.academy.roles.destroy ΓÇ║ Api\LearΓÇª
+  POST            api/academies/{academy}/settings api.academy.settings.update ΓÇ║ Api\Learn\ΓÇª
+  POST            api/academies/{academy}/unmembers Api\Learn\Academy\AcademyMemberControllΓÇª
+  PATCH           api/academies/{academy}/update academy.update ΓÇ║ Api\Learn\Academy\AcademyΓÇª
+  GET|HEAD        api/activities ...... activities.index ΓÇ║ Api\Play\ActivityController@index
+  GET|HEAD        api/activities/{activity} activities.show ΓÇ║ Api\Play\ActivityController@sΓÇª
+  DELETE          api/activities/{activity} activities.destroy ΓÇ║ Api\Play\ActivityControlleΓÇª
+  GET|HEAD        api/admin/academies ................................ admin.academies.index
+  POST            api/admin/academies ................................ admin.academies.store
+  GET|HEAD        api/admin/academies/{id} ............................ admin.academies.show
+  PUT             api/admin/academies/{id} .......................... admin.academies.update
+  DELETE          api/admin/academies/{id} ......................... admin.academies.destroy
+  GET|HEAD        api/admin/activities .............................. admin.activities.index
+  POST            api/admin/auth/login ....................... Api\AdminAuthController@login
+  POST            api/admin/auth/logout ..................... Api\AdminAuthController@logout
+  GET|HEAD        api/admin/auth/me ............................. Api\AdminAuthController@me
+  POST            api/admin/auth/refresh ................... Api\AdminAuthController@refresh
+  GET|HEAD        api/admin/content .................................... admin.content.index
+  GET|HEAD        api/admin/coupons .................................... admin.coupons.index
+  POST            api/admin/coupons .................................... admin.coupons.store
+  GET|HEAD        api/admin/coupons/{id} ................................ admin.coupons.show
+  PUT             api/admin/coupons/{id} .............................. admin.coupons.update
+  DELETE          api/admin/coupons/{id} ............................. admin.coupons.destroy
+  GET|HEAD        api/admin/courses .................................... admin.courses.index
+  POST            api/admin/courses .................................... admin.courses.store
+  GET|HEAD        api/admin/courses/{id} ................................ admin.courses.show
+  PUT             api/admin/courses/{id} .............................. admin.courses.update
+  DELETE          api/admin/courses/{id} ............................. admin.courses.destroy
+  GET|HEAD        api/admin/dashboard/activities ................ admin.dashboard.activities
+  GET|HEAD        api/admin/dashboard/recent-courses ....................................... 
+  GET|HEAD        api/admin/dashboard/recent-users ......................................... 
+  GET|HEAD        api/admin/dashboard/top-courses .............. admin.dashboard.top-courses
+  GET|HEAD        api/admin/health ......................................................... 
+  GET|HEAD        api/admin/permissions admin.permissions.index ΓÇ║ Api\AdminPermissionControΓÇª
+  POST            api/admin/permissions admin.permissions.store ΓÇ║ Api\AdminPermissionControΓÇª
+  POST            api/admin/permissions/bulk admin.permissions.bulk ΓÇ║ Api\AdminPermissionCoΓÇª
+  GET|HEAD        api/admin/permissions/groups admin.permissions.groups ΓÇ║ Api\AdminPermissiΓÇª
+  GET|HEAD        api/admin/permissions/{id} admin.permissions.show ΓÇ║ Api\AdminPermissionCoΓÇª
+  PUT             api/admin/permissions/{id} admin.permissions.update ΓÇ║ Api\AdminPermissionΓÇª
+  DELETE          api/admin/permissions/{id} admin.permissions.destroy ΓÇ║ Api\AdminPermissioΓÇª
+  GET|HEAD        api/admin/points-transactions ............ admin.points-transactions.index
+  GET|HEAD        api/admin/roles ........ admin.roles.index ΓÇ║ Api\AdminRoleController@index
+  POST            api/admin/roles ........ admin.roles.store ΓÇ║ Api\AdminRoleController@store
+  GET|HEAD        api/admin/roles/datatable admin.roles.datatable ΓÇ║ Api\AdminRoleControllerΓÇª
+  GET|HEAD        api/admin/roles/permissions admin.roles.permissions ΓÇ║ Api\AdminRoleControΓÇª
+  GET|HEAD        api/admin/roles/{id} ..... admin.roles.show ΓÇ║ Api\AdminRoleController@show
+  PUT             api/admin/roles/{id} . admin.roles.update ΓÇ║ Api\AdminRoleController@update
+  DELETE          api/admin/roles/{id} admin.roles.destroy ΓÇ║ Api\AdminRoleController@destroy
+  GET|HEAD        api/admin/settings ....................................................... 
+  GET|HEAD        api/admin/stats .............................................. admin.stats
+  GET|HEAD        api/admin/users ............ admin.users.index ΓÇ║ Api\AdminController@index
+  POST            api/admin/users ............ admin.users.store ΓÇ║ Api\AdminController@store
+  GET|HEAD        api/admin/users/datatable admin.users.datatable ΓÇ║ Api\AdminController@datΓÇª
+  GET|HEAD        api/admin/users/statistics admin.users.statistics ΓÇ║ Api\AdminController@sΓÇª
+  GET|HEAD        api/admin/users/{id} ......... admin.users.show ΓÇ║ Api\AdminController@show
+  PUT             api/admin/users/{id} ..... admin.users.update ΓÇ║ Api\AdminController@update
+  DELETE          api/admin/users/{id} ... admin.users.destroy ΓÇ║ Api\AdminController@destroy
+  POST            api/admin/users/{id}/toggle-ban admin.users.toggle-ban ΓÇ║ Api\AdminControlΓÇª
+  POST            api/admin/users/{id}/unverify-email admin.users.unverify-email ΓÇ║ Api\AdmiΓÇª
+  POST            api/admin/users/{id}/verify-email admin.users.verify-email ΓÇ║ Api\AdminConΓÇª
+  GET|HEAD        api/admin/wallet-transactions ............ admin.wallet-transactions.index
+  GET|HEAD        api/admin/wallet/deposit-requests/pending admin.wallet.deposits.pending  ΓÇª
+  POST            api/admin/wallet/deposit-requests/{id}/approve admin.wallet.deposits.apprΓÇª
+  POST            api/admin/wallet/deposit-requests/{id}/reject admin.wallet.deposits.rejecΓÇª
+  GET|HEAD        api/admin/wallet/stats admin.wallet.stats ΓÇ║ Api\AdminWalletController@staΓÇª
+  GET|HEAD        api/admin/wallet/withdrawals/pending admin.wallet.withdrawals.pending ΓÇ║ AΓÇª
+  POST            api/admin/wallet/withdrawals/{id}/approve admin.wallet.withdrawals.approvΓÇª
+  POST            api/admin/wallet/withdrawals/{id}/reject admin.wallet.withdrawals.reject ΓÇª
+  GET|HEAD        api/advertises ................. advertises.index ΓÇ║ AdvertController@index
+  POST            api/advertises ................. advertises.store ΓÇ║ AdvertController@store
+  GET|HEAD        api/advertises/create ........ advertises.create ΓÇ║ AdvertController@create
+  GET|HEAD        api/advertises/more advertises.more ΓÇ║ AdvertController@getMoreAdvertisings
+  GET|HEAD        api/advertises/widget ........ advertises.widget ΓÇ║ AdvertController@widget
+  POST            api/advertises/{advert}/view ..... advertises.view ΓÇ║ AdvertController@view
+  GET|HEAD        api/albums/{id} ................................. Api\AlbumController@show
+  GET|HEAD        api/asmimages asmimages.index ΓÇ║ Api\Learn\Course\assignments\AssignmentImΓÇª
+  POST            api/asmimages asmimages.store ΓÇ║ Api\Learn\Course\assignments\AssignmentImΓÇª
+  GET|HEAD        api/asmimages/create asmimages.create ΓÇ║ Api\Learn\Course\assignments\AssiΓÇª
+  GET|HEAD        api/asmimages/{asmimage} asmimages.show ΓÇ║ Api\Learn\Course\assignments\AsΓÇª
+  PUT|PATCH       api/asmimages/{asmimage} asmimages.update ΓÇ║ Api\Learn\Course\assignments\ΓÇª
+  DELETE          api/asmimages/{asmimage} asmimages.destroy ΓÇ║ Api\Learn\Course\assignmentsΓÇª
+  GET|HEAD        api/asmimages/{asmimage}/edit asmimages.edit ΓÇ║ Api\Learn\Course\assignmenΓÇª
+  GET|HEAD        api/assignments assignments.index ΓÇ║ Api\Learn\Course\assignments\AssignmeΓÇª
+  POST            api/assignments assignments.store ΓÇ║ Api\Learn\Course\assignments\AssignmeΓÇª
+  GET|HEAD        api/assignments/create assignments.create ΓÇ║ Api\Learn\Course\assignments\ΓÇª
+  GET|HEAD        api/assignments/{assignment} assignments.show ΓÇ║ Api\Learn\Course\assignmeΓÇª
+  PUT|PATCH       api/assignments/{assignment} assignments.update ΓÇ║ Api\Learn\Course\assignΓÇª
+  DELETE          api/assignments/{assignment} assignments.destroy ΓÇ║ Api\Learn\Course\assigΓÇª
+  GET|HEAD        api/assignments/{assignment}/answers answers.index ΓÇ║ Api\Learn\Course\assΓÇª
+  POST            api/assignments/{assignment}/answers answers.store ΓÇ║ Api\Learn\Course\assΓÇª
+  GET|HEAD        api/assignments/{assignment}/answers/create answers.create ΓÇ║ Api\Learn\CoΓÇª
+  GET|HEAD        api/assignments/{assignment}/answers/{answer} answers.show ΓÇ║ Api\Learn\CoΓÇª
+  PUT|PATCH       api/assignments/{assignment}/answers/{answer} answers.update ΓÇ║ Api\Learn\ΓÇª
+  DELETE          api/assignments/{assignment}/answers/{answer} answers.destroy ΓÇ║ Api\LearnΓÇª
+  GET|HEAD        api/assignments/{assignment}/answers/{answer}/edit answers.edit ΓÇ║ Api\LeaΓÇª
+  POST            api/assignments/{assignment}/answers/{answer}/set-points assignments.answΓÇª
+  GET|HEAD        api/assignments/{assignment}/edit assignments.edit ΓÇ║ Api\Learn\Course\assΓÇª
+  PATCH           api/attendances/details/{detail} attendance.details.update ΓÇ║ Api\Learn\CoΓÇª
+  PATCH           api/attendances/{attendance} attendances.update ΓÇ║ Api\Learn\Course\attendΓÇª
+  DELETE          api/attendances/{attendance} attendances.destroy ΓÇ║ Api\Learn\Course\attenΓÇª
+  GET|HEAD        api/attendances/{attendance}/basic-info attendances.basic.info ΓÇ║ Api\LearΓÇª
+  POST            api/attendances/{attendance}/check-in attendances.student.check-in ΓÇ║ Api\ΓÇª
+  GET|HEAD        api/attendances/{attendance}/details attendances.details.index ΓÇ║ Api\LearΓÇª
+  POST            api/attendances/{attendance}/details attendances.details.store ΓÇ║ Api\LearΓÇª
+  GET|HEAD        api/attendances/{attendance}/group-members-details attendances.group.membΓÇª
+  GET|HEAD        api/attendances/{attendance}/member/{member}/join-status attendances.membΓÇª
+  POST            api/attendances/{attendance}/member/{member}/update-status attendances.meΓÇª
+  GET|HEAD        api/auth/{provider}/callback oauth.callback ΓÇ║ Api\Auth\ProviderAuthControΓÇª
+  GET|HEAD        api/auth/{provider}/redirect oauth.redirect ΓÇ║ Api\Auth\ProviderAuthControΓÇª
+  GET|HEAD        api/certificates/my ............. Api\CertificateController@myCertificates
+  GET|HEAD        api/certificates/pricing .... Api\CertificateController@getDownloadPricing
+  GET|HEAD        api/certificates/verify/{verificationCode} Api\CertificateController@veriΓÇª
+  GET|HEAD        api/certificates/{certificate}/check-download Api\CertificateController@cΓÇª
+  GET|HEAD        api/certificates/{certificate}/download Api\CertificateController@download
+  POST            api/certificates/{certificate}/issue ..... Api\CertificateController@issue
+  POST            api/certificates/{certificate}/regenerate-pdf Api\CertificateController@rΓÇª
+  POST            api/certificates/{certificate}/revoke ... Api\CertificateController@revoke
+  GET|HEAD        api/check-email-exists/{email} profile.email.check ΓÇ║ Api\Shared\UserProfiΓÇª
+  GET|HEAD        api/check-username-exists/{name} profile.username.check ΓÇ║ Api\Shared\UserΓÇª
+  POST            api/coupons ................. coupons.create ΓÇ║ Api\CouponController@create
+  GET|HEAD        api/coupons ................... coupons.index ΓÇ║ Api\CouponController@index
+  POST            api/coupons/redeem .......... coupons.redeem ΓÇ║ Api\CouponController@redeem
+  GET|HEAD        api/coupons/statistics coupons.statistics ΓÇ║ Api\CouponController@statistiΓÇª
+  GET|HEAD        api/coupons/{id} ................ coupons.show ΓÇ║ Api\CouponController@show
+  POST            api/coupons/{id}/cancel ..... coupons.cancel ΓÇ║ Api\CouponController@cancel
+  GET|HEAD        api/coupons/{id}/print ........ coupons.print ΓÇ║ Api\CouponController@print
+  GET|HEAD        api/courses ....... courses ΓÇ║ Api\Learn\Course\info\CourseController@index
+  POST            api/courses . courses.store ΓÇ║ Api\Learn\Course\info\CourseController@store
+  GET|HEAD        api/courses/create courses.create ΓÇ║ Api\Learn\Course\info\CourseControlleΓÇª
+  GET|HEAD        api/courses/favorites courses.favorites ΓÇ║ Api\Learn\Course\info\CourseConΓÇª
+  GET|HEAD        api/courses/filters courses.filters ΓÇ║ Api\Learn\Course\info\CourseControlΓÇª
+  GET|HEAD        api/courses/popular api.courses.popular ΓÇ║ Api\Learn\Course\info\CourseConΓÇª
+  POST            api/courses/posts/comments/{comment}/dislike toggle.dislike.course_post_cΓÇª
+  POST            api/courses/posts/comments/{comment}/like toggle.like.course_post_commentΓÇª
+  POST            api/courses/posts/images/comments/{comment}/dislike toggle.dislike.courseΓÇª
+  POST            api/courses/posts/images/comments/{comment}/like toggle.like.course_post_ΓÇª
+  GET|HEAD        api/courses/search courses.search ΓÇ║ Api\Learn\Course\info\CourseControlleΓÇª
+  GET|HEAD        api/courses/users/{user} user.courses ΓÇ║ Api\Learn\Course\info\CourseContrΓÇª
+  GET|HEAD        api/courses/users/{user}/member auth.member.courses ΓÇ║ Api\Learn\Course\inΓÇª
+  GET|HEAD        api/courses/users/{user}/membered api.courses.member ΓÇ║ Api\Learn\Course\iΓÇª
+  GET|HEAD        api/courses/users/{user}/membered-courses user.membered.courses ΓÇ║ Api\LeaΓÇª
+  GET|HEAD        api/courses/users/{user}/my-courses api.courses.my-courses ΓÇ║ Api\Learn\CoΓÇª
+  GET|HEAD        api/courses/{course} course.show ΓÇ║ Api\Learn\Course\info\CourseControllerΓÇª
+  PUT             api/courses/{course} course.update ΓÇ║ Api\Learn\Course\info\CourseControllΓÇª
+  PATCH           api/courses/{course} course.part.update ΓÇ║ Api\Learn\Course\info\CourseConΓÇª
+  DELETE          api/courses/{course} course.destroy ΓÇ║ Api\Learn\Course\info\CourseControlΓÇª
+  GET|HEAD        api/courses/{course}/admins course.admins.index ΓÇ║ Api\Learn\Course\adminsΓÇª
+  DELETE          api/courses/{course}/admins/invitations/{invitation} course.admins.invitaΓÇª
+  POST            api/courses/{course}/admins/invitations/{invitation}/accept course.adminsΓÇª
+  POST            api/courses/{course}/admins/invitations/{invitation}/decline course.adminΓÇª
+  POST            api/courses/{course}/admins/invite course.admins.invite ΓÇ║ Api\Learn\CoursΓÇª
+  POST            api/courses/{course}/admins/search course.admins.search ΓÇ║ Api\Learn\CoursΓÇª
+  DELETE          api/courses/{course}/admins/{member} course.admins.destroy ΓÇ║ Api\Learn\CoΓÇª
+  GET|HEAD        api/courses/{course}/appeals ............. Api\GradeAppealController@index
+  POST            api/courses/{course}/appeals ............. Api\GradeAppealController@store
+  GET|HEAD        api/courses/{course}/appeals/statistics Api\GradeAppealController@getStatΓÇª
+  GET|HEAD        api/courses/{course}/assignments course.assignments.index ΓÇ║ Api\Learn\CouΓÇª
+  POST            api/courses/{course}/assignments course.assignments.store ΓÇ║ Api\Learn\CouΓÇª
+  GET|HEAD        api/courses/{course}/assignments/create course.assignments.create ΓÇ║ Api\LΓÇª
+  GET|HEAD        api/courses/{course}/assignments/{assignment} course.assignments.show ΓÇ║ AΓÇª
+  PUT|PATCH       api/courses/{course}/assignments/{assignment} course.assignments.update  ΓÇª
+  DELETE          api/courses/{course}/assignments/{assignment} course.assignments.destroy ΓÇª
+  GET|HEAD        api/courses/{course}/assignments/{assignment}/edit course.assignments.ediΓÇª
+  GET|HEAD        api/courses/{course}/attendances attendances.index ΓÇ║ Api\Learn\Course\attΓÇª
+  GET|HEAD        api/courses/{course}/basic-info course.basic-info.page.show ΓÇ║ Api\Learn\CΓÇª
+  GET|HEAD        api/courses/{course}/certificates ........ Api\CertificateController@index
+  POST            api/courses/{course}/certificates/bulk-issue Api\CertificateController@buΓÇª
+  POST            api/courses/{course}/certificates/generate Api\CertificateController@geneΓÇª
+  GET|HEAD        api/courses/{course}/certificates/pricing Api\CertificateController@getDoΓÇª
+  GET|HEAD        api/courses/{course}/certificates/settings Api\CertificateController@getSΓÇª
+  PATCH           api/courses/{course}/certificates/settings Api\CertificateController@updaΓÇª
+  GET|HEAD        api/courses/{course}/certificates/statistics Api\CertificateController@geΓÇª
+  POST            api/courses/{course}/completion/accept-grade Api\CourseCompletionControllΓÇª
+  POST            api/courses/{course}/completion/archive Api\CourseCompletionController@arΓÇª
+  GET|HEAD        api/courses/{course}/completion/export Api\CourseCompletionController@expΓÇª
+  POST            api/courses/{course}/completion/finalize Api\CourseCompletionController@fΓÇª
+  PATCH           api/courses/{course}/completion/members/{member}/grade Api\CourseCompletiΓÇª
+  GET|HEAD        api/courses/{course}/completion/members/{member}/grade-history Api\CourseΓÇª
+  GET|HEAD        api/courses/{course}/completion/my-grade Api\CourseCompletionController@gΓÇª
+  GET|HEAD        api/courses/{course}/completion/preview-grades Api\CourseCompletionControΓÇª
+  POST            api/courses/{course}/completion/publish-grades Api\CourseCompletionControΓÇª
+  POST            api/courses/{course}/completion/reopen Api\CourseCompletionController@reoΓÇª
+  POST            api/courses/{course}/completion/start-grading Api\CourseCompletionControlΓÇª
+  GET|HEAD        api/courses/{course}/completion/summary Api\CourseCompletionController@geΓÇª
+  POST            api/courses/{course}/cover course.cover.update ΓÇ║ Api\Learn\Course\info\CoΓÇª
+  GET|HEAD        api/courses/{course}/eligibility . Api\ExamEligibilityController@getStatus
+  POST            api/courses/{course}/eligibility/members/{member}/unlock Api\ExamEligibilΓÇª
+  GET|HEAD        api/courses/{course}/eligibility/pending-requests Api\ExamEligibilityContΓÇª
+  POST            api/courses/{course}/eligibility/refresh Api\ExamEligibilityController@reΓÇª
+  GET|HEAD        api/courses/{course}/eligibility/summary Api\ExamEligibilityController@geΓÇª
+  POST            api/courses/{course}/eligibility/unlock/points Api\ExamEligibilityControlΓÇª
+  POST            api/courses/{course}/eligibility/unlock/reading Api\ExamEligibilityControΓÇª
+  GET|HEAD        api/courses/{course}/export/results course.export.results ΓÇ║ Api\Learn\CouΓÇª
+  POST            api/courses/{course}/favorite course.favorite ΓÇ║ Api\Learn\Course\info\CouΓÇª
+  GET|HEAD        api/courses/{course}/feeds course.feeds ΓÇ║ Api\Learn\Course\info\CourseActΓÇª
+  GET|HEAD        api/courses/{course}/feeds/get-more-activities course.feeds.getMoresActivΓÇª
+  GET|HEAD        api/courses/{course}/groups course.groups.index ΓÇ║ Api\Learn\Course\groupsΓÇª
+  POST            api/courses/{course}/groups course.groups.store ΓÇ║ Api\Learn\Course\groupsΓÇª
+  GET|HEAD        api/courses/{course}/groups/{group} course.groups.show ΓÇ║ Api\Learn\CourseΓÇª
+  PATCH           api/courses/{course}/groups/{group} course.groups.update ΓÇ║ Api\Learn\CourΓÇª
+  DELETE          api/courses/{course}/groups/{group} course.groups.destroy ΓÇ║ Api\Learn\CouΓÇª
+  GET|HEAD        api/courses/{course}/groups/{group}/attendances course.groups.attendancesΓÇª
+  POST            api/courses/{course}/groups/{group}/attendances course.groups.attendancesΓÇª
+  GET|HEAD        api/courses/{course}/groups/{group}/member-requesters Api\Learn\Course\grΓÇª
+  POST            api/courses/{course}/groups/{group}/members Api\Learn\Course\groups\CoursΓÇª
+  POST            api/courses/{course}/groups/{group}/members/join course.groups.members.joΓÇª
+  POST            api/courses/{course}/groups/{group}/members/leave course.groups.members.lΓÇª
+  GET|HEAD        api/courses/{course}/groups/{group}/members/requesters course.groups.membΓÇª
+  DELETE          api/courses/{course}/groups/{group}/members/{member} course.groups.memberΓÇª
+  POST            api/courses/{course}/groups/{group}/members/{member}/approve course.groupΓÇª
+  POST            api/courses/{course}/groups/{group}/members/{member}/reject course.groupsΓÇª
+  PATCH           api/courses/{course}/header course.header.update ΓÇ║ Api\Learn\Course\info\ΓÇª
+  GET|HEAD        api/courses/{course}/lessons course.lessons.index ΓÇ║ Api\Learn\Course\lessΓÇª
+  POST            api/courses/{course}/lessons course.lessons.store ΓÇ║ Api\Learn\Course\lessΓÇª
+  GET|HEAD        api/courses/{course}/lessons/create course.lessons.create ΓÇ║ Api\Learn\CouΓÇª
+  GET|HEAD        api/courses/{course}/lessons/{lesson} course.lessons.show ΓÇ║ Api\Learn\CouΓÇª
+  PUT             api/courses/{course}/lessons/{lesson} course.lessons.update ΓÇ║ Api\Learn\CΓÇª
+  PATCH           api/courses/{course}/lessons/{lesson} course.lessons.part.update ΓÇ║ Api\LeΓÇª
+  DELETE          api/courses/{course}/lessons/{lesson} course.lessons.destroy ΓÇ║ Api\Learn\ΓÇª
+  POST            api/courses/{course}/lessons/{lesson}/bookmark course.lessons.bookmark.toΓÇª
+  POST            api/courses/{course}/lessons/{lesson}/dislike course.lessons.dislike ΓÇ║ ApΓÇª
+  POST            api/courses/{course}/lessons/{lesson}/dislikes course.lessons.dislike.togΓÇª
+  GET|HEAD        api/courses/{course}/lessons/{lesson}/edit course.lessons.edit ΓÇ║ Api\LearΓÇª
+  POST            api/courses/{course}/lessons/{lesson}/like course.lessons.like ΓÇ║ Api\LearΓÇª
+  POST            api/courses/{course}/lessons/{lesson}/likes course.lessons.like.toggle ΓÇ║ ΓÇª
+  POST            api/courses/{course}/lessons/{lesson}/share course.lessons.share ΓÇ║ Api\LeΓÇª
+  POST            api/courses/{course}/logo course.logo.update ΓÇ║ Api\Learn\Course\info\CourΓÇª
+  GET|HEAD        api/courses/{course}/members course.members.index ΓÇ║ Api\Learn\Course\membΓÇª
+  POST            api/courses/{course}/members course.members.storemember ΓÇ║ Api\Learn\CoursΓÇª
+  DELETE          api/courses/{course}/members/groups/{group} Api\Learn\Course\groups\CoursΓÇª
+  GET|HEAD        api/courses/{course}/members/member-requesters course.members.requesters ΓÇª
+  POST            api/courses/{course}/members/process-scores course.members.process-scoresΓÇª
+  PATCH           api/courses/{course}/members/update-last-access-group courses.members.updΓÇª
+  GET|HEAD        api/courses/{course}/members/{course_member}/member-settings course.membeΓÇª
+  DELETE          api/courses/{course}/members/{member} Api\Learn\Course\members\CourseMembΓÇª
+  GET|HEAD        api/courses/{course}/members/{member}/admin/progress course.admin.member.ΓÇª
+  PATCH           api/courses/{course}/members/{member}/bonus-points Api\Learn\Course\membeΓÇª
+  DELETE          api/courses/{course}/members/{member}/delete Api\Learn\Course\members\CouΓÇª
+  PATCH           api/courses/{course}/members/{member}/edited-grade course.member.edited-gΓÇª
+  PATCH           api/courses/{course}/members/{member}/grade_progress Api\Learn\Course\memΓÇª
+  PATCH           api/courses/{course}/members/{member}/member-code course.member.member-coΓÇª
+  GET|HEAD        api/courses/{course}/members/{member}/member-grade-progress course.memberΓÇª
+  PATCH           api/courses/{course}/members/{member}/notes-comments Api\Learn\Course\memΓÇª
+  PATCH           api/courses/{course}/members/{member}/order-number course.member.order-nuΓÇª
+  POST            api/courses/{course}/members/{member}/process-grades Api\Learn\Course\memΓÇª
+  GET|HEAD        api/courses/{course}/members/{member}/progress course.member.show ΓÇ║ Api\LΓÇª
+  POST            api/courses/{course}/members/{member}/set-active-group-tab Api\Learn\CourΓÇª
+  POST            api/courses/{course}/members/{member}/set-active-tab Api\Learn\Course\memΓÇª
+  PATCH           api/courses/{course}/members/{member}/update Api\Learn\Course\members\CouΓÇª
+  PATCH           api/courses/{course}/members/{member}/update-own-profile course.member.upΓÇª
+  GET|HEAD        api/courses/{course}/posts course.posts.index ΓÇ║ Api\Learn\Course\posts\CoΓÇª
+  POST            api/courses/{course}/posts course.posts.store ΓÇ║ Api\Learn\Course\posts\CoΓÇª
+  GET|HEAD        api/courses/{course}/posts/{course_post} course.posts.show ΓÇ║ Api\Learn\CoΓÇª
+  PATCH           api/courses/{course}/posts/{course_post} course.posts.update ΓÇ║ Api\Learn\ΓÇª
+  DELETE          api/courses/{course}/posts/{course_post} course.posts.destroy ΓÇ║ Api\LearnΓÇª
+  GET|HEAD        api/courses/{course}/posts/{course_post}/comments course.post.comments.inΓÇª
+  POST            api/courses/{course}/posts/{course_post}/comments course.post.comments.stΓÇª
+  PATCH           api/courses/{course}/posts/{course_post}/comments/{comment} course.post.cΓÇª
+  DELETE          api/courses/{course}/posts/{course_post}/comments/{comment} course.post.cΓÇª
+  POST            api/courses/{course}/posts/{course_post}/dislike toggle.dislike.course_poΓÇª
+  GET|HEAD        api/courses/{course}/posts/{course_post}/edit course.posts.edit ΓÇ║ Api\LeaΓÇª
+  GET|HEAD        api/courses/{course}/posts/{course_post}/images/{image}/comments course.pΓÇª
+  POST            api/courses/{course}/posts/{course_post}/images/{image}/comments course.pΓÇª
+  DELETE          api/courses/{course}/posts/{course_post}/images/{image}/comments/{comment} course.post.images.comment.destroy ΓÇ║ Api\Learn\Course\posts\CoursePostImageCommentController@destrΓÇª
+  PUT             api/courses/{course}/posts/{course_post}/images/{image}/comments/{comment} course.post.images.comment.update ΓÇ║ Api\Learn\Course\posts\CoursePostImageCommentController@updaΓÇª
+  POST            api/courses/{course}/posts/{course_post}/images/{image}/comments/{comment}/dislike course.post.images.comment.toggle-dislike ΓÇ║ Api\Learn\Course\posts\CoursePostImageCommentReactionController@togΓÇª
+  POST            api/courses/{course}/posts/{course_post}/images/{image}/comments/{comment}/like course.post.images.comment.toggle-like ΓÇ║ Api\Learn\Course\posts\CoursePostImageCommentReactionController@togΓÇª
+  POST            api/courses/{course}/posts/{course_post}/images/{image}/dislike course.poΓÇª
+  POST            api/courses/{course}/posts/{course_post}/images/{image}/like course.post.ΓÇª
+  POST            api/courses/{course}/posts/{course_post}/like toggle.like.course_post ΓÇ║ AΓÇª
+  POST            api/courses/{course}/posts/{course_post}/share course.post.share ΓÇ║ CourseΓÇª
+  GET|HEAD        api/courses/{course}/posts/{course_post}/shares course.post.shares.list  ΓÇª
+  DELETE          api/courses/{course}/posts/{course_post}/unshare course.post.unshare ΓÇ║ CoΓÇª
+  GET|HEAD        api/courses/{course}/profile course.profile ΓÇ║ Api\Learn\Course\info\CoursΓÇª
+  GET|HEAD        api/courses/{course}/progress course.progress ΓÇ║ Api\Learn\Course\info\CouΓÇª
+  GET|HEAD        api/courses/{course}/quizzes quizzes.index ΓÇ║ Api\Learn\Course\quizzes\CouΓÇª
+  POST            api/courses/{course}/quizzes quizzes.store ΓÇ║ Api\Learn\Course\quizzes\CouΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/create quizzes.create ΓÇ║ Api\Learn\Course\quiΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz} quizzes.show ΓÇ║ Api\Learn\Course\quizzΓÇª
+  PUT|PATCH       api/courses/{course}/quizzes/{quiz} quizzes.update ΓÇ║ Api\Learn\Course\quiΓÇª
+  DELETE          api/courses/{course}/quizzes/{quiz} quizzes.destroy ΓÇ║ Api\Learn\Course\quΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz}/edit quizzes.edit ΓÇ║ Api\Learn\Course\ΓÇª
+  POST            api/courses/{course}/quizzes/{quiz}/efficiency course.member.quiz.efficieΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz}/questions quiz.questions.index ΓÇ║ Api\ΓÇª
+  POST            api/courses/{course}/quizzes/{quiz}/questions quiz.questions.store ΓÇ║ Api\ΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz}/questions/create quiz.questions.creatΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz}/questions/{question} quiz.questions.sΓÇª
+  PUT|PATCH       api/courses/{course}/quizzes/{quiz}/questions/{question} quiz.questions.uΓÇª
+  DELETE          api/courses/{course}/quizzes/{quiz}/questions/{question} quiz.questions.dΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz}/questions/{question}/edit quiz.questiΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz}/results results.index ΓÇ║ Api\Learn\CouΓÇª
+  POST            api/courses/{course}/quizzes/{quiz}/results results.store ΓÇ║ Api\Learn\CouΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz}/results/create results.create ΓÇ║ Api\LΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz}/results/{result} results.show ΓÇ║ Api\LΓÇª
+  PUT|PATCH       api/courses/{course}/quizzes/{quiz}/results/{result} results.update ΓÇ║ ApiΓÇª
+  DELETE          api/courses/{course}/quizzes/{quiz}/results/{result} results.destroy ΓÇ║ ApΓÇª
+  GET|HEAD        api/courses/{course}/quizzes/{quiz}/results/{result}/edit results.edit ΓÇ║ ΓÇª
+  GET|HEAD        api/courses/{course}/remediation ......... Api\RemediationController@index
+  POST            api/courses/{course}/remediation ......... Api\RemediationController@store
+  GET|HEAD        api/courses/{course}/reviews course.reviews.index ΓÇ║ Api\Learn\Course\reviΓÇª
+  POST            api/courses/{course}/reviews course.reviews.store ΓÇ║ Api\Learn\Course\reviΓÇª
+  GET|HEAD        api/courses/{course}/reviews/my-review course.reviews.my-review ΓÇ║ Api\LeaΓÇª
+  GET|HEAD        api/courses/{course}/reviews/{review} course.reviews.show ΓÇ║ Api\Learn\CouΓÇª
+  PUT             api/courses/{course}/reviews/{review} course.reviews.update ΓÇ║ Api\Learn\CΓÇª
+  DELETE          api/courses/{course}/reviews/{review} course.reviews.destroy ΓÇ║ Api\Learn\ΓÇª
+  GET|HEAD        api/courses/{course}/settings course.settings.page.show ΓÇ║ Api\Learn\CoursΓÇª
+  PATCH           api/courses/{course}/subheader course.subheader.update ΓÇ║ Api\Learn\CourseΓÇª
+  GET|HEAD        api/courses/{course}/top-performers course.top-performers ΓÇ║ Api\Learn\CouΓÇª
+  GET|HEAD        api/dashboard .................................................. dashboard
+  GET|HEAD        api/debug-data ........................................................... 
+  POST            api/debug-login .......................................................... 
+  GET|HEAD        api/donates . donates.list ΓÇ║ Api\Earn\DonateController@allAvailableDonates
+  GET|HEAD        api/donates/available donates.available ΓÇ║ Api\Earn\DonateController@allAvΓÇª
+  GET|HEAD        api/donates/history .. donates.history ΓÇ║ Api\Earn\DonateController@history
+  GET|HEAD        api/donates/widget ..... donates.widget ΓÇ║ Api\Earn\DonateController@widget
+  GET|HEAD        api/donates/{donate}/get-donate donate.get-donate ΓÇ║ Api\Earn\DonateControΓÇª
+  POST            api/eligibility-overrides/{override}/approve Api\ExamEligibilityControlleΓÇª
+  PATCH           api/eligibility-overrides/{override}/reading-progress Api\ExamEligibilityΓÇª
+  POST            api/eligibility-overrides/{override}/reject Api\ExamEligibilityControllerΓÇª
+  GET|HEAD        api/follow/is-following ................. Api\FollowController@isFollowing
+  POST            api/follow/toggle ...................... Api\FollowController@toggleFollow
+  GET|HEAD        api/follow/users/{userId}/followers ....... Api\FollowController@followers
+  GET|HEAD        api/follow/users/{userId}/following ....... Api\FollowController@following
+  GET|HEAD        api/follow/users/{userId}/stats ............... Api\FollowController@stats
+  GET|HEAD        api/forgot-password forgot-pasword ΓÇ║ Api\Shared\ForgotPasswordController@ΓÇª
+  POST            api/forgot-password/exchange/{user} forgot-pasword.exchange ΓÇ║ Api\Shared\ΓÇª
+  POST            api/forgot-password/getuser forgot-pasword.get-user ΓÇ║ Api\Shared\ForgotPaΓÇª
+  POST            api/forgot-password/reset/{user} forgot-pasword.reset ΓÇ║ Api\Shared\ForgotΓÇª
+  DELETE          api/forgot-password/users/{user} Api\Shared\ForgotPasswordController@destΓÇª
+  GET|HEAD        api/friends .................... friends ΓÇ║ Api\Play\FriendController@index
+  GET|HEAD        api/friends/pending friends.pending ΓÇ║ Api\Play\FriendController@pendingReΓÇª
+  GET|HEAD        api/friends/search ..... friends.search ΓÇ║ Api\Play\FriendController@search
+  GET|HEAD        api/friends/suggestions friends.suggestions ΓÇ║ Api\Play\FriendController@sΓÇª
+  DELETE          api/friends/{friend} delete-friend-request ΓÇ║ Api\Play\FriendController@deΓÇª
+  PATCH           api/friends/{friend}/accept accept-friend-request ΓÇ║ Api\Play\FriendControΓÇª
+  POST            api/friends/{friend}/deny deny-friend-request ΓÇ║ Api\Play\FriendControllerΓÇª
+  POST            api/friends/{friend}/unfriend unfriend ΓÇ║ Api\Play\FriendController@unfrieΓÇª
+  POST            api/friends/{recipient} friend-request ΓÇ║ Api\Play\FriendController@addFriΓÇª
+  GET|HEAD        api/game/guessing-number game.quessing_number ΓÇ║ Api\Play\Game\GameControlΓÇª
+  GET|HEAD        api/game/mental-match game.mental_match ΓÇ║ Api\Play\Game\GameController@meΓÇª
+  GET|HEAD        api/game/snake ...... game.snake ΓÇ║ Api\Play\Game\GameController@snake_game
+  GET|HEAD        api/game/xo ............... game.xo ΓÇ║ Api\Play\Game\GameController@xo_game
+  GET|HEAD        api/gamification/achievements . Api\GamificationController@getAchievements
+  GET|HEAD        api/gamification/achievements/available Api\GamificationController@getAvaΓÇª
+  GET|HEAD        api/gamification/achievements/stats Api\GamificationController@getAchieveΓÇª
+  GET|HEAD        api/gamification/leaderboard/achievements gamification.leaderboard.achievΓÇª
+  GET|HEAD        api/gamification/leaderboard/level gamification.leaderboard.level ΓÇ║ Api\GΓÇª
+  GET|HEAD        api/gamification/leaderboard/points gamification.leaderboard.points ΓÇ║ ApiΓÇª
+  GET|HEAD        api/gamification/leaderboard/streak gamification.leaderboard.streak ΓÇ║ ApiΓÇª
+  GET|HEAD        api/gamification/leaderboard/summary gamification.leaderboard.summary ΓÇ║ AΓÇª
+  POST            api/gamification/login ............ Api\GamificationController@recordLogin
+  GET|HEAD        api/gamification/streak ......... Api\GamificationController@getStreakInfo
+  GET|HEAD        api/grade-appeals/my ................. Api\GradeAppealController@myAppeals
+  GET|HEAD        api/grade-appeals/{appeal} ................ Api\GradeAppealController@show
+  POST            api/grade-appeals/{appeal}/approve ..... Api\GradeAppealController@approve
+  POST            api/grade-appeals/{appeal}/reject ....... Api\GradeAppealController@reject
+  POST            api/grade-appeals/{appeal}/start-review Api\GradeAppealController@startReΓÇª
+  POST            api/grade-appeals/{appeal}/withdraw ... Api\GradeAppealController@withdraw
+  GET|HEAD        api/home-visit homevisit.login ΓÇ║ Api\Learn\Student\HomeVisit\HomeVisitAutΓÇª
+  POST            api/home-visit/admin-login homevisit.admin.login ΓÇ║ Api\Learn\Student\HomeΓÇª
+  GET|HEAD        api/home-visit/admin/dashboard homevisit.admin.dashboard ΓÇ║ Api\Learn\StudΓÇª
+  GET|HEAD        api/home-visit/admin/dashboard/mock homevisit.admin.dashboard.mock ΓÇ║ Api\ΓÇª
+  GET|HEAD        api/home-visit/admin/export/visits homevisit.admin.export.visits ΓÇ║ Api\LeΓÇª
+  POST            api/home-visit/admin/logout homevisit.admin.logout ΓÇ║ Api\Learn\Student\HoΓÇª
+  GET|HEAD        api/home-visit/admin/settings homevisit.admin.settings ΓÇ║ Api\Learn\StudenΓÇª
+  GET|HEAD        api/home-visit/admin/students homevisit.admin.students ΓÇ║ Api\Learn\StudenΓÇª
+  GET|HEAD        api/home-visit/admin/students/{id} homevisit.admin.students.show ΓÇ║ Api\LeΓÇª
+  PUT             api/home-visit/admin/students/{id} homevisit.admin.students.update ΓÇ║ Api\ΓÇª
+  GET|HEAD        api/home-visit/admin/visits homevisit.admin.visits ΓÇ║ Api\Learn\Student\HoΓÇª
+  GET|HEAD        api/home-visit/admin/visits/{id} homevisit.admin.visits.show ΓÇ║ Api\Learn\ΓÇª
+  PUT             api/home-visit/admin/visits/{id}/status homevisit.admin.visits.update.staΓÇª
+  GET|HEAD        api/home-visit/admin/zones homevisit.admin.zones.list ΓÇ║ Api\Learn\StudentΓÇª
+  POST            api/home-visit/admin/zones homevisit.admin.zones.store ΓÇ║ Api\Learn\StudenΓÇª
+  POST            api/home-visit/admin/zones/reorder homevisit.admin.zones.reorder ΓÇ║ Api\LeΓÇª
+  GET|HEAD        api/home-visit/admin/zones/{id} homevisit.admin.zones.show ΓÇ║ Api\Learn\StΓÇª
+  PUT             api/home-visit/admin/zones/{id} homevisit.admin.zones.update ΓÇ║ Api\Learn\ΓÇª
+  DELETE          api/home-visit/admin/zones/{id} homevisit.admin.zones.destroy ΓÇ║ Api\LearnΓÇª
+  PUT             api/home-visit/admin/zones/{id}/toggle-status homevisit.admin.zones.togglΓÇª
+  GET|HEAD        api/home-visit/check-auth homevisit.check.auth ΓÇ║ Api\Learn\Student\HomeViΓÇª
+  POST            api/home-visit/logout homevisit.general.logout ΓÇ║ Api\Learn\Student\HomeViΓÇª
+  POST            api/home-visit/student-login homevisit.student.login ΓÇ║ Api\Learn\Student\ΓÇª
+  PUT             api/home-visit/student/academic-info/bulk-update homevisit.student.academΓÇª
+  GET|HEAD        api/home-visit/student/academic-info/search homevisit.student.academic-inΓÇª
+  GET|HEAD        api/home-visit/student/academic-info/statistics homevisit.student.academiΓÇª
+  POST            api/home-visit/student/home-visit homevisit.student.home-visit.store ΓÇ║ ApΓÇª
+  GET|HEAD        api/home-visit/student/profile homevisit.student.profile ΓÇ║ Api\Learn\StudΓÇª
+  POST            api/home-visit/student/update-info homevisit.student.update.info ΓÇ║ Api\LeΓÇª
+  POST            api/home-visit/student/upload-photos homevisit.student.upload.photos ΓÇ║ ApΓÇª
+  GET|HEAD        api/home-visit/student/{student}/academic-info homevisit.student.academicΓÇª
+  POST            api/home-visit/student/{student}/academic-info homevisit.student.academicΓÇª
+  GET|HEAD        api/home-visit/student/{student}/academic-info/{academicInfo} homevisit.sΓÇª
+  PUT             api/home-visit/student/{student}/academic-info/{academicInfo} homevisit.sΓÇª
+  DELETE          api/home-visit/student/{student}/academic-info/{academicInfo} homevisit.sΓÇª
+  PUT             api/home-visit/student/{student}/academic-info/{academicInfo}/set-current homevisit.student.academic-info.set-current ΓÇ║ Api\Learn\Student\HomeVisit\StudentAcademicInfoController@setCurrenΓÇª
+  GET|HEAD        api/home-visit/student/{student}/addresses homevisit.student.addresses.inΓÇª
+  POST            api/home-visit/student/{student}/addresses homevisit.student.addresses.stΓÇª
+  PUT             api/home-visit/student/{student}/addresses/{address} homevisit.student.adΓÇª
+  DELETE          api/home-visit/student/{student}/addresses/{address} homevisit.student.adΓÇª
+  PUT             api/home-visit/student/{student}/addresses/{address}/set-current homevisiΓÇª
+  GET|HEAD        api/home-visit/student/{student}/contacts homevisit.student.contacts.indeΓÇª
+  POST            api/home-visit/student/{student}/contacts homevisit.student.contacts.storΓÇª
+  PUT             api/home-visit/student/{student}/contacts/{contact} homevisit.student.conΓÇª
+  DELETE          api/home-visit/student/{student}/contacts/{contact} homevisit.student.conΓÇª
+  PUT             api/home-visit/student/{student}/contacts/{contact}/set-primary homevisitΓÇª
+  GET|HEAD        api/home-visit/student/{student}/guardian homevisit.student.guardian.showΓÇª
+  POST            api/home-visit/student/{student}/guardian homevisit.student.guardian.storΓÇª
+  PUT             api/home-visit/student/{student}/guardian homevisit.student.guardian.updaΓÇª
+  GET|HEAD        api/home-visit/student/{student}/health homevisit.student.health.show ΓÇ║ AΓÇª
+  POST            api/home-visit/student/{student}/health homevisit.student.health.store ΓÇ║ ΓÇª
+  PUT             api/home-visit/student/{student}/health/{health} homevisit.student.healthΓÇª
+  POST            api/home-visit/teacher-login homevisit.teacher.login ΓÇ║ Api\Learn\Student\ΓÇª
+  PUT             api/home-visit/teacher/academic-info/bulk-update homevisit.teacher.academΓÇª
+  GET|HEAD        api/home-visit/teacher/academic-info/search homevisit.teacher.academic-inΓÇª
+  GET|HEAD        api/home-visit/teacher/academic-info/statistics homevisit.teacher.academiΓÇª
+  POST            api/home-visit/teacher/create-home-visit/{student} homevisit.teacher.creaΓÇª
+  GET|HEAD        api/home-visit/teacher/dashboard homevisit.teacher.dashboard ΓÇ║ Api\Learn\ΓÇª
+  DELETE          api/home-visit/teacher/delete-home-visit/{homeVisit} homevisit.teacher.deΓÇª
+  GET|HEAD        api/home-visit/teacher/manage-student/{student} homevisit.teacher.manage.ΓÇª
+  GET|HEAD        api/home-visit/teacher/search-students homevisit.teacher.search.students ΓÇª
+  POST            api/home-visit/teacher/update-home-visit-with-images/{homeVisit} homevisiΓÇª
+  PUT             api/home-visit/teacher/update-home-visit/{homeVisit} homevisit.teacher.upΓÇª
+  PUT             api/home-visit/teacher/update-student/{student} homevisit.teacher.update.ΓÇª
+  GET|HEAD        api/home-visit/teacher/{student}/academic-info homevisit.teacher.academicΓÇª
+  POST            api/home-visit/teacher/{student}/academic-info homevisit.teacher.academicΓÇª
+  GET|HEAD        api/home-visit/teacher/{student}/academic-info/{academicInfo} homevisit.tΓÇª
+  PUT             api/home-visit/teacher/{student}/academic-info/{academicInfo} homevisit.tΓÇª
+  DELETE          api/home-visit/teacher/{student}/academic-info/{academicInfo} homevisit.tΓÇª
+  PUT             api/home-visit/teacher/{student}/academic-info/{academicInfo}/set-current homevisit.teacher.academic-info.set-current ΓÇ║ Api\Learn\Student\HomeVisit\StudentAcademicInfoController@setCurrenΓÇª
+  GET|HEAD        api/home-visit/teacher/{student}/addresses homevisit.teacher.addresses.inΓÇª
+  POST            api/home-visit/teacher/{student}/addresses homevisit.teacher.addresses.stΓÇª
+  PUT             api/home-visit/teacher/{student}/addresses/{address} homevisit.teacher.adΓÇª
+  DELETE          api/home-visit/teacher/{student}/addresses/{address} homevisit.teacher.adΓÇª
+  PUT             api/home-visit/teacher/{student}/addresses/{address}/set-current homevisiΓÇª
+  GET|HEAD        api/home-visit/teacher/{student}/contacts homevisit.teacher.contacts.indeΓÇª
+  POST            api/home-visit/teacher/{student}/contacts homevisit.teacher.contacts.storΓÇª
+  PUT             api/home-visit/teacher/{student}/contacts/{contact} homevisit.teacher.conΓÇª
+  DELETE          api/home-visit/teacher/{student}/contacts/{contact} homevisit.teacher.conΓÇª
+  PUT             api/home-visit/teacher/{student}/contacts/{contact}/set-primary homevisitΓÇª
+  GET|HEAD        api/home-visit/teacher/{student}/guardian homevisit.teacher.guardian.showΓÇª
+  POST            api/home-visit/teacher/{student}/guardian homevisit.teacher.guardian.storΓÇª
+  PUT             api/home-visit/teacher/{student}/guardian homevisit.teacher.guardian.updaΓÇª
+  GET|HEAD        api/home-visit/teacher/{student}/health homevisit.teacher.health.show ΓÇ║ AΓÇª
+  POST            api/home-visit/teacher/{student}/health homevisit.teacher.health.store ΓÇ║ ΓÇª
+  PUT             api/home-visit/teacher/{student}/health/{health} homevisit.teacher.healthΓÇª
+  GET|HEAD        api/home-visit/zones homevisit.zones.index ΓÇ║ Api\Learn\Student\HomeVisit\ΓÇª
+  GET|HEAD        api/lessons ...... index ΓÇ║ Api\Learn\Course\lessons\LessonController@index
+  POST            api/lessons ...... store ΓÇ║ Api\Learn\Course\lessons\LessonController@store
+  GET|HEAD        api/lessons/create create ΓÇ║ Api\Learn\Course\lessons\LessonController@creΓÇª
+  GET|HEAD        api/lessons/{lesson}/assignments lesson.assignments.index ΓÇ║ Api\Learn\CouΓÇª
+  POST            api/lessons/{lesson}/assignments lesson.assignments.store ΓÇ║ Api\Learn\CouΓÇª
+  GET|HEAD        api/lessons/{lesson}/assignments/create lesson.assignments.create ΓÇ║ Api\LΓÇª
+  GET|HEAD        api/lessons/{lesson}/assignments/{assignment} lesson.assignments.show ΓÇ║ AΓÇª
+  PUT|PATCH       api/lessons/{lesson}/assignments/{assignment} lesson.assignments.update  ΓÇª
+  DELETE          api/lessons/{lesson}/assignments/{assignment} lesson.assignments.destroy ΓÇª
+  GET|HEAD        api/lessons/{lesson}/assignments/{assignment}/edit lesson.assignments.ediΓÇª
+  GET|HEAD        api/lessons/{lesson}/comments comments.index ΓÇ║ Api\Learn\Course\lessons\cΓÇª
+  POST            api/lessons/{lesson}/comments comments.store ΓÇ║ Api\Learn\Course\lessons\cΓÇª
+  GET|HEAD        api/lessons/{lesson}/comments/create comments.create ΓÇ║ Api\Learn\Course\lΓÇª
+  GET|HEAD        api/lessons/{lesson}/comments/{comment} comments.show ΓÇ║ Api\Learn\Course\ΓÇª
+  PUT|PATCH       api/lessons/{lesson}/comments/{comment} comments.update ΓÇ║ Api\Learn\CoursΓÇª
+  DELETE          api/lessons/{lesson}/comments/{comment} comments.destroy ΓÇ║ Api\Learn\CourΓÇª
+  PATCH           api/lessons/{lesson}/comments/{comment} lesson.comments.update ΓÇ║ Api\LearΓÇª
+  GET|HEAD        api/lessons/{lesson}/comments/{comment}/edit comments.edit ΓÇ║ Api\Learn\CoΓÇª
+  POST            api/lessons/{lesson}/comments/{lesson_comment}/dislike lesson.comments.diΓÇª
+  POST            api/lessons/{lesson}/comments/{lesson_comment}/like lesson.comments.like.ΓÇª
+  GET|HEAD        api/lessons/{lesson}/images lesson.images.index ΓÇ║ Api\Learn\Course\lessonΓÇª
+  POST            api/lessons/{lesson}/images lesson.images.store ΓÇ║ Api\Learn\Course\lessonΓÇª
+  GET|HEAD        api/lessons/{lesson}/images/create lesson.images.create ΓÇ║ Api\Learn\CoursΓÇª
+  GET|HEAD        api/lessons/{lesson}/images/{image} lesson.images.show ΓÇ║ Api\Learn\CourseΓÇª
+  PUT|PATCH       api/lessons/{lesson}/images/{image} lesson.images.update ΓÇ║ Api\Learn\CourΓÇª
+  DELETE          api/lessons/{lesson}/images/{image} lesson.images.destroy ΓÇ║ Api\Learn\CouΓÇª
+  GET|HEAD        api/lessons/{lesson}/images/{image}/edit lesson.images.edit ΓÇ║ Api\Learn\CΓÇª
+  GET|HEAD        api/lessons/{lesson}/progress lesson.progress.show ΓÇ║ Api\Learn\Course\lesΓÇª
+  POST            api/lessons/{lesson}/progress/complete lesson.progress.complete ΓÇ║ Api\LeaΓÇª
+  POST            api/lessons/{lesson}/progress/start lesson.progress.start ΓÇ║ Api\Learn\CouΓÇª
+  POST            api/lessons/{lesson}/progress/time-spent lesson.progress.time-spent ΓÇ║ ApiΓÇª
+  POST            api/lessons/{lesson}/progress/toggle lesson.progress.toggle ΓÇ║ Api\Learn\CΓÇª
+  GET|HEAD        api/lessons/{lesson}/questions lesson.questions.index ΓÇ║ Api\Learn\Course\ΓÇª
+  POST            api/lessons/{lesson}/questions lesson.questions.store ΓÇ║ Api\Learn\Course\ΓÇª
+  GET|HEAD        api/lessons/{lesson}/questions/create lesson.questions.create ΓÇ║ Api\LearnΓÇª
+  GET|HEAD        api/lessons/{lesson}/questions/{question} lesson.questions.show ΓÇ║ Api\LeaΓÇª
+  PUT|PATCH       api/lessons/{lesson}/questions/{question} lesson.questions.update ΓÇ║ Api\LΓÇª
+  DELETE          api/lessons/{lesson}/questions/{question} lesson.questions.destroy ΓÇ║ Api\ΓÇª
+  POST            api/lessons/{lesson}/questions/{question}/answer lesson.questions.answer ΓÇª
+  GET|HEAD        api/lessons/{lesson}/questions/{question}/edit lesson.questions.edit ΓÇ║ ApΓÇª
+  GET|HEAD        api/lessons/{lesson}/topics topics.index ΓÇ║ Api\Learn\Course\lessons\topicΓÇª
+  POST            api/lessons/{lesson}/topics topics.store ΓÇ║ Api\Learn\Course\lessons\topicΓÇª
+  GET|HEAD        api/lessons/{lesson}/topics/create topics.create ΓÇ║ Api\Learn\Course\lessoΓÇª
+  GET|HEAD        api/lessons/{lesson}/topics/{topic} topics.show ΓÇ║ Api\Learn\Course\lessonΓÇª
+  PUT|PATCH       api/lessons/{lesson}/topics/{topic} topics.update ΓÇ║ Api\Learn\Course\lessΓÇª
+  DELETE          api/lessons/{lesson}/topics/{topic} topics.destroy ΓÇ║ Api\Learn\Course\lesΓÇª
+  GET|HEAD        api/lessons/{lesson}/topics/{topic}/edit topics.edit ΓÇ║ Api\Learn\Course\lΓÇª
+  GET|HEAD        api/lessons/{} ..... show ΓÇ║ Api\Learn\Course\lessons\LessonController@show
+  PUT|PATCH       api/lessons/{} . update ΓÇ║ Api\Learn\Course\lessons\LessonController@update
+  DELETE          api/lessons/{} destroy ΓÇ║ Api\Learn\Course\lessons\LessonController@destroy
+  GET|HEAD        api/lessons/{}/edit edit ΓÇ║ Api\Learn\Course\lessons\LessonController@edit
+  GET|HEAD        api/login ...................................................... api.login
+  POST            api/login .................................. Api\Auth\AuthController@login
+  POST            api/logout ................................ Api\Auth\AuthController@logout
+  GET|HEAD        api/me ........................................ Api\Auth\AuthController@me
+  GET|HEAD        api/me/course-invitations api.courses.my-invitations ΓÇ║ Api\Learn\Course\aΓÇª
+  GET|HEAD        api/me/recent-courses api.courses.recent ΓÇ║ Api\Learn\Course\info\CourseCoΓÇª
+  GET|HEAD        api/mental-math mental-math ΓÇ║ Api\Learn\Course\info\MentalMathController@ΓÇª
+  GET|HEAD        api/newsfeed ................ newsfeed ΓÇ║ Api\Play\NewsfeedController@index
+  GET|HEAD        api/newsfeed/activities newsfeed.activities ΓÇ║ Api\Play\ActivityControllerΓÇª
+  GET|HEAD        api/notifications notifications.index ΓÇ║ Api\Play\NotificationController@iΓÇª
+  POST            api/notifications/mark-all-read notifications.mark-all-read ΓÇ║ Api\Play\NoΓÇª
+  DELETE          api/notifications/read notifications.delete-read ΓÇ║ Api\Play\NotificationCΓÇª
+  GET|HEAD        api/notifications/recent notifications.recent ΓÇ║ Api\Play\NotificationContΓÇª
+  GET|HEAD        api/notifications/unread-count notifications.unread-count ΓÇ║ Api\Play\NotiΓÇª
+  DELETE          api/notifications/{notification} notifications.destroy ΓÇ║ Api\Play\NotificΓÇª
+  POST            api/notifications/{notification}/read notifications.mark-read ΓÇ║ Api\Play\ΓÇª
+  GET|HEAD        api/nuxnan-admin/deposit-requests Api\AdminWalletController@pendingDeposiΓÇª
+  GET|HEAD        api/nuxnan-admin/deposit-requests/{id} Api\AdminWalletController@showDepoΓÇª
+  POST            api/nuxnan-admin/deposit-requests/{id}/approve Api\AdminWalletController@ΓÇª
+  POST            api/nuxnan-admin/deposit-requests/{id}/reject Api\AdminWalletController@rΓÇª
+  GET|HEAD        api/nuxnan-admin/points/analytics .... Api\AdminPointsController@analytics
+  GET|HEAD        api/nuxnan-admin/points/leaderboard Api\AdminPointsController@leaderboard
+  GET|HEAD        api/nuxnan-admin/points/rules ............ Api\AdminPointsController@rules
+  POST            api/nuxnan-admin/points/rules ....... Api\AdminPointsController@createRule
+  PUT             api/nuxnan-admin/points/rules/{id} .. Api\AdminPointsController@updateRule
+  DELETE          api/nuxnan-admin/points/rules/{id} .. Api\AdminPointsController@deleteRule
+  GET|HEAD        api/nuxnan-admin/points/stats ............ Api\AdminPointsController@stats
+  POST            api/nuxnan-admin/points/users/{userId}/adjust Api\AdminPointsController@aΓÇª
+  GET|HEAD        api/nuxnan-admin/points/users/{userId}/transactions Api\AdminPointsControΓÇª
+  GET|HEAD        api/nuxnan-admin/wallet/analytics .... Api\AdminWalletController@analytics
+  GET|HEAD        api/nuxnan-admin/wallet/deposit-requests/pending Api\AdminWalletControlleΓÇª
+  POST            api/nuxnan-admin/wallet/deposit-requests/{requestId}/approve Api\AdminWalΓÇª
+  POST            api/nuxnan-admin/wallet/deposit-requests/{requestId}/reject Api\AdminWallΓÇª
+  GET|HEAD        api/nuxnan-admin/wallet/stats ............ Api\AdminWalletController@stats
+  POST            api/nuxnan-admin/wallet/users/{userId}/adjust Api\AdminWalletController@aΓÇª
+  GET|HEAD        api/nuxnan-admin/wallet/users/{userId}/transactions Api\AdminWalletControΓÇª
+  GET|HEAD        api/nuxnan-admin/wallet/withdrawals/pending Api\AdminWalletController@penΓÇª
+  POST            api/nuxnan-admin/wallet/withdrawals/{transactionId}/approve Api\AdminWallΓÇª
+  POST            api/nuxnan-admin/wallet/withdrawals/{transactionId}/reject Api\AdminWalleΓÇª
+  GET|HEAD        api/options options.index ΓÇ║ Api\Learn\Course\questions\QuestionOptionContΓÇª
+  POST            api/options options.store ΓÇ║ Api\Learn\Course\questions\QuestionOptionContΓÇª
+  GET|HEAD        api/options/create options.create ΓÇ║ Api\Learn\Course\questions\QuestionOpΓÇª
+  GET|HEAD        api/options/{option} options.show ΓÇ║ Api\Learn\Course\questions\QuestionOpΓÇª
+  PUT|PATCH       api/options/{option} options.update ΓÇ║ Api\Learn\Course\questions\QuestionΓÇª
+  DELETE          api/options/{option} options.destroy ΓÇ║ Api\Learn\Course\questions\QuestioΓÇª
+  GET|HEAD        api/options/{option}/edit options.edit ΓÇ║ Api\Learn\Course\questions\QuestΓÇª
+  GET|HEAD        api/photos/album/{albumId} ................ Api\PhotoController@getByAlbum
+  GET|HEAD        api/photos/{id} ................................. Api\PhotoController@show
+  POST            api/photos/{id}/like ............................ Api\PhotoController@like
+  POST            api/photos/{id}/unlike ........................ Api\PhotoController@unlike
+  GET|HEAD        api/ping ................................................................. 
+  GET|HEAD        api/plearnd-admin/advertises admin.advertises.index ΓÇ║ AdvertController@adΓÇª
+  PATCH           api/plearnd-admin/advertises/{advert}/approve admin.advertises.approve ΓÇ║ ΓÇª
+  PATCH           api/plearnd-admin/advertises/{advert}/reject admin.advertises.reject ΓÇ║ AdΓÇª
+  GET|HEAD        api/plearnd-admin/supports/donates admin.support.donate.index ΓÇ║ Api\Earn\ΓÇª
+  GET|HEAD        api/plearnd-admin/supports/donates/more admin.support.donate.fetch-more-dΓÇª
+  PATCH           api/plearnd-admin/supports/donates/{donate}/recieve admin.support.donate.ΓÇª
+  PATCH           api/plearnd-admin/supports/donates/{donate}/reject admin.support.donate.rΓÇª
+  GET|HEAD        api/points/balance .......................... Api\PointsController@balance
+  POST            api/points/convert .......................... Api\PointsController@convert
+  POST            api/points/earn ................................ Api\PointsController@earn
+  POST            api/points/refund ............................ Api\PointsController@refund
+  GET|HEAD        api/points/rules .............................. Api\PointsController@rules
+  POST            api/points/spend .............................. Api\PointsController@spend
+  GET|HEAD        api/points/transactions ................ Api\PointsController@transactions
+  POST            api/points/transfer ........................ Api\PointsController@transfer
+  PATCH           api/poll_comments/{poll_comment} polls.comment.update ΓÇ║ Api\Play\PollReacΓÇª
+  DELETE          api/poll_comments/{poll_comment} polls.comment.destroy ΓÇ║ Api\Play\PollReaΓÇª
+  POST            api/polls .................... polls.store ΓÇ║ Api\Play\PollController@store
+  POST            api/polls/vote ............ polls.vote ΓÇ║ Api\Play\PollVoteController@store
+  DELETE          api/polls/{poll} ......... polls.destroy ΓÇ║ Api\Play\PollController@destroy
+  POST            api/polls/{poll}/comment polls.comment ΓÇ║ Api\Play\PollReactionController@ΓÇª
+  POST            api/polls/{poll}/dislike polls.dislike ΓÇ║ Api\Play\PollReactionController@ΓÇª
+  POST            api/polls/{poll}/like polls.like ΓÇ║ Api\Play\PollReactionController@toggleΓÇª
+  POST            api/post_comments/{comment}/replies post.comments.reply.store ΓÇ║ Api\Play\ΓÇª
+  GET|HEAD        api/post_comments/{comment}/replies post.comments.replies.index ΓÇ║ Api\PlaΓÇª
+  POST            api/post_comments/{post_comment}/dislike toggle.dislike.post.comment ΓÇ║ ApΓÇª
+  POST            api/post_comments/{post_comment}/like toggle.like.post.comment ΓÇ║ Api\PlayΓÇª
+  DELETE          api/post_image_comments/{post_image_comment} post.image.comments.destroy ΓÇª
+  PATCH           api/post_image_comments/{post_image_comment} post.image.comments.update  ΓÇª
+  POST            api/post_image_comments/{post_image_comment}/dislike toggle.dislike.post.ΓÇª
+  POST            api/post_image_comments/{post_image_comment}/like toggle.like.post.image.ΓÇª
+  POST            api/post_images/{post_image}/dislike toggle.dislike.post.image ΓÇ║ Api\PlayΓÇª
+  POST            api/post_images/{post_image}/like toggle.like.post.image ΓÇ║ Api\Play\PostIΓÇª
+  POST            api/postimage/{post_image}/comments post.image.comments.store ΓÇ║ Api\Play\ΓÇª
+  GET|HEAD        api/postimage/{post_image}/comments post.image.comments.getComments ΓÇ║ ApiΓÇª
+  GET|HEAD        api/posts .................... posts.index ΓÇ║ Api\Play\PostController@index
+  POST            api/posts .................... posts.store ΓÇ║ Api\Play\PostController@store
+  GET|HEAD        api/posts-activity-types post.activity-types ΓÇ║ Api\Play\PostController@geΓÇª
+  GET|HEAD        api/posts-backgrounds post.backgrounds ΓÇ║ Api\Play\PostController@getBackgΓÇª
+  GET|HEAD        api/posts-feelings ... post.feelings ΓÇ║ Api\Play\PostController@getFeelings
+  GET|HEAD        api/posts-near-location post.near-location ΓÇ║ Api\Play\PostController@searΓÇª
+  GET|HEAD        api/posts-options .......... post.options ΓÇ║ Api\Play\PostController@create
+  GET|HEAD        api/posts-pinned ....... post.pinned ΓÇ║ Api\Play\PostController@pinnedPosts
+  GET|HEAD        api/posts-scheduled post.scheduled ΓÇ║ Api\Play\PostController@scheduledPosΓÇª
+  GET|HEAD        api/posts-tagged .... post.tagged ΓÇ║ Api\Play\PostController@getTaggedPosts
+  GET|HEAD        api/posts/create ........... posts.create ΓÇ║ Api\Play\PostController@create
+  GET|HEAD        api/posts/{post} ............... posts.show ΓÇ║ Api\Play\PostController@show
+  PUT|PATCH       api/posts/{post} ........... posts.update ΓÇ║ Api\Play\PostController@update
+  DELETE          api/posts/{post} ......... posts.destroy ΓÇ║ Api\Play\PostController@destroy
+  POST            api/posts/{post}/approve-tag post.approve-tag ΓÇ║ Api\Play\PostController@aΓÇª
+  GET|HEAD        api/posts/{post}/comments post.comments.index ΓÇ║ Api\Play\PostCommentContrΓÇª
+  POST            api/posts/{post}/comments post.comments.store ΓÇ║ Api\Play\PostCommentContrΓÇª
+  DELETE          api/posts/{post}/comments/{comment} post.comments.destroy ΓÇ║ Api\Play\PostΓÇª
+  PATCH           api/posts/{post}/comments/{comment} post.comments.update ΓÇ║ Api\Play\PostCΓÇª
+  POST            api/posts/{post}/dislike toggle.dislike.post ΓÇ║ Api\Play\PostReactionContrΓÇª
+  GET|HEAD        api/posts/{post}/edit .......... posts.edit ΓÇ║ Api\Play\PostController@edit
+  GET|HEAD        api/posts/{post}/getPostActivity post.activity ΓÇ║ Api\Play\PostController@ΓÇª
+  GET|HEAD        api/posts/{post}/images post.images.index ΓÇ║ Api\Play\PostImageController@ΓÇª
+  POST            api/posts/{post}/images post.images.store ΓÇ║ Api\Play\PostImageController@ΓÇª
+  DELETE          api/posts/{post}/images/{image} post.images.destroy ΓÇ║ Api\Play\PostImageCΓÇª
+  POST            api/posts/{post}/like toggle.like.post ΓÇ║ Api\Play\PostReactionController@ΓÇª
+  DELETE          api/posts/{post}/remove-tag post.remove-tag ΓÇ║ Api\Play\PostController@remΓÇª
+  POST            api/posts/{post}/schedule post.schedule ΓÇ║ Api\Play\PostController@schedule
+  POST            api/posts/{post}/share ............ post.share ΓÇ║ PostShareController@share
+  GET|HEAD        api/posts/{post}/shares .... post.shares.list ΓÇ║ PostShareController@shares
+  POST            api/posts/{post}/toggle-comments post.toggle-comments ΓÇ║ Api\Play\PostContΓÇª
+  POST            api/posts/{post}/toggle-pin post.toggle-pin ΓÇ║ Api\Play\PostController@togΓÇª
+  DELETE          api/posts/{post}/unshare ...... post.unshare ΓÇ║ PostShareController@unshare
+  GET|HEAD        api/profile/albums ............................. Api\AlbumController@index
+  POST            api/profile/albums ............................. Api\AlbumController@store
+  PUT             api/profile/albums/{id} ....................... Api\AlbumController@update
+  DELETE          api/profile/albums/{id} ...................... Api\AlbumController@destroy
+  POST            api/profile/avatar profile.avatar ΓÇ║ Api\Shared\UserProfileController@updaΓÇª
+  GET|HEAD        api/profile/completion profile.completion ΓÇ║ Api\Shared\UserProfileControlΓÇª
+  POST            api/profile/cover profile.cover ΓÇ║ Api\Shared\UserProfileController@updateΓÇª
+  GET|HEAD        api/profile/me .......... profile.me ΓÇ║ Api\Shared\UserProfileController@me
+  GET|HEAD        api/profile/photos ............................. Api\PhotoController@index
+  POST            api/profile/photos ............................. Api\PhotoController@store
+  PUT             api/profile/photos/{id} ....................... Api\PhotoController@update
+  DELETE          api/profile/photos/{id} ...................... Api\PhotoController@destroy
+  PUT             api/profile/privacy profile.privacy ΓÇ║ Api\Shared\UserProfileController@upΓÇª
+  GET|HEAD        api/profile/stats . profile.stats ΓÇ║ Api\Shared\UserProfileController@stats
+  PUT             api/profile/update profile.update ΓÇ║ Api\Shared\UserProfileController@updaΓÇª
+  GET|HEAD        api/profile/videos .... profile.videos ΓÇ║ Api\Play\VideoController@myVideos
+  POST            api/profile/videos . profile.videos.store ΓÇ║ Api\Play\VideoController@store
+  PUT             api/profile/videos/{video} profile.videos.update ΓÇ║ Api\Play\VideoControllΓÇª
+  DELETE          api/profile/videos/{video} profile.videos.destroy ΓÇ║ Api\Play\VideoControlΓÇª
+  POST            api/qr/execute ..................... qr.execute ΓÇ║ QRCodeController@execute
+  POST            api/qr/parse ........................... qr.parse ΓÇ║ QRCodeController@parse
+  GET|HEAD        api/qr/types ........................... qr.types ΓÇ║ QRCodeController@types
+  GET|HEAD        api/questions api.questions.index ΓÇ║ Api\Learn\Course\questions\QuestionCoΓÇª
+  POST            api/questions api.questions.store ΓÇ║ Api\Learn\Course\questions\QuestionCoΓÇª
+  GET|HEAD        api/questions/create api.questions.create ΓÇ║ Api\Learn\Course\questions\QuΓÇª
+  GET|HEAD        api/questions/{question} api.questions.show ΓÇ║ Api\Learn\Course\questions\ΓÇª
+  PUT|PATCH       api/questions/{question} api.questions.update ΓÇ║ Api\Learn\Course\questionΓÇª
+  DELETE          api/questions/{question} api.questions.destroy ΓÇ║ Api\Learn\Course\questioΓÇª
+  GET|HEAD        api/questions/{question}/answers questions.answers.index ΓÇ║ Api\Learn\CourΓÇª
+  POST            api/questions/{question}/answers questions.answers.store ΓÇ║ Api\Learn\CourΓÇª
+  GET|HEAD        api/questions/{question}/answers/create questions.answers.create ΓÇ║ Api\LeΓÇª
+  GET|HEAD        api/questions/{question}/answers/{answer} questions.answers.show ΓÇ║ Api\LeΓÇª
+  PUT|PATCH       api/questions/{question}/answers/{answer} questions.answers.update ΓÇ║ Api\ΓÇª
+  DELETE          api/questions/{question}/answers/{answer} questions.answers.destroy ΓÇ║ ApiΓÇª
+  GET|HEAD        api/questions/{question}/answers/{answer}/edit questions.answers.edit ΓÇ║ AΓÇª
+  POST            api/questions/{question}/duplicate Api\Learn\Course\questions\QuestionConΓÇª
+  GET|HEAD        api/questions/{question}/edit api.questions.edit ΓÇ║ Api\Learn\Course\questΓÇª
+  GET|HEAD        api/questions/{question}/images question.images.index ΓÇ║ Api\Learn\Course\ΓÇª
+  POST            api/questions/{question}/images question.images.store ΓÇ║ Api\Learn\Course\ΓÇª
+  GET|HEAD        api/questions/{question}/images/create question.images.create ΓÇ║ Api\LearnΓÇª
+  GET|HEAD        api/questions/{question}/images/{image} question.images.show ΓÇ║ Api\Learn\ΓÇª
+  PUT|PATCH       api/questions/{question}/images/{image} question.images.update ΓÇ║ Api\LearΓÇª
+  DELETE          api/questions/{question}/images/{image} question.images.destroy ΓÇ║ Api\LeaΓÇª
+  GET|HEAD        api/questions/{question}/images/{image}/edit question.images.edit ΓÇ║ Api\LΓÇª
+  GET|HEAD        api/questions/{question}/options questions.options.index ΓÇ║ Api\Learn\CourΓÇª
+  POST            api/questions/{question}/options questions.options.store ΓÇ║ Api\Learn\CourΓÇª
+  GET|HEAD        api/questions/{question}/options/create questions.options.create ΓÇ║ Api\LeΓÇª
+  GET|HEAD        api/questions/{question}/options/{option} questions.options.show ΓÇ║ Api\LeΓÇª
+  PUT|PATCH       api/questions/{question}/options/{option} questions.options.update ΓÇ║ Api\ΓÇª
+  DELETE          api/questions/{question}/options/{option} questions.options.destroy ΓÇ║ ApiΓÇª
+  GET|HEAD        api/questions/{question}/options/{option}/edit questions.options.edit ΓÇ║ AΓÇª
+  PATCH           api/questions/{question}/set_correct_option questions.set_correct_option ΓÇª
+  GET|HEAD        api/quizs/{quiz}/questions/{question}/answers quiz.question.answers.indexΓÇª
+  POST            api/quizs/{quiz}/questions/{question}/answers quiz.question.answers.storeΓÇª
+  GET|HEAD        api/quizs/{quiz}/questions/{question}/answers/create quiz.question.answerΓÇª
+  GET|HEAD        api/quizs/{quiz}/questions/{question}/answers/{answer} quiz.question.answΓÇª
+  PUT|PATCH       api/quizs/{quiz}/questions/{question}/answers/{answer} quiz.question.answΓÇª
+  DELETE          api/quizs/{quiz}/questions/{question}/answers/{answer} quiz.question.answΓÇª
+  GET|HEAD        api/quizs/{quiz}/questions/{question}/answers/{answer}/edit quiz.questionΓÇª
+  GET|HEAD        api/quizzes/get-quizzes course.quizzes.getQuizzes ΓÇ║ Api\Learn\Course\quizΓÇª
+  GET|HEAD        api/quizzes/search course.quizzes.search ΓÇ║ Api\Learn\Course\quizzes\CoursΓÇª
+  POST            api/quizzes/{quiz}/duplicate course.quizzes.duplicateQuizzes ΓÇ║ Api\Learn\ΓÇª
+  POST            api/refresh .............................. Api\Auth\AuthController@refresh
+  POST            api/register ............................ Api\Auth\AuthController@register
+  GET|HEAD        api/register/{user} register.reference ΓÇ║ Api\Shared\SuggesterController@iΓÇª
+  POST            api/remediation-enrollments/{enrollment}/cancel Api\RemediationControllerΓÇª
+  POST            api/remediation-enrollments/{enrollment}/grade Api\RemediationController@ΓÇª
+  POST            api/remediation-enrollments/{enrollment}/mark-attendance Api\RemediationCΓÇª
+  POST            api/remediation-enrollments/{enrollment}/submit Api\RemediationControllerΓÇª
+  GET|HEAD        api/remediation-sessions/{session} ........ Api\RemediationController@show
+  PATCH           api/remediation-sessions/{session} ...... Api\RemediationController@update
+  POST            api/remediation-sessions/{session}/bulk-grade Api\RemediationController@bΓÇª
+  POST            api/remediation-sessions/{session}/complete Api\RemediationController@comΓÇª
+  POST            api/remediation-sessions/{session}/enroll Api\RemediationController@enroll
+  POST            api/remediation-sessions/{session}/open ... Api\RemediationController@open
+  POST            api/remediation-sessions/{session}/start . Api\RemediationController@start
+  GET|HEAD        api/remediation/my-enrollments ... Api\RemediationController@myEnrollments
+  GET|HEAD        api/rewards ................................... Api\RewardController@index
+  POST            api/rewards ................................... Api\RewardController@store
+  GET|HEAD        api/rewards/my ............................ Api\RewardController@myRewards
+  POST            api/rewards/redeem ........................... Api\RewardController@redeem
+  GET|HEAD        api/rewards/stats ............................. Api\RewardController@stats
+  GET|HEAD        api/rewards/{id} ............................... Api\RewardController@show
+  PUT             api/rewards/{id} ............................. Api\RewardController@update
+  DELETE          api/rewards/{id} ............................ Api\RewardController@destroy
+  POST            api/rewards/{id}/claim ........................ Api\RewardController@claim
+  GET|HEAD        api/settings ................................ Api\SettingsController@index
+  POST            api/settings/account ................ Api\SettingsController@updateAccount
+  POST            api/settings/avatar .................. Api\SettingsController@updateAvatar
+  POST            api/settings/cover .................... Api\SettingsController@updateCover
+  POST            api/settings/password .............. Api\SettingsController@updatePassword
+  POST            api/settings/profile ................ Api\SettingsController@updateProfile
+  PATCH           api/share-comments/{id} shares.comments.update ΓÇ║ ShareCommentController@uΓÇª
+  DELETE          api/share-comments/{id} shares.comments.destroy ΓÇ║ ShareCommentController@ΓÇª
+  POST            api/share-comments/{id}/dislike shares.comments.dislike ΓÇ║ ShareCommentConΓÇª
+  POST            api/share-comments/{id}/like shares.comments.like ΓÇ║ ShareCommentControlleΓÇª
+  POST            api/shares .......................... shares.store ΓÇ║ ShareController@store
+  DELETE          api/shares/{id} ................. shares.destroy ΓÇ║ ShareController@destroy
+  GET|HEAD        api/shares/{id}/comments shares.comments.index ΓÇ║ ShareCommentController@iΓÇª
+  POST            api/shares/{id}/comments shares.comments.store ΓÇ║ ShareCommentController@sΓÇª
+  POST            api/shares/{id}/dislike shares.dislike ΓÇ║ ShareReactionController@toggleDiΓÇª
+  POST            api/shares/{id}/like .... shares.like ΓÇ║ ShareReactionController@toggleLike
+  GET|HEAD        api/shares/{type}/{id} .............. shares.list ΓÇ║ ShareController@shares
+  GET|HEAD        api/student-card student-card.index ΓÇ║ Api\Learn\Student\Card\StudentCardCΓÇª
+  GET|HEAD        api/student-card/admin student-card.admin.index ΓÇ║ Api\Learn\Student\Card\ΓÇª
+  GET|HEAD        api/student-card/admin/students student-card.admin.students ΓÇ║ Api\Learn\SΓÇª
+  GET|HEAD        api/student-card/admin/students/{level}/{room} student-card.admin.studentΓÇª
+  PATCH           api/student-card/admin/update-code/{student_card} student-card.admin.updaΓÇª
+  PATCH           api/student-card/admin/update-name-en/{student_card} student-card.admin.uΓÇª
+  PATCH           api/student-card/admin/update-name-th/{student_card} student-card.admin.uΓÇª
+  POST            api/student-card/admin/upload-photo/{student_card} student-card.admin.uplΓÇª
+  GET|HEAD        api/student-card/dashboard student-card.dashboard ΓÇ║ Api\Learn\Student\CarΓÇª
+  GET|HEAD        api/student-card/profile/{student_card} student-card.profile ΓÇ║ Api\Learn\ΓÇª
+  GET|HEAD        api/student-card/search student-card.search ΓÇ║ Api\Learn\Student\Card\StudΓÇª
+  PUT             api/student-card/update/{student_card} student-card.update ΓÇ║ Api\Learn\StΓÇª
+  GET|HEAD        api/student-card/{level}/{room} student-card.get-by-room ΓÇ║ Api\Learn\StudΓÇª
+  DELETE          api/student-card/{student_card}/photo student-card.photo.destroy ΓÇ║ Api\LeΓÇª
+  GET|HEAD        api/suggester/check/{user} suggester.check ΓÇ║ Api\Shared\SuggesterControllΓÇª
+  GET|HEAD        api/super-admins ...... super-admin.index ΓÇ║ Api\SuperAdminController@index
+  POST            api/super-admins ...... super-admin.store ΓÇ║ Api\SuperAdminController@store
+  GET|HEAD        api/super-admins/check super-admin.check ΓÇ║ Api\SuperAdminController@check
+  DELETE          api/super-admins/{userId} super-admin.destroy ΓÇ║ Api\SuperAdminController@ΓÇª
+  POST            api/supports/donates support.donate.store ΓÇ║ Api\Earn\DonateController@stoΓÇª
+  GET|HEAD        api/supports/donates/create support.donate.create ΓÇ║ Api\Earn\DonateControΓÇª
+  GET|HEAD        api/supports/donates/donor/{user} donate.get-donor ΓÇ║ Api\Earn\DonateContrΓÇª
+  POST            api/supports/plearnd support.store.plearnd ΓÇ║ Api\Shared\SupportControllerΓÇª
+  GET|HEAD        api/test-debug ........................................................... 
+  POST            api/test-login-diagnostic ................................................ 
+  POST            api/test-login-now ....................................................... 
+  POST            api/test-login-simple .................................................... 
+  POST            api/test-phone-login ..................................................... 
+  GET|HEAD        api/topics/{topic}/images topic.images.index ΓÇ║ Api\Learn\Course\lessons\tΓÇª
+  POST            api/topics/{topic}/images topic.images.store ΓÇ║ Api\Learn\Course\lessons\tΓÇª
+  GET|HEAD        api/topics/{topic}/images/create topic.images.create ΓÇ║ Api\Learn\Course\lΓÇª
+  GET|HEAD        api/topics/{topic}/images/{image} topic.images.show ΓÇ║ Api\Learn\Course\leΓÇª
+  PUT|PATCH       api/topics/{topic}/images/{image} topic.images.update ΓÇ║ Api\Learn\Course\ΓÇª
+  DELETE          api/topics/{topic}/images/{image} topic.images.destroy ΓÇ║ Api\Learn\CourseΓÇª
+  GET|HEAD        api/topics/{topic}/images/{image}/edit topic.images.edit ΓÇ║ Api\Learn\CourΓÇª
+  GET|HEAD        api/user ................................................................. 
+  GET|HEAD        api/user/questions user.get.questions ΓÇ║ Api\Learn\Course\questions\QuestiΓÇª
+  GET|HEAD        api/user1 ................................................................ 
+  GET|HEAD        api/users/search .. users.search ΓÇ║ Api\Shared\UserProfileController@search
+  GET|HEAD        api/users/{identifier}/activities user.activities ΓÇ║ Api\Shared\UserProfilΓÇª
+  GET|HEAD        api/users/{identifier}/albums .................. Api\AlbumController@index
+  GET|HEAD        api/users/{identifier}/friends user.friends ΓÇ║ Api\Play\FriendController@uΓÇª
+  GET|HEAD        api/users/{identifier}/photos .................. Api\PhotoController@index
+  GET|HEAD        api/users/{identifier}/show user.profile.show ΓÇ║ Api\Shared\UserProfileConΓÇª
+  GET|HEAD        api/users/{identifier}/stats user.stats ΓÇ║ Api\Shared\UserProfileControlleΓÇª
+  GET|HEAD        api/users/{user}/profile user.profile ΓÇ║ Api\Shared\UserProfileController@ΓÇª
+  GET|HEAD        api/users/{user}/videos user.videos ΓÇ║ Api\Play\VideoController@userVideos
+  POST            api/validate-referral-code .. Api\Auth\AuthController@validateReferralCode
+  GET|HEAD        api/videos/{video} ........... videos.show ΓÇ║ Api\Play\VideoController@show
+  POST            api/videos/{video}/view videos.view ΓÇ║ Api\Play\VideoController@recordView
+  GET|HEAD        api/wallet/balance .......................... Api\WalletController@balance
+  POST            api/wallet/convert-points ............. Api\WalletController@convertPoints
+  POST            api/wallet/convert-to-points ........ Api\WalletController@convertToPoints
+  POST            api/wallet/deposit .......................... Api\WalletController@deposit
+  POST            api/wallet/deposit-request ..... Api\WalletController@createDepositRequest
+  GET|HEAD        api/wallet/deposit-requests ...... Api\WalletController@getDepositRequests
+  DELETE          api/wallet/deposit-requests/{id} Api\WalletController@cancelDepositRequest
+  GET|HEAD        api/wallet/transactions ................ Api\WalletController@transactions
+  POST            api/wallet/transfer ........................ Api\WalletController@transfer
+  POST            api/wallet/withdraw ........................ Api\WalletController@withdraw
+  POST            api/wallet/withdrawals/{id}/approve Api\WalletController@approveWithdrawal
+  POST            api/wallet/withdrawals/{id}/reject . Api\WalletController@rejectWithdrawal
+  GET|HEAD        api/welcome .................... api.welcome ΓÇ║ Api\WelcomeController@index
+  GET|HEAD        auth/{provider}/callback google.callback ΓÇ║ Api\Auth\ProviderAuthControlleΓÇª
+  GET|HEAD        auth/{provider}/redirect google.redirect ΓÇ║ Api\Auth\ProviderAuthControlleΓÇª
+  GET|HEAD        login .............................................................. login
+  GET|HEAD        storage/{path} ............................................. storage.local
+  GET|HEAD        up ....................................................................... 
+
+                                                                        Showing [841] routes
+

@@ -30,6 +30,11 @@ interface Member {
     avatar?: string
     profile_photo_url?: string
   }
+  tags?: {
+    id: number
+    name: string
+    color: string
+  }[]
 }
 
 interface Props {
@@ -270,6 +275,23 @@ const isAllSelected = computed(() =>
             <!-- Status Badge -->
             <span :class="['inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium', getStatusBadge(member.status).bgColor, getStatusBadge(member.status).color]">
               {{ getStatusBadge(member.status).label }}
+            </span>
+            
+            <!-- Tags -->
+            <span
+              v-for="tag in (member.tags || []).slice(0, 3)"
+              :key="tag.id"
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border"
+              :style="{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }"
+            >
+              <Icon icon="mdi:tag" class="w-2.5 h-2.5" />
+              {{ tag.name }}
+            </span>
+            <span 
+              v-if="(member.tags || []).length > 3"
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+            >
+              +{{ (member.tags || []).length - 3 }}
             </span>
           </div>
 

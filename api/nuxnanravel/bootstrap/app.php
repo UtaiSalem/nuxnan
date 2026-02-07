@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware(['api'])
                 ->prefix('api/admin')
                 ->group(base_path('routes/admin/admin.php'));
+            
+            // Load course completion routes
+            Route::middleware(['api'])
+                ->prefix('api')
+                ->group(base_path('routes/course-completion.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -26,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'plearnd_admin' => \App\Http\Middleware\EnsurePlearndAdmin::class,
             'admin' => \App\Http\Middleware\EnsureAdminRole::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'audit.log' => \App\Http\Middleware\AuditRequest::class,
         ]);
         
         // Ensure CORS is applied to API routes

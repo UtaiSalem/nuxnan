@@ -46,21 +46,17 @@ const fetchGroups = async () => {
       ? `/api/users/${props.userId}/groups`
       : `/api/profile/groups`
     
-    const response = await api.get(endpoint) as {
-      success: boolean
-      data?: Group[]
-      groups?: Group[]
-    }
+    // Use real API
+    const response = await api.get(endpoint).catch(() => ({ success: false })) as any
     
-    if (response.success) {
-      groups.value = response.data || response.groups || []
+    if (response && response.success) {
+      groups.value = response.groups || []
     } else {
-      // Mock data for demonstration
-      groups.value = getMockGroups()
+      groups.value = []
     }
   } catch (error) {
     console.error('Error fetching groups:', error)
-    groups.value = getMockGroups()
+    groups.value = []
   } finally {
     isLoading.value = false
   }

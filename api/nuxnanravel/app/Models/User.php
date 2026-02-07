@@ -39,6 +39,7 @@ use App\Models\CourseQuizResult;
 use App\Models\CourseGroupMember;
 use App\Models\UserAnswerQuestion;
 use App\Models\Permission;
+use App\Models\Badge;
 
 use Illuminate\Support\Str;
 // use Laravel\Sanctum\HasApiTokens;
@@ -211,6 +212,16 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function permissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class, 'user_permissions');
+    }
+
+    /**
+     * Get badges earned by the user.
+     */
+    public function badges(): BelongsToMany
+    {
+        return $this->belongsToMany(Badge::class, 'user_badges')
+            ->withPivot('is_earned', 'progress', 'earned_at')
+            ->withTimestamps();
     }
 
     /**

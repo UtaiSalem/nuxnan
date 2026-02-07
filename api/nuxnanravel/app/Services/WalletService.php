@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\WalletTransaction;
 use App\Models\PointsTransaction;
 use App\Models\User;
+use App\Models\Course;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -511,5 +512,166 @@ class WalletService
         ]);
 
         return true;
+    }
+
+    /**
+     * Purchase a course - deduct wallet balance and create transaction
+     * 
+     * @param User $user The user making the purchase
+     * @param Course $course The course being purchased
+     * @param float|null $overridePrice Optional override price (for discounts)
+     * @return WalletTransaction
+     * @throws \Exception If insufficient balance
+     */
+    public function purchaseCourse(User $user, Course $course, ?float $overridePrice = null): WalletTransaction
+    {
+        // Calculate price - use override, tuition_fees, or price
+        $originalPrice = $course->tuition_fees ?? $course->price ?? 0;
+        $finalPrice = $overridePrice ?? $originalPrice;
+        
+        // Apply discount if exists and no override
+        if ($overridePrice === null && $course->discount > 0) {
+            $finalPrice = $originalPrice - ($originalPrice * $course->discount / 100);
+        }
+
+        return DB::transaction(function () use ($user, $course, $finalPrice, $originalPrice) {
+            $balanceBefore = $user->wallet;
+
+            // Check if user has enough balance
+            if ($balanceBefore < $finalPrice) {
+                throw new \Exception('ยอดเงินในกระเป๋าไม่เพียงพอ');
+            }
+
+            $balanceAfter = $balanceBefore - $finalPrice;
+
+            // Update user wallet
+            $user->update([
+                'wallet' => $balanceAfter,
+            ]);
+
+            // Create purchase transaction for buyer
+            $transaction = WalletTransaction::create([
+                'user_id' => $user->id,
+                'transaction_type' => 'purchase',
+                'amount' => $finalPrice,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'currency' => 'THB',
+                'description' => "ซื้อรายวิชา: {$course->name}",
+                'metadata' => [
+                    'course_id' => $course->id,
+                    'course_name' => $course->name,
+                    'original_price' => $originalPrice,
+                    'discount' => $course->discount ?? 0,
+                    'final_price' => $finalPrice,
+                ],
+                'status' => 'completed',
+            ]);
+
+            // Pay to course owner if course has user_id
+            if ($course->user_id && $course->user_id !== $user->id && $finalPrice > 0) {
+                $owner = User::find($course->user_id);
+                if ($owner) {
+                    $ownerBalanceBefore = $owner->wallet;
+                    $ownerBalanceAfter = $ownerBalanceBefore + $finalPrice;
+                    
+                    $owner->update([
+                        'wallet' => $ownerBalanceAfter,
+                    ]);
+
+                    // Create income transaction for course owner
+                    WalletTransaction::create([
+                        'user_id' => $owner->id,
+                        'transaction_type' => 'course_income',
+                        'amount' => $finalPrice,
+                        'balance_before' => $ownerBalanceBefore,
+                        'balance_after' => $ownerBalanceAfter,
+                        'currency' => 'THB',
+                        'description' => "รายได้จากการขายรายวิชา: {$course->name}",
+                        'metadata' => [
+                            'course_id' => $course->id,
+                            'course_name' => $course->name,
+                            'buyer_id' => $user->id,
+                            'buyer_name' => $user->name,
+                        ],
+                        'status' => 'completed',
+                    ]);
+                }
+            }
+
+            Log::info('Course purchased', [
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+                'original_price' => $originalPrice,
+                'final_price' => $finalPrice,
+                'transaction_id' => $transaction->id,
+            ]);
+
+            return $transaction;
+        });
+    }
+
+    /**
+     * Refund a course purchase
+     * 
+     * @param User $user The user to refund
+     * @param Course $course The course being refunded
+     * @param float $amount The amount to refund
+     * @param string|null $reason The reason for refund
+     * @return WalletTransaction
+     */
+    public function refundCoursePurchase(User $user, Course $course, float $amount, ?string $reason = null): WalletTransaction
+    {
+        return DB::transaction(function () use ($user, $course, $amount, $reason) {
+            $balanceBefore = $user->wallet;
+            $balanceAfter = $balanceBefore + $amount;
+
+            // Update user wallet
+            $user->update([
+                'wallet' => $balanceAfter,
+            ]);
+
+            // Create refund transaction
+            $transaction = WalletTransaction::create([
+                'user_id' => $user->id,
+                'transaction_type' => 'refund',
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'currency' => 'THB',
+                'description' => "คืนเงินจากรายวิชา: {$course->name}",
+                'metadata' => [
+                    'course_id' => $course->id,
+                    'course_name' => $course->name,
+                    'refund_reason' => $reason,
+                ],
+                'status' => 'completed',
+            ]);
+
+            Log::info('Course refunded', [
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+                'amount' => $amount,
+                'reason' => $reason,
+            ]);
+
+            return $transaction;
+        });
+    }
+
+    /**
+     * Check if user has purchased a course
+     * 
+     * @param User $user
+     * @param Course $course
+     * @return bool
+     */
+    public function hasPurchased(User $user, Course $course): bool
+    {
+        return WalletTransaction::where('user_id', $user->id)
+            ->where('transaction_type', 'purchase')
+            ->where('status', 'completed')
+            ->whereJsonContains('metadata->course_id', $course->id)
+            ->exists();
     }
 }

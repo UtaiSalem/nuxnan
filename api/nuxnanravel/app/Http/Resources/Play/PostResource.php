@@ -31,6 +31,7 @@ class PostResource extends JsonResource
             'post_url'          => $this->post_url,
             'status'            => $this->status,
             'post_type'         => $this->post_type,
+            'price'             => $this->price, // For Marketplace
             
             // Images/Media
             'images'            => PostImageResource::collection($this->postImages),

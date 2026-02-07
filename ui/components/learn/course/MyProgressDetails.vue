@@ -211,6 +211,20 @@ const getProgressBarColor = (score, max) => {
     return 'bg-gradient-to-r from-red-400 to-red-500';
 };
 
+// Grade color helper
+const getGradeColor = (grade) => {
+    if (!grade || grade === '-') return { text: 'text-gray-500 dark:text-gray-400', ring: '#9CA3AF', ringStop: '#6B7280' };
+    const g = grade.toUpperCase();
+    if (g === 'A' || g === 'A+') return { text: 'text-green-600 dark:text-green-400', ring: '#10B981', ringStop: '#059669' };
+    if (g === 'B+' || g === 'B') return { text: 'text-blue-600 dark:text-blue-400', ring: '#3B82F6', ringStop: '#2563EB' };
+    if (g === 'C+' || g === 'C') return { text: 'text-yellow-600 dark:text-yellow-400', ring: '#F59E0B', ringStop: '#D97706' };
+    if (g === 'D+' || g === 'D') return { text: 'text-orange-600 dark:text-orange-400', ring: '#F97316', ringStop: '#EA580C' };
+    if (g === 'F') return { text: 'text-red-600 dark:text-red-400', ring: '#EF4444', ringStop: '#DC2626' };
+    return { text: 'text-gray-600 dark:text-gray-400', ring: '#9CA3AF', ringStop: '#6B7280' };
+};
+
+const gradeColors = computed(() => getGradeColor(stats.value.grade));
+
 // Check if score should be shown
 const canShowScore = computed(() => {
     // Admin can always see
@@ -315,15 +329,18 @@ const tabs = [
                     <div class="text-sm text-gray-500 mb-2">เกรดปัจจุบัน</div>
                      <RadialProgress 
                         :diameter="100" 
-                        :completed-steps="100" 
+                        :completed-steps="Math.round(stats.scorePercent)" 
                         :total-steps="100"
                         :stroke-width="8"
                         :inner-stroke-width="8"
-                        start-color="#3B82F6"
-                        stop-color="#2563EB"
+                        :start-color="gradeColors.ring"
+                        :stop-color="gradeColors.ringStop"
                         inner-stroke-color="#E5E7EB"
                      >
-                        <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stats.grade }}</span>
+                        <div class="text-center">
+                            <span class="text-2xl font-bold" :class="gradeColors.text">{{ stats.grade }}</span>
+                            <div class="text-xs font-semibold" :class="gradeColors.text">{{ stats.scorePercent.toFixed(1) }}%</div>
+                        </div>
                      </RadialProgress>
                 </div>
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">

@@ -1,6 +1,6 @@
 <template>
   <article
-    class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 p-6 mb-4"
+    class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 p-4 sm:p-6 mb-4"
   >
     <!-- Post Header -->
     <div class="flex items-start justify-between mb-4">

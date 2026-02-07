@@ -118,13 +118,11 @@ const fetchBadges = async () => {
     if (response.success) {
       badges.value = response.data || response.badges || []
     } else {
-      // Mock data for demonstration
-      badges.value = getMockBadges()
+      badges.value = []
     }
   } catch (error) {
     console.error('Error fetching badges:', error)
-    // Use mock data as fallback
-    badges.value = getMockBadges()
+    badges.value = []
   } finally {
     isLoading.value = false
   }

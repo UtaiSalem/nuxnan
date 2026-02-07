@@ -6,10 +6,12 @@ namespace App\Models;
 use App\Models\User;
 use App\Models\Academy;
 use App\Models\AcademyRole;
+use App\Models\MemberTag;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AcademyMember extends Model
@@ -122,26 +124,60 @@ class AcademyMember extends Model
         return $this->academyRole->isParentRole();
     }
 
+    /**
+     * Get tags assigned to this member
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(MemberTag::class, 'academy_member_tag')
+            ->withPivot('assigned_by')
+            ->withTimestamps();
+    }
+
     public function getMemberNameAttribute()
     {
-        if ($this->user_id && $this->user) {
+        // Priority: User name > Student Thai name > Student English name > Unknown
+        if ($this->user_id && $this->relationLoaded('user') && $this->user) {
             return $this->user->name;
         }
-        if ($this->student_id && $this->student) {
-            return $this->student->first_name_th . ' ' . $this->student->last_name_th;
+        if ($this->student_id && $this->relationLoaded('student') && $this->student) {
+            $name = trim($this->student->first_name_th . ' ' . $this->student->last_name_th);
+            if (!empty($name)) return $name;
+            
+            $nameEn = trim($this->student->first_name_en . ' ' . $this->student->last_name_en);
+            if (!empty($nameEn)) return $nameEn;
         }
-        return 'Unknown Member';
+        return 'สมาชิก #' . $this->id;
     }
 
     public function getMemberAvatarAttribute()
     {
-        if ($this->user_id && $this->user) {
+        // Priority: User avatar > Student profile_image > UI Avatars
+        if ($this->user_id && $this->relationLoaded('user') && $this->user && $this->user->profile_photo_url) {
             return $this->user->profile_photo_url;
         }
-        if ($this->student_id && $this->student && $this->student->profile_image) {
+        if ($this->student_id && $this->relationLoaded('student') && $this->student && $this->student->profile_image) {
             return '/storage/images/students/profiles/' . $this->student->profile_image;
         }
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->member_name) . '&color=7F9CF5&background=EBF4FF';
+        
+        // Generate UI Avatar with initials
+        $name = $this->member_name;
+        $initials = $this->getInitials($name);
+        return 'https://ui-avatars.com/api/?name=' . urlencode($initials) . '&color=FFFFFF&background=6366F1&font-size=0.4&bold=true';
+    }
+    
+    /**
+     * Get initials from name (supports Thai)
+     */
+    protected function getInitials(string $name): string
+    {
+        $words = explode(' ', trim($name));
+        if (count($words) >= 2) {
+            // Get first character of first and last word
+            return mb_substr($words[0], 0, 1) . mb_substr($words[count($words) - 1], 0, 1);
+        }
+        // Just use first 2 characters
+        return mb_substr($name, 0, 2);
     }
 
     /**

@@ -49,14 +49,34 @@ const handleDeletePostRequest = () => {
     }).then( async (result) => {
         if (result.isConfirmed) {
             isDeleting.value = true;
-            let delResp = await axios.delete(`/posts/${props.activity.target_resource.id}`);
-            if (delResp.data.success) {
-                Swal.fire(
-                    'ลบโพสต์สำเร็จ!',
-                    'โพสต์นี้ของคุณและทุกอย่างที่เกี่ยวข้องถูกลบออกแล้ว',
-                    'success'
-                );
-                emit('delete-post');
+            try {
+                // Use the URL from the resource (which should be the API endpoint)
+                // If post_url is full URL, we might need relative. 
+                // Assuming post_url from backend is relative or full valid URL.
+                // But let's check what post_url returns first. 
+                // However, safe bet is replacing '/posts/' if we are sure it's wrong.
+                // Better: Use the url constructed in postSettingMenus for delete action.
+                
+                const deleteMenu = postSettingMenus.find(m => m.action === 'delete');
+                const deleteUrl = deleteMenu ? deleteMenu.url : `/api/academies/${props.activity.target_resource.academy_id}/posts/${props.activity.target_resource.id}`; 
+                // Fallback invalid if not found, but let's try to use target_resource.post_url from props if available directly.
+                // From the Viewer code: 
+                // url: props.activity.target_resource.post_url 
+                
+                let delResp = await axios.delete(props.activity.target_resource.post_url);
+
+                if (delResp.data.success) {
+                    Swal.fire(
+                        'ลบโพสต์สำเร็จ!',
+                        'โพสต์นี้ของคุณและทุกอย่างที่เกี่ยวข้องถูกลบออกแล้ว',
+                        'success'
+                    );
+                    emit('delete-post');
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'ไม่สามารถลบโพสต์ได้', 'error');
+            } finally {
                 isDeleting.value = false;
             }
         }

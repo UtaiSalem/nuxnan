@@ -74,6 +74,16 @@ const fetchGroups = async () => {
     }
 }
 
+// Computed: Determine the passing score threshold
+const passingThreshold = computed(() => {
+    // If passing_score is explicitly set (even 0), use it
+    if (props.assignment.passing_score !== null && props.assignment.passing_score !== undefined) {
+        return Number(props.assignment.passing_score)
+    }
+    // Default to 50% of total points
+    return (props.assignment.points || 0) / 2
+})
+
 const fetchAllAnswers = async (page = 1, reset = false) => {
   isFetchingAnswers.value = true
   try {
@@ -86,18 +96,18 @@ const fetchAllAnswers = async (page = 1, reset = false) => {
     
     // Map response.data - Admin Grading View expansion logic:
     // - Ungraded (points = null) -> expanded (needs grading)
-    // - Graded but score < half of total points -> expanded (may need review)
-    // - Graded and score >= half of total points -> collapsed (good enough)
-    const halfPoints = (props.assignment.points || 0) / 2
+    // - Graded but score < passing threshold -> expanded (may need review)
+    // - Graded and score >= passing threshold -> collapsed (good enough)
+    const threshold = passingThreshold.value
     const newAnswers = (response.data || []).map((a: any) => {
       const isGraded = a.points !== null && a.points !== undefined
-      const hasGoodScore = isGraded && a.points >= halfPoints
+      const hasGoodScore = isGraded && a.points >= threshold
       return {
         ...a,
         points: a.points, 
         originalPoints: a.points,
         isUpdating: false,
-        isExpanded: !hasGoodScore // Expand if NOT graded or score < half, collapse if score >= half
+        isExpanded: !hasGoodScore // Expand if NOT graded or score < threshold, collapse if score >= threshold
       }
     })
 
@@ -124,13 +134,13 @@ const filteredAnswers = computed(() => {
   let result = allAnswers.value
   
   // Apply status filter
-  const halfPoints = (props.assignment.points || 0) / 2
+  const threshold = passingThreshold.value
   if (statusFilter.value === 'ungraded') {
     result = result.filter(a => a.points === null || a.points === undefined)
   } else if (statusFilter.value === 'graded') {
-    result = result.filter(a => a.points !== null && a.points !== undefined && a.points >= halfPoints)
+    result = result.filter(a => a.points !== null && a.points !== undefined && a.points >= threshold)
   } else if (statusFilter.value === 'failed') {
-    result = result.filter(a => a.points !== null && a.points !== undefined && a.points < halfPoints)
+    result = result.filter(a => a.points !== null && a.points !== undefined && a.points < threshold)
   }
   
   // Apply search query
@@ -153,12 +163,12 @@ const filteredAnswers = computed(() => {
 
 // Computed: Count for each status
 const statusCounts = computed(() => {
-  const halfPoints = (props.assignment.points || 0) / 2
+  const threshold = passingThreshold.value
   return {
     all: allAnswers.value.length,
     ungraded: allAnswers.value.filter(a => a.points === null || a.points === undefined).length,
-    graded: allAnswers.value.filter(a => a.points !== null && a.points !== undefined && a.points >= halfPoints).length,
-    failed: allAnswers.value.filter(a => a.points !== null && a.points !== undefined && a.points < halfPoints).length
+    graded: allAnswers.value.filter(a => a.points !== null && a.points !== undefined && a.points >= threshold).length,
+    failed: allAnswers.value.filter(a => a.points !== null && a.points !== undefined && a.points < threshold).length
   }
 })
 
@@ -198,9 +208,9 @@ const updateGrade = async (answer: any) => {
     answer.status = 'graded' // Mark as graded in local state
     answer.isUpdating = false
     
-    // Collapse if score >= half of total points, stay expanded if score < half
-    const halfPoints = (props.assignment.points || 0) / 2
-    answer.isExpanded = answer.points < halfPoints // Score < half = stay expanded, Score >= half = collapse
+    // Collapse if score >= passing threshold, stay expanded if score < threshold
+    const threshold = passingThreshold.value
+    answer.isExpanded = answer.points < threshold // Score < threshold = stay expanded, Score >= threshold = collapse
     
     swal.toast('บันทึกคะแนนเรียบร้อย', 'success')
   } catch (error) {
@@ -235,9 +245,9 @@ const getAnswerCardClass = (answer: any) => {
    if (answer.points === null || answer.points === undefined) {
      return 'bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600'
    }
-   // Has points = graded (green/red based on half of total points)
-   const halfPoints = (props.assignment.points || 0) / 2
-   return answer.points >= halfPoints 
+   // Has points = graded (green/red based on passing threshold)
+   const threshold = passingThreshold.value
+   return answer.points >= threshold 
       ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
       : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
 }
@@ -413,7 +423,7 @@ const scrollToTop = () => {
                                     <Icon :icon="answer.isExpanded ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" class="w-5 h-5" />
                                  </button>
 
-                                 <div class="text-xl font-bold" :class="answer.points !== null ? (answer.points >= (assignment.passing_score || 0) ? 'text-green-600' : 'text-red-500') : 'text-gray-300'">
+                                 <div class="text-xl font-bold" :class="answer.points !== null ? (answer.points >= passingThreshold ? 'text-green-600' : 'text-red-500') : 'text-gray-300'">
                                     {{ answer.points ?? '-' }} <span class="text-xs font-normal text-gray-400">/ {{ assignment.points }}</span>
                                  </div>
                              </div>

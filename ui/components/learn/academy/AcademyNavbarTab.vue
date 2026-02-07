@@ -36,6 +36,25 @@
         >
             Members
         </NuxtLink>
+        <NuxtLink 
+            :to="`/Learn/Academy/${academy?.data?.name || academy?.name}/curriculum`"
+            :class="[
+                'px-4 py-2 rounded font-medium transition-colors',
+                activeTab === 4 ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'
+            ]"
+        >
+            Curriculum
+        </NuxtLink>
+        <NuxtLink 
+            v-if="isAcademyAdmin"
+            :to="`/Learn/Academy/${academy?.data?.name || academy?.name}/Settings`"
+            :class="[
+                'px-4 py-2 rounded font-medium transition-colors',
+                activeTab === 5 ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'
+            ]"
+        >
+            บริหารจัดการ
+        </NuxtLink>
     </div>
 </template>
 <script setup>
@@ -44,6 +63,7 @@ defineProps({
     activeTab: {
         type: Number,
         default: 0
-    }
+    },
+    isAcademyAdmin: Boolean
 })
 </script>

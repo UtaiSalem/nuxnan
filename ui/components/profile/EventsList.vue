@@ -53,20 +53,17 @@ const fetchEvents = async () => {
       ? `/api/users/${props.userId}/events`
       : `/api/profile/events`
     
-    const response = await api.get(endpoint) as {
-      success: boolean
-      data?: Event[]
-      events?: Event[]
-    }
+    // Use real API
+    const response = await api.get(endpoint).catch(() => ({ success: false })) as any
     
-    if (response.success) {
-      events.value = response.data || response.events || []
+    if (response && response.success) {
+      events.value = response.events || []
     } else {
-      events.value = getMockEvents()
+      events.value = []
     }
   } catch (error) {
     console.error('Error fetching events:', error)
-    events.value = getMockEvents()
+    events.value = []
   } finally {
     isLoading.value = false
   }

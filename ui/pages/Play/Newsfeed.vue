@@ -295,7 +295,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Feed Posts -->
-      <div v-else class="space-y-4">
+      <div v-else class="space-y-1.5 sm:space-y-2 md:space-y-3">
         <!-- Refresh Button -->
         <div class="flex justify-center">
           <button 

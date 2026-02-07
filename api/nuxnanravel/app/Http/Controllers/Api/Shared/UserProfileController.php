@@ -163,6 +163,11 @@ class UserProfileController extends \App\Http\Controllers\Controller
         // Check privacy settings
         $canViewFullProfile = $this->canViewFullProfile($authUser, $user, $profile);
 
+        // Increment visits if not own profile
+        if ($authUser && $authUser->id !== $user->id) {
+            $profile->increment('visits');
+        }
+
         $profileData = new UserProfileResource($profile);
         
         return response()->json([
@@ -170,7 +175,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
             'data' => $profileData,
             'friendship_status' => $friendshipStatus,
             'can_view_full_profile' => $canViewFullProfile,
-            'is_own_profile' => $authUser->id === $user->id,
+            'is_own_profile' => $authUser && $authUser->id === $user->id,
         ]);
     }
 
@@ -596,6 +601,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
                 'friends' => $friendsCount,
                 'points' => $user->pp ?? 0,
                 'wallet' => $user->wallet ?? 0,
+                'visits' => $user->profile->visits ?? 0,
             ],
         ]);
     }
@@ -605,6 +611,10 @@ class UserProfileController extends \App\Http\Controllers\Controller
      */
     private function getFriendshipStatus($authUser, $targetUser): array
     {
+        if (!$authUser) {
+            return ['status' => 'guest', 'label' => 'ผู้เยี่ยมชม'];
+        }
+        
         if ($authUser->id === $targetUser->id) {
             return ['status' => 'self', 'label' => 'ตัวเอง'];
         }
@@ -636,6 +646,11 @@ class UserProfileController extends \App\Http\Controllers\Controller
      */
     private function canViewFullProfile($authUser, $targetUser, $profile): bool
     {
+        if (!$authUser) {
+            // Guest users can only view public profiles
+            return ($profile->privacy_settings ?? 'public') === 'public';
+        }
+        
         if ($authUser->id === $targetUser->id) {
             return true;
         }

@@ -65,13 +65,27 @@ class UserProfileResource extends JsonResource
             'friends'           => $this->friends ?? 0,
             'friends_count'     => $this->friends ?? 0,
             'posts_count'       => $user->activities()->count(),
-            'visits_count'      => $this->profile_views ?? 0,
+            'visits_count'      => $this->visits ?? 0,
             
             // Level & Experience
             'level'             => $levelData['level'],
             'grade'             => $this->getStudentGrade($user), // ระดับชั้น ม.1-6
             'experience'        => $levelData['current_xp'],
             'experience_to_next_level' => $levelData['xp_to_next'],
+            
+            // Badges Gamification
+            'badges_unlocked'   => $user->badges()->count(),
+            'badges_total'      => \App\Models\Badge::count(),
+            'badges'            => $user->badges->map(function($badge) {
+                return [
+                    'id' => $badge->id,
+                    'name' => $badge->name,
+                    'description' => $badge->description,
+                    'icon' => $badge->icon,
+                    'xp_reward' => $badge->xp_reward,
+                    'earned_at' => $badge->pivot->earned_at,
+                ];
+            }),
             
             // Points & Wallet
             'points'            => $user->pp ?? 0,

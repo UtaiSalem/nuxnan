@@ -207,11 +207,39 @@ class CourseMemberController extends Controller
 
     public function storemember(Course $course, Request $request)
     {
-        if (auth()->user()->pp < $course->tuition_fees) {
-            return response()->json([
-                'success' => false,
-                'msg'     => 'แต้มสะสมไม่เพียงพอ กรุณาเติมแต้มสะสมก่อนสมัครสมาชิก'
-            ], 201);
+        $user = auth()->user();
+        
+        // Calculate course price
+        $price = $course->tuition_fees ?? $course->price ?? 0;
+        
+        // Apply discount if exists
+        if ($price > 0 && $course->discount > 0) {
+            $price = $price - ($price * $course->discount / 100);
+        }
+        
+        // For paid courses, process wallet payment
+        if ($price > 0) {
+            // Check wallet balance
+            if ($user->wallet < $price) {
+                return response()->json([
+                    'success' => false,
+                    'msg' => 'ยอดเงินในกระเป๋าไม่เพียงพอ กรุณาเติมเงินก่อนสมัครเรียน',
+                    'required' => $price,
+                    'current_balance' => $user->wallet,
+                    'need_topup' => true,
+                ], 400);
+            }
+            
+            // Process payment via WalletService
+            try {
+                $walletService = app(\App\Services\WalletService::class);
+                $transaction = $walletService->purchaseCourse($user, $course);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'msg' => 'การชำระเงินล้มเหลว: ' . $e->getMessage(),
+                ], 400);
+            }
         }
 
         $course_member = CourseMember::where('course_id', $course->id)->where('user_id', auth()->id())->first();
@@ -226,6 +254,7 @@ class CourseMemberController extends Controller
             $new_course_member->group_id    = $request->group_id ?? null;
             $new_course_member->status      = $courseAutoAcceptMembers;
             $new_course_member->course_member_status      = $courseAutoAcceptMembers;
+            $new_course_member->enrollment_date = now();
             $new_course_member->save();
 
             $newCourseGroupMember = new CourseGroupMember();
@@ -242,17 +271,22 @@ class CourseMemberController extends Controller
             $new_course_member = $course_member;
 
             $courseGroupMember = CourseGroupMember::where('course_id', $course->id)->where('user_id', auth()->id())->first();
-            $courseGroupMember->group_id = $request->group_id;
-            $courseGroupMember->save();
+            if ($courseGroupMember) {
+                $courseGroupMember->group_id = $request->group_id;
+                $courseGroupMember->save();
+            }
         }
 
         return response()->json([
             'success' => true,
             'newCourseMember' => CourseMember::find($new_course_member->id),
-            // 'newCourseMember' => new CourseMemberResource(CourseMember::find($new_course_member->id)),
-            // 'setting' =>  $curent_member_status,
+            'memberStatus' => $new_course_member->status,
+            'paid' => $price > 0,
+            'amount_paid' => $price > 0 ? $price : 0,
+            'transaction_id' => isset($transaction) ? $transaction->id : null,
         ], 200);
     }
+
 
     public function destroy(Course $course, CourseMember $member)
     {

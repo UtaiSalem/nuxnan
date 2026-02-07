@@ -27,6 +27,7 @@ use App\Http\Resources\Learn\Course\progress\CourseMemberGradeProgressResource;
 use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\members\CourseMemberResource;
 use App\Http\Resources\Learn\Course\info\MemberedCourseResource;
+use App\Http\Resources\Learn\Course\info\UserProfileCourseResource;
 use App\Models\RecentlyViewedCourse;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LearningResultsExport;
@@ -295,6 +296,41 @@ class CourseController extends Controller
                 'to'           => $query->lastItem(),
             ]
         ], 200);
+    }
+
+    public function getUserMemberedCourses(User $user, Request $request)
+    {
+        $perPage = $request->input('per_page', 10);
+        $status = $request->input('status', 'enrolled'); // 'enrolled' or 'completed'
+
+        $query = CourseMember::where('user_id', $user->id)
+            ->when($status === 'completed', function($q) {
+                // Completed if completion_date is set OR progress is 100% (optional check)
+                $q->whereNotNull('completion_date');
+            })
+            ->when($status === 'enrolled', function($q) {
+                $q->whereNull('completion_date');
+            })
+            ->with('course') // Eager load course
+            ->latest()
+            ->paginate($perPage);
+
+        $courses = $query->map(function ($member) {
+            return new UserProfileCourseResource($member->course, $member);
+        });
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+            'pagination' => [
+                'total'        => $query->total(),
+                'per_page'     => $query->perPage(),
+                'current_page' => $query->currentPage(),
+                'last_page'    => $query->lastPage(),
+                'from'         => $query->firstItem(),
+                'to'           => $query->lastItem(),
+            ]
+        ]);
     }
 
 

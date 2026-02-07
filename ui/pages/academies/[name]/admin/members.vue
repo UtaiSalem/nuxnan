@@ -18,16 +18,36 @@ const academyName = computed(() => route.params.name as string)
 const academy = ref<any>(null)
 const members = ref<any[]>([])
 const roles = ref<any[]>([])
+const tags = ref<any[]>([])
 const isLoading = ref(true)
 const isLoadingMembers = ref(false)
+
+// Filter Options from API
+const filterOptions = ref<{
+  class_levels: { value: string; label: string }[]
+  class_sections: { value: string; label: string }[]
+  classrooms: { class_level: string; class_section: string; label: string; count: number }[]
+  genders: { value: number; label: string; count: number }[]
+}>({
+  class_levels: [],
+  class_sections: [],
+  classrooms: [],
+  genders: []
+})
 
 // Filters
 const searchQuery = ref('')
 const selectedStatus = ref<number | null>(null)
 const selectedRole = ref<string | null>(null)
+const selectedTag = ref<number | null>(null)
+const selectedClassLevel = ref<string | null>(null)
+const selectedClassSection = ref<string | null>(null)
+const selectedGender = ref<number | null>(null)
+const selectedMemberType = ref<string | null>(null)
 const sortBy = ref('created_at')
 const sortOrder = ref<'asc' | 'desc'>('desc')
 const viewMode = ref<'card' | 'table'>('card')
+const groupBy = ref<'none' | 'classroom' | 'class_level' | 'gender'>('none')
 
 // Persist view mode preference
 const savedViewMode = useCookie<'card' | 'table'>('academy-members-view-mode')
@@ -52,7 +72,32 @@ const pagination = ref({
 const showRoleModal = ref(false)
 const showManageModal = ref(false)
 const showInviteModal = ref(false)
+const showBulkRoleModal = ref(false)
+const showAdvancedFilter = ref(false)
 const selectedMember = ref<any>(null)
+
+// Bulk Selection
+const selectedMemberIds = ref<number[]>([])
+const isBulkProcessing = ref(false)
+
+// Advanced Filters
+const advancedFilters = ref({
+  dateFrom: null as string | null,
+  dateTo: null as string | null,
+  roleId: null as number | null,
+})
+
+const activeFiltersCount = computed(() => {
+  let count = 0
+  if (advancedFilters.value.dateFrom) count++
+  if (advancedFilters.value.dateTo) count++
+  if (advancedFilters.value.roleId) count++
+  if (selectedClassLevel.value) count++
+  if (selectedClassSection.value) count++
+  if (selectedGender.value !== null) count++
+  if (selectedMemberType.value) count++
+  return count
+})
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -82,6 +127,89 @@ const roleOptions = computed(() => [
   ...roles.value.map(r => ({ value: r.name, label: r.display_name_th }))
 ])
 
+const tagOptions = computed(() => [
+  { value: null, label: 'ทุกแท็ก' },
+  ...tags.value.map(t => ({ value: t.id, label: t.name, color: t.color }))
+])
+
+const classLevelOptions = computed(() => [
+  { value: null, label: 'ทุกชั้น' },
+  ...filterOptions.value.class_levels
+])
+
+const classSectionOptions = computed(() => [
+  { value: null, label: 'ทุกห้อง' },
+  ...filterOptions.value.class_sections
+])
+
+const genderOptions = computed(() => [
+  { value: null, label: 'ทุกเพศ' },
+  ...filterOptions.value.genders.map(g => ({
+    value: g.value,
+    label: `${g.label} (${g.count})`
+  }))
+])
+
+const memberTypeOptions = [
+  { value: null, label: 'ทุกประเภท' },
+  { value: 'student', label: 'นักเรียน' },
+  { value: 'user', label: 'ผู้ใช้ทั่วไป' },
+]
+
+// Grouped members for display
+const groupedMembers = computed(() => {
+  if (groupBy.value === 'none') {
+    return [{ key: 'all', label: 'ทั้งหมด', members: members.value }]
+  }
+  
+  const groups: Record<string, { key: string; label: string; members: any[] }> = {}
+  
+  for (const member of members.value) {
+    let key = 'unknown'
+    let label = 'ไม่ระบุ'
+    
+    if (groupBy.value === 'classroom') {
+      const level = member.student?.class_level || ''
+      const section = member.student?.class_section || ''
+      if (level || section) {
+        key = `${level}-${section}`
+        label = level + (section ? `/${section}` : '')
+      } else {
+        key = 'no-class'
+        label = 'ยังไม่กำหนดชั้น/ห้อง'
+      }
+    } else if (groupBy.value === 'class_level') {
+      const level = member.student?.class_level
+      if (level) {
+        key = level
+        label = level
+      } else {
+        key = 'no-level'
+        label = 'ยังไม่กำหนดชั้น'
+      }
+    } else if (groupBy.value === 'gender') {
+      const gender = member.student?.gender
+      if (gender === 1) {
+        key = 'male'
+        label = 'ชาย'
+      } else if (gender === 0) {
+        key = 'female'
+        label = 'หญิง'
+      } else {
+        key = 'unknown'
+        label = 'ไม่ระบุ'
+      }
+    }
+    
+    if (!groups[key]) {
+      groups[key] = { key, label, members: [] }
+    }
+    groups[key].members.push(member)
+  }
+  
+  return Object.values(groups).sort((a, b) => a.label.localeCompare(b.label, 'th'))
+})
+
 onMounted(async () => {
   try {
     const response: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
@@ -99,6 +227,8 @@ onMounted(async () => {
         fetchMembers(),
         fetchRoles(),
         fetchStats(),
+        fetchTags(),
+        fetchFilterOptions(),
       ])
     }
   } catch (err) {
@@ -119,6 +249,11 @@ const fetchMembers = async (page = 1) => {
     if (searchQuery.value) params.append('search', searchQuery.value)
     if (selectedStatus.value !== null) params.append('status', String(selectedStatus.value))
     if (selectedRole.value) params.append('role', selectedRole.value)
+    if (selectedTag.value !== null) params.append('tag_id', String(selectedTag.value))
+    if (selectedClassLevel.value) params.append('class_level', selectedClassLevel.value)
+    if (selectedClassSection.value) params.append('class_section', selectedClassSection.value)
+    if (selectedGender.value !== null) params.append('gender', String(selectedGender.value))
+    if (selectedMemberType.value) params.append('member_type', selectedMemberType.value)
     params.append('sort_by', sortBy.value)
     params.append('sort_order', sortOrder.value)
 
@@ -157,6 +292,32 @@ const fetchStats = async () => {
     }
   } catch (err) {
     console.error('Failed to fetch stats:', err)
+  }
+}
+
+const fetchTags = async () => {
+  if (!academyId.value) return
+  
+  try {
+    const response: any = await api.get(`/api/academies/${academyId.value}/member-tags`)
+    if (response.success) {
+      tags.value = response.tags || []
+    }
+  } catch (err) {
+    console.error('Failed to fetch tags:', err)
+  }
+}
+
+const fetchFilterOptions = async () => {
+  if (!academyId.value) return
+  
+  try {
+    const response: any = await api.get(`/api/academies/${academyId.value}/members/filter-options`)
+    if (response.success && response.filters) {
+      filterOptions.value = response.filters
+    }
+  } catch (err) {
+    console.error('Failed to fetch filter options:', err)
   }
 }
 
@@ -256,6 +417,227 @@ const onSearch = () => {
   fetchMembers(1)
 }
 
+// Advanced Filter handlers
+const applyAdvancedFilters = (filters: any) => {
+  advancedFilters.value = {
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+    roleId: filters.roleId,
+  }
+  
+  // Update sort options
+  if (filters.sortBy) sortBy.value = filters.sortBy
+  if (filters.sortOrder) sortOrder.value = filters.sortOrder
+  
+  // Update status if specified
+  if (filters.status !== undefined) selectedStatus.value = filters.status
+  
+  onSearch()
+}
+
+const resetAdvancedFilters = () => {
+  advancedFilters.value = {
+    dateFrom: null,
+    dateTo: null,
+    roleId: null,
+  }
+  selectedStatus.value = null
+  selectedRole.value = null
+  selectedClassLevel.value = null
+  selectedClassSection.value = null
+  selectedGender.value = null
+  selectedMemberType.value = null
+  sortBy.value = 'created_at'
+  sortOrder.value = 'desc'
+  groupBy.value = 'none'
+  onSearch()
+}
+
+const clearAllFilters = () => {
+  searchQuery.value = ''
+  resetAdvancedFilters()
+}
+
+// ============================================
+// Bulk Actions
+// ============================================
+const clearBulkSelection = () => {
+  selectedMemberIds.value = []
+}
+
+const bulkApprove = async () => {
+  const result = await Swal.fire({
+    title: 'ยืนยันการอนุมัติ',
+    text: `อนุมัติสมาชิก ${selectedMemberIds.value.length} คน?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'อนุมัติทั้งหมด',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#10b981'
+  })
+
+  if (result.isConfirmed) {
+    isBulkProcessing.value = true
+    try {
+      const response: any = await api.post(`/api/academies/${academyId.value}/members/bulk-action`, {
+        member_ids: selectedMemberIds.value,
+        action: 'approve'
+      })
+      if (response.success) {
+        Swal.fire('สำเร็จ', response.message, 'success')
+        clearBulkSelection()
+        await fetchMembers(pagination.value.current_page)
+        await fetchStats()
+      }
+    } catch (err: any) {
+      Swal.fire('เกิดข้อผิดพลาด', err.data?.message || 'ไม่สามารถอนุมัติได้', 'error')
+    } finally {
+      isBulkProcessing.value = false
+    }
+  }
+}
+
+const bulkReject = async () => {
+  const result = await Swal.fire({
+    title: 'ยืนยันการปฏิเสธ',
+    text: `ปฏิเสธสมาชิก ${selectedMemberIds.value.length} คน?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ปฏิเสธทั้งหมด',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#ef4444'
+  })
+
+  if (result.isConfirmed) {
+    isBulkProcessing.value = true
+    try {
+      const response: any = await api.post(`/api/academies/${academyId.value}/members/bulk-action`, {
+        member_ids: selectedMemberIds.value,
+        action: 'reject'
+      })
+      if (response.success) {
+        Swal.fire('สำเร็จ', response.message, 'success')
+        clearBulkSelection()
+        await fetchMembers(pagination.value.current_page)
+        await fetchStats()
+      }
+    } catch (err: any) {
+      Swal.fire('เกิดข้อผิดพลาด', err.data?.message || 'ไม่สามารถปฏิเสธได้', 'error')
+    } finally {
+      isBulkProcessing.value = false
+    }
+  }
+}
+
+const bulkSuspend = async () => {
+  const result = await Swal.fire({
+    title: 'ยืนยันการระงับ',
+    text: `ระงับสมาชิก ${selectedMemberIds.value.length} คน?`,
+    icon: 'warning',
+    input: 'textarea',
+    inputLabel: 'เหตุผล (ไม่บังคับ)',
+    inputPlaceholder: 'ระบุเหตุผลในการระงับ...',
+    showCancelButton: true,
+    confirmButtonText: 'ระงับทั้งหมด',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f97316'
+  })
+
+  if (result.isConfirmed) {
+    isBulkProcessing.value = true
+    try {
+      const response: any = await api.post(`/api/academies/${academyId.value}/members/bulk-action`, {
+        member_ids: selectedMemberIds.value,
+        action: 'suspend',
+        reason: result.value || ''
+      })
+      if (response.success) {
+        Swal.fire('สำเร็จ', response.message, 'success')
+        clearBulkSelection()
+        await fetchMembers(pagination.value.current_page)
+        await fetchStats()
+      }
+    } catch (err: any) {
+      Swal.fire('เกิดข้อผิดพลาด', err.data?.message || 'ไม่สามารถระงับได้', 'error')
+    } finally {
+      isBulkProcessing.value = false
+    }
+  }
+}
+
+const bulkRemove = async () => {
+  const result = await Swal.fire({
+    title: 'ยืนยันการลบ',
+    text: `ลบสมาชิก ${selectedMemberIds.value.length} คน? การกระทำนี้ไม่สามารถย้อนกลับได้`,
+    icon: 'error',
+    showCancelButton: true,
+    confirmButtonText: 'ลบทั้งหมด',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#ef4444'
+  })
+
+  if (result.isConfirmed) {
+    isBulkProcessing.value = true
+    try {
+      const response: any = await api.post(`/api/academies/${academyId.value}/members/bulk-action`, {
+        member_ids: selectedMemberIds.value,
+        action: 'remove'
+      })
+      if (response.success) {
+        Swal.fire('สำเร็จ', response.message, 'success')
+        clearBulkSelection()
+        await fetchMembers(pagination.value.current_page)
+        await fetchStats()
+      }
+    } catch (err: any) {
+      Swal.fire('เกิดข้อผิดพลาด', err.data?.message || 'ไม่สามารถลบได้', 'error')
+    } finally {
+      isBulkProcessing.value = false
+    }
+  }
+}
+
+const bulkExport = async () => {
+  isBulkProcessing.value = true
+  try {
+    const response = await api.post(`/api/academies/${academyId.value}/members/export-selected`, {
+      member_ids: selectedMemberIds.value
+    }, { responseType: 'blob' })
+    
+    // Create download link
+    const blob = new Blob([response as any], { type: 'text/csv;charset=utf-8' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `academy_members_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    
+    Swal.fire('สำเร็จ', 'ส่งออกข้อมูลเรียบร้อยแล้ว', 'success')
+  } catch (err: any) {
+    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถส่งออกข้อมูลได้', 'error')
+  } finally {
+    isBulkProcessing.value = false
+  }
+}
+
+const onBulkRoleAssigned = async () => {
+  showBulkRoleModal.value = false
+  clearBulkSelection()
+  await fetchMembers(pagination.value.current_page)
+}
+
+const exportAllMembers = async () => {
+  try {
+    // Use the existing export API
+    window.open(`/api/academies/${academyId.value}/members/export`, '_blank')
+  } catch (err: any) {
+    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถส่งออกข้อมูลได้', 'error')
+  }
+}
+
 const getStatusBadge = (status: number) => {
   const badges: Record<number, { label: string; class: string }> = {
     1: { label: 'รอการอนุมัติ', class: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
@@ -296,21 +678,31 @@ const getRoleBadge = (member: any) => {
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">จัดการสมาชิก</h1>
           <p class="text-gray-600 dark:text-gray-400 mt-1">จัดการสมาชิกทั้งหมดของโรงเรียน</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <!-- Export Button -->
+          <button 
+            v-if="can('members.manage')"
+            @click="exportAllMembers"
+            class="px-3 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+            title="ส่งออกข้อมูลสมาชิก"
+          >
+            <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
+            <span class="hidden sm:inline">ส่งออก CSV</span>
+          </button>
           <NuxtLink 
             :to="`/academies/${academyName}/admin/roles`"
-            class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+            class="px-3 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:shield-person-24-regular" class="w-5 h-5" />
-            จัดการบทบาท
+            <span class="hidden sm:inline">จัดการบทบาท</span>
           </NuxtLink>
           <button 
             v-if="can('members.manage')"
             @click="showInviteModal = true"
-            class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2"
+            class="px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:person-add-24-regular" class="w-5 h-5" />
-            เชิญสมาชิก
+            <span class="hidden sm:inline">เชิญสมาชิก</span>
           </button>
         </div>
       </div>
@@ -368,7 +760,8 @@ const getRoleBadge = (member: any) => {
       </div>
 
       <!-- Filters -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+        <!-- Main Search Row -->
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex-1">
             <div class="relative">
@@ -377,25 +770,12 @@ const getRoleBadge = (member: any) => {
                 v-model="searchQuery"
                 @input="onSearch"
                 type="text"
-                placeholder="ค้นหาชื่อ, อีเมล, รหัสสมาชิก..."
+                placeholder="ค้นหาชื่อ, อีเมล, รหัสนักเรียน..."
                 class="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
           </div>
-          <select
-            v-model="selectedStatus"
-            @change="onSearch"
-            class="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-          </select>
-          <select
-            v-model="selectedRole"
-            @change="onSearch"
-            class="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-          </select>
+          
           <!-- View Mode Toggle -->
           <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
             <button 
@@ -416,6 +796,108 @@ const getRoleBadge = (member: any) => {
             </button>
           </div>
         </div>
+        
+        <!-- Filter Row -->
+        <div class="flex flex-wrap gap-3 items-center">
+          <!-- Status Filter -->
+          <select
+            v-model="selectedStatus"
+            @change="onSearch"
+            class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+          >
+            <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          
+          <!-- Role Filter -->
+          <select
+            v-model="selectedRole"
+            @change="onSearch"
+            class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+          >
+            <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          
+          <!-- Class Level Filter -->
+          <select
+            v-if="filterOptions.class_levels.length > 0"
+            v-model="selectedClassLevel"
+            @change="onSearch"
+            class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+          >
+            <option v-for="opt in classLevelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          
+          <!-- Class Section Filter -->
+          <select
+            v-if="filterOptions.class_sections.length > 0"
+            v-model="selectedClassSection"
+            @change="onSearch"
+            class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+          >
+            <option v-for="opt in classSectionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          
+          <!-- Gender Filter -->
+          <select
+            v-if="filterOptions.genders.some(g => g.count > 0)"
+            v-model="selectedGender"
+            @change="onSearch"
+            class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+          >
+            <option v-for="opt in genderOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          
+          <!-- Tag Filter -->
+          <select
+            v-if="tags.length > 0"
+            v-model="selectedTag"
+            @change="onSearch"
+            class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+          >
+            <option v-for="opt in tagOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          
+          <!-- Group By -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">จัดกลุ่ม:</span>
+            <select
+              v-model="groupBy"
+              class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+            >
+              <option value="none">ไม่จัดกลุ่ม</option>
+              <option value="classroom">ตามห้องเรียน</option>
+              <option value="class_level">ตามชั้นเรียน</option>
+              <option value="gender">ตามเพศ</option>
+            </select>
+          </div>
+          
+          <!-- Clear Filters -->
+          <button
+            v-if="activeFiltersCount > 0"
+            @click="clearAllFilters"
+            class="flex items-center gap-1 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-sm transition-colors"
+          >
+            <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
+            ล้างตัวกรอง ({{ activeFiltersCount }})
+          </button>
+        </div>
+        
+        <!-- Classroom Quick Filters -->
+        <div v-if="filterOptions.classrooms.length > 0 && filterOptions.classrooms.length <= 20" class="flex flex-wrap gap-2">
+          <button
+            v-for="classroom in filterOptions.classrooms"
+            :key="`${classroom.class_level}-${classroom.class_section}`"
+            @click="selectedClassLevel = classroom.class_level; selectedClassSection = classroom.class_section; onSearch()"
+            :class="[
+              'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
+              selectedClassLevel === classroom.class_level && selectedClassSection === classroom.class_section
+                ? 'bg-primary-500 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            ]"
+          >
+            {{ classroom.label }} <span class="opacity-70">({{ classroom.count }})</span>
+          </button>
+        </div>
       </div>
 
       <!-- Members List -->
@@ -427,13 +909,58 @@ const getRoleBadge = (member: any) => {
         <div v-else-if="members.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-16 text-center">
           <Icon icon="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
           <p class="text-gray-500 dark:text-gray-400">ไม่พบสมาชิก</p>
+          <button 
+            v-if="activeFiltersCount > 0"
+            @click="clearAllFilters"
+            class="mt-3 text-primary-600 hover:text-primary-700 text-sm font-medium"
+          >
+            ล้างตัวกรองทั้งหมด
+          </button>
         </div>
 
+        <!-- Grouped View -->
+        <div v-else-if="groupBy !== 'none'" class="space-y-6">
+          <div 
+            v-for="group in groupedMembers" 
+            :key="group.key"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
+          >
+            <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <h3 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Icon 
+                  :icon="groupBy === 'gender' ? (group.key === 'male' ? 'fluent:person-24-filled' : 'fluent:person-24-filled') : 'fluent:class-24-regular'" 
+                  class="w-5 h-5"
+                  :class="groupBy === 'gender' ? (group.key === 'male' ? 'text-blue-500' : 'text-pink-500') : 'text-gray-500'"
+                />
+                {{ group.label }}
+              </h3>
+              <span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300">
+                {{ group.members.length }} คน
+              </span>
+            </div>
+            <AcademyMemberMemberListView
+              :members="group.members"
+              :view-mode="viewMode"
+              :is-admin="can('members.manage')"
+              :show-checkbox="can('members.manage')"
+              v-model:selected-ids="selectedMemberIds"
+              @accept-member="acceptMember"
+              @reject-member="rejectMember"
+              @remove-member="removeMember"
+              @edit-role="openRoleModal"
+              @manage-member="openManageModal"
+            />
+          </div>
+        </div>
+
+        <!-- Non-Grouped View -->
         <AcademyMemberMemberListView
           v-else
           :members="members"
           :view-mode="viewMode"
           :is-admin="can('members.manage')"
+          :show-checkbox="can('members.manage')"
+          v-model:selected-ids="selectedMemberIds"
           @accept-member="acceptMember"
           @reject-member="rejectMember"
           @remove-member="removeMember"
@@ -492,6 +1019,44 @@ const getRoleBadge = (member: any) => {
       v-model="showInviteModal"
       :academy-id="academyId!"
       @invited="fetchMembers(1); fetchStats()"
+    />
+
+    <!-- Bulk Role Modal -->
+    <AcademyMemberBulkRoleModal
+      v-model="showBulkRoleModal"
+      :academy-id="academyId!"
+      :member-ids="selectedMemberIds"
+      @role-assigned="onBulkRoleAssigned"
+    />
+
+    <!-- Advanced Filter Modal -->
+    <AcademyMemberAdvancedFilterModal
+      v-model="showAdvancedFilter"
+      :roles="roles"
+      :current-filters="{
+        status: selectedStatus,
+        roleId: advancedFilters.roleId,
+        dateFrom: advancedFilters.dateFrom,
+        dateTo: advancedFilters.dateTo,
+        sortBy: sortBy,
+        sortOrder: sortOrder
+      }"
+      @apply="applyAdvancedFilters"
+      @reset="resetAdvancedFilters"
+    />
+
+    <!-- Bulk Action Bar -->
+    <AcademyMemberBulkActionBar
+      v-if="can('members.manage')"
+      :count="selectedMemberIds.length"
+      :is-processing="isBulkProcessing"
+      @approve="bulkApprove"
+      @reject="bulkReject"
+      @suspend="bulkSuspend"
+      @remove="bulkRemove"
+      @assign-role="showBulkRoleModal = true"
+      @export="bulkExport"
+      @clear="clearBulkSelection"
     />
   </NuxtLayout>
 </template>

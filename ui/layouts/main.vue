@@ -534,7 +534,7 @@ const onQRActionComplete = (result) => {
                 </NuxtLink>
                 <NuxtLink
                   v-if="authUser.is_plearnd_admin"
-                  to="/admin/support"
+                  to="/nuxnan-admin/supports"
                   @click="closeSettings"
                   class="flex items-center gap-3 px-4 py-3 transition-colors"
                   :class="isDarkMode ? 'hover:bg-vikinger-dark-200 text-gray-300' : 'hover:bg-gray-100 text-gray-700'"
@@ -830,6 +830,20 @@ const onQRActionComplete = (result) => {
               <Icon icon="fluent:settings-24-regular" class="w-5 h-5" />
               <span class="font-semibold">ตั้งค่า</span>
             </NuxtLink>
+            
+            <!-- Logout Button -->
+            <button
+              @click="logout"
+              class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mt-4 border-t pt-4"
+              :class="
+                isDarkMode
+                  ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300 border-vikinger-dark-50/30'
+                  : 'text-red-500 hover:bg-red-50 hover:text-red-600 border-gray-200'
+              "
+            >
+              <Icon icon="fluent:sign-out-24-regular" class="w-5 h-5" />
+              <span class="font-semibold">ออกจากระบบ</span>
+            </button>
           </div>
         </div>
 
@@ -957,6 +971,20 @@ const onQRActionComplete = (result) => {
           >
             <Icon icon="fluent:settings-24-regular" class="w-6 h-6" />
           </NuxtLink>
+          
+          <!-- Logout Button (Collapsed) -->
+          <button
+            @click="logout"
+            class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300 mt-4"
+            :class="
+              isDarkMode
+                ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300'
+                : 'text-red-500 hover:bg-red-50 hover:text-red-600'
+            "
+            title="ออกจากระบบ"
+          >
+            <Icon icon="fluent:sign-out-24-regular" class="w-6 h-6" />
+          </button>
         </div>
       </aside>
 
@@ -977,7 +1005,7 @@ const onQRActionComplete = (result) => {
           isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20',
         ]"
       >
-        <div class="max-w-6xl mx-auto px-4 py-6">
+        <div class="max-w-6xl mx-auto px-1.5 sm:px-3 md:px-4 py-4 sm:py-6">
           <!-- Hero Banner Slot (Full Width) -->
           <div v-if="$slots.hero" class="w-full mb-6">
             <slot name="hero" />

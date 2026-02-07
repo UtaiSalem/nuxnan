@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AdminPermissionController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\AdminPointsController;
 use App\Http\Controllers\Api\AdminWalletController;
+use App\Http\Controllers\Api\AuditLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -499,5 +500,24 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
                 ]
             ]);
         });
+    });
+
+    // =====================================================
+    // Audit Logs
+    // =====================================================
+    Route::prefix('audit-logs')->group(function () {
+        Route::get('/', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
+        Route::get('/actions', [AuditLogController::class, 'getActions'])->name('admin.audit-logs.actions');
+        Route::get('/modules', [AuditLogController::class, 'getModules'])->name('admin.audit-logs.modules');
+        Route::get('/summary', [AuditLogController::class, 'summary'])->name('admin.audit-logs.summary');
+        Route::get('/entity', [AuditLogController::class, 'getEntityLogs'])->name('admin.audit-logs.entity');
+        Route::get('/my-logs', [AuditLogController::class, 'myLogs'])->name('admin.audit-logs.my-logs');
+        Route::get('/export', [AuditLogController::class, 'export'])->name('admin.audit-logs.export');
+        Route::get('/{auditLog}', [AuditLogController::class, 'show'])->name('admin.audit-logs.show');
+        
+        // Cleanup (Super Admin only)
+        Route::delete('/cleanup', [AuditLogController::class, 'cleanup'])
+            ->middleware('admin:SUPER_ADMIN')
+            ->name('admin.audit-logs.cleanup');
     });
 });

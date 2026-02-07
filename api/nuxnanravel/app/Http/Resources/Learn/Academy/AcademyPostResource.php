@@ -27,11 +27,11 @@ class AcademyPostResource extends JsonResource
             'meta'              => $this->meta,
             'likes'             => $this->likes,
             'dislikes'          => $this->dislikes,
-            'isLikedByAuth'     => $this->when(auth()->check(), function () use ($request) {
-                                        return $this->likedPost()->where('user_id', auth()->id())->exists() ;
+            'isLikedByAuth'     => $this->when(auth()->check(), function () {
+                                        return $this->likedPost()->where('user_id', auth()->id())->exists();
                                     }),
-            'isDislikedByAuth'  => $this->when(auth()->check(), function () use ($request) {
-                                        return $this->dislikedPost()->where('user_id', auth()->id())->exists() ;
+            'isDislikedByAuth'  => $this->when(auth()->check(), function () {
+                                        return $this->dislikedPost()->where('user_id', auth()->id())->exists();
                                     }),
             'comments'          => $this->comments,
             'comments_count'    => $this->comments()->count(),
