@@ -5,14 +5,11 @@
  */
 import { Icon } from '@iconify/vue'
 
-interface Props {
-  academyName: string
-}
-
-const props = defineProps<Props>()
-
 const route = useRoute()
 const api = useApi()
+
+// Get academy name from route params
+const academyName = computed(() => route.params.name as string)
 
 // State
 const academy = ref<any>(null)
@@ -26,7 +23,7 @@ const { can, isOwner, isAdmin, isTeacher, fetchMyRole } = useAcademyRole(academy
 
 onMounted(async () => {
   try {
-    const response: any = await api.get(`/api/academies/${encodeURIComponent(props.academyName)}`)
+    const response: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
     if (response.success) {
       academy.value = response.academy
       academyId.value = response.academy.id
@@ -34,7 +31,7 @@ onMounted(async () => {
       
       // Check if user has admin access
       if (!can('academy.view') && !isOwner.value && !isAdmin.value) {
-        navigateTo(`/academies/${props.academyName}`)
+        navigateTo(`/academies/${academyName.value}`)
       }
     }
   } catch (err) {
@@ -53,7 +50,7 @@ const menuGroups = computed(() => [
       { 
         icon: 'fluent:grid-24-regular', 
         label: 'แดชบอร์ด', 
-        to: `/academies/${props.academyName}/admin`, 
+        to: `/academies/${academyName.value}/admin`, 
         permission: 'academy.view',
         exact: true
       },
@@ -65,31 +62,31 @@ const menuGroups = computed(() => [
       { 
         icon: 'fluent:people-24-regular', 
         label: 'สมาชิก', 
-        to: `/academies/${props.academyName}/admin/members`, 
+        to: `/academies/${academyName.value}/admin/members`, 
         permission: 'members.view' 
       },
       { 
         icon: 'fluent:shield-person-24-regular', 
         label: 'บทบาทและสิทธิ์', 
-        to: `/academies/${props.academyName}/admin/roles`, 
+        to: `/academies/${academyName.value}/admin/roles`, 
         permission: 'roles.view' 
       },
       { 
         icon: 'fluent:link-24-regular', 
         label: 'ลิงก์เชิญสมาชิก', 
-        to: `/academies/${props.academyName}/admin/invite-links`, 
+        to: `/academies/${academyName.value}/admin/invite-links`, 
         permission: 'members.manage' 
       },
       { 
         icon: 'fluent:tag-24-regular', 
         label: 'แท็กสมาชิก', 
-        to: `/academies/${props.academyName}/admin/member-tags`, 
+        to: `/academies/${academyName.value}/admin/member-tags`, 
         permission: 'members.manage' 
       },
       { 
         icon: 'fluent:people-community-24-regular', 
         label: 'ผู้ปกครอง', 
-        to: `/academies/${props.academyName}/admin/guardians`, 
+        to: `/academies/${academyName.value}/admin/guardians`, 
         permission: 'members.view' 
       },
     ]
@@ -100,31 +97,31 @@ const menuGroups = computed(() => [
       { 
         icon: 'fluent:book-24-regular', 
         label: 'คอร์สเรียน', 
-        to: `/academies/${props.academyName}/admin/courses`, 
+        to: `/academies/${academyName.value}/admin/courses`, 
         permission: 'courses.view' 
       },
       { 
         icon: 'fluent:book-globe-24-regular', 
         label: 'หลักสูตร', 
-        to: `/academies/${props.academyName}/admin/curriculums`, 
+        to: `/academies/${academyName.value}/admin/curriculums`, 
         permission: 'courses.view' 
       },
       { 
         icon: 'fluent:people-team-24-regular', 
         label: 'ห้องเรียน', 
-        to: `/academies/${props.academyName}/admin/classrooms`, 
+        to: `/academies/${academyName.value}/admin/classrooms`, 
         permission: 'groups.view' 
       },
       { 
         icon: 'fluent:organization-24-regular', 
         label: 'ฝ่าย/แผนก', 
-        to: `/academies/${props.academyName}/admin/departments`, 
+        to: `/academies/${academyName.value}/admin/departments`, 
         permission: 'groups.view' 
       },
       { 
         icon: 'fluent:calendar-24-regular', 
         label: 'ตารางเรียน', 
-        to: `/academies/${props.academyName}/admin/schedule`, 
+        to: `/academies/${academyName.value}/admin/schedule`, 
         permission: 'schedule.view' 
       },
     ]
@@ -135,25 +132,31 @@ const menuGroups = computed(() => [
       { 
         icon: 'fluent:hat-graduation-24-regular', 
         label: 'ทะเบียนนักเรียน', 
-        to: `/academies/${props.academyName}/admin/students`, 
+        to: `/academies/${academyName.value}/admin/students`, 
+        permission: 'students.view' 
+      },
+      { 
+        icon: 'fluent:person-card-24-regular', 
+        label: 'บัตรนักเรียน', 
+        to: `/academies/${academyName.value}/admin/student-cards`, 
         permission: 'students.view' 
       },
       { 
         icon: 'fluent:clipboard-task-24-regular', 
         label: 'การเข้าเรียน', 
-        to: `/academies/${props.academyName}/admin/attendance`, 
+        to: `/academies/${academyName.value}/admin/attendance`, 
         permission: 'attendance.view' 
       },
       { 
         icon: 'fluent:star-24-regular', 
         label: 'ผลการเรียน', 
-        to: `/academies/${props.academyName}/admin/grades`, 
+        to: `/academies/${academyName.value}/admin/grades`, 
         permission: 'grades.view' 
       },
       { 
         icon: 'fluent:home-person-24-regular', 
         label: 'เยี่ยมบ้าน', 
-        to: `/academies/${props.academyName}/admin/home-visits`, 
+        to: `/academies/${academyName.value}/admin/home-visits`, 
         permission: 'home_visits.view' 
       },
     ]
@@ -164,7 +167,7 @@ const menuGroups = computed(() => [
       { 
         icon: 'fluent:person-board-24-regular', 
         label: 'ข้อมูลบุคลากร', 
-        to: `/academies/${props.academyName}/admin/staff`, 
+        to: `/academies/${academyName.value}/admin/staff`, 
         permission: 'staff.view' 
       },
     ]
@@ -175,7 +178,7 @@ const menuGroups = computed(() => [
       { 
         icon: 'fluent:megaphone-24-regular', 
         label: 'ประกาศ', 
-        to: `/academies/${props.academyName}/admin/announcements`, 
+        to: `/academies/${academyName.value}/admin/announcements`, 
         permission: 'announcements.manage' 
       },
     ]
@@ -186,13 +189,13 @@ const menuGroups = computed(() => [
       { 
         icon: 'fluent:data-bar-horizontal-24-regular', 
         label: 'สถิติและรายงาน', 
-        to: `/academies/${props.academyName}/admin/reports`, 
+        to: `/academies/${academyName.value}/admin/reports`, 
         permission: 'reports.view' 
       },
       { 
         icon: 'fluent:history-24-regular', 
         label: 'ประวัติกิจกรรม', 
-        to: `/academies/${props.academyName}/admin/activity-log`, 
+        to: `/academies/${academyName.value}/admin/activity-log`, 
         permission: 'reports.view' 
       },
     ]
@@ -203,13 +206,13 @@ const menuGroups = computed(() => [
       { 
         icon: 'fluent:building-24-regular', 
         label: 'ระบบบริหารโรงเรียน', 
-        to: `/academies/${props.academyName}/admin/school-management`, 
+        to: `/academies/${academyName.value}/admin/school-management`, 
         permission: 'settings.manage' 
       },
       { 
         icon: 'fluent:settings-24-regular', 
         label: 'ตั้งค่าโรงเรียน', 
-        to: `/academies/${props.academyName}/admin/settings`, 
+        to: `/academies/${academyName.value}/admin/settings`, 
         permission: 'settings.manage' 
       },
     ]
@@ -244,168 +247,152 @@ const toggleMobileSidebar = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <NuxtLayout name="main">
     <!-- Loading -->
-    <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
+    <div v-if="isLoading" class="flex items-center justify-center py-20">
       <div class="text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent mx-auto mb-4"></div>
         <p class="text-gray-500 dark:text-gray-400">กำลังโหลด...</p>
       </div>
     </div>
 
-    <div v-else class="flex">
-      <!-- Desktop Sidebar -->
-      <aside 
-        :class="[
-          'hidden lg:flex flex-col h-screen sticky top-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-300',
-          isSidebarOpen ? 'w-64' : 'w-20'
-        ]"
-      >
-        <!-- Sidebar Header -->
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
-          <NuxtLink :to="`/academies/${academyName}`" class="flex items-center gap-3 flex-1 min-w-0">
+    <div v-else class="w-full">
+      <!-- Academy Header Card -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+        <div class="p-4 flex items-center justify-between">
+          <NuxtLink :to="`/academies/${academyName}`" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <img 
               :src="academy?.avatar || '/images/default-academy.png'" 
               :alt="academy?.name"
-              class="w-10 h-10 rounded-lg object-cover shrink-0"
-            />
-            <div v-if="isSidebarOpen" class="min-w-0">
-              <p class="font-semibold text-gray-900 dark:text-white truncate text-sm">{{ academy?.name }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">แอดมิน</p>
-            </div>
-          </NuxtLink>
-          <button 
-            @click="toggleSidebar"
-            class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <Icon :name="isSidebarOpen ? 'fluent:panel-left-contract-24-regular' : 'fluent:panel-left-expand-24-regular'" class="w-5 h-5" />
-          </button>
-        </div>
-
-        <!-- Menu -->
-        <nav class="flex-1 overflow-y-auto p-3 space-y-6">
-          <div v-for="group in filteredMenuGroups" :key="group.title">
-            <p v-if="isSidebarOpen" class="px-3 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              {{ group.title }}
-            </p>
-            <div class="space-y-1">
-              <NuxtLink
-                v-for="item in group.items"
-                :key="item.to"
-                :to="item.to"
-                :class="[
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                  isActiveRoute(item.to, item.exact)
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
-                  !isSidebarOpen && 'justify-center'
-                ]"
-                :title="!isSidebarOpen ? item.label : ''"
-              >
-                <Icon :name="item.icon" class="w-5 h-5 shrink-0" />
-                <span v-if="isSidebarOpen" class="text-sm font-medium">{{ item.label }}</span>
-              </NuxtLink>
-            </div>
-          </div>
-        </nav>
-
-        <!-- Sidebar Footer -->
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-          <NuxtLink 
-            :to="`/academies/${academyName}`"
-            :class="[
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
-              !isSidebarOpen && 'justify-center'
-            ]"
-          >
-            <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5 shrink-0" />
-            <span v-if="isSidebarOpen" class="text-sm font-medium">กลับหน้าโรงเรียน</span>
-          </NuxtLink>
-        </div>
-      </aside>
-
-      <!-- Mobile Sidebar Overlay -->
-      <div 
-        v-if="isMobileSidebarOpen"
-        @click="toggleMobileSidebar"
-        class="fixed inset-0 bg-black/50 z-40 lg:hidden"
-      />
-
-      <!-- Mobile Sidebar -->
-      <aside 
-        :class="[
-          'fixed left-0 top-0 h-full w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-50 lg:hidden transition-transform duration-300',
-          isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        ]"
-      >
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <img 
-              :src="academy?.avatar || '/images/default-academy.png'" 
-              :alt="academy?.name"
-              class="w-10 h-10 rounded-lg object-cover"
+              class="w-12 h-12 rounded-lg object-cover"
             />
             <div>
-              <p class="font-semibold text-gray-900 dark:text-white text-sm">{{ academy?.name }}</p>
-              <p class="text-xs text-gray-500">แอดมิน</p>
+              <h1 class="font-bold text-lg text-gray-900 dark:text-white">{{ academy?.name }}</h1>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Admin Panel</p>
             </div>
-          </div>
-          <button @click="toggleMobileSidebar" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            <Icon name="fluent:dismiss-24-regular" class="w-5 h-5" />
-          </button>
-        </div>
-
-        <nav class="overflow-y-auto p-3 space-y-6" style="height: calc(100% - 140px)">
-          <div v-for="group in filteredMenuGroups" :key="group.title">
-            <p class="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ group.title }}</p>
-            <div class="space-y-1">
-              <NuxtLink
-                v-for="item in group.items"
-                :key="item.to"
-                :to="item.to"
-                @click="toggleMobileSidebar"
-                :class="[
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                  isActiveRoute(item.to, item.exact)
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                ]"
-              >
-                <Icon :name="item.icon" class="w-5 h-5" />
-                <span class="text-sm font-medium">{{ item.label }}</span>
-              </NuxtLink>
-            </div>
-          </div>
-        </nav>
-
-        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
-          <NuxtLink 
-            :to="`/academies/${academyName}`"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
-            <span class="text-sm font-medium">กลับหน้าโรงเรียน</span>
           </NuxtLink>
         </div>
-      </aside>
+      </div>
 
-      <!-- Main Content -->
-      <div class="flex-1 min-w-0">
-        <!-- Mobile Header -->
-        <header class="lg:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-          <div class="flex items-center gap-3">
-            <button @click="toggleMobileSidebar" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:navigation-24-regular" class="w-5 h-5" />
+      <!-- Mobile Menu Toggle -->
+      <button 
+        @click="toggleMobileSidebar"
+        class="lg:hidden w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+      >
+        <Icon name="fluent:navigation-24-regular" class="w-5 h-5" />
+        <span>{{ isMobileSidebarOpen ? 'ซ่อนเมนู' : 'แสดงเมนู' }}</span>
+      </button>
+
+      <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar Navigation (Desktop) -->
+        <aside 
+          :class="[
+            'bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300',
+            'hidden lg:block lg:flex-shrink-0',
+            isSidebarOpen ? 'lg:w-64' : 'lg:w-20'
+          ]"
+        >
+          <!-- Toggle Button -->
+          <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-end">
+            <button 
+              @click="toggleSidebar"
+              class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Icon :name="isSidebarOpen ? 'fluent:panel-left-contract-24-regular' : 'fluent:panel-left-expand-24-regular'" class="w-5 h-5" />
             </button>
-            <span class="font-medium text-gray-900 dark:text-white">แอดมิน</span>
           </div>
-        </header>
 
-        <!-- Page Content -->
-        <main class="p-4 lg:p-6">
-          <slot />
+          <!-- Menu -->
+          <nav class="p-3 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div v-for="group in filteredMenuGroups" :key="group.title">
+              <p v-if="isSidebarOpen" class="px-3 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                {{ group.title }}
+              </p>
+              <div class="space-y-1">
+                <NuxtLink
+                  v-for="item in group.items"
+                  :key="item.to"
+                  :to="item.to"
+                  :class="[
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                    isActiveRoute(item.to, item.exact)
+                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
+                    !isSidebarOpen && 'justify-center'
+                  ]"
+                  :title="!isSidebarOpen ? item.label : ''"
+                >
+                  <Icon :name="item.icon" class="w-5 h-5 shrink-0" />
+                  <span v-if="isSidebarOpen" class="text-sm font-medium">{{ item.label }}</span>
+                </NuxtLink>
+              </div>
+            </div>
+          </nav>
+
+          <!-- Sidebar Footer -->
+          <div class="p-3 border-t border-gray-200 dark:border-gray-700">
+            <NuxtLink 
+              :to="`/academies/${academyName}`"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
+                !isSidebarOpen && 'justify-center'
+              ]"
+            >
+              <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5 shrink-0" />
+              <span v-if="isSidebarOpen" class="text-sm font-medium">กลับหน้าโรงเรียน</span>
+            </NuxtLink>
+          </div>
+        </aside>
+
+        <!-- Mobile Sidebar -->
+        <aside 
+          :class="[
+            'lg:hidden bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 mb-4',
+            isMobileSidebarOpen ? 'block' : 'hidden'
+          ]"
+        >
+          <nav class="p-3 space-y-4 max-h-[60vh] overflow-y-auto">
+            <div v-for="group in filteredMenuGroups" :key="group.title">
+              <p class="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ group.title }}</p>
+              <div class="space-y-1">
+                <NuxtLink
+                  v-for="item in group.items"
+                  :key="item.to"
+                  :to="item.to"
+                  @click="isMobileSidebarOpen = false"
+                  :class="[
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                    isActiveRoute(item.to, item.exact)
+                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ]"
+                >
+                  <Icon :name="item.icon" class="w-5 h-5" />
+                  <span class="text-sm font-medium">{{ item.label }}</span>
+                </NuxtLink>
+              </div>
+            </div>
+          </nav>
+
+          <div class="p-3 border-t border-gray-200 dark:border-gray-700">
+            <NuxtLink 
+              :to="`/academies/${academyName}`"
+              class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+              <span class="text-sm font-medium">กลับหน้าโรงเรียน</span>
+            </NuxtLink>
+          </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 lg:p-6">
+            <slot />
+          </div>
         </main>
       </div>
     </div>
-  </div>
+  </NuxtLayout>
 </template>
+

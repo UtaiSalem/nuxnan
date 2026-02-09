@@ -6,7 +6,7 @@
 import { Icon } from '@iconify/vue'
 
 definePageMeta({
-  layout: 'main',
+  layout: false,
   middleware: ['auth']
 })
 
@@ -18,7 +18,7 @@ const academyName = computed(() => route.params.name as string)
 // State
 const academy = ref<any>(null)
 const isLoading = ref(true)
-const isSidebarOpen = ref(true)
+const isSidebarOpen = ref(false) // Default to closed on mobile
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -203,65 +203,66 @@ const toggleSidebar = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-    <!-- Loading -->
-    <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
-      <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-    </div>
+  <NuxtLayout name="main">
+    <div class="w-full">
+      <!-- Loading -->
+      <div v-if="isLoading" class="flex items-center justify-center py-20">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
+      </div>
 
-    <div v-else class="flex">
-      <!-- Sidebar -->
-      <aside 
-        :class="[
-          'fixed lg:relative inset-y-0 left-0 z-40 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300',
-          isSidebarOpen ? 'w-64' : 'w-0 lg:w-16'
-        ]"
-      >
-        <div class="flex flex-col h-full">
-          <!-- Header -->
-          <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+      <div v-else>
+        <!-- Academy Header Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+          <div class="p-4 flex items-center justify-between">
             <NuxtLink 
-              v-if="isSidebarOpen"
               :to="`/academies/${academyName}`"
               class="flex items-center gap-3 hover:opacity-80 transition-opacity"
             >
               <img 
-                :src="academy?.logo || '/images/default-academy-logo.png'" 
+                :src="academy?.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(academy?.name || 'Academy')}&background=6366f1&color=fff&size=96`" 
                 :alt="academy?.name"
-                class="w-10 h-10 rounded-lg object-cover"
+                class="w-12 h-12 rounded-lg object-cover flex-shrink-0"
               />
-              <div class="flex-1 min-w-0">
-                <h2 class="font-semibold text-gray-900 dark:text-white truncate text-sm">
+              <div>
+                <h1 class="font-bold text-lg text-gray-900 dark:text-white">
                   {{ academy?.name }}
-                </h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Admin Panel</p>
+                </h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Admin Panel</p>
               </div>
             </NuxtLink>
-            <button 
-              @click="toggleSidebar"
-              class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 lg:block hidden"
-            >
-              <Icon 
-                :name="isSidebarOpen ? 'fluent:panel-left-contract-24-regular' : 'fluent:panel-left-expand-24-regular'" 
-                class="w-5 h-5 text-gray-500"
-              />
-            </button>
-          </div>
-
-          <!-- Role Badge -->
-          <div v-if="isSidebarOpen" class="p-4 border-b border-gray-200 dark:border-gray-700">
+            
+            <!-- Role Badge -->
             <div :class="['flex items-center gap-2 px-3 py-2 rounded-lg', roleColor]">
               <Icon :name="roleIcon" class="w-5 h-5" />
-              <span class="font-medium text-sm">{{ roleDisplayName }}</span>
+              <span class="font-medium text-sm hidden sm:inline">{{ roleDisplayName }}</span>
             </div>
           </div>
+        </div>
 
+        <!-- Mobile Menu Toggle -->
+        <button 
+          @click="toggleSidebar"
+          class="lg:hidden w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+        >
+          <Icon name="fluent:navigation-24-regular" class="w-5 h-5" />
+          <span>{{ isSidebarOpen ? 'ซ่อนเมนู' : 'แสดงเมนู' }}</span>
+        </button>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar Navigation -->
+        <aside 
+          :class="[
+            'bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300',
+            isSidebarOpen ? 'block' : 'hidden lg:block',
+            'lg:w-64 lg:flex-shrink-0'
+          ]"
+        >
           <!-- Navigation -->
-          <nav class="flex-1 overflow-y-auto p-4 space-y-6">
+          <nav class="p-4 space-y-4 max-h-[70vh] lg:max-h-none overflow-y-auto">
             <div v-for="group in menuItems" :key="group.group">
               <h3 
-                v-if="isSidebarOpen && group.items.some(item => item.show)"
-                class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2"
+                v-if="group.items.some(item => item.show)"
+                class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-3"
               >
                 {{ group.group }}
               </h3>
@@ -277,9 +278,9 @@ const toggleSidebar = () => {
                     ]"
                   >
                     <Icon :name="item.icon" class="w-5 h-5 flex-shrink-0" />
-                    <span v-if="isSidebarOpen" class="text-sm">{{ item.name }}</span>
+                    <span class="text-sm">{{ item.name }}</span>
                     <span 
-                      v-if="item.badge && isSidebarOpen" 
+                      v-if="item.badge" 
                       class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full"
                     >
                       {{ item.badge }}
@@ -297,36 +298,21 @@ const toggleSidebar = () => {
               class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
-              <span v-if="isSidebarOpen" class="text-sm">กลับหน้าโรงเรียน</span>
+              <span class="text-sm">กลับหน้าโรงเรียน</span>
             </NuxtLink>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      <!-- Mobile Sidebar Overlay -->
-      <div 
-        v-if="isSidebarOpen"
-        @click="toggleSidebar"
-        class="fixed inset-0 bg-black/50 z-30 lg:hidden"
-      ></div>
-
-      <!-- Main Content -->
-      <main class="flex-1 min-h-screen">
-        <!-- Mobile Header -->
-        <div class="lg:hidden flex items-center gap-4 p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <button @click="toggleSidebar" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <Icon name="fluent:navigation-24-regular" class="w-6 h-6" />
-          </button>
-          <h1 class="font-semibold text-gray-900 dark:text-white">{{ academy?.name }}</h1>
-        </div>
-
-        <!-- Page Content -->
-        <div class="p-6">
-          <slot />
-        </div>
-      </main>
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+            <NuxtPage />
+          </div>
+        </main>
+      </div>
     </div>
   </div>
+  </NuxtLayout>
 </template>
 
 <style scoped>

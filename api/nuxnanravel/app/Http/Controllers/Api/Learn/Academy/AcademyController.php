@@ -406,16 +406,34 @@ class AcademyController extends Controller
         }
     }
 
-    public function getAuthMemberedAcademies(){
+    public function getAuthMemberedAcademies(\App\Models\User $user){
         try {
+            // Get academies where user is a member with approved status (status = 2) or legacy strings
+            // Status: 1 = Pending, 2 = Approved, 3 = Rejected, 4 = Invited, 5 = Suspended
+            $memberships = AcademyMember::where('user_id', $user->id)
+                ->where(function($q) {
+                    $q->whereIn('status', [2, 'accepted', 'approved']);
+                })
+                ->get(['academy_id', 'status', 'role']);
 
-            // $academiesAuthMembered = AcademyMember::where('user_id', auth()->id())->where('status', 1)->get('academy_id');
-            // $academiesAuthMembered = auth()->user()->memberAcademies()->where('status', 1)->get('academy_id');
-            $academiesAuthMembered = auth()->user()->memberAcademies()->where('status', 1)->get('academy_id');
+            $academyIds = $memberships->pluck('academy_id');
+            
+            // Get academies with pagination
+            $academies = Academy::whereIn('id', $academyIds)->paginate(10);
+            
+            // Map member status to each academy
+            $academiesWithStatus = $academies->getCollection()->map(function ($academy) use ($memberships) {
+                $membership = $memberships->firstWhere('academy_id', $academy->id);
+                $academy->memberStatus = $membership ? $membership->status : null;
+                $academy->memberRole = $membership ? $membership->role : null;
+                return $academy;
+            });
+            
+            $academies->setCollection($academiesWithStatus);
 
             return response()->json([
                 'success'       => true,
-                'academies'     => AcademyResource::collection(Academy::whereIn('id', $academiesAuthMembered)->paginate(10)),
+                'academies'     => AcademyResource::collection($academies),
             ], 200);
 
         } catch (\Throwable $th) {

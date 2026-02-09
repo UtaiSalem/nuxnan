@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
 use App\Http\Controllers\Controller;
 use App\Models\StudentHomeVisit;
 use App\Models\Student;
+use App\Models\StudentCard;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -12,13 +13,46 @@ class AdminController extends Controller
 {
     public function __construct()
     {
-        // Ensure admin is authenticated
+        // Ensure admin is authenticated via session OR API token
         $this->middleware(function ($request, $next) {
+            // Allow if authenticated via API (for academy-based routes)
+            if (auth('api')->check()) {
+                return $next($request);
+            }
+            
+            // Otherwise, check session authentication (for legacy routes)
             if (!session('homevisit_admin_authenticated')) {
                 return redirect()->route('homevisit.login');
             }
             return $next($request);
         });
+    }
+
+    /**
+     * Get statistics for academy admin dashboard
+     */
+    public function statistics()
+    {
+        $totalStudents = StudentCard::count();
+        $totalVisits = StudentHomeVisit::count();
+        $completedVisits = StudentHomeVisit::where('visit_status', 'completed')->count();
+        $pendingVisits = StudentHomeVisit::where('visit_status', 'pending')->count();
+        
+        // Calculate visited students (distinct)
+        $visitedStudents = StudentHomeVisit::distinct('student_id')->count('student_id');
+        $visitRate = $totalStudents > 0 ? round(($visitedStudents / $totalStudents) * 100, 1) : 0;
+        
+        return response()->json([
+            'success' => true,
+            'statistics' => [
+                'totalVisits' => $totalVisits,
+                'completedVisits' => $completedVisits,
+                'pendingVisits' => $pendingVisits,
+                'totalStudents' => $totalStudents,
+                'visitedStudents' => $visitedStudents,
+                'visitRate' => $visitRate
+            ]
+        ]);
     }
 
     /**

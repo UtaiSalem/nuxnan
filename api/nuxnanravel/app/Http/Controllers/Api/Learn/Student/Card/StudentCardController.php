@@ -27,8 +27,62 @@ class StudentCardController extends Controller
         $levels = StudentCard::distinct()->pluck('class_level')->sort()->values();
         
         return response()->json([
+            'success' => true,
             'totalStudents' => $totalStudents,
             'levels' => $levels
+        ]);
+    }
+
+    /**
+     * Get statistics for student cards - for academy admin dashboard
+     */
+    public function statistics()
+    {
+        $totalStudents = StudentCard::count();
+        $withPhoto = StudentCard::whereNotNull('profile_image')
+            ->where('profile_image', '!=', '')
+            ->count();
+        $withoutPhoto = $totalStudents - $withPhoto;
+        
+        $byLevel = StudentCard::selectRaw('class_level, COUNT(*) as count')
+            ->groupBy('class_level')
+            ->pluck('count', 'class_level')
+            ->toArray();
+        
+        return response()->json([
+            'success' => true,
+            'statistics' => [
+                'totalStudents' => $totalStudents,
+                'withPhoto' => $withPhoto,
+                'withoutPhoto' => $withoutPhoto,
+                'byLevel' => $byLevel
+            ]
+        ]);
+    }
+
+    /**
+     * Get all class levels
+     */
+    public function getLevels()
+    {
+        $levels = StudentCard::distinct()->pluck('class_level')->sort()->values();
+        
+        return response()->json([
+            'success' => true,
+            'levels' => $levels
+        ]);
+    }
+
+    /**
+     * Get all sections/rooms
+     */
+    public function getSections()
+    {
+        $sections = StudentCard::distinct()->pluck('class_section')->sort()->values();
+        
+        return response()->json([
+            'success' => true,
+            'sections' => $sections
         ]);
     }
 

@@ -43,7 +43,7 @@ class AcademyResource extends JsonResource
             'cover'                 => $this->cover_url,
             // 'isMember'           => $this->isMember(auth()->user()),
             'setting'               => $this->academySetting,
-            'memberStatus'          => $this->member_status($this->id),
+            'memberStatus'          => $this->memberStatus ?? $this->member_status($this->id),
             'authIsAcademyAdmin'    => auth()->id() === $this->user_id
         ];
     }

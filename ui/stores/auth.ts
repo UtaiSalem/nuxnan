@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, skipHydrate } from 'pinia'
 
 export const useAuthStore = defineStore('auth', () => {
   const config = useRuntimeConfig()
@@ -366,7 +366,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user,
-    token,
+    token: skipHydrate(token),
     isAuthenticated,
     isRefreshing,
     isLoading,

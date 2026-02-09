@@ -56,10 +56,12 @@ const getLogoUrl = (academy: any) => {
 
 const getMemberStatusLabel = (status: string | number) => {
   const statusMap: Record<string | number, { label: string; color: string }> = {
-    1: { label: 'สมาชิก', color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
+    2: { label: 'สมาชิก', color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
+    1: { label: 'รอการอนุมัติ', color: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' },
     0: { label: 'รอการอนุมัติ', color: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' },
     'pending': { label: 'รอการอนุมัติ', color: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' },
     'approved': { label: 'สมาชิก', color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
+    'accepted': { label: 'สมาชิก', color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
   }
   return statusMap[status] || { label: 'สมาชิก', color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' }
 }

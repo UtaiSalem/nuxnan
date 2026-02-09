@@ -283,8 +283,16 @@ require __DIR__ . '/play/videos.php';
 require __DIR__ . '/learn/academy.php';
 require __DIR__ . '/learn/course.php';
 require __DIR__ . '/learn/student.php';
+
+// Academy-based Student Card and Home Visit Routes (NEW - under academy management)
+require __DIR__ . '/learn/academy-student-card.php';
+require __DIR__ . '/learn/academy-home-visit.php';
+
+// Legacy routes (deprecated - kept for backward compatibility)
+// TODO: Remove these in future version after frontend migration is complete
 require __DIR__ . '/homevisit/homevisit.php';
 require __DIR__ . '/studentcard/studentcard.php';
+
 // Note: Admin routes are loaded in bootstrap/app.php with /api/admin prefix
 // Do not include them here to avoid route conflicts
 

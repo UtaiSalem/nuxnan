@@ -6,7 +6,8 @@
 import { Icon } from '@iconify/vue'
 
 definePageMeta({
-  layout: false
+  layout: false, // Using NuxtLayout directly
+  ssr: false // Disable SSR to avoid hydration issues with auth
 })
 
 const route = useRoute()
@@ -14,7 +15,6 @@ const api = useApi()
 const academyName = computed(() => route.params.name as string)
 
 // State
-const academy = ref<any>(null)
 const stats = ref({
   totalStudents: 0,
   totalTeachers: 0,
@@ -29,29 +29,24 @@ const isLoading = ref(true)
 
 // Academy Role
 const academyId = ref<number | null>(null)
-const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { can } = useAcademyRole(academyId)
 
 onMounted(async () => {
   try {
+    // Get academy ID first
     const response: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
     if (response.success) {
-      academy.value = response.academy
       academyId.value = response.academy.id
-      await fetchMyRole()
       
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}`)
-        return
-      }
-      
+      // Fetch dashboard data
       await Promise.all([
         fetchStats(),
         fetchPendingRequests(),
         fetchRecentActivities(),
       ])
     }
-  } catch (err) {
-    console.error('Failed to load:', err)
+  } catch (err: any) {
+    console.error('Failed to load dashboard data:', err)
   } finally {
     isLoading.value = false
   }
@@ -156,7 +151,7 @@ const quickActions = computed(() => [
     description: 'แก้ไขข้อมูลโรงเรียน',
     icon: 'fluent:settings-24-filled',
     to: `/academies/${academyName.value}/admin/settings`,
-    color: 'from-gray-500 to-gray-600',
+    color: 'from-slate-600 to-slate-700',
     show: can('academy.settings.edit'),
   },
 ])
@@ -184,7 +179,7 @@ const rejectRequest = async (memberId: number) => {
 </script>
 
 <template>
-  <NuxtLayout name="academy-admin" :academy-name="academyName">
+  <div>
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>
     </div>
@@ -371,5 +366,5 @@ const rejectRequest = async (memberId: number) => {
         </div>
       </div>
     </div>
-  </NuxtLayout>
+  </div>
 </template>

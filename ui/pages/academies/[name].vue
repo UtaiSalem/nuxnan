@@ -58,6 +58,14 @@ const activitiesNextPageUrl = ref<string | null>(null)
 // Computed
 const academyName = computed(() => route.params.name as string)
 
+// Check if current route is a child route (e.g., /admin, /dashboard)
+const isChildRoute = computed(() => {
+  const basePath = `/academies/${encodeURIComponent(academyName.value)}`
+  const decodedBasePath = `/academies/${academyName.value}`
+  return route.path !== basePath && route.path !== decodedBasePath && 
+         (route.path.startsWith(basePath + '/') || route.path.startsWith(decodedBasePath + '/'))
+})
+
 const logoUrl = computed(() => {
   if (!academy.value?.logo) {
     return `${config.public.apiBase}/storage/images/academies/logos/default_logo.png`
@@ -560,7 +568,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-200 dark:bg-vikinger-dark-300">
+  <!-- Child Route Content (admin, dashboard, etc.) -->
+  <NuxtPage v-if="isChildRoute" />
+  
+  <!-- Main Academy Page Content -->
+  <div v-else class="min-h-screen bg-gray-200 dark:bg-vikinger-dark-300">
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
       <div class="text-center">
