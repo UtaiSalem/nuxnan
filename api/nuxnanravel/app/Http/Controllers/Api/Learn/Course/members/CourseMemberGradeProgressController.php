@@ -109,8 +109,7 @@ class CourseMemberGradeProgressController extends Controller
             // 1. หาคำตอบล่าสุดสำหรับแต่ละคำถามในแต่ละ quiz
             $latestAnswers = DB::table('user_answer_questions as uaq')
                 ->select('quiz_id', 'question_id',
-                    DB::raw('MAX(id) as latest_id'),
-                    DB::raw('MAX(CASE WHEN answer_id = correct_option_id THEN 1 ELSE 0 END) as is_correct'))
+                    DB::raw('MAX(id) as latest_id'))
                 ->where('course_id', $courseId)
                 ->where('user_id', $userId)
                 ->groupBy(['quiz_id', 'question_id'])
@@ -126,10 +125,10 @@ class CourseMemberGradeProgressController extends Controller
                     ->delete();
             }
 
-            // 3. คำนวณคะแนนรวมสำหรับแต่ละ quiz
+            // 3. คำนวณคะแนนรวมสำหรับแต่ละ quiz (ใช้แต้มมูลค่าจริงของแต่ละข้อ ไม่ใช่นับจำนวนข้อที่ถูก)
             $quizResults = DB::table('user_answer_questions as uaq')
                 ->select('quiz_id',
-                    DB::raw('SUM(CASE WHEN answer_id = correct_option_id THEN 1 ELSE 0 END) as score'))
+                    DB::raw('SUM(points) as score'))
                 ->where('course_id', $courseId)
                 ->where('user_id', $userId)
                 ->whereIn('id', $idsToKeep)
@@ -227,6 +226,10 @@ class CourseMemberGradeProgressController extends Controller
     }
     public function updateEditedGrade(Course $course, CourseMember $member, Request $request)
     {
+        if (!$course->hasPermission(auth()->user(), 'edit_grades')) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $request->validate([
             'edited_grade' => 'nullable|numeric|between:0,4',
         ]);
