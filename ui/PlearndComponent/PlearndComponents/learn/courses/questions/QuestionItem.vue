@@ -177,8 +177,10 @@ const debouncedHandleConfirmAnswer = debounce(async function() {
             Swal.fire('บันทึกล้มเหลว', errorMessage, 'error' );
         }
         
-        if (resultResp.data.message === 'แก้ไข') {
-            usePage().props.auth.user.pp -= props.question.pp_fine
+        // pp_fine deduction is now handled by the backend (UserAnswerQuestionController@update)
+        // Sync user pp from backend response if available
+        if (resultResp.data.user_pp !== undefined) {
+            usePage().props.auth.user.pp = resultResp.data.user_pp
         }
 
     } catch (error) {

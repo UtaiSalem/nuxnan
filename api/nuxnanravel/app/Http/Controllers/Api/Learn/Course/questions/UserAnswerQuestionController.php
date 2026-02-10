@@ -122,6 +122,24 @@ class UserAnswerQuestionController extends Controller
                 ], 422);
             }
 
+            // Validate and deduct pp_fine (Plearnd Points) for editing an answer
+            $ppFine = $question->pp_fine ?? 0;
+            $user = auth()->user();
+
+            if ($ppFine > 0) {
+                if ($user->pp < $ppFine) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "แต้มสะสมไม่เพียงพอ ต้องใช้ {$ppFine} แต้มในการแก้ไขคำตอบ",
+                        'required_pp' => $ppFine,
+                        'current_pp' => $user->pp,
+                    ], 422);
+                }
+
+                // Deduct pp_fine from user
+                $user->decrement('pp', $ppFine);
+            }
+
             $oldAnswer = $answer->answer_id;
             $newAnswer = $request->answer_id;
             
@@ -135,7 +153,7 @@ class UserAnswerQuestionController extends Controller
             // Update the user's answer record
             $answer->update([
                 'answer_id' => $newAnswer,
-                'correct_option_id' => $question->correct_option_id, // Maintain legacy or use null
+                'correct_option_id' => $question->correct_option_id,
                 'points' => $isNewAnswerCorrect ? $question->points : 0,
                 'edit_count' => $answer->edit_count + 1,
             ]);
@@ -149,6 +167,8 @@ class UserAnswerQuestionController extends Controller
                 'authAnswerQuestion' => $answer->id,
                 'points' => $answer->points,
                 'is_correct' => $isNewAnswerCorrect,
+                'pp_deducted' => $ppFine,
+                'user_pp' => $user->fresh()->pp,
             ], 200);
         });
     }

@@ -68,15 +68,25 @@
                       <!-- Action Buttons -->
                       <transition name="fade" mode="out-in">
                         <div class="mt-4 flex flex-wrap justify-end gap-2">
-                            <!-- Case 1: Is Answered AND Not Editing -> Show "Edit Answer" -->
+                            <!-- Case 1: Is Answered AND Not Editing -> Show "Edit Answer" (only if user has enough pp) -->
                             <button 
-                                v-if="isAnswered(q.id) && !isEditing(q.id)"
-                                @click="startEditing(q.id)"
+                                v-if="isAnswered(q.id) && !isEditing(q.id) && hasEnoughPpForEdit(q.pp_fine)"
+                                @click="requestEditing(q)"
                                 class="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
                             >
                                 <Icon icon="heroicons:pencil-square" />
                                 แก้ไขคำตอบ
+                                <span class="text-xs opacity-75">(-{{ q.pp_fine || 0 }} แต้ม)</span>
                             </button>
+                            
+                            <!-- Case 1b: Is Answered but not enough pp to edit -->
+                            <div 
+                                v-else-if="isAnswered(q.id) && !isEditing(q.id) && !hasEnoughPpForEdit(q.pp_fine)"
+                                class="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm font-medium rounded-lg cursor-not-allowed"
+                            >
+                                <Icon icon="heroicons:lock-closed" />
+                                แต้มไม่พอแก้ไข (ต้องใช้ {{ q.pp_fine || 0 }} แต้ม)
+                            </div>
 
                             <!-- Case 2: Show Confirm Button (If unconfirmed changes OR Editing) -->
                             <button 
@@ -112,6 +122,7 @@ import { Icon } from '@iconify/vue'
 import { ref, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import { useQuestionAnswersStore } from '@/stores/questionAnswers'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
     courseId: { type: [Number, String], required: false },
@@ -123,6 +134,7 @@ const props = defineProps({
 
 const api = useApi()
 const { user } = useAuth()
+const authStore = useAuthStore()
 const store = useQuestionAnswersStore()
 
 // Local state for editing mode
@@ -206,6 +218,34 @@ const hasUnconfirmedChanges = (questionId) => {
     return temp && temp !== confirmed;
 }
 
+// Check if user has enough pp (Plearnd Points) to edit an answer
+const hasEnoughPpForEdit = (ppFine) => {
+    const userPp = Number(user.value?.points) || 0;
+    return userPp >= (ppFine || 0);
+}
+
+// Request editing with pp_fine confirmation
+const requestEditing = async (question) => {
+    const ppFine = question.pp_fine || 0;
+    
+    if (ppFine > 0) {
+        const result = await Swal.fire({
+            title: 'แก้ไขคำตอบ',
+            text: `ต้องใช้แต้มสะสม ${ppFine} แต้ม`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#7c3aed',
+            cancelButtonColor: '#f87171',
+            confirmButtonText: 'ยืนยันการแก้ไข',
+            cancelButtonText: 'ยกเลิก'
+        });
+        
+        if (!result.isConfirmed) return;
+    }
+    
+    startEditing(question.id);
+}
+
 const startEditing = (questionId) => {
     editingQuestions.value[questionId] = true;
 }
@@ -236,21 +276,24 @@ const confirmAnswer = async (question) => {
     const selectedOptionId = store.getTemporaryAnswer(props.quizId, question.id);
     if (!selectedOptionId) return;
 
-    // 1. Check Points Logic
-    const userPoints = user.value?.points || 0;
-    const requiredPoints = question.points || 0;
-
-    if (userPoints < requiredPoints) {
-        await Swal.fire({
-            icon: 'error',
-            title: 'แต้มไม่เพียงพอ!',
-            text: `คุณมี ${userPoints} แต้ม แต่ข้อนี้ต้องใช้ ${requiredPoints} แต้มในการตอบ`,
-            confirmButtonText: 'ตกลง'
-        });
-        return; // Stop here
+    // ตรวจสอบ pp_fine เฉพาะเมื่อแก้ไขคำตอบ (ตอบครั้งแรกฟรี)
+    const isEditingAnswer = isEditing(question.id);
+    if (isEditingAnswer) {
+        const ppFine = question.pp_fine || 0;
+        const userPp = Number(user.value?.points) || 0;
+        
+        if (ppFine > 0 && userPp < ppFine) {
+            await Swal.fire({
+                icon: 'error',
+                title: 'แต้มสะสมไม่เพียงพอ!',
+                text: `คุณมี ${userPp} แต้ม แต่ต้องใช้ ${ppFine} แต้มในการแก้ไขคำตอบ`,
+                confirmButtonText: 'ตกลง'
+            });
+            return;
+        }
     }
 
-    // 2. Proceed to Save
+    // Proceed to Save
     store.setQuestionSubmitting(props.quizId, question.id, true);
     
     const payload = {
@@ -283,7 +326,7 @@ const confirmAnswer = async (question) => {
         }
         
         if (response && response.authAnswerQuestion) {
-            handleSuccess(question.id, selectedOptionId, response.authAnswerQuestion, response.points);
+            handleSuccess(question.id, selectedOptionId, response.authAnswerQuestion, response.points, response);
         }
 
     } catch (e) {
@@ -299,7 +342,7 @@ const confirmAnswer = async (question) => {
              try {
                  const response = await api.put(`/api/quizs/${props.quizId}/questions/${question.id}/answers/${existingId}`, payload);
                  if (response && response.authAnswerQuestion) {
-                     handleSuccess(question.id, selectedOptionId, response.authAnswerQuestion, response.points);
+                     handleSuccess(question.id, selectedOptionId, response.authAnswerQuestion, response.points, response);
                      return;
                  }
              } catch (retryError) {
@@ -318,7 +361,7 @@ const confirmAnswer = async (question) => {
     }
 }
 
-const handleSuccess = async (questionId, optionId, userAnswerId, points) => {
+const handleSuccess = async (questionId, optionId, userAnswerId, points, responseData = {}) => {
     // Update Store
     store.setAnsweredQuestion(props.quizId, questionId, optionId);
     
@@ -328,6 +371,11 @@ const handleSuccess = async (questionId, optionId, userAnswerId, points) => {
     // Update Local Points
     if (points !== undefined) {
         localEarnedPoints.value[questionId] = points;
+    }
+    
+    // Sync user pp from backend response (if returned)
+    if (responseData.user_pp !== undefined) {
+        authStore.setPoints(responseData.user_pp);
     }
     
     // Exit Editing Mode
