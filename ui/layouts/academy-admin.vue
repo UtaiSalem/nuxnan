@@ -66,6 +66,12 @@ const menuGroups = computed(() => [
         permission: 'members.view' 
       },
       { 
+        icon: 'fluent:person-clock-24-regular', 
+        label: 'คำขอเข้าร่วม', 
+        to: `/academies/${academyName.value}/admin/requests`, 
+        permission: 'members.manage' 
+      },
+      { 
         icon: 'fluent:shield-person-24-regular', 
         label: 'บทบาทและสิทธิ์', 
         to: `/academies/${academyName.value}/admin/roles`, 

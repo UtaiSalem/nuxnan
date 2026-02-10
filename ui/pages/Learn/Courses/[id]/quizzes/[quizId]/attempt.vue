@@ -191,25 +191,24 @@ const finishAttempt = async () => {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-6 max-w-4xl">
+  <div class="container mx-auto px-3 py-4 sm:px-4 sm:py-6 max-w-4xl">
       <!-- Loading -->
       <!-- Loading (ContentLoader) -->
       <ContentLoader v-if="isLoading" />
 
       <div v-else-if="quiz" class="relative">
           <!-- Sticky Header with Timer & Actions -->
-          <div class="sticky top-4 z-20 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-blue-100 dark:border-gray-700 p-4 mb-6 flex items-center justify-between transition-all duration-300">
-              <div class="flex items-center gap-4">
-                  <h1 class="text-lg font-bold text-gray-800 dark:text-white truncate max-w-[200px] sm:max-w-md hidden sm:block">
+          <div class="sticky top-2 sm:top-4 z-20 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-blue-100 dark:border-gray-700 p-3 sm:p-4 mb-4 sm:mb-6 flex items-center justify-between transition-all duration-300">
+              <div class="flex items-center gap-2 sm:gap-4">
+                  <h1 class="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate max-w-[100px] sm:max-w-md block">
                       {{ quiz.title }}
                   </h1>
-                   <span class="sm:hidden font-bold text-gray-800 dark:text-white">เวลาที่ใช้</span>
               </div>
 
-              <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2 sm:gap-4">
                    <!-- Timer -->
-                   <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg font-mono font-bold text-lg">
-                       <Icon icon="fluent:timer-24-filled" class="w-6 h-6" />
+                   <div class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg font-mono font-bold text-base sm:text-lg">
+                       <Icon icon="fluent:timer-24-filled" class="w-5 h-5 sm:w-6 sm:h-6" />
                        {{ formattedTime }}
                    </div>
 
@@ -217,7 +216,7 @@ const finishAttempt = async () => {
                    <button 
                       @click="finishAttempt"
                       :disabled="isSubmitting"
-                      class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-md transition-colors flex items-center gap-2"
+                      class="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-md transition-colors flex items-center gap-2"
                    >
                        <span class="hidden sm:inline">สิ้นสุดการสอบ (หยุดเวลา)</span>
                        <Icon icon="fluent:stop-24-filled" class="w-5 h-5 sm:hidden" />

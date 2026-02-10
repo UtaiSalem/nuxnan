@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use App\Models\QuestionOption;
 use Illuminate\Support\Carbon;
 use App\Models\CourseQuizResult;
+use App\Models\UserAnswerQuestion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use App\Exceptions\ImageCopyException;
@@ -377,6 +378,81 @@ class CourseQuizController extends Controller
         });
     }
     
+    public function recalculateResults(Course $course, CourseQuiz $quiz)
+    {
+        // Check authorization (Teacher/Admin only)
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // 1. Ensure Quiz Total Score is in sync with Questions
+        $currentTotalScore = $quiz->questions()->sum('points');
+        if ($quiz->total_score != $currentTotalScore) {
+             $quiz->update(['total_score' => $currentTotalScore]);
+        }
+        
+        $results = $quiz->userResults;
+        $updatedCount = 0;
+
+        foreach ($results as $result) {
+            // Get all answers for this user & quiz
+            $userAnswers = UserAnswerQuestion::where('quiz_id', $quiz->id)
+                ->where('user_id', $result->user_id)
+                ->get();
+            
+            // 2. Validate and Update Answer Points
+            foreach ($userAnswers as $answer) {
+                 $question = Question::find($answer->question_id);
+                 if ($question) {
+                     // Re-check correctness
+                     $isCorrect = ($answer->answer_id == $question->correct_option_id);
+                     // Or Check if the chosen option is correct (some logic uses option.is_correct)
+                     // UserAnswerQuestionController uses $selectedOption->is_correct
+                     $selectedOption = QuestionOption::find($answer->answer_id);
+                     $isCorrect = $selectedOption && $selectedOption->is_correct;
+                     
+                     $points = $isCorrect ? $question->points : 0;
+                     
+                     if ($answer->points != $points) {
+                         $answer->update(['points' => $points]);
+                     }
+                 } else {
+                     // Question deleted. Controller usually deletes answers, but if not:
+                     if ($answer->points > 0) {
+                        $answer->update(['points' => 0]);
+                     }
+                 }
+            }
+            
+            // Re-fetch to get updated points
+             $userAnswers = UserAnswerQuestion::where('quiz_id', $quiz->id)
+                ->where('user_id', $result->user_id)
+                ->get();
+                
+            $newScore = $userAnswers->sum('points');
+            
+            $percentage = $currentTotalScore > 0 ? ($newScore / $currentTotalScore) * 100 : 0;
+            
+            $status = $percentage >= $quiz->passing_score 
+                ? 3 // PASSED
+                : 4; // FAILED
+            
+            $result->update([
+                'score' => $newScore,
+                'percentage' => $percentage,
+                'status' => $status
+            ]);
+            
+            $updatedCount++;
+        }
+        
+        return response()->json([
+            'success' => true, 
+            'message' => "คำนวณคะแนนใหม่เรียบร้อยแล้ว ($updatedCount รายการ)",
+            'quiz_total_score' => $currentTotalScore
+        ]);
+    }
+
     private function updateCorrectAnswer($question, int $optionId): void
     {
         $question->update([

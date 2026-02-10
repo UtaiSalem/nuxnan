@@ -17,7 +17,7 @@ return [
 
     'paths' => ['api/*', 'auth/*', 'courses/*', 'users/*', 'profiles/*', 'attendances/*', 'storage/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['*'],
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
     'allowed_origins' => [
         'http://localhost:3000',

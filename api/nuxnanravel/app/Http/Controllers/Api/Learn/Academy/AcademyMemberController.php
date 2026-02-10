@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 
 
 use App\Models\Academy;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use App\Models\AcademyMember;
 use App\Http\Resources\Learn\Course\info\CourseResource;

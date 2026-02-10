@@ -850,12 +850,17 @@ const onQRActionComplete = (result) => {
         <!-- Collapsed Content -->
         <div v-else class="p-3 space-y-2 flex flex-col items-center">
           <!-- Profile Avatar (Collapsed) -->
-          <NuxtLink to="/profile" class="mb-4">
+          <NuxtLink to="/profile" class="mb-2 flex flex-col items-center">
             <img
-              :src="authUser.profile_photo_url"
+              :src="authUser.avatar"
               class="w-12 h-12 rounded-full border-2 border-vikinger-purple shadow-lg"
               :alt="authUser.name"
+              @error="(e) => e.target.src = '/images/default-avatar.png'"
             />
+            <span 
+              class="mt-1 text-xs font-medium truncate max-w-[60px] text-center"
+              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+            >{{ authUser.name }}</span>
           </NuxtLink>
 
           <!-- Navigation Icons (Collapsed) -->
@@ -973,18 +978,23 @@ const onQRActionComplete = (result) => {
           </NuxtLink>
           
           <!-- Logout Button (Collapsed) -->
-          <button
-            @click="logout"
-            class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300 mt-4"
-            :class="
-              isDarkMode
-                ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300'
-                : 'text-red-500 hover:bg-red-50 hover:text-red-600'
-            "
-            title="ออกจากระบบ"
+          <div 
+            class="w-full mt-4 pt-4 flex justify-center"
+            :class="isDarkMode ? 'border-t border-vikinger-dark-50/30' : 'border-t border-gray-200'"
           >
-            <Icon icon="fluent:sign-out-24-regular" class="w-6 h-6" />
-          </button>
+            <button
+              @click="logout"
+              class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
+              :class="
+                isDarkMode
+                  ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300'
+                  : 'text-red-500 hover:bg-red-50 hover:text-red-600'
+              "
+              title="ออกจากระบบ"
+            >
+              <Icon icon="fluent:sign-out-24-regular" class="w-6 h-6" />
+            </button>
+          </div>
         </div>
       </aside>
 

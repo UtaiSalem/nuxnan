@@ -66,7 +66,7 @@ const menuItems = computed(() => [
       {
         name: 'คำขอเข้าร่วม',
         icon: 'fluent:person-add-24-regular',
-        to: `/academies/${academyName.value}/admin/requests`,
+        to: `/academies/${academyName.value}/admin/members`,
         show: can('members.manage'),
       },
     ]
@@ -83,7 +83,7 @@ const menuItems = computed(() => [
       {
         name: 'กลุ่ม/ห้องเรียน',
         icon: 'fluent:people-community-24-regular',
-        to: `/academies/${academyName.value}/admin/groups`,
+        to: `/academies/${academyName.value}/admin/classrooms`,
         show: can('academy.view'),
       },
       {
@@ -112,7 +112,7 @@ const menuItems = computed(() => [
       {
         name: 'สุขภาพ',
         icon: 'fluent:heart-pulse-24-regular',
-        to: `/academies/${academyName.value}/admin/health`,
+        to: `/academies/${academyName.value}/admin/students`,
         show: can('students.view'),
       },
     ]
@@ -129,7 +129,7 @@ const menuItems = computed(() => [
       {
         name: 'ข้อความ',
         icon: 'fluent:chat-24-regular',
-        to: `/academies/${academyName.value}/admin/messages`,
+        to: `/academies/${academyName.value}/admin/announcements`,
         show: true,
       },
     ]
@@ -140,13 +140,7 @@ const menuItems = computed(() => [
       {
         name: 'รายงานภาพรวม',
         icon: 'fluent:chart-multiple-24-regular',
-        to: `/academies/${academyName.value}/admin/reports`,
-        show: can('reports.view'),
-      },
-      {
-        name: 'สถิติการเข้าเรียน',
-        icon: 'fluent:data-trending-24-regular',
-        to: `/academies/${academyName.value}/admin/reports/attendance`,
+        to: `/academies/${academyName.value}/admin`,
         show: can('reports.view'),
       },
     ]
@@ -163,7 +157,7 @@ const menuItems = computed(() => [
       {
         name: 'การตั้งค่าทั่วไป',
         icon: 'fluent:settings-24-regular',
-        to: `/academies/${academyName.value}/admin/settings/general`,
+        to: `/academies/${academyName.value}/admin/settings`,
         show: can('academy.settings.edit'),
       },
     ]

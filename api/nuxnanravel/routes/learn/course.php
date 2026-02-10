@@ -84,12 +84,15 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
 
     Route::resource('/{course}/quizzes/{quiz}/questions', CourseQuizQuestionController::class)->names('course.quiz.questions');
     Route::resource('/{course}/quizzes/{quiz}/results', CourseQuizResultController::class);
+    Route::post('/{course}/quizzes/{quiz}/recalculate', [CourseQuizController::class, 'recalculateResults'])->name('course.quiz.recalculate');
 
     Route::get('/{course}/groups/{group}/attendances', [CourseAttendanceController::class, 'getCourseGroupAttendances'])->name('course.groups.attendances');
     Route::post('/{course}/groups/{group}/attendances', [CourseAttendanceController::class, 'store'])->name('course.groups.attendances.store');
 
     Route::get('/{course}/feeds', [CourseActivityController::class, 'index'])->name('course.feeds');
     Route::get('/{course}/feeds/get-more-activities', [CourseActivityController::class, 'getActivities'])->name('course.feeds.getMoresActivities');
+    
+    Route::post('/{course}/quizzes/{quiz}/recalculate', [CourseQuizController::class, 'recalculateResults'])->name('course.quiz.recalculate');
 });
 
 

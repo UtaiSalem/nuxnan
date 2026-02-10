@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-6">
-      <div v-for="(q, index) in questions" :key="q.id" class="p-6 bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 rounded-xl">
-          <div class="flex gap-4">
+      <div v-for="(q, index) in questions" :key="q.id" class="p-4 sm:p-6 bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 rounded-xl">
+          <div class="flex gap-2 sm:gap-4">
               <span class="font-bold text-lg text-blue-600 dark:text-blue-400 min-w-[24px]">{{ index + 1 }}.</span>
               <div class="flex-grow">
                   <!-- Header: Text & Badges -->
-                  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+                  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4 mb-3 sm:mb-4">
                       <!-- Question Text -->
                       <div class="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100 flex-grow" v-html="q.text"></div>
   
@@ -39,7 +39,9 @@
                           class="relative flex items-start p-3 rounded-lg border transition-all group"
                           :class="[
                             getOptionClass(q.id, opt.id),
-                            isLocked(q.id) ? 'opacity-70 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            isLocked(q.id) 
+                              ? (isSelected(q.id, opt.id) ? 'cursor-not-allowed' : 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800')
+                              : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50'
                           ]"
                           @click="!isLocked(q.id) && selectOption(q, opt)"
                       >
@@ -57,7 +59,7 @@
                                <!-- Option Images -->
                                <div v-if="opt.images && opt.images.length > 0" class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <div v-for="optImg in opt.images" :key="optImg.id" class="rounded overflow-hidden border border-gray-200 dark:border-gray-700">
-                                         <img :src="optImg.full_url" class="w-full h-24 object-cover" loading="lazy" />
+                                         <img :src="optImg.full_url" class="w-full h-auto aspect-video sm:h-32 sm:aspect-auto object-cover" loading="lazy" />
                                     </div>
                                </div>
                           </div>
@@ -65,7 +67,7 @@
                       
                       <!-- Action Buttons -->
                       <transition name="fade" mode="out-in">
-                        <div class="mt-4 flex justify-end gap-2">
+                        <div class="mt-4 flex flex-wrap justify-end gap-2">
                             <!-- Case 1: Is Answered AND Not Editing -> Show "Edit Answer" -->
                             <button 
                                 v-if="isAnswered(q.id) && !isEditing(q.id)"
@@ -165,14 +167,20 @@ onMounted(() => {
     }
 })
 
-// Check if an option is currently selected (Temporary state)
+// Check if an option is currently selected (Temporary state OR Confirmed state)
 const isSelected = (questionId, optionId) => {
-    return store.getTemporaryAnswer(props.quizId, questionId) === optionId;
+    const tempAnswer = store.getTemporaryAnswer(props.quizId, questionId);
+    if (tempAnswer) {
+        return tempAnswer === optionId;
+    }
+    // Fallback to confirmed answer if no temporary selection
+    return store.getAnswerForQuestion(props.quizId, questionId) === optionId;
 }
 
 const getOptionClass = (questionId, optionId) => {
+    // Selected state with Dark Mode support
     return isSelected(questionId, optionId) 
-        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10 ring-1 ring-blue-500' 
+        ? 'border-blue-600 border-2 bg-blue-100 dark:bg-blue-900/60 dark:border-blue-500 ring-1 ring-blue-600 dark:ring-blue-500 shadow-md z-10' 
         : 'border-gray-200 dark:border-gray-700';
 }
 

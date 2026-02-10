@@ -22,6 +22,11 @@ const tags = ref<any[]>([])
 const isLoading = ref(true)
 const isLoadingMembers = ref(false)
 
+// Error state for graceful error handling
+const error = ref<string | null>(null)
+const hasError = ref(false)
+const retryCount = ref(0)
+
 // Filter Options from API
 const filterOptions = ref<{
   class_levels: { value: string; label: string }[]
@@ -95,6 +100,7 @@ const activeFiltersCount = computed(() => {
   if (selectedClassLevel.value) count++
   if (selectedClassSection.value) count++
   if (selectedGender.value !== null) count++
+  if (searchQuery.value) count++
   if (selectedMemberType.value) count++
   return count
 })
@@ -223,16 +229,37 @@ onMounted(async () => {
         return
       }
       
-      await Promise.all([
-        fetchMembers(),
-        fetchRoles(),
-        fetchStats(),
-        fetchTags(),
-        fetchFilterOptions(),
-      ])
+      // Check if student filter cookie exists (from /students page)
+      const studentFilter = useCookie('academy-members-student-filter')
+      if (studentFilter.value === 'student') {
+        selectedMemberType.value = 'student'
+        // Clear the cookie after applying the filter
+        studentFilter.value = null
+      }
+      
+      // Make API calls more resilient - if one fails, the others should still work
+      // fetchMembers and fetchStats are critical, fetchTags and fetchFilterOptions are secondary
+      const criticalCalls = [fetchMembers(), fetchStats()]
+      const secondaryCalls = [fetchTags(), fetchFilterOptions()]
+      
+      // Wait for critical calls to complete
+      await Promise.allSettled(criticalCalls)
+      
+      // Secondary calls can fail without breaking the page
+      await Promise.allSettled(secondaryCalls)
+      
+      // Check if critical data loaded successfully
+      if (members.value.length === 0 && !isLoadingMembers.value) {
+        // Members failed to load, set error state
+        hasError.value = true
+        error.value = 'Failed to load members data. Please try again.'
+      }
     }
   } catch (err) {
-    console.error('Failed to load:', err)
+    // Set error state for user-friendly feedback
+    hasError.value = true
+    error.value = 'Failed to load data. Please try again.'
+    // Note: useApi.ts already logs the error, so we don't need to log again
   } finally {
     isLoading.value = false
   }
@@ -261,9 +288,17 @@ const fetchMembers = async (page = 1) => {
     if (response.success) {
       members.value = response.members || []
       pagination.value = response.pagination || pagination.value
+      // Clear error state on successful fetch
+      if (hasError.value) {
+        hasError.value = false
+        error.value = null
+      }
     }
   } catch (err) {
-    console.error('Failed to fetch members:', err)
+    // Set error state for user-friendly feedback
+    hasError.value = true
+    error.value = 'Failed to load members. Please try again.'
+    // Note: useApi.ts already logs the error, so we don't need to log again
   } finally {
     isLoadingMembers.value = false
   }
@@ -304,7 +339,9 @@ const fetchTags = async () => {
       tags.value = response.tags || []
     }
   } catch (err) {
-    console.error('Failed to fetch tags:', err)
+    // Tags are secondary data - failure shouldn't break the main page
+    // Just log a warning, don't set error state
+    // Note: useApi.ts already logs the error, so we don't need to log again
   }
 }
 
@@ -317,8 +354,30 @@ const fetchFilterOptions = async () => {
       filterOptions.value = response.filters
     }
   } catch (err) {
-    console.error('Failed to fetch filter options:', err)
+    // Filter options are secondary data - failure shouldn't break the main page
+    // Just log a warning, don't set error state
+    // Note: useApi.ts already logs the error, so we don't need to log again
   }
+}
+
+// Retry function to retry failed API calls
+const retryFetch = async () => {
+  // Clear error state before retrying
+  hasError.value = false
+  error.value = null
+  retryCount.value++
+  
+  // Retry critical API calls
+  await Promise.allSettled([
+    fetchMembers(),
+    fetchStats(),
+  ])
+  
+  // Retry secondary API calls
+  await Promise.allSettled([
+    fetchTags(),
+    fetchFilterOptions(),
+  ])
 }
 
 // Actions
@@ -671,12 +730,36 @@ const getRoleBadge = (member: any) => {
       <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>
     </div>
 
+    <!-- Error State UI -->
+    <div v-else-if="hasError" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-16 text-center px-4">
+      <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 mx-auto text-red-500 mb-4" />
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        เกิดข้อผิดพลาด
+      </h2>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">
+        {{ error || 'Failed to load data. Please try again.' }}
+      </p>
+      <button
+        @click="retryFetch"
+        :disabled="isLoadingMembers"
+        class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+      >
+        <Icon icon="fluent:arrow-clockwise-24-regular" class="w-5 h-5" />
+        <span v-if="isLoadingMembers">กำลังลองใหม่...</span>
+        <span v-else>ลองใหม่</span>
+      </button>
+    </div>
+
     <div v-else class="space-y-6">
       <!-- Header -->
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">จัดการสมาชิก</h1>
-          <p class="text-gray-600 dark:text-gray-400 mt-1">จัดการสมาชิกทั้งหมดของโรงเรียน</p>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+            {{ selectedMemberType === 'student' ? 'รายการนักเรียน' : 'จัดการสมาชิก' }}
+          </h1>
+          <p class="text-gray-600 dark:text-gray-400 mt-1">
+            {{ selectedMemberType === 'student' ? 'จัดการข้อมูลนักเรียนทั้งหมดของโรงเรียน' : 'จัดการสมาชิกทั้งหมดของโรงเรียน' }}
+          </p>
         </div>
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <!-- Export Button -->
@@ -880,6 +963,22 @@ const getRoleBadge = (member: any) => {
             <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
             ล้างตัวกรอง ({{ activeFiltersCount }})
           </button>
+          
+          <!-- Student Filter Indicator -->
+          <div
+            v-if="selectedMemberType === 'student'"
+            class="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg text-sm"
+          >
+            <Icon icon="fluent:person-student-24-regular" class="w-4 h-4" />
+            <span>แสดงเฉพาะนักเรียน</span>
+            <button
+              @click="selectedMemberType = null; onSearch()"
+              class="ml-1 hover:bg-primary-100 dark:hover:bg-primary-800/50 rounded p-0.5 transition-colors"
+              title="แสดงสมาชิกทั้งหมด"
+            >
+              <Icon icon="fluent:dismiss-24-regular" class="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
         
         <!-- Classroom Quick Filters -->
@@ -938,7 +1037,7 @@ const getRoleBadge = (member: any) => {
                 {{ group.members.length }} คน
               </span>
             </div>
-            <AcademyMemberMemberListView
+            <AcademyMemberListView
               :members="group.members"
               :view-mode="viewMode"
               :is-admin="can('members.manage')"
@@ -954,7 +1053,7 @@ const getRoleBadge = (member: any) => {
         </div>
 
         <!-- Non-Grouped View -->
-        <AcademyMemberMemberListView
+        <AcademyMemberListView
           v-else
           :members="members"
           :view-mode="viewMode"
@@ -997,7 +1096,7 @@ const getRoleBadge = (member: any) => {
     </div>
 
     <!-- Role Modal -->
-    <AcademyMemberMemberRoleModal
+    <AcademyMemberRoleModal
       v-model="showRoleModal"
       :member="selectedMember"
       :academy-id="academyId!"
@@ -1005,7 +1104,7 @@ const getRoleBadge = (member: any) => {
     />
 
     <!-- Manage Modal -->
-    <AcademyMemberMemberManageModal
+    <AcademyMemberManageModal
       v-model="showManageModal"
       :member="selectedMember"
       :academy-id="academyId!"
@@ -1015,7 +1114,7 @@ const getRoleBadge = (member: any) => {
     />
 
     <!-- Invite Modal -->
-    <LazyInviteMemberModal
+    <LazyAcademyInviteMemberModal
       v-model="showInviteModal"
       :academy-id="academyId!"
       @invited="fetchMembers(1); fetchStats()"

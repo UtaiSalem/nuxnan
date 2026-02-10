@@ -18,7 +18,7 @@ interface AcademyRole {
 
 interface Props {
   modelValue: boolean
-  academyId: number
+  academyId: number | null
   memberIds: number[]
   memberCount?: number
 }

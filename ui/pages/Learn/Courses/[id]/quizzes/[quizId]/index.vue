@@ -65,6 +65,36 @@ const deleteQuiz = async () => {
   }
 }
 
+
+const recalculateScores = async () => {
+  try {
+    const result = await Swal.fire({
+      title: 'คำนวณคะแนนใหม่?',
+      text: "ระบบจะคำนวณผลคะแนนของนักเรียนทุกคนใหม่ตามเกณฑ์ปัจจุบัน หากมีการแก้ไขคะแนนหรือข้อสอบหลังจากนักเรียนสอบเสร็จ แนะนำให้กดปุ่มนี้",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'ยืนยัน, คำนวณใหม่',
+      confirmButtonColor: '#f97316',
+      cancelButtonText: 'ยกเลิก'
+    })
+    
+    if (result.isConfirmed) {
+      Swal.fire({
+        title: 'กำลังคำนวณ...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      })
+      
+      const res = await api.post(`/api/courses/${courseId}/quizzes/${quizId}/recalculate`)
+      
+      await Swal.fire('เรียบร้อย', res.message, 'success')
+      refresh()
+    }
+  } catch (err) {
+    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถคำนวณคะแนนได้', 'error')
+  }
+}
+
 // Formatters
 const formatDate = (date: string) => {
   if (!date) return '-'
@@ -97,7 +127,7 @@ const getStatusBadge = computed(() => {
 
     <div v-else-if="quiz">
       <!-- Header / Nav -->
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <button 
           @click="navigateTo(`/courses/${courseId}/quizzes`)"
           class="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -106,27 +136,27 @@ const getStatusBadge = computed(() => {
           <span>กลับไปหน้ารวมแบบทดสอบ</span>
         </button>
 
-        <div v-if="isCourseAdmin" class="flex items-center gap-2">
+        <div v-if="isCourseAdmin" class="flex items-center gap-2 flex-wrap">
           <button 
             @click="openDuplicateModal"
             class="px-4 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30 transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:copy-24-regular" class="w-5 h-5" />
-            คัดลอก
+            <span class="hidden sm:inline">คัดลอก</span>
           </button>
           <button 
             @click="editQuiz"
             class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
-            แก้ไข
+            <span class="hidden sm:inline">แก้ไข</span>
           </button>
           <button 
             @click="deleteQuiz"
             class="px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
-            ลบ
+            <span class="hidden sm:inline">ลบ</span>
           </button>
         </div>
       </div>
@@ -135,13 +165,13 @@ const getStatusBadge = computed(() => {
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         
         <!-- Cover / Banner Area -->
-        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-8 text-white">
-          <div class="flex items-start gap-4">
-            <div class="w-16 h-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 sm:p-8 text-white">
+          <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
+            <div class="w-16 h-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shrink-0">
               <Icon icon="fluent:quiz-new-24-filled" class="w-8 h-8 text-white" />
             </div>
             <div>
-              <div class="flex items-center gap-2 mb-2">
+              <div class="flex flex-wrap justify-center sm:justify-start items-center gap-2 mb-2">
                 <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white border border-white/20">
                   {{ getStatusBadge.text }}
                 </span>
@@ -313,6 +343,13 @@ const getStatusBadge = computed(() => {
             </div>
             
             <div class="mt-4 flex justify-end gap-2">
+                 <button 
+                  @click="recalculateScores"
+                  class="px-4 py-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/30 transition-colors flex items-center gap-2"
+                >
+                  <Icon icon="fluent:arrow-sync-24-filled" class="w-5 h-5" />
+                  คำนวณคะแนนใหม่
+                </button>
                  <button 
                   @click="editQuiz"
                   class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-2"

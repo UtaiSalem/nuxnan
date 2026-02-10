@@ -7,7 +7,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
 interface Props {
-  academyId: number
+  academyId: number | null
   modelValue?: boolean
 }
 

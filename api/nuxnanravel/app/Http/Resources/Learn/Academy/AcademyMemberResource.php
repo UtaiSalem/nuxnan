@@ -34,9 +34,10 @@ class AcademyMemberResource extends JsonResource
             'invited_by' => $this->invited_by,
             
             // Academy Role Information
+            // Academy Role Information
             'academy_role_id' => $this->academy_role_id,
             'academy_role' => $this->whenLoaded('academyRole', function () {
-                return [
+                return $this->academyRole ? [
                     'id' => $this->academyRole->id,
                     'name' => $this->academyRole->name,
                     'display_name_th' => $this->academyRole->display_name_th,
@@ -44,7 +45,7 @@ class AcademyMemberResource extends JsonResource
                     'color' => $this->academyRole->color,
                     'icon' => $this->academyRole->icon,
                     'permissions' => $this->academyRole->permissions,
-                ];
+                ] : null;
             }),
             
             // Role checks
@@ -55,16 +56,16 @@ class AcademyMemberResource extends JsonResource
             
             // Relations
             'user' => $this->whenLoaded('user', function () {
-                return [
+                return $this->user ? [
                     'id' => $this->user->id,
                     'name' => $this->user->name,
                     'email' => $this->user->email,
                     'profile_photo_url' => $this->user->profile_photo_url,
                     'reference_code' => $this->user->reference_code,
-                ];
+                ] : null;
             }),
             'student' => $this->whenLoaded('student', function () {
-                return [
+                return $this->student ? [
                     'id' => $this->student->id,
                     'student_id' => $this->student->student_id,
                     'full_name_th' => $this->student->full_name_th,
@@ -76,14 +77,14 @@ class AcademyMemberResource extends JsonResource
                     'current_classroom' => $this->student->current_classroom,
                     'gender' => $this->student->gender,
                     'gender_text' => $this->student->gender_text,
-                ];
+                ] : null;
             }),
             'inviter' => $this->whenLoaded('inviter', function () {
-                return [
+                return $this->inviter ? [
                     'id' => $this->inviter->id,
                     'name' => $this->inviter->name,
                     'profile_photo_url' => $this->inviter->profile_photo_url,
-                ];
+                ] : null;
             }),
             'tags' => $this->whenLoaded('tags', function () {
                 return $this->tags->map(function ($tag) {

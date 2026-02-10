@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('academy_groups')) {
+            return;
+        }
         Schema::create('academy_groups', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->foreignId('academy_id')->constrained()->onDelete('cascade');
