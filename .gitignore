@@ -47,6 +47,9 @@
 /api/nuxnanravel/Homestead.json
 /api/nuxnanravel/Homestead.yaml
 /api/nuxnanravel/*.log
+/api/nuxnanravel/database/database.sqlite
+/api/nuxnanravel/test_*.php
+/api/nuxnanravel/routes/debug/
 
 # ===========================================
 # UI folder - ignore build/runtime files
@@ -62,6 +65,8 @@
 /ui/.env.*
 !/ui/.env.example
 /ui/*.log
+/ui/.vscode/
+/ui/public/storage/
 
 # ===========================================
 # OS & IDE files (global)
