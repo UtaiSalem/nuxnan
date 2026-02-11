@@ -116,7 +116,7 @@ class DepartmentController extends Controller
                     'id' => $headUser->id,
                     'name' => $headUser->name,
                     'email' => $headUser->email,
-                    'avatar' => $headUser->profile_photo_path,
+                    'avatar' => $headUser->avatar,
                 ] : null,
             ]
         ]);
@@ -235,7 +235,7 @@ class DepartmentController extends Controller
                         'id' => $member->id,
                         'name' => $member->name,
                         'email' => $member->email,
-                        'avatar' => $member->profile_photo_path,
+                        'avatar' => $member->avatar,
                         'role' => $member->pivot->role,
                         'joined_at' => $member->pivot->created_at,
                     ];

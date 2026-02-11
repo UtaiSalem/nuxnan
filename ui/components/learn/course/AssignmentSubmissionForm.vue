@@ -26,6 +26,17 @@ const existingImages = ref<any[]>([])
 const deletedImageIds = ref<number[]>([])
 const isSubmitting = ref(false)
 
+const handleAnswerImageError = (event: Event) => {
+  const el = event.target as HTMLImageElement
+  el.style.display = 'none'
+  if (el.parentElement) {
+    const placeholder = document.createElement('div')
+    placeholder.className = 'w-full h-full flex items-center justify-center'
+    placeholder.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-gray-400" viewBox="0 0 24 24"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'
+    el.parentElement.appendChild(placeholder)
+  }
+}
+
 // Initialize form
 watch(() => props.existingAnswer, (newVal) => {
     if (newVal) {
@@ -166,7 +177,7 @@ const submitAnswer = async () => {
                  :key="img.id" 
                  class="relative group aspect-square rounded-xl overflow-hidden border-2 border-green-200 dark:border-green-700 bg-gray-100 dark:bg-gray-900"
                >
-                 <img :src="img.full_url || img.image_url" class="w-full h-full object-cover" />
+                 <img :src="img.full_url || img.image_url" class="w-full h-full object-cover" @error="handleAnswerImageError" />
                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                    <button 
                      @click="removeExistingImage(img.id)" 

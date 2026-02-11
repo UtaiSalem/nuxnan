@@ -74,14 +74,19 @@ const fetchGroups = async () => {
     }
 }
 
-// Computed: Determine the passing score threshold
+// Computed: Half of max points — used for expand/collapse logic
+const halfOfMaxPoints = computed(() => {
+    return (props.assignment.points || 0) / 2
+})
+
+// Computed: Determine the passing score threshold — used for status badges & colors
 const passingThreshold = computed(() => {
-    // If passing_score is explicitly set (even 0), use it
-    if (props.assignment.passing_score !== null && props.assignment.passing_score !== undefined) {
+    // If passing_score is explicitly set (and > 0), use it
+    if (props.assignment.passing_score !== null && props.assignment.passing_score !== undefined && Number(props.assignment.passing_score) > 0) {
         return Number(props.assignment.passing_score)
     }
     // Default to 50% of total points
-    return (props.assignment.points || 0) / 2
+    return halfOfMaxPoints.value
 })
 
 const fetchAllAnswers = async (page = 1, reset = false) => {
@@ -96,18 +101,18 @@ const fetchAllAnswers = async (page = 1, reset = false) => {
     
     // Map response.data - Admin Grading View expansion logic:
     // - Ungraded (points = null) -> expanded (needs grading)
-    // - Graded but score < passing threshold -> expanded (may need review)
-    // - Graded and score >= passing threshold -> collapsed (good enough)
-    const threshold = passingThreshold.value
+    // - Graded but score < half of max -> expanded (needs review)
+    // - Graded and score >= half of max -> collapsed (good score)
+    const half = halfOfMaxPoints.value
     const newAnswers = (response.data || []).map((a: any) => {
       const isGraded = a.points !== null && a.points !== undefined
-      const hasGoodScore = isGraded && a.points >= threshold
+      const hasGoodScore = isGraded && a.points >= half
       return {
         ...a,
         points: a.points, 
         originalPoints: a.points,
         isUpdating: false,
-        isExpanded: !hasGoodScore // Expand if NOT graded or score < threshold, collapse if score >= threshold
+        isExpanded: !hasGoodScore // Expand if NOT graded or score < half, collapse if score >= half
       }
     })
 
@@ -208,9 +213,9 @@ const updateGrade = async (answer: any) => {
     answer.status = 'graded' // Mark as graded in local state
     answer.isUpdating = false
     
-    // Collapse if score >= passing threshold, stay expanded if score < threshold
-    const threshold = passingThreshold.value
-    answer.isExpanded = answer.points < threshold // Score < threshold = stay expanded, Score >= threshold = collapse
+    // Collapse if score >= half of max, stay expanded if score < half
+    const half = halfOfMaxPoints.value
+    answer.isExpanded = answer.points < half // Score < half = stay expanded, Score >= half = collapse
     
     swal.toast('บันทึกคะแนนเรียบร้อย', 'success')
   } catch (error) {
@@ -239,6 +244,17 @@ const isLate = (answer: any) => {
 }
 
 const userAvatar = (user: any) => getAvatarUrl(user)
+
+const handleAnswerImageError = (event: Event) => {
+  const el = event.target as HTMLImageElement
+  el.style.display = 'none'
+  if (el.parentElement) {
+    const placeholder = document.createElement('div')
+    placeholder.className = 'w-full h-full flex items-center justify-center'
+    placeholder.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-400" viewBox="0 0 24 24"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'
+    el.parentElement.appendChild(placeholder)
+  }
+}
 
 const getAnswerCardClass = (answer: any) => {
    // No points = ungraded (gray background)
@@ -433,13 +449,19 @@ const scrollToTop = () => {
                                <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap border border-gray-100 dark:border-gray-800">
                                   {{ answer.content }}
                                   <div v-if="answer.images?.length" class="mt-3 flex flex-wrap gap-2">
-                                     <img 
+                                     <div 
                                         v-for="(img, idx) in answer.images" 
                                         :key="img.id" 
-                                        :src="img.full_url || img.image_url" 
-                                        class="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                                        class="w-12 h-12 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center"
                                         @click.stop="openGallery(answer.images, idx, `งานของ ${answer.member_name || 'นักเรียน'}`)"
-                                     />
+                                     >
+                                        <img 
+                                           :src="img.full_url || img.image_url" 
+                                           :alt="`รูปที่ ${idx + 1}`"
+                                           class="w-full h-full object-cover"
+                                           @error="handleAnswerImageError"
+                                        />
+                                     </div>
                                   </div>
                                </div>
                           </div>

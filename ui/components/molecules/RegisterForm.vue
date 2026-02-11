@@ -230,7 +230,7 @@ const getAvatarUrl = (avatar: string | undefined) => {
   }
   
   // Prepend backend URL for Laravel storage paths
-  return `http://localhost:8000${avatar}`
+  return `${useRuntimeConfig().public.apiBase}${avatar}`
 }
 
 // Registration form state

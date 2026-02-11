@@ -371,7 +371,7 @@ class AdminPointsController extends Controller
                 break;
         }
 
-        $users = $query->paginate($perPage, ['id', 'username', 'pp', 'level', 'profile_photo_path'], 'page', $page);
+        $users = $query->paginate($perPage, ['id', 'username', 'name', 'pp', 'level', 'profile_photo_path'], 'page', $page);
 
         $leaderboard = [];
         $rank = 1;
@@ -381,7 +381,7 @@ class AdminPointsController extends Controller
                 'rank' => $rank++,
                 'user_id' => $userItem->id,
                 'username' => $userItem->username,
-                'avatar' => $userItem->profile_photo_path,
+                'avatar' => $userItem->avatar,
                 'score' => match($type) {
                     'points' => $userItem->pp,
                     'weekly' => $userItem->weekly_points ?? $userItem->pp,

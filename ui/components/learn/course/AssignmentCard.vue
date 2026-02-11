@@ -80,6 +80,17 @@ const viewImage = (img: any) => {
   window.open(img.full_url || img.image_url, '_blank')
 }
 
+const handleAnswerImageError = (event: Event) => {
+  const el = event.target as HTMLImageElement
+  el.style.display = 'none'
+  if (el.parentElement) {
+    const placeholder = document.createElement('div')
+    placeholder.className = 'w-full h-full flex items-center justify-center'
+    placeholder.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-gray-400" viewBox="0 0 24 24"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'
+    el.parentElement.appendChild(placeholder)
+  }
+}
+
 const showGrading = ref(false)
 const isEditingGraded = ref(false)
 
@@ -201,8 +212,14 @@ const handleGradedEditSubmit = () => {
            </div>
 
            <div v-if="answerImages.length && !isEditingGraded" class="flex flex-wrap gap-3">
-                 <div v-for="img in answerImages" :key="img.id" class="group relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 shadow-sm hover:shadow-md transition-all">
-                    <img :src="img.full_url || img.image_url" class="w-full h-full object-cover cursor-zoom-in group-hover:scale-110 transition-transform duration-500" @click="viewImage(img)" />
+                 <div v-for="(img, idx) in answerImages" :key="img.id" class="group relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 shadow-sm hover:shadow-md transition-all bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                    <img 
+                      :src="img.full_url || img.image_url" 
+                      :alt="`รูปที่ ${idx + 1}`"
+                      class="w-full h-full object-cover cursor-zoom-in group-hover:scale-110 transition-transform duration-500" 
+                      @click="viewImage(img)" 
+                      @error="handleAnswerImageError"
+                    />
                  </div>
            </div>
 

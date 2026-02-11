@@ -80,7 +80,12 @@ class AssignmentAnswerController extends Controller
         if($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                // Use getClientOriginalExtension first, fallback to guessExtension for reliability
+                $extension = $image->getClientOriginalExtension();
+                if (empty($extension)) {
+                    $extension = $image->guessExtension() ?? 'jpg';
+                }
+                $fileName = uniqid() . '.' . $extension;
                 $image_url = Storage::disk('public')->putFileAs('images/courses/assignments/answers/', $image, $fileName);
                 $answer->images()->create([
                     'filename' => $fileName

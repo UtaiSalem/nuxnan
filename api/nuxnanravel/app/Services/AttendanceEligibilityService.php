@@ -337,7 +337,7 @@ class AttendanceEligibilityService
                 $userData = [
                     'id' => $user->id,
                     'name' => $user->name,
-                    'avatar' => $user->profile_photo_path,
+                    'avatar' => $user->avatar,
                 ];
             }
             

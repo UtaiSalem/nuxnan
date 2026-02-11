@@ -194,8 +194,9 @@ function nextImage() {
 }
 
 function handleImageError(event) {
-    // Basic placeholder or error handling
-    // event.target.style.display = 'none' 
+    // Show a placeholder SVG for broken images
+    event.target.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22 fill=%22%236b7280%22%3E%3Crect width=%22200%22 height=%22200%22 fill=%22%231f2937%22/%3E%3Cpath d=%22M100 60c-5.5 0-10 4.5-10 10v40c0 5.5 4.5 10 10 10s10-4.5 10-10V70c0-5.5-4.5-10-10-10zm0 80c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10z%22/%3E%3Ctext x=%22100%22 y=%22175%22 text-anchor=%22middle%22 font-size=%2214%22 fill=%22%239ca3af%22%3E%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%9E%E0%B8%9A%E0%B8%A3%E0%B8%B9%E0%B8%9B%E0%B8%A0%E0%B8%B2%E0%B8%9E%3C/text%3E%3C/svg%3E'
+    event.target.style.objectFit = 'contain'
 }
 
 // Watchers

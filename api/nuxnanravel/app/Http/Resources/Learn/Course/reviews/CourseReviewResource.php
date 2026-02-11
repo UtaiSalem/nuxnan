@@ -28,7 +28,7 @@ class CourseReviewResource extends JsonResource
             'user' => [
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
-                'avatar' => $this->user?->profile_photo_path,
+                'avatar' => $this->user?->avatar,
                 'reference_code' => $this->user?->reference_code,
             ],
             'is_own' => auth('api')->check() && auth('api')->id() === $this->user_id,
