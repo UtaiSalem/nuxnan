@@ -15,7 +15,7 @@
         @error="handleImageError"
       />
       <div v-else class="avatar-fallback">
-        <Icon :name="fallbackIcon" class="fallback-icon" aria-hidden="true" />
+        <Icon :icon="fallbackIcon" class="fallback-icon" aria-hidden="true" />
       </div>
     </div>
 
@@ -31,6 +31,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Icon } from '@iconify/vue'
 import { DEFAULT_AVATAR } from '~/utils/avatarConstants'
 
 const props = withDefaults(defineProps<{

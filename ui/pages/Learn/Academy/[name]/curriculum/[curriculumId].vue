@@ -93,21 +93,15 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { useRoute, Link } from '@inertiajs/vue3'; // Use Inertia Link for better integration if possible, or NuxtLink
-// Note: AcademyLayout uses NuxtLink inside AcademyNavbarTab. Mixing might be weird but acceptable if AcademyMembers uses Link.
-// Actually AcademyMembers uses Link from @inertiajs/vue3.
+import { Link } from '@inertiajs/vue3';
 import AcademyLayout from '@/layouts/AcademyLayout.vue';
 import CurriculumForm from '@/components/learn/academy/curriculum/CurriculumForm.vue';
 import CurriculumCourseList from '@/components/learn/academy/curriculum/CurriculumCourseList.vue';
 import axios from 'axios';
 
-const route = useRoute(); // Is this Vue Router useRoute or Inertia? In Nuxt page it's Vue Router useRoute.
-// Wait, if I use <script setup> in Nuxt, useRoute() comes from #app (vue-router).
-
-import { useRoute as useVueRoute } from 'vue-router';
-const vueRoute = useVueRoute();
-const academyName = vueRoute.params.name;
-const curriculumId = vueRoute.params.curriculumId;
+const route = useRoute();
+const academyName = route.params.name;
+const curriculumId = route.params.curriculumId;
 
 const academy = ref(null);
 const isAcademyAdmin = ref(false);

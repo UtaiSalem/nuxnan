@@ -108,13 +108,6 @@ const loadProfile = async () => {
 
 // Load user activities/posts with pagination and memory optimization
 const loadActivities = async (page: number = 1) => {
-  console.log('[loadActivities] Starting...', { 
-    page, 
-    referenceCode: referenceCode.value, 
-    isViewingOwnProfile: isViewingOwnProfile.value,
-    profileLoaded: !!profile.value 
-  })
-  
   try {
     const api = useApi()
     // API จะตรวจสอบ privacy settings ตาม:
@@ -133,9 +126,7 @@ const loadActivities = async (page: number = 1) => {
     
     // Limit per page to reduce memory usage (default 10, can be adjusted)
     const perPage = 10
-    console.log('[loadActivities] Fetching activities for:', userIdentifier, 'URL:', `/api/users/${userIdentifier}/activities?page=${page}&per_page=${perPage}`)
     const response = await api.get(`/api/users/${userIdentifier}/activities?page=${page}&per_page=${perPage}`)
-    console.log('[loadActivities] Response:', response)
     
     if (response.success && response.activities) {
       if (page === 1) {

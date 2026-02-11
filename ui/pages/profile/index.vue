@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
+
 // Redirect to own profile page
 definePageMeta({
   layout: 'main',
@@ -19,6 +21,6 @@ onMounted(() => {
 
 <template>
   <div class="flex items-center justify-center min-h-[400px]">
-    <Icon icon="fluent:spinner-ios-20-regular" class="w-12 h-12 animate-spin text-vikinger-purple" />
+    <Icon icon="fluent:spinner-ios-20-regular" class="w-12 h-12 animate-spin text-vikinger-purple" aria-hidden="true" />
   </div>
 </template>
