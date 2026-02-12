@@ -280,8 +280,8 @@ function createApiError(
     name: 'ApiError',
   };
   
-  // Set prototype for instanceof checks
-  Object.setPrototypeOf(apiError, ApiError.prototype);
+  // Set prototype for instanceof checks  
+  Object.setPrototypeOf(apiError, Error.prototype);
   
   return apiError;
 }
