@@ -1,0 +1,115 @@
+import { computed } from 'vue';
+
+/**
+ * Composable สำหรับคำนวณความคืบหน้าของสมาชิก
+ * @param {Ref<Object>} member - Member object
+ * @param {Ref<Number>} totalScore - Total course score
+ * @returns {Object} Progress data and utilities
+ */
+export function useMemberProgress(member, totalScore) {
+  // คำนวณ percentage
+  const percentage = computed(() => {
+    const achievedScore = member.value?.achieved_score || 0;
+    const total = totalScore.value || 0;
+    
+    if (!achievedScore || !total) return 0;
+    
+    return Math.min(100, Math.round((achievedScore / total) * 100));
+  });
+
+  // สถานะ progress
+  const progressStatus = computed(() => {
+    const pct = percentage.value;
+    if (pct >= 80) return 'excellent';
+    if (pct >= 50) return 'good';
+    if (pct >= 30) return 'fair';
+    return 'poor';
+  });
+
+  // สี progress bar (รองรับทั้ง Tailwind classes และ CSS variables)
+  const progressColor = computed(() => {
+    const status = progressStatus.value;
+    const colorMap = {
+      excellent: { 
+        bg: 'bg-success', 
+        text: 'text-success-600', 
+        ring: 'ring-success-200',
+        var: 'var(--success-color, #22c55e)',
+        gradient: 'from-green-400 to-emerald-500'
+      },
+      good: { 
+        bg: 'bg-primary', 
+        text: 'text-primary-600', 
+        ring: 'ring-primary-200',
+        var: 'var(--primary-color, #3b82f6)',
+        gradient: 'from-blue-400 to-indigo-500'
+      },
+      fair: { 
+        bg: 'bg-warning', 
+        text: 'text-warning-600', 
+        ring: 'ring-warning-200',
+        var: 'var(--warning-color, #eab308)',
+        gradient: 'from-yellow-400 to-orange-500'
+      },
+      poor: { 
+        bg: 'bg-danger', 
+        text: 'text-danger-600', 
+        ring: 'ring-danger-200',
+        var: 'var(--danger-color, #ef4444)',
+        gradient: 'from-red-400 to-rose-500'
+      }
+    };
+    return colorMap[status];
+  });
+
+  // ข้อความแสดงสถานะ
+  const statusMessage = computed(() => {
+    const messages = {
+      excellent: 'ยอดเยี่ยม! 🎉',
+      good: 'ดีมาก! 👍',
+      fair: 'พอใช้ 💪',
+      poor: 'ต้องพยายามเพิ่ม 📚'
+    };
+    return messages[progressStatus.value];
+  });
+
+  // ไอคอนสถานะ
+  const statusIcon = computed(() => {
+    const icons = {
+      excellent: 'heroicons:trophy-solid',
+      good: 'heroicons:star-solid',
+      fair: 'heroicons:chart-bar-solid',
+      poor: 'heroicons:arrow-trending-up-solid'
+    };
+    return icons[progressStatus.value];
+  });
+
+  // คำนวณคะแนนที่เหลือ
+  const remainingScore = computed(() => {
+    return Math.max(0, totalScore.value - (member.value?.achieved_score || 0));
+  });
+
+  // เปอร์เซ็นต์ที่เหลือ
+  const remainingPercentage = computed(() => {
+    return Math.max(0, 100 - percentage.value);
+  });
+
+  // Style สำหรับ progress bar (รองรับ CSS variables)
+  const progressBarStyle = computed(() => {
+    return {
+      width: `${percentage.value}%`,
+      backgroundColor: progressColor.value.var
+    };
+  });
+
+  return {
+    percentage,
+    progressStatus,
+    progressColor,
+    statusMessage,
+    statusIcon,
+    remainingScore,
+    remainingPercentage,
+    progressBarStyle
+  };
+}
