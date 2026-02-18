@@ -1345,8 +1345,19 @@ class CourseController extends Controller
                 'assignments_progress' => $assignmentsProgressPct,
                 'quizzes_progress' => $quizzesProgressPct,
                 'scores' => [
+                    'lesson_assignments' => $lessonAssignScore,
+                    'lesson_quizzes' => $lessonTestScore,
+                    'course_assignments' => $courseAssignScore,
+                    'course_quizzes' => $courseQuizScore,
+                    'bonus_points' => $member->bonus_points ?? 0,
                     'total_score' => $rawTotal,
+                    'percentage' => round($percentage, 2),
                     'grade_name' => $finalGradeName,
+                    'max_lesson_assignments' => $lessonAssignments->sum('points'),
+                    'max_lesson_quizzes' => $lessonQuestions->sum('points'),
+                    'max_course_assignments' => $courseAssignments->sum('points'),
+                    'max_course_quizzes' => $courseQuizzes->sum('total_score'),
+                    'max_total' => $course->total_score ?? 0,
                 ]
             ];
         }

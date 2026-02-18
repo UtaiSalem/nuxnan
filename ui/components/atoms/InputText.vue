@@ -11,23 +11,23 @@
         :value="modelValue"
         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
         class="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:border-vikinger-purple focus:ring-1 focus:ring-vikinger-purple transition-colors duration-300 font-bold"
+        :class="{ 'pr-12': type === 'password' && showToggle }"
       />
-    </div>
-    <div v-if="type === 'password' && showToggle" class="mt-2 flex items-center">
-      <input
-        type="checkbox"
-        :id="`show-password-${uniqueId}`"
-        v-model="isPasswordVisible"
-        @change="togglePasswordVisibility"
-        class="w-4 h-4 text-vikinger-purple border-gray-300 rounded focus:ring-vikinger-purple cursor-pointer"
-      />
-      <label :for="`show-password-${uniqueId}`" class="ml-2 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer select-none">Show Password</label>
+      <button
+        v-if="type === 'password' && showToggle"
+        type="button"
+        @click="togglePasswordVisibility"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-vikinger-purple transition-colors duration-200"
+      >
+        <Icon :icon="isPasswordVisible ? 'fluent:eye-off-24-regular' : 'fluent:eye-24-regular'" class="w-5 h-5" />
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 
 const uniqueId = useId()
 
@@ -76,6 +76,7 @@ watch(() => props.type, (newType) => {
 })
 
 const togglePasswordVisibility = () => {
+  isPasswordVisible.value = !isPasswordVisible.value
   inputType.value = isPasswordVisible.value ? 'text' : 'password'
 }
 </script>

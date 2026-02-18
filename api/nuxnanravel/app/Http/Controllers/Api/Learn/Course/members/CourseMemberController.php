@@ -189,7 +189,7 @@ class CourseMemberController extends Controller
                 'attempt_count' => $attemptCount,
                 'completed_at' => $result ? $result->created_at : null,
                 'passed' => $result !== null 
-                    ? ($quiz->passing_score ? $percentage >= $quiz->passing_score : true) 
+                    ? ($quiz->passing_score ? round($percentage, 2) >= $quiz->passing_score : true) 
                     : null,
             ];
         })->values();
@@ -339,7 +339,7 @@ class CourseMemberController extends Controller
         $request->validate([
             'member_name'   => 'nullable|string|max:255',
             'member_email'  => 'nullable|email|max:255',
-            'order_number'  => 'nullable|integer',
+            'order_number'  => 'nullable|numeric',
             'member_code'   => 'nullable|string|max:50',
             'group_id'      => 'nullable|exists:course_groups,id',
         ]);
@@ -351,7 +351,7 @@ class CourseMemberController extends Controller
         $member->update([
             'member_name'   => $request->member_name,
             'member_email'  => $request->member_email,
-            'order_number'  => $request->order_number,
+            'order_number'  => $request->filled('order_number') ? (int) $request->order_number : null,
             'member_code'   => $request->member_code,
         ]);
 
@@ -556,7 +556,7 @@ class CourseMemberController extends Controller
                 'attempt_count' => $attemptCount,
                 'completed_at' => $result ? $result->created_at : null,
                 'passed' => $result !== null 
-                    ? ($quiz->passing_score ? $percentage >= $quiz->passing_score : true) 
+                    ? ($quiz->passing_score ? round($percentage, 2) >= $quiz->passing_score : true) 
                     : null,
             ];
         })->values();
@@ -1055,7 +1055,7 @@ class CourseMemberController extends Controller
             
             $validated = $request->validate([
                 'member_name' => 'nullable|string|max:255',
-                'order_number' => 'nullable|integer|min:0',
+                'order_number' => 'nullable|numeric|min:0',
                 'member_code' => 'nullable|string|max:50',
                 'role' => 'nullable|integer|min:1|max:3',
                 'status' => 'nullable|boolean',
@@ -1099,13 +1099,13 @@ class CourseMemberController extends Controller
 
         $request->validate([
             'member_name'   => 'nullable|string|max:255',
-            'order_number'  => 'nullable|integer',
+            'order_number'  => 'nullable|numeric',
             'member_code'   => 'nullable|string|max:50',
         ]);
 
         $member->update([
             'member_name'   => $request->member_name,
-            'order_number'  => $request->order_number,
+            'order_number'  => $request->filled('order_number') ? (int) $request->order_number : null,
             'member_code'   => $request->member_code,
         ]);
 

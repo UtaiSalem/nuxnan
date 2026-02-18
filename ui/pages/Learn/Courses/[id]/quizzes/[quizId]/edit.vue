@@ -249,7 +249,7 @@ const openEditQuestion = (q: any) => {
             }
             return {
                 id: opt.id,
-                text: opt.text,
+                text: opt.text || '',
                 is_correct: !!opt.is_correct,
                 media_url: opt.media_url || null
             }
@@ -306,7 +306,7 @@ const saveQuestion = async () => {
             })
 
             // Update options
-            const validOptions = questionForm.options.filter(o => o.text.trim() !== '')
+            const validOptions = questionForm.options.filter(o => (o.text || '').trim() !== '')
             
             // Delete removed options
             if (editingQuestion.value.options) {
@@ -366,7 +366,7 @@ const saveQuestion = async () => {
                 
                 // Create Options
                 // Filter out empty options
-                const validOptions = questionForm.options.filter(o => o.text.trim() !== '')
+                const validOptions = questionForm.options.filter(o => (o.text || '').trim() !== '')
                 
                 for (let i = 0; i < validOptions.length; i++) {
                     const opt = validOptions[i]

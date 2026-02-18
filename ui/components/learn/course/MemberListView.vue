@@ -125,7 +125,7 @@ const getStatusBadge = (status?: number) => {
 
 // Progress calculation for each member
 const getMemberProgress = (member: Member) => {
-  const score = member.achieved_score || 0
+  const score = (member.achieved_score || 0) + (member.bonus_points || 0)
   const total = props.courseTotalScore || 100
   const percentage = Math.min(Math.round((score / total) * 100), 100)
   

@@ -337,7 +337,7 @@ const onQRActionComplete = (result) => {
 
           <!-- Logo + App Name -->
           <NuxtLink to="/" class="flex items-center gap-3">
-            <img src="/storage/images/plearnd-logo.png" alt="Plearnd Logo" class="w-10 h-10" />
+            <img src="/images/plearnd-logo.png" alt="Plearnd Logo" class="w-10 h-10" />
             <span
               class="hidden md:inline-block px-3 py-1 text-lg font-audiowide text-white rounded-lg bg-gradient-vikinger shadow-lg"
               >NUXNAN</span
@@ -1130,7 +1130,7 @@ const onQRActionComplete = (result) => {
                 </div>
                 <div class="flex items-center gap-3 mt-1">
                   <div class="flex items-center gap-1 text-[10px] font-bold text-vikinger-purple" title="แต้มสะสม (PP)">
-                    <img src="/storage/images/badge/completedq.png" class="w-3.5 h-3.5" alt="pp" />
+                    <img src="~/assets/images/badge/completedq-s.png" class="w-3.5 h-3.5" alt="pp" />
                     {{ formatNumber(user.points || 0) }}
                   </div>
                 </div>

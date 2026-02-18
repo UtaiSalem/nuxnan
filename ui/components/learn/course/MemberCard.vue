@@ -41,7 +41,8 @@ const {
   statusIcon,
   remainingScore,
   remainingPercentage,
-  progressBarStyle
+  progressBarStyle,
+  totalAchievedScore
 } = useMemberProgress(memberRef, courseTotalScore);
 
 // Member display data
@@ -200,7 +201,7 @@ const handleUnmember = () => {
                 <!-- Score Detail -->
                 <div class="flex items-center justify-between w-full mt-2 text-xs">
                     <div class="text-gray-500 dark:text-gray-400">
-                        <span class="font-medium" :class="progressColor.text">{{ props.member?.achieved_score || 0 }}</span>
+                        <span class="font-medium" :class="progressColor.text">{{ totalAchievedScore }}</span>
                         <span class="mx-1">/</span>
                         <span>{{ courseTotalScore }}</span>
                         <span class="ml-1">คะแนน</span>

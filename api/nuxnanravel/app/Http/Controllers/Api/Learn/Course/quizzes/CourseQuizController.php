@@ -433,7 +433,7 @@ class CourseQuizController extends Controller
             
             $percentage = $currentTotalScore > 0 ? ($newScore / $currentTotalScore) * 100 : 0;
             
-            $status = $percentage >= $quiz->passing_score 
+            $status = round($percentage, 2) >= $quiz->passing_score 
                 ? 3 // PASSED
                 : 4; // FAILED
             

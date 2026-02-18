@@ -131,8 +131,8 @@ const members = computed(() => {
     // Sort by order_number or score
     list.sort((a, b) => {
         if (sortBy.value === 'score') {
-            const scoreA = Number(a.achieved_score || 0)
-            const scoreB = Number(b.achieved_score || 0)
+            const scoreA = Number(a.achieved_score || 0) + Number(a.bonus_points || 0)
+            const scoreB = Number(b.achieved_score || 0) + Number(b.bonus_points || 0)
             if (scoreA !== scoreB) {
                 return scoreB - scoreA // Descending score
             }

@@ -7,6 +7,8 @@ use App\Models\Course;
 use App\Models\CourseQuiz;
 use Illuminate\Http\Request;
 use App\Models\CourseQuizResult;
+use App\Models\UserAnswerQuestion;
+use App\Constants\QuizConstants;
 use Illuminate\Support\Facades\DB;
 
 class CourseQuizResultController extends Controller
@@ -67,6 +69,22 @@ class CourseQuizResultController extends Controller
         if ($request->has('duration')) {
             $data['duration'] = $request->duration;
         }
+
+        // Recalculate score, percentage, and status to ensure accuracy on completion
+        $quizUserAnswers = UserAnswerQuestion::where('user_id', auth()->id())
+            ->where('quiz_id', $quiz->id)
+            ->get();
+
+        $data['score'] = $quizUserAnswers->sum('points');
+        $data['attempted_questions'] = $quizUserAnswers->count();
+        $data['correct_answers'] = $quizUserAnswers->filter(fn($a) => $a->points > 0)->count();
+        $data['incorrect_answers'] = $quizUserAnswers->filter(fn($a) => $a->points == 0)->count();
+        $data['percentage'] = $quiz->total_score > 0
+            ? round(($data['score'] / $quiz->total_score) * 100, 2)
+            : 0;
+        $data['status'] = $data['percentage'] >= $quiz->passing_score
+            ? QuizConstants::STATUS_PASSED
+            : QuizConstants::STATUS_FAILED;
 
         $result->update($data);
 

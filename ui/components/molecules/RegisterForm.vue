@@ -130,38 +130,22 @@
       />
       <InputText
         v-model="form.password"
-        :type="showPassword ? 'text' : 'password'"
+        type="password"
         :placeholder="$t('auth.password')"
         :label="$t('auth.password')"
-        :show-toggle="false"
         id="register-password"
         name="password"
         autocomplete="new-password"
       />
       <InputText
         v-model="form.password_confirmation"
-        :type="showPassword ? 'text' : 'password'"
+        type="password"
         :placeholder="$t('auth.confirmPassword')"
         :label="$t('auth.confirmPassword')"
-        :show-toggle="false"
         id="register-password-confirmation"
         name="password_confirmation"
         autocomplete="new-password"
       />
-
-      <div class="flex items-center">
-        <input
-          type="checkbox"
-          id="show-password-register"
-          v-model="showPassword"
-          class="w-4 h-4 text-vikinger-purple border-gray-300 rounded focus:ring-vikinger-purple cursor-pointer"
-        />
-        <label
-          for="show-password-register"
-          class="ml-2 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer select-none"
-          >{{ $t('auth.showPassword') }}</label
-        >
-      </div>
 
 
       <div v-if="success" class="text-green-500 text-sm text-center font-medium">{{ success }}</div>
@@ -243,7 +227,6 @@ const form = reactive({
   newsletter: true,
 })
 
-const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
 const success = ref('')

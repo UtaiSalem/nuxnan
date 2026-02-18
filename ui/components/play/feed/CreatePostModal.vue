@@ -99,6 +99,15 @@ const postText = ref('')
 const isSubmitting = ref(false)
 const selectedImages = ref([])
 const imageInput = ref(null)
+const textareaRef = ref(null)
+
+// Auto-resize textarea
+const autoResize = () => {
+  const el = textareaRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = Math.max(el.scrollHeight, 160) + 'px'
+}
 
 // Image preview URLs
 const imagePreviews = computed(() => {
@@ -453,27 +462,35 @@ const removeTaggedFriend = (friendId) => {
         @click.self="closeModal"
       >
         <div class="w-full max-w-2xl mx-4 mb-10 modal-content">
-          <div class="bg-white dark:bg-vikinger-dark-300 rounded-xl shadow-2xl">
-            <!-- Header -->
-            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-vikinger-dark-50/30">
-              <div class="flex items-center gap-2">
-                <Icon :icon="context === 'academy' ? 'fluent:building-24-regular' : context === 'course' ? 'fluent:book-24-regular' : 'fluent:calendar-ltr-24-regular'" class="w-5 h-5 text-vikinger-purple" />
-                <h2 class="text-xl font-bold text-gray-800 dark:text-white">{{ modalTitle }}</h2>
+          <div class="bg-white dark:bg-vikinger-dark-300 rounded-2xl shadow-2xl overflow-hidden">
+            <!-- Header with gradient -->
+            <div class="relative">
+              <div class="absolute inset-0 bg-gradient-to-r from-vikinger-purple/10 via-vikinger-cyan/5 to-vikinger-purple/10 dark:from-vikinger-purple/20 dark:via-vikinger-cyan/10 dark:to-vikinger-purple/20"></div>
+              <div class="relative flex items-center justify-between p-4 border-b border-gray-100 dark:border-vikinger-dark-50/20">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-vikinger-purple to-vikinger-cyan flex items-center justify-center shadow-sm">
+                    <Icon :icon="context === 'academy' ? 'fluent:building-24-filled' : context === 'course' ? 'fluent:book-24-filled' : 'fluent:compose-24-filled'" class="w-5 h-5 text-white" />
+                  </div>
+                  <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ modalTitle }}</h2>
+                </div>
+                <button @click="closeModal" class="p-2 hover:bg-white/60 dark:hover:bg-vikinger-dark-200 rounded-xl transition-colors">
+                  <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors" />
+                </button>
               </div>
-              <button @click="closeModal" class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full">
-                <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-500" />
-              </button>
             </div>
 
             <!-- Body -->
             <div class="p-4 max-h-[75vh] overflow-y-auto">
               
-              <!-- User Info (matching Course style) -->
+              <!-- User Info -->
               <div class="flex items-center gap-3 mb-4">
-                <img 
-                  :src="currentUserAvatar" 
-                  class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-purple/20" 
-                />
+                <div class="relative flex-shrink-0">
+                  <img 
+                    :src="currentUserAvatar" 
+                    class="w-11 h-11 rounded-full object-cover ring-2 ring-vikinger-purple/30 shadow-sm" 
+                  />
+                  <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-vikinger-dark-300 rounded-full"></div>
+                </div>
                 <div class="flex-1">
                   <div class="font-bold text-gray-800 dark:text-white leading-tight">{{ authStore.user?.name }}</div>
                   <div class="flex items-center gap-1.5 mt-0.5">
@@ -491,28 +508,23 @@ const removeTaggedFriend = (friendId) => {
                 </div>
               </div>
 
-              <!-- Tab Navigation (50-50 split) -->
-              <div class="flex border-b border-gray-200 dark:border-vikinger-dark-50/30 mb-4">
+              <!-- Tab Navigation -->
+              <div class="flex bg-gray-50 dark:bg-vikinger-dark-200/50 rounded-xl p-1 mb-4">
                 <button
                   v-for="tab in tabs" 
                   :key="tab.id"
                   @click="activeTab = tab.id"
                   :class="[
-                    'flex-1 pb-3 text-sm font-bold uppercase tracking-wider transition-all relative flex items-center justify-center gap-2',
+                    'flex-1 py-2.5 text-sm font-bold tracking-wide transition-all duration-200 relative flex items-center justify-center gap-2 rounded-lg',
                     activeTab === tab.id 
-                      ? tab.id === 'status' ? 'text-blue-600' : 'text-amber-600' 
-                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                      ? tab.id === 'status' 
+                        ? 'bg-white dark:bg-vikinger-dark-100 text-vikinger-purple shadow-sm' 
+                        : 'bg-white dark:bg-vikinger-dark-100 text-amber-600 shadow-sm'
+                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                   ]"
                 >
-                  <Icon :icon="tab.id === 'status' ? 'fluent:edit-24-regular' : 'fluent:poll-24-regular'" class="w-5 h-5" />
+                  <Icon :icon="tab.id === 'status' ? (activeTab === 'status' ? 'fluent:edit-24-filled' : 'fluent:edit-24-regular') : (activeTab === 'poll' ? 'fluent:poll-24-filled' : 'fluent:poll-24-regular')" class="w-5 h-5" />
                   {{ tab.label }}
-                  <div 
-                    v-if="activeTab === tab.id" 
-                    :class="[
-                      'absolute bottom-0 left-0 w-full h-1 rounded-full',
-                      tab.id === 'status' ? 'bg-blue-600' : 'bg-amber-600'
-                    ]"
-                  ></div>
                 </button>
               </div>
 
@@ -552,17 +564,21 @@ const removeTaggedFriend = (friendId) => {
                 </div>
 
                 <!-- Post Input -->
-                <div class="rounded-lg mb-4 min-h-[120px] p-4 transition-all" :class="selectedBackground ? '' : 'bg-gray-50 dark:bg-vikinger-dark-200'" :style="backgroundStyle">
+                <div class="rounded-xl mb-4 p-4 transition-all duration-300 border" :class="selectedBackground ? 'border-transparent' : 'bg-gray-50/80 dark:bg-vikinger-dark-200/60 border-gray-100 dark:border-vikinger-dark-50/10 focus-within:border-vikinger-purple/30 focus-within:bg-white dark:focus-within:bg-vikinger-dark-200'" :style="backgroundStyle">
                   <textarea 
+                    ref="textareaRef"
                     v-model="postText" 
                     placeholder="คุณกำลังคิดอะไรอยู่?" 
-                    :rows="selectedBackground ? 5 : 3" 
-                    class="w-full bg-transparent border-none outline-none resize-none placeholder-gray-400" 
+                    class="w-full bg-transparent border-none outline-none resize-none placeholder-gray-300 dark:placeholder-gray-500 text-[15px] leading-relaxed min-h-[160px] max-h-[50vh]" 
                     :class="selectedBackground ? 'text-center text-lg font-medium' : 'text-gray-800 dark:text-white'" 
                     :style="selectedBackground ? { color: selectedBackground.text_color } : {}" 
+                    @input="autoResize"
                     @keydown.ctrl.enter="createPost" 
                     :disabled="isSubmitting" 
                   />
+                  <div v-if="postText.length > 0" class="flex justify-end mt-1">
+                    <span class="text-xs" :class="postText.length > 5000 ? 'text-red-500 font-bold' : 'text-gray-300 dark:text-gray-600'">{{ postText.length }}</span>
+                  </div>
                 </div>
 
                 <!-- Images Preview -->
@@ -709,35 +725,38 @@ const removeTaggedFriend = (friendId) => {
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex flex-wrap gap-2 border-t border-gray-200 dark:border-vikinger-dark-50/30 pt-4">
-                  <button @click="triggerImageInput" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all" :disabled="isSubmitting">
-                    <Icon icon="mdi:image-multiple" class="w-5 h-5 text-green-500" />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">รูปภาพ</span>
-                  </button>
-                  <button @click="showFeelingPicker = !showFeelingPicker; showActivityPicker = false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all" :class="{ 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20': selectedFeeling }" :disabled="isSubmitting">
-                    <Icon icon="mdi:emoticon-happy" class="w-5 h-5 text-yellow-500" />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">ความรู้สึก</span>
-                  </button>
-                  <button @click="showActivityPicker = !showActivityPicker; showFeelingPicker = false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all" :class="{ 'border-orange-400 bg-orange-50 dark:bg-orange-900/20': selectedActivity }" :disabled="isSubmitting">
-                    <Icon icon="mdi:run" class="w-5 h-5 text-orange-500" />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">กิจกรรม</span>
-                  </button>
-                  <button @click="showLocationInput = !showLocationInput" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" :class="{ 'border-red-400 bg-red-50 dark:bg-red-900/20': locationInput }" :disabled="isSubmitting">
-                    <Icon icon="mdi:map-marker" class="w-5 h-5 text-red-500" />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">สถานที่</span>
-                  </button>
-                  <button @click="showTagFriends = !showTagFriends" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all" :class="{ 'border-blue-400 bg-blue-50 dark:bg-blue-900/20': taggedFriends.length > 0 }" :disabled="isSubmitting">
-                    <Icon icon="mdi:account-multiple-plus" class="w-5 h-5 text-blue-500" />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">แท็กเพื่อน</span>
-                  </button>
-                  <button v-if="imagePreviews.length === 0" @click="showBackgroundPicker = !showBackgroundPicker" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all" :class="{ 'border-purple-400 bg-purple-50 dark:bg-purple-900/20': selectedBackground }" :disabled="isSubmitting">
-                    <Icon icon="mdi:palette" class="w-5 h-5 text-purple-500" />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">พื้นหลัง</span>
-                  </button>
-                  <button @click="showScheduler = !showScheduler" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all" :class="{ 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20': scheduledDate }" :disabled="isSubmitting">
-                    <Icon icon="mdi:clock-outline" class="w-5 h-5 text-indigo-500" />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">ตั้งเวลา</span>
-                  </button>
+                <div class="border-t border-gray-100 dark:border-vikinger-dark-50/15 pt-3">
+                  <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">เพิ่มเติมในโพสต์</p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button @click="triggerImageInput" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="imagePreviews.length > 0 ? 'bg-green-100 dark:bg-green-900/30 ring-1 ring-green-300 dark:ring-green-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-green-50 dark:hover:bg-green-900/20'" :disabled="isSubmitting">
+                      <Icon icon="fluent:image-24-filled" class="w-4.5 h-4.5 text-green-500" />
+                      <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">รูปภาพ</span>
+                    </button>
+                    <button @click="showFeelingPicker = !showFeelingPicker; showActivityPicker = false" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="selectedFeeling ? 'bg-yellow-100 dark:bg-yellow-900/30 ring-1 ring-yellow-300 dark:ring-yellow-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'" :disabled="isSubmitting">
+                      <Icon icon="fluent:emoji-24-filled" class="w-4.5 h-4.5 text-yellow-500" />
+                      <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">ความรู้สึก</span>
+                    </button>
+                    <button @click="showActivityPicker = !showActivityPicker; showFeelingPicker = false" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="selectedActivity ? 'bg-orange-100 dark:bg-orange-900/30 ring-1 ring-orange-300 dark:ring-orange-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-orange-50 dark:hover:bg-orange-900/20'" :disabled="isSubmitting">
+                      <Icon icon="fluent:run-24-filled" class="w-4.5 h-4.5 text-orange-500" />
+                      <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">กิจกรรม</span>
+                    </button>
+                    <button @click="showLocationInput = !showLocationInput" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="locationInput ? 'bg-red-100 dark:bg-red-900/30 ring-1 ring-red-300 dark:ring-red-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-red-50 dark:hover:bg-red-900/20'" :disabled="isSubmitting">
+                      <Icon icon="fluent:location-24-filled" class="w-4.5 h-4.5 text-red-500" />
+                      <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">สถานที่</span>
+                    </button>
+                    <button @click="showTagFriends = !showTagFriends" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="taggedFriends.length > 0 ? 'bg-blue-100 dark:bg-blue-900/30 ring-1 ring-blue-300 dark:ring-blue-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-blue-50 dark:hover:bg-blue-900/20'" :disabled="isSubmitting">
+                      <Icon icon="fluent:people-team-24-filled" class="w-4.5 h-4.5 text-blue-500" />
+                      <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">แท็กเพื่อน</span>
+                    </button>
+                    <button v-if="imagePreviews.length === 0" @click="showBackgroundPicker = !showBackgroundPicker" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="selectedBackground ? 'bg-purple-100 dark:bg-purple-900/30 ring-1 ring-purple-300 dark:ring-purple-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-purple-50 dark:hover:bg-purple-900/20'" :disabled="isSubmitting">
+                      <Icon icon="fluent:color-24-filled" class="w-4.5 h-4.5 text-purple-500" />
+                      <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">พื้นหลัง</span>
+                    </button>
+                    <button @click="showScheduler = !showScheduler" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="scheduledDate ? 'bg-indigo-100 dark:bg-indigo-900/30 ring-1 ring-indigo-300 dark:ring-indigo-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'" :disabled="isSubmitting">
+                      <Icon icon="fluent:clock-24-filled" class="w-4.5 h-4.5 text-indigo-500" />
+                      <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">ตั้งเวลา</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -887,15 +906,16 @@ const removeTaggedFriend = (friendId) => {
               </div>
 
               <!-- Footer Buttons -->
-              <div class="p-4 border-t border-gray-200 dark:border-vikinger-dark-50/30">
+              <div class="p-4 border-t border-gray-100 dark:border-vikinger-dark-50/15">
                 <button 
                   @click="createPost" 
                   :disabled="isSubmitting || (activeTab === 'status' && !postText.trim() && imagePreviews.length === 0) || (activeTab === 'poll' && !pollQuestion.trim())" 
-                  class="w-full py-3 px-4 bg-gradient-vikinger text-white font-semibold rounded-lg hover:shadow-vikinger transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  class="w-full py-3.5 px-4 bg-gradient-to-r from-vikinger-purple via-vikinger-cyan to-vikinger-purple bg-[length:200%_auto] text-white font-bold rounded-xl hover:bg-right transition-all duration-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-left flex items-center justify-center gap-2 shadow-lg shadow-vikinger-purple/20 hover:shadow-vikinger-purple/40 active:scale-[0.98]"
                 >
                   <Icon v-if="isSubmitting" icon="mdi:loading" class="w-5 h-5 animate-spin" />
-                  <Icon v-else-if="activeTab === 'poll'" icon="mdi:poll" class="w-5 h-5" />
-                  <Icon v-else-if="scheduledDate" icon="mdi:clock-outline" class="w-5 h-5" />
+                  <Icon v-else-if="activeTab === 'poll'" icon="fluent:poll-24-filled" class="w-5 h-5" />
+                  <Icon v-else-if="scheduledDate" icon="fluent:clock-24-filled" class="w-5 h-5" />
+                  <Icon v-else icon="fluent:send-24-filled" class="w-5 h-5" />
                   <span>{{ isSubmitting ? (activeTab === 'poll' ? 'กำลังสร้างโพล...' : 'กำลังโพสต์...') : (activeTab === 'poll' ? 'สร้างโพล' : (scheduledDate ? 'ตั้งเวลาโพสต์' : 'โพสต์')) }}</span>
                 </button>
               </div>

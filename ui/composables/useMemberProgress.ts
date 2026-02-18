@@ -2,11 +2,15 @@ import { computed, type Ref } from 'vue'
 
 export function useMemberProgress(member: Ref<any>, totalScore: Ref<number>) {
 
+  // Total score including bonus points (matches backend getTotalAchievedScore)
+  const totalAchievedScore = computed(() => {
+    return (member.value?.achieved_score || 0) + (member.value?.bonus_points || 0)
+  })
+
   const percentage = computed(() => {
     if (!totalScore.value || totalScore.value === 0) return 0
-    const score = member.value?.achieved_score || 0
-    // Prevent division by zero and cap at 100 if needed, though bonus points might exceed 100%
-    return Math.round((score / totalScore.value) * 100)
+    const score = totalAchievedScore.value
+    return Math.min(100, Math.round((score / totalScore.value) * 100))
   })
 
   // Determine status based on percentage
@@ -64,7 +68,7 @@ export function useMemberProgress(member: Ref<any>, totalScore: Ref<number>) {
   })
 
   const remainingScore = computed(() => {
-    const achieved = member.value?.achieved_score || 0
+    const achieved = totalAchievedScore.value
     const total = totalScore.value || 0
     return Math.max(0, total - achieved)
   })
@@ -87,6 +91,7 @@ export function useMemberProgress(member: Ref<any>, totalScore: Ref<number>) {
     statusIcon,
     remainingScore,
     remainingPercentage,
-    progressBarStyle
+    progressBarStyle,
+    totalAchievedScore
   }
 }

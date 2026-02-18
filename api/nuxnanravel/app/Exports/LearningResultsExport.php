@@ -24,16 +24,17 @@ class LearningResultsExport implements FromArray, WithHeadings, WithTitle, Shoul
     {
         $rows = [];
         foreach ($this->data as $item) {
+            $scores = $item['scores'];
             $rows[] = [
                 $item['member']['member_code'] ?? '-',
                 $item['member']['user']['name'] ?? '-',
-                $item['member']['group']['name'] ?? 'ไม่มีกลุ่ม',
                 $item['attendance_rate'] . '%',
-                $item['lessons_progress'] . '%',
-                $item['assignments_progress'] . '%',
-                $item['quizzes_progress'] . '%',
-                $item['scores']['total_score'],
-                $item['scores']['grade_name'],
+                $scores['course_assignments'] ?? 0,
+                $scores['course_quizzes'] ?? 0,
+                $scores['bonus_points'] ?? 0,
+                $scores['total_score'],
+                $scores['percentage'] . '%',
+                $scores['grade_name'],
             ];
         }
         return $rows;
@@ -41,15 +42,21 @@ class LearningResultsExport implements FromArray, WithHeadings, WithTitle, Shoul
 
     public function headings(): array
     {
+        // Get max scores from first row for header labels
+        $first = $this->data[0]['scores'] ?? [];
+        $maxCA = $first['max_course_assignments'] ?? 0;
+        $maxCQ = $first['max_course_quizzes'] ?? 0;
+        $maxTotal = $maxCA + $maxCQ;
+
         return [
             'รหัสนักศึกษา',
             'ชื่อ-นามสกุล',
-            'กลุ่ม',
             'การเข้าเรียน (%)',
-            'บทเรียน (%)',
-            'งาน (%)',
-            'แบบทดสอบ (%)',
-            'คะแนนรวม',
+            'งาน (' . $maxCA . ')',
+            'แบบทดสอบ (' . $maxCQ . ')',
+            'คะแนนพิเศษ',
+            'คะแนนรวม (' . $maxTotal . ')',
+            'ร้อยละ',
             'เกรด',
         ];
     }

@@ -26,7 +26,7 @@
       <div class="relative group">
         <div class="absolute -inset-4 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
         <div class="relative w-20 h-20 bg-gradient-to-br from-white to-gray-100 rounded-2xl flex items-center justify-center shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
-          <img src="/storage/images/plearnd-logo.png" alt="Nuxni Logo" class="w-12 h-12" />
+          <img src="/images/plearnd-logo.png" alt="Nuxni Logo" class="w-12 h-12" />
         </div>
       </div>
 
