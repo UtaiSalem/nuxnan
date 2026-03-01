@@ -52,13 +52,7 @@ const fetchStudent = async () => {
       student.value = response.student
     }
   } catch (err) {
-    // Fallback to legacy API
-    try {
-      const response: any = await api.get(`/api/student-card/profile/${studentId.value}`)
-      student.value = response.student
-    } catch (legacyErr) {
-      console.error('Failed to fetch student:', legacyErr)
-    }
+    console.error('Failed to fetch student:', err)
   }
 }
 
@@ -89,7 +83,7 @@ const getProfileImage = () => {
             :to="`/academies/${academyName}/admin/student-cards`"
             class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
-            <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
           </NuxtLink>
           <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">บัตรนักเรียน</h1>
@@ -102,7 +96,7 @@ const getProfileImage = () => {
             @click="printCard"
             class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
           >
-            <Icon name="fluent:print-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:print-24-regular" class="w-5 h-5" />
             <span>พิมพ์</span>
           </button>
           
@@ -110,7 +104,7 @@ const getProfileImage = () => {
             :to="`/academies/${academyName}/admin/student-cards/${studentId}/edit`"
             class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
           >
-            <Icon name="fluent:edit-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
             <span>แก้ไข</span>
           </NuxtLink>
         </div>
@@ -204,7 +198,7 @@ const getProfileImage = () => {
     </div>
 
     <div v-else class="text-center py-20">
-      <Icon name="fluent:person-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
+      <Icon icon="fluent:person-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
       <p class="text-gray-500 dark:text-gray-400">ไม่พบข้อมูลนักเรียน</p>
     </div>
   </div>

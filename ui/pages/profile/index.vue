@@ -11,8 +11,9 @@ const authStore = useAuthStore()
 
 // Redirect to user profile with own reference code or 'me'
 onMounted(() => {
-  if (authStore.user?.reference_code) {
-    navigateTo(`/profile/${authStore.user.reference_code}`)
+  const targetId = authStore.user?.personal_code || authStore.user?.reference_code
+  if (targetId) {
+    navigateTo(`/profile/${targetId}`)
   } else {
     navigateTo('/profile/me')
   }

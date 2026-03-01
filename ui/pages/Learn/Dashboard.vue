@@ -246,7 +246,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="learning-dashboard min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="learning-dashboard min-h-screen bg-gray-50 dark:bg-gray-900 pb-24 lg:pb-0">
     <!-- Header Section -->
     <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

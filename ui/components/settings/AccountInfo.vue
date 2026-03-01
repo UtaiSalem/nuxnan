@@ -57,15 +57,15 @@ async function saveAccount() {
 
 <template>
 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-    <div class="p-6 border-b border-gray-100 dark:border-gray-700">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Account Information</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Manage your basic account details</p>
+    <div class="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">ข้อมูลบัญชี</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400">จัดการข้อมูลบัญชีพื้นฐานของคุณ</p>
     </div>
 
-    <div class="p-6 space-y-6">
+    <div class="p-4 sm:p-6 space-y-6">
         <!-- Name -->
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Display Name</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ชื่อที่แสดง</label>
             <div class="relative">
                 <Icon icon="fluent:person-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input v-model="form.name" type="text" class="pl-10 w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder="Your name" />
@@ -74,17 +74,17 @@ async function saveAccount() {
 
         <!-- Email (Read Only) -->
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">อีเมล</label>
             <div class="relative opacity-75">
                 <Icon icon="fluent:mail-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input v-model="form.email" type="email" readonly class="pl-10 w-full rounded-xl border-gray-300 bg-gray-50 dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-400 cursor-not-allowed" />
             </div>
-            <p class="mt-1 text-xs text-amber-500">Contact support to change email address.</p>
+            <p class="mt-1 text-xs text-amber-500">ติดต่อทีมงานเพื่อเปลี่ยนอีเมล</p>
         </div>
 
         <!-- Phone -->
          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone Number</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เบอร์โทรศัพท์</label>
             <div class="relative">
                 <Icon icon="fluent:call-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input v-model="form.phone_number" type="tel" class="pl-10 w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder="08xxxxxxxx" />
@@ -99,7 +99,7 @@ async function saveAccount() {
                 class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <Icon v-if="isLoading" icon="svg-spinners:ring-resize" />
-                Save Changes
+                บันทึกข้อมูล
             </button>
         </div>
     </div>

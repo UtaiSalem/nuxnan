@@ -6,10 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\SchoolEvent;
 use App\Models\EventRegistration;
+use App\Models\ActivityEnrollment;
+use App\Models\ActivitySession;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 
 class SchoolEventController extends Controller
 {
@@ -224,6 +228,11 @@ class SchoolEventController extends Controller
             );
 
             DB::commit();
+
+            // Generate sessions if recurring
+            if ($event->is_recurring && !empty($event->recurrence_pattern)) {
+                $this->generateSessions($event);
+            }
 
             $event->load('creator:id,name,profile_photo_path');
 
@@ -635,6 +644,77 @@ class SchoolEventController extends Controller
     }
 
     /**
+     * Enroll in a semester-based activity
+     */
+    public function enroll(Request $request, Academy $academy, SchoolEvent $event)
+    {
+        if ($event->academy_id !== $academy->id) {
+            return response()->json(['success' => false, 'message' => 'Event not found'], 404);
+        }
+
+        $user = $request->user();
+
+        // Check enrollment deadline/criteria
+        // ...
+
+        // Check if already enrolled
+        $existing = ActivityEnrollment::where('user_id', $user->id)
+            ->where('event_id', $event->id)
+            ->where('semester', $request->get('semester', '1')) // Default or current
+            ->where('academic_year', $request->get('academic_year', '2024'))
+            ->first();
+
+        if ($existing) {
+            return response()->json(['success' => false, 'message' => 'Already enrolled'], 400);
+        }
+
+        $enrollment = ActivityEnrollment::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => 'active',
+            'semester' => $request->get('semester', '1'),
+            'academic_year' => $request->get('academic_year', '2024'),
+            'remarks' => $request->remarks,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Enrolled successfully',
+            'data' => $enrollment,
+        ], 201);
+    }
+
+    /**
+     * Get my activity schedule
+     */
+    public function mySchedule(Request $request, Academy $academy)
+    {
+        $user = $request->user();
+        $start = $request->get('start', now()->startOfWeek());
+        $end = $request->get('end', now()->endOfWeek());
+
+        // Get activities user is enrolled in
+        $enrolledEventIds = ActivityEnrollment::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->pluck('event_id');
+
+        // Get sessions for these events within date range
+        $sessions = ActivitySession::whereIn('event_id', $enrolledEventIds)
+            ->whereBetween('start_datetime', [$start, $end])
+            ->with('event:id,title,location')
+            ->orderBy('start_datetime')
+            ->get();
+
+        // Also include attendance status if exists
+        // ...
+
+        return response()->json([
+            'success' => true,
+            'data' => $sessions,
+        ]);
+    }
+
+    /**
      * Check if user is academy admin
      */
     private function isAcademyAdmin($user, Academy $academy): bool
@@ -643,5 +723,90 @@ class SchoolEventController extends Controller
             ->where('user_id', $user->id)
             ->whereIn('role', ['owner', 'admin', 'moderator'])
             ->exists();
+    }
+
+    /**
+     * Generate sessions based on recurrence pattern
+     */
+    private function generateSessions(SchoolEvent $event)
+    {
+        $pattern = $event->recurrence_pattern;
+        $startDate = Carbon::parse($event->start_datetime);
+        $endDate = Carbon::parse($event->end_datetime); // Or pattern end date
+
+        // If end_datetime is same as start (one day event), maybe rely on pattern
+        if ($startDate->isSameDay($endDate)) {
+            // Check if pattern defines an extended end date
+            if (isset($pattern['until'])) {
+                $endDate = Carbon::parse($pattern['until']);
+            } else {
+                // Default to one month if not specified? Or just today + 1 month
+                $endDate = $startDate->copy()->addMonths(4); // Default semester length?
+            }
+        }
+
+        $frequency = $pattern['frequency'] ?? 'weekly'; // daily, weekly
+        $daysOfWeek = $pattern['days'] ?? []; // 0=Sun, 1=Mon... or specific dates
+
+        $sessions = [];
+        $currentDate = $startDate->copy();
+
+        while ($currentDate->lte($endDate)) {
+            $shouldCreate = false;
+
+            if ($frequency === 'daily') {
+                $shouldCreate = true;
+            } elseif ($frequency === 'weekly') {
+                // Check if current day is in daysOfWeek
+                // Carbon dayOfWeek: 0 (Sunday) - 6 (Saturday)
+                if (empty($daysOfWeek) || in_array($currentDate->dayOfWeek, $daysOfWeek)) {
+                    $shouldCreate = true;
+                }
+            }
+
+            if ($shouldCreate) {
+                // Create session
+                // Ensure time is preserved from event start time
+                $sessionStart = $currentDate->copy()->setTimeFromString($startDate->format('H:i'));
+                
+                // Calculate duration
+                $duration = $startDate->diffInMinutes(Carbon::parse($event->end_datetime));
+                // Wait, if event spans multiple days originally, this logic might be weird.
+                // Usually recurring events have a duration per session.
+                // Assuming start_datetime and end_datetime define the FIRST session time and duration.
+                
+                // Correct logic: event->end_datetime is often used as the END execution of the recurring series? 
+                // Or provided as end time of the first event instance.
+                // Let's assume start_datetime and end_datetime define the time block (e.g. 14:00 - 16:00) on the first day.
+                // And recurrence creates copies of this block.
+                
+                $originalStart = Carbon::parse($event->start_datetime);
+                $originalEnd = Carbon::parse($event->end_datetime);
+                
+                if ($originalStart->isSameDay($originalEnd)) {
+                     $durationMinutes = $originalStart->diffInMinutes($originalEnd);
+                     $sessionEnd = $sessionStart->copy()->addMinutes($durationMinutes);
+                } else {
+                     // Multi-day session? default 2 hours
+                     $sessionEnd = $sessionStart->copy()->addHours(2);
+                }
+
+                $sessions[] = [
+                    'event_id' => $event->id,
+                    'title' => $event->title . ' - ' . $sessionStart->format('d M'),
+                    'start_datetime' => $sessionStart,
+                    'end_datetime' => $sessionEnd,
+                    'status' => 'scheduled',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            $currentDate->addDay();
+        }
+
+        if (!empty($sessions)) {
+            ActivitySession::insert($sessions);
+        }
     }
 }

@@ -288,6 +288,9 @@ require __DIR__ . '/learn/student.php';
 require __DIR__ . '/learn/academy-student-card.php';
 require __DIR__ . '/learn/academy-home-visit.php';
 
+// Academy Store Management Routes (School Store System)
+require __DIR__ . '/learn/academy-store.php';
+
 // Legacy routes (deprecated - kept for backward compatibility)
 // TODO: Remove these in future version after frontend migration is complete
 require __DIR__ . '/homevisit/homevisit.php';

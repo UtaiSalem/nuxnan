@@ -187,18 +187,18 @@ const deleteCourse = async () => {
   <div class="space-y-8 max-w-7xl mx-auto pb-20">
     
     <!-- Header -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 p-8 text-white shadow-lg">
+    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 p-4 sm:p-8 text-white shadow-lg">
       <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
       <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-black/10 rounded-full blur-3xl"></div>
       
-      <div class="relative z-10 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="p-3 bg-white/20 backdrop-blur-md rounded-xl">
-             <Icon icon="mdi-light:settings" class="w-8 h-8 text-white" />
+      <div class="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-3 sm:gap-4">
+          <div class="p-2 sm:p-3 bg-white/20 backdrop-blur-md rounded-xl">
+             <Icon icon="mdi-light:settings" class="w-6 h-6 sm:w-8 sm:h-8 text-white" />
           </div>
           <div>
-            <h1 class="text-2xl font-bold">ตั้งค่ารายวิชา</h1>
-            <p class="text-blue-100 opacity-90">จัดการข้อมูลและสถานะของรายวิชา</p>
+            <h1 class="text-lg sm:text-2xl font-bold">ตั้งค่ารายวิชา</h1>
+            <p class="text-blue-100 opacity-90 text-sm sm:text-base">จัดการข้อมูลและสถานะของรายวิชา</p>
           </div>
         </div>
         
@@ -608,7 +608,7 @@ const deleteCourse = async () => {
 
 
       <!-- Mobile Save Button (Sticky Bottom) -->
-      <div class="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 lg:hidden z-50">
+      <div class="fixed bottom-16 sm:bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 lg:hidden z-50">
         <button
           type="submit"
           :disabled="isSaving"

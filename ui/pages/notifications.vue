@@ -167,11 +167,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 lg:pb-0">
     <!-- Page Header -->
     <section class="bg-gradient-to-r from-primary-500 to-primary-600 text-white py-6 mb-4">
       <div class="container mx-auto px-4">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 class="text-2xl font-bold mb-1">การแจ้งเตือน</h1>
             <div class="flex items-center gap-2 text-sm text-primary-100">
@@ -180,16 +180,16 @@ onMounted(() => {
               <span>การแจ้งเตือน</span>
             </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <button
               @click="markAllAsRead"
-              class="px-3 py-2 text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              class="px-3 py-2 text-xs sm:text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
             >
               อ่านทั้งหมด
             </button>
             <button
               @click="deleteAllRead"
-              class="px-3 py-2 text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              class="px-3 py-2 text-xs sm:text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
             >
               ลบที่อ่านแล้ว
             </button>
@@ -202,7 +202,7 @@ onMounted(() => {
     <div class="container mx-auto px-4 pb-6">
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <!-- Tabs -->
-        <div class="flex border-b border-gray-200 dark:border-gray-700">
+        <div class="flex border-b border-gray-200 dark:border-gray-700 mobile-scroll-x">
           <button
             v-for="tab in tabs"
             :key="tab.id"

@@ -174,7 +174,7 @@ const rooms = computed(() => {
             :to="`/academies/${academyName}/admin/student-cards/print`"
             class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
           >
-            <Icon name="fluent:print-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:print-24-regular" class="w-5 h-5" />
             <span>พิมพ์บัตร</span>
           </NuxtLink>
           
@@ -182,7 +182,7 @@ const rooms = computed(() => {
             :to="`/academies/${academyName}/admin/student-cards/import`"
             class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
           >
-            <Icon name="fluent:arrow-upload-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:arrow-upload-24-regular" class="w-5 h-5" />
             <span>นำเข้าข้อมูล</span>
           </NuxtLink>
         </div>
@@ -193,7 +193,7 @@ const rooms = computed(() => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
-              <Icon name="fluent:people-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalStudents }}</p>
@@ -205,7 +205,7 @@ const rooms = computed(() => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl">
-              <Icon name="fluent:image-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Icon icon="fluent:image-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.withPhoto }}</p>
@@ -217,7 +217,7 @@ const rooms = computed(() => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-orange-100 dark:bg-orange-900/50 rounded-xl">
-              <Icon name="fluent:image-off-24-filled" class="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <Icon icon="fluent:image-off-24-filled" class="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.withoutPhoto }}</p>
@@ -229,7 +229,7 @@ const rooms = computed(() => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
-              <Icon name="fluent:building-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Icon icon="fluent:building-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ levels.length }}</p>
@@ -244,7 +244,7 @@ const rooms = computed(() => {
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex-1">
             <div class="relative">
-              <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 v-model="searchQuery"
                 type="text"
@@ -330,14 +330,14 @@ const rooms = computed(() => {
                       class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg"
                       title="ดูบัตร"
                     >
-                      <Icon name="fluent:eye-24-regular" class="w-5 h-5" />
+                      <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
                     </button>
                     <button
                       @click="editStudentCard(student)"
                       class="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                       title="แก้ไข"
                     >
-                      <Icon name="fluent:edit-24-regular" class="w-5 h-5" />
+                      <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
                     </button>
                   </div>
                 </td>
@@ -345,7 +345,7 @@ const rooms = computed(() => {
               
               <tr v-if="students.length === 0">
                 <td colspan="6" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
-                  <Icon name="fluent:people-24-regular" class="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <Icon icon="fluent:people-24-regular" class="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>ไม่พบข้อมูลนักเรียน</p>
                 </td>
               </tr>

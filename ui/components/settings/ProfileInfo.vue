@@ -340,10 +340,10 @@ function handleSave() {
                     <Icon icon="fluent:mail-24-regular" class="w-4 h-4" />
                     {{ authStore.user?.email || '-' }}
                 </p>
-                <!-- Reference Code -->
-                <p class="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-1">
-                    <Icon icon="fluent:key-24-regular" class="w-3 h-3" />
-                    {{ authStore.user?.reference_code || '-' }}
+                <!-- Personal Code -->
+                <p class="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-1" title="Personal Code">
+                    <Icon icon="fluent:id-card-24-regular" class="w-3 h-3" />
+                    {{ authStore.user?.personal_code || authStore.user?.reference_code || '-' }}
                 </p>
             </div>
         </div>

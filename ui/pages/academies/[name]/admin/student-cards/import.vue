@@ -102,7 +102,7 @@ const uploadFile = async () => {
       }
     }, 200)
     
-    const response: any = await api.post('/api/student-card/import', formData, {
+    const response: any = await api.post(`/api/academies/${academyId.value}/student-cards/admin/import`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     
@@ -121,7 +121,7 @@ const uploadFile = async () => {
 }
 
 const downloadTemplate = async () => {
-  window.open('/api/student-card/template', '_blank')
+  window.open(`/api/academies/${academyId.value}/student-cards/admin/export?format=template`, '_blank')
 }
 
 const formatFileSize = (bytes: number) => {
@@ -149,7 +149,7 @@ const levels = ['1', '2', '3', '4', '5', '6']
           :to="`/academies/${academyName}/admin/student-cards`"
           class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
         >
-          <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
         </NuxtLink>
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">นำเข้าข้อมูลนักเรียน</h1>
@@ -160,7 +160,7 @@ const levels = ['1', '2', '3', '4', '5', '6']
       <!-- Instructions -->
       <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
         <h3 class="font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
-          <Icon name="fluent:info-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:info-24-regular" class="w-5 h-5" />
           คำแนะนำ
         </h3>
         <ul class="text-sm text-blue-700 dark:text-blue-300 space-y-1 ml-7 list-disc">
@@ -174,7 +174,7 @@ const levels = ['1', '2', '3', '4', '5', '6']
           @click="downloadTemplate"
           class="mt-3 ml-7 inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
-          <Icon name="fluent:document-arrow-down-24-regular" class="w-4 h-4" />
+          <Icon icon="fluent:document-arrow-down-24-regular" class="w-4 h-4" />
           ดาวน์โหลดเทมเพลต
         </button>
       </div>
@@ -192,7 +192,7 @@ const levels = ['1', '2', '3', '4', '5', '6']
             ]"
           >
             <template v-if="!selectedFile">
-              <Icon name="fluent:cloud-arrow-up-24-regular" class="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              <Icon icon="fluent:cloud-arrow-up-24-regular" class="w-12 h-12 mx-auto text-gray-400 mb-3" />
               <p class="text-gray-600 dark:text-gray-400 mb-2">ลากไฟล์มาวางที่นี่ หรือ</p>
               <label class="inline-block">
                 <input
@@ -211,7 +211,7 @@ const levels = ['1', '2', '3', '4', '5', '6']
             </template>
             
             <template v-else>
-              <Icon name="fluent:document-checkmark-24-regular" class="w-12 h-12 mx-auto text-primary-500 mb-3" />
+              <Icon icon="fluent:document-checkmark-24-regular" class="w-12 h-12 mx-auto text-primary-500 mb-3" />
               <p class="font-medium text-gray-900 dark:text-white">{{ selectedFile.name }}</p>
               <p class="text-sm text-gray-500">{{ formatFileSize(selectedFile.size) }}</p>
               <button
@@ -275,7 +275,7 @@ const levels = ['1', '2', '3', '4', '5', '6']
           <div v-if="uploadResult" class="p-4 rounded-lg" :class="uploadResult.success ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'">
             <div class="flex items-start gap-3">
               <Icon
-                :name="uploadResult.success ? 'fluent:checkmark-circle-24-regular' : 'fluent:error-circle-24-regular'"
+                :icon="uploadResult.success ? 'fluent:checkmark-circle-24-regular' : 'fluent:error-circle-24-regular'"
                 class="w-6 h-6 shrink-0"
                 :class="uploadResult.success ? 'text-green-500' : 'text-red-500'"
               />
@@ -318,8 +318,8 @@ const levels = ['1', '2', '3', '4', '5', '6']
               :disabled="!selectedFile || isUploading"
               class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              <Icon v-if="isUploading" name="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
-              <Icon v-else name="fluent:arrow-upload-24-regular" class="w-5 h-5" />
+              <Icon v-if="isUploading" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
+              <Icon v-else icon="fluent:arrow-upload-24-regular" class="w-5 h-5" />
               <span>{{ isUploading ? 'กำลังนำเข้า...' : 'นำเข้าข้อมูล' }}</span>
             </button>
           </div>

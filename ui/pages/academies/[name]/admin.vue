@@ -115,6 +115,12 @@ const menuItems = computed(() => [
         to: `/academies/${academyName.value}/admin/students`,
         show: can('students.view'),
       },
+      {
+        name: 'บัตรนักเรียน',
+        icon: 'fluent:card-ui-24-regular',
+        to: `/academies/${academyName.value}/admin/student-cards`,
+        show: can('students.view') || can('students.manage'),
+      },
     ]
   },
   {

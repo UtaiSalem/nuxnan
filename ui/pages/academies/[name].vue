@@ -1060,6 +1060,13 @@ onMounted(() => {
         
         <!-- Sidebar -->
         <div class="space-y-6">
+          <!-- Student Card Widget (สำหรับสมาชิกที่ได้รับอนุมัติแล้ว) -->
+          <LearnAcademyStudentCardWidget
+            v-if="academy && (academy.memberStatus === 2 || academy.authIsAcademyAdmin)"
+            :academy-id="academy.id"
+            :academy-name="academyName"
+          />
+
           <!-- About Card -->
           <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
             <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">

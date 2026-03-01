@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24 lg:pb-0">
     <div class="container mx-auto px-4 py-8">
       <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">
         PitTube - Video Platform

@@ -36,7 +36,7 @@ onMounted(async () => {
 
 const fetchMyStudentCard = async () => {
   try {
-    const res: any = await api.get(`/api/students/me/card`, {
+    const res: any = await api.get(`/api/academies/my-student-card`, {
       params: { academy_id: academy.value.id }
     })
     if (res.success) {

@@ -70,6 +70,7 @@ const isViewingOwnProfile = computed(() => {
   if (!authStore.user) return false
   return referenceCode.value === 'me' || 
          referenceCode.value === authStore.user.reference_code ||
+         referenceCode.value === String(authStore.user.personal_code || '') ||
          referenceCode.value === String(authStore.user.id)
 })
 
@@ -118,7 +119,7 @@ const loadActivities = async (page: number = 1) => {
     // Use actual user identifier (for 'me', use auth user's reference_code or id)
     let userIdentifier = referenceCode.value
     if (isViewingOwnProfile.value && authStore.user) {
-      userIdentifier = authStore.user.reference_code || authStore.user.id
+      userIdentifier = authStore.user.personal_code || authStore.user.reference_code || authStore.user.id
     } else if (profile.value) {
       // Use loaded profile's reference_code or user_id
       userIdentifier = profile.value.reference_code || profile.value.user_id || referenceCode.value
@@ -177,9 +178,12 @@ const loadMoreActivities = async () => {
   }
 }
 
-// Go to edit profile
+// Go to edit profile / settings
 const goToEditProfile = () => {
-  navigateTo('/profile/edit')
+  const profileId = referenceCode.value === 'me' 
+    ? (authStore.user?.personal_code || authStore.user?.reference_code || authStore.user?.id || 'me')
+    : referenceCode.value
+  navigateTo(`/profile/${profileId}/settings`)
 }
 
 // Tabs carousel scroll functions
@@ -367,6 +371,11 @@ watch(() => route.params.id, async () => {
   activities.value = []
   profile.value = null
   await loadProfile()
+})
+
+// Detect if there's a child route active (e.g., /profile/[id]/settings)
+const hasChildRoute = computed(() => {
+  return route.matched.length > 1
 })
 
 // Computed properties
@@ -696,7 +705,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   :src="profile.avatar || '/images/default-avatar.png'"
                   :alt="displayName"
                   class="w-full h-full object-cover"
-                  @error="(e) => e.target.src = '/images/default-avatar.png'"
+                  @error="(e: Event) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-avatar.png' }"
                 />
               </div>
               
@@ -809,7 +818,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
       </div>
 
       <!-- Tabs Navigation Bar - Premium Carousel Style (Desktop Only) -->
-      <div class="hidden md:block vikinger-card relative overflow-hidden !rounded-2xl !p-0 dark:!bg-gradient-to-br dark:!from-gray-900 dark:!via-gray-800 dark:!to-gray-900 mb-6">
+      <div v-if="!hasChildRoute" class="hidden md:block vikinger-card relative overflow-hidden !rounded-2xl !p-0 dark:!bg-gradient-to-br dark:!from-gray-900 dark:!via-gray-800 dark:!to-gray-900 mb-6">
         <!-- Background Pattern -->
         <div class="absolute inset-0 pointer-events-none opacity-50">
           <div class="absolute inset-0 bg-[url('/images/patterns/circuit.svg')] bg-repeat opacity-5"></div>
@@ -910,8 +919,13 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
         </div>
       </div>
 
+      <!-- Child Route Content (e.g., Settings) - Full Width -->
+      <div v-if="hasChildRoute">
+        <NuxtPage />
+      </div>
+
       <!-- Tab Content - 3 Column Layout like Vikinger -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         <!-- Left Sidebar (About, Badges, Friends) -->
         <div class="lg:col-span-3 space-y-6">
@@ -1314,6 +1328,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
 
         <!-- Main Content Area (Center) -->
         <div class="lg:col-span-6 space-y-2 sm:space-y-3">
+          <!-- Profile Tabs Content -->
           <!-- Timeline Tab -->
           <template v-if="activeTab === 'timeline'">
             <!-- Create Post (Own Profile Only) -->
@@ -1602,7 +1617,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                 <!-- XP/Status -->
                 <div class="flex items-center gap-2">
                   <span class="text-xs text-vikinger-cyan font-bold" v-if="badge.xp_reward">+{{ badge.xp_reward }} XP</span>
-                  <div class="text-xs text-xs text-gray-500" v-if="badge.unlocked_at">
+                  <div class="text-xs text-gray-500" v-if="badge.unlocked_at">
                     {{ new Date(badge.unlocked_at).toLocaleDateString() }}
                   </div>
                   <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5 text-green-500" />
@@ -1794,8 +1809,8 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               <!-- Preview Area -->
               <div class="relative aspect-[3/1] bg-gray-700 rounded-lg overflow-hidden mb-6">
                 <img 
-                  v-if="coverPreview || profile?.cover_photo"
-                  :src="coverPreview || profile?.cover_photo"
+                  v-if="coverPreview || profile?.cover_image"
+                  :src="coverPreview || profile?.cover_image"
                   alt="Cover Preview"
                   class="w-full h-full object-cover"
                 />

@@ -136,17 +136,17 @@ import BaseAvatar from '~/components/atoms/BaseAvatar.vue'
 </script>
 
 <template>
-    <div class="container mx-auto px-4 py-8 max-w-6xl">
-        <div class="flex justify-between items-center mb-6">
+    <div class="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl pb-24 lg:pb-8">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
             <div>
-                <h1 class="text-2xl font-bold flex items-center gap-2">
+                <h1 class="text-xl sm:text-2xl font-bold flex items-center gap-2">
                     <Icon icon="eos-icons:admin-outlined" class="text-blue-600" />
                     จัดการผู้ดูแลรายวิชา
                 </h1>
                 <p class="text-gray-500 text-sm mt-1">เพิ่มหรือลบผู้ดูแลและผู้ช่วยสอน</p>
             </div>
             <button @click="showInviteModal = true" 
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow transition-all">
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 shadow transition-all w-full sm:w-auto">
                 <Icon icon="mdi:plus" /> เพิ่มผู้ดูแล
             </button>
         </div>

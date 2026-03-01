@@ -77,6 +77,76 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* ========================
+     Mobile-First Utilities
+     ======================== */
+
+  /* Bottom nav spacing - prevents content from being hidden behind fixed bottom nav on mobile */
+  .pb-bottom-nav {
+    @apply pb-20 lg:pb-0;
+  }
+
+  /* Safe area insets for notched devices (iPhone X+, etc.) */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Touch-friendly scrolling for mobile */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Horizontal scroll container for mobile (tabs, navigation) */
+  .mobile-scroll-x {
+    @apply overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mobile-scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Full-width sections on mobile, contained on desktop */
+  .mobile-full {
+    @apply -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
+
+  /* Responsive text truncation */
+  .mobile-truncate {
+    @apply truncate max-w-[200px] sm:max-w-none;
+  }
+
+  /* Prevent text overflow on mobile */
+  * {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Ensure images don't overflow on mobile */
+  img {
+    @apply max-w-full h-auto;
+  }
+
+  /* Tap highlight removal for mobile */
+  button,
+  a,
+  [role='button'] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Minimum touch target size (44x44px as per Apple HIG) */
+  .touch-target {
+    @apply min-w-[44px] min-h-[44px];
+  }
 }
 
 @layer components {
@@ -618,4 +688,13 @@
 .dark .dp__time_input,
 .dark .dp__time_col_reg_block {
   @apply bg-gray-800 text-gray-200 border-gray-600 !important;
+}
+
+/* Scrollbar Hide Utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
 }

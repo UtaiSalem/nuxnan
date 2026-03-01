@@ -208,7 +208,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="dashboard-page min-h-screen bg-gray-50 dark:bg-vikinger-dark">
+  <div class="dashboard-page min-h-screen bg-gray-50 dark:bg-vikinger-dark pb-20 lg:pb-0">
     <!-- Header Section - Vikinger Style -->
     <div class="relative overflow-hidden">
       <!-- Background with animated gradient -->
@@ -224,9 +224,9 @@ onMounted(() => {
       </div>
       
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
           <!-- Left: Welcome Message -->
-          <div class="flex items-center gap-6">
+          <div class="flex items-center gap-4 sm:gap-6">
             <!-- Avatar with Level Badge -->
             <div class="relative">
               <div class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-vikinger-purple to-vikinger-cyan p-1 shadow-vikinger">
@@ -253,11 +253,11 @@ onMounted(() => {
           </div>
           
           <!-- Right: Stats Badges -->
-          <div class="flex flex-wrap items-center gap-3">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
             <!-- Level Badge -->
             <div class="relative group">
               <div class="absolute -inset-0.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-xl blur opacity-30 group-hover:opacity-60 transition duration-300"></div>
-              <div class="relative bg-vikinger-dark-100 border border-vikinger-purple/30 rounded-xl px-5 py-3 flex items-center gap-3">
+              <div class="relative bg-vikinger-dark-100 border border-vikinger-purple/30 rounded-xl px-3 sm:px-5 py-2 sm:py-3 flex items-center gap-2 sm:gap-3">
                 <div class="w-10 h-10 bg-gradient-vikinger rounded-lg flex items-center justify-center shadow-vikinger">
                   <Icon icon="mdi:shield-star" class="w-5 h-5 text-white" />
                 </div>
@@ -271,7 +271,7 @@ onMounted(() => {
             <!-- XP Progress -->
             <div class="relative group">
               <div class="absolute -inset-0.5 bg-gradient-to-r from-vikinger-cyan to-green-400 rounded-xl blur opacity-30 group-hover:opacity-60 transition duration-300"></div>
-              <div class="relative bg-vikinger-dark-100 border border-vikinger-cyan/30 rounded-xl px-5 py-3">
+              <div class="relative bg-vikinger-dark-100 border border-vikinger-cyan/30 rounded-xl px-3 sm:px-5 py-2 sm:py-3">
                 <div class="flex items-center gap-3 mb-2">
                   <Icon icon="mdi:lightning-bolt" class="w-5 h-5 text-vikinger-cyan" />
                   <span class="text-xs text-gray-400 uppercase tracking-wider">Experience</span>
@@ -291,7 +291,7 @@ onMounted(() => {
             <!-- Streak Badge -->
             <div v-if="streakInfo" class="relative group">
               <div class="absolute -inset-0.5 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl blur opacity-30 group-hover:opacity-60 transition duration-300"></div>
-              <div class="relative bg-vikinger-dark-100 border border-orange-500/30 rounded-xl px-5 py-3 flex items-center gap-3">
+              <div class="relative bg-vikinger-dark-100 border border-orange-500/30 rounded-xl px-3 sm:px-5 py-2 sm:py-3 flex items-center gap-2 sm:gap-3">
                 <div class="text-2xl">{{ getStreakIcon(streakInfo.current_streak) }}</div>
                 <div>
                   <p class="text-xs text-gray-400 uppercase tracking-wider">Streak</p>

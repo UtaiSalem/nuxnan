@@ -53,8 +53,10 @@ onMounted(async () => {
 
 const fetchLevels = async () => {
   try {
-    const response: any = await api.get('/api/student-card/dashboard')
-    levels.value = response.levels || []
+    const response: any = await api.get(`/api/academies/${academyId.value}/student-cards/levels`)
+    if (response.success) {
+      levels.value = response.levels || []
+    }
   } catch (err) {
     console.error('Failed to fetch levels:', err)
   }
@@ -65,7 +67,9 @@ const fetchStudents = async () => {
   
   isLoading.value = true
   try {
-    const response: any = await api.get(`/api/student-card/${selectedLevel.value}/${selectedRoom.value}`)
+    const response: any = await api.get(`/api/academies/${academyId.value}/student-cards/by-room`, {
+      params: { level: selectedLevel.value, section: selectedRoom.value }
+    })
     students.value = response.students || []
     selectedStudents.value = new Set()
   } catch (err) {
@@ -125,7 +129,7 @@ const studentsToprint = computed(() => {
             :to="`/academies/${academyName}/admin/student-cards`"
             class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
-            <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
           </NuxtLink>
           <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">พิมพ์บัตรนักเรียน</h1>
@@ -139,7 +143,7 @@ const studentsToprint = computed(() => {
           :disabled="isPrinting"
           class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
         >
-          <Icon name="fluent:print-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:print-24-regular" class="w-5 h-5" />
           <span>พิมพ์ ({{ studentsToprint.length }} ใบ)</span>
         </button>
       </div>
@@ -263,7 +267,7 @@ const studentsToprint = computed(() => {
 
       <!-- Empty State -->
       <div v-else-if="!isLoading && selectedLevel && selectedRoom" class="text-center py-12 print:hidden">
-        <Icon name="fluent:people-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <Icon icon="fluent:people-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
         <p class="text-gray-500 dark:text-gray-400">ไม่พบนักเรียนในห้องนี้</p>
       </div>
     </div>

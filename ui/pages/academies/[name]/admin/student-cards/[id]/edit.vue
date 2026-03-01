@@ -67,7 +67,7 @@ onMounted(async () => {
 
 const fetchStudent = async () => {
   try {
-    const response: any = await api.get(`/api/student-card/profile/${studentId.value}`)
+    const response: any = await api.get(`/api/academies/${academyId.value}/student-cards/profile/${studentId.value}`)
     student.value = response.student
     
     // Populate form
@@ -102,15 +102,14 @@ const saveStudent = async () => {
   
   try {
     // Update student info
-    await api.put(`/api/student-card/update/${studentId.value}`, form.value)
+    await api.put(`/api/academies/${academyId.value}/student-cards/${studentId.value}`, form.value)
     
     // Upload photo if selected
     if (photoFile.value) {
       const formData = new FormData()
       formData.append('photo', photoFile.value)
-      formData.append('admin_password', 'jsm_card_admin2025') // TODO: Add proper password input
       
-      await api.post(`/api/student-card/admin/upload-photo/${studentId.value}`, formData)
+      await api.post(`/api/academies/${academyId.value}/student-cards/admin/upload-photo/${studentId.value}`, formData)
     }
     
     successMessage.value = 'บันทึกข้อมูลสำเร็จ'
@@ -151,7 +150,7 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
           :to="`/academies/${academyName}/admin/student-cards/${studentId}`"
           class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
         >
-          <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
         </NuxtLink>
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">แก้ไขข้อมูลนักเรียน</h1>
@@ -161,12 +160,12 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
 
       <!-- Messages -->
       <div v-if="successMessage" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center gap-3">
-        <Icon name="fluent:checkmark-circle-24-filled" class="w-5 h-5 text-green-500" />
+        <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5 text-green-500" />
         <span class="text-green-700 dark:text-green-300">{{ successMessage }}</span>
       </div>
       
       <div v-if="errorMessage" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
-        <Icon name="fluent:error-circle-24-filled" class="w-5 h-5 text-red-500" />
+        <Icon icon="fluent:error-circle-24-filled" class="w-5 h-5 text-red-500" />
         <span class="text-red-700 dark:text-red-300">{{ errorMessage }}</span>
       </div>
 
@@ -186,7 +185,7 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
             
             <div>
               <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
-                <Icon name="fluent:arrow-upload-24-regular" class="w-5 h-5" />
+                <Icon icon="fluent:arrow-upload-24-regular" class="w-5 h-5" />
                 <span>เลือกรูปภาพ</span>
                 <input 
                   type="file" 

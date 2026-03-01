@@ -270,7 +270,7 @@ const onQRActionComplete = (result) => {
 
 <template>
   <div
-    class="min-h-screen transition-colors duration-300"
+    class="min-h-screen transition-colors duration-300 overflow-x-hidden"
     :class="isDarkMode ? 'bg-vikinger-dark dark' : 'bg-gray-200 light'"
   >
     <!-- ========================================
@@ -1015,7 +1015,7 @@ const onQRActionComplete = (result) => {
           isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20',
         ]"
       >
-        <div class="max-w-6xl mx-auto px-1.5 sm:px-3 md:px-4 py-4 sm:py-6">
+        <div class="max-w-6xl mx-auto px-1.5 sm:px-3 md:px-4 py-4 sm:py-6 pb-24 lg:pb-6">
           <!-- Hero Banner Slot (Full Width) -->
           <div v-if="$slots.hero" class="w-full mb-6">
             <slot name="hero" />

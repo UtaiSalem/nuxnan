@@ -136,6 +136,13 @@ const studentQuickActions = computed(() => [
     to: `/academies/${academyName.value}/admin/home-visits`,
     color: 'from-green-500 to-green-600',
   },
+  {
+    title: 'ร้านค้าโรงเรียน',
+    description: 'จัดการร้านค้าและสินค้า',
+    icon: 'fluent:store-microsoft-24-filled',
+    to: `/academies/${academyName.value}/admin/store`,
+    color: 'from-emerald-500 to-emerald-600',
+  },
 ])
 
 onMounted(async () => {

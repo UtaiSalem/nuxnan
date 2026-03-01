@@ -109,6 +109,16 @@ class SchoolEvent extends Model
         return $this->hasMany(EventRegistration::class, 'event_id');
     }
 
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(ActivityEnrollment::class, 'event_id');
+    }
+
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(ActivitySession::class, 'event_id');
+    }
+
     // Accessors
     public function getTypeNameAttribute(): string
     {

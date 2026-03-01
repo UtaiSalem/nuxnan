@@ -79,12 +79,12 @@ async function saveSocials() {
 
 <template>
 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-    <div class="p-6 border-b border-gray-100 dark:border-gray-700">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Social Networks</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Connect your social profiles</p>
+    <div class="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">โซเชียลมีเดีย</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400">เชื่อมต่อบัญชีโซเชียลมีเดียของคุณ</p>
     </div>
 
-    <div class="p-6 space-y-6">
+    <div class="p-4 sm:p-6 space-y-6">
         <div v-for="(url, platform) in socials" :key="platform" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
             <div class="md:col-span-3 flex items-center gap-2">
                 <Icon :icon="socialIcons[platform]" class="w-6 h-6" />
@@ -107,7 +107,7 @@ async function saveSocials() {
                 class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <Icon v-if="isLoading" icon="svg-spinners:ring-resize" />
-                Save Social Links
+                บันทึกโซเชียลลิงก์
             </button>
         </div>
     </div>

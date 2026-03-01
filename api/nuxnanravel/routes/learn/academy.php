@@ -520,6 +520,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('/', [SchoolEventController::class, 'index'])->name('api.academy.events.index');
         Route::post('/', [SchoolEventController::class, 'store'])->name('api.academy.events.store');
         Route::get('/upcoming', [SchoolEventController::class, 'upcoming'])->name('api.academy.events.upcoming');
+        Route::get('/my-schedule', [SchoolEventController::class, 'mySchedule'])->name('api.academy.events.mySchedule');
+        Route::post('/{event}/enroll', [SchoolEventController::class, 'enroll'])->name('api.academy.events.enroll');
         Route::get('/{event}', [SchoolEventController::class, 'show'])->name('api.academy.events.show');
         Route::patch('/{event}', [SchoolEventController::class, 'update'])->name('api.academy.events.update');
         Route::post('/{event}/publish', [SchoolEventController::class, 'publish'])->name('api.academy.events.publish');
