@@ -11,6 +11,7 @@
               <th class="p-3 font-semibold text-center">งาน</th>
               <th class="p-3 font-semibold text-center">แบบทดสอบ</th>
               <th class="p-3 font-semibold text-center">คะแนนรวม</th>
+              <th class="p-3 font-semibold text-center">%</th>
               <th class="p-3 font-semibold text-center">เกรด</th>
               <th class="p-3 font-semibold text-center">จัดการ</th>
             </tr>
@@ -46,6 +47,12 @@
               </td>
               <td class="p-3 text-center">
                 <span class="font-bold text-gray-700">{{ member.scores?.total_score || 0 }}</span>
+                <span class="text-xs text-gray-400">/{{ member.scores?.max_total || 0 }}</span>
+              </td>
+              <td class="p-3 text-center">
+                <span class="font-bold" :class="(member.scores?.score_percentage || 0) >= 50 ? 'text-green-600' : 'text-red-600'">
+                  {{ member.scores?.score_percentage || 0 }}%
+                </span>
               </td>
               <td class="p-3 text-center">
                 <span class="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700">

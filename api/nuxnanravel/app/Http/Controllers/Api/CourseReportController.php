@@ -287,10 +287,18 @@ class CourseReportController extends Controller
     {
         $data = [];
 
+        // Compute actual max total from all score sources
+        $lessons = $course->courseLessons()->with(['assignments', 'questions'])->get();
+        $computedMaxTotal = $course->courseAssignments->sum('points')
+            + $lessons->flatMap->assignments->sum('points')
+            + $course->courseQuizzes->sum('total_score')
+            + $lessons->flatMap->questions->sum('points');
+
         foreach ($members as $member) {
-            $percentage = $course->total_score > 0
-                ? (($member->achieved_score ?? 0) / $course->total_score) * 100
+            $percentage = $computedMaxTotal > 0
+                ? (($member->achieved_score ?? 0) / $computedMaxTotal) * 100
                 : 0;
+            $percentage = min(100, max(0, $percentage));
 
             $calculatedGrade = CourseMember::calculateGradeFromPercentage($percentage);
             $finalGrade = $member->edited_grade ?? $calculatedGrade;
@@ -302,8 +310,8 @@ class CourseReportController extends Controller
                 'email' => $member->user->email ?? '-',
                 'group' => $member->group->name ?? '-',
                 'achieved_score' => $member->achieved_score ?? 0,
-                'total_score' => $course->total_score,
-                'percentage' => round($percentage, 2),
+                'total_score' => $computedMaxTotal,
+                'percentage' => round($percentage),
                 'calculated_grade' => $calculatedGrade,
                 'final_grade' => $finalGrade,
                 'grade_name' => $gradeName,

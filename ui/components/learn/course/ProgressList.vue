@@ -231,6 +231,10 @@ const updateBonusPoints = async (member: any) => {
     member.scores.total_score = (member.scores.total_score || 0) + diff
     member.scores.original_bonus = member.scores.bonus_points // Update original to new saved value
     
+    // Recalculate percentage
+    const maxTotal = member.scores?.max_total || 0
+    member.scores.score_percentage = maxTotal > 0 ? Math.round(((member.scores.total_score || 0) / maxTotal) * 100) : 0
+
     // Update Grade Display immediately
     member.scores.grade_progress = response.grade_progress
     member.scores.grade_name = response.grade_name
@@ -730,6 +734,7 @@ onMounted(() => {
                 <th scope="col" class="px-6 py-3 whitespace-nowrap">
                     รวม
                 </th>
+                    <th scope="col" class="px-4 py-3 text-center">%</th>
                     <th scope="col" class="px-4 py-3 text-center">เกรด</th>
                     <th scope="col" class="px-4 py-3 text-center min-w-[120px]">เกรดแก้</th>
                     <th scope="col" class="px-4 py-3 text-center">สถานะ</th>
@@ -782,6 +787,14 @@ onMounted(() => {
                 </td>
                     <td class="px-4 py-3 text-center font-bold text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400">
                         {{ member.scores?.total_score || 0 }}
+                        <span class="text-xs font-normal text-gray-400">/{{ member.scores?.max_total || 0 }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-center font-bold"
+                        :class="{
+                            'text-green-600 dark:text-green-400': (member.scores?.score_percentage || 0) >= 50,
+                            'text-red-600 dark:text-red-400': (member.scores?.score_percentage || 0) < 50
+                        }">
+                        {{ member.scores?.score_percentage || 0 }}%
                     </td>
                     <td class="px-4 py-3 text-center font-bold text-lg" 
                         :class="{'text-green-600 dark:text-green-400': (member.scores?.grade_progress || 0) >= 2, 'text-red-600 dark:text-red-400': (member.scores?.grade_progress || 0) < 1}">

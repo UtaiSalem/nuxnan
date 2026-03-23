@@ -39,10 +39,19 @@ const totalAchievedScore = computed(() => {
     return assignmentScore + quizScore;
 });
 
+// Compute actual max total from assignment points + quiz total scores
+const computedMaxTotal = computed(() => {
+    let maxAssignment = 0;
+    let maxQuiz = 0;
+    props.course_assignments.forEach(a => { maxAssignment += a.points || 0; });
+    props.course_quizzes.forEach(q => { maxQuiz += q.total_score || 0; });
+    return maxAssignment + maxQuiz;
+});
+
 // Calculate percentage of achieved score
 const scorePercentage = computed(() => {
-    if (!props.course.data.total_score || props.course.data.total_score === 0) return 0;
-    return (totalAchievedScore.value / props.course.data.total_score) * 100;
+    if (!computedMaxTotal.value || computedMaxTotal.value === 0) return 0;
+    return Math.min(100, (totalAchievedScore.value / computedMaxTotal.value) * 100);
 });
 
 // Check if all assignments are submitted
@@ -59,8 +68,8 @@ const calculatedGrade = computed(() => {
         return { grade: 'ร.', label: 'รอการตัดเกรด', status: 'pending' };
     }
     
-    // Check if score is below passing threshold (50% of total score)
-    const passingThreshold = props.course.data.total_score / 2;
+    // Check if score is below passing threshold (50% of max total)
+    const passingThreshold = computedMaxTotal.value / 2;
     if (totalAchievedScore.value < passingThreshold) {
         return { grade: '0', label: '0 (ไม่ผ่านเกณฑ์)', status: 'fail' };
     }
@@ -74,15 +83,14 @@ const calculatedGrade = computed(() => {
     if (percentage >= 75) return { grade: '2.5', label: '2.5 (ค่อนข้างดี)', status: 'fairly-good' };
     if (percentage >= 70) return { grade: '2.0', label: '2.0 (พอใช้)', status: 'fair' };
     if (percentage >= 60) return { grade: '1.5', label: '1.5 (ผ่านขั้นต่ำ)', status: 'minimum-pass' };
-    // if (percentage > passingThreshold / props.course.data.total_score * 100) return { grade: '1.0', label: '1.0 (ผ่าน)', status: 'pass' };
-    if (percentage >= (passingThreshold / props.course.data.total_score * 100)) return { grade: '1.0', label: '1.0 (ผ่าน)', status: 'pass' };
+    if (percentage >= 50) return { grade: '1.0', label: '1.0 (ผ่าน)', status: 'pass' };
     
     return { grade: '0', label: '0 (ไม่ผ่าน)', status: 'fail' };
 });
 
 // Determine pass/fail status
 const passFailStatus = computed(() => {
-    const passingThreshold = props.course.data.total_score / 2;
+    const passingThreshold = computedMaxTotal.value / 2;
     return totalAchievedScore.value >= passingThreshold ? 'ผ่าน' : 'ไม่ผ่าน';
 });
 
@@ -251,13 +259,13 @@ const projectedTotalScore = computed(() => {
 });
 
 const projectedScorePercentage = computed(() => {
-    if (!props.course.data.total_score || props.course.data.total_score === 0) return 0;
-    return (projectedTotalScore.value / props.course.data.total_score) * 100;
+    if (!computedMaxTotal.value || computedMaxTotal.value === 0) return 0;
+    return Math.min(100, (projectedTotalScore.value / computedMaxTotal.value) * 100);
 });
 
 const projectedGrade = computed(() => {
      const score = projectedTotalScore.value;
-     const passingThreshold = props.course.data.total_score / 2;
+     const passingThreshold = computedMaxTotal.value / 2;
      
      if (score <= passingThreshold) return { grade: '0', label: '0 (ไม่ผ่าน)', status: 'fail' };
      
@@ -269,7 +277,7 @@ const projectedGrade = computed(() => {
     if (percentage >= 75) return { grade: '2.5', label: '2.5 (ค่อนข้างดี)', status: 'fairly-good' };
     if (percentage >= 70) return { grade: '2.0', label: '2.0 (พอใช้)', status: 'fair' };
     if (percentage >= 60) return { grade: '1.5', label: '1.5 (ผ่านขั้นต่ำ)', status: 'minimum-pass' };
-    if (percentage > passingThreshold / props.course.data.total_score * 100) return { grade: '1.0', label: '1.0 (ผ่าน)', status: 'pass' };
+    if (percentage >= 50) return { grade: '1.0', label: '1.0 (ผ่าน)', status: 'pass' };
     
     return { grade: '0', label: '0 (ไม่ผ่าน)', status: 'fail' };
 });

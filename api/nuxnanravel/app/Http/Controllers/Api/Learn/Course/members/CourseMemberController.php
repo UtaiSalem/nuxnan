@@ -435,7 +435,15 @@ class CourseMemberController extends Controller
 
         $member->update(['bonus_points' => $request->bonus_points]);
 
-        $percentage = (($member->achieved_score + $request->bonus_points) / $course->total_score) * 100;
+        // Compute actual max total from all score sources
+        $lessons = $course->courseLessons()->with(['assignments', 'questions'])->get();
+        $computedMaxTotal = $course->courseAssignments->sum('points')
+            + $lessons->flatMap->assignments->sum('points')
+            + $course->courseQuizzes->sum('total_score')
+            + $lessons->flatMap->questions->sum('points');
+
+        $percentage = ($computedMaxTotal > 0) ? (($member->achieved_score + $request->bonus_points) / $computedMaxTotal) * 100 : 0;
+        $percentage = min(100, max(0, $percentage));
         $grade = CourseMember::calculateGradeFromPercentage($percentage);
 
         $member->update([

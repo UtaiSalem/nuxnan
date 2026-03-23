@@ -692,6 +692,13 @@ class CourseController extends Controller
             ->get()
             ->groupBy('course_member_id');
 
+        // Compute actual max total from all score sources (once, outside loop)
+        $maxLessonAssignments = $lessonAssignments->sum('points');
+        $maxLessonQuizzes = $lessonQuestions->sum('points');
+        $maxCourseAssignments = $courseAssignments->sum('points');
+        $maxCourseQuizzes = $courseQuizzes->sum('total_score');
+        $computedMaxTotal = $maxCourseAssignments + $maxLessonAssignments + $maxCourseQuizzes + $maxLessonQuizzes;
+
         $courseMembersProgress = [];
         foreach ($courseMembers as $member) {
             $memberProgress = $member->memberProgress;
@@ -763,8 +770,9 @@ class CourseController extends Controller
             // Calculate totals
             $rawTotal = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
             
-            // Calculate Real-time Grade
-            $percentage = ($course->total_score > 0) ? ($rawTotal / $course->total_score) * 100 : 0;
+            // Calculate Real-time Grade using computed max total (not stored course.total_score)
+            $percentage = ($computedMaxTotal > 0) ? ($rawTotal / $computedMaxTotal) * 100 : 0;
+            $percentage = min(100, max(0, $percentage)); // Clamp 0-100
             $realtimeGrade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
             
             // Effective Grade (Prioritize edited_grade)
@@ -803,16 +811,17 @@ class CourseController extends Controller
                     'bonus_points' => $member->bonus_points ?? 0,
                     'edited_grade' => $member->edited_grade, // New field
                     'total_score' => $rawTotal, // Calculated realtime
+                    'score_percentage' => round($percentage), // Percentage of total score
                     'db_achieved_score' => $member->achieved_score, // Stored in DB
                     'grade_progress' => $finalGrade, // Effective Grade
                     'calculated_grade' => $realtimeGrade, // Original Calculated Grade
                     'grade_name' => $finalGradeName, // Effective Grade Name
                     // Max scores for each category
-                    'max_lesson_assignments' => $lessonAssignments->sum('points'),
-                    'max_lesson_quizzes' => $lessonQuestions->sum('points'),
-                    'max_course_assignments' => $courseAssignments->sum('points'),
-                    'max_course_quizzes' => $courseQuizzes->sum('total_score'),
-                    'max_total' => $course->total_score ?? 0,
+                    'max_lesson_assignments' => $maxLessonAssignments,
+                    'max_lesson_quizzes' => $maxLessonQuizzes,
+                    'max_course_assignments' => $maxCourseAssignments,
+                    'max_course_quizzes' => $maxCourseQuizzes,
+                    'max_total' => $computedMaxTotal,
                 ]
             ];
         }
@@ -902,6 +911,13 @@ class CourseController extends Controller
             ->get()
             ->groupBy('user_id');
 
+        // Compute actual max total from all score sources
+        $maxCourseAssign = $courseAssignments->sum('points');
+        $maxLessonAssign = $lessonAssignments->sum('points');
+        $maxCourseQuiz = $courseQuizzes->sum('total_score');
+        $maxLessonQuiz = $lessonQuestions->sum('points');
+        $computedMaxTotal = $maxCourseAssign + $maxLessonAssign + $maxCourseQuiz + $maxLessonQuiz;
+
         // Calculate scores for each member
         $membersWithScores = [];
         foreach ($courseMembers as $member) {
@@ -931,7 +947,8 @@ class CourseController extends Controller
             $totalScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
             
             // Calculate grade
-            $percentage = ($course->total_score > 0) ? ($totalScore / $course->total_score) * 100 : 0;
+            $percentage = ($computedMaxTotal > 0) ? ($totalScore / $computedMaxTotal) * 100 : 0;
+            $percentage = min(100, max(0, $percentage));
             $grade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
             $finalGrade = $member->edited_grade ?? $grade;
             $gradeName = \App\Models\CourseMember::getGradeNameFromGrade($finalGrade);
@@ -1284,6 +1301,10 @@ class CourseController extends Controller
             ->get()
             ->groupBy('course_member_id');
 
+        // Compute actual max total from all score sources
+        $computedMaxTotal2 = $courseAssignments->sum('points') + $lessonAssignments->sum('points')
+            + $courseQuizzes->sum('total_score') + $lessonQuestions->sum('points');
+
         $exportData = [];
         foreach ($courseMembers as $member) {
             $userId = $member->user_id;
@@ -1333,7 +1354,8 @@ class CourseController extends Controller
             $attendanceRate = ($totalGroupAttendanceSessions > 0) ? round(($attendancePresent / $totalGroupAttendanceSessions) * 100) : 0;
 
             $rawTotal = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
-            $percentage = ($course->total_score > 0) ? ($rawTotal / $course->total_score) * 100 : 0;
+            $percentage = ($computedMaxTotal2 > 0) ? ($rawTotal / $computedMaxTotal2) * 100 : 0;
+            $percentage = min(100, max(0, $percentage));
             $realtimeGrade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
             $finalGrade = $member->edited_grade ?? $realtimeGrade;
             $finalGradeName = \App\Models\CourseMember::getGradeNameFromGrade($finalGrade);
@@ -1357,7 +1379,7 @@ class CourseController extends Controller
                     'max_lesson_quizzes' => $lessonQuestions->sum('points'),
                     'max_course_assignments' => $courseAssignments->sum('points'),
                     'max_course_quizzes' => $courseQuizzes->sum('total_score'),
-                    'max_total' => $course->total_score ?? 0,
+                    'max_total' => $computedMaxTotal2,
                 ]
             ];
         }

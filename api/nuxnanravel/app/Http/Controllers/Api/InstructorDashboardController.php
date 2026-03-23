@@ -219,8 +219,9 @@ class InstructorDashboardController extends Controller
             }
 
             // Check current score
-            $scorePercentage = $course->total_score > 0
-                ? (($member->achieved_score ?? 0) / $course->total_score) * 100
+            $computedMax = $this->getComputedMaxTotal($course);
+            $scorePercentage = $computedMax > 0
+                ? (($member->achieved_score ?? 0) / $computedMax) * 100
                 : 0;
             if ($scorePercentage < $threshold) {
                 $risks[] = [
@@ -282,8 +283,9 @@ class InstructorDashboardController extends Controller
             ->get();
 
         $topPerformers = $members->map(function ($member) use ($course) {
-            $scorePercentage = $course->total_score > 0
-                ? (($member->achieved_score ?? 0) / $course->total_score) * 100
+            $computedMax = $this->getComputedMaxTotal($course);
+            $scorePercentage = $computedMax > 0
+                ? (($member->achieved_score ?? 0) / $computedMax) * 100
                 : 0;
 
             return [
@@ -622,5 +624,14 @@ class InstructorDashboardController extends Controller
             ->count();
 
         return round(($submitted / $totalAssignments) * 100, 1);
+    }
+
+    protected function getComputedMaxTotal(Course $course): float
+    {
+        $lessons = $course->courseLessons()->with(['assignments', 'questions'])->get();
+        return $course->courseAssignments->sum('points')
+            + $lessons->flatMap->assignments->sum('points')
+            + $course->courseQuizzes->sum('total_score')
+            + $lessons->flatMap->questions->sum('points');
     }
 }
