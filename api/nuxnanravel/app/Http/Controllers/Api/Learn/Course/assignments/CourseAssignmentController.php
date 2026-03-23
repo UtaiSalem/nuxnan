@@ -19,7 +19,7 @@ class CourseAssignmentController extends Controller
     {
         return response()->json([
             'course'                => new CourseResource($course),
-            'assignments'           => AssignmentResource::collection($course->courseAssignments()->latest()->paginate(15)),
+            'assignments'           => AssignmentResource::collection($course->courseAssignments()->withCount('answers')->latest()->paginate(15)),
             'groups'                => $course->courseGroups()->get(['id', 'name']),
             'isCourseAdmin'         => $course->isAdmin(auth()->user()),
             'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),

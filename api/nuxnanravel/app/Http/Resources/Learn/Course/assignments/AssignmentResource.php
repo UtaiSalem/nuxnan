@@ -67,6 +67,7 @@ class AssignmentResource extends JsonResource
             'grading_rubric'        => $this->grading_rubric,
             'graded_score'          => $this->graded_score,
             'feedback'              => $this->feedback,
+            'answer_count'          => $this->answers_count ?? $this->answers->count(),
             'created_at'            => $this->created_at,
             'updated_at'            => $this->updated_at,
         ];

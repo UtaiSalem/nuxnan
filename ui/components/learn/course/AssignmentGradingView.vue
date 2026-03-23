@@ -446,8 +446,8 @@ const scrollToTop = () => {
                           </div>
 
                           <div v-show="answer.isExpanded">
-                               <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap border border-gray-100 dark:border-gray-800">
-                                  {{ answer.content }}
+                               <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-gray-700 dark:text-gray-300 text-sm border border-gray-100 dark:border-gray-800">
+                                  <div v-if="answer.content" class="prose prose-sm dark:prose-invert max-w-none" v-html="answer.content"></div>
                                   <div v-if="answer.images?.length" class="mt-3 flex flex-wrap gap-2">
                                      <div 
                                         v-for="(img, idx) in answer.images" 

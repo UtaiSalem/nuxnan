@@ -278,12 +278,31 @@ const handleGradedEditSubmit = () => {
              </div>
           </div>
        
-           <!-- Admin Grading View (Shared footer space) -->
+           <!-- Admin Grading Toggle & View -->
            <div v-if="isCourseAdmin" class="mt-4">
-               <AssignmentGradingView 
-                 :assignment="assignment"
-                 :courseId="courseId"
-               />
+               <button
+                 @click.stop="toggleGrading"
+                 class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200"
+                 :class="showGrading 
+                   ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700' 
+                   : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 border border-gray-200 dark:border-gray-600'"
+               >
+                 <div class="flex items-center gap-2">
+                   <Icon :icon="showGrading ? 'fluent:eye-off-24-regular' : 'fluent:eye-24-regular'" class="w-5 h-5" />
+                   <span>{{ showGrading ? 'ซ่อนคำตอบนักเรียน' : 'ดูคำตอบนักเรียน' }}</span>
+                   <span v-if="assignment.answer_count" class="px-2 py-0.5 rounded-full text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
+                     {{ assignment.answer_count }} คน
+                   </span>
+                 </div>
+                 <Icon :icon="showGrading ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" class="w-5 h-5" />
+               </button>
+
+               <div v-if="showGrading" class="mt-3">
+                 <AssignmentGradingView 
+                   :assignment="assignment"
+                   :courseId="courseId"
+                 />
+               </div>
            </div>
 
            <!-- Student Direct Submission Form / Edit Form -->

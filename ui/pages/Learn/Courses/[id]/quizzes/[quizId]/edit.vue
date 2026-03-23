@@ -55,8 +55,8 @@ const fetchData = async () => {
         quiz.value = res.quiz
         
         // Populate Form
-        form.title = quiz.value.title
-        form.description = quiz.value.description
+        form.title = quiz.value.title || ''
+        form.description = quiz.value.description || ''
         form.start_date = new Date(quiz.value.start_date)
         form.end_date = new Date(quiz.value.end_date)
         form.time_limit = quiz.value.time_limit
@@ -80,7 +80,7 @@ onMounted(() => {
 
 // Validation
 const isFormValid = computed(() => {
-  return form.title.trim() !== '' && 
+  return (form.title || '').trim() !== '' && 
          form.time_limit > 0 && 
          form.passing_score >= 0 && 
          form.passing_score <= 100 &&
@@ -230,28 +230,38 @@ const openAddQuestion = () => {
     questionModal.value = true
 }
 
+const getImageUrl = (item: any): string | null => {
+    if (item.media_url) return item.media_url
+    if (item.images && item.images.length > 0) {
+        return item.images[0].full_url || item.images[0].url || null
+    }
+    return null
+}
+
 const openEditQuestion = (q: any) => {
     editingQuestion.value = q
-    questionForm.text = q.text
+    questionForm.text = q.text || ''
     questionForm.points = q.points
     questionForm.pp_fine = q.pp_fine || 0
-    questionForm.media_url = q.media_url || null
+    questionForm.media_url = getImageUrl(q)
     // Reset media files
     questionMediaFile.value = null
-    questionMediaPreview.value = q.media_url || null
+    questionMediaPreview.value = getImageUrl(q)
     optionMediaFiles.value = {}
     optionMediaPreviews.value = {}
     // Mapping options if available, else default
     if (q.options && q.options.length) {
         questionForm.options = q.options.map((opt: any, idx: number) => {
-            if (opt.media_url) {
-                optionMediaPreviews.value[idx] = opt.media_url
+            const optImgUrl = getImageUrl(opt)
+            if (optImgUrl) {
+                optionMediaPreviews.value[idx] = optImgUrl
             }
             return {
                 id: opt.id,
                 text: opt.text || '',
                 is_correct: !!opt.is_correct,
-                media_url: opt.media_url || null
+                media_url: optImgUrl,
+                images: opt.images || []
             }
         })
     } else {
@@ -268,16 +278,26 @@ const toggleCorrectOption = (index: number) => {
     questionForm.options[index].is_correct = !questionForm.options[index].is_correct
 }
 
-const uploadMedia = async (file: File): Promise<string | null> => {
-    try {
-        const formData = new FormData()
-        formData.append('file', file)
-        const res = await api.post('/api/upload/media', formData)
-        return res.url || res.data?.url || null
-    } catch (err) {
-        console.error('Upload failed', err)
-        return null
+const buildQuestionFormData = (fields: Record<string, any>, imageFile?: File | null): FormData => {
+    const fd = new FormData()
+    for (const [key, value] of Object.entries(fields)) {
+        if (value !== null && value !== undefined) fd.append(key, String(value))
     }
+    if (imageFile) {
+        fd.append('images[]', imageFile)
+    }
+    return fd
+}
+
+const buildOptionFormData = (fields: Record<string, any>, imageFile?: File | null): FormData => {
+    const fd = new FormData()
+    for (const [key, value] of Object.entries(fields)) {
+        if (value !== null && value !== undefined) fd.append(key, String(value))
+    }
+    if (imageFile) {
+        fd.append('images[]', imageFile)
+    }
+    return fd
 }
 
 const saveQuestion = async () => {
@@ -289,24 +309,20 @@ const saveQuestion = async () => {
 
     isSavingQuestion.value = true
     try {
-        // Upload question media if new file selected
-        let questionMediaUrl = questionForm.media_url
-        if (questionMediaFile.value) {
-            questionMediaUrl = await uploadMedia(questionMediaFile.value)
-        }
-
         if (editingQuestion.value) {
             // Update existing question
             const qId = editingQuestion.value.id
-            await api.patch(`/api/courses/${courseId}/quizzes/${quizId}/questions/${qId}`, {
+            const qFormData = buildQuestionFormData({
                 text: questionForm.text,
                 points: questionForm.points,
                 pp_fine: questionForm.pp_fine,
-                media_url: questionMediaUrl
-            })
+                _method: 'PATCH'
+            }, questionMediaFile.value)
+
+            await api.post(`/api/courses/${courseId}/quizzes/${quizId}/questions/${qId}`, qFormData)
 
             // Update options
-            const validOptions = questionForm.options.filter(o => (o.text || '').trim() !== '')
+            const validOptions = questionForm.options.filter(o => (o.text ?? '').trim() !== '' || o.media_url || optionMediaFiles.value[questionForm.options.indexOf(o)])
             
             // Delete removed options
             if (editingQuestion.value.options) {
@@ -324,26 +340,32 @@ const saveQuestion = async () => {
             
             for (let i = 0; i < validOptions.length; i++) {
                 const opt = validOptions[i]
-                // Upload option media if new file
-                let optMediaUrl = opt.media_url
-                if (optionMediaFiles.value[i]) {
-                    optMediaUrl = await uploadMedia(optionMediaFiles.value[i]!)
-                }
+                const origIdx = questionForm.options.indexOf(opt)
+                const optFile = optionMediaFiles.value[origIdx] || null
                 
                 if (opt.id) {
-                    // Update existing option
-                    await api.patch(`/api/questions/${qId}/options/${opt.id}`, {
-                        text: opt.text,
-                        is_correct: opt.is_correct ? 1 : 0,
-                        media_url: optMediaUrl
-                    })
+                    if (optFile) {
+                        // Has new image — use FormData POST with _method PATCH
+                        const optFd = buildOptionFormData({
+                            text: opt.text,
+                            is_correct: opt.is_correct ? 1 : 0,
+                            _method: 'PATCH'
+                        }, optFile)
+                        await api.post(`/api/questions/${qId}/options/${opt.id}`, optFd)
+                    } else {
+                        // No new image — simple JSON patch
+                        await api.patch(`/api/questions/${qId}/options/${opt.id}`, {
+                            text: opt.text,
+                            is_correct: opt.is_correct ? 1 : 0
+                        })
+                    }
                 } else {
-                    // Create new option
-                    await api.post(`/api/questions/${qId}/options`, {
+                    // Create new option with FormData
+                    const optFd = buildOptionFormData({
                         text: opt.text,
-                        is_correct: opt.is_correct ? 1 : 0,
-                        media_url: optMediaUrl
-                    })
+                        is_correct: opt.is_correct ? 1 : 0
+                    }, optFile)
+                    await api.post(`/api/questions/${qId}/options`, optFd)
                 }
             }
 
@@ -353,34 +375,32 @@ const saveQuestion = async () => {
             editingQuestion.value = null
             Swal.fire('Success', 'แก้ไขคำถามเรียบร้อย', 'success')
         } else {
-            // Create Question
-            const qRes = await api.post(`/api/courses/${courseId}/quizzes/${quizId}/questions`, {
+            // Create Question with FormData
+            const qFormData = buildQuestionFormData({
                 text: questionForm.text,
                 points: questionForm.points,
-                pp_fine: questionForm.pp_fine,
-                media_url: questionMediaUrl
-            })
+                pp_fine: questionForm.pp_fine
+            }, questionMediaFile.value)
+
+            const qRes = await api.post(`/api/courses/${courseId}/quizzes/${quizId}/questions`, qFormData)
 
             if (qRes.success && qRes.question) {
                 const newQ = qRes.question
                 
                 // Create Options
-                // Filter out empty options
-                const validOptions = questionForm.options.filter(o => (o.text || '').trim() !== '')
+                const validOptions = questionForm.options.filter((o, i) => (o.text ?? '').trim() !== '' || o.media_url || optionMediaFiles.value[i])
                 
                 for (let i = 0; i < validOptions.length; i++) {
                     const opt = validOptions[i]
-                    // Upload option media if new file
-                    let optMediaUrl = opt.media_url
-                    if (optionMediaFiles.value[i]) {
-                        optMediaUrl = await uploadMedia(optionMediaFiles.value[i]!)
-                    }
+                    const origIdx = questionForm.options.indexOf(opt)
+                    const optFile = optionMediaFiles.value[origIdx] || null
                     
-                    await api.post(`/api/questions/${newQ.id}/options`, {
+                    const optFd = buildOptionFormData({
                         text: opt.text,
-                        is_correct: opt.is_correct ? 1 : 0,
-                        media_url: optMediaUrl
-                    })
+                        is_correct: opt.is_correct ? 1 : 0
+                    }, optFile)
+                    
+                    await api.post(`/api/questions/${newQ.id}/options`, optFd)
                 }
 
                 // Reload Data
@@ -587,6 +607,10 @@ const deleteQuestion = async (qId: number) => {
                             </div>
                             <div>
                                 <h4 class="font-medium text-gray-900 dark:text-white mb-2">{{ q.text }}</h4>
+                                <!-- Question Images -->
+                                <div v-if="q.images && q.images.length" class="flex flex-wrap gap-2 mb-2">
+                                    <img v-for="img in q.images" :key="img.id" :src="img.full_url || img.url" class="h-16 w-auto rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
+                                </div>
                                 <div class="space-y-1">
                                     <div v-for="opt in q.options" :key="opt.id" class="flex items-center gap-2 text-sm">
                                         <Icon 
@@ -596,6 +620,7 @@ const deleteQuestion = async (qId: number) => {
                                         <span :class="opt.is_correct ? 'text-green-700 dark:text-green-400 font-medium' : 'text-gray-600 dark:text-gray-400'">
                                             {{ opt.text }}
                                         </span>
+                                        <img v-if="opt.images && opt.images.length" :src="opt.images[0].full_url || opt.images[0].url" class="h-8 w-auto rounded object-cover border border-gray-200 dark:border-gray-600" />
                                     </div>
                                 </div>
                             </div>
