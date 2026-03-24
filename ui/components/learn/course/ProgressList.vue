@@ -14,10 +14,12 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const api = useApi()
+const swal = useSweetAlert()
 
 // State
 const members = ref<any[]>([])
 const loading = ref(true)
+const savingMemberDetails = ref(false)
 const searchQuery = ref('')
 const sortBy = ref<'name' | 'progress' | 'last_activity' | 'order_number' | 'member_code'>('order_number')
 const sortOrder = ref<'asc' | 'desc'>('asc')
@@ -263,45 +265,21 @@ const updateEditedGrade = async (member: any) => {
   }
 }
 
-const updateMemberCode = async (member: any) => {
+const saveAllMemberDetails = async (member: any) => {
+    savingMemberDetails.value = true
     try {
-        await api.patch(`/api/courses/${props.courseId}/members/${member.id}/member-code`, {
-            member_code: member.member_code
-        })
-        // Show success toast or notification if needed
-    } catch (error) {
-        console.error('Error updating member code:', error)
-    }
-}
-
-const updateOrderNumber = async (member: any) => {
-    try {
-        await api.patch(`/api/courses/${props.courseId}/members/${member.id}/order-number`, {
-            order_number: member.order_number
-        })
-    } catch (error) {
-        console.error('Error updating order number:', error)
-    }
-}
-
-const updateMemberStatus = async (member: any) => {
-    try {
-        await api.patch(`/api/courses/${props.courseId}/members/${member.id}/update`, {
-            course_member_status: member.course_member_status
-        })
-    } catch (error) {
-        console.error('Error updating member status:', error)
-    }
-}
-
-const updateMemberProfile = async (member: any) => {
-    try {
-        await api.patch(`/api/courses/${props.courseId}/members/${member.id}/update`, {
-            member_name: member.member_name,
-            member_email: member.member_email
-        })
-    } catch (error) {
-        console.error('Error updating member profile:', error)
+      await api.patch(`/api/courses/${props.courseId}/members/${member.id}/update`, {
+        member_name: member.member_name || null,
+        order_number: member.order_number,
+        member_code: member.member_code != null ? String(member.member_code) : null,
+        course_member_status: member.course_member_status
+      })
+      swal.success('บันทึกข้อมูลผู้เรียนเรียบร้อยแล้ว')
+    } catch (error: any) {
+      console.error('Error saving member details:', error)
+      swal.error('บันทึกไม่สำเร็จ')
+    } finally {
+      savingMemberDetails.value = false
     }
 }
 
@@ -537,7 +515,7 @@ onMounted(() => {
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ student.user?.name }}</p>
-                    <p class="text-xs text-gray-500 truncate">{{ student.scores?.grade_name || '-' }} • {{ student.overall_progress || 0 }}%</p>
+                    <p class="text-xs text-gray-500 truncate">{{ student.scores?.grade_progress ?? 0 }} ({{ student.scores?.grade_name || '-' }}) • {{ student.overall_progress || 0 }}%</p>
                 </div>
                 <div class="text-sm font-bold text-green-600">{{ student.scores?.total_score || 0 }}</div>
              </div>
@@ -798,8 +776,8 @@ onMounted(() => {
                     </td>
                     <td class="px-4 py-3 text-center font-bold text-lg" 
                         :class="{'text-green-600 dark:text-green-400': (member.scores?.grade_progress || 0) >= 2, 'text-red-600 dark:text-red-400': (member.scores?.grade_progress || 0) < 1}">
-                        {{ member.scores?.grade_name || '-' }} 
-                        <span class="text-xs text-gray-400 font-normal">({{ member.scores?.grade_progress || 0 }})</span>
+                        {{ member.scores?.grade_progress ?? 0 }} 
+                        <span class="text-xs text-gray-400 font-normal">({{ member.scores?.grade_name || '-' }})</span>
                     </td>
                     <!-- เกรดแก้ Column (After Grade) -->
                     <td class="px-4 py-3 text-center">
@@ -918,77 +896,34 @@ onMounted(() => {
                 <!-- Name -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อ-สกุล (Name)</label>
-                  <div class="flex flex-col sm:flex-row gap-2">
-                    <input 
-                      v-model="selectedMember.member_name" 
-                      type="text" 
-                      class="w-full sm:flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="ระบุชื่อ-สกุล"
-                    >
-                    <button 
-                        @click="updateMemberProfile(selectedMember)"
-                        class="w-full sm:w-auto px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                    >
-                        บันทึก
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Email -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">อีเมล (Email)</label>
-                  <div class="flex flex-col sm:flex-row gap-2">
-                    <input 
-                      v-model="selectedMember.member_email" 
-                      type="email" 
-                      class="w-full sm:flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="ระบุอีเมล"
-                    >
-                    <button 
-                        @click="updateMemberProfile(selectedMember)"
-                        class="w-full sm:w-auto px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                    >
-                        บันทึก
-                    </button>
-                  </div>
+                  <input 
+                    v-model="selectedMember.member_name" 
+                    type="text" 
+                    class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    placeholder="ระบุชื่อ-สกุล"
+                  >
                 </div>
 
                 <!-- Order Number -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">เลขที่ (No.)</label>
-                  <div class="flex flex-col sm:flex-row gap-2">
-                    <input 
-                      v-model="selectedMember.order_number" 
-                      type="number" 
-                      class="w-full sm:flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="ระบุเลขที่"
-                    >
-                    <button 
-                        @click="updateOrderNumber(selectedMember)"
-                        class="w-full sm:w-auto px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                    >
-                        บันทึก
-                    </button>
-                  </div>
+                  <input 
+                    v-model="selectedMember.order_number" 
+                    type="number" 
+                    class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    placeholder="ระบุเลขที่"
+                  >
                 </div>
 
                 <!-- Member Code -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสประจำตัว (Student ID)</label>
-                  <div class="flex flex-col sm:flex-row gap-2">
-                    <input 
-                      v-model="selectedMember.member_code" 
-                      type="text" 
-                      class="w-full sm:flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="ระบุรหัสประจำตัว"
-                    >
-                    <button 
-                        @click="updateMemberCode(selectedMember)"
-                        class="w-full sm:w-auto px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                    >
-                        บันทึก
-                    </button>
-                  </div>
+                  <input 
+                    v-model="selectedMember.member_code" 
+                    type="text" 
+                    class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    placeholder="ระบุรหัสประจำตัว"
+                  >
                 </div>
 
                 <!-- Status -->
@@ -996,12 +931,27 @@ onMounted(() => {
                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">สถานะ</label>
                    <select 
                       v-model="selectedMember.course_member_status"
-                      @change="updateMemberStatus(selectedMember)"
                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
                    >
                       <option :value="1">ปกติ (Active)</option>
                       <option :value="0">พักการเรียน (Suspended)</option>
                    </select>
+                </div>
+
+                <!-- Save Button -->
+                <div class="md:col-span-2 pt-2">
+                  <button
+                    @click="saveAllMemberDetails(selectedMember)"
+                    :disabled="savingMemberDetails"
+                    class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+                  >
+                    <svg v-if="savingMemberDetails" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <Icon v-else icon="fluent:save-24-regular" class="w-4 h-4" />
+                    {{ savingMemberDetails ? 'กำลังบันทึก...' : 'บันทึกข้อมูล' }}
+                  </button>
                 </div>
              </div>
           </div>
@@ -1028,9 +978,9 @@ onMounted(() => {
             <!-- Grade -->
             <div class="text-center">
               <div class="w-16 h-16 mx-auto rounded-full bg-white dark:bg-gray-700 shadow flex items-center justify-center">
-                <span class="text-2xl font-bold text-green-600 dark:text-green-400">{{ selectedMember?.scores?.grade_name || '-' }}</span>
+                <span class="text-2xl font-bold text-green-600 dark:text-green-400">{{ selectedMember?.scores?.grade_progress ?? 0 }}</span>
               </div>
-              <p class="text-xs text-gray-500 mt-2">เกรด ({{ selectedMember?.scores?.grade_progress || 0 }})</p>
+              <p class="text-xs text-gray-500 mt-2">เกรด ({{ selectedMember?.scores?.grade_name || '-' }})</p>
             </div>
             
             <!-- Attendance -->

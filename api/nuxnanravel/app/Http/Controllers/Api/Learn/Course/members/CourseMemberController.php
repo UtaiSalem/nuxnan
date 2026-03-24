@@ -338,22 +338,27 @@ class CourseMemberController extends Controller
 
         $request->validate([
             'member_name'   => 'nullable|string|max:255',
-            'member_email'  => 'nullable|email|max:255',
             'order_number'  => 'nullable|numeric',
             'member_code'   => 'nullable|string|max:50',
             'group_id'      => 'nullable|exists:course_groups,id',
+            'course_member_status' => 'nullable|in:0,1',
         ]);
 
         if ($request->has('group_id') && $request->group_id != $member->group_id) {
             $this->moveMemberToGroup($member, $request->group_id);
         }
 
-        $member->update([
+        $data = [
             'member_name'   => $request->member_name,
-            'member_email'  => $request->member_email,
             'order_number'  => $request->filled('order_number') ? (int) $request->order_number : null,
             'member_code'   => $request->member_code,
-        ]);
+        ];
+
+        if ($request->has('course_member_status')) {
+            $data['course_member_status'] = (int) $request->course_member_status;
+        }
+
+        $member->update($data);
 
         return response()->json([
             'success' => true,
