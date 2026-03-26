@@ -142,7 +142,7 @@ const deleteComment = async () => {
     <!-- User Avatar -->
     <NuxtLink :to="`/profile/${comment.user?.id}`" class="flex-shrink-0">
       <img
-        :src="comment.user?.avatar || '/default-avatar.png'"
+        :src="comment.user?.avatar || '/images/default-avatar.png'"
         :alt="comment.user?.name"
         class="w-10 h-10 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-blue-500 transition-all"
       />

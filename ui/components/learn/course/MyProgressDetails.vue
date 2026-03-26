@@ -142,6 +142,7 @@ const stats = computed(() => {
         totalScore,
         maxScore,
         grade: d.member?.grade_name || '-',
+        gradeProgress: d.member?.grade_progress ?? 0,
         completedLessons: d.lessons?.filter(l => l.completed).length || 0,
         totalLessons: d.lessons?.length || 0,
         completedAssignments: d.assignments?.filter(a => a.submitted).length || 0,
@@ -338,8 +339,8 @@ const tabs = [
                         inner-stroke-color="#E5E7EB"
                      >
                         <div class="text-center">
-                            <span class="text-2xl font-bold" :class="gradeColors.text">{{ stats.grade }}</span>
-                            <div class="text-xs font-semibold" :class="gradeColors.text">{{ stats.scorePercent.toFixed(1) }}%</div>
+                            <span class="text-2xl font-bold" :class="gradeColors.text">{{ stats.gradeProgress }}</span>
+                            <div class="text-xs font-semibold" :class="gradeColors.text">({{ stats.grade }})</div>
                         </div>
                      </RadialProgress>
                 </div>

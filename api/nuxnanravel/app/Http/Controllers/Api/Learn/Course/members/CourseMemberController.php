@@ -348,11 +348,17 @@ class CourseMemberController extends Controller
             $this->moveMemberToGroup($member, $request->group_id);
         }
 
-        $data = [
-            'member_name'   => $request->member_name,
-            'order_number'  => $request->filled('order_number') ? (int) $request->order_number : null,
-            'member_code'   => $request->member_code,
-        ];
+        $data = [];
+
+        if ($request->has('member_name')) {
+            $data['member_name'] = $request->member_name;
+        }
+        if ($request->has('order_number')) {
+            $data['order_number'] = $request->filled('order_number') ? (int) $request->order_number : null;
+        }
+        if ($request->has('member_code')) {
+            $data['member_code'] = $request->member_code;
+        }
 
         if ($request->has('course_member_status')) {
             $data['course_member_status'] = (int) $request->course_member_status;
@@ -909,6 +915,7 @@ class CourseMemberController extends Controller
         $member->update(['group_id' => $groupId]);
         
         // Update group member relationship
+        // course_group_members.status is ENUM('0','1'), must pass string values
         CourseGroupMember::updateOrCreate(
             [
                 'user_id' => $member->user_id,
@@ -916,7 +923,7 @@ class CourseMemberController extends Controller
             ],
             [
                 'group_id' => $groupId,
-                'status' => $member->status,
+                'status' => $member->status > 0 ? '1' : '0',
             ]
         );
     }

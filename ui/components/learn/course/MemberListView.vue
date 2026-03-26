@@ -38,6 +38,11 @@ interface Member {
   }
 }
 
+interface Group {
+  id: number
+  name: string
+}
+
 interface Props {
   members: Member[]
   viewMode?: 'card' | 'table'
@@ -45,6 +50,8 @@ interface Props {
   isCourseAdmin?: boolean
   showCheckbox?: boolean
   selectedIds?: number[]
+  availableGroups?: Group[]
+  assigningMemberId?: number | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -52,7 +59,9 @@ const props = withDefaults(defineProps<Props>(), {
   courseTotalScore: 100,
   isCourseAdmin: false,
   showCheckbox: false,
-  selectedIds: () => []
+  selectedIds: () => [],
+  availableGroups: () => [],
+  assigningMemberId: null
 })
 
 const emit = defineEmits<{
@@ -60,7 +69,10 @@ const emit = defineEmits<{
   'view-member': [member: Member]
   'edit-member': [member: Member]
   'update:selectedIds': [ids: number[]]
+  'assign-group': [{ memberId: number; groupId: number }]
 }>()
+
+const showGroupAssign = computed(() => props.availableGroups.length > 0)
 
 // Helper functions
 const getMemberName = (member: Member) => 
@@ -247,7 +259,18 @@ const isAllSelected = computed(() =>
               <!-- Group -->
               <div class="flex items-center gap-1.5 mt-2 text-sm text-gray-600 dark:text-gray-400">
                 <Icon icon="fluent:people-team-24-regular" class="w-4 h-4" />
-                <span>{{ getMemberGroup(member) }}</span>
+                <template v-if="!member.group && showGroupAssign">
+                  <select
+                    :disabled="assigningMemberId === member.id"
+                    class="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none disabled:opacity-50"
+                    @change="(e) => { const val = e.target.value; if (val) { emit('assign-group', { memberId: member.id, groupId: Number(val) }); e.target.value = '' } }"
+                  >
+                    <option value="">เลือกกลุ่ม...</option>
+                    <option v-for="g in availableGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+                  </select>
+                  <Icon v-if="assigningMemberId === member.id" icon="svg-spinners:ring-resize" class="w-4 h-4 text-blue-500" />
+                </template>
+                <span v-else>{{ getMemberGroup(member) }}</span>
               </div>
             </div>
           </div>
@@ -426,7 +449,20 @@ const isAllSelected = computed(() =>
 
               <!-- Group -->
               <td class="px-4 py-3">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300">
+                <template v-if="!member.group && showGroupAssign">
+                  <div class="flex items-center gap-2">
+                    <select
+                      :disabled="assigningMemberId === member.id"
+                      class="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none disabled:opacity-50"
+                      @change="(e) => { const val = e.target.value; if (val) { emit('assign-group', { memberId: member.id, groupId: Number(val) }); e.target.value = '' } }"
+                    >
+                      <option value="">เลือกกลุ่ม...</option>
+                      <option v-for="g in availableGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+                    </select>
+                    <Icon v-if="assigningMemberId === member.id" icon="svg-spinners:ring-resize" class="w-4 h-4 text-blue-500" />
+                  </div>
+                </template>
+                <span v-else class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300">
                   <Icon icon="fluent:people-team-24-regular" class="w-3.5 h-3.5" />
                   {{ getMemberGroup(member) }}
                 </span>

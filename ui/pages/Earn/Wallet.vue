@@ -513,7 +513,7 @@ const getDefaultAvatar = (name: string) => {
 const getOwnerInfo = () => {
   return {
     name: authStore.user?.name || 'ฉัน',
-    avatar: authStore.user?.profile_photo_url || getDefaultAvatar(authStore.user?.name || 'User')
+    avatar: authStore.user?.avatar || authStore.user?.profile_photo_url || getDefaultAvatar(authStore.user?.name || 'User')
   }
 }
 
@@ -1181,7 +1181,7 @@ onMounted(async () => {
               <div v-if="selectedRecipient" class="mb-3">
                 <div class="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
                   <img 
-                    :src="selectedRecipient.profile_photo_url || selectedRecipient.avatar || '/default-avatar.png'" 
+                    :src="selectedRecipient.avatar || selectedRecipient.profile_photo_url || '/images/default-avatar.png'" 
                     :alt="selectedRecipient.name"
                     class="w-12 h-12 rounded-full object-cover"
                   >
@@ -1230,7 +1230,7 @@ onMounted(async () => {
                     @click="selectRecipient(user)"
                   >
                     <img 
-                      :src="user.profile_photo_url || user.avatar || '/default-avatar.png'" 
+                      :src="user.avatar || user.profile_photo_url || '/images/default-avatar.png'" 
                       :alt="user.name"
                       class="w-10 h-10 rounded-full object-cover"
                     >

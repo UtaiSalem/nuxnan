@@ -61,7 +61,7 @@ const handleKeydown = (event: KeyboardEvent) => {
     <!-- User Avatar -->
     <NuxtLink :to="`/profile/${authStore.user?.id}`" class="flex-shrink-0">
       <img
-        :src="authStore.user?.avatar || '/default-avatar.png'"
+        :src="authStore.user?.avatar || '/images/default-avatar.png'"
         :alt="authStore.user?.name"
         class="w-10 h-10 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
       />

@@ -90,6 +90,7 @@ const fetchProgress = async (page = 1) => {
         // Spread existing structures
         ...item.progress,
         ...item.member,
+        original_order_number: item.member?.order_number ?? null,
         scores: { 
           ...item.scores,
           original_bonus: item.scores?.bonus_points || 0,
@@ -216,6 +217,26 @@ const exportProgress = async () => {
   }
 }
 
+// Update order number inline
+const updatingOrderNumber = ref<number | null>(null)
+const updateOrderNumber = async (member: any) => {
+  const newValue = member.order_number
+  const oldValue = member.original_order_number
+  if (newValue === oldValue) return
+  updatingOrderNumber.value = member.id
+  try {
+    await api.patch(`/api/courses/${props.courseId}/members/${member.id}/order-number`, {
+      order_number: newValue
+    })
+    member.original_order_number = newValue
+  } catch (error) {
+    console.error('Error updating order number:', error)
+    member.order_number = oldValue
+  } finally {
+    updatingOrderNumber.value = null
+  }
+}
+
 // Update bonus points (allow negative for deductions)
 const updateBonusPoints = async (member: any) => {
   const newValue = member.scores?.bonus_points ?? 0
@@ -272,7 +293,8 @@ const saveAllMemberDetails = async (member: any) => {
         member_name: member.member_name || null,
         order_number: member.order_number,
         member_code: member.member_code != null ? String(member.member_code) : null,
-        course_member_status: member.course_member_status
+        course_member_status: member.course_member_status,
+        group_id: member.group_id ?? null
       })
       swal.success('บันทึกข้อมูลผู้เรียนเรียบร้อยแล้ว')
     } catch (error: any) {
@@ -352,27 +374,33 @@ const passRate = computed(() => {
 })
 
 // สีพื้นหลัง avatar นุ่มนวลสบายตา (hex without #)
-const getAvatarUrl = (user: any, index = 0) => {
-  if (user?.avatar) return user.avatar
-  
-  // Use user id or name to determine color index consistently
+const getFallbackAvatarUrl = (user: any, index = 0) => {
   const colorIndex = user?.id || index || user?.name?.length || 0
-  
   const textColors = [
-    'f59e0b', // amber-500
-    '64748b', // slate-500
-    'f97316', // orange-500
-    '0ea5e9', // sky-500
-    '10b981', // emerald-500
-    '8b5cf6', // violet-500
-    'f43f5e', // rose-500
-    '14b8a6', // teal-500
-    '6366f1', // indigo-500
-    '06b6d4', // cyan-500
+    'f59e0b', '64748b', 'f97316', '0ea5e9', '10b981',
+    '8b5cf6', 'f43f5e', '14b8a6', '6366f1', '06b6d4',
   ]
   const color = textColors[colorIndex % textColors.length]
-  // Background: Soft White / AliceBlue-ish (f0f9ff is sky-50, eff6ff is blue-50)
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=eff6ff&color=${color}&font-size=0.4`
+}
+
+const getAvatarUrl = (user: any, index = 0) => {
+  if (user?.avatar) {
+    // Skip old broken profile-photos paths - use fallback instead
+    if (user.avatar.includes('/profile-photos/')) {
+      return getFallbackAvatarUrl(user, index)
+    }
+    return user.avatar
+  }
+  return getFallbackAvatarUrl(user, index)
+}
+
+const onAvatarError = (event: Event, user: any, index = 0) => {
+  const img = event.target as HTMLImageElement
+  const fallback = getFallbackAvatarUrl(user, index)
+  if (img.src !== fallback) {
+    img.src = fallback
+  }
 }
 
 // สีนุ่มนวลสบายตาสำหรับอันดับต่างๆ (Muted/Pastel colors)
@@ -392,10 +420,51 @@ const getRankColor = (index: number) => {
   return colors[index] || 'bg-slate-400'
 }
 
+// Scroll sync for top scrollbar
+const tableScrollContainer = ref<HTMLElement | null>(null)
+const topScrollbar = ref<HTMLElement | null>(null)
+const tableInner = ref<HTMLElement | null>(null)
+const topScrollbarWidth = ref(0)
+const isSyncingScroll = ref(false)
+
+const syncTopToTable = () => {
+  if (isSyncingScroll.value) return
+  isSyncingScroll.value = true
+  if (tableScrollContainer.value && topScrollbar.value) {
+    tableScrollContainer.value.scrollLeft = topScrollbar.value.scrollLeft
+  }
+  nextTick(() => { isSyncingScroll.value = false })
+}
+
+const syncTableToTop = () => {
+  if (isSyncingScroll.value) return
+  isSyncingScroll.value = true
+  if (tableScrollContainer.value && topScrollbar.value) {
+    topScrollbar.value.scrollLeft = tableScrollContainer.value.scrollLeft
+  }
+  nextTick(() => { isSyncingScroll.value = false })
+}
+
+const updateTopScrollbarWidth = () => {
+  if (tableInner.value) {
+    topScrollbarWidth.value = tableInner.value.scrollWidth
+  }
+}
+
 // Init
 onMounted(() => {
   fetchProgress()
   fetchTopPerformers()
+  nextTick(() => {
+    updateTopScrollbarWidth()
+  })
+})
+
+// Update scrollbar width when members change
+watch(members, () => {
+  nextTick(() => {
+    updateTopScrollbarWidth()
+  })
 })
 </script>
 
@@ -507,7 +576,7 @@ onMounted(() => {
                   class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
                   @click="viewMemberDetails(student)">
                 <div class="relative">
-                    <img :src="getAvatarUrl(student.user, index)" class="w-10 h-10 rounded-full object-cover border border-gray-200">
+                    <img :src="getAvatarUrl(student.user, index)" class="w-10 h-10 rounded-full object-cover border border-gray-200" @error="onAvatarError($event, student.user, index)">
                     <div v-if="index < 3" class="absolute -top-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-white"
                          :class="getRankColor(index)">
                         {{ index + 1 }}
@@ -535,7 +604,7 @@ onMounted(() => {
                   <div v-for="student in atRiskStudents.slice(0, 5)" :key="student.id" 
                        class="flex items-center gap-1.5 bg-white dark:bg-gray-800 px-2 py-1 rounded-md border border-red-100 dark:border-red-900/30 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                        @click="viewMemberDetails(student)">
-                      <img :src="getAvatarUrl(student.user, student.id)" class="w-5 h-5 rounded-full">
+                      <img :src="getAvatarUrl(student.user, student.id)" class="w-5 h-5 rounded-full" @error="onAvatarError($event, student.user, student.id)">
                       <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ student.user?.name }}</span>
                       <span class="text-xs text-red-500 font-bold">({{ student.overall_progress }}%)</span>
                   </div>
@@ -695,110 +764,153 @@ onMounted(() => {
     </div>
 
     <!-- Progress Table -->
-    <div v-else-if="members.length > 0 && viewMode === 'table'" class="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-300">
+    <div v-else-if="members.length > 0 && viewMode === 'table'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+        <!-- Top Scrollbar -->
+        <div 
+          ref="topScrollbar"
+          class="overflow-x-auto overflow-y-hidden" 
+          style="height: 12px;"
+          @scroll="syncTopToTable"
+        >
+          <div :style="{ width: topScrollbarWidth + 'px', height: '1px' }"></div>
+        </div>
+        <!-- Table Container -->
+        <div 
+          ref="tableScrollContainer"
+          class="overflow-x-auto"
+          @scroll="syncTableToTop"
+        >
+          <table ref="tableInner" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-300 sticky top-0 z-10">
                 <tr>
-                    <th scope="col" class="px-4 py-3 min-w-[50px]">#</th>
-                    <th scope="col" class="px-4 py-3 min-w-[60px]">เลขที่</th>
-                    <th scope="col" class="px-4 py-3 min-w-[80px]">รหัส</th>
-                    <th scope="col" class="px-4 py-3 min-w-[200px]">สมาชิก</th>
-                    <th scope="col" class="px-4 py-3 text-center">บทเรียน</th>
-                    <th scope="col" class="px-4 py-3 text-center">งาน</th>
-                    <th scope="col" class="px-4 py-3 text-center">ทดสอบ</th>
-                    <th scope="col" class="px-6 py-3 min-w-[120px]">
-                    พิเศษ
-                </th>
-                <th scope="col" class="px-6 py-3 whitespace-nowrap">
-                    รวม
-                </th>
-                    <th scope="col" class="px-4 py-3 text-center">%</th>
-                    <th scope="col" class="px-4 py-3 text-center">เกรด</th>
-                    <th scope="col" class="px-4 py-3 text-center min-w-[120px]">เกรดแก้</th>
-                    <th scope="col" class="px-4 py-3 text-center">สถานะ</th>
-                    <th scope="col" class="px-4 py-3 text-center">จัดการ</th>
+                    <th scope="col" class="px-2 py-2.5 whitespace-nowrap">#</th>
+                    <th scope="col" class="px-2 py-2.5 whitespace-nowrap">เลขที่</th>
+                    <th scope="col" class="px-2 py-2.5 whitespace-nowrap">รหัส</th>
+                    <th scope="col" class="px-2 py-2.5 whitespace-nowrap">สมาชิก</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">บทเรียน</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">งาน</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">ทดสอบ</th>
+                    <th scope="col" class="px-2 py-2.5 whitespace-nowrap">พิเศษ</th>
+                    <th scope="col" class="px-2 py-2.5 whitespace-nowrap">รวม</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">%</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">เกรด</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">เกรดแก้</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">สถานะ</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">จัดการ</th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="(member, index) in members" :key="member.id" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td class="px-4 py-3">{{ index + 1 }}</td>
-                    <td class="px-4 py-3 font-medium text-center text-gray-900 dark:text-white">
-                        {{ member.order_number || '-' }}
+                    <td class="px-2 py-2">{{ index + 1 }}</td>
+                    <td class="px-2 py-2 font-medium text-center text-gray-900 dark:text-white">
+                        <div v-if="isCourseAdmin" class="flex items-center justify-center gap-0.5">
+                            <button 
+                                @click="member.order_number = Math.max(0, (member.order_number || 0) - 1)"
+                                class="p-0.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded dark:hover:bg-red-900/30 transition-colors"
+                                title="ลด"
+                            >
+                                <Icon icon="fluent:subtract-12-filled" class="w-3 h-3" />
+                            </button>
+                            <input 
+                                type="number" 
+                                v-model.number="member.order_number"
+                                class="w-10 px-0.5 py-0.5 text-sm text-center border rounded focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                min="0"
+                                @keyup.enter="updateOrderNumber(member)"
+                            >
+                            <button 
+                                @click="member.order_number = (member.order_number || 0) + 1"
+                                class="p-0.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded dark:hover:bg-green-900/30 transition-colors"
+                                title="เพิ่ม"
+                            >
+                                <Icon icon="fluent:add-12-filled" class="w-3 h-3" />
+                            </button>
+                            <button 
+                                v-if="member.order_number !== member.original_order_number"
+                                @click="updateOrderNumber(member)"
+                                :disabled="updatingOrderNumber === member.id"
+                                class="p-1 text-green-600 hover:bg-green-100 rounded dark:hover:bg-green-900/30 disabled:opacity-50 transition-colors"
+                                title="บันทึก"
+                            >
+                                <svg v-if="updatingOrderNumber === member.id" class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            </button>
+                        </div>
+                        <span v-else>{{ member.order_number || '-' }}</span>
                     </td>
-                    <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-400">
+                    <td class="px-2 py-2 font-mono text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                         {{ member.member_code || '-' }}
                     </td>
-                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                        <div class="flex items-center gap-3">
-                            <img :src="getAvatarUrl(member.user, index)" class="w-8 h-8 rounded-full" alt="">
-                            <div class="flex flex-col">
-                                <span>{{ member.member_name || member.user?.name }}</span>
-                                <span class="text-xs text-gray-400">{{ member.member_email || member.user?.email || '-' }}</span>
+                    <td class="px-2 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <img :src="getAvatarUrl(member.user, index)" class="w-7 h-7 rounded-full shrink-0" alt="" @error="onAvatarError($event, member.user, index)">
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-sm truncate max-w-[150px]">{{ member.member_name || member.user?.name }}</span>
+                                <span class="text-xs text-gray-400 truncate max-w-[150px]">{{ member.member_email || member.user?.email || '-' }}</span>
                             </div>
                         </div>
                     </td>
-                    <td class="px-4 py-3 text-center">
-                        <div class="flex flex-col items-center">
-                            <span class="text-xs text-gray-400">งาน: {{ member.scores?.lesson_assignments || 0 }}</span>
-                            <span class="text-xs text-gray-400">สอบ: {{ member.scores?.lesson_quizzes || 0 }}</span>
-                        </div>
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
+                        <span class="text-sm">{{ member.scores?.lesson_assignments || 0 }}</span>
+                        <span class="text-xs text-gray-400 mx-0.5">/</span>
+                        <span class="text-sm">{{ member.scores?.lesson_quizzes || 0 }}</span>
                     </td>
-                    <td class="px-4 py-3 text-center">{{ member.scores?.course_assignments || 0 }}</td>
-                    <td class="px-4 py-3 text-center">{{ member.scores?.course_quizzes || 0 }}</td>
-                    <td class="px-6 py-4">
+                    <td class="px-2 py-2 text-center">{{ member.scores?.course_assignments || 0 }}</td>
+                    <td class="px-2 py-2 text-center">{{ member.scores?.course_quizzes || 0 }}</td>
+                    <td class="px-2 py-2">
                     <div v-if="isCourseAdmin" class="flex items-center gap-1">
                         <input 
                             type="number" 
                             v-model.number="member.scores.bonus_points"
-                            class="w-16 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            class="w-14 px-1 py-0.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         >
                         <button 
                             v-if="member.scores.bonus_points !== member.scores.original_bonus"
                             @click="updateBonusPoints(member)"
-                            class="p-1 text-green-600 hover:bg-green-100 rounded dark:hover:bg-green-900/30"
+                            class="p-0.5 text-green-600 hover:bg-green-100 rounded dark:hover:bg-green-900/30"
                             title="บันทึก"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                         </button>
                     </div>
                     <span v-else class="text-orange-600 font-medium">{{ member.scores?.bonus_points || 0 }}</span>
-                </td>
-                    <td class="px-4 py-3 text-center font-bold text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400">
+                    </td>
+                    <td class="px-2 py-2 text-center font-bold whitespace-nowrap text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400">
                         {{ member.scores?.total_score || 0 }}
                         <span class="text-xs font-normal text-gray-400">/{{ member.scores?.max_total || 0 }}</span>
                     </td>
-                    <td class="px-4 py-3 text-center font-bold"
+                    <td class="px-2 py-2 text-center font-bold whitespace-nowrap"
                         :class="{
                             'text-green-600 dark:text-green-400': (member.scores?.score_percentage || 0) >= 50,
                             'text-red-600 dark:text-red-400': (member.scores?.score_percentage || 0) < 50
                         }">
                         {{ member.scores?.score_percentage || 0 }}%
                     </td>
-                    <td class="px-4 py-3 text-center font-bold text-lg" 
+                    <td class="px-2 py-2 text-center font-bold whitespace-nowrap" 
                         :class="{'text-green-600 dark:text-green-400': (member.scores?.grade_progress || 0) >= 2, 'text-red-600 dark:text-red-400': (member.scores?.grade_progress || 0) < 1}">
-                        {{ member.scores?.grade_progress ?? 0 }} 
+                        {{ member.scores?.grade_progress ?? 0 }}
                         <span class="text-xs text-gray-400 font-normal">({{ member.scores?.grade_name || '-' }})</span>
                     </td>
                     <!-- เกรดแก้ Column (After Grade) -->
-                    <td class="px-4 py-3 text-center">
-                        <div v-if="isCourseAdmin" class="flex items-center justify-center gap-1">
+                    <td class="px-2 py-2 text-center">
+                        <div v-if="isCourseAdmin" class="flex items-center justify-center gap-0.5">
                             <select 
                                 v-model.number="member.scores.edited_grade"
-                                class="w-20 px-2 py-1 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                class="w-[70px] px-1 py-0.5 text-sm border rounded focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             >
                                 <option :value="null">-</option>
-                                <option :value="1">1 (D)</option>
-                                <option :value="1.5">1.5 (D+)</option>
-                                <option :value="2">2 (C)</option>
-                                <option :value="2.5">2.5 (C+)</option>
-                                <option :value="3">3 (B)</option>
-                                <option :value="3.5">3.5 (B+)</option>
-                                <option :value="4">4 (A)</option>
+                                <option :value="1">D</option>
+                                <option :value="1.5">D+</option>
+                                <option :value="2">C</option>
+                                <option :value="2.5">C+</option>
+                                <option :value="3">B</option>
+                                <option :value="3.5">B+</option>
+                                <option :value="4">A</option>
                             </select>
                             <button 
                                 v-if="member.scores.edited_grade !== member.scores.original_edited_grade"
                                 @click="updateEditedGrade(member)"
-                                class="p-1 text-blue-600 hover:bg-blue-100 rounded dark:hover:bg-blue-900/30"
+                                class="p-0.5 text-blue-600 hover:bg-blue-100 rounded dark:hover:bg-blue-900/30"
                                 title="บันทึกเกรดแก้"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -806,18 +918,19 @@ onMounted(() => {
                         </div>
                         <span v-else class="font-medium">{{ member.scores?.edited_grade || '-' }}</span>
                     </td>
-                    <td class="px-4 py-3 text-center">
-                         <span v-if="member.course_member_status === 1" class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-green-900 dark:text-green-300">ปกติ</span>
-                         <span v-else class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">พัก</span>
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
+                         <span v-if="member.course_member_status === 1" class="bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded dark:bg-green-900 dark:text-green-300">ปกติ</span>
+                         <span v-else class="bg-red-100 text-red-800 text-xs font-medium px-1.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">พัก</span>
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
                         <button @click="viewMemberDetails(member)" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-xs">
                             รายละเอียด
                         </button>
                     </td>
                 </tr>
             </tbody>
-        </table>
+          </table>
+        </div>
     </div>
 
     <!-- Pagination -->
@@ -927,7 +1040,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Status -->
-                <div class="md:col-span-2">
+                <div>
                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">สถานะ</label>
                    <select 
                       v-model="selectedMember.course_member_status"
@@ -935,6 +1048,18 @@ onMounted(() => {
                    >
                       <option :value="1">ปกติ (Active)</option>
                       <option :value="0">พักการเรียน (Suspended)</option>
+                   </select>
+                </div>
+
+                <!-- Group -->
+                <div v-if="groups.length > 0">
+                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">กลุ่ม (Group)</label>
+                   <select 
+                      v-model="selectedMember.group_id"
+                      class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500"
+                   >
+                      <option :value="null">ไม่มีกลุ่ม (No Group)</option>
+                      <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.name }}</option>
                    </select>
                 </div>
 

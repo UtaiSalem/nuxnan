@@ -126,6 +126,27 @@ const leaveGroup = async () => {
   }
 }
 
+// Remove member from group (admin only)
+const isRemovingMember = ref<number | null>(null)
+
+const removeMember = async (member: any) => {
+  const memberName = getMemberName(member)
+  if (!confirm(`ยืนยันการลบ "${memberName}" ออกจากกลุ่มนี้?`)) return
+
+  const userId = member.user_id || member.user?.id
+  if (!userId) return
+
+  isRemovingMember.value = member.id
+  try {
+    await api.delete(`/api/courses/${course.value.id}/groups/${groupId.value}/members/${userId}`)
+    await loadGroup()
+  } catch (error: any) {
+    alert(error.data?.message || 'ไม่สามารถลบสมาชิกได้')
+  } finally {
+    isRemovingMember.value = null
+  }
+}
+
 // Delete group (admin only)
 const deleteGroup = async () => {
   if (!confirm('ยืนยันการลบกลุ่มนี้หรือไม่? สมาชิกในกลุ่มจะถูกย้ายไปยังกลุ่มหลัก')) return
@@ -359,7 +380,7 @@ onMounted(() => {
           <div 
             v-for="member in members" 
             :key="member.id"
-            class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+            class="group flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
           >
             <img 
               :src="getMemberAvatar(member)" 
@@ -370,6 +391,17 @@ onMounted(() => {
               <p class="font-medium text-gray-900 dark:text-white truncate">{{ getMemberName(member) }}</p>
               <p class="text-sm text-gray-500 dark:text-gray-400">สมาชิก</p>
             </div>
+            <!-- Remove button (admin only) -->
+            <button
+              v-if="isCourseAdmin"
+              @click.stop="removeMember(member)"
+              :disabled="isRemovingMember === member.id"
+              class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+              title="ลบสมาชิกออกจากกลุ่ม"
+            >
+              <Icon v-if="isRemovingMember === member.id" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+              <Icon v-else icon="heroicons:x-mark" class="w-4 h-4" />
+            </button>
           </div>
         </div>
         

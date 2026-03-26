@@ -14,14 +14,14 @@ class FixAvatarPaths extends Command
      *
      * @var string
      */
-    protected $signature = 'fix:avatar-paths {--dry-run : Simulate the migration without making changes}';
+    protected $signature = 'fix:avatar-paths {--dry-run : Simulate the migration without making changes} {--clear-missing : Set profile_photo_path to null for missing files}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Move user avatars to avatars/{user_id}/ structure';
+    protected $description = 'Move user avatars to avatars/{user_id}/ structure and optionally clear missing file references';
 
     /**
      * Execute the console command.
@@ -31,6 +31,7 @@ class FixAvatarPaths extends Command
         $this->info('Starting avatar path fix...');
 
         $isDryRun = $this->option('dry-run');
+        $clearMissing = $this->option('clear-missing');
         if ($isDryRun) {
             $this->warn('Running in DRY-RUN mode. No changes will be saved.');
         }
@@ -44,6 +45,7 @@ class FixAvatarPaths extends Command
             'migrated' => 0,
             'already_correct' => 0,
             'missing' => 0,
+            'cleared' => 0,
             'errors' => 0,
         ];
 
@@ -63,8 +65,31 @@ class FixAvatarPaths extends Command
 
             // Check if file exists
             if (!Storage::disk('public')->exists($cleanCurrentPath)) {
-                $stats['missing']++;
-                // $this->error("File missing for user {$user->id}: {$cleanCurrentPath}");
+                // File missing at old path - check if already migrated to avatars/{user_id}/
+                $targetFolder = "avatars/{$user->id}";
+                $existingFiles = Storage::disk('public')->files($targetFolder);
+                $found = false;
+                foreach ($existingFiles as $file) {
+                    if (Str::startsWith(basename($file), $user->id . '_')) {
+                        // Found migrated file, update DB to point to it
+                        if (!$isDryRun) {
+                            $user->profile_photo_path = $file;
+                            $user->saveQuietly();
+                        }
+                        $stats['migrated']++;
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    if ($clearMissing && !$isDryRun) {
+                        $user->profile_photo_path = null;
+                        $user->saveQuietly();
+                        $stats['cleared']++;
+                    } else {
+                        $stats['missing']++;
+                    }
+                }
                 $bar->advance();
                 continue;
             }
@@ -124,6 +149,7 @@ class FixAvatarPaths extends Command
             ['Migrated/Moved', $stats['migrated']],
             ['Already Correct/External', $stats['already_correct']],
             ['Missing Files', $stats['missing']],
+            ['Cleared (set null)', $stats['cleared']],
             ['Errors', $stats['errors']],
         ]);
         

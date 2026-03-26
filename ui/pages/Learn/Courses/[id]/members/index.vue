@@ -15,11 +15,12 @@ const courseMemberStore = useCourseMemberStore()
 
 // State
 const searchQuery = ref('')
-const activeGroupTab = ref(0) // 0 = all, 1+ = group index
+const activeGroupTab = ref(0) // 0 = all, -1 = ungrouped, 1+ = group index
 const viewMode = ref<'card' | 'table' | 'list'>('card') // Default to card view
 const isSavingGroupTab = ref(false)
 const sortBy = ref<'number' | 'score'>('number') // 'number' | 'score'
 const selectedMemberIds = ref<number[]>([])
+const assigningGroupForMember = ref<number | null>(null) // member id currently being assigned
 
 // Persist view mode preference
 const savedViewMode = useCookie<'card' | 'table' | 'list'>('course-members-view-mode')
@@ -97,8 +98,11 @@ const members = computed(() => {
     let list = []
     
     if (activeGroupTab.value === 0) {
-        // "All" tab - aggregate all members from all groups
-        const allMembers = courseGroupStore.groups.flatMap(g => g.members || [])
+        // "All" tab - aggregate all members from all groups + ungrouped
+        const allMembers = [
+            ...courseGroupStore.groups.flatMap(g => g.members || []),
+            ...(courseGroupStore.ungroupedMembers || [])
+        ]
         // Deduplicate by ID
         const seen = new Set()
         list = allMembers.filter(m => {
@@ -106,6 +110,9 @@ const members = computed(() => {
             seen.add(m.id)
             return !duplicate
         })
+    } else if (activeGroupTab.value === -1) {
+        // "ไม่มีกลุ่ม" tab - ungrouped members (exclude admins role=4)
+        list = (courseGroupStore.ungroupedMembers || []).filter(m => m.role !== 4)
     } else {
         // Specific group tab
         const group = courseGroupStore.groups[activeGroupTab.value - 1]
@@ -214,6 +221,60 @@ const handleEditMember = (member: any) => {
     // Navigate to member edit page or show modal
     navigateTo(`/Learn/Courses/${course?.value?.id}/members/${member.id}/edit`)
 }
+
+// Total members count including ungrouped (exclude admins from ungrouped count)
+const totalAllMembers = computed(() => {
+    const grouped = courseGroupStore.groups.reduce((sum: number, g: any) => sum + (g.members?.length || 0), 0)
+    const ungrouped = (courseGroupStore.ungroupedMembers || []).filter((m: any) => m.role !== 4).length
+    return grouped + ungrouped
+})
+
+// Ungrouped non-admin count for tab display
+const ungroupedCount = computed(() => {
+    return (courseGroupStore.ungroupedMembers || []).filter((m: any) => m.role !== 4).length
+})
+
+// Assign group to ungrouped member
+async function assignGroupToMember(memberId: number, groupId: number) {
+    if (!course?.value?.id || !groupId) return
+    
+    assigningGroupForMember.value = memberId
+    try {
+        await api.patch(`/api/courses/${course.value.id}/members/${memberId}/update`, {
+            group_id: groupId
+        })
+        
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'ย้ายเข้ากลุ่มสำเร็จ',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        })
+
+        // Refresh groups to update member lists (don't let refresh failure override success)
+        try {
+            await courseGroupStore.fetchGroups(course.value.id, true)
+        } catch (refreshErr) {
+            console.warn('Group list refresh failed after successful assignment:', refreshErr)
+        }
+    } catch (error) {
+        console.error('Failed to assign group:', error)
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'error',
+            title: 'ไม่สามารถย้ายกลุ่มได้',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        })
+    } finally {
+        assigningGroupForMember.value = null
+    }
+}
 </script>
 
 <template>
@@ -310,7 +371,7 @@ const handleEditMember = (member: any) => {
                                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
                         >
                             <Icon icon="heroicons:users" class="w-4 h-4 mr-2" />
-                            ทั้งหมด ({{ courseGroupStore.groups.reduce((sum, g) => sum + (g.members?.length || 0), 0) }})
+                            ทั้งหมด ({{ totalAllMembers }})
                         </button>
 
                         <button 
@@ -323,6 +384,20 @@ const handleEditMember = (member: any) => {
                                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
                         >
                             {{ group.name }} ({{ group.members?.length || 0 }})
+                        </button>
+
+                        <!-- ไม่มีกลุ่ม tab -->
+                        <button 
+                            @click="setActiveGroupTab(-1)"
+                            class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
+                            :class="activeGroupTab === -1
+                                ? 'bg-amber-500 text-white shadow-md'
+                                : (ungroupedCount > 0
+                                    ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
+                                    : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800')"
+                        >
+                            <Icon icon="heroicons:user-minus" class="w-4 h-4 mr-2" />
+                            ไม่มีกลุ่ม ({{ ungroupedCount }})
                         </button>
                     </div>
                 </div>
@@ -346,16 +421,30 @@ const handleEditMember = (member: any) => {
                 </div>
 
                 <div v-else-if="members.length > 0">
-                    <!-- Card/Table View using new component -->
+                    <!-- Ungrouped Tab: Info banner -->
+                    <div v-if="activeGroupTab === -1 && isCourseAdmin" class="mb-4">
+                        <!-- Info banner -->
+                        <div class="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                            <Icon icon="heroicons:information-circle" class="w-5 h-5 text-amber-500 flex-shrink-0" />
+                            <span class="text-sm text-amber-700 dark:text-amber-300">
+                                สมาชิกด้านล่างยังไม่ได้เข้าร่วมกลุ่มใดๆ สามารถจัดกลุ่ม ลบออกจากรายวิชา หรือแก้ไขข้อมูลสมาชิกได้
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Card/Table View using new component (used for ALL tabs including ungrouped) -->
                     <MemberListView
                         v-if="viewMode === 'card' || viewMode === 'table'"
                         :members="members"
                         :view-mode="viewMode === 'card' ? 'card' : 'table'"
                         :course-total-score="course?.total_score || 100"
                         :is-course-admin="isCourseAdmin"
+                        :available-groups="activeGroupTab === -1 ? courseGroupStore.groups : []"
+                        :assigning-member-id="assigningGroupForMember"
                         @request-unmember="handleRequestUnmember"
                         @view-member="handleViewMember"
                         @edit-member="handleEditMember"
+                        @assign-group="({ memberId, groupId }) => assignGroupToMember(memberId, groupId)"
                     />
 
                     <!-- List View (original MemberCard) -->

@@ -336,7 +336,7 @@ onMounted(async () => {
                 <td class="px-4 py-4">
                   <div class="flex items-center gap-3">
                     <img 
-                      :src="req.user.avatar || '/default-avatar.png'" 
+                      :src="req.user.avatar || '/images/default-avatar.png'" 
                       :alt="req.user.name"
                       class="w-10 h-10 rounded-full object-cover"
                     >
@@ -459,7 +459,7 @@ onMounted(async () => {
               <div v-if="selectedRequest" class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 mb-6">
                 <div class="flex items-center gap-3 mb-3">
                   <img 
-                    :src="selectedRequest.user.avatar || '/default-avatar.png'" 
+                    :src="selectedRequest.user.avatar || '/images/default-avatar.png'" 
                     class="w-12 h-12 rounded-full"
                   >
                   <div>
@@ -511,7 +511,7 @@ onMounted(async () => {
               <div v-if="selectedRequest" class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 mb-6">
                 <div class="flex items-center gap-3 mb-3">
                   <img 
-                    :src="selectedRequest.user.avatar || '/default-avatar.png'" 
+                    :src="selectedRequest.user.avatar || '/images/default-avatar.png'" 
                     class="w-12 h-12 rounded-full"
                   >
                   <div>

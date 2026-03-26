@@ -90,7 +90,7 @@ onMounted(() => {
       >
         <div class="flex items-center gap-3 mb-3">
           <img 
-            :src="request.sender?.avatar || '/storage/images/default-avatar.png'" 
+            :src="request.sender?.avatar || '/images/default-avatar.png'" 
             :alt="request.sender?.name"
             class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-purple/20"
           />

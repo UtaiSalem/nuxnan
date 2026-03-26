@@ -2,7 +2,7 @@
 import { fileURLToPath } from 'url'
 
 export default defineNuxtConfig({
-  compatibilityDate: '2024-11-01',
+  compatibilityDate: '2024-04-04',
   devtools: { enabled: true },
 
   vite: {
@@ -117,7 +117,7 @@ export default defineNuxtConfig({
       script: [],
     },
     // Disable page transition to avoid warnings with multi-slot layouts
-    pageTransition: false,
+    // pageTransition: false,
   },
 
   build: {

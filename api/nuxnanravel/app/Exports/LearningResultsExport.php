@@ -25,16 +25,17 @@ class LearningResultsExport implements FromArray, WithHeadings, WithTitle, Shoul
         $rows = [];
         foreach ($this->data as $item) {
             $scores = $item['scores'];
+            $memberName = $item['member']['member_name'] ?? $item['member']['user']['name'] ?? '-';
             $rows[] = [
                 $item['member']['member_code'] ?? '-',
-                $item['member']['user']['name'] ?? '-',
-                $item['attendance_rate'] . '%',
+                $memberName,
+                $item['attendance_rate'],
                 $scores['course_assignments'] ?? 0,
                 $scores['course_quizzes'] ?? 0,
                 $scores['bonus_points'] ?? 0,
                 $scores['total_score'],
-                $scores['percentage'] . '%',
-                $scores['grade_name'],
+                (int) $scores['percentage'],
+                $scores['grade_progress'] . ' (' . $scores['grade_name'] . ')',
             ];
         }
         return $rows;

@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 export const useCourseGroupStore = defineStore('courseGroup', () => {
   // State
   const groups = ref<any[]>([])
+  const ungroupedMembers = ref<any[]>([])
   const currentGroup = ref<any>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -65,6 +66,7 @@ export const useCourseGroupStore = defineStore('courseGroup', () => {
 
   const clearGroups = () => {
     groups.value = []
+    ungroupedMembers.value = []
     currentGroup.value = null
     error.value = null
     lastFetchTime.value = null
@@ -74,7 +76,7 @@ export const useCourseGroupStore = defineStore('courseGroup', () => {
   const fetchGroups = async (courseId: string | number, forceRefresh = false) => {
     // Return cached data if valid and for same course
     if (!forceRefresh && isCacheValid.value(courseId)) {
-      return { success: true, groups: groups.value }
+      return { success: true, groups: groups.value, ungrouped_members: ungroupedMembers.value }
     }
 
     isLoading.value = true
@@ -84,10 +86,12 @@ export const useCourseGroupStore = defineStore('courseGroup', () => {
       const api = useApi()
       const response = await api.get(`/api/courses/${courseId}/groups`)
       
-      if (response.success) {
-        setGroups((response as any).groups || (response as any).data, courseId)
-        return response
+      const groupsData = (response as any).groups || (response as any).data
+      if (groupsData) {
+        setGroups(groupsData, courseId)
+        ungroupedMembers.value = (response as any).ungrouped_members || []
       }
+      return response
     } catch (err: any) {
       error.value = err.data?.msg || 'ไม่สามารถโหลดข้อมูลกลุ่มได้'
       throw err
@@ -181,6 +185,7 @@ export const useCourseGroupStore = defineStore('courseGroup', () => {
   return {
     // State
     groups,
+    ungroupedMembers,
     currentGroup,
     isLoading,
     error,

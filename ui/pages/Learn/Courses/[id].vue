@@ -63,6 +63,7 @@ const fetchCourse = async (forceRefresh = false) => {
       courseStore.setAcademy(response.academy)
       courseStore.setIsCourseAdmin(response.isCourseAdmin)
       courseGroupStore.setGroups(response.courseGroups || [], courseId.value)
+      courseGroupStore.ungroupedMembers = response.ungroupedMembers || []
       
       // Set Auth Member Store
       courseMemberStore.setMember(response.courseMemberOfAuth)

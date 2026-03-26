@@ -98,3 +98,28 @@ export const getAvatarAltText = (name?: string): string => {
   if (!name) return 'User avatar'
   return `Avatar of ${name}`
 }
+
+/**
+ * Resolve avatar URL - handles full URLs, relative paths, and fallbacks
+ * Use this when you don't have access to useAvatar() composable
+ * @param avatarValue - The avatar field value (could be full URL, relative path, or null)
+ * @param apiBase - The API base URL (e.g. from runtimeConfig)
+ * @returns Resolved full URL or DEFAULT_AVATAR
+ */
+export const resolveAvatarUrl = (avatarValue: string | null | undefined, apiBase?: string): string => {
+  if (!avatarValue) return DEFAULT_AVATAR
+
+  // Already a full URL - use as-is
+  if (avatarValue.startsWith('http://') || avatarValue.startsWith('https://')) return avatarValue
+
+  // Starts with /storage - prefix with apiBase
+  if (avatarValue.startsWith('/storage') && apiBase) return `${apiBase.replace(/\/$/, '')}${avatarValue}`
+
+  // Starts with / but not storage - local asset
+  if (avatarValue.startsWith('/')) return avatarValue
+
+  // Bare relative path (e.g. "avatars/1/xxx.jpg") - build storage URL
+  if (apiBase) return `${apiBase.replace(/\/$/, '')}/storage/${avatarValue}`
+
+  return DEFAULT_AVATAR
+}

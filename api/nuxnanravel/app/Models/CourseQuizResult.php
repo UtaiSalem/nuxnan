@@ -27,6 +27,8 @@ class CourseQuizResult extends Model
         'incorrect_answers',
         'skipped_questions',
         'passed',
+        'status',
+        'efficiency',
     ];
 
     protected $casts = [

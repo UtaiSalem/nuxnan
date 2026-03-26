@@ -56,7 +56,7 @@
               </td>
               <td class="p-3 text-center">
                 <span class="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700">
-                  {{ member.scores?.grade_name || '-' }}
+                  {{ member.scores?.grade_progress ?? 0 }} ({{ member.scores?.grade_name || '-' }})
                 </span>
               </td>
               <td class="p-3 text-center">

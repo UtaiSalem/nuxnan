@@ -165,9 +165,9 @@ const getAvatarUrl = (user: any) => {
         <!-- Grade Text in Center -->
         <div class="absolute inset-0 flex flex-col items-center justify-center">
           <span class="text-sm font-bold" :class="getProgressTextColor(overallProgress)">
-            {{ member.scores?.grade_name || '-' }}
+            {{ member.scores?.grade_progress ?? 0 }}
           </span>
-          <span class="text-[10px] text-gray-400">{{ overallProgress }}%</span>
+          <span class="text-[10px] text-gray-400">({{ member.scores?.grade_name || '-' }})</span>
         </div>
       </div>
     </div>
@@ -251,7 +251,7 @@ const getAvatarUrl = (user: any) => {
       </div>
       <div>
         <div class="text-lg font-semibold" :class="getProgressTextColor(overallProgress)">
-          {{ member.scores?.grade_name || '-' }}
+          {{ member.scores?.grade_progress ?? 0 }} ({{ member.scores?.grade_name || '-' }})
         </div>
         <p class="text-xs text-gray-400">เกรด</p>
       </div>

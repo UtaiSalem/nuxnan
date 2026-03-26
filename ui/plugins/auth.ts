@@ -6,40 +6,51 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
   if (token.value && !authStore.user) {
     try {
-      // Fetch current user data
       await authStore.fetchUser()
     } catch (error: any) {
-      // Only log if not a 401 (expected when token is invalid/expired)
       if (error?.statusCode !== 401 && !error?.message?.includes('401')) {
         console.error('Failed to fetch user on init', error)
       }
-      // Clear token if it's invalid
       token.value = null
       authStore.user = null
     }
   }
 
-  // Setup automatic token refresh (refresh 5 minutes before expiry)
-  // JWT tokens typically last 1 hour, so refresh after 55 minutes
-  // Only run on client-side
+  // Dynamic token refresh: schedule the next refresh based on the token's
+  // actual expires_in value (returned by login/refresh endpoints).
+  // We refresh when 80% of the TTL has elapsed (e.g. at 48 min for a 60 min token).
   if (process.client && token.value) {
-    const refreshInterval = setInterval(async () => {
-      if (authStore.isAuthenticated && !authStore.isRefreshing) {
-        const success = await authStore.refreshToken()
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
-        if (!success) {
-          clearInterval(refreshInterval)
-          // Redirect to login if refresh fails
+    function scheduleRefresh() {
+      if (refreshTimer) clearTimeout(refreshTimer)
+
+      const ttlSeconds = authStore.tokenExpiresIn ?? 3600
+      // Refresh at 80% of TTL to leave a comfortable margin
+      const delayMs = Math.max(ttlSeconds * 0.8 * 1000, 30_000) // at least 30 s
+
+      refreshTimer = setTimeout(async () => {
+        if (!authStore.isAuthenticated) return
+
+        const success = await authStore.refreshToken()
+        if (success) {
+          // Reschedule based on new TTL
+          scheduleRefresh()
+        } else {
           navigateTo('/auth')
         }
-      } else {
-        clearInterval(refreshInterval)
-      }
-    }, 55 * 60 * 1000) // 55 minutes
+      }, delayMs)
+    }
 
-    // Clean up on app unmount
+    scheduleRefresh()
+
+    // Reschedule whenever tokenExpiresIn changes (e.g. after manual refreshToken call)
+    watch(() => authStore.tokenExpiresIn, () => {
+      if (authStore.isAuthenticated) scheduleRefresh()
+    })
+
     nuxtApp.hook('app:unmount', () => {
-      clearInterval(refreshInterval)
+      if (refreshTimer) clearTimeout(refreshTimer)
     })
   }
 })

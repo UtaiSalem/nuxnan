@@ -31,6 +31,7 @@ const { fetchUserProfile, fetchMyProfile } = useProfile()
 const { sendFriendRequest, acceptFriendRequest, cancelFriendRequest, unfriend } = useFriends()
 const authStore = useAuthStore()
 const toast = useToast()
+const swal = useSweetAlert()
 
 // State
 const profile = ref<UserProfile | null>(null)
@@ -229,13 +230,13 @@ const handleCoverFileChange = (event: Event) => {
   
   // Validate file type
   if (!file.type.startsWith('image/')) {
-    alert('Please select an image file')
+    swal.warning('กรุณาเลือกไฟล์รูปภาพ', 'ไฟล์ไม่ถูกต้อง')
     return
   }
   
   // Validate file size (max 5MB)
   if (file.size > 5 * 1024 * 1024) {
-    alert('File size must be less than 5MB')
+    swal.warning('ขนาดไฟล์ต้องไม่เกิน 5MB', 'ไฟล์ใหญ่เกินไป')
     return
   }
   
@@ -266,9 +267,10 @@ const uploadCover = async () => {
     }
     
     closeCoverModal()
+    swal.success('อัปโหลดรูปปกสำเร็จ')
   } catch (error) {
     console.error('Error uploading cover:', error)
-    alert('Failed to upload cover photo')
+    swal.error('ไม่สามารถอัปโหลดรูปปกได้ กรุณาลองใหม่', 'อัปโหลดล้มเหลว')
   } finally {
     isUploadingCover.value = false
   }
@@ -296,13 +298,13 @@ const handleAvatarFileChange = (event: Event) => {
   
   // Validate file type
   if (!file.type.startsWith('image/')) {
-    alert('Please select an image file')
+    swal.warning('กรุณาเลือกไฟล์รูปภาพ', 'ไฟล์ไม่ถูกต้อง')
     return
   }
   
   // Validate file size (max 2MB)
   if (file.size > 2 * 1024 * 1024) {
-    alert('File size must be less than 2MB')
+    swal.warning('ขนาดไฟล์ต้องไม่เกิน 2MB', 'ไฟล์ใหญ่เกินไป')
     return
   }
   
@@ -340,9 +342,10 @@ const uploadAvatar = async () => {
     }
     
     closeAvatarModal()
+    swal.success('อัปโหลดรูปโปรไฟล์สำเร็จ')
   } catch (error) {
     console.error('Error uploading avatar:', error)
-    alert('Failed to upload avatar')
+    swal.error('ไม่สามารถอัปโหลดรูปโปรไฟล์ได้ กรุณาลองใหม่', 'อัปโหลดล้มเหลว')
   } finally {
     isUploadingAvatar.value = false
   }
@@ -498,7 +501,12 @@ const handleFriendAction = async () => {
         
       case 'unfriend':
         // Show confirmation first
-        if (confirm(`ต้องการเลิกเป็นเพื่อนกับ ${displayName.value} หรือไม่?`)) {
+        const confirmed = await swal.confirm(
+          `ต้องการเลิกเป็นเพื่อนกับ ${displayName.value} หรือไม่?`,
+          'ยืนยันการเลิกเป็นเพื่อน',
+          { icon: 'warning', isDanger: true }
+        )
+        if (confirmed) {
           success = await unfriend(userId)
           if (success) {
             friendshipStatus.value = { status: 'none', label: '' }

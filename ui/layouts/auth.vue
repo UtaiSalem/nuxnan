@@ -17,7 +17,9 @@
       
       <!-- Moving stars (warp effect) -->
       <div class="warp-stars">
-        <div v-for="i in 100" :key="i" class="warp-star" :style="getWarpStarStyle(i)"></div>
+        <ClientOnly>
+          <div v-for="i in 100" :key="i" class="warp-star" :style="getWarpStarStyle(i)"></div>
+        </ClientOnly>
       </div>
       
       <!-- Shooting stars -->

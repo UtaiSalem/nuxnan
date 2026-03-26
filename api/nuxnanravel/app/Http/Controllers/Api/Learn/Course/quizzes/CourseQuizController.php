@@ -91,8 +91,28 @@ class CourseQuizController extends Controller
 
     public function show(Course $course, CourseQuiz $quiz)
     {
+        $isCourseAdmin = $course->isAdmin(auth()->user());
+
+        $groups = [];
+        if ($isCourseAdmin) {
+            $groups = $course->courseGroups->map(function ($group) use ($course) {
+                $memberUserIds = $course->courseMembers()
+                    ->where('group_id', $group->id)
+                    ->pluck('user_id')
+                    ->toArray();
+
+                return [
+                    'id'   => $group->id,
+                    'name' => $group->name,
+                    'member_user_ids' => $memberUserIds,
+                    'member_count' => count($memberUserIds),
+                ];
+            });
+        }
+
         return response()->json([
-            'quiz' => new CourseQuizResource($quiz)
+            'quiz'   => new CourseQuizResource($quiz),
+            'groups' => $groups,
         ]);
     }
 

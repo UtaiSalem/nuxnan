@@ -33,9 +33,8 @@ class CourseGradesExport implements FromArray, WithHeadings, WithTitle, ShouldAu
                 $row['group'],
                 $row['achieved_score'],
                 $row['total_score'],
-                $row['percentage'] . '%',
-                $row['final_grade'],
-                $row['grade_name'],
+                $row['percentage'],
+                $row['final_grade'] . ' (' . $row['grade_name'] . ')',
                 $row['bonus_points'],
                 $this->getStatusLabel($row['completion_status']),
             ];
@@ -53,7 +52,6 @@ class CourseGradesExport implements FromArray, WithHeadings, WithTitle, ShouldAu
             'คะแนนเต็ม',
             'เปอร์เซ็นต์',
             'เกรด',
-            'ผลการเรียน',
             'คะแนนโบนัส',
             'สถานะ',
         ];
@@ -67,7 +65,7 @@ class CourseGradesExport implements FromArray, WithHeadings, WithTitle, ShouldAu
     public function styles(Worksheet $sheet)
     {
         // Header row styling
-        $sheet->getStyle('A1:K1')->applyFromArray([
+        $sheet->getStyle('A1:J1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -77,7 +75,7 @@ class CourseGradesExport implements FromArray, WithHeadings, WithTitle, ShouldAu
 
         // Course info in header
         $sheet->setCellValue('A1', 'รายวิชา: ' . $this->course->name);
-        $sheet->mergeCells('A1:K1');
+        $sheet->mergeCells('A1:J1');
         $sheet->getStyle('A1')->getFont()->setSize(14)->setBold(true);
         
         // Insert actual headers at row 2
@@ -86,7 +84,7 @@ class CourseGradesExport implements FromArray, WithHeadings, WithTitle, ShouldAu
         foreach ($headers as $col => $header) {
             $sheet->setCellValueByColumnAndRow($col + 1, 2, $header);
         }
-        $sheet->getStyle('A2:K2')->applyFromArray([
+        $sheet->getStyle('A2:J2')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,

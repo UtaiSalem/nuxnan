@@ -36,6 +36,10 @@ export const useAuthStore = defineStore('auth', () => {
         if (accessToken) {
           token.value = accessToken
           user.value = userData
+          // Store token TTL for dynamic refresh scheduling
+          if (response.expires_in) {
+            tokenExpiresIn.value = response.expires_in
+          }
         } else {
           throw new Error('Invalid response from server')
         }
@@ -176,11 +180,26 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Track token expiry so plugins can schedule refresh dynamically
+  const tokenExpiresIn = ref<number>(60 * 60) // default 1 hour in seconds
+
+  // Promise that concurrent 401 handlers can await while a refresh is in-flight
+  let refreshPromise: Promise<boolean> | null = null
+
   async function refreshToken() {
-    if (isRefreshing.value || !token.value) return false
+    if (!token.value) return false
+
+    // If a refresh is already in-flight, reuse that promise (dedup concurrent calls)
+    if (isRefreshing.value && refreshPromise) return refreshPromise
 
     isRefreshing.value = true
+    refreshPromise = _doRefresh()
+    const result = await refreshPromise
+    refreshPromise = null
+    return result
+  }
 
+  async function _doRefresh(): Promise<boolean> {
     try {
       const response = await $fetch<any>(`${apiBase}/api/refresh`, {
         method: 'POST',
@@ -190,22 +209,31 @@ export const useAuthStore = defineStore('auth', () => {
         },
       })
 
-      // Backend returns: { success: true, data: { accessToken, ... } }
-      if (response.success && response.data?.accessToken) {
-        token.value = response.data.accessToken
+      // Backend respondWithToken returns:
+      // { success: true, access_token: "...", token_type: "bearer", expires_in: 3600, user: {...} }
+      if (response.success) {
+        const accessToken = response.access_token || response.data?.accessToken
+        if (accessToken) {
+          token.value = accessToken
 
-        // Optionally update user data if included
-        if (response.data.user) {
-          user.value = response.data.user
+          // Store expires_in for dynamic refresh scheduling
+          if (response.expires_in) {
+            tokenExpiresIn.value = response.expires_in
+          }
+
+          // Update user data if included
+          const userData = response.user || response.data?.user
+          if (userData) {
+            user.value = userData
+          }
+
+          return true
         }
-        
-        return true
       }
-      
+
       return false
     } catch (e: any) {
       console.error('Token refresh error:', e)
-      // If refresh fails, clear auth
       token.value = null
       user.value = null
       return false
@@ -370,6 +398,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isRefreshing,
     isLoading,
+    tokenExpiresIn,
     login,
     adminLogin,
     register,

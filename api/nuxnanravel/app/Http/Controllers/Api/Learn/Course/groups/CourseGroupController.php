@@ -20,12 +20,70 @@ class CourseGroupController extends Controller
      */
     public function index(Course $course)
     {
+        // Get ungrouped members (group_id is NULL, exclude admins role=4)
+        $ungroupedMembers = $course->courseMembers()
+            ->whereNull('group_id')
+            ->where('role', '!=', 4)
+            ->with('user')
+            ->orderBy('order_number')
+            ->get();
+
         return response()->json([
+            'success'       => true,
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course'        => new CourseResource($course),
             'groups'        => CourseGroupResource::collection($course->courseGroups),
+            'ungrouped_members' => $ungroupedMembers->map(function ($member) {
+                $user = $member->user;
+                $avatarUrl = $this->getAvatarUrl($user);
+                return [
+                    'id'             => $member->id,
+                    'course_id'      => $member->course_id,
+                    'group_id'       => null,
+                    'user_id'        => $member->user_id,
+                    'member_name'    => $member->member_name,
+                    'member_code'    => $member->member_code,
+                    'order_number'   => $member->order_number,
+                    'achieved_score' => $member->achieved_score ?? 0,
+                    'bonus_points'   => $member->bonus_points ?? 0,
+                    'role'           => $member->role,
+                    'status'         => $member->status,
+                    'enrollment_date'   => $member->enrollment_date,
+                    'last_activity_at'  => $member->last_accessed_at,
+                    'lessons_completed' => $member->lessons_completed ?? 0,
+                    'attendance_rate'   => $member->attendance_rate ?? 0,
+                    'user'           => $user ? [
+                        'id'     => $user->id,
+                        'name'   => $user->name,
+                        'avatar' => $avatarUrl,
+                        'email'  => $user->email,
+                    ] : null,
+                    'avatar'         => $avatarUrl,
+                    'name'           => $member->member_name ?? $user?->name ?? 'Unknown User',
+                    'group'          => null,
+                ];
+            }),
             'courseMemberOfAuth'=> $course->courseMembers()->where('user_id', auth()->id())->first(),
         ]);
+    }
+
+    /**
+     * Generate avatar URL for a user (matches CourseGroupResource logic)
+     */
+    private function getAvatarUrl($user): string
+    {
+        if (!$user) {
+            return 'https://ui-avatars.com/api/?name=User&color=7F9CF5&background=EBF4FF';
+        }
+
+        if ($user->profile_photo_path) {
+            if (filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
+                return $user->profile_photo_path;
+            }
+            return url(Storage::url($user->profile_photo_path));
+        }
+
+        return 'https://ui-avatars.com/api/?name=' . urlencode($user->name ?? 'User') . '&color=7F9CF5&background=EBF4FF';
     }
 
     /**

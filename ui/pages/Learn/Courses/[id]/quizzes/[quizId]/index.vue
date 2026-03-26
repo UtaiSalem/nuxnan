@@ -25,14 +25,34 @@ const handleDuplicated = (newQuiz: any) => {
   }
 }
 
+// Group filter state
+const groups = ref<any[]>([])
+const selectedGroupId = ref<number | null>(null)
+
 // Fetch quiz details
 const { data: quiz, refresh, pending } = await useAsyncData(
   `course-quiz-${quizId}`,
   async () => {
     const res = await api.get(`/api/courses/${courseId}/quizzes/${quizId}`)
+    if (res.groups) {
+      groups.value = res.groups
+    }
     return res.quiz
   }
 )
+
+// Filtered student results by group
+const filteredStudentResults = computed(() => {
+  if (!quiz.value?.student_results) return []
+  if (!selectedGroupId.value) return quiz.value.student_results
+
+  const group = groups.value.find((g: any) => g.id === selectedGroupId.value)
+  if (!group) return quiz.value.student_results
+
+  return quiz.value.student_results.filter((result: any) =>
+    group.member_user_ids.includes(result.user_id)
+  )
+})
 
 const startQuiz = () => {
   navigateTo(`/courses/${courseId}/quizzes/${quizId}/attempt`)
@@ -291,8 +311,49 @@ const getStatusBadge = computed(() => {
             </p>
           </div>
           <div v-else>
+            <!-- Group Filter -->
+            <div v-if="groups.length > 0" class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <Icon icon="fluent:people-team-24-regular" class="w-5 h-5 inline-block mr-1" />
+                กรองตามกลุ่ม
+              </label>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  @click="selectedGroupId = null"
+                  :class="[
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border',
+                    !selectedGroupId
+                      ? 'border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-500 shadow-sm'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-purple-300 dark:hover:border-purple-700'
+                  ]"
+                >
+                  ทั้งหมด
+                  <span class="ml-1 text-xs opacity-70">({{ quiz.student_results?.length || 0 }})</span>
+                </button>
+                <button
+                  v-for="group in groups"
+                  :key="group.id"
+                  @click="selectedGroupId = group.id"
+                  :class="[
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border',
+                    selectedGroupId === group.id
+                      ? 'border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-500 shadow-sm'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-purple-300 dark:hover:border-purple-700'
+                  ]"
+                >
+                  {{ group.name || `กลุ่ม ${group.id}` }}
+                  <span class="ml-1 text-xs opacity-70">({{ group.member_count || 0 }})</span>
+                </button>
+              </div>
+            </div>
+
             <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-6">
-                <h3 class="text-lg font-semibold mb-4">ผลการสอบของนักเรียน</h3>
+                <h3 class="text-lg font-semibold mb-4">
+                  ผลการสอบของนักเรียน
+                  <span v-if="selectedGroupId" class="text-sm font-normal text-gray-500 ml-2">
+                    ({{ filteredStudentResults.length }} คน)
+                  </span>
+                </h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400">
@@ -305,7 +366,7 @@ const getStatusBadge = computed(() => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="result in quiz.student_results" :key="result.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                            <tr v-for="result in filteredStudentResults" :key="result.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
                                 <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white flex items-center gap-2">
                                     <div class="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
                                         <img v-if="result.user?.avatar" :src="result.user.avatar" class="w-full h-full object-cover">
@@ -332,9 +393,9 @@ const getStatusBadge = computed(() => {
                                     <span v-else class="text-gray-500 italic">...</span>
                                 </td>
                             </tr>
-                            <tr v-if="!quiz.student_results || quiz.student_results.length === 0">
+                            <tr v-if="filteredStudentResults.length === 0">
                                 <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                                    ยังไม่มีใครทำแบบทดสอบนี้นะ
+                                    {{ selectedGroupId ? 'ไม่มีนักเรียนในกลุ่มนี้ที่ทำแบบทดสอบ' : 'ยังไม่มีใครทำแบบทดสอบนี้นะ' }}
                                 </td>
                             </tr>
                         </tbody>

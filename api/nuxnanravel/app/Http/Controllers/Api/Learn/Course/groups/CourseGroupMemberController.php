@@ -227,10 +227,23 @@ class CourseGroupMemberController extends Controller
      */
     public function destroy(Course $course, CourseGroup $group, $memberId)
     {
-        $member = CourseGroupMember::findOrFail($memberId);
-        
-        if ($member->group_id !== $group->id) {
-            return response()->json(['success' => false, 'message' => 'Member not found in this group'], 404);
+        // Authorization check
+        $isCourseAdmin = $course->isAdmin(auth()->user());
+        $authMember = CourseGroupMember::where('group_id', $group->id)->where('user_id', auth()->id())->first();
+
+        if (!$isCourseAdmin && (!$authMember || $authMember->role !== 'admin')) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Try to find by CourseGroupMember ID first, then by user_id
+        $member = CourseGroupMember::find($memberId);
+        if (!$member || $member->group_id !== $group->id) {
+            // Fallback: treat memberId as user_id
+            $member = CourseGroupMember::where('group_id', $group->id)->where('user_id', $memberId)->first();
+        }
+
+        if (!$member) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบสมาชิกในกลุ่มนี้'], 404);
         }
 
         $userId = $member->user_id;
