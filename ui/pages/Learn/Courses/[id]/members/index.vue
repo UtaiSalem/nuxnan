@@ -454,7 +454,14 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                             :key="member.id"
                             :member="member"
                             :data-index="index"
+                            :is-course-admin="isCourseAdmin"
+                            :course-total-score="course?.total_score || 100"
+                            :available-groups="activeGroupTab === -1 ? courseGroupStore.groups : []"
+                            :assigning-member-id="assigningGroupForMember"
                             @request-unmember-course="handleRequestUnmember"
+                            @view-member="handleViewMember"
+                            @edit-member="handleEditMember"
+                            @assign-group="({ memberId, groupId }) => assignGroupToMember(memberId, groupId)"
                         />
                     </ul>
                 </div>

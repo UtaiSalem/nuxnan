@@ -41,8 +41,9 @@ class CourseActivityController extends Controller implements HasMiddleware
             $cma = $course->courseMembers()->where('user_id', auth()->id())->first();
             $coursesResource = new CourseResource($course);
             
-            // Get course groups
+            // Get course groups with eager loaded members and users
             $courseGroups = CourseGroup::where('course_id', $course->id)
+                ->with(['members.user'])
                 ->withCount('course_group_members')
                 ->get();
 

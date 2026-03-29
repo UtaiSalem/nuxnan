@@ -517,6 +517,10 @@ class CourseMemberController extends Controller
 
     public function memberSettings(Course $course, CourseMember $course_member)
     {
+        // Eager load relationships to avoid N+1 queries
+        $course_member->load(['user', 'group']);
+        $course->load(['courseLessons', 'courseGroups', 'courseAssignments', 'courseQuizzes']);
+
         return response()->json([
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course'        => new CourseResource($course),
@@ -526,7 +530,6 @@ class CourseMemberController extends Controller
             'assignments'       => AssignmentResource::collection($course->courseAssignments), 
             'quizzes'           => CourseQuizResource::collection($course->courseQuizzes),
             'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
-            // 'courseMemberOfAuth' => $course_member,
         ]);
     }
 

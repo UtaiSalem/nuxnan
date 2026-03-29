@@ -28,11 +28,14 @@ class CourseGroupController extends Controller
             ->orderBy('order_number')
             ->get();
 
+        // Eager load members.user to avoid N+1 queries
+        $courseGroups = $course->courseGroups()->with(['members.user'])->get();
+
         return response()->json([
             'success'       => true,
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'course'        => new CourseResource($course),
-            'groups'        => CourseGroupResource::collection($course->courseGroups),
+            'groups'        => CourseGroupResource::collection($courseGroups),
             'ungrouped_members' => $ungroupedMembers->map(function ($member) {
                 $user = $member->user;
                 $avatarUrl = $this->getAvatarUrl($user);

@@ -1,11 +1,9 @@
 <script setup>
 import { computed, toRef } from 'vue';
-import { usePage } from "@inertiajs/vue3";
 import { Icon } from '@iconify/vue';
 
 // ✅ Import composable
-import { useMemberProgress } from '@/composables/useMemberProgress.ts';
-import DotsDropdownMenu from '@/components/accessories/DotsDropdownMenu.vue';
+import { useMemberProgress } from '~/composables/useMemberProgress';
 
 const props = defineProps({
     member: {
@@ -17,22 +15,34 @@ const props = defineProps({
       type: Number,
       default: 0
     },
+    isCourseAdmin: {
+      type: Boolean,
+      default: false
+    },
+    courseTotalScore: {
+      type: Number,
+      default: 100
+    },
+    availableGroups: {
+      type: Array,
+      default: () => []
+    },
+    assigningMemberId: {
+      type: Number,
+      default: null
+    },
 });
 
-const emit = defineEmits(['request-unmember-course']);
-
-// Cache usePage props
-const page = computed(() => usePage().props);
-const courseTotalScore = computed(() => page.value.course?.data?.total_score || 100);
-const isCourseAdmin = computed(() => page.value.isCourseAdmin);
-const authUserId = computed(() => page.value.auth?.user?.id);
-
-const canManage = computed(() => 
-  props.member?.user?.id === authUserId.value || isCourseAdmin.value
-);
+const emit = defineEmits([
+    'request-unmember-course',
+    'view-member',
+    'edit-member',
+    'assign-group'
+]);
 
 // ✅ ใช้ composable สำหรับ progress calculation
 const memberRef = toRef(props, 'member');
+const totalScoreRef = computed(() => props.courseTotalScore);
 const { 
   percentage, 
   progressStatus, 
@@ -43,7 +53,9 @@ const {
   remainingPercentage,
   progressBarStyle,
   totalAchievedScore
-} = useMemberProgress(memberRef, courseTotalScore);
+} = useMemberProgress(memberRef, totalScoreRef);
+
+const showGroupAssign = computed(() => props.availableGroups.length > 0);
 
 // Member display data
 const memberDisplayName = computed(() => 
@@ -81,6 +93,14 @@ const handleUnmember = () => {
   });
 };
 
+const handleViewMember = () => {
+  emit('view-member', props.member);
+};
+
+const handleEditMember = () => {
+  emit('edit-member', props.member);
+};
+
 </script>
 
 <template>
@@ -90,19 +110,37 @@ const handleUnmember = () => {
         :aria-label="`Member card for ${memberDisplayName}`"
         role="article">
         
-        <!-- Admin Controls -->
-        <div class="absolute top-3 right-3 z-10" v-if="isCourseAdmin">
-            <DotsDropdownMenu @delete-model="handleUnmember">
-                <template #deleteModel>
-                    <span>ลบสมาชิก</span>
-                </template>
-            </DotsDropdownMenu>
+        <!-- Admin Controls - Hover Action Buttons -->
+        <div class="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" v-if="isCourseAdmin">
+            <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-1">
+                <button
+                    @click="handleViewMember"
+                    class="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
+                    title="ดูรายละเอียด"
+                >
+                    <Icon icon="fluent:eye-24-regular" class="w-4 h-4" />
+                </button>
+                <button
+                    @click="handleEditMember"
+                    class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                    title="แก้ไข"
+                >
+                    <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
+                </button>
+                <button
+                    @click="handleUnmember"
+                    class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                    title="ลบสมาชิก"
+                >
+                    <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
+                </button>
+            </div>
         </div>
         
         <!-- Flex Layout สำหรับจัดวาง Member Info และ Progress Bar -->
         <div class="flex flex-col lg:flex-row gap-4 items-start" :class="{'pr-10': isCourseAdmin}">
             <!-- Member Info -->
-            <div class="flex items-center w-full lg:w-64 lg:flex-shrink-0">
+            <div class="flex items-center w-full lg:w-72 lg:flex-shrink-0">
                 <!-- Avatar with ring -->
                 <div class="relative flex-shrink-0">
                     <img 
@@ -122,18 +160,8 @@ const handleUnmember = () => {
                 
                 <div class="ml-4 min-w-0 flex-1">
                     <!-- Name -->
-                    <a v-if="isCourseAdmin"
-                       :href="`/courses/${page.course?.data?.id}/members/${props.member.id}/member-settings`"
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       :title="memberDisplayName"
-                       class="text-gray-900 dark:text-white font-bold tracking-wide text-lg hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-300 cursor-pointer inline-flex items-center group/link max-w-full">
-                        <span class="truncate">{{ memberDisplayName }}</span>
-                        <Icon icon="heroicons:arrow-top-right-on-square" class="w-4 h-4 ml-1.5 flex-shrink-0 opacity-0 group-hover/link:opacity-100 transition-opacity duration-200" />
-                    </a>
-                    <p v-else 
-                       :title="memberDisplayName"
-                       class="text-gray-900 dark:text-white font-bold tracking-wide text-lg truncate">
+                    <p :title="memberDisplayName"
+                       class="text-gray-900 dark:text-white font-bold tracking-wide text-base leading-snug break-words line-clamp-2">
                         {{ memberDisplayName }}
                     </p>
                     
@@ -144,7 +172,7 @@ const handleUnmember = () => {
                     </div>
                     
                     <!-- Meta Info -->
-                    <div class="flex items-center space-x-3 text-sm">
+                    <div class="flex items-center flex-wrap gap-x-3 gap-y-1 text-sm">
                         <!-- Order Number -->
                         <span class="flex items-center transition-colors"
                               :class="memberOrderNumber === '#' ? 'text-orange-500 dark:text-orange-400 font-bold' : 'text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400'">
@@ -153,7 +181,21 @@ const handleUnmember = () => {
                         </span>
                         
                         <!-- Group -->
-                        <span class="flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                        <template v-if="!member.group && showGroupAssign && isCourseAdmin">
+                            <div class="flex items-center gap-1">
+                                <Icon icon="heroicons:user-group-solid" class="w-5 h-5 text-gray-400" />
+                                <select
+                                    :disabled="assigningMemberId === member.id"
+                                    class="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none disabled:opacity-50"
+                                    @change="(e) => { const val = e.target.value; if (val) { emit('assign-group', { memberId: member.id, groupId: Number(val) }); e.target.value = '' } }"
+                                >
+                                    <option value="">เลือกกลุ่ม...</option>
+                                    <option v-for="g in availableGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+                                </select>
+                                <Icon v-if="assigningMemberId === member.id" icon="svg-spinners:ring-resize" class="w-4 h-4 text-blue-500" />
+                            </div>
+                        </template>
+                        <span v-else class="flex items-center text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                             <Icon icon="heroicons:user-group-solid" class="w-5 h-5 mr-1" />
                             <span class="font-medium">{{ memberGroupName }}</span>
                         </span>

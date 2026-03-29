@@ -3,7 +3,7 @@
  * MemberListView - Course Member List Component
  * แสดงรายการสมาชิกรายวิชา พร้อมมุมมอง Card และ Table
  */
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
 interface Member {
@@ -188,6 +188,56 @@ const toggleSelectAll = () => {
 const isAllSelected = computed(() => 
   props.members.length > 0 && props.selectedIds.length === props.members.length
 )
+
+// Top scrollbar sync for table view
+const topScrollRef = ref<HTMLElement | null>(null)
+const tableScrollRef = ref<HTMLElement | null>(null)
+const tableRef = ref<HTMLElement | null>(null)
+const tableScrollWidth = ref(0)
+let isSyncingScroll = false
+
+const updateTableWidth = () => {
+  if (tableRef.value) {
+    tableScrollWidth.value = tableRef.value.scrollWidth
+  }
+}
+
+const onTopScroll = () => {
+  if (isSyncingScroll) return
+  isSyncingScroll = true
+  if (tableScrollRef.value && topScrollRef.value) {
+    tableScrollRef.value.scrollLeft = topScrollRef.value.scrollLeft
+  }
+  nextTick(() => { isSyncingScroll = false })
+}
+
+const onTableScroll = () => {
+  if (isSyncingScroll) return
+  isSyncingScroll = true
+  if (topScrollRef.value && tableScrollRef.value) {
+    topScrollRef.value.scrollLeft = tableScrollRef.value.scrollLeft
+  }
+  nextTick(() => { isSyncingScroll = false })
+}
+
+onMounted(() => {
+  updateTableWidth()
+  window.addEventListener('resize', updateTableWidth)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateTableWidth)
+})
+
+watch(() => props.members, () => {
+  nextTick(updateTableWidth)
+}, { deep: true })
+
+watch(() => props.viewMode, (val) => {
+  if (val === 'table') {
+    nextTick(updateTableWidth)
+  }
+})
 </script>
 
 <template>
@@ -240,20 +290,20 @@ const isAllSelected = computed(() =>
 
             <!-- Info -->
             <div class="flex-1 min-w-0">
-              <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0 flex-1">
-                  <h3 class="font-bold text-gray-900 dark:text-white truncate text-lg leading-tight">
-                    {{ getMemberName(member) }}
-                  </h3>
-                  <p class="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">
+              <div>
+                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug break-words line-clamp-2">
+                  {{ getMemberName(member) }}
+                </h3>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[140px]">
                     {{ getMemberCode(member) }}
                   </p>
+                  <!-- Role Badge -->
+                  <span :class="['inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap', getRoleBadge(member.role).color]">
+                    <Icon :icon="getRoleBadge(member.role).icon" class="w-3 h-3" />
+                    {{ getRoleBadge(member.role).label }}
+                  </span>
                 </div>
-                <!-- Role Badge -->
-                <span :class="['flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium', getRoleBadge(member.role).color]">
-                  <Icon :icon="getRoleBadge(member.role).icon" class="w-3.5 h-3.5" />
-                  {{ getRoleBadge(member.role).label }}
-                </span>
               </div>
 
               <!-- Group -->
@@ -351,9 +401,13 @@ const isAllSelected = computed(() =>
 
     <!-- Table View -->
     <div v-else class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left">
-          <thead>
+      <!-- Top Scrollbar -->
+      <div ref="topScrollRef" class="overflow-x-auto overflow-y-hidden scrollbar-thin" style="height: 12px;" @scroll="onTopScroll">
+        <div :style="{ width: tableScrollWidth + 'px', height: '1px' }"></div>
+      </div>
+      <div ref="tableScrollRef" class="overflow-x-auto" @scroll="onTableScroll">
+        <table ref="tableRef" class="w-full text-left min-w-[900px]">
+          <thead class="sticky top-0 z-10">
             <tr class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
               <th v-if="showCheckbox" class="w-12 px-4 py-3">
                 <input
@@ -363,37 +417,37 @@ const isAllSelected = computed(() =>
                   class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-16">
                 เลขที่
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[200px]">
                 สมาชิก
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[100px]">
                 รหัส
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[90px]">
                 กลุ่ม
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[90px]">
                 บทบาท
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[160px]">
                 ความคืบหน้า
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center whitespace-nowrap min-w-[80px]">
                 คะแนน
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[70px]">
                 บทเรียน
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[70px]">
                 เข้าเรียน
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[110px]">
                 ใช้งานล่าสุด
               </th>
-              <th v-if="isCourseAdmin" class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">
+              <th v-if="isCourseAdmin" class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right whitespace-nowrap min-w-[120px]">
                 การดำเนินการ
               </th>
             </tr>
@@ -427,13 +481,13 @@ const isAllSelected = computed(() =>
                   <img
                     :src="getMemberAvatar(member)"
                     :alt="getMemberName(member)"
-                    class="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700"
+                    class="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700 flex-shrink-0"
                   />
                   <div class="min-w-0">
-                    <p class="font-semibold text-gray-900 dark:text-white truncate max-w-[180px]">
+                    <p class="font-semibold text-gray-900 dark:text-white text-sm leading-snug break-words line-clamp-2 max-w-[200px]">
                       {{ getMemberName(member) }}
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px]">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
                       {{ getMemberEmail(member) }}
                     </p>
                   </div>
