@@ -15,6 +15,7 @@ class GradebookScore extends Model
     use HasFactory;
 
     protected $fillable = [
+        'academy_id',
         'assessment_id',
         'student_id',
         'user_id',
@@ -51,6 +52,11 @@ class GradebookScore extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
     }
 
     public function user(): BelongsTo

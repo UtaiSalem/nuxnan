@@ -729,7 +729,7 @@ const getGradeColor = (grade: string) => {
                     <div>
                       <h3 class="font-semibold text-gray-900 dark:text-white">{{ classroom.name }}</h3>
                       <p class="text-sm text-gray-500 dark:text-gray-400">
-                        {{ classroom.students_count || 0 }}/{{ classroom.capacity || 40 }} คน
+                        {{ classroom.student_count || 0 }}/{{ classroom.capacity || 40 }} คน
                       </p>
                     </div>
                   </div>
@@ -768,7 +768,7 @@ const getGradeColor = (grade: string) => {
                   <div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div 
                       class="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all"
-                      :style="{ width: `${Math.min((classroom.students_count || 0) / (classroom.capacity || 40) * 100, 100)}%` }"
+                      :style="{ width: `${Math.min((classroom.student_count || 0) / (classroom.capacity || 40) * 100, 100)}%` }"
                     ></div>
                   </div>
                 </div>
@@ -1182,7 +1182,7 @@ const getGradeColor = (grade: string) => {
               >
                 <option :value="null" disabled>เลือกห้องเรียน</option>
                 <option v-for="room in otherClassrooms" :key="room.id" :value="room.id">
-                  {{ room.name }} ({{ room.students_count || 0 }}/{{ room.capacity || 40 }})
+                  {{ room.name }} ({{ room.student_count || 0 }}/{{ room.capacity || 40 }})
                 </option>
               </select>
             </div>

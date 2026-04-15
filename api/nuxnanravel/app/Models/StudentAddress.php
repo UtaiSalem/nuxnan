@@ -16,6 +16,7 @@ class StudentAddress extends Model
     protected $table = 'student_addresses';
 
     protected $fillable = [
+        'academy_id',
         'student_id',
         'address_type',
         'house_number',
@@ -37,6 +38,11 @@ class StudentAddress extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
     }
 
     // Address type constants

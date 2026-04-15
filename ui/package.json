@@ -43,7 +43,7 @@
     "@tiptap/vue-3": "^3.14.0",
     "@types/qrcode": "^1.5.6",
     "@vuepic/vue-datepicker": "^12.1.0",
-    "axios": "^1.13.2",
+    "axios": "1.13.2",
     "canvas-confetti": "^1.9.4",
     "file-saver": "^2.0.5",
     "flowbite": "2.5.2",

@@ -14,6 +14,7 @@ class CourseGrade extends Model
     use HasFactory;
 
     protected $fillable = [
+        'academy_id',
         'course_id',
         'student_id',
         'user_id',
@@ -52,6 +53,11 @@ class CourseGrade extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
     }
 
     public function user(): BelongsTo

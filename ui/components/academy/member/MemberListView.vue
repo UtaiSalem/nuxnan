@@ -358,7 +358,7 @@ const isAllSelected = computed(() =>
     <!-- Table View -->
     <div v-else class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-left">
+        <table class="w-full text-left" style="min-width: 800px">
           <thead>
             <tr class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
               <th v-if="showCheckbox" class="w-12 px-4 py-3">
@@ -369,25 +369,25 @@ const isAllSelected = computed(() =>
                   class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
               </th>
-              <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                 สมาชิก
               </th>
-              <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                 รหัส
               </th>
-              <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                 บทบาท
               </th>
-              <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                 สถานะ
               </th>
-              <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">
                 วันที่เข้าร่วม
               </th>
-              <th class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                 ใช้งานล่าสุด
               </th>
-              <th v-if="isAdmin" class="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">
+              <th v-if="isAdmin" class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right whitespace-nowrap">
                 การดำเนินการ
               </th>
             </tr>
@@ -396,7 +396,7 @@ const isAllSelected = computed(() =>
             <tr 
               v-for="member in members" 
               :key="member.id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              class="group hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors"
             >
               <!-- Checkbox -->
               <td v-if="showCheckbox" class="px-4 py-3">
@@ -409,18 +409,24 @@ const isAllSelected = computed(() =>
               </td>
 
               <!-- Member -->
-              <td class="px-6 py-4">
+              <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
-                  <img
-                    :src="getMemberAvatar(member)"
-                    :alt="getMemberName(member)"
-                    class="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700"
-                  />
+                  <div class="relative flex-shrink-0">
+                    <img
+                      :src="getMemberAvatar(member)"
+                      :alt="getMemberName(member)"
+                      class="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700"
+                    />
+                    <div 
+                      class="absolute -bottom-0.5 -right-0.5 w-4 h-4 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-800"
+                      :class="member.status === 2 ? 'bg-green-500' : member.status === 1 ? 'bg-yellow-500' : member.status === 5 ? 'bg-orange-500' : 'bg-gray-400'"
+                    />
+                  </div>
                   <div class="min-w-0">
-                    <p class="font-semibold text-gray-900 dark:text-white truncate max-w-[180px]">
+                    <p class="font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">
                       {{ getMemberName(member) }}
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px]">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
                       {{ getMemberEmail(member) }}
                     </p>
                   </div>
@@ -428,17 +434,17 @@ const isAllSelected = computed(() =>
               </td>
 
               <!-- Member Code -->
-              <td class="px-6 py-4">
-                <span class="text-sm text-gray-600 dark:text-gray-400 font-mono">
+              <td class="px-4 py-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700/50 px-2 py-0.5 rounded">
                   {{ getMemberCode(member) }}
                 </span>
               </td>
 
               <!-- Role -->
-              <td class="px-6 py-4">
+              <td class="px-4 py-3">
                 <button 
                   @click="emit('edit-role', member)"
-                  :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-80', getRoleColorClass(getRoleBadge(member).color)]"
+                  :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-80 whitespace-nowrap', getRoleColorClass(getRoleBadge(member).color)]"
                 >
                   <Icon :icon="getRoleBadge(member).icon" class="w-3.5 h-3.5" />
                   {{ getRoleBadge(member).label }}
@@ -446,30 +452,30 @@ const isAllSelected = computed(() =>
               </td>
 
               <!-- Status -->
-              <td class="px-6 py-4">
-                <span :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium', getStatusBadge(member.status).bgColor, getStatusBadge(member.status).color]">
+              <td class="px-4 py-3">
+                <span :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap', getStatusBadge(member.status).bgColor, getStatusBadge(member.status).color]">
                   <Icon :icon="getStatusBadge(member.status).icon" class="w-3.5 h-3.5" />
                   {{ getStatusBadge(member.status).label }}
                 </span>
               </td>
 
               <!-- Join Date -->
-              <td class="px-6 py-4">
-                <span class="text-sm text-gray-500 dark:text-gray-400">
+              <td class="px-4 py-3 hidden lg:table-cell">
+                <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                   {{ formatDate(member.enrollment_date || member.created_at) }}
                 </span>
               </td>
 
               <!-- Last Activity -->
-              <td class="px-6 py-4">
+              <td class="px-4 py-3 hidden xl:table-cell">
                 <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                   {{ formatLastActivity(member.last_activity_at) }}
                 </span>
               </td>
 
               <!-- Actions -->
-              <td v-if="isAdmin" class="px-6 py-4">
-                <div class="flex items-center justify-end gap-1">
+              <td v-if="isAdmin" class="px-4 py-3">
+                <div class="flex items-center justify-end gap-0.5">
                   <!-- Accept/Reject for pending -->
                   <template v-if="member.status === 1">
                     <button
@@ -491,21 +497,21 @@ const isAllSelected = computed(() =>
                   <!-- Regular actions -->
                   <button
                     @click="emit('edit-role', member)"
-                    class="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
+                    class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                     title="กำหนดบทบาท"
                   >
                     <Icon icon="fluent:shield-person-24-regular" class="w-4 h-4" />
                   </button>
                   <button
                     @click="emit('manage-member', member)"
-                    class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                     title="จัดการสมาชิก"
                   >
                     <Icon icon="fluent:settings-24-regular" class="w-4 h-4" />
                   </button>
                   <button
                     @click="emit('remove-member', member)"
-                    class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                     title="ลบสมาชิก"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />

@@ -34,6 +34,40 @@ class Student extends Model
         return $this->hasOne(AcademyMember::class, 'student_id');
     }
 
+    /**
+     * ห้องเรียนที่นักเรียนสังกัด (ผ่าน classroom_students pivot)
+     */
+    public function classrooms(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Classroom::class, 'classroom_students', 'student_id', 'classroom_id')
+                     ->withPivot('student_number', 'status', 'academic_year_id', 'enrolled_at', 'left_at')
+                     ->withTimestamps();
+    }
+
+    /**
+     * ห้องเรียนปัจจุบัน (active enrollment)
+     */
+    public function activeClassroom(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->classrooms()->wherePivot('status', 'active');
+    }
+
+    /**
+     * ClassroomStudent records ทั้งหมด (HasMany — ได้ pivot model โดยตรง)
+     */
+    public function classroomEnrollments(): HasMany
+    {
+        return $this->hasMany(ClassroomStudent::class);
+    }
+
+    /**
+     * Current active classroom enrollment record
+     */
+    public function currentEnrollment(): HasOne
+    {
+        return $this->hasOne(ClassroomStudent::class)->where('status', 'active');
+    }
+
     protected $fillable = [
         'user_id',
         'academy_id',
@@ -236,6 +270,16 @@ class Student extends Model
 
     public function getCurrentClassroomAttribute(): ?string
     {
+        // Priority 1: from active classroom enrollment (pivot table)
+        $enrollment = $this->currentEnrollment;
+        if ($enrollment) {
+            $classroom = $enrollment->classroom;
+            if ($classroom) {
+                return $classroom->display_name;
+            }
+        }
+
+        // Priority 2: from StudentAcademicInfo (legacy)
         return $this->currentAcademicInfo?->classroom_full;
     }
 
@@ -286,6 +330,14 @@ class Student extends Model
               ->orWhere('first_name_en', 'LIKE', "%{$search}%")
               ->orWhere('last_name_en', 'LIKE', "%{$search}%");
         });
+    }
+
+    /**
+     * Scope: กรองนักเรียนตาม academy
+     */
+    public function scopeByAcademy($query, $academyId)
+    {
+        return $query->where('academy_id', $academyId);
     }
 
     // Methods

@@ -36,6 +36,8 @@ use App\Http\Controllers\Api\Learn\Academy\ParentDashboardController;
 use App\Http\Controllers\Api\Learn\Academy\MemberActivityLogController;
 use App\Http\Controllers\Api\Learn\Academy\InviteLinkController;
 use App\Http\Controllers\Api\Learn\Academy\MemberTagController;
+use App\Http\Controllers\Api\Learn\Academy\ClassroomGroupController;
+use App\Http\Controllers\Api\Learn\Academy\ClassroomInvitationController;
 
 // Public routes for invite links (no auth required for validation)
 Route::get('/invite/{code}', [InviteLinkController::class, 'validateCode'])->name('invite.validate');
@@ -55,6 +57,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::get('/users/{user}/my-academies', [AcademyController::class, 'getMyAcademies'])->name('academies.my-academies');
     Route::get('/users/{user}/membered-academies', [AcademyController::class, 'getAuthMemberedAcademies'])->name('academies.membered');
     Route::get('/by-id/{academy}', [AcademyController::class, 'show'])->name('academy.showById');
+    Route::get('/my-student-card', [ClassroomController::class, 'getMyStudentCard'])->name('api.academy.myStudentCard');
     
     // Wildcard route MUST be last
     Route::get('/{academy:name}', [AcademyController::class, 'show'])->name('academy.show');
@@ -298,16 +301,50 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('/', [ClassroomController::class, 'show'])->name('api.academy.classrooms.show');
         Route::patch('/', [ClassroomController::class, 'update'])->name('api.academy.classrooms.update');
         Route::delete('/', [ClassroomController::class, 'destroy'])->name('api.academy.classrooms.destroy');
+        Route::post('archive', [ClassroomController::class, 'archive'])->name('api.academy.classrooms.archive');
+
+        // Legacy student management
         Route::post('students', [ClassroomController::class, 'addStudents'])->name('api.academy.classrooms.students.add');
         Route::delete('students/{student}', [ClassroomController::class, 'removeStudent'])->name('api.academy.classrooms.students.remove');
         Route::patch('students/{student}/number', [ClassroomController::class, 'updateStudentNumber'])->name('api.academy.classrooms.students.updateNumber');
+
+        // New member management
+        Route::get('members', [ClassroomController::class, 'listMembers'])->name('api.academy.classrooms.members.index');
+        Route::post('members', [ClassroomController::class, 'addMember'])->name('api.academy.classrooms.members.add');
+        Route::post('members/bulk', [ClassroomController::class, 'bulkAddMembers'])->name('api.academy.classrooms.members.bulk');
+        Route::patch('members/{member}', [ClassroomController::class, 'updateMember'])->name('api.academy.classrooms.members.update');
+        Route::delete('members/{member}', [ClassroomController::class, 'removeMember'])->name('api.academy.classrooms.members.remove');
+
+        // Classroom Groups
+        Route::get('groups', [ClassroomGroupController::class, 'index'])->name('api.academy.classrooms.groups.index');
+        Route::post('groups', [ClassroomGroupController::class, 'store'])->name('api.academy.classrooms.groups.store');
+        Route::get('groups/{group}', [ClassroomGroupController::class, 'show'])->name('api.academy.classrooms.groups.show');
+        Route::patch('groups/{group}', [ClassroomGroupController::class, 'update'])->name('api.academy.classrooms.groups.update');
+        Route::delete('groups/{group}', [ClassroomGroupController::class, 'destroy'])->name('api.academy.classrooms.groups.destroy');
+        Route::post('groups/{group}/members', [ClassroomGroupController::class, 'addMember'])->name('api.academy.classrooms.groups.members.add');
+        Route::post('groups/{group}/members/bulk', [ClassroomGroupController::class, 'bulkAddMembers'])->name('api.academy.classrooms.groups.members.bulk');
+        Route::delete('groups/{group}/members/{member}', [ClassroomGroupController::class, 'removeMember'])->name('api.academy.classrooms.groups.members.remove');
+
+        // Classroom Invitations
+        Route::get('invitations', [ClassroomInvitationController::class, 'index'])->name('api.academy.classrooms.invitations.index');
+        Route::post('invitations', [ClassroomInvitationController::class, 'store'])->name('api.academy.classrooms.invitations.store');
+        Route::delete('invitations/{invitation}', [ClassroomInvitationController::class, 'cancel'])->name('api.academy.classrooms.invitations.cancel');
     });
 
-    // Student transfer between classrooms
-    Route::post('classrooms/transfer-student', [ClassroomController::class, 'transferStudent'])->name('api.academy.classrooms.transferStudent');
+    // Member transfer between classrooms
+    Route::post('{academy}/classrooms/transfer-member', [ClassroomController::class, 'transferMember'])->name('api.academy.classrooms.transferMember');
 
-    // Get student card for current user
-    Route::get('my-student-card', [ClassroomController::class, 'getMyStudentCard'])->name('api.academy.myStudentCard');
+    // Student enrollment management (new system)
+    Route::post('{academy}/classrooms/transfer-student', [ClassroomController::class, 'transferStudent'])->name('api.academy.classrooms.transferStudent');
+    Route::post('{academy}/classrooms/promote', [ClassroomController::class, 'promoteClassroom'])->name('api.academy.classrooms.promote');
+    Route::get('{academy}/students/{student}/enrollment-history', [ClassroomController::class, 'getStudentEnrollmentHistory'])->name('api.academy.students.enrollmentHistory');
+
+    // Invitation accept/decline (token-based, not classroom-scoped)
+    Route::post('classrooms/invitations/{token}/accept', [ClassroomInvitationController::class, 'accept'])->name('api.academy.classrooms.invitations.accept');
+    Route::post('classrooms/invitations/{token}/decline', [ClassroomInvitationController::class, 'decline'])->name('api.academy.classrooms.invitations.decline');
+
+    // Join via classroom code
+    Route::post('classrooms/join', [ClassroomInvitationController::class, 'joinViaCode'])->name('api.academy.classrooms.join');
 
     // =====================================================
     // Curriculum Routes - ระบบหลักสูตร

@@ -77,6 +77,12 @@ class AcademyMemberResource extends JsonResource
                     'current_classroom' => $this->student->current_classroom,
                     'gender' => $this->student->gender,
                     'gender_text' => $this->student->gender_text,
+                    'current_enrollment' => $this->student->relationLoaded('currentEnrollment') && $this->student->currentEnrollment ? [
+                        'classroom_id' => $this->student->currentEnrollment->classroom_id,
+                        'student_number' => $this->student->currentEnrollment->student_number,
+                        'status' => $this->student->currentEnrollment->status,
+                        'enrolled_at' => $this->student->currentEnrollment->enrolled_at?->toDateString(),
+                    ] : null,
                 ] : null;
             }),
             'inviter' => $this->whenLoaded('inviter', function () {

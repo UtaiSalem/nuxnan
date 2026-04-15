@@ -360,8 +360,11 @@ class PostController extends \App\Http\Controllers\Controller
      */
     public function destroy(Post $post): JsonResponse
     {
-        // Check if user owns this post
-        if ($post->user_id !== auth()->id()) {
+        $user = auth()->user();
+        $isOwner = (int) $post->user_id === (int) $user->id;
+        $isAdmin = $user->isSuperAdmin() || $user->hasAnyRole(['ADMIN', 'MODERATOR']) || $user->isPlearndAdmin();
+
+        if (!$isOwner && !$isAdmin) {
             return response()->json([
                 'success' => false,
                 'message' => 'คุณไม่มีสิทธิ์ลบโพสต์นี้ / You do not have permission to delete this post',

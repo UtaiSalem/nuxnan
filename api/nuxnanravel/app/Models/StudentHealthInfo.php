@@ -16,6 +16,7 @@ class StudentHealthInfo extends Model
     protected $table = 'student_health_info';
 
     protected $fillable = [
+        'academy_id',
         'student_id',
         'height_cm',
         'weight_kg',
@@ -36,6 +37,11 @@ class StudentHealthInfo extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
     }
 
     public function getBmiAttribute(): ?float

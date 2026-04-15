@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Academy Admin - Print Student Cards
- * หน้าพิมพ์บัตรนักเรียน
+ * หน้าพิมพ์บัตรนักเรียน (ด้านหน้า + ด้านหลัง)
  */
 import { Icon } from '@iconify/vue'
 
@@ -18,12 +18,14 @@ const academy = ref<any>(null)
 const students = ref<any[]>([])
 const selectedStudents = ref<Set<number>>(new Set())
 const levels = ref<string[]>([])
+const sections = ref<Record<string, string[]>>({})
 const isLoading = ref(true)
 const isPrinting = ref(false)
 
 // Filters
 const selectedLevel = ref('')
 const selectedRoom = ref('')
+const printBackSide = ref(true)
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -42,7 +44,7 @@ onMounted(async () => {
         return
       }
       
-      await fetchLevels()
+      await fetchStatistics()
     }
   } catch (err) {
     console.error('Failed to load:', err)
@@ -51,14 +53,21 @@ onMounted(async () => {
   }
 })
 
-const fetchLevels = async () => {
+const fetchStatistics = async () => {
   try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/student-cards/levels`)
+    const response: any = await api.get(`/api/academies/${academyId.value}/student-cards/statistics`)
     if (response.success) {
-      levels.value = response.levels || []
+      levels.value = Object.keys(response.statistics.byLevel || {}).sort()
+      sections.value = response.statistics.sectionsByLevel || {}
     }
   } catch (err) {
-    console.error('Failed to fetch levels:', err)
+    // Fallback
+    try {
+      const response: any = await api.get(`/api/academies/${academyId.value}/student-cards/levels`)
+      if (response.success) levels.value = response.levels || []
+    } catch (legacyErr) {
+      console.error('Failed to fetch levels:', legacyErr)
+    }
   }
 }
 
@@ -67,11 +76,13 @@ const fetchStudents = async () => {
   
   isLoading.value = true
   try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/student-cards/by-room`, {
-      params: { level: selectedLevel.value, section: selectedRoom.value }
-    })
-    students.value = response.students || []
-    selectedStudents.value = new Set()
+    const response: any = await api.get(
+      `/api/academies/${academyId.value}/student-cards/${selectedLevel.value}/${selectedRoom.value}`
+    )
+    if (response.success) {
+      students.value = response.students || []
+      selectedStudents.value = new Set()
+    }
   } catch (err) {
     console.error('Failed to fetch students:', err)
   } finally {
@@ -98,10 +109,10 @@ const selectAll = () => {
 
 const printCards = () => {
   isPrinting.value = true
-  setTimeout(() => {
+  nextTick(() => {
     window.print()
     isPrinting.value = false
-  }, 100)
+  })
 }
 
 const getProfileImage = (student: any) => {
@@ -111,12 +122,21 @@ const getProfileImage = (student: any) => {
   return '/images/default-avatar.png'
 }
 
-const rooms = computed(() => ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'])
+const roomsForLevel = computed(() => {
+  if (!selectedLevel.value) return []
+  return sections.value[selectedLevel.value] || ['1','2','3','4','5','6','7','8','9','10']
+})
 
-const studentsToprint = computed(() => {
+const studentsToPrint = computed(() => {
   if (selectedStudents.value.size === 0) return students.value
   return students.value.filter(s => selectedStudents.value.has(s.id))
 })
+
+const academyLogo = computed(() => {
+  return academy.value?.logo ? `/storage/${academy.value.logo}` : '/images/default-school-logo.png'
+})
+
+const academyAddress = computed(() => academy.value?.address || '')
 </script>
 
 <template>
@@ -138,24 +158,24 @@ const studentsToprint = computed(() => {
         </div>
         
         <button
-          v-if="studentsToprint.length > 0"
+          v-if="studentsToPrint.length > 0"
           @click="printCards"
           :disabled="isPrinting"
           class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
         >
           <Icon icon="fluent:print-24-regular" class="w-5 h-5" />
-          <span>พิมพ์ ({{ studentsToprint.length }} ใบ)</span>
+          <span>พิมพ์ ({{ studentsToPrint.length }} ใบ)</span>
         </button>
       </div>
 
       <!-- Filters (No Print) -->
       <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 print:hidden">
-        <div class="flex flex-wrap gap-4">
+        <div class="flex flex-wrap gap-4 items-end">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ระดับชั้น</label>
             <select
               v-model="selectedLevel"
-              @change="selectedRoom = ''"
+              @change="selectedRoom = ''; students = []"
               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">เลือกระดับชั้น</option>
@@ -171,11 +191,16 @@ const studentsToprint = computed(() => {
               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">เลือกห้อง</option>
-              <option v-for="room in rooms" :key="room" :value="room">{{ room }}</option>
+              <option v-for="room in roomsForLevel" :key="room" :value="room">{{ room }}</option>
             </select>
           </div>
           
-          <div v-if="students.length > 0" class="flex items-end">
+          <div class="flex items-center gap-2">
+            <input id="print-back" v-model="printBackSide" type="checkbox" class="rounded border-gray-300" />
+            <label for="print-back" class="text-sm text-gray-700 dark:text-gray-300">พิมพ์ด้านหลังด้วย</label>
+          </div>
+
+          <div v-if="students.length > 0">
             <button
               @click="selectAll"
               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -195,72 +220,70 @@ const studentsToprint = computed(() => {
           </p>
         </div>
         
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4">
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 p-4">
           <div
             v-for="student in students"
             :key="student.id"
             @click="toggleStudent(student.id)"
             :class="[
-              'cursor-pointer rounded-lg border-2 p-3 transition-all',
+              'cursor-pointer rounded-lg border-2 p-2 transition-all',
               selectedStudents.has(student.id) 
                 ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
             ]"
           >
-            <img 
-              :src="getProfileImage(student)"
-              class="w-full aspect-[3/4] object-cover rounded-lg mb-2"
-            />
-            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {{ student.first_name_thai }}
-            </p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ student.student_number }}
-            </p>
+            <img :src="getProfileImage(student)" class="w-full aspect-[3/4] object-cover rounded-lg mb-1" />
+            <p class="text-xs font-medium text-gray-900 dark:text-white truncate">{{ student.first_name_thai }}</p>
+            <p class="text-[10px] text-gray-500 dark:text-gray-400">{{ student.student_number }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Print Preview / Print Area -->
-      <div v-if="studentsToprint.length > 0" class="hidden print:block">
-        <div class="grid grid-cols-2 gap-4">
-          <div
-            v-for="student in studentsToprint"
-            :key="student.id"
-            class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg p-4 text-white text-sm"
-            style="page-break-inside: avoid; height: 200px;"
-          >
-            <div class="text-center mb-2">
-              <p class="font-bold">{{ academy?.name }}</p>
-              <p class="text-xs opacity-80">บัตรประจำตัวนักเรียน</p>
-            </div>
-            
-            <div class="flex gap-3">
-              <div class="w-16 h-20 bg-white rounded overflow-hidden shrink-0">
-                <img :src="getProfileImage(student)" class="w-full h-full object-cover" />
-              </div>
-              
-              <div class="flex-1 space-y-1">
-                <div>
-                  <p class="text-[10px] opacity-70">ชื่อ-นามสกุล</p>
-                  <p class="font-medium text-xs">{{ student.first_name_thai }} {{ student.last_name_thai }}</p>
-                </div>
-                <div>
-                  <p class="text-[10px] opacity-70">รหัสนักเรียน</p>
-                  <p class="font-mono">{{ student.student_number }}</p>
-                </div>
-                <div class="flex gap-2">
-                  <div>
-                    <p class="text-[10px] opacity-70">ชั้น</p>
-                    <p>ม.{{ student.class_level }}</p>
-                  </div>
-                  <div>
-                    <p class="text-[10px] opacity-70">ห้อง</p>
-                    <p>{{ student.class_section }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <!-- On-Screen Preview (No Print) -->
+      <div v-if="studentsToPrint.length > 0" class="space-y-4 print:hidden">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ตัวอย่างบัตร</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div v-for="student in studentsToPrint.slice(0, 4)" :key="'preview-' + student.id">
+            <LazyLearnStudentCardStudentCardFront
+              :student="student"
+              :academy-name="academy?.name"
+              :academy-logo="academyLogo"
+              :academy-address="academyAddress"
+            />
+          </div>
+        </div>
+        <p v-if="studentsToPrint.length > 4" class="text-sm text-gray-500 text-center">
+          ... และอีก {{ studentsToPrint.length - 4 }} ใบ (จะแสดงในหน้าพิมพ์)
+        </p>
+      </div>
+
+      <!-- Print Area (Hidden on Screen, Shown on Print) -->
+      <div v-if="studentsToPrint.length > 0" class="hidden print:block">
+        <div
+          v-for="(student, idx) in studentsToPrint"
+          :key="'print-' + student.id"
+          class="print-card-wrapper"
+        >
+          <!-- Front Side -->
+          <div class="print-card">
+            <LazyLearnStudentCardStudentCardFront
+              :student="student"
+              :academy-name="academy?.name"
+              :academy-logo="academyLogo"
+              :academy-address="academyAddress"
+              :show-qr-code="true"
+              :card-id="'print-front-' + student.id"
+            />
+          </div>
+          
+          <!-- Back Side (if enabled) -->
+          <div v-if="printBackSide" class="print-card">
+            <LazyLearnStudentCardStudentCardBack
+              :academy-name="academy?.name"
+              :academy-logo="academyLogo"
+              :academy-address="academyAddress"
+              :card-id="'print-back-' + student.id"
+            />
           </div>
         </div>
       </div>
@@ -277,17 +300,38 @@ const studentsToprint = computed(() => {
 <style>
 @media print {
   @page {
-    size: A4;
-    margin: 10mm;
+    size: A4 landscape;
+    margin: 5mm;
   }
   
-  body * {
-    visibility: hidden;
+  .print\:hidden {
+    display: none !important;
   }
   
-  .print\\:block,
-  .print\\:block * {
-    visibility: visible;
+  .print\:block {
+    display: block !important;
+  }
+  
+  .print-card-wrapper {
+    display: flex;
+    gap: 8mm;
+    margin-bottom: 8mm;
+    page-break-inside: avoid;
+  }
+
+  .print-card {
+    width: 85.6mm;
+    height: 54mm;
+    flex-shrink: 0;
+  }
+
+  .print-card .student-card-front,
+  .print-card .student-card-back {
+    width: 100% !important;
+    max-width: 100% !important;
+    aspect-ratio: auto !important;
+    height: 100%;
+    border-radius: 8px !important;
   }
 }
 </style>

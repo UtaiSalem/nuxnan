@@ -155,65 +155,121 @@ class AcademyMemberController extends Controller
 
     /**
      * Get available filter options for members (class levels, sections, etc.)
+     * Uses classroom_students pivot as source of truth, with fallback to students table
      */
     public function getFilterOptions(Academy $academy)
     {
-        // Get distinct class levels from students linked to this academy's members
-        $classLevels = Student::whereIn('id', function ($query) use ($academy) {
-                $query->select('student_id')
-                    ->from('academy_members')
-                    ->where('academy_id', $academy->id)
-                    ->whereNotNull('student_id');
-            })
-            ->whereNotNull('class_level')
-            ->where('class_level', '!=', '')
-            ->distinct()
-            ->orderBy('class_level')
-            ->pluck('class_level')
-            ->map(fn($level) => ['value' => $level, 'label' => $level])
-            ->values();
+        // Try to get data from classrooms table first (more reliable)
+        $hasClassrooms = \App\Models\Classroom::where('academy_id', $academy->id)
+            ->where('is_active', true)
+            ->exists();
 
-        // Get distinct class sections
-        $classSections = Student::whereIn('id', function ($query) use ($academy) {
-                $query->select('student_id')
-                    ->from('academy_members')
-                    ->where('academy_id', $academy->id)
-                    ->whereNotNull('student_id');
-            })
-            ->whereNotNull('class_section')
-            ->where('class_section', '!=', '')
-            ->distinct()
-            ->orderBy('class_section')
-            ->pluck('class_section')
-            ->map(fn($section) => ['value' => $section, 'label' => 'ห้อง ' . $section])
-            ->values();
+        if ($hasClassrooms) {
+            // Use classrooms as source for grade levels
+            $classLevels = \App\Models\Classroom::where('academy_id', $academy->id)
+                ->where('is_active', true)
+                ->distinct()
+                ->orderBy('grade_level')
+                ->pluck('grade_level')
+                ->map(fn($level) => ['value' => $level, 'label' => $level])
+                ->values();
 
-        // Get classroom summary (class_level + section combinations with count)
-        $classrooms = \DB::table('students')
-            ->join('academy_members', 'students.id', '=', 'academy_members.student_id')
-            ->where('academy_members.academy_id', $academy->id)
-            ->whereNotNull('students.class_level')
-            ->select(
-                'students.class_level',
-                'students.class_section',
-                \DB::raw('COUNT(*) as student_count')
-            )
-            ->groupBy('students.class_level', 'students.class_section')
-            ->orderBy('students.class_level')
-            ->orderBy('students.class_section')
-            ->get()
-            ->map(function ($item) {
-                $label = $item->class_level;
-                if ($item->class_section) {
-                    $label .= '/' . $item->class_section;
-                }
-                return [
-                    'class_level' => $item->class_level,
-                    'class_section' => $item->class_section,
-                    'label' => $label,
-                    'count' => $item->student_count,
-                ];
-            });
+            $classSections = \App\Models\Classroom::where('academy_id', $academy->id)
+                ->where('is_active', true)
+                ->distinct()
+                ->orderBy('section')
+                ->pluck('section')
+                ->map(fn($section) => ['value' => $section, 'label' => 'ห้อง ' . $section])
+                ->values();
+
+            // Classroom summary with student count from pivot table
+            $classrooms = \DB::table('classrooms')
+                ->leftJoin('classroom_students', function ($join) {
+                    $join->on('classrooms.id', '=', 'classroom_students.classroom_id')
+                         ->where('classroom_students.status', '=', 'active');
+                })
+                ->where('classrooms.academy_id', $academy->id)
+                ->where('classrooms.is_active', true)
+                ->select(
+                    'classrooms.id',
+                    'classrooms.grade_level as class_level',
+                    'classrooms.section as class_section',
+                    'classrooms.name',
+                    \DB::raw('COUNT(classroom_students.id) as student_count')
+                )
+                ->groupBy('classrooms.id', 'classrooms.grade_level', 'classrooms.section', 'classrooms.name')
+                ->orderBy('classrooms.grade_level')
+                ->orderBy('classrooms.section')
+                ->get()
+                ->map(function ($item) {
+                    $label = $item->class_level;
+                    if ($item->class_section) {
+                        $label .= '/' . $item->class_section;
+                    }
+                    return [
+                        'id' => $item->id,
+                        'class_level' => $item->class_level,
+                        'class_section' => $item->class_section,
+                        'label' => $item->name ?? $label,
+                        'count' => $item->student_count,
+                    ];
+                });
+        } else {
+            // Fallback: use students.class_level + class_section directly
+            $classLevels = Student::whereIn('id', function ($query) use ($academy) {
+                    $query->select('student_id')
+                        ->from('academy_members')
+                        ->where('academy_id', $academy->id)
+                        ->whereNotNull('student_id');
+                })
+                ->whereNotNull('class_level')
+                ->where('class_level', '!=', '')
+                ->distinct()
+                ->orderBy('class_level')
+                ->pluck('class_level')
+                ->map(fn($level) => ['value' => $level, 'label' => $level])
+                ->values();
+
+            $classSections = Student::whereIn('id', function ($query) use ($academy) {
+                    $query->select('student_id')
+                        ->from('academy_members')
+                        ->where('academy_id', $academy->id)
+                        ->whereNotNull('student_id');
+                })
+                ->whereNotNull('class_section')
+                ->where('class_section', '!=', '')
+                ->distinct()
+                ->orderBy('class_section')
+                ->pluck('class_section')
+                ->map(fn($section) => ['value' => $section, 'label' => 'ห้อง ' . $section])
+                ->values();
+
+            $classrooms = \DB::table('students')
+                ->join('academy_members', 'students.id', '=', 'academy_members.student_id')
+                ->where('academy_members.academy_id', $academy->id)
+                ->whereNotNull('students.class_level')
+                ->select(
+                    'students.class_level',
+                    'students.class_section',
+                    \DB::raw('COUNT(*) as student_count')
+                )
+                ->groupBy('students.class_level', 'students.class_section')
+                ->orderBy('students.class_level')
+                ->orderBy('students.class_section')
+                ->get()
+                ->map(function ($item) {
+                    $label = $item->class_level;
+                    if ($item->class_section) {
+                        $label .= '/' . $item->class_section;
+                    }
+                    return [
+                        'class_level' => $item->class_level,
+                        'class_section' => $item->class_section,
+                        'label' => $label,
+                        'count' => $item->student_count,
+                    ];
+                });
+        }
 
         // Gender options
         $genderCounts = \DB::table('students')

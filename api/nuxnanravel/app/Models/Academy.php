@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\AcademyPost;
 use App\Models\AcademyAdmin;
 use App\Models\AcademyMember;
+use App\Models\Student;
 // use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use App\Models\AcademySetting;
 use Illuminate\Database\Eloquent\Model;
@@ -62,6 +63,22 @@ class Academy extends Model
     public function students(): HasMany
     {
         return $this->hasMany(Student::class);
+    }
+
+    /**
+     * นักเรียนที่ active ในโรงเรียน
+     */
+    public function activeStudents(): HasMany
+    {
+        return $this->hasMany(Student::class)->where('status', 'active');
+    }
+
+    /**
+     * สมาชิกที่เป็นนักเรียน (academy_members ที่มี student_id)
+     */
+    public function studentMembers(): HasMany
+    {
+        return $this->hasMany(AcademyMember::class)->whereNotNull('student_id');
     }
 
     public function members(): BelongsToMany

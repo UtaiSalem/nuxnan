@@ -7,53 +7,115 @@ use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\Academy;
 use App\Models\Student;
+use App\Services\ClassroomService;
+use App\Services\MemberService;
+use App\Services\StudentEnrollmentService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class ClassroomController extends Controller
 {
+    private ClassroomService $classroomService;
+    private MemberService $memberService;
+    private StudentEnrollmentService $enrollmentService;
+
+    public function __construct(
+        ClassroomService $classroomService,
+        MemberService $memberService,
+        StudentEnrollmentService $enrollmentService
+    ) {
+        $this->classroomService = $classroomService;
+        $this->memberService = $memberService;
+        $this->enrollmentService = $enrollmentService;
+    }
+
     /**
      * Get all classrooms for academy
      */
     public function index(Request $request, int $academyId): JsonResponse
     {
-        $academicYearId = $request->query('academic_year_id');
-        $gradeLevel = $request->query('grade_level');
+        $filters = $request->only(['academic_year_id', 'academic_year', 'semester', 'grade_level', 'status']);
+        $withMembers = $request->boolean('include_members', false);
 
-        $query = Classroom::where('academy_id', $academyId)
-            ->with(['academicYear', 'homeroomTeacher', 'activeStudents'])
-            ->withCount('activeStudents');
-
-        if ($academicYearId) {
-            $query->where('academic_year_id', $academicYearId);
-        }
-
-        if ($gradeLevel) {
-            $query->where('grade_level', $gradeLevel);
-        }
-
-        $classrooms = $query->orderBy('grade_level')
-            ->orderBy('section')
-            ->get();
+        $classrooms = $this->classroomService->listClassrooms($academyId, $filters, $withMembers);
 
         return response()->json([
             'success' => true,
-            'classrooms' => $classrooms,
+            'data' => $classrooms,
+            'classrooms' => $classrooms, // backward compat
         ]);
     }
 
     /**
-     * Get single classroom with students
+     * Get single classroom with members and students
      */
     public function show(int $academyId, int $id): JsonResponse
     {
-        $classroom = Classroom::where('academy_id', $academyId)
-            ->with(['academicYear', 'homeroomTeacher', 'classroomStudents.student.user'])
-            ->findOrFail($id);
+        $classroom = $this->classroomService->getClassroom($academyId, $id);
+
+        // New system: classroom_members (teachers, observers, etc.)
+        $members = $this->memberService->listMembers($id);
+
+        // Query students through classroom_students pivot (source of truth)
+        $students = Student::whereIn('id', function ($query) use ($id) {
+                $query->select('student_id')
+                    ->from('classroom_students')
+                    ->where('classroom_id', $id)
+                    ->where('status', 'active');
+            })
+            ->select('id', 'student_id', 'title_prefix_th', 'first_name_th', 'last_name_th',
+                'nickname', 'gender', 'profile_image', 'status', 'class_level', 'class_section')
+            ->orderBy('first_name_th')
+            ->get()
+            ->map(function ($student) use ($id) {
+                // Attach student_number from pivot
+                $pivot = ClassroomStudent::where('classroom_id', $id)
+                    ->where('student_id', $student->id)
+                    ->where('status', 'active')
+                    ->first();
+                $student->student_number = $pivot?->student_number;
+                // Build full profile image URL
+                if ($student->profile_image) {
+                    $student->profile_image_url = asset("storage/images/students/{$student->class_level}/{$student->class_section}/{$student->profile_image}");
+                }
+                return $student;
+            })
+            ->sortBy('student_number')
+            ->values();
+
+        // Fallback: if no pivot records, use legacy direct matching
+        if ($students->isEmpty()) {
+            $students = Student::where('academy_id', $academyId)
+                ->where('class_level', $classroom->grade_level)
+                ->where('class_section', $classroom->section)
+                ->select('id', 'student_id', 'title_prefix_th', 'first_name_th', 'last_name_th',
+                    'nickname', 'gender', 'profile_image', 'status', 'class_level', 'class_section')
+                ->orderBy('first_name_th')
+                ->get()
+                ->map(function ($student) {
+                    if ($student->profile_image) {
+                        $student->profile_image_url = asset("storage/images/students/{$student->class_level}/{$student->class_section}/{$student->profile_image}");
+                    }
+                    return $student;
+                });
+        }
+
+        // Build classroom data with students and members embedded
+        $classroomData = $classroom->toArray();
+
+        // Fix academic_year: ensure string value instead of relationship object
+        $classroomData['academic_year'] = $classroom->getRawOriginal('academic_year');
+        if ($classroom->relationLoaded('academicYear') && $classroom->getRelation('academicYear')) {
+            $classroomData['academic_year_info'] = $classroom->getRelation('academicYear')->toArray();
+        }
+
+        // Embed students and members inside the classroom object
+        $classroomData['students'] = $students;
+        $classroomData['members'] = $members;
 
         return response()->json([
             'success' => true,
-            'classroom' => $classroom,
+            'classroom' => $classroomData,
         ]);
     }
 
@@ -63,13 +125,15 @@ class ClassroomController extends Controller
     public function store(Request $request, int $academyId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
+
         if (!$this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
         $validated = $request->validate([
-            'academic_year_id' => 'required|exists:academic_years,id',
+            'academic_year_id' => 'nullable|exists:academic_years,id',
+            'academic_year' => 'required|string|max:10',
+            'semester' => 'nullable|integer|in:1,2',
             'grade_level' => 'required|string|max:10',
             'section' => 'required|string|max:10',
             'name' => 'nullable|string|max:50',
@@ -78,15 +142,12 @@ class ClassroomController extends Controller
             'capacity' => 'nullable|integer|min:1',
         ]);
 
-        $validated['academy_id'] = $academyId;
-        $validated['name'] = $validated['name'] ?? "{$validated['grade_level']}/{$validated['section']}";
-
-        $classroom = Classroom::create($validated);
+        $classroom = $this->classroomService->createClassroom($academyId, $validated);
 
         return response()->json([
             'success' => true,
             'message' => 'สร้างห้องเรียนสำเร็จ',
-            'classroom' => $classroom->load('academicYear', 'homeroomTeacher'),
+            'data' => $classroom,
         ], 201);
     }
 
@@ -96,7 +157,7 @@ class ClassroomController extends Controller
     public function update(Request $request, int $academyId, int $id): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
+
         if (!$this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
@@ -107,18 +168,21 @@ class ClassroomController extends Controller
             'grade_level' => 'string|max:10',
             'section' => 'string|max:10',
             'name' => 'nullable|string|max:50',
+            'academic_year' => 'string|max:10',
+            'semester' => 'nullable|integer|in:1,2',
             'homeroom_teacher_id' => 'nullable|exists:users,id',
             'room_location' => 'nullable|string|max:100',
             'capacity' => 'nullable|integer|min:1',
             'is_active' => 'boolean',
+            'status' => 'in:active,archived',
         ]);
 
-        $classroom->update($validated);
+        $classroom = $this->classroomService->updateClassroom($classroom, $validated);
 
         return response()->json([
             'success' => true,
             'message' => 'อัปเดตห้องเรียนสำเร็จ',
-            'classroom' => $classroom->fresh(['academicYear', 'homeroomTeacher']),
+            'data' => $classroom,
         ]);
     }
 
@@ -128,13 +192,13 @@ class ClassroomController extends Controller
     public function destroy(int $academyId, int $id): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
+
         if (!$this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
         $classroom = Classroom::where('academy_id', $academyId)->findOrFail($id);
-        $classroom->delete();
+        $this->classroomService->deleteClassroom($classroom);
 
         return response()->json([
             'success' => true,
@@ -143,12 +207,186 @@ class ClassroomController extends Controller
     }
 
     /**
-     * Add students to classroom
+     * Archive classroom (soft)
+     */
+    public function archive(int $academyId, int $id): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (!$this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $classroom = Classroom::where('academy_id', $academyId)->findOrFail($id);
+        $this->classroomService->archiveClassroom($classroom);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'เก็บห้องเรียนเข้าคลังสำเร็จ',
+        ]);
+    }
+
+    // ───────────────────────────────────────
+    // Member management (new system)
+    // ───────────────────────────────────────
+
+    /**
+     * List members of a classroom
+     */
+    public function listMembers(Request $request, int $academyId, int $classroomId): JsonResponse
+    {
+        $role = $request->query('role');
+        $members = $this->memberService->listMembers($classroomId, $role);
+
+        return response()->json([
+            'success' => true,
+            'data' => $members,
+        ]);
+    }
+
+    /**
+     * Add a member to classroom
+     */
+    public function addMember(Request $request, int $academyId, int $classroomId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (!$this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'role' => 'required|in:teacher,co_teacher,student,observer',
+            'student_no' => 'nullable|integer|min:1',
+        ]);
+
+        $classroom = Classroom::where('academy_id', $academyId)->findOrFail($classroomId);
+
+        $member = $this->memberService->addMember(
+            $classroom,
+            $validated['user_id'],
+            $validated['role'],
+            $validated['student_no'] ?? null
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'เพิ่มสมาชิกสำเร็จ',
+            'data' => $member->load('user'),
+        ], 201);
+    }
+
+    /**
+     * Bulk add members
+     */
+    public function bulkAddMembers(Request $request, int $academyId, int $classroomId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (!$this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $validated = $request->validate([
+            'user_ids' => 'required|array',
+            'user_ids.*' => 'exists:users,id',
+            'role' => 'required|in:teacher,co_teacher,student,observer',
+        ]);
+
+        $classroom = Classroom::where('academy_id', $academyId)->findOrFail($classroomId);
+        $added = $this->memberService->bulkAddMembers($classroom, $validated['user_ids'], $validated['role']);
+
+        return response()->json([
+            'success' => true,
+            'message' => "เพิ่มสมาชิกสำเร็จ {$added} คน",
+            'meta' => ['added' => $added],
+        ]);
+    }
+
+    /**
+     * Update a member (role, student_no)
+     */
+    public function updateMember(Request $request, int $academyId, int $classroomId, int $memberId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (!$this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $validated = $request->validate([
+            'role' => 'in:teacher,co_teacher,student,observer',
+            'student_no' => 'nullable|integer|min:1',
+        ]);
+
+        $member = $this->memberService->updateMember($memberId, $validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'อัปเดตสมาชิกสำเร็จ',
+            'data' => $member,
+        ]);
+    }
+
+    /**
+     * Remove a member from classroom (soft)
+     */
+    public function removeMember(int $academyId, int $classroomId, int $memberId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (!$this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $this->memberService->removeMember($classroomId, $memberId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ลบสมาชิกออกจากห้องเรียนสำเร็จ',
+        ]);
+    }
+
+    /**
+     * Transfer a member to another classroom
+     */
+    public function transferMember(Request $request, int $academyId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (!$this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $validated = $request->validate([
+            'member_id' => 'required|exists:classroom_members,id',
+            'target_classroom_id' => 'required|exists:classrooms,id',
+        ]);
+
+        $newMember = $this->memberService->transferMember(
+            $validated['member_id'],
+            $validated['target_classroom_id']
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ย้ายสมาชิกสำเร็จ',
+            'data' => $newMember->load('user'),
+        ]);
+    }
+
+    // ───────────────────────────────────────
+    // Legacy student management (backward compat)
+    // ───────────────────────────────────────
+
+    /**
+     * Add students to classroom (uses enrollment service)
      */
     public function addStudents(Request $request, int $academyId, int $id): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
+
         if (!$this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
@@ -160,14 +398,7 @@ class ClassroomController extends Controller
             'student_ids.*' => 'exists:students,id',
         ]);
 
-        $added = 0;
-        foreach ($validated['student_ids'] as $studentId) {
-            $student = Student::find($studentId);
-            if ($student) {
-                $classroom->addStudent($student);
-                $added++;
-            }
-        }
+        $added = $this->enrollmentService->bulkEnrollStudents($classroom, $validated['student_ids']);
 
         return response()->json([
             'success' => true,
@@ -182,15 +413,15 @@ class ClassroomController extends Controller
     public function removeStudent(int $academyId, int $id, int $studentId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
+
         if (!$this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
         $classroom = Classroom::where('academy_id', $academyId)->findOrFail($id);
         $student = Student::findOrFail($studentId);
-        
-        $classroom->removeStudent($student);
+
+        $this->enrollmentService->unenrollStudent($student, $classroom);
 
         return response()->json([
             'success' => true,
@@ -199,12 +430,12 @@ class ClassroomController extends Controller
     }
 
     /**
-     * Update student number
+     * Update student number (legacy)
      */
     public function updateStudentNumber(Request $request, int $academyId, int $id, int $studentId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
+
         if (!$this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
@@ -237,6 +468,90 @@ class ClassroomController extends Controller
         return response()->json([
             'success' => true,
             'gradeLevels' => $gradeLevels,
+        ]);
+    }
+
+    /**
+     * Transfer student between classrooms
+     */
+    public function transferStudent(Request $request, int $academyId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (!$this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $validated = $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'from_classroom_id' => 'required|exists:classrooms,id',
+            'to_classroom_id' => 'required|exists:classrooms,id',
+            'reason' => 'nullable|string|max:100',
+        ]);
+
+        $student = Student::findOrFail($validated['student_id']);
+        $fromClassroom = Classroom::where('academy_id', $academyId)->findOrFail($validated['from_classroom_id']);
+        $toClassroom = Classroom::where('academy_id', $academyId)->findOrFail($validated['to_classroom_id']);
+
+        $enrollment = $this->enrollmentService->transferStudent(
+            $student,
+            $fromClassroom,
+            $toClassroom,
+            $validated['reason'] ?? 'ย้ายห้อง'
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ย้ายนักเรียนสำเร็จ',
+            'data' => $enrollment->load(['student', 'classroom']),
+        ]);
+    }
+
+    /**
+     * Get enrollment history for a student
+     */
+    public function getStudentEnrollmentHistory(int $academyId, int $studentId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (!$this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
+        }
+
+        $student = Student::where('academy_id', $academyId)->findOrFail($studentId);
+        $history = $this->enrollmentService->getStudentHistory($student);
+
+        return response()->json([
+            'success' => true,
+            'data' => $history,
+        ]);
+    }
+
+    /**
+     * Promote all students from one classroom to another (new academic year)
+     */
+    public function promoteClassroom(Request $request, int $academyId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (!$this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $validated = $request->validate([
+            'from_classroom_id' => 'required|exists:classrooms,id',
+            'to_classroom_id' => 'required|exists:classrooms,id',
+        ]);
+
+        $fromClassroom = Classroom::where('academy_id', $academyId)->findOrFail($validated['from_classroom_id']);
+        $toClassroom = Classroom::where('academy_id', $academyId)->findOrFail($validated['to_classroom_id']);
+
+        $promoted = $this->enrollmentService->promoteClassroom($fromClassroom, $toClassroom);
+
+        return response()->json([
+            'success' => true,
+            'message' => "เลื่อนชั้นนักเรียนสำเร็จ {$promoted} คน",
+            'meta' => ['promoted' => $promoted],
         ]);
     }
 

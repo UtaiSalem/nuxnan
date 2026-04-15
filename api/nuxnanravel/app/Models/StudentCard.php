@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StudentCard extends Model
 {
     protected $fillable = [
+        'academy_id',
         'order_no',
         'full_name_thai',
         'class_level',
@@ -35,6 +37,11 @@ class StudentCard extends Model
         return Student::where('student_id', $this->student_number)
             ->orWhere('citizen_id', $this->national_id)
             ->first();
+    }
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
     }
 
     /**

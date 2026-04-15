@@ -16,7 +16,9 @@ class StudentAcademicInfo extends Model
     protected $table = 'student_academic_info';
 
     protected $fillable = [
+        'academy_id',
         'student_id',
+        'classroom_id',
         'current_grade',
         'education_level',
         'current_class',
@@ -61,6 +63,16 @@ class StudentAcademicInfo extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
+    }
+
+    public function classroom(): BelongsTo
+    {
+        return $this->belongsTo(Classroom::class);
     }
 
     public function getFullClassroomAttribute(): string

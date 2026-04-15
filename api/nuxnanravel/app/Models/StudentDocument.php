@@ -14,6 +14,7 @@ class StudentDocument extends Model
     use HasFactory;
 
     protected $fillable = [
+        'academy_id',
         'student_id',
         'document_type',
         'original_name',
@@ -36,6 +37,11 @@ class StudentDocument extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
     }
 
     public function uploader(): BelongsTo

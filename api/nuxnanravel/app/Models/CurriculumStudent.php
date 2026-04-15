@@ -13,6 +13,7 @@ class CurriculumStudent extends Model
     protected $table = 'curriculum_students';
 
     protected $fillable = [
+        'academy_id',
         'curriculum_id',
         'user_id',
         'academy_member_id',
@@ -46,6 +47,11 @@ class CurriculumStudent extends Model
     public function curriculum(): BelongsTo
     {
         return $this->belongsTo(Curriculum::class);
+    }
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
     }
 
     /**

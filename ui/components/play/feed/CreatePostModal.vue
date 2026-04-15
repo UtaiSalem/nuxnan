@@ -223,11 +223,24 @@ const feelingActivityText = computed(() => {
   }
   return parts.join(' — ')
 })
+// Emoji fallback map (in case DB stores '?' due to utf8 charset)
+const feelingEmojiMap = {
+  happy: '😊', blessed: '🙏', loved: '🥰', excited: '🤩', grateful: '💖',
+  thankful: '🙌', wonderful: '✨', amazing: '🤯', joyful: '😁', proud: '😤',
+  hopeful: '🌟', motivated: '💪', relaxed: '😌', peaceful: '☮️', content: '😊',
+  thoughtful: '🤔', curious: '🧐', nostalgic: '😢', surprised: '😮', crazy: '🤪',
+  silly: '😜', hungry: '🤤', sleepy: '😴', tired: '😩', lazy: '🦥',
+  sad: '😢', angry: '😠', frustrated: '😤', annoyed: '😒', disappointed: '😞',
+  worried: '😟', anxious: '😰', stressed: '😫', lonely: '😔', confused: '😕',
+  sick: '🤒', heartbroken: '💔',
+}
+
 const feelingsByCategory = computed(() => {
   const grouped = {}
   feelings.value.forEach(f => {
     if (!grouped[f.category]) grouped[f.category] = []
-    grouped[f.category].push(f)
+    const icon = (!f.icon || f.icon === '?') ? (feelingEmojiMap[f.name] || '😊') : f.icon
+    grouped[f.category].push({ ...f, icon })
   })
   return grouped
 })

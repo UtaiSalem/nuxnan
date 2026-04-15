@@ -27,12 +27,12 @@ const config = useRuntimeConfig()
 
 // Get group color based on index or id
 const groupColors = [
-  'from-cyan-400 to-blue-500',
-  'from-purple-400 to-pink-500',
-  'from-green-400 to-teal-500',
-  'from-orange-400 to-red-500',
-  'from-indigo-400 to-purple-500',
-  'from-yellow-400 to-orange-500'
+  'from-sky-300/80 to-blue-400/80',
+  'from-violet-300/80 to-purple-400/80',
+  'from-emerald-300/80 to-teal-400/80',
+  'from-amber-300/80 to-orange-400/80',
+  'from-indigo-300/80 to-slate-400/80',
+  'from-rose-300/80 to-pink-400/80'
 ]
 
 const groupColor = computed(() => {
@@ -161,7 +161,7 @@ const handleJoinClick = async () => {
       <div class="flex justify-center -mt-12 mb-3">
         <div class="relative">
           <!-- Glow effect -->
-          <div class="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-2xl blur-lg opacity-50 group-hover/card:opacity-70 transition-opacity"></div>
+          <div class="absolute inset-0 bg-gradient-to-r from-gray-400 via-slate-400 to-gray-500 rounded-2xl blur-lg opacity-30 group-hover/card:opacity-50 transition-opacity"></div>
           
           <!-- Avatar -->
           <div class="relative w-24 h-24 rounded-2xl border-4 border-white dark:border-gray-800 bg-white dark:bg-gray-700 overflow-hidden shadow-xl">
@@ -246,7 +246,7 @@ const handleJoinClick = async () => {
           <!-- Remaining count -->
           <div 
             v-if="remainingMembers > 0"
-            class="relative w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md"
+            class="relative w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 bg-gradient-to-br from-slate-400 to-gray-500 flex items-center justify-center shadow-md"
           >
             <span class="text-xs font-bold text-white">+{{ remainingMembers }}</span>
           </div>
@@ -261,8 +261,8 @@ const handleJoinClick = async () => {
         :disabled="loading"
         class="w-full py-3 bg-gradient-to-r text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn disabled:opacity-70 disabled:cursor-not-allowed"
         :class="isMemberOfOtherGroup ? 
-            'from-amber-500 via-orange-600 to-red-600 hover:from-amber-600 hover:via-orange-700 hover:to-red-700' : 
-            'from-purple-500 via-blue-500 to-purple-600 hover:from-purple-600 hover:via-blue-600 hover:to-purple-700'"
+            'from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600' : 
+            'from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'"
       >
         <Icon v-if="loading" icon="svg-spinners:ring-resize" class="w-5 h-5 animate-spin" />
         <Icon v-else :icon="isMemberOfOtherGroup ? 'heroicons:arrow-path-rounded-square' : 'heroicons:user-plus-solid'" class="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
@@ -272,7 +272,7 @@ const handleJoinClick = async () => {
       <!-- Already Member -->
       <div
         v-else-if="isMember"
-        class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2"
+        class="w-full py-3 bg-gradient-to-r from-emerald-400 to-teal-400 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2"
       >
         <Icon icon="heroicons:check-circle-solid" class="w-5 h-5" />
         <span>Member</span>

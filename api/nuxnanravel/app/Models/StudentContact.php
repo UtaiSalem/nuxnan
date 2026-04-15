@@ -14,6 +14,7 @@ class StudentContact extends Model
     use HasFactory;
 
     protected $fillable = [
+        'academy_id',
         'student_id',
         'contact_type',
         'contact_value',
@@ -29,6 +30,11 @@ class StudentContact extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
     }
 
     public function scopePrimary($query)

@@ -7,21 +7,31 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * ClassroomStudent Model - นักเรียนในห้องเรียน
+ * ClassroomStudent Model - นักเรียนในห้องเรียน (Pivot Table)
+ * 
+ * เป็น Source of Truth สำหรับการสังกัดห้องเรียนของนักเรียน
+ * รองรับ Historical Data — เก็บประวัติห้องเรียนข้ามปีการศึกษาได้
  */
 class ClassroomStudent extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'academy_id',
         'classroom_id',
         'student_id',
+        'academic_year_id',
         'student_number',
         'status',
+        'enrolled_at',
+        'left_at',
+        'leave_reason',
     ];
 
     protected $casts = [
         'student_number' => 'integer',
+        'enrolled_at' => 'date',
+        'left_at' => 'date',
     ];
 
     // Status Constants
@@ -41,6 +51,16 @@ class ClassroomStudent extends Model
         return $this->belongsTo(Student::class);
     }
 
+    public function academy(): BelongsTo
+    {
+        return $this->belongsTo(Academy::class);
+    }
+
+    public function academicYear(): BelongsTo
+    {
+        return $this->belongsTo(AcademicYear::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {
@@ -50,6 +70,21 @@ class ClassroomStudent extends Model
     public function scopeByClassroom($query, $classroomId)
     {
         return $query->where('classroom_id', $classroomId);
+    }
+
+    public function scopeByAcademicYear($query, $academicYearId)
+    {
+        return $query->where('academic_year_id', $academicYearId);
+    }
+
+    public function scopeByAcademy($query, $academyId)
+    {
+        return $query->where('academy_id', $academyId);
+    }
+
+    public function scopeCurrent($query)
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
     }
 
     // Accessors

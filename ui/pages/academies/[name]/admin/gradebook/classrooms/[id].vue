@@ -214,7 +214,7 @@ const deselectAll = () => {
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <div class="text-sm text-gray-600 dark:text-gray-400">ปีการศึกษา</div>
-            <div class="text-lg font-semibold text-gray-900 dark:text-white">{{ classroom?.academic_year?.name }}</div>
+            <div class="text-lg font-semibold text-gray-900 dark:text-white">{{ classroom?.academic_year_info?.name || classroom?.academic_year }}</div>
           </div>
           <div>
             <div class="text-sm text-gray-600 dark:text-gray-400">ครูประจำชั้น</div>

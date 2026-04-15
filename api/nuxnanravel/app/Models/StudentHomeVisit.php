@@ -10,7 +10,8 @@ class StudentHomeVisit extends Model
     use HasFactory;
 
     protected $fillable = [
-        // Foreign key to students table
+        // Foreign keys
+        'academy_id',
         'student_id',
         
         // Zone Information
@@ -75,6 +76,11 @@ class StudentHomeVisit extends Model
     public function student()
     {
         return $this->belongsTo(Student::class, 'student_id');
+    }
+
+    public function academy()
+    {
+        return $this->belongsTo(Academy::class);
     }
     
     /**

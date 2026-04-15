@@ -486,7 +486,8 @@ const isDeletingPost = ref(false)
 
 // Check if current user is the post author
 const isOwnPost = computed(() => {
-  return authStore.user?.id === postAuthor.value?.id
+  return authStore.user?.id != null && postAuthor.value?.id != null && 
+    Number(authStore.user.id) === Number(postAuthor.value.id)
 })
 
 // Check if current user is the owner of the share (for share activities)
@@ -1895,6 +1896,15 @@ const deletePost = async () => {
           apiUrl = `${config.public.apiBase}/api/courses/${courseId}/posts/${postData.value.id}`
         } else {
           swal.error('ไม่สามารถระบุรายวิชาของโพสต์นี้ได้')
+          return
+        }
+        break
+      case 'AcademyPost':
+        const academyId = postData.value.academy_id || postData.value.academy?.id
+        if (academyId) {
+          apiUrl = `${config.public.apiBase}/api/academies/${academyId}/posts/${postData.value.id}`
+        } else {
+          swal.error('ไม่สามารถระบุสถาบันของโพสต์นี้ได้')
           return
         }
         break

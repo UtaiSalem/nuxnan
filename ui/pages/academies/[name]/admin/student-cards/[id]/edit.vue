@@ -26,13 +26,16 @@ const errorMessage = ref('')
 const form = ref({
   student_number: '',
   national_id: '',
+  title_name: '',
   first_name_thai: '',
   last_name_thai: '',
   first_name_english: '',
   last_name_english: '',
   class_level: '',
   class_section: '',
-  birth_date: ''
+  birth_date: '',
+  card_issue_date: '',
+  card_expiry_date: '',
 })
 
 // Academy Role
@@ -74,13 +77,16 @@ const fetchStudent = async () => {
     form.value = {
       student_number: response.student.student_number || '',
       national_id: response.student.national_id || '',
+      title_name: response.student.title_name || '',
       first_name_thai: response.student.first_name_thai || '',
       last_name_thai: response.student.last_name_thai || '',
       first_name_english: response.student.first_name_english || '',
       last_name_english: response.student.last_name_english || '',
       class_level: response.student.class_level?.toString() || '',
       class_section: response.student.class_section?.toString() || '',
-      birth_date: response.student.birth_date || ''
+      birth_date: response.student.birth_date || '',
+      card_issue_date: response.student.card_issue_date || '',
+      card_expiry_date: response.student.card_expiry_date || '',
     }
   } catch (err) {
     console.error('Failed to fetch student:', err)
@@ -224,6 +230,29 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
             </div>
             
             <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำนำหน้า</label>
+              <select
+                v-model="form.title_name"
+                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="">เลือกคำนำหน้า</option>
+                <option value="เด็กชาย">เด็กชาย</option>
+                <option value="เด็กหญิง">เด็กหญิง</option>
+                <option value="นาย">นาย</option>
+                <option value="นางสาว">นางสาว</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">วันเกิด</label>
+              <input
+                v-model="form.birth_date"
+                type="date"
+                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อ (ไทย)</label>
               <input
                 v-model="form.first_name_thai"
@@ -251,10 +280,10 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">วันเกิด</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">นามสกุล (อังกฤษ)</label>
               <input
-                v-model="form.birth_date"
-                type="date"
+                v-model="form.last_name_english"
+                type="text"
                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
@@ -279,6 +308,24 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
                 <option value="">เลือกห้อง</option>
                 <option v-for="section in sections" :key="section" :value="section">{{ section }}</option>
               </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">วันที่ออกบัตร</label>
+              <input
+                v-model="form.card_issue_date"
+                type="date"
+                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">วันหมดอายุบัตร</label>
+              <input
+                v-model="form.card_expiry_date"
+                type="date"
+                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
             </div>
           </div>
         </div>

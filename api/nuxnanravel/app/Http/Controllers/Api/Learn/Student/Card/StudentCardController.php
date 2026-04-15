@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Learn\Student\Card;
 
 use Carbon\Carbon;
+use App\Models\Academy;
 use App\Models\StudentCard;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -11,20 +12,30 @@ use Illuminate\Support\Facades\Storage;
 class StudentCardController extends Controller
 {
     /**
-     * Main public index page - no authentication required
+     * Get academy-scoped query builder
      */
-    public function index() 
+    private function academyQuery($academy)
+    {
+        $academyId = $academy instanceof Academy ? $academy->id : $academy;
+        return StudentCard::where('academy_id', $academyId);
+    }
+
+    /**
+     * Main index page
+     */
+    public function index($academy) 
     {
         return response()->json(['success' => true]);
     }
 
     /**
-     * Public dashboard - show overview and search
+     * Dashboard - show overview
      */
-    public function dashboard() 
+    public function dashboard($academy) 
     {
-        $totalStudents = StudentCard::count();
-        $levels = StudentCard::distinct()->pluck('class_level')->sort()->values();
+        $query = $this->academyQuery($academy);
+        $totalStudents = $query->count();
+        $levels = $this->academyQuery($academy)->distinct()->pluck('class_level')->sort()->values();
         
         return response()->json([
             'success' => true,
@@ -36,17 +47,31 @@ class StudentCardController extends Controller
     /**
      * Get statistics for student cards - for academy admin dashboard
      */
-    public function statistics()
+    public function statistics($academy)
     {
-        $totalStudents = StudentCard::count();
-        $withPhoto = StudentCard::whereNotNull('profile_image')
+        $query = $this->academyQuery($academy);
+        $totalStudents = $query->count();
+        $withPhoto = $this->academyQuery($academy)
+            ->whereNotNull('profile_image')
             ->where('profile_image', '!=', '')
             ->count();
         $withoutPhoto = $totalStudents - $withPhoto;
         
-        $byLevel = StudentCard::selectRaw('class_level, COUNT(*) as count')
+        $byLevel = $this->academyQuery($academy)
+            ->selectRaw('class_level, COUNT(*) as count')
             ->groupBy('class_level')
             ->pluck('count', 'class_level')
+            ->toArray();
+
+        // Sections per level
+        $sectionsByLevel = $this->academyQuery($academy)
+            ->selectRaw('class_level, class_section')
+            ->distinct()
+            ->orderBy('class_level')
+            ->orderBy('class_section')
+            ->get()
+            ->groupBy('class_level')
+            ->map(fn($items) => $items->pluck('class_section')->sort()->values())
             ->toArray();
         
         return response()->json([
@@ -55,7 +80,8 @@ class StudentCardController extends Controller
                 'totalStudents' => $totalStudents,
                 'withPhoto' => $withPhoto,
                 'withoutPhoto' => $withoutPhoto,
-                'byLevel' => $byLevel
+                'byLevel' => $byLevel,
+                'sectionsByLevel' => $sectionsByLevel,
             ]
         ]);
     }
@@ -63,9 +89,9 @@ class StudentCardController extends Controller
     /**
      * Get all class levels
      */
-    public function getLevels()
+    public function getLevels($academy)
     {
-        $levels = StudentCard::distinct()->pluck('class_level')->sort()->values();
+        $levels = $this->academyQuery($academy)->distinct()->pluck('class_level')->sort()->values();
         
         return response()->json([
             'success' => true,
@@ -76,9 +102,9 @@ class StudentCardController extends Controller
     /**
      * Get all sections/rooms
      */
-    public function getSections()
+    public function getSections($academy)
     {
-        $sections = StudentCard::distinct()->pluck('class_section')->sort()->values();
+        $sections = $this->academyQuery($academy)->distinct()->pluck('class_section')->sort()->values();
         
         return response()->json([
             'success' => true,
@@ -87,18 +113,19 @@ class StudentCardController extends Controller
     }
 
     /**
-     * Public search functionality
+     * Search functionality
      */
-    public function search(Request $request)
+    public function search($academy, Request $request)
     {
-        $query = StudentCard::query();
+        $query = $this->academyQuery($academy);
         
         if ($request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('first_name_thai', 'like', '%' . $request->search . '%')
-                  ->orWhere('last_name_thai', 'like', '%' . $request->search . '%')
-                  ->orWhere('student_number', 'like', '%' . $request->search . '%')
-                  ->orWhere('national_id', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name_thai', 'like', '%' . $search . '%')
+                  ->orWhere('last_name_thai', 'like', '%' . $search . '%')
+                  ->orWhere('student_number', 'like', '%' . $search . '%')
+                  ->orWhere('national_id', 'like', '%' . $search . '%');
             });
         }
         
@@ -110,295 +137,356 @@ class StudentCardController extends Controller
             $query->where('class_section', $request->section);
         }
         
-        $students = $query->paginate(20);
+        $students = $query->orderBy('class_level')
+            ->orderBy('class_section')
+            ->orderBy('order_no')
+            ->paginate(20);
         
         return response()->json([
+            'success' => true,
             'students' => $students,
             'filters' => $request->only(['search', 'level', 'section'])
         ]);
     }
 
     /**
-     * Public student profile view
+     * Student profile view
      */
-    public function profile(StudentCard $student_card)
+    public function profile($academy, StudentCard $student_card)
     {
         return response()->json([
+            'success' => true,
             'student' => $student_card
         ]);
     }
  
     /**
-     * Admin main page - public access but requires password for actions
+     * Admin main page
      */
-    public function adminIndex() 
+    public function adminIndex($academy) 
     {
         return response()->json(['success' => true]);
     }
 
     /**
-     * Admin student management
+     * Admin student management with search/filter
      */
-    public function adminStudents(Request $request)
+    public function adminStudents($academy, Request $request)
     {
-        $query = StudentCard::query();
+        $query = $this->academyQuery($academy);
         
         if ($request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('first_name_thai', 'like', '%' . $request->search . '%')
-                  ->orWhere('last_name_thai', 'like', '%' . $request->search . '%')
-                  ->orWhere('student_number', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name_thai', 'like', '%' . $search . '%')
+                  ->orWhere('last_name_thai', 'like', '%' . $search . '%')
+                  ->orWhere('student_number', 'like', '%' . $search . '%')
+                  ->orWhere('national_id', 'like', '%' . $search . '%');
             });
         }
         
         if ($request->level) {
             $query->where('class_level', $request->level);
         }
+
+        if ($request->section) {
+            $query->where('class_section', $request->section);
+        }
         
-        $students = $query->orderBy('class_level')->orderBy('class_section')->orderBy('first_name_thai')->paginate(50);
+        $students = $query->orderBy('class_level')
+            ->orderBy('class_section')
+            ->orderBy('order_no')
+            ->orderBy('first_name_thai')
+            ->paginate(50);
         
         return response()->json([
+            'success' => true,
             'students' => $students,
-            'filters' => $request->only(['search', 'level'])
+            'filters' => $request->only(['search', 'level', 'section'])
         ]);
     }
 
     /**
-     * Verify admin password for protected actions
+     * Get students by level and room
      */
-    private function verifyAdminPassword($password)
+    public function getStudentByRoom($academy, $level, $room)
     {
-        return $password === 'jsm_card_admin2025';
-    }
-
-    //getStudentByRoom method
-    public function getStudentByRoom($level, $room)
-    {
-        // Logic to fetch students by level and room
-        // This is a placeholder; actual implementation will depend on your data source
-        // $students = []; // Fetch students from the database or any other source
-
-        $students = StudentCard::where('class_level', $level)->where('class_section', $room)->get();
+        $students = $this->academyQuery($academy)
+            ->where('class_level', $level)
+            ->where('class_section', $room)
+            ->orderBy('order_no')
+            ->orderBy('first_name_thai')
+            ->get();
 
         return response()->json([
+            'success' => true,
             'students' => $students,
             'level' => $level,
             'room' => $room,
         ]);
     }
 
-        public function adminGetStudentByRoom($level, $room)
+    /**
+     * Admin: Get students by level and room
+     */
+    public function adminGetStudentByRoom($academy, $level, $room)
     {
-        // Logic to fetch students by level and room
-        // This is a placeholder; actual implementation will depend on your data source
-        // $students = []; // Fetch students from the database or any other source
-
-        $students = StudentCard::where('class_level', $level)->where('class_section', $room)->get();
+        $students = $this->academyQuery($academy)
+            ->where('class_level', $level)
+            ->where('class_section', $room)
+            ->orderBy('order_no')
+            ->orderBy('first_name_thai')
+            ->get();
 
         return response()->json([
+            'success' => true,
             'students' => $students,
             'level' => $level,
             'room' => $room,
         ]);
     }
 
-    public function updateImage(StudentCard $student_card, Request $request)
+    /**
+     * Upload/update student photo
+     */
+    public function updateImage($academy, StudentCard $student_card, Request $request)
     {
-        // Validate request
         $request->validate([
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
-            'admin_password' => 'required|string'
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
-
-        // Verify admin password
-        if (!$this->verifyAdminPassword($request->admin_password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'รหัสผ่านแอดมินไม่ถูกต้อง'
-            ], 403);
-        }
 
         try {
-            // Handle image upload
             if ($request->hasFile('photo')) {
                 // Delete old image if exists
                 if ($student_card->profile_image) {
-                    Storage::disk('public')->delete('images/students/'.$student_card->class_level.'/'.$student_card->class_section.'/'.$student_card->profile_image);
+                    Storage::disk('public')->delete(
+                        'images/students/'.$student_card->class_level.'/'.$student_card->class_section.'/'.$student_card->profile_image
+                    );
                 }
 
-                // Store new image
-                // $path = $request->file('photo')->store('students', 'public');
-                $fileName = $student_card->student_number. '.' . $request->file('photo')->getClientOriginalExtension();
+                $fileName = $student_card->student_number . '.' . $request->file('photo')->getClientOriginalExtension();
                 
-                // Store the image in the public disk under 'images/students' directory
-                // $path = $request->file('photo')->storeAs('images/students', $fileName, 'public');
-                $path = Storage::disk('public')->putFileAs('images/students/'.$student_card->class_level.'/'.$student_card->class_section, $request->file('photo'), $fileName);
+                $path = Storage::disk('public')->putFileAs(
+                    'images/students/'.$student_card->class_level.'/'.$student_card->class_section, 
+                    $request->file('photo'), 
+                    $fileName
+                );
 
-
-                // Update student card record
                 $student_card->update([
                     'profile_image' => $fileName
                 ]);
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Image uploaded successfully',
+                    'message' => 'อัพโหลดรูปภาพสำเร็จ',
+                    'photo' => $fileName,
                     'path' => Storage::url($path)
                 ]);
             }
 
             return response()->json([
                 'success' => false,
-                'message' => 'No image file provided'
+                'message' => 'ไม่พบไฟล์รูปภาพ'
             ], 400);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to upload image',
+                'message' => 'ไม่สามารถอัพโหลดรูปภาพได้',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function updateStudentID(StudentCard $student_card, Request $request)
+    /**
+     * Update student number/code
+     */
+    public function updateStudentID($academy, StudentCard $student_card, Request $request)
     {
-        // Validate request
         $request->validate([
-            'student_id' => 'required|string|max:255',
-            'admin_password' => 'required|string'
+            'student_number' => 'required|string|max:255',
         ]);
 
-        // Verify admin password
-        if (!$this->verifyAdminPassword($request->admin_password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'รหัสผ่านแอดมินไม่ถูกต้อง'
-            ], 403);
-        }
-
         try {
-            // Update student card record
             $student_card->update([
-                'student_id' => $request->input('student_id'),
+                'student_number' => $request->input('student_number'),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Student ID updated successfully'
+                'message' => 'อัพเดทรหัสนักเรียนสำเร็จ'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update student ID',
+                'message' => 'ไม่สามารถอัพเดทรหัสนักเรียนได้',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
-    public function updateStudentNameTh(StudentCard $student_card, Request $request)
+
+    /**
+     * Update student Thai name
+     */
+    public function updateStudentNameTh($academy, StudentCard $student_card, Request $request)
     {
-        // Validate request
         $request->validate([
-            'student_name_th' => 'nullable|string|max:255',
-            'admin_password' => 'required|string'
+            'title_name' => 'nullable|string|max:50',
+            'first_name_thai' => 'nullable|string|max:255',
+            'last_name_thai' => 'nullable|string|max:255',
         ]);
 
-        // Verify admin password
-        if (!$this->verifyAdminPassword($request->admin_password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'รหัสผ่านแอดมินไม่ถูกต้อง'
-            ], 403);
-        }
-
         try {
-            // Update student card record
+            $titleName = $request->input('title_name', $student_card->title_name);
+            $firstName = $request->input('first_name_thai', $student_card->first_name_thai);
+            $lastName = $request->input('last_name_thai', $student_card->last_name_thai);
+
             $student_card->update([
-                'student_name_th' => $request->input('student_name_th'),
+                'title_name' => $titleName,
+                'first_name_thai' => $firstName,
+                'last_name_thai' => $lastName,
+                'full_name_thai' => trim($titleName . ' ' . $firstName . ' ' . $lastName),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Student name (Thai) updated successfully'
+                'message' => 'อัพเดทชื่อสำเร็จ'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update student name (Thai)',
+                'message' => 'ไม่สามารถอัพเดทชื่อได้',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
-    public function updateStudentNameEn(StudentCard $student_card, Request $request)
+
+    /**
+     * Update student English name
+     */
+    public function updateStudentNameEn($academy, StudentCard $student_card, Request $request)
     {
-        // Validate request
         $request->validate([
-            'student_name_en' => 'nullable|string|max:255',
-            'admin_password' => 'required|string'
+            'first_name_english' => 'nullable|string|max:255',
         ]);
 
-        // Verify admin password
-        if (!$this->verifyAdminPassword($request->admin_password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'รหัสผ่านแอดมินไม่ถูกต้อง'
-            ], 403);
-        }
-
         try {
-            // Update student card record
             $student_card->update([
-                'student_name_en' => $request->input('student_name_en'),
+                'first_name_english' => $request->input('first_name_english'),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Student name (English) updated successfully'
+                'message' => 'อัพเดทชื่อภาษาอังกฤษสำเร็จ'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update student name (English)',
+                'message' => 'ไม่สามารถอัพเดทชื่อภาษาอังกฤษได้',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function update(StudentCard $student, Request $request)
+    /**
+     * Update full student card info
+     */
+    public function update($academy, StudentCard $student_card, Request $request)
     {
-        // Validate request
         $request->validate([
-            'student_id' => 'nullable|string|max:255',
-            'prefix_name' => 'nullable|string|max:50',
-            'student_name_th' => 'nullable|string|max:255',
-            'last_name_th' => 'nullable|string|max:255',
-            'student_name_en' => 'nullable|string|max:255',
-            'id_card_no' => 'nullable|string|max:20',
-            'date_of_birth' => 'nullable',
+            'student_number' => 'nullable|string|max:255',
+            'title_name' => 'nullable|string|max:50',
+            'first_name_thai' => 'nullable|string|max:255',
+            'last_name_thai' => 'nullable|string|max:255',
+            'first_name_english' => 'nullable|string|max:255',
+            'national_id' => 'nullable|string|max:20',
+            'birth_date' => 'nullable|date',
+            'class_level' => 'nullable|string|max:10',
+            'class_section' => 'nullable|string|max:10',
+            'card_issue_date' => 'nullable|date',
+            'card_expiry_date' => 'nullable|date',
         ]);
  
         try {
-            // Update student card record
-            $student->update([
-                'student_id' => $request->input('student_id'),
-                'prefix_name' => $request->input('prefix_name'),
-                'student_name_th' => $request->input('student_name_th'),
-                'last_name_th' => $request->input('last_name_th'),
-                'student_name_en' => $request->input('student_name_en'),
-                'id_card_no' => $request->input('id_card_no'),
-                'date_of_birth' => $request->input('date_of_birth'),
-                'date_of_birth_str' => $this->convertDateToThaiFormat($request->input('date_of_birth')),
-                'student_fullname_th' => $request->input('prefix_name') . ' ' . $request->input('student_name_th') . ' ' . $request->input('last_name_th'),
+            $data = $request->only([
+                'student_number', 'title_name', 'first_name_thai', 'last_name_thai',
+                'first_name_english', 'national_id', 'birth_date', 'class_level',
+                'class_section', 'card_issue_date', 'card_expiry_date',
             ]);
+
+            // Auto-generate full_name_thai
+            $title = $data['title_name'] ?? $student_card->title_name;
+            $first = $data['first_name_thai'] ?? $student_card->first_name_thai;
+            $last = $data['last_name_thai'] ?? $student_card->last_name_thai;
+            $data['full_name_thai'] = trim($title . ' ' . $first . ' ' . $last);
+
+            // Auto-generate birth_date_string
+            if (!empty($data['birth_date'])) {
+                $data['birth_date_string'] = $this->convertDateToThaiFormat($data['birth_date']);
+            }
+
+            $student_card->update($data);
             
             return response()->json([
                 'success' => true,
-                'message' => 'Student card updated successfully',
+                'message' => 'บันทึกข้อมูลสำเร็จ',
+                'student' => $student_card->fresh(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update student card',
+                'message' => 'ไม่สามารถบันทึกข้อมูลได้',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Create new student card
+     */
+    public function store($academy, Request $request)
+    {
+        $request->validate([
+            'student_number' => 'required|string|max:255',
+            'first_name_thai' => 'required|string|max:255',
+            'last_name_thai' => 'required|string|max:255',
+            'class_level' => 'required|string|max:10',
+            'class_section' => 'required|string|max:10',
+            'title_name' => 'nullable|string|max:50',
+            'first_name_english' => 'nullable|string|max:255',
+            'national_id' => 'nullable|string|max:20',
+            'birth_date' => 'nullable|date',
+        ]);
+
+        $academyId = $academy instanceof Academy ? $academy->id : $academy;
+
+        try {
+            $data = $request->only([
+                'student_number', 'title_name', 'first_name_thai', 'last_name_thai',
+                'first_name_english', 'national_id', 'birth_date', 'class_level', 'class_section',
+            ]);
+            
+            $data['academy_id'] = $academyId;
+            $data['full_name_thai'] = trim(
+                ($data['title_name'] ?? '') . ' ' . $data['first_name_thai'] . ' ' . $data['last_name_thai']
+            );
+            $data['student_status'] = 'active';
+
+            if (!empty($data['birth_date'])) {
+                $data['birth_date_string'] = $this->convertDateToThaiFormat($data['birth_date']);
+            }
+
+            $studentCard = StudentCard::create($data);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'สร้างบัตรนักเรียนสำเร็จ',
+                'student' => $studentCard,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่สามารถสร้างบัตรนักเรียนได้',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -410,42 +498,87 @@ class StudentCardController extends Controller
             return null;
         }
 
-        // Convert date to Carbon instance
-        $carbonDate = Carbon::createFromFormat('Y-m-d', $date);
-
-        // Return date in Thai format (m/d/Y)
-        return $carbonDate->format('m/d/Y');
+        try {
+            $carbonDate = Carbon::parse($date);
+            return $carbonDate->format('d/m/Y');
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
-    // destroyPhoto method
-    public function destroyPhoto(StudentCard $student)
+    /**
+     * Delete student photo
+     */
+    public function destroyPhoto($academy, StudentCard $student_card)
     {
         try {
-            // Check if the student has a photo
-            if ($student->profile_image) {
-                // Delete the photo from storage
-                Storage::disk('public')->delete('images/students/'.$student->class_level.'/'.$student->class_section.'/'.$student->profile_image);
+            if ($student_card->profile_image) {
+                Storage::disk('public')->delete(
+                    'images/students/'.$student_card->class_level.'/'.$student_card->class_section.'/'.$student_card->profile_image
+                );
 
-                // Update the student record to remove the photo
-                $student->update(['profile_image' => null]);
+                $student_card->update(['profile_image' => null]);
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Photo deleted successfully'
+                    'message' => 'ลบรูปภาพสำเร็จ'
                 ]);
             }
 
             return response()->json([
                 'success' => false,
-                'message' => 'No photo found for this student'
+                'message' => 'ไม่พบรูปภาพ'
             ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete photo',
+                'message' => 'ไม่สามารถลบรูปภาพได้',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
+    /**
+     * Import student cards from CSV/Excel
+     */
+    public function import($academy, Request $request)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'ฟีเจอร์นำเข้าข้อมูลยังอยู่ระหว่างการพัฒนา'
+        ], 501);
+    }
+
+    /**
+     * Export student cards to CSV/Excel
+     */
+    public function export($academy, Request $request)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'ฟีเจอร์ส่งออกข้อมูลยังอยู่ระหว่างการพัฒนา'
+        ], 501);
+    }
+
+    /**
+     * Bulk upload photos
+     */
+    public function bulkUploadPhotos($academy, Request $request)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'ฟีเจอร์อัพโหลดรูปภาพแบบกลุ่มยังอยู่ระหว่างการพัฒนา'
+        ], 501);
+    }
+
+    /**
+     * Bulk update student cards
+     */
+    public function bulkUpdate($academy, Request $request)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'ฟีเจอร์อัพเดทข้อมูลแบบกลุ่มยังอยู่ระหว่างการพัฒนา'
+        ], 501);
+    }
 }
