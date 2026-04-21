@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\Learn\Course\posts\CoursePostImageCommentController
 use App\Http\Controllers\Api\Learn\Course\members\CourseMemberGradeProgressController;
 use App\Http\Controllers\Api\Learn\Course\posts\CoursePostCommentReactionController;
 use App\Http\Controllers\Api\Learn\Course\posts\CoursePostImageCommentReactionController;
+use App\Http\Controllers\Api\Learn\Course\scores\CourseExternalScoreController;
 use App\Http\Controllers\Api\Learn\Course\lessons\LessonProgressController;
 use App\Http\Controllers\CoursePostShareController;
 use App\Http\Controllers\Api\Learn\Course\admins\CourseAdminController;
@@ -391,4 +392,15 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
     
     // Refund (admin/owner only)
     Route::post('/courses/{course}/purchase/refund', [CoursePurchaseController::class, 'refundPurchase'])->name('course.purchase.refund');
+});
+
+// Course External Scores Routes (บันทึกคะแนนจากภายนอก)
+Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/external-scores')->group(function () {
+    Route::get('/', [CourseExternalScoreController::class, 'index'])->name('course.external-scores.index');
+    Route::post('/', [CourseExternalScoreController::class, 'store'])->name('course.external-scores.store');
+    Route::get('/table-view/{groupId?}', [CourseExternalScoreController::class, 'tableView'])->name('course.external-scores.table-view');
+    Route::get('/{externalScore}', [CourseExternalScoreController::class, 'show'])->name('course.external-scores.show');
+    Route::patch('/{externalScore}', [CourseExternalScoreController::class, 'update'])->name('course.external-scores.update');
+    Route::delete('/{externalScore}', [CourseExternalScoreController::class, 'destroy'])->name('course.external-scores.destroy');
+    Route::post('/{externalScore}/entries', [CourseExternalScoreController::class, 'saveEntries'])->name('course.external-scores.entries.save');
 });

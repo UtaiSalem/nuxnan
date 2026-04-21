@@ -97,6 +97,11 @@ class Course extends Model
         return $this->hasMany(CourseMember::class);
     }
 
+    public function courseExternalScores(): HasMany
+    {
+        return $this->hasMany(CourseExternalScore::class);
+    }
+
     public function isMember(User $user)
     {
         return $this->members->contains($user);

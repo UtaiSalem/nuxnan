@@ -4,6 +4,7 @@ namespace App\Http\Resources\Learn\Academy;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\UserResource;
 
 class AcademyPostCommentResource extends JsonResource
 {
@@ -24,14 +25,12 @@ class AcademyPostCommentResource extends JsonResource
             'likes'             => $this->likes,
             'dislikes'          => $this->dislikes,
             'replies'           => $this->replies,
-            // 'isLikedByAuth'     => $this->when(auth()->check(), function () {
-            //                             return $this->likedPostComment()->where('user_id', auth()->id())->exists() ;
-            //                         }),
-            // 'isDislikedByAuth'  => $this->when(auth()->check(), function () {
-            //                             return $this->dislikedComment()->where('user_id', auth()->id())->exists() ;
-            //                         }),
-            'isLikedByAuth'     => $this->likedPostComment()->where('user_id', auth()->id())->exists(),
-            'isDislikedByAuth'  => $this->dislikedPostComment()->where('user_id', auth()->id())->exists(),
+            'isLikedByAuth'     => $this->when(auth()->check(), function () {
+                                        return $this->likes()->where('user_id', auth()->id())->exists();
+                                    }),
+            'isDislikedByAuth'  => $this->when(auth()->check(), function () {
+                                        return $this->dislikes()->where('user_id', auth()->id())->exists();
+                                    }),
             
             'parent_comment_id' => $this->parent_comment_id,
             'sentiment'         => $this->sentiment,

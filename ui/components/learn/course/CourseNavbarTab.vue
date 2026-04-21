@@ -31,6 +31,7 @@ const activeTab = computed(() => {
   if (path.includes('/member-settings')) return 9
   if (path.includes('/my-progress')) return 9
   if (path.includes('/progress')) return 10
+  if (path.includes('/external-scores')) return 14
   if (path.includes('/admin')) return 13
   // Default to info tab for base course page
   if (path.endsWith(`/Learn/Courses/${props.courseId}`) || path.endsWith(`/Learn/Courses/${props.courseId}/`)) return 12
@@ -127,6 +128,17 @@ watch(activeTab, async (newTab, oldTab) => {
           <Icon icon="healthicons:i-exam-qualification-outline" class="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-all duration-300"
             :class="{ 'text-cyan-500 scale-110': activeTab === 3, 'hover:text-cyan-400': activeTab !== 3 }" />
           <span class="mt-0.5 text-[10px] sm:text-xs md:text-sm font-medium transition-all duration-300 whitespace-nowrap" :class="{ 'text-cyan-500 font-semibold': activeTab === 3 }">ทดสอบ</span>
+        </div>
+      </NuxtLink>
+
+      <!-- บันทึกคะแนน (Admin) -->
+      <NuxtLink v-if="isCourseAdmin" :to="`/Learn/Courses/${courseId}/external-scores`"
+        class="flex-shrink-0 min-w-[4.5rem] sm:min-w-0 sm:flex-1 text-center border-b-4 tab-item hover:border-gray-400 transition-all duration-300 ease-in-out"
+        :class="{ 'border-b-4 border-cyan-500 bg-gradient-to-t from-cyan-50 dark:from-cyan-900/20 to-white dark:to-gray-800 shadow-sm': activeTab === 14, 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-transparent': activeTab !== 14 }">
+        <div class="flex flex-col items-center justify-center py-2 sm:py-3 text-slate-600/80 dark:text-gray-300 transition-all duration-300">
+          <Icon icon="mdi:clipboard-text-outline" class="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 transition-all duration-300"
+            :class="{ 'text-cyan-500 scale-110': activeTab === 14, 'hover:text-cyan-400': activeTab !== 14 }" />
+          <span class="mt-0.5 text-[10px] sm:text-xs md:text-sm font-medium transition-all duration-300 whitespace-nowrap" :class="{ 'text-cyan-500 font-semibold': activeTab === 14 }">บันทึกคะแนน</span>
         </div>
       </NuxtLink>
 

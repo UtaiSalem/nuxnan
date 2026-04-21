@@ -15,7 +15,7 @@ class AcademyPostCommentImage extends Model
 
     public function postComment()
     {
-        return $this->belongsTo(PostComment::class);
+        return $this->belongsTo(AcademyPostComment::class, 'academy_post_comment_id');
     }
 
     public function getUrlAttribute(): string

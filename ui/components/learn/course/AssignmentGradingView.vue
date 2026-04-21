@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
+import { stripHtml } from '~/utils/textUtils'
 
 const props = defineProps<{
   assignment: any
@@ -447,7 +448,7 @@ const scrollToTop = () => {
 
                           <div v-show="answer.isExpanded">
                                <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-gray-700 dark:text-gray-300 text-sm border border-gray-100 dark:border-gray-800">
-                                  <div v-if="answer.content" class="prose prose-sm dark:prose-invert max-w-none" v-html="answer.content"></div>
+                                  <div v-if="answer.content" class="text-sm max-w-none whitespace-pre-wrap">{{ stripHtml(answer.content) }}</div>
                                   <div v-if="answer.images?.length" class="mt-3 flex flex-wrap gap-2">
                                      <div 
                                         v-for="(img, idx) in answer.images" 

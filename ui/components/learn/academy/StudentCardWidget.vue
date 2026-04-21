@@ -3,7 +3,9 @@
  * StudentCardWidget - วิดเจ็ตบัตรประจำตัวนักเรียนแบบย่อ
  * แสดงในไซด์บาร์ของหน้าโรงเรียน สำหรับสมาชิกที่ได้รับอนุมัติแล้ว
  */
+import { onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useApi } from '../../../composables/useApi'
 
 const props = defineProps<{
   academyId: number
@@ -109,27 +111,27 @@ onMounted(() => {
           <div class="flex-1 min-w-0 space-y-1">
             <div>
               <div class="text-white/60 text-[10px] leading-none">ชื่อ-นามสกุล</div>
-              <div class="font-semibold text-sm truncate">{{ student?.user?.displayname }}</div>
+              <div class="font-semibold text-sm truncate">{{ studentCard?.full_name_thai || student?.user?.displayname }}</div>
             </div>
             <div>
               <div class="text-white/60 text-[10px] leading-none">เลขประจำตัว</div>
-              <div class="font-semibold text-sm">{{ student?.student_number || studentCard?.card_number }}</div>
+              <div class="font-semibold text-sm">{{ studentCard?.student_number || student?.student_id }}</div>
             </div>
-            <div v-if="student?.classroom">
-              <div class="text-white/60 text-[10px] leading-none">ห้องเรียน</div>
-              <div class="font-semibold text-sm">{{ student.classroom.name }}</div>
+            <div v-if="studentCard?.level_and_room">
+              <div class="text-white/60 text-[10px] leading-none">ระดับชั้น</div>
+              <div class="font-semibold text-sm">{{ studentCard.level_and_room }}</div>
             </div>
           </div>
         </div>
 
         <!-- Card number footer -->
         <div class="mt-2 pt-2 border-t border-white/20 text-[10px] text-white/50 relative z-10">
-          หมายเลขบัตร: {{ studentCard?.card_number }}
+          เลขประจำตัว: {{ studentCard?.student_number || student?.student_id }}
         </div>
       </div>
 
-      <!-- View Full Card Button -->
-      <div class="px-4 pb-4">
+      <!-- View Full Card Button - ปิดไว้ชั่วคราว -->
+      <!-- <div class="px-4 pb-4">
         <NuxtLink
           :to="`/academies/${encodeURIComponent(academyName)}/my-card`"
           class="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
@@ -137,7 +139,7 @@ onMounted(() => {
           <Icon icon="fluent:open-24-regular" class="w-4 h-4" />
           ดูบัตรเต็ม
         </NuxtLink>
-      </div>
+      </div> -->
     </template>
 
     <!-- No Card Data -->
@@ -148,6 +150,7 @@ onMounted(() => {
         </div>
         <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ยังไม่มีบัตรนักเรียน</p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">กรุณาติดต่อเจ้าหน้าที่เพื่อออกบัตร</p>
+        <!-- ปิดไว้ชั่วคราว
         <NuxtLink
           :to="`/academies/${encodeURIComponent(academyName)}/my-card`"
           class="inline-flex items-center gap-1.5 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
@@ -155,6 +158,7 @@ onMounted(() => {
           <Icon icon="fluent:arrow-right-24-regular" class="w-4 h-4" />
           ไปหน้าบัตรนักเรียน
         </NuxtLink>
+        -->
       </div>
     </div>
   </div>

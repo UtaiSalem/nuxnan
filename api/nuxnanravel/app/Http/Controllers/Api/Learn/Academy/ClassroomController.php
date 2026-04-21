@@ -643,7 +643,7 @@ class ClassroomController extends Controller
         $academyId = $request->query('academy_id');
 
         $query = Student::where('user_id', $user->id)
-            ->with(['studentCard', 'classroom', 'user']);
+            ->with(['activeClassroom', 'user']);
 
         if ($academyId) {
             $query->where('academy_id', $academyId);

@@ -124,13 +124,14 @@ onMounted(() => {
           10: 'progress',
           11: 'feeds',
           12: '', // base info
-          13: 'admin'
+          13: 'admin',
+          14: 'external-scores'
         }
         
         const targetRoute = tabRoutes[lastTab]
         
         // Handle admin-only tabs for non-admins
-        const adminOnlyTabs = [8, 10, 13] // settings, progress (admin), admin
+        const adminOnlyTabs = [8, 10, 13, 14] // settings, progress (admin), admin, external-scores
         if (adminOnlyTabs.includes(lastTab) && !isCourseAdmin.value) {
           // Redirect to feeds instead
           navigateTo(`/Learn/Courses/${courseId.value}/feeds`)

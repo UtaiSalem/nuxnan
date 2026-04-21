@@ -6,6 +6,7 @@ import RadialProgress from "vue3-radial-progress";
 import AssignmentSubmissionForm from '~/components/learn/course/AssignmentSubmissionForm.vue';
 import ImageGalleryModal from '~/components/ImageGalleryModal.vue';
 import { inject } from 'vue';
+import { stripHtml } from '~/utils/textUtils';
 
 // Image Gallery State
 const showGallery = ref(false);
@@ -240,10 +241,20 @@ const canShowScore = computed(() => {
 // Tabs
 const activeTab = ref('lessons');
 const tabs = [
-    { id: 'lessons', label: 'บทเรียน', icon: 'fluent:book-open-24-filled' },
-    { id: 'assignments', label: 'งานที่มอบหมาย', icon: 'fluent:document-text-24-filled' },
-    { id: 'quizzes', label: 'แบบทดสอบ', icon: 'fluent:quiz-new-24-filled' },
+    { id: 'lessons', label: 'คะแนนจากบทเรียน', shortLabel: 'บทเรียน', icon: 'fluent:book-open-24-filled' },
+    { id: 'assignments', label: 'คะแนนจากงานที่มอบหมาย', shortLabel: 'งาน', icon: 'fluent:document-text-24-filled' },
+    { id: 'quizzes', label: 'คะแนนจากแบบทดสอบ', shortLabel: 'ทดสอบ', icon: 'fluent:quiz-new-24-filled' },
 ];
+
+const getTabCount = (tabId) => {
+    if (!data.value) return { completed: 0, total: 0 };
+    switch (tabId) {
+        case 'lessons': return { completed: stats.value.completedLessons, total: stats.value.totalLessons };
+        case 'assignments': return { completed: stats.value.completedAssignments, total: stats.value.totalAssignments };
+        case 'quizzes': return { completed: stats.value.completedQuizzes, total: stats.value.totalQuizzes };
+        default: return { completed: 0, total: 0 };
+    }
+};
 </script>
 
 <template>
@@ -325,9 +336,9 @@ const tabs = [
              </div>
 
              <!-- Header Stats (Only Show if canShowScore) -->
-             <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
-                    <div class="text-sm text-gray-500 mb-2">เกรดปัจจุบัน</div>
+             <div v-else class="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <div class="bg-white dark:bg-gray-800 p-3 sm:p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
+                    <div class="text-xs sm:text-sm text-gray-500 mb-1.5 sm:mb-2">เกรดปัจจุบัน</div>
                      <RadialProgress 
                         :diameter="100" 
                         :completed-steps="Math.round(stats.scorePercent)" 
@@ -344,8 +355,8 @@ const tabs = [
                         </div>
                      </RadialProgress>
                 </div>
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
-                    <div class="text-sm text-gray-500 mb-2">คะแนนรวม</div>
+                <div class="bg-white dark:bg-gray-800 p-3 sm:p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
+                    <div class="text-xs sm:text-sm text-gray-500 mb-1.5 sm:mb-2">คะแนนรวม</div>
                     <RadialProgress 
                         :diameter="100" 
                         :completed-steps="Math.round(stats.scorePercent)" 
@@ -362,61 +373,62 @@ const tabs = [
                         </div>
                      </RadialProgress>
                 </div>
-                 <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div class="text-sm text-gray-500 mb-1">งานที่ส่งแล้ว</div>
-                    <div class="text-3xl font-bold text-green-600 dark:text-green-400">
-                        {{ stats.completedAssignments }} <span class="text-sm text-gray-400 font-normal">/ {{ stats.totalAssignments }}</span>
-                    </div>
-                </div>
-                 <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div class="text-sm text-gray-500 mb-1">ทดสอบแล้ว</div>
-                    <div class="text-3xl font-bold text-purple-600 dark:text-purple-400">
-                        {{ stats.completedQuizzes }} <span class="text-sm text-gray-400 font-normal">/ {{ stats.totalQuizzes }}</span>
-                    </div>
-                </div>
              </div>
 
              <!-- Tabs Navigation -->
-             <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6 overflow-x-auto">
+             <div class="bg-gray-100 dark:bg-gray-800/80 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 mb-4 sm:mb-6 flex gap-1 overflow-x-auto">
                  <button 
                     v-for="tab in tabs" 
                     :key="tab.id"
                     @click="activeTab = tab.id"
-                    class="px-4 py-3 text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-colors border-b-2"
+                    class="relative flex-1 min-w-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer select-none"
                     :class="activeTab === tab.id 
-                        ? 'border-blue-600 text-blue-600 dark:text-blue-400' 
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                        ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-md ring-1 ring-black/5 dark:ring-white/10' 
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:text-gray-700 dark:hover:text-gray-200 active:scale-[0.97]'"
                  >
-                     <Icon :icon="tab.icon" class="w-5 h-5" />
-                     {{ tab.label }}
+                     <Icon :icon="tab.icon" class="w-5 h-5 sm:w-5 sm:h-5 flex-shrink-0" />
+                     <span class="truncate hidden sm:inline">{{ tab.label }}</span>
+                     <span class="truncate sm:hidden text-[11px] leading-tight text-center">{{ tab.shortLabel }}</span>
+                     <span 
+                        v-if="data"
+                        class="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 tabular-nums"
+                        :class="activeTab === tab.id 
+                            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' 
+                            : 'bg-gray-200/80 dark:bg-gray-600 text-gray-500 dark:text-gray-400'"
+                     >
+                        {{ getTabCount(tab.id).completed }}/{{ getTabCount(tab.id).total }}
+                     </span>
                  </button>
              </div>
 
              <!-- Tab Content -->
-             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+             <div class="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                  
                  <!-- Lessons Tab -->
                  <div v-if="activeTab === 'lessons'">
-                     <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
-                         <h3 class="font-semibold text-gray-800 dark:text-white">รายการบทเรียน</h3>
-                         <span class="text-sm text-gray-500">{{ stats.completedLessons }}/{{ stats.totalLessons }}</span>
+                     <div class="px-3 sm:px-4 py-3 sm:py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
+                         <h3 class="text-sm sm:text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                             <Icon icon="fluent:book-open-24-filled" class="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                             รายการบทเรียน
+                         </h3>
+                         <span class="text-xs sm:text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{{ stats.completedLessons }}/{{ stats.totalLessons }}</span>
                      </div>
                      <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         <div v-if="data.lessons && data.lessons.length === 0" class="p-8 text-center text-gray-500">
                             ไม่มีบทเรียนในรายวิชานี้
                         </div>
-                         <div v-for="lesson in data.lessons" :key="lesson.id" class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                              <div class="flex flex-col gap-3">
-                                  <div class="flex justify-between items-center">
-                                      <div class="flex items-center gap-3 flex-1">
-                                          <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                         <div v-for="lesson in data.lessons" :key="lesson.id" class="px-3 sm:px-4 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                              <div class="flex flex-col gap-2 sm:gap-3">
+                                  <div class="flex justify-between items-center gap-2">
+                                      <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                                          <div class="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center"
                                               :class="lesson.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'">
-                                              <Icon :icon="lesson.completed ? 'fluent:checkmark-24-filled' : 'fluent:circle-24-regular'" class="w-5 h-5" />
+                                              <Icon :icon="lesson.completed ? 'fluent:checkmark-24-filled' : 'fluent:circle-24-regular'" class="w-4 h-4 sm:w-5 sm:h-5" />
                                           </div>
-                                          <div class="font-medium text-gray-900 dark:text-white">{{ lesson.title }}</div>
+                                          <div class="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">{{ lesson.title }}</div>
                                       </div>
-                                      <span class="text-xs px-2 py-1 rounded-full flex-shrink-0"
-                                          :class="lesson.completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'">
+                                      <span class="text-[10px] sm:text-xs px-2 py-1 rounded-full flex-shrink-0 font-medium"
+                                          :class="lesson.completed ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'">
                                           {{ lesson.completed ? 'เรียนแล้ว' : 'ยังไม่เรียน' }}
                                       </span>
                                   </div>
@@ -443,19 +455,22 @@ const tabs = [
 
                  <!-- Assignments Tab -->
                  <div v-if="activeTab === 'assignments'">
-                     <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
-                         <h3 class="font-semibold text-gray-800 dark:text-white">รายการงานที่มอบหมาย</h3>
-                         <span class="text-sm text-gray-500">{{ stats.completedAssignments }}/{{ stats.totalAssignments }}</span>
+                     <div class="px-3 sm:px-4 py-3 sm:py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
+                         <h3 class="text-sm sm:text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                             <Icon icon="fluent:document-text-24-filled" class="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
+                             รายการงานที่มอบหมาย
+                         </h3>
+                         <span class="text-xs sm:text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{{ stats.completedAssignments }}/{{ stats.totalAssignments }}</span>
                      </div>
                      <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         <div v-if="data.assignments && data.assignments.length === 0" class="p-8 text-center text-gray-500">
                             ไม่มีงานที่มอบหมายในรายวิชานี้
                         </div>
-                         <div v-for="assign in data.assignments" :key="assign.id" class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                              <div class="flex flex-col gap-3">
-                                  <div class="flex justify-between items-start">
-                                      <div class="flex-1">
-                                          <div class="font-medium text-gray-900 dark:text-white">{{ assign.title }}</div>
+                         <div v-for="assign in data.assignments" :key="assign.id" class="px-3 sm:px-4 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                              <div class="flex flex-col gap-2 sm:gap-3">
+                                  <div class="flex justify-between items-start gap-2">
+                                      <div class="flex-1 min-w-0">
+                                          <div class="font-medium text-sm sm:text-base text-gray-900 dark:text-white">{{ assign.title }}</div>
                                           <div class="text-xs mt-1" :class="{
                                               'text-green-600': assign.submitted,
                                               'text-yellow-600': !assign.submitted
@@ -545,7 +560,7 @@ const tabs = [
                                           </div>
                                           <div v-else-if="gradingAnswer">
                                               <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl mb-4 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                                                  {{ gradingAnswer.content }}
+                                                  {{ stripHtml(gradingAnswer.content) }}
                                                   <div v-if="gradingAnswer.images?.length" class="mt-3 flex flex-wrap gap-2">
                                                       <img 
                                                           v-for="(img, index) in gradingAnswer.images" 
@@ -587,19 +602,22 @@ const tabs = [
 
                  <!-- Quizzes Tab -->
                  <div v-if="activeTab === 'quizzes'">
-                     <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
-                         <h3 class="font-semibold text-gray-800 dark:text-white">รายการแบบทดสอบ</h3>
-                         <span class="text-sm text-gray-500">{{ stats.completedQuizzes }}/{{ stats.totalQuizzes }}</span>
+                     <div class="px-3 sm:px-4 py-3 sm:py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
+                         <h3 class="text-sm sm:text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                             <Icon icon="fluent:quiz-new-24-filled" class="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+                             รายการแบบทดสอบ
+                         </h3>
+                         <span class="text-xs sm:text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{{ stats.completedQuizzes }}/{{ stats.totalQuizzes }}</span>
                      </div>
                      <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         <div v-if="data.quizzes && data.quizzes.length === 0" class="p-8 text-center text-gray-500">
                             ไม่มีแบบทดสอบในรายวิชานี้
                         </div>
-                         <div v-for="quiz in data.quizzes" :key="quiz.id" class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                              <div class="flex flex-col gap-3">
-                                  <div class="flex justify-between items-start">
-                                      <div class="flex-1">
-                                          <div class="font-medium text-gray-900 dark:text-white">{{ quiz.title }}</div>
+                         <div v-for="quiz in data.quizzes" :key="quiz.id" class="px-3 sm:px-4 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                              <div class="flex flex-col gap-2 sm:gap-3">
+                                  <div class="flex justify-between items-start gap-2">
+                                      <div class="flex-1 min-w-0">
+                                          <div class="font-medium text-sm sm:text-base text-gray-900 dark:text-white">{{ quiz.title }}</div>
                                           <div class="text-xs mt-1 flex items-center gap-2" :class="{
                                               'text-green-600': quiz.completed,
                                               'text-gray-500': !quiz.completed

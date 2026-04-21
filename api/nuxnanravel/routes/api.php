@@ -288,6 +288,9 @@ require __DIR__ . '/learn/student.php';
 require __DIR__ . '/learn/academy-student-card.php';
 require __DIR__ . '/learn/academy-home-visit.php';
 
+// Student Profile Routes (view student profile by academy context)
+require __DIR__ . '/learn/student-profile.php';
+
 // Academy Store Management Routes (School Store System)
 require __DIR__ . '/learn/academy-store.php';
 

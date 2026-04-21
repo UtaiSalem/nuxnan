@@ -8,6 +8,13 @@ definePageMeta({
 // Game data
 const games = [
   {
+    title: 'Cross Math',
+    description: 'ปริศนาตัวเลข เติมตัวเลขให้สมการถูกต้องทั้งแนวนอนและแนวตั้ง',
+    icon: 'fluent:calculate-24-regular',
+    route: '/play/games/cross-math-game',
+    color: 'from-amber-500 to-amber-600'
+  },
+  {
     title: 'เกมทายตัวเลข',
     description: 'ทายตัวเลขระหว่าง 1-100 ในจำนวนครั้งน้อยที่สุด',
     icon: 'fluent:number-symbol-24-regular',
