@@ -64,12 +64,10 @@ watch(() => form.title, (newTitle) => {
 
 const searchQuizzes = async () => {
   if (!form.title || form.title.length < 2) return
-  
-  console.log('Searching quizzes for:', form.title)
+
   isSearchingQuizzes.value = true
   try {
     const res = await api.get(`/api/quizzes/search?q=${encodeURIComponent(form.title)}`) as any
-    console.log('API Response:', res)
     // Handle different response formats
     if (Array.isArray(res)) {
       quizSuggestions.value = res
@@ -80,7 +78,6 @@ const searchQuizzes = async () => {
     } else {
       quizSuggestions.value = []
     }
-    console.log('Quiz suggestions loaded:', quizSuggestions.value.length, 'items')
   } catch (err) {
     console.error('Error searching quizzes:', err)
     quizSuggestions.value = []

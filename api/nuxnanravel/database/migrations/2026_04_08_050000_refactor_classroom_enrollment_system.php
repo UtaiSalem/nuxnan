@@ -71,12 +71,21 @@ return new class extends Migration
             });
 
             // Populate academy_id from student's academy
-            DB::statement("
-                UPDATE student_academic_info sai
-                INNER JOIN students s ON s.id = sai.student_id
-                SET sai.academy_id = s.academy_id
-                WHERE sai.academy_id IS NULL AND s.academy_id IS NOT NULL
-            ");
+            if (DB::getDriverName() === 'mysql') {
+                DB::statement("
+                    UPDATE student_academic_info sai
+                    INNER JOIN students s ON s.id = sai.student_id
+                    SET sai.academy_id = s.academy_id
+                    WHERE sai.academy_id IS NULL AND s.academy_id IS NOT NULL
+                ");
+            } elseif (DB::getDriverName() === 'sqlite') {
+                DB::statement("
+                    UPDATE student_academic_info 
+                    SET academy_id = (SELECT academy_id FROM students WHERE students.id = student_academic_info.student_id)
+                    WHERE academy_id IS NULL 
+                    AND EXISTS (SELECT 1 FROM students WHERE students.id = student_academic_info.student_id AND academy_id IS NOT NULL)
+                ");
+            }
         }
 
         if (!Schema::hasColumn('student_academic_info', 'classroom_id')) {
@@ -132,34 +141,53 @@ return new class extends Migration
         }
 
         // Insert into classroom_students by matching grade_level+section+academy
-        DB::statement("
-            INSERT IGNORE INTO classroom_students 
-                (academy_id, classroom_id, student_id, academic_year_id, student_number, status, created_at, updated_at)
-            SELECT 
-                s.academy_id,
-                c.id as classroom_id,
-                s.id as student_id,
-                c.academic_year_id,
-                NULL as student_number,
-                CASE 
-                    WHEN s.status = 'active' THEN 'active'
-                    WHEN s.status = 'graduated' THEN 'graduated'
-                    WHEN s.status = 'transferred' THEN 'transferred'
-                    ELSE 'active'
-                END as status,
-                NOW(),
-                NOW()
-            FROM students s
-            INNER JOIN classrooms c 
-                ON c.academy_id = s.academy_id
-                AND c.grade_level = s.class_level
-                AND c.section = s.class_section
-            WHERE s.class_level IS NOT NULL 
-                AND s.class_level != ''
-                AND s.class_section IS NOT NULL
-                AND s.class_section != ''
-                AND s.academy_id IS NOT NULL
-        ");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("
+                INSERT IGNORE INTO classroom_students 
+                    (academy_id, classroom_id, student_id, academic_year_id, student_number, status, created_at, updated_at)
+                SELECT 
+                    s.academy_id,
+                    c.id as classroom_id,
+                    s.id as student_id,
+                    c.academic_year_id,
+                    NULL as student_number,
+                    CASE 
+                        WHEN s.status = 'active' THEN 'active'
+                        WHEN s.status = 'graduated' THEN 'graduated'
+                        WHEN s.status = 'transferred' THEN 'transferred'
+                        ELSE 'active'
+                    END as status,
+                    NOW(),
+                    NOW()
+                FROM students s
+                INNER JOIN classrooms c 
+                    ON c.academy_id = s.academy_id
+                    AND c.grade_level = s.class_level
+                    AND c.section = s.class_section
+                WHERE s.class_level IS NOT NULL 
+                    AND s.class_level != ''
+                    AND s.class_section IS NOT NULL
+                    AND s.class_section != ''
+                    AND s.academy_id IS NOT NULL
+            ");
+        } elseif (DB::getDriverName() === 'sqlite') {
+            // Basic sqlite implementation for tests
+            DB::statement("
+                INSERT OR IGNORE INTO classroom_students 
+                    (academy_id, classroom_id, student_id, academic_year_id, student_number, status, created_at, updated_at)
+                SELECT 
+                    s.academy_id,
+                    c.id as classroom_id,
+                    s.id as student_id,
+                    c.academic_year_id,
+                    NULL as student_number,
+                    'active' as status,
+                    datetime('now'),
+                    datetime('now')
+                FROM students s
+                JOIN classrooms c ON c.academy_id = s.academy_id AND c.grade_level = s.class_level AND c.section = s.class_section
+            ");
+        }
     }
 
     /**
@@ -168,13 +196,26 @@ return new class extends Migration
     private function populateAcademicInfoClassroomId(): void
     {
         // Update student_academic_info with classroom_id from classroom_students
-        DB::statement("
-            UPDATE student_academic_info sai
-            INNER JOIN classroom_students cs ON cs.student_id = sai.student_id AND cs.status = 'active'
-            SET sai.classroom_id = cs.classroom_id
-            WHERE sai.classroom_id IS NULL
-                AND sai.is_current = 1
-        ");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("
+                UPDATE student_academic_info sai
+                INNER JOIN classroom_students cs ON cs.student_id = sai.student_id AND cs.status = 'active'
+                SET sai.classroom_id = cs.classroom_id
+                WHERE sai.classroom_id IS NULL
+                    AND sai.is_current = 1
+            ");
+        } elseif (DB::getDriverName() === 'sqlite') {
+            DB::statement("
+                UPDATE student_academic_info 
+                SET classroom_id = (
+                    SELECT classroom_id 
+                    FROM classroom_students 
+                    WHERE classroom_students.student_id = student_academic_info.student_id AND status = 'active'
+                    LIMIT 1
+                )
+                WHERE classroom_id IS NULL AND is_current = 1
+            ");
+        }
     }
 
     public function down(): void

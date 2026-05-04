@@ -175,9 +175,8 @@ function handleCancelled(coupon: Coupon) {
   loadStatistics()
 }
 
-function handlePrinted(coupon: Coupon) {
-  // Just log the print action
-  console.log('Coupon printed:', coupon.coupon_code)
+function handlePrinted(_coupon: Coupon) {
+  // Print action handled (hook for future analytics)
 }
 
 async function loadStatistics() {

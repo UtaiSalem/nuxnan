@@ -36,7 +36,7 @@ async function onUpdateCourseHandler(courseData){
         let resultResp = await axios.put(`/courses/${props.course.data.id}`, courseUpdateForm ,config);
 
         if (resultResp.data && resultResp.data.success) {
-            // console.log(resultResp.data);
+            // 
             router.reload({ only: ['course']});
         }
     } catch (error) {

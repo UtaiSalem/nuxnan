@@ -79,7 +79,8 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router'; // Added useRouter
 import AcademyLayout from '@/layouts/AcademyLayout.vue';
 import CurriculumForm from '@/components/learn/academy/curriculum/CurriculumForm.vue';
-import axios from 'axios';
+
+const api = useApi();
 
 const route = useRoute();
 const router = useRouter(); // To navigate
@@ -93,10 +94,10 @@ const showCreateModal = ref(false);
 
 const fetchAcademy = async () => {
     try {
-        const response = await axios.get(`/api/academies/${academyName}`);
-        if(response.data.success) {
-            academy.value = response.data.academy;
-            isAcademyAdmin.value = response.data.isAcademyAdmin;
+        const response = await api.get(`/api/academies/${academyName}`);
+        if(response.success) {
+            academy.value = response.academy;
+            isAcademyAdmin.value = response.isAcademyAdmin;
             fetchCurriculums(academy.value.id);
         }
     } catch (error) {
@@ -107,9 +108,9 @@ const fetchAcademy = async () => {
 const fetchCurriculums = async (academyId) => {
     isLoading.value = true;
     try {
-        const response = await axios.get(`/api/academies/${academyId}/curriculums`);
-        if(response.data.success) {
-            curriculums.value = response.data.curriculums;
+        const response = await api.get(`/api/academies/${academyId}/curriculums`);
+        if(response.success) {
+            curriculums.value = response.curriculums;
         }
     } catch (error) {
         console.error("Error fetching curriculums", error);

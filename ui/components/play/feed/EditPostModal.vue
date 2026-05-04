@@ -17,7 +17,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'post-updated'])
 
-const { $apiFetch } = useNuxtApp()
+const api = useApi()
 const authStore = useAuthStore()
 const swal = useSweetAlert()
 const { 
@@ -368,7 +368,7 @@ const searchFriends = async () => {
   searchTimeout = setTimeout(async () => {
     isSearchingFriends.value = true
     try {
-      const response = await $apiFetch(`/api/friends/search?q=${encodeURIComponent(friendSearchQuery.value)}`)
+      const response = await api.get(`/api/friends/search?q=${encodeURIComponent(friendSearchQuery.value)}`)
       if (response.success) {
         friendSearchResults.value = response.data || []
       }

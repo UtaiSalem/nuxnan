@@ -303,8 +303,9 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
-import axios from 'axios'
 import Swal from 'sweetalert2'
+
+const api = useApi()
 
 const props = defineProps({
   student: {
@@ -365,12 +366,11 @@ const loadContactsFromAPI = async () => {
     try {
       url = route('homevisit.student.contacts.index', props.student.id)
     } catch (routeError) {
-      url = `/home-visit/student/${props.student.id}/contacts`
+      url = `/api/home-visit/student/${props.student.id}/contacts`
     }
-    
-    const response = await axios.get(url)
-    const result = response.data
-    
+
+    const result = await api.get(url)
+
     if (result.status === 'success' && result.data) {
       if (result.data.length > 0) {
         contactRecords.value = result.data.map(record => ({
@@ -435,11 +435,10 @@ const deleteRecord = async (index) => {
     try {
       url = route('homevisit.student.contacts.destroy', [props.student.id, record.id])
     } catch (routeError) {
-      url = `/home-visit/student/${props.student.id}/contacts/${record.id}`
+      url = `/api/home-visit/student/${props.student.id}/contacts/${record.id}`
     }
-    
-    const response = await axios.delete(url)
-    const result = response.data
+
+    const result = await api.delete(url)
 
     if (result.status === 'success' || result.success === true) {
       // 1. Remove from local array first
@@ -507,11 +506,10 @@ const setPrimary = async (record, index) => {
     try {
       url = route('homevisit.student.contacts.set-primary', [props.student.id, record.id])
     } catch (routeError) {
-      url = `/home-visit/student/${props.student.id}/contacts/${record.id}/set-primary`
+      url = `/api/home-visit/student/${props.student.id}/contacts/${record.id}/set-primary`
     }
-    
-    const response = await axios.put(url)
-    const result = response.data
+
+    const result = await api.put(url, {})
 
     if (result.status === 'success' || result.success === true) {
       // 1. Update local state first
@@ -648,33 +646,31 @@ const submitForm = async () => {
       is_primary: Boolean(formData.value.is_primary)
     }
 
-    let response
+    let result
     if (modalMode.value === 'edit' && editingRecord.value?.id) {
       // PUT request for update
       let updateUrl
       try {
         updateUrl = route('homevisit.student.contacts.update', [props.student.id, editingRecord.value.id])
       } catch (routeError) {
-        updateUrl = `/home-visit/student/${props.student.id}/contacts/${editingRecord.value.id}`
+        updateUrl = `/api/home-visit/student/${props.student.id}/contacts/${editingRecord.value.id}`
       }
-      
-      response = await axios.put(updateUrl, apiData)
+
+      result = await api.put(updateUrl, apiData)
     } else {
       // POST request for create
       let storeUrl
       try {
         storeUrl = route('homevisit.student.contacts.store', props.student.id)
       } catch (routeError) {
-        storeUrl = `/home-visit/student/${props.student.id}/contacts`
+        storeUrl = `/api/home-visit/student/${props.student.id}/contacts`
       }
-      
-      response = await axios.post(storeUrl, apiData)
+
+      result = await api.post(storeUrl, apiData)
     }
 
-    const result = response.data
-
     // Check for different success response formats
-    if (result.status === 'success' || result.success === true || response.status === 200) {
+    if (result.status === 'success' || result.success === true) {
       // 1. Update local data from API response (avoid unnecessary reload)
       if (modalMode.value === 'add' && result.data) {
         // If new record is primary, unset other primary records

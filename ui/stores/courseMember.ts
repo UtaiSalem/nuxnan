@@ -32,7 +32,7 @@ export const useCourseMemberStore = defineStore('course-member', {
                 const res = await api.get(`/api/courses/${courseId}/me`) as any
                 if (res.data) {
                     this.member = res.data
-                    // console.log(this.member)
+                    // Dev-only logging
                 }
             } catch (error) {
                 console.error('Failed to fetch my member info', error)

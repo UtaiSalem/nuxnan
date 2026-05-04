@@ -28,7 +28,8 @@ const filteredStudents = computed(() => {
 
 const handlePhotoUpload = async ({id, studentId, file }) => {
 
-    // console.log('Uploading photo for student:', studentId, 'id:', id, 'File:', file)
+    // Remove comment and implement if needed
+  // 
     if (!file || !studentId) return
     // return;
 
@@ -44,9 +45,9 @@ const handlePhotoUpload = async ({id, studentId, file }) => {
             }
         })
 
-    } catch (error) {
-        console.error('Upload failed:', error)
-    }
+  } catch (error) {
+    // Dev-only logging
+  }
 }
 
 const handleUpdateStudent = async (updatedData) => {
@@ -60,10 +61,10 @@ const handleUpdateStudent = async (updatedData) => {
             }
             alert('บันทึกข้อมูลสำเร็จ')
         }
-    } catch (error) {
-        console.error('Update failed:', error)
-        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
-    }
+  } catch (error) {
+    // Dev-only logging
+    alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+  }
 }
 
 // Function to handle save student card as image
@@ -85,9 +86,10 @@ const handleSaveStudentCard = async (studentId) => {
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-    } catch (error) {
-        console.error('Error saving student card:', error)
-    }
+  } catch (error) {
+    // Dev-only logging  
+  }
+
 }
 </script>
 

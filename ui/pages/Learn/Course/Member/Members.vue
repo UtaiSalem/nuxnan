@@ -85,9 +85,8 @@ async function setActiveGroupTab(tabIndex) {
 }
 
 // Handle unmember request
-const handleUnmemberRequest = (data) => {
+const handleUnmemberRequest = (_data) => {
     // TODO: Implement unmember functionality
-    console.log('Unmember request:', data);
 };
 </script>
 

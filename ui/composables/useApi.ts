@@ -424,15 +424,11 @@ export const useApi = () => {
     // Check if request is retryable based on method
     const isRetryableMethod = retryConfig.retryableMethods.includes(method);
 
-    // Log request if debug mode is enabled
-    if (debug) {
-      console.log(`[API Request] ${method} ${finalUrl}`, {
-        headers: sanitizeHeaders(finalOptions.headers || {}),
-        body: sanitizeBody(finalOptions.body),
-        timeout,
-        retryConfig: isRetryableMethod ? retryConfig : 'disabled for non-idempotent method',
-      });
-    }
+     // Log request if debug mode is enabled
+     if (debug) {
+       // Dev-only logging
+     }
+     
 
     let lastError: ApiError | null = null;
     let retryCount = 0;
@@ -468,14 +464,11 @@ export const useApi = () => {
         // Apply response interceptor
         const intercepted = await responseInterceptor(response, finalUrl, finalOptions);
 
-        // Log response if debug mode is enabled
-        if (debug) {
-          console.log(`[API Response] ${method} ${finalUrl}`, {
-            status: intercepted.status,
-            data: intercepted.data,
-            retryCount,
-          });
-        }
+         // Log response if debug mode is enabled
+         if (debug) {
+           // Dev-only logging
+         }
+         
 
         return intercepted.data;
 
@@ -502,16 +495,16 @@ export const useApi = () => {
 
         // Handle 401 errors - try to refresh token (only on first attempt)
         if ((apiError.status === 401) && retryCount === 0) {
-          if (debug || process.env.NODE_ENV === 'development') {
-            console.log('[API] Token expired, attempting refresh...');
-          }
+        if (debug || process.env.NODE_ENV === 'development') {
+          // Dev-only logging
+        }
 
           const refreshed = await authStore.refreshToken();
 
           if (refreshed) {
-            if (debug || process.env.NODE_ENV === 'development') {
-              console.log('[API] Token refreshed successfully, retrying request...');
-            }
+          if (debug || process.env.NODE_ENV === 'development') {
+            // Dev-only logging
+          }
             
             // Update token and retry immediately (don't count as retry)
             continue;
@@ -533,15 +526,7 @@ export const useApi = () => {
           );
 
           if (debug || process.env.NODE_ENV === 'development') {
-            console.log(
-              `[API Retry] Attempt ${retryCount}/${retryConfig.maxRetries} after ${delay}ms`,
-              {
-                error: apiError.message,
-                status: apiError.status,
-                type: apiError.type,
-                errorId: apiError.id,
-              }
-            );
+            // Dev-only logging
           }
 
           // Wait before retrying
@@ -549,22 +534,10 @@ export const useApi = () => {
           continue;
         }
 
-        // Log error only in debug mode or development
-        if (debug || process.env.NODE_ENV === 'development') {
-          console.error('[API Error]', {
-            id: apiError.id,
-            endpoint: apiError.endpoint,
-            url: apiError.url,
-            method: apiError.method,
-            status: apiError.status,
-            type: apiError.type,
-            message: apiError.message,
-            data: apiError.data,
-            retryCount: apiError.retryCount,
-            isRetryable: apiError.isRetryable,
-            timestamp: apiError.timestamp,
-          });
-        }
+         // Log error only in debug mode or development
+         if (debug || process.env.NODE_ENV === 'development') {
+           // Dev-only logging
+         }
 
         // Throw the error
         throw apiError;
@@ -745,15 +718,8 @@ export const useApi = () => {
         apiError.status = response.status;
         apiError.data = errorData;
         
-        if (debug || process.env.NODE_ENV === 'development') {
-          console.error('[API Blob Error]', {
-            id: apiError.id,
-            endpoint: apiError.endpoint,
-            url: apiError.url,
-            status: apiError.status,
-            message: apiError.message,
-            data: apiError.data,
-          });
+       if (debug || process.env.NODE_ENV === 'development') {
+         // Dev-only logging
         }
         
         throw apiError;
@@ -771,13 +737,8 @@ export const useApi = () => {
         }
       }
 
-      if (debug || process.env.NODE_ENV === 'development') {
-        console.log('[API Blob Download]', {
-          url,
-          filename,
-          size: blob.size,
-          type: blob.type,
-        });
+       if (debug || process.env.NODE_ENV === 'development') {
+         // Dev-only logging
       }
 
       return { blob, filename };

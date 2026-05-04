@@ -85,8 +85,9 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AcademyLayout from '@/layouts/AcademyLayout.vue';
 import CurriculumForm from '@/components/learn/academy/curriculum/CurriculumForm.vue';
-import axios from 'axios';
 import Swal from 'sweetalert2';
+
+const api = useApi();
 
 const route = useRoute();
 const router = useRouter();
@@ -101,10 +102,10 @@ const editingCurriculum = ref(null);
 
 const fetchAcademy = async () => {
     try {
-        const response = await axios.get(`/api/academies/${academyName}`);
-        if(response.data.success) {
-            academy.value = response.data.academy;
-            isAcademyAdmin.value = response.data.isAcademyAdmin;
+        const response = await api.get(`/api/academies/${academyName}`);
+        if(response.success) {
+            academy.value = response.academy;
+            isAcademyAdmin.value = response.isAcademyAdmin;
             fetchCurriculums(academy.value.id);
         }
     } catch (error) {
@@ -115,9 +116,9 @@ const fetchAcademy = async () => {
 const fetchCurriculums = async (academyId) => {
     isLoading.value = true;
     try {
-        const response = await axios.get(`/api/academies/${academyId}/curriculums`);
-        if(response.data.success) {
-            curriculums.value = response.data.curriculums;
+        const response = await api.get(`/api/academies/${academyId}/curriculums`);
+        if(response.success) {
+            curriculums.value = response.curriculums;
         }
     } catch (error) {
         console.error("Error fetching curriculums", error);
@@ -159,13 +160,13 @@ const deleteCurriculum = async (id) => {
 
     if (result.isConfirmed) {
         try {
-            const response = await axios.delete(`/api/academies/curriculums/${id}`);
-            if (response.data.success) {
+            const response = await api.delete(`/api/academies/curriculums/${id}`);
+            if (response.success) {
                 curriculums.value = curriculums.value.filter(c => c.id !== id);
                 Swal.fire('สำเร็จ', 'ลบหลักสูตรเรียบร้อยแล้ว', 'success');
             }
         } catch (error) {
-            Swal.fire('ข้อผิดพลาด', error.response?.data?.message || 'ไม่สามารถลบได้', 'error');
+            Swal.fire('ข้อผิดพลาด', error?.data?.message || 'ไม่สามารถลบได้', 'error');
         }
     }
 };

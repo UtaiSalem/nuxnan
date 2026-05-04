@@ -188,8 +188,9 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import axios from 'axios'
 import Swal from 'sweetalert2'
+
+const api = useApi()
 
 const props = defineProps({
   student: {
@@ -255,12 +256,11 @@ const loadHealthData = async () => {
     try {
       url = route('homevisit.student.health.show', props.student.id)
     } catch (routeError) {
-      url = `/home-visit/student/${props.student.id}/health`
+      url = `/api/home-visit/student/${props.student.id}/health`
     }
-    
-    const response = await axios.get(url)
-    const result = response.data
-    
+
+    const result = await api.get(url)
+
     if (result.status === 'success' && result.data) {
       healthData.value = result.data
       
@@ -320,30 +320,28 @@ const saveHealthData = async () => {
       rh_factor: form.value.rh_factor || null
     }
 
-    let response
+    let result
     let url
-    
+
     if (healthData.value && healthData.value.id) {
       // Update existing health data
       try {
         url = route('homevisit.student.health.update', [props.student.id, healthData.value.id])
       } catch (routeError) {
-        url = `/home-visit/student/${props.student.id}/health/${healthData.value.id}`
+        url = `/api/home-visit/student/${props.student.id}/health/${healthData.value.id}`
       }
-      response = await axios.put(url, apiData)
+      result = await api.put(url, apiData)
     } else {
       // Create new health data
       try {
         url = route('homevisit.student.health.store', props.student.id)
       } catch (routeError) {
-        url = `/home-visit/student/${props.student.id}/health`
+        url = `/api/home-visit/student/${props.student.id}/health`
       }
-      response = await axios.post(url, apiData)
+      result = await api.post(url, apiData)
     }
 
-    const result = response.data
-
-    if (result.status === 'success' || result.success === true || response.status === 200) {
+    if (result.status === 'success' || result.success === true) {
       // 1. Update local health data
       healthData.value = result.data
       

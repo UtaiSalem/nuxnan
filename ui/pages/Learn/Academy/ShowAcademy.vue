@@ -15,7 +15,8 @@ const props = defineProps({
 import AcademyInfoWidget from '@/components/learn/academy/widgets/AcademyInfoWidget.vue';
 import AcademyActivityWidget from '@/components/learn/academy/widgets/AcademyActivityWidget.vue';
 import AcademyAnnouncementWidget from '@/components/learn/academy/widgets/AcademyAnnouncementWidget.vue';
-import axios from 'axios';
+
+const api = useApi();
 
 const isLoadingAcademyPosts = ref(false);
 const academyActivities = ref(props.activities?.data || []);
@@ -26,10 +27,10 @@ const fetchActivities = async (url = null) => {
     try {
         isLoadingAcademyPosts.value = true;
         const targetUrl = url || `/api/academies/${props.academy.data.id}/activities?page=${page.value}`;
-        const response = await axios.get(targetUrl);
-        
-        if (response.data.success || response.data.data) { // Handle different response structures if any
-            const data = response.data.activities || response.data;
+        const response = await api.get(targetUrl);
+
+        if (response.success || response.data) { // Handle different response structures if any
+            const data = response.activities || response;
             if (url) {
                 // Load more
                 academyActivities.value = [...academyActivities.value, ...data.data];

@@ -24,7 +24,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'image-updated'])
 
-const { $apiFetch } = useNuxtApp()
+const api = useApi()
 const authStore = useAuthStore()
 const swal = useSweetAlert()
 
@@ -166,9 +166,7 @@ const toggleLike = async () => {
   }
   
   try {
-    const response = await $apiFetch(`/api/post_images/${currentImage.value.id}/like`, {
-      method: 'POST'
-    })
+    const response = await api.post(`/api/post_images/${currentImage.value.id}/like`, {})
     
     if (!response.success) {
       // Revert on failure
@@ -222,9 +220,7 @@ const toggleDislike = async () => {
   }
   
   try {
-    const response = await $apiFetch(`/api/post_images/${currentImage.value.id}/dislike`, {
-      method: 'POST'
-    })
+    const response = await api.post(`/api/post_images/${currentImage.value.id}/dislike`, {})
     
     if (!response.success) {
       // Revert on failure
@@ -266,7 +262,7 @@ const loadComments = async () => {
   isLoadingComments.value = true
   
   try {
-    const response = await $apiFetch(`/api/postimage/${currentImage.value.id}/comments?page=${commentsPage.value}`)
+    const response = await api.get(`/api/postimage/${currentImage.value.id}/comments?page=${commentsPage.value}`)
     
     if (response.success || response.data) {
       const newComments = response.data || response.comments || []
@@ -297,11 +293,8 @@ const submitComment = async () => {
   isSubmittingComment.value = true
   
   try {
-    const response = await $apiFetch(`/api/postimage/${currentImage.value.id}/comments`, {
-      method: 'POST',
-      body: {
-        content: newComment.value
-      }
+    const response = await api.post(`/api/postimage/${currentImage.value.id}/comments`, {
+      content: newComment.value
     })
     
     if (response.success) {
@@ -330,9 +323,7 @@ const deleteComment = async (commentId) => {
   if (!confirmed) return
   
   try {
-    const response = await $apiFetch(`/api/post_image_comments/${commentId}`, {
-      method: 'DELETE'
-    })
+    const response = await api.delete(`/api/post_image_comments/${commentId}`)
     
     if (response.success) {
       comments.value = comments.value.filter(c => c.id !== commentId)
@@ -350,9 +341,7 @@ const deleteComment = async (commentId) => {
 // Like Comment
 const likeComment = async (comment) => {
   try {
-    const response = await $apiFetch(`/api/post_image_comments/${comment.id}/like`, {
-      method: 'POST'
-    })
+    const response = await api.post(`/api/post_image_comments/${comment.id}/like`, {})
     
     if (response.success) {
       comment.isLikedByAuth = !comment.isLikedByAuth

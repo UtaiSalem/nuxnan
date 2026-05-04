@@ -14,15 +14,25 @@ return new class extends Migration
     public function up(): void
     {
         // First, remove any existing duplicates (keep the earliest record)
-        DB::statement('
-            DELETE a1 FROM attendance_details a1
-            INNER JOIN attendance_details a2 
-            WHERE a1.id > a2.id 
-            AND a1.course_attendance_id = a2.course_attendance_id 
-            AND a1.course_member_id = a2.course_member_id
-        ');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('
+                DELETE a1 FROM attendance_details a1
+                INNER JOIN attendance_details a2 
+                WHERE a1.id > a2.id 
+                AND a1.course_attendance_id = a2.course_attendance_id
+                AND a1.course_member_id = a2.course_member_id
+            ');
+        } elseif (DB::getDriverName() === 'sqlite') {
+            DB::statement('
+                DELETE FROM attendance_details 
+                WHERE id NOT IN (
+                    SELECT MIN(id) 
+                    FROM attendance_details 
+                    GROUP BY course_attendance_id, course_member_id
+                )
+            ');
+        }
 
-        // Add unique constraint
         Schema::table('attendance_details', function (Blueprint $table) {
             $table->unique(['course_attendance_id', 'course_member_id'], 'unique_attendance_per_member');
         });

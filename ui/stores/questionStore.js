@@ -1,7 +1,6 @@
 // stores/useQuestionStore.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import axios from 'axios'
 
 export const useQuestionStore = defineStore('question', () => {
   const selectedOption = ref(null)
@@ -11,6 +10,8 @@ export const useQuestionStore = defineStore('question', () => {
   const isLoading = ref(false)
   const isImageLoading = ref(false)
   const showEditModal = ref(false)
+
+  const api = useApi()
 
   const initQuestion = (question) => {
     selectedOption.value = question.isAnsweredByAuth
@@ -23,18 +24,20 @@ export const useQuestionStore = defineStore('question', () => {
     try {
       isLoading.value = true
       const url = question.isAnsweredByAuth === null
-        ? `/quizs/${question.questionable_id}/questions/${question.id}/answers`
-        : `/quizs/${question.questionable_id}/questions/${question.id}/answers/${question.authAnswerQuestion}`
+        ? `/api/quizs/${question.questionable_id}/questions/${question.id}/answers`
+        : `/api/quizs/${question.questionable_id}/questions/${question.id}/answers/${question.authAnswerQuestion}`
 
       const method = question.isAnsweredByAuth === null ? 'post' : 'patch'
 
-      const response = await axios[method](url, {
+      const body = {
         course_id: question.course_id,
         answer_id: selectedOption.value,
-      })
+      }
 
-      if (response.data.success) {
-        question.authAnswerQuestion = response.data.authAnswerQuestion
+      const response = method === 'post' ? await api.post(url, body) : await api.patch(url, body)
+
+      if (response.success) {
+        question.authAnswerQuestion = response.authAnswerQuestion
         question.isAnsweredByAuth = true
         showConfirmAnswerButton.value = false
         canEditAnswer.value = true
@@ -51,13 +54,13 @@ export const useQuestionStore = defineStore('question', () => {
   }
 
   const deleteOption = async (questionId, optionId, idx) => {
-    await axios.delete(`/options/${optionId}`)
+    await api.delete(`/api/options/${optionId}`)
     // Update the options array in the question object
   }
 
   const setCorrectAnswer = async (questionId, answerId) => {
     if (answerId) {
-      await axios.patch(`/questions/${questionId}/set_correct_option`, { answer: answerId })
+      await api.patch(`/api/questions/${questionId}/set_correct_option`, { answer: answerId })
       correctAnswer.value = answerId
     } else {
       // Show error message

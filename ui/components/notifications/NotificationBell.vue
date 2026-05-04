@@ -15,6 +15,7 @@ const {
   markAllAsRead,
   getColorClass,
   formatRelativeTime,
+  initEcho,
 } = useNotifications()
 
 const isOpen = ref(false)
@@ -23,13 +24,7 @@ const dropdownRef = ref<HTMLElement | null>(null)
 // Fetch on mount
 onMounted(() => {
   fetchRecent()
-  
-  // Poll every 60 seconds
-  const interval = setInterval(() => {
-    fetchRecent()
-  }, 60000)
-  
-  onUnmounted(() => clearInterval(interval))
+  initEcho()
 })
 
 // Close on click outside

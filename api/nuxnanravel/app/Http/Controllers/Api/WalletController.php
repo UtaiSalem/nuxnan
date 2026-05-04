@@ -100,6 +100,64 @@ class WalletController extends Controller
     }
 
     /**
+     * Deduct money from wallet (Internal use for exams/purchases).
+     */
+    public function deduct(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'reason' => 'required|string',
+            'metadata' => 'nullable|array'
+        ]);
+
+        try {
+            // using WalletService to withdraw without bank account (internal deduction)
+            $transaction = $this->walletService->withdraw(
+                $user,
+                $validated['amount'],
+                'internal_deduction',
+                [
+                    'bank_name' => 'Internal',
+                    'account_number' => 'N/A',
+                    'account_name' => 'Internal Deduction',
+                ],
+                $validated['reason']
+            );
+
+            if (!$transaction) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ยอดเงินในกระเป๋าไม่เพียงพอ',
+                ], 400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Deduction successful',
+                'data' => [
+                    'amount' => $transaction->amount,
+                    'new_balance' => $transaction->balance_after,
+                    'transaction_id' => $transaction->id,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
      * Withdraw money from wallet.
      */
     public function withdraw(Request $request): JsonResponse

@@ -30,7 +30,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'post-created'])
 
-const { $apiFetch } = useNuxtApp()
+const api = useApi()
 const authStore = useAuthStore()
 const swal = useSweetAlert()
 const { getAvatarUrl } = useAvatar()
@@ -68,10 +68,7 @@ const createAcademyPost = async (content, options) => {
     formData.append('privacy_settings', String(options.privacy_settings))
   }
   
-  return await $apiFetch(`/api/academies/${props.contextId}/posts`, {
-    method: 'POST',
-    body: formData,
-  })
+  return await api.post(`/api/academies/${props.contextId}/posts`, formData)
 }
 
 // Create course post
@@ -85,10 +82,7 @@ const createCoursePost = async (content, options) => {
     })
   }
   
-  return await $apiFetch(`/api/courses/${props.contextId}/posts`, {
-    method: 'POST',
-    body: formData,
-  })
+  return await api.post(`/api/courses/${props.contextId}/posts`, formData)
 }
 
 // Current user avatar
@@ -439,7 +433,7 @@ const searchFriends = async () => {
   searchTimeout = setTimeout(async () => {
     isSearchingFriends.value = true
     try {
-      const response = await $apiFetch(`/api/friends/search?q=${encodeURIComponent(friendSearchQuery.value)}`)
+      const response = await api.get(`/api/friends/search?q=${encodeURIComponent(friendSearchQuery.value)}`)
       if (response.success) {
         friendSearchResults.value = response.data || []
       }

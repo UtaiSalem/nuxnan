@@ -137,10 +137,20 @@ class AcademyMemberController extends Controller
 
     public function memberlist(Academy $academy)
     {
-        $members = $academy->academyMembers()->with(['user', 'student'])->get();
+        $perPage = request()->get('per_page', 20);
+        $members = $academy->academyMembers()
+            ->with(['user', 'student'])
+            ->paginate($perPage);
+
         return response()->json([
             'success' => true,
             'members'  => AcademyMemberResource::collection($members),
+            'pagination' => [
+                'current_page' => $members->currentPage(),
+                'last_page' => $members->lastPage(),
+                'per_page' => $members->perPage(),
+                'total' => $members->total(),
+            ],
         ], 200);
     }
 
@@ -825,9 +835,58 @@ class AcademyMemberController extends Controller
         $memberData = (new AcademyMemberResource($member))->toArray(request());
         $memberData['enrolled_courses_count'] = $enrolledCoursesCount;
         $memberData['completed_courses_count'] = $completedCoursesCount;
-        $memberData['attendance_rate'] = null; // TODO: Calculate from attendance records
-        $memberData['gpa'] = null; // TODO: Calculate from grades
-
+        // Calculate GPA from SemesterTranscript or CourseGrade
+        $gpa = null;
+        if ($member->user_id) {
+            // Try to get latest published/completed semester transcript
+            $latestTranscript = \App\Models\SemesterTranscript::where('student_id', $member->student_id?->id ?? 0)
+                ->where('academy_id', $academy->id)
+                ->whereIn('status', [\App\Models\SemesterTranscript::STATUS_PUBLISHED, \App\Models\SemesterTranscript::STATUS_APPROVED])
+                ->orderBy('semester_id', 'desc')
+                ->first();
+            
+            if ($latestTranscript && $latestTranscript->gpa !== null) {
+                $gpa = (float) $latestTranscript->gpa;
+            } elseif ($member->user_id) {
+                // Fallback: Calculate from CourseGrade
+                $courseGrades = \App\Models\CourseGrade::where('student_id', $member->student_id?->id ?? 0)
+                    ->where('status', \App\Models\CourseGrade::STATUS_COMPLETED)
+                    ->where('is_published', true)
+                    ->get();
+                
+                if ($courseGrades->isNotEmpty()) {
+                    $totalGradePoints = 0;
+                    $totalCredits = 0;
+                    foreach ($courseGrades as $grade) {
+                        $credits = $grade->course?->credit_units ?? 1;
+                        if ($grade->grade_points !== null && $grade->grade_points >= 1) {
+                            $totalGradePoints += $grade->grade_points * $credits;
+                            $totalCredits += $credits;
+                        }
+                    }
+                    $gpa = $totalCredits > 0 ? round($totalGradePoints / $totalCredits, 2) : 0;
+                }
+            }
+        }
+        $memberData['gpa'] = $gpa;
+        
+        // Calculate attendance rate from attendance records
+        $attendanceRate = null;
+        if ($member->user_id && $member->student_id) {
+            $attendanceDetails = \App\Models\AttendanceDetail::whereHas('courseMember', function($q) use ($academy, $member) {
+                    $q->where('academy_id', $academy->id)
+                      ->where('user_id', $member->user_id);
+                })
+                ->where('course_member_id', '!=', null)
+                ->get();
+            
+            if ($attendanceDetails->isNotEmpty()) {
+                $totalSessions = $attendanceDetails->count();
+                $attendedSessions = $attendanceDetails->where('status', 'present')->count();
+                $attendanceRate = $totalSessions > 0 ? round(($attendedSessions / $totalSessions) * 100, 2) : 0;
+            }
+        }
+        $memberData['attendance_rate'] = $attendanceRate;
         return response()->json([
             'success' => true,
             'member' => $memberData,
@@ -1398,3 +1457,5 @@ class AcademyMemberController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 }
+
+

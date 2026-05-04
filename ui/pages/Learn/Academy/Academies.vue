@@ -6,6 +6,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import AcademiesLoadingSkeleton from '@/components/accessories/AcademiesLoadingSkeleton.vue'
 import AcademyCard from '@/components/learn/academy/AcademyCard.vue'
+import { useApi } from '@/stores/composables/useApi'
 
 const isLoading = ref(false)
 const authUser = usePage().props.auth.user
@@ -19,6 +20,7 @@ const academiesType = ref([
   { title: 'แหล่งเรียนรู้ทั้งหมด', errorMessages: 'ยังไม่มีแหล่งเรียนรู้' },
 ])
 const academiesTypeIndex = ref(1)
+const api = useApi()
 
 onMounted(() => {
   handleGetAcademies(academiesTypeIndex.value)
@@ -44,7 +46,7 @@ const handleGetAcademies = async (index) => {
 const getAuthOwnerAcademies = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`/api/academies/users/${authUser.id}/my-academies`)
+    const response = await api.get(`/api/academies/users/${authUser.id}/my-academies`)
     if (response.data.success) {
       academies.value = response.data.academies
       isLoading.value = false
@@ -64,7 +66,7 @@ const getAuthOwnerAcademies = async () => {
 const getAuthMemberedAcademies = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`/api/academies/users/${authUser.id}/membered-academies`)
+    const response = await api.get(`/api/academies/users/${authUser.id}/membered-academies`)
     if (response.data.success) {
       academies.value = response.data.academies
       isLoading.value = false
@@ -84,7 +86,7 @@ const getAuthMemberedAcademies = async () => {
 const getAllAcademies = async () => {
   try {
     isLoading.value = true
-    const response = await axios.get(`/api/academies/all-academies`)
+    const response = await api.get(`/api/academies/all-academies`)
     if (response.data.success) {
       academies.value = response.data.academies
       isLoading.value = false

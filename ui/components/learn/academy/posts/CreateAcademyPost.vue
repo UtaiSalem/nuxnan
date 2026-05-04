@@ -67,8 +67,9 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
-import axios from 'axios';
 import Swal from 'sweetalert2';
+
+const api = useApi();
 
 const props = defineProps({
     academy_id: Number
@@ -128,18 +129,14 @@ const createPost = async () => {
             formData.append(`images[${index}]`, image);
         });
 
-        const response = await axios.post(`/api/academies/${props.academy_id}/posts`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
+        const response = await api.post(`/api/academies/${props.academy_id}/posts`, formData);
 
-        if (response.data.success) {
+        if (response.success) {
             // content.value = '';
             // images.value = [];
             // imagePreviews.value = [];
             resetForm();
-            emit('post-created', response.data.post);
+            emit('post-created', response.post);
             
             const Toast = Swal.mixin({
                 toast: true,
@@ -158,7 +155,7 @@ const createPost = async () => {
         Swal.fire({
             icon: 'error',
             title: 'ผิดพลาด',
-            text: error.response?.data?.message || 'ไม่สามารถสร้างโพสต์ได้ กรุณาลองใหม่',
+            text: error?.data?.message || 'ไม่สามารถสร้างโพสต์ได้ กรุณาลองใหม่',
         });
     } finally {
         isLoading.value = false;

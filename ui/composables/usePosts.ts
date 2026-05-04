@@ -100,9 +100,9 @@ export interface BackgroundItem {
 
 export const usePosts = () => {
   const feedStore = useFeedStore()
-  const { $apiFetch } = useNuxtApp()
+  const api = useApi()
   const authStore = useAuthStore()
-  
+
   // Cached data
   const feelings = ref<FeelingItem[]>([])
   const activityTypes = ref<ActivityTypeItem[]>([])
@@ -111,7 +111,7 @@ export const usePosts = () => {
 
   const fetchPosts = async () => {
     try {
-      const response = await $apiFetch('/api/newsfeed/activities')
+      const response = await api.get('/api/newsfeed/activities')
       if (response && response.data) {
         feedStore.setPosts(response.data)
       }
@@ -125,9 +125,9 @@ export const usePosts = () => {
   // Fetch feelings list
   const fetchFeelings = async (): Promise<FeelingItem[]> => {
     if (feelings.value.length > 0) return feelings.value
-    
+
     try {
-      const response = await $apiFetch('/api/posts-feelings')
+      const response = await api.get('/api/posts-feelings')
       if (response.success) {
         const data = response.data || response.feelings || []
         feelings.value = data
@@ -143,9 +143,9 @@ export const usePosts = () => {
   // Fetch activity types list
   const fetchActivityTypes = async (): Promise<ActivityTypeItem[]> => {
     if (activityTypes.value.length > 0) return activityTypes.value
-    
+
     try {
-      const response = await $apiFetch('/api/posts-activity-types')
+      const response = await api.get('/api/posts-activity-types')
       if (response.success) {
         const data = response.data || response.activity_types || []
         activityTypes.value = data
@@ -161,9 +161,9 @@ export const usePosts = () => {
   // Fetch backgrounds list
   const fetchBackgrounds = async (): Promise<BackgroundItem[]> => {
     if (backgrounds.value.length > 0) return backgrounds.value
-    
+
     try {
-      const response = await $apiFetch('/api/posts-backgrounds')
+      const response = await api.get('/api/posts-backgrounds')
       if (response.success) {
         const data = response.data || []
         backgrounds.value = data
@@ -180,9 +180,9 @@ export const usePosts = () => {
   const fetchPostOptions = async () => {
     if (isLoadingOptions.value) return
     isLoadingOptions.value = true
-    
+
     try {
-      const response = await $apiFetch('/api/posts-options')
+      const response = await api.get('/api/posts-options')
       if (response.success && response.data) {
         feelings.value = response.data.feelings || []
         activityTypes.value = response.data.activity_types || []
@@ -278,10 +278,7 @@ export const usePosts = () => {
         }
       }
 
-      const response = await $apiFetch('/api/posts', {
-        method: 'POST',
-        body: formData,
-      })
+      const response = await api.post('/api/posts', formData)
 
       if (response.success && response.activity) {
         feedStore.addPost(response.activity)
@@ -383,10 +380,7 @@ export const usePosts = () => {
         formData.append('comments_disabled', options.comments_disabled ? '1' : '0')
       }
 
-      const response = await $apiFetch(`/api/posts/${postId}`, {
-        method: 'POST', // Using POST with _method override for FormData
-        body: formData,
-      })
+      const response = await api.post(`/api/posts/${postId}`, formData)
 
       if (response.success && response.post) {
         // Update post in feed store

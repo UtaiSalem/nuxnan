@@ -187,7 +187,6 @@ import AppButton from '../atoms/Button.vue'
 import Checkbox from '../atoms/Checkbox.vue'
 
 const authStore = useAuthStore()
-const router = useRouter()
 const config = useRuntimeConfig()
 
 // Referral code state
@@ -375,16 +374,12 @@ const handleSubmit = async () => {
       reference_code: referralCode.value,
     })
 
-    success.value = 'Registration successful! Redirecting...'
-
-    // Redirect to newsfeed after successful registration
-    setTimeout(() => {
-      router.push('/play/newsfeed')
-    }, 1500)
+    // Keep spinner visible during navigation (register() resets isLoading in finally)
+    authStore.isLoading = true
+    await navigateTo('/play/newsfeed')
   } catch (e: any) {
     console.error('Registration failed', e)
     error.value = e.message || e.data?.message || 'Registration failed. Please try again.'
-  } finally {
     loading.value = false
   }
 }

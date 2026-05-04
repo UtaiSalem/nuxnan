@@ -1,204 +1,184 @@
 /**
- * Course Service - จัดการ API calls สำหรับ Course
- * 
- * แยก API logic ออกจาก Store เพื่อ:
- * - ง่ายต่อการ test และ mock
- * - Reusable
- * - Centralized API endpoints
+ * Course Service - API calls for courses
+ *
+ * Uses the centralized useApi() composable for:
+ * - Automatic JWT authentication (Authorization: Bearer <token>)
+ * - Retry + exponential backoff on transient failures
+ * - Standardized error objects
+ * - Timeout handling
+ *
+ * NOTE: Each method calls useApi() internally. Must be invoked from
+ * a Nuxt setup context (e.g. inside <script setup>, useAsyncData,
+ * composables, or Pinia store actions).
  */
 
-import axios from 'axios';
-
 export const courseService = {
-    /**
-     * ดึงข้อมูลรายวิชาเดียว
-     */
-    async getCourse(courseId) {
-        const response = await axios.get(`/api/courses/${courseId}`);
-        return response.data;
-    },
-    
-    /**
-     * ดึงรายการรายวิชา
-     */
-    async getCourses(params = {}) {
-        const response = await axios.get('/api/courses', { params });
-        return response.data;
-    },
+  // ============= Courses =============
 
-    /**
-     * Get favorite courses
-     */
-    async getFavoriteCourses(params = {}) {
-        const response = await axios.get('/api/courses/favorites', { params });
-        return response.data;
-    },
-    
-    /**
-     * สร้างรายวิชาใหม่
-     */
-    async createCourse(data) {
-        const response = await axios.post('/api/courses', data);
-        return response.data;
-    },
-    
-    /**
-     * อัพเดทข้อมูลรายวิชา
-     */
-    async updateCourse(courseId, data) {
-        const response = await axios.patch(`/api/courses/${courseId}`, data);
-        return response.data;
-    },
-    
-    /**
-     * ลบรายวิชา
-     */
-    async deleteCourse(courseId) {
-        const response = await axios.delete(`/api/courses/${courseId}`);
-        return response.data;
-    },
+  /**
+   * Get a single course
+   */
+  async getCourse(courseId) {
+    const api = useApi()
+    return api.get(`/api/courses/${courseId}`)
+  },
 
-    /**
-     * Toggle favorite status
-     */
-    async toggleFavorite(courseId) {
-        const response = await axios.post(`/api/courses/${courseId}/favorite`);
-        return response.data;
-    },
-    
-    /**
-     * อัพเดทรูปปก
-     */
-    async updateCourseCover(courseId, file) {
-        const formData = new FormData();
-        formData.append('cover', file);
-        formData.append('_method', 'PATCH');
-        
-        const response = await axios.post(
-            `/courses/${courseId}`, 
-            formData,
-            { 
-                headers: { 
-                    'Content-Type': 'multipart/form-data' 
-                } 
-            }
-        );
-        return response.data;
-    },
-    
-    /**
-     * อัพเดทโลโก้
-     */
-    async updateCourseLogo(courseId, file) {
-        const formData = new FormData();
-        formData.append('logo', file);
-        formData.append('_method', 'PATCH');
-        
-        const response = await axios.post(
-            `/courses/${courseId}`, 
-            formData,
-            { 
-                headers: { 
-                    'Content-Type': 'multipart/form-data' 
-                } 
-            }
-        );
-        return response.data;
-    },
-    
-    /**
-     * อัพเดทหัวข้อรายวิชา
-     */
-    async updateCourseHeader(courseId, header) {
-        const response = await axios.patch(`/courses/${courseId}`, { 
-            name: header 
-        });
-        return response.data;
-    },
-    
-    /**
-     * อัพเดทรหัสวิชา
-     */
-    async updateCourseSubheader(courseId, subheader) {
-        const response = await axios.patch(`/courses/${courseId}`, { 
-            code: subheader 
-        });
-        return response.data;
-    },
-    
-    // ============= Member Management =============
-    
-    /**
-     * ขอเป็นสมาชิกรายวิชา
-     */
-    async requestMembership(courseId, groupId = null) {
-        const response = await axios.post(`/courses/${courseId}/members`, {
-            group_id: groupId
-        });
-        return response.data;
-    },
-    
-    /**
-     * ยกเลิกสมาชิก / ออกจากรายวิชา
-     */
-    async cancelMembership(courseId, memberId) {
-        const response = await axios.delete(`/courses/${courseId}/members/${memberId}`);
-        return response.data;
-    },
-    
-    /**
-     * ดึงรายชื่อสมาชิกในรายวิชา
-     */
-    async getCourseMembers(courseId, params = {}) {
-        const response = await axios.get(`/courses/${courseId}/members`, { params });
-        return response.data;
-    },
-    
-    /**
-     * อัพเดทสถานะสมาชิก (สำหรับ Admin)
-     */
-    async updateMemberStatus(courseId, memberId, status) {
-        const response = await axios.patch(
-            `/courses/${courseId}/members/${memberId}`, 
-            { status }
-        );
-        return response.data;
-    },
-    
-    // ============= Groups =============
-    
-    /**
-     * ดึงกลุ่มในรายวิชา
-     */
-    async getCourseGroups(courseId) {
-        const response = await axios.get(`/courses/${courseId}/groups`);
-        return response.data;
-    },
-    
-    /**
-     * สร้างกลุ่มใหม่
-     */
-    async createCourseGroup(courseId, data) {
-        const response = await axios.post(`/courses/${courseId}/groups`, data);
-        return response.data;
-    },
-    
-    /**
-     * อัพเดทกลุ่ม
-     */
-    async updateCourseGroup(courseId, groupId, data) {
-        const response = await axios.patch(
-            `/courses/${courseId}/groups/${groupId}`, 
-            data
-        );
-        return response.data;
-    },
-    
-    /**
-     * ลบกลุ่ม
-     */
-    async deleteCourseGroup(courseId, groupId) {
-        const response = await axios.delete(`/courses/${courseId}/groups/${groupId}`);
-        return response.data;
-    },
-};
+  /**
+   * Get course list
+   */
+  async getCourses(params = {}) {
+    const api = useApi()
+    const query = new URLSearchParams(params).toString()
+    return api.get(`/api/courses${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * Get favorite courses
+   */
+  async getFavoriteCourses(params = {}) {
+    const api = useApi()
+    const query = new URLSearchParams(params).toString()
+    return api.get(`/api/courses/favorites${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * Create a new course
+   */
+  async createCourse(data) {
+    const api = useApi()
+    return api.post('/api/courses', data)
+  },
+
+  /**
+   * Update course
+   */
+  async updateCourse(courseId, data) {
+    const api = useApi()
+    return api.patch(`/api/courses/${courseId}`, data)
+  },
+
+  /**
+   * Delete course
+   */
+  async deleteCourse(courseId) {
+    const api = useApi()
+    return api.delete(`/api/courses/${courseId}`)
+  },
+
+  /**
+   * Toggle favorite
+   */
+  async toggleFavorite(courseId) {
+    const api = useApi()
+    return api.post(`/api/courses/${courseId}/favorite`, {})
+  },
+
+  /**
+   * Update course cover image (FormData upload)
+   */
+  async updateCourseCover(courseId, file) {
+    const api = useApi()
+    const formData = new FormData()
+    formData.append('cover', file)
+    formData.append('_method', 'PATCH')
+    return api.post(`/api/courses/${courseId}`, formData)
+  },
+
+  /**
+   * Update course logo (FormData upload)
+   */
+  async updateCourseLogo(courseId, file) {
+    const api = useApi()
+    const formData = new FormData()
+    formData.append('logo', file)
+    formData.append('_method', 'PATCH')
+    return api.post(`/api/courses/${courseId}`, formData)
+  },
+
+  /**
+   * Update course name
+   */
+  async updateCourseHeader(courseId, header) {
+    const api = useApi()
+    return api.patch(`/api/courses/${courseId}`, { name: header })
+  },
+
+  /**
+   * Update course code
+   */
+  async updateCourseSubheader(courseId, subheader) {
+    const api = useApi()
+    return api.patch(`/api/courses/${courseId}`, { code: subheader })
+  },
+
+  // ============= Member Management =============
+
+  /**
+   * Request course membership
+   */
+  async requestMembership(courseId, groupId = null) {
+    const api = useApi()
+    return api.post(`/api/courses/${courseId}/members`, {
+      group_id: groupId,
+    })
+  },
+
+  /**
+   * Cancel course membership
+   */
+  async cancelMembership(courseId, memberId) {
+    const api = useApi()
+    return api.delete(`/api/courses/${courseId}/members/${memberId}`)
+  },
+
+  /**
+   * Get course members
+   */
+  async getCourseMembers(courseId, params = {}) {
+    const api = useApi()
+    const query = new URLSearchParams(params).toString()
+    return api.get(`/api/courses/${courseId}/members${query ? `?${query}` : ''}`)
+  },
+
+  /**
+   * Update member status (admin)
+   */
+  async updateMemberStatus(courseId, memberId, status) {
+    const api = useApi()
+    return api.patch(`/api/courses/${courseId}/members/${memberId}`, { status })
+  },
+
+  // ============= Groups =============
+
+  /**
+   * Get course groups
+   */
+  async getCourseGroups(courseId) {
+    const api = useApi()
+    return api.get(`/api/courses/${courseId}/groups`)
+  },
+
+  /**
+   * Create a group
+   */
+  async createCourseGroup(courseId, data) {
+    const api = useApi()
+    return api.post(`/api/courses/${courseId}/groups`, data)
+  },
+
+  /**
+   * Update a group
+   */
+  async updateCourseGroup(courseId, groupId, data) {
+    const api = useApi()
+    return api.patch(`/api/courses/${courseId}/groups/${groupId}`, data)
+  },
+
+  /**
+   * Delete a group
+   */
+  async deleteCourseGroup(courseId, groupId) {
+    const api = useApi()
+    return api.delete(`/api/courses/${courseId}/groups/${groupId}`)
+  },
+}

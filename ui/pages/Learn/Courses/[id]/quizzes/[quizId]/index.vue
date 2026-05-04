@@ -28,6 +28,8 @@ const handleDuplicated = (newQuiz: any) => {
 // Group filter state
 const groups = ref<any[]>([])
 const selectedGroupId = ref<number | null>(null)
+const canTakeExam = ref(true)
+const eligibility = ref<any>(null)
 
 // Fetch quiz details
 const { data: quiz, refresh, pending } = await useAsyncData(
@@ -36,6 +38,10 @@ const { data: quiz, refresh, pending } = await useAsyncData(
     const res = await api.get(`/api/courses/${courseId}/quizzes/${quizId}`)
     if (res.groups) {
       groups.value = res.groups
+    }
+    if (res.canTakeExam !== undefined) {
+      canTakeExam.value = res.canTakeExam
+      eligibility.value = res.eligibility
     }
     return res.quiz
   }
@@ -48,13 +54,46 @@ const filteredStudentResults = computed(() => {
 
   const group = groups.value.find((g: any) => g.id === selectedGroupId.value)
   if (!group) return quiz.value.student_results
-
   return quiz.value.student_results.filter((result: any) =>
     group.member_user_ids.includes(result.user_id)
   )
 })
 
-const startQuiz = () => {
+const startQuiz = async () => {
+  if (!canTakeExam.value && eligibility.value) {
+    const cost = eligibility.value.options?.find((o: any) => o.method === 'points')?.cost || 0
+    if (cost > 0) {
+      const result = await Swal.fire({
+        title: 'ปลดล็อคสิทธิ์สอบ',
+        text: `คุณต้องใช้คะแนนสะสม ${cost} แต้ม เพื่อปลดล็อคสิทธิ์สอบวิชานี้`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันใช้แต้ม',
+        cancelButtonText: 'ยกเลิก'
+      })
+      if (result.isConfirmed) {
+        try {
+          // Call the unlock endpoint which will deduct the points
+          const res: any = await api.post(`/api/courses/${courseId}/eligibility/unlock/points`)
+          if (res.success) {
+            Swal.fire('สำเร็จ', 'ปลดล็อคสิทธิ์สอบเรียบร้อยแล้ว', 'success')
+            canTakeExam.value = true
+            await refresh()
+          } else {
+             throw new Error(res.message || 'ไม่สามารถปลดล็อคได้')
+          }
+        } catch (err: any) {
+           const msg = err.data?.message || err.response?._data?.message || err.message || 'แต้มไม่เพียงพอ หรือเกิดข้อผิดพลาด'
+           Swal.fire('ผิดพลาด', msg, 'error')
+        }
+      }
+      return
+    } else {
+       Swal.fire('หมดสิทธิ์สอบ', 'คุณไม่มีสิทธิ์ทำแบบทดสอบนี้ กรุณาติดต่อผู้สอน', 'error')
+       return
+    }
+  }
+
   navigateTo(`/courses/${courseId}/quizzes/${quizId}/attempt`)
 }
 

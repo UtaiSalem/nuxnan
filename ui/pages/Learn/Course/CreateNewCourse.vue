@@ -208,11 +208,10 @@ async function handleSubmitForm(){
 
     const courseResp = await axios.post(`/courses`, courseFormData , config);
 
-    if (courseResp.data && courseResp.data.success) {
-      // console.log(courseResp.data.newCourse);
-      // console.log(courseResp.data.newCourse);
+      if (courseResp.data && courseResp.data.success) {
+        // Dev-only logging
 
-      Swal.fire(
+        Swal.fire(
           'สำเร็จ',
           'การบันทึกข้อมูลเสร็จสมบูรณ์',
           'success'

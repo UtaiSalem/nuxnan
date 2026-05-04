@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use App\Exceptions\ImageCopyException;
 use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Services\AttendanceEligibilityService;
 
 use Illuminate\Support\Facades\Storage;
 use App\Exceptions\ImageNotFoundException;
@@ -28,6 +29,12 @@ use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 class CourseQuizController extends Controller
 {
     private const QUIZ_IMAGE_PATH = 'images/courses/quizzes/questions/';
+    protected AttendanceEligibilityService $eligibilityService;
+
+    public function __construct(AttendanceEligibilityService $eligibilityService)
+    {
+        $this->eligibilityService = $eligibilityService;
+    }
 
     public function index(Course $course) 
     {
@@ -93,6 +100,19 @@ class CourseQuizController extends Controller
     {
         $isCourseAdmin = $course->isAdmin(auth()->user());
 
+        // Check Exam Eligibility for Student
+        $eligibilityInfo = null;
+        $canTakeExam = true;
+
+        if (!$isCourseAdmin) {
+            $member = $course->courseMembers()->where('user_id', auth()->id())->first();
+            if ($member) {
+                // If course has point deduction for exams, or requires attendance, check it
+                $eligibilityInfo = $this->eligibilityService->canTakeExam($member);
+                $canTakeExam = $eligibilityInfo['is_eligible'] || $eligibilityInfo['status'] === 'unlocked';
+            }
+        }
+
         $groups = [];
         if ($isCourseAdmin) {
             $groups = $course->courseGroups->map(function ($group) use ($course) {
@@ -110,9 +130,21 @@ class CourseQuizController extends Controller
             });
         }
 
+        // If student is not eligible and hasn't unlocked it, do not return questions in the resource
+        $quizResource = new CourseQuizResource($quiz);
+        if (!$canTakeExam && !$isCourseAdmin) {
+            // Strip questions to prevent cheating before paying/unlocking
+            // We can do this by using a different resource or stripping it out
+            $quizArray = $quizResource->toArray(request());
+            unset($quizArray['questions']);
+            $quizResource = $quizArray;
+        }
+
         return response()->json([
-            'quiz'   => new CourseQuizResource($quiz),
+            'quiz'   => $quizResource,
             'groups' => $groups,
+            'eligibility' => $eligibilityInfo,
+            'canTakeExam' => $canTakeExam,
         ]);
     }
 

@@ -196,7 +196,7 @@ export const useNotifications = () => {
   /**
    * Navigate to notification action
    */
-  const navigateTo = async (notification: Notification): Promise<void> => {
+  const handleNavigateTo = async (notification: ApiNotification): Promise<void> => {
     // Mark as read first
     if (!notification.read_status) {
       await markAsRead(notification.id)
@@ -205,6 +205,31 @@ export const useNotifications = () => {
     // Navigate if action_url exists
     if (notification.action_url) {
       await navigateTo(notification.action_url as any)
+    }
+  }
+
+  /**
+   * Initialize Echo and listen for notifications
+   */
+  const initEcho = () => {
+    if (!import.meta.client) return
+    const echo = window.Echo
+    const authStore = useAuthStore()
+
+    if (echo && authStore.user) {
+      const channelName = `App.Models.User.${authStore.user.id}`
+      echo.private(channelName)
+        .notification((notification: any) => {
+          // Increment unread count
+          unreadCount.value++
+          
+          // Prepend to notifications list
+          notifications.value.unshift({
+             ...notification,
+             read_status: false,
+             created_at: new Date().toISOString()
+          })
+        })
     }
   }
 
@@ -221,7 +246,8 @@ export const useNotifications = () => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    navigateTo,
+    navigateTo: handleNavigateTo,
+    initEcho,
     
     // Helpers
     getTypeLabel,

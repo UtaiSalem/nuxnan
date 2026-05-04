@@ -6,7 +6,8 @@ import Swal from 'sweetalert2';
 import MainLayout from '~/layouts/main.vue';
 import AcademyCoverProfile from '@/components/learn/academy/AcademyCoverProfile.vue';
 import AcademyNavbarTab from '@/components/learn/academy/AcademyNavbarTab.vue';
-import axios from 'axios';
+
+const api = useApi();
 
 const props = defineProps({
     academy: {
@@ -47,13 +48,13 @@ async function fetchMembers() {
     if (!academyData.value.id) return;
     isLoading.value = true;
     try {
-        const response = await axios.get(`/api/academies/${academyData.value.id}/members`);
-        if (response.data.success) {
+        const response = await api.get(`/api/academies/${academyData.value.id}/members`);
+        if (response.success) {
             let allMembers = [];
-            if (response.data.members && response.data.members.data) {
-                allMembers = response.data.members.data;
+            if (response.members && response.members.data) {
+                allMembers = response.members.data;
             } else {
-                allMembers = response.data.members || [];
+                allMembers = response.members || [];
             }
             
             // Filter logic
@@ -104,9 +105,9 @@ async function fetchPendingRequests() {
     isLoadingPending.value = true;
     try {
         // We reuse pending requests logic
-        const response = await axios.get(`/api/academies/${academyData.value.id}/pending-requests`);
-        if (response.data.success) {
-            pendingRequests.value = response.data.pendingRequests || [];
+        const response = await api.get(`/api/academies/${academyData.value.id}/pending-requests`);
+        if (response.success) {
+            pendingRequests.value = response.pendingRequests || [];
         }
     } catch (error) {
         console.error("Error fetching pending requests:", error);
@@ -129,14 +130,14 @@ async function handleAccept(memberId) {
         });
 
         if (result.isConfirmed) {
-            const response = await axios.post(`/api/academies/${academyData.value.id}/members/${memberId}/accept`);
-            if (response.data.success) {
+            const response = await api.post(`/api/academies/${academyData.value.id}/members/${memberId}/accept`, {});
+            if (response.success) {
                 Swal.fire('สำเร็จ!', 'รับเข้าเรียนเรียบร้อยแล้ว', 'success');
                 // Refresh lists
                 fetchPendingRequests();
                 fetchMembers();
-                if (response.data.totalStudents) {
-                    academyData.value.total_students = response.data.totalStudents;
+                if (response.totalStudents) {
+                    academyData.value.total_students = response.totalStudents;
                 }
             }
         }
@@ -160,8 +161,8 @@ async function handleReject(memberId) {
         });
 
         if (result.isConfirmed) {
-            const response = await axios.post(`/api/academies/${academyData.value.id}/members/${memberId}/reject`);
-            if (response.data.success) {
+            const response = await api.post(`/api/academies/${academyData.value.id}/members/${memberId}/reject`, {});
+            if (response.success) {
                 Swal.fire('สำเร็จ!', 'ปฏิเสธคำขอเรียบร้อยแล้ว', 'success');
                 fetchPendingRequests();
                 // Optionally add to history log if we maintained it locally
@@ -200,34 +201,34 @@ const getMemberCode = (member) => {
 // ... existing cover/logo functions ...
 async function onCoverImageChange(coverFile) {
     const academyCoverUpdate = new FormData();
-    academyCoverUpdate.append('cover', coverFile); 
+    academyCoverUpdate.append('cover', coverFile);
     academyCoverUpdate.append('_method', 'patch');
-    await axios.post(`/academies/${academyData.value.id}/update`, academyCoverUpdate);
+    await api.post(`/api/academies/${academyData.value.id}/update`, academyCoverUpdate);
 }
 
 async function onLogoImageChange(logoFile) {
     const academyLogoUpdate = new FormData();
-    academyLogoUpdate.append('logo', logoFile); 
+    academyLogoUpdate.append('logo', logoFile);
     academyLogoUpdate.append('_method', 'patch');
-    await axios.post(`/academies/${academyData.value.id}/update`, academyLogoUpdate);
+    await api.post(`/api/academies/${academyData.value.id}/update`, academyLogoUpdate);
 }
 
 async function onHeaderChange(academyName) {
-    await axios.patch(`/academies/${academyData.value.id}/update`, { name:academyName });
+    await api.patch(`/api/academies/${academyData.value.id}/update`, { name:academyName });
 }
 
 async function onSubheaderChange(academySlogan) {
-    await axios.patch(`/academies/${academyData.value.id}/update`, { slogan:academySlogan });
+    await api.patch(`/api/academies/${academyData.value.id}/update`, { slogan:academySlogan });
 }
 
 async function onRequestToBeAMember(){
     try {
-        let memberResp = await axios.post(`/academies/${academyData.value.id}/members`);
-        if (memberResp.data.success) {
-            academyData.value.isMember=memberResp.data.isMember;
-            academyData.value.total_students = memberResp.data.totalStudents;
-            fetchMembers(); 
-             if (memberResp.data.isMember) {
+        let memberResp = await api.post(`/api/academies/${academyData.value.id}/members`, {});
+        if (memberResp.success) {
+            academyData.value.isMember=memberResp.isMember;
+            academyData.value.total_students = memberResp.totalStudents;
+            fetchMembers();
+             if (memberResp.isMember) {
                 Swal.fire('เสร็จสิ้น', 'ขอเป็นสมาชิกเรียบร้อยแล้ว', 'success');
             } else {
                 Swal.fire('เสร็จสิ้น', 'ออกจากการเป็นสมาชิกเรียบร้อยแล้ว', 'success');

@@ -349,12 +349,13 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
 
 export default {
   name: 'ZoneManagement',
 
   setup() {
+    const api = useApi()
+
     const zones = ref({ data: [], current_page: 1, last_page: 1, from: 0, to: 0, total: 0 })
     const loading = ref(false)
     const searchQuery = ref('')
@@ -419,21 +420,20 @@ export default {
     const loadZones = async (page = 1) => {
       loading.value = true
       try {
-        const params = {
-          page,
-          per_page: 10
-        }
+        const params = new URLSearchParams()
+        params.append('page', page)
+        params.append('per_page', 10)
 
         if (searchQuery.value) {
-          params.search = searchQuery.value
+          params.append('search', searchQuery.value)
         }
 
         if (statusFilter.value !== '') {
-          params.is_active = statusFilter.value
+          params.append('is_active', statusFilter.value)
         }
 
-        const response = await axios.get('/home-visit/admin/zones', { params })
-        zones.value = response.data.zones
+        const response = await api.get(`/api/home-visit/admin/zones?${params.toString()}`)
+        zones.value = response.zones
       } catch (error) {
         console.error('Error loading zones:', error)
         alert('เกิดข้อผิดพลาดในการโหลดข้อมูล')
@@ -481,11 +481,11 @@ export default {
       try {
         if (editingZone.value) {
           // Update existing zone
-          await axios.put(`/home-visit/admin/zones/${editingZone.value.id}`, formData.value)
+          await api.put(`/api/home-visit/admin/zones/${editingZone.value.id}`, formData.value)
           alert('อัพเดทโซนเรียบร้อยแล้ว')
         } else {
           // Create new zone
-          await axios.post('/home-visit/admin/zones', formData.value)
+          await api.post('/api/home-visit/admin/zones', formData.value)
           alert('เพิ่มโซนเรียบร้อยแล้ว')
         }
 
@@ -493,8 +493,8 @@ export default {
         loadZones(zones.value.current_page)
       } catch (error) {
         console.error('Error saving zone:', error)
-        if (error.response && error.response.data.errors) {
-          errors.value = error.response.data.errors
+        if (error.data && error.data.errors) {
+          errors.value = error.data.errors
         } else {
           alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
         }
@@ -505,8 +505,8 @@ export default {
 
     const toggleZoneStatus = async (zone) => {
       try {
-        const response = await axios.put(`/home-visit/admin/zones/${zone.id}/toggle-status`)
-        alert(response.data.message)
+        const response = await api.put(`/api/home-visit/admin/zones/${zone.id}/toggle-status`, {})
+        alert(response.message)
         loadZones(zones.value.current_page)
       } catch (error) {
         console.error('Error toggling zone status:', error)
@@ -525,12 +525,12 @@ export default {
       }
 
       try {
-        await axios.delete(`/home-visit/admin/zones/${zone.id}`)
+        await api.delete(`/api/home-visit/admin/zones/${zone.id}`)
         alert('ลบโซนเรียบร้อยแล้ว')
         loadZones(zones.value.current_page)
       } catch (error) {
         console.error('Error deleting zone:', error)
-        alert(error.response?.data?.message || 'เกิดข้อผิดพลาดในการลบโซน')
+        alert(error?.data?.message || 'เกิดข้อผิดพลาดในการลบโซน')
       }
     }
 

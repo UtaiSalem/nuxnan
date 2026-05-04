@@ -618,7 +618,6 @@ const saveStaff = async () => {
 
 const recordCheckIn = async () => {
   // TODO: Implement check-in
-  console.log('Record check-in')
 }
 
 const submitLeave = async () => {

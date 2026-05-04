@@ -28,7 +28,7 @@
       <div class="shooting-star shooting-star-3"></div>
       
       <!-- Central galaxy glow -->
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]">
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(90vw,600px)] h-[min(90vw,600px)]">
         <div class="absolute inset-0 bg-gradient-radial from-purple-500/10 via-transparent to-transparent rounded-full animate-spin-slow"></div>
         <div class="absolute inset-10 bg-gradient-radial from-cyan-500/10 via-transparent to-transparent rounded-full animate-spin-reverse"></div>
       </div>

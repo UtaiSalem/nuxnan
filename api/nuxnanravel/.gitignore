@@ -31,3 +31,11 @@ yarn-error.log*
 Thumbs.db
 .idea
 .vscode
+
+# Local diagnostic / scratch files (one-shot debug scripts, not for commit)
+/check_*.php
+/debug_*.php
+/scratch_*.php
+/routes_check.txt
+/*.bak
+/*.tmp

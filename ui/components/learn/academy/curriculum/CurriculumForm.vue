@@ -71,7 +71,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import axios from 'axios';
+import { useApi } from '@/composables/useApi';
 import Swal from 'sweetalert2';
 
 const props = defineProps({
@@ -79,6 +79,7 @@ const props = defineProps({
     curriculum: { type: Object, default: null } // If provided, edit mode
 });
 
+const api = useApi();
 const emit = defineEmits(['saved', 'cancel']);
 
 const isLoading = ref(false);
@@ -112,15 +113,15 @@ const submit = async () => {
         let response;
         if (props.curriculum) {
              // Update
-             response = await axios.patch(`/api/academies/curriculums/${props.curriculum.id}`, form.value);
+             response = await api.patch(`/api/academies/curriculums/${props.curriculum.id}`, form.value);
         } else {
              // Create
-             response = await axios.post(`/api/academies/${props.academyId}/curriculums`, form.value);
+             response = await api.post(`/api/academies/${props.academyId}/curriculums`, form.value);
         }
 
-        if (response.data.success) {
-            Swal.fire('สำเร็จ', response.data.message, 'success');
-            emit('saved', response.data.curriculum);
+        if (response.success) {
+            Swal.fire('สำเร็จ', response.message, 'success');
+            emit('saved', response.curriculum);
         }
     } catch (error) {
         console.error(error);

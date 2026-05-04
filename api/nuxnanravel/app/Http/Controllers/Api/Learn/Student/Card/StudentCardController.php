@@ -31,11 +31,11 @@ class StudentCardController extends Controller
     /**
      * Dashboard - show overview
      */
-    public function dashboard($academy) 
+    public function dashboard($academy)
     {
-        $query = $this->academyQuery($academy);
-        $totalStudents = $query->count();
-        $levels = $this->academyQuery($academy)->distinct()->pluck('class_level')->sort()->values();
+        $baseQuery = fn() => $academy ? $this->academyQuery($academy) : StudentCard::query();
+        $totalStudents = $baseQuery()->count();
+        $levels = $baseQuery()->distinct()->pluck('class_level')->sort()->values();
         
         return response()->json([
             'success' => true,
@@ -117,7 +117,7 @@ class StudentCardController extends Controller
      */
     public function search($academy, Request $request)
     {
-        $query = $this->academyQuery($academy);
+        $query = $academy ? $this->academyQuery($academy) : StudentCard::query();
         
         if ($request->search) {
             $search = $request->search;
@@ -173,7 +173,7 @@ class StudentCardController extends Controller
      */
     public function adminStudents($academy, Request $request)
     {
-        $query = $this->academyQuery($academy);
+        $query = $academy ? $this->academyQuery($academy) : StudentCard::query();
         
         if ($request->search) {
             $search = $request->search;
@@ -209,9 +209,11 @@ class StudentCardController extends Controller
     /**
      * Get students by level and room
      */
-    public function getStudentByRoom($academy, $level, $room)
+    public function getStudentByRoom($level, $room, $academy = null)
     {
-        $students = $this->academyQuery($academy)
+        $baseQuery = $academy ? $this->academyQuery($academy) : StudentCard::query();
+
+        $students = $baseQuery
             ->where('class_level', $level)
             ->where('class_section', $room)
             ->orderBy('order_no')
@@ -229,9 +231,11 @@ class StudentCardController extends Controller
     /**
      * Admin: Get students by level and room
      */
-    public function adminGetStudentByRoom($academy, $level, $room)
+    public function adminGetStudentByRoom($level, $room, $academy = null)
     {
-        $students = $this->academyQuery($academy)
+        $baseQuery = $academy ? $this->academyQuery($academy) : StudentCard::query();
+
+        $students = $baseQuery
             ->where('class_level', $level)
             ->where('class_section', $room)
             ->orderBy('order_no')

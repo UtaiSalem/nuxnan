@@ -54,15 +54,48 @@ const sortOrder = ref<'asc' | 'desc'>('desc')
 const viewMode = ref<'card' | 'table'>('card')
 const groupBy = ref<'none' | 'classroom' | 'class_level' | 'gender'>('none')
 
-// Persist view mode preference
+// Mobile detection for view mode
+const isMobile = ref(false)
+const updateMobileDetection = () => {
+  isMobile.value = window.innerWidth < 768 // md breakpoint
+}
+
+// Auto-switch to card view on mobile
+const effectiveViewMode = computed(() => {
+  return isMobile.value ? 'card' : viewMode.value
+})
+
+// Persist view mode preference (only for desktop)
 const savedViewMode = useCookie<'card' | 'table'>('academy-members-view-mode')
 onMounted(() => {
-  if (savedViewMode.value) {
+  updateMobileDetection()
+  if (savedViewMode.value && !isMobile.value) {
     viewMode.value = savedViewMode.value
   }
 })
 watch(viewMode, (val) => {
-  savedViewMode.value = val
+  if (!isMobile.value) {
+    savedViewMode.value = val
+  }
+})
+
+// Watch for mobile changes
+watch(isMobile, (mobile) => {
+  if (mobile && viewMode.value !== 'card') {
+    // Force card view on mobile
+    viewMode.value = 'card'
+  } else if (!mobile && savedViewMode.value) {
+    // Restore saved preference on desktop
+    viewMode.value = savedViewMode.value
+  }
+})
+
+// Window resize listener
+onMounted(() => {
+  window.addEventListener('resize', updateMobileDetection)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', updateMobileDetection)
 })
 
 // Pagination
@@ -950,7 +983,7 @@ const getRoleBadge = (member: any) => {
           
           <div class="flex items-center gap-2">
             <!-- View Mode Toggle -->
-            <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+            <div v-if="!isMobile" class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
               <button 
                 @click="viewMode = 'card'"
                 class="p-2 rounded-md transition-all"
@@ -1169,7 +1202,7 @@ const getRoleBadge = (member: any) => {
             </div>
             <AcademyMemberListView
               :members="group.members"
-              :view-mode="viewMode"
+              :view-mode="effectiveViewMode"
               :is-admin="can('members.manage')"
               :show-checkbox="can('members.manage')"
               v-model:selected-ids="selectedMemberIds"
@@ -1186,7 +1219,7 @@ const getRoleBadge = (member: any) => {
         <AcademyMemberListView
           v-else
           :members="members"
-          :view-mode="viewMode"
+          :view-mode="effectiveViewMode"
           :is-admin="can('members.manage')"
           :show-checkbox="can('members.manage')"
           v-model:selected-ids="selectedMemberIds"

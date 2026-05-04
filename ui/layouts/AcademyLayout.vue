@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { Head, Link } from "@inertiajs/vue3";
 import { Icon } from '@iconify/vue';
 import Swal from 'sweetalert2';
+import { useApi } from '@/composables/useApi';
 
 import MainLayout from "~/layouts/main.vue";
 import AcademyCoverProfile from '~/components/learn/academy/AcademyCoverProfile.vue';
@@ -13,6 +14,7 @@ const props = defineProps({
     isAcademyAdmin: Boolean,
 });
 
+const api = useApi();
 const isLoadingAcademyPosts = ref(false);
 const academyActivities = ref([]);
 
@@ -39,7 +41,7 @@ const academyActivities = ref([]);
 //             });
 //         }
 //     } catch (error) {
-//         console.log(error);
+//         
 //         isLoadingAcademyPosts.value = false;
 //     }
 // };
@@ -47,55 +49,51 @@ const academyActivities = ref([]);
 const getAcademyCourses = async () => {
     try {
         isLoadingAcademyPosts.value = true;
-        const response = await axios.get(`/api/academies/${props.academy.data.id}/courses`);
-        if (response.data.success) {
-            console.log(response.data.courses);
-            academyCourses.value = response.data.courses;
-
-            console.log(academyCourses.value);
-
+        const response = await api.get(`/api/academies/${props.academy.data.id}/courses`);
+        if (response.success) {
+            academyCourses.value = response.courses;
             isLoadingAcademyPosts.value = false;
         } else {
             isLoadingAcademyPosts.value = false;
             Swal.fire({
                 icon: 'error',
                 title: 'เกิดข้อผิดพลาด! กรุณาลองใหม่อีกครั้ง',
-                text: response.data.message,
+                text: response.message,
             });
         }
-    } catch (error) {
-        console.log(error);
-        isLoadingAcademyPosts.value = false;
-    }
-};
+        } catch (error) {
+          // Dev-only logging
+          isLoadingAcademyPosts.value = false;
+        }
+      };
 
-const getAcademyActivities = async () => {
+      const getAcademyActivities = async () => {
     try {
         isLoadingAcademyPosts.value = true;
-        const response = await axios.get(`/api/academies/${props.academy.data.id}/activities`);
-        if (response.data.success) {
-            console.log(response.data);
-            academyActivities.value = response.data.activities;
+        const response = await api.get(`/api/academies/${props.academy.data.id}/activities`);
+        if (response.success) {
+            academyActivities.value = response.activities;
 
-            // console.log(academyActivities.value);
+          // Dev-only logging
 
-            isLoadingAcademyPosts.value = false;
+              isLoadingAcademyPosts.value = false;
         } else {
             isLoadingAcademyPosts.value = false;
             Swal.fire({
                 icon: 'error',
                 title: 'เกิดข้อผิดพลาด! กรุณาลองใหม่อีกครั้ง',
-                text: response.data.message,
+                text: response.message,
             });
         }
-    } catch (error) {
-        console.log(error);
-        isLoadingAcademyPosts.value = false;
-    }
-};
+        } catch (error) {
+          // Dev-only logging
+          isLoadingAcademyPosts.value = false;
+        }
+      };
 
-// const isDarkMode = ref(false);
-// const currentTabIndex = ref(0);
+      // const isDarkMode = ref(false);
+      // const currentTabIndex = ref(0);
+
 
 // Safe accessors for academy data
 const academyData = computed(() => props.academy?.data || props.academy || {});
@@ -123,71 +121,70 @@ const tempSubheader = ref(academyData.value.slogan || '');
 
 async function onCoverImageChange(coverFile) {
     const academyCoverUpdate = new FormData();
-    academyCoverUpdate.append('cover', coverFile); 
+    academyCoverUpdate.append('cover', coverFile);
     academyCoverUpdate.append('_method', 'patch');
-    await axios.post(`/academies/${props.academy.data.id}/update`, academyCoverUpdate);
+    await api.post(`/academies/${props.academy.data.id}/update`, academyCoverUpdate);
 }
 
 async function onLogoImageChange(logoFile) {
     const academyLogoUpdate = new FormData();
-    academyLogoUpdate.append('logo', logoFile); 
+    academyLogoUpdate.append('logo', logoFile);
     academyLogoUpdate.append('_method', 'patch');
-    await axios.post(`/academies/${props.academy.data.id}/update`, academyLogoUpdate);
+    await api.post(`/academies/${props.academy.data.id}/update`, academyLogoUpdate);
 }
 
 async function onHeaderChange(academyName) {
-    await axios.patch(`/academies/${props.academy.data.id}/update`, { name:academyName });
+    await api.patch(`/academies/${props.academy.data.id}/update`, { name:academyName });
 }
 
 async function onSubheaderChange(academySlogan) {
-    await axios.patch(`/academies/${props.academy.data.id}/update`, { slogan:academySlogan });
+    await api.patch(`/academies/${props.academy.data.id}/update`, { slogan:academySlogan });
 }
 
-async function onRequestToBeAMember(){
-    try {
-        let memberResp = await axios.post(`/academies/${props.academy.data.id}/members`);
-        if (memberResp.data && memberResp.data.success) {
-            props.academy.data.memberStatus=memberResp.data.memberStatus;
-            props.academy.data.total_students = memberResp.data.totalStudents;
-            if (memberResp.data && memberResp.data.success) {
-                props.academy.data.memberStatus = memberResp.data.memberStatus;
-                Swal.fire(
-                    'เสร็จสิ้น',
-                    'ขอเป็นสมาชิกเรียบร้อยแล้ว',
-                    'success'
-                )
-            }
-        }else if(memberResp.data && !memberResp.data.success) {
+    async function onRequestToBeAMember(){
+      try {
+        let memberResp = await api.post(`/academies/${props.academy.data.id}/members`);
+        if (memberResp.success) {
+          props.academy.data.memberStatus=memberResp.memberStatus;
+          props.academy.data.total_students = memberResp.totalStudents;
+          if (memberResp.success) {
+            props.academy.data.memberStatus = memberResp.memberStatus;
             Swal.fire(
-                'เกิดข้อผิดพลาด',
-                    memberResp.data.msg ,
-                'error'
+              'เสร็จสิ้น',
+              'ขอเป็นสมาชิกเรียบร้อยแล้ว',
+              'success'
             )
+          }
+        }else if(!memberResp.success) {
+          Swal.fire(
+            'เกิดข้อผิดพลาด',
+                memberResp.msg ,
+            'error'
+          )
         }
-    } catch (error) {
-        console.log(error);
-    }
+      } catch (error) {
+        // Dev-only logging
+      }
 }
 
-async function onRequestToBeUnmember(){
-    console.log('unmember');
-    try {
-        let memberResp = await axios.post(`/academies/${props.academy.data.id}/unmembers`);
-        if (memberResp.data && memberResp.data.success) {
-            if (props.academy.data.memberStatus==2) {
-                props.academy.data.total_students--;
-            }
-            props.academy.data.memberStatus=null;
-            Swal.fire(
-                'เสร็จสิ้น',
-                'ออกจากการเป็นสมาชิกเรียบร้อยแล้ว',
-                'success'
-            )
+    async function onRequestToBeUnmember(){
+      try {
+        let memberResp = await api.post(`/academies/${props.academy.data.id}/unmembers`);
+        if (memberResp.success) {
+          if (props.academy.data.memberStatus==2) {
+            props.academy.data.total_students--;
+          }
+          props.academy.data.memberStatus=null;
+          Swal.fire(
+            'เสร็จสิ้น',
+            'ออกจากการเป็นสมาชิกเรียบร้อยแล้ว',
+            'success'
+          )
         }
-    } catch (error) {
-        console.log(error);
+      } catch (error) {
+        // Dev-only logging
+      }
     }
-}
 
 </script>
 

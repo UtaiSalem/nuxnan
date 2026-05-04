@@ -1,6 +1,11 @@
 /**
- * Services Index
- * Export ทุก services เพื่อง่ายต่อการ import
+ * Services Index - Barrel export
+ *
+ * Import services via:
+ *   import { courseService, friendService } from '@/services'
+ *
+ * See README.md for the service/composable layering convention.
  */
 
-export { courseService } from './courseService';
+export { courseService } from './courseService'
+export { friendService } from './friendService'

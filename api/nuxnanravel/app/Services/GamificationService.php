@@ -6,6 +6,7 @@ use App\Models\PointStreak;
 use App\Models\User;
 use App\Services\PointsService;
 use App\Services\AchievementService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class GamificationService
@@ -87,89 +88,85 @@ class GamificationService
      */
     public function getLeaderboard(string $type = 'points', int $page = 1, int $perPage = 20): array
     {
-        $query = User::query();
+        $cacheKey = "leaderboard_{$type}_{$page}_{$perPage}";
 
-        switch ($type) {
-            case 'points':
-                $query->orderByDesc('pp');
-                break;
-            case 'weekly':
-                $query->with(['pointsTransactions' => function ($query) {
-                    $query->where('transaction_type', 'earn')
-                        ->where('created_at', '>=', now()->startOfWeek())
-                        ->where('created_at', '<=', now()->endOfWeek());
-                }])
-                ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as weekly_points')
-                ->groupBy('users.id')
-                ->orderByDesc('weekly_points');
-                break;
-            case 'monthly':
-                $query->with(['pointsTransactions' => function ($query) {
-                    $query->where('transaction_type', 'earn')
-                        ->where('created_at', '>=', now()->startOfMonth())
-                        ->where('created_at', '<=', now()->endOfMonth());
-                }])
-                ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as monthly_points')
-                ->groupBy('users.id')
-                ->orderByDesc('monthly_points');
-                break;
-            case 'streak':
-                $query->with('pointStreak')
-                    ->orderByDesc('point_streaks.current_streak');
-                break;
-            case 'achievements':
-                $query->withCount(['userAchievements' => function ($query) {
-                    $query->where('is_completed', true);
-                }])
-                ->orderByDesc('user_achievements_count');
-                break;
-            default:
-                $query->orderByDesc('pp');
-                break;
-        }
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($type, $page, $perPage) {
+            $query = User::query();
 
-        $users = $query->paginate($perPage, ['id', 'username', 'name', 'pp', 'level', 'profile_photo_path'], 'page', $page);
+            switch ($type) {
+                case 'points':
+                    $query->orderByDesc('pp');
+                    break;
+                case 'weekly':
+                    $query->with(['pointsTransactions' => function ($query) {
+                        $query->where('transaction_type', 'earn')
+                            ->where('created_at', '>=', now()->startOfWeek())
+                            ->where('created_at', '<=', now()->endOfWeek());
+                    }])
+                    ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as weekly_points')
+                    ->leftJoin('points_transactions', 'users.id', '=', 'points_transactions.user_id') // Added join for summation
+                    ->groupBy('users.id')
+                    ->orderByDesc('weekly_points');
+                    break;
+                case 'monthly':
+                    $query->with(['pointsTransactions' => function ($query) {
+                        $query->where('transaction_type', 'earn')
+                            ->where('created_at', '>=', now()->startOfMonth())
+                            ->where('created_at', '<=', now()->endOfMonth());
+                    }])
+                    ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as monthly_points')
+                    ->leftJoin('points_transactions', 'users.id', '=', 'points_transactions.user_id') // Added join
+                    ->groupBy('users.id')
+                    ->orderByDesc('monthly_points');
+                    break;
+                case 'streak':
+                    $query->with('pointStreak')
+                        ->orderByDesc('point_streaks.current_streak');
+                    break;
+                case 'achievements':
+                    $query->withCount(['userAchievements' => function ($query) {
+                        $query->where('is_completed', true);
+                    }])
+                    ->orderByDesc('user_achievements_count');
+                    break;
+                default:
+                    $query->orderByDesc('pp');
+                    break;
+            }
 
-        $leaderboard = [];
-        $rank = 1;
+            $users = $query->paginate($perPage, ['id', 'username', 'name', 'pp', 'level', 'profile_photo_path'], 'page', $page);
 
-        foreach ($users->items() as $userItem) {
-            $leaderboard[] = [
-                'rank' => $rank++,
-                'user_id' => $userItem->id,
-                'username' => $userItem->username,
-                'avatar' => $userItem->avatar,
-                'score' => match($type) {
-                    'points' => $userItem->pp,
-                    'weekly' => $userItem->weekly_points ?? $userItem->pp,
-                    'monthly' => $userItem->monthly_points ?? $userItem->pp,
-                    'streak' => $userItem->pointStreak->current_streak ?? 0,
-                    'achievements' => $userItem->user_achievements_count ?? 0,
-                    default => $userItem->pp,
-                },
-                'level' => $userItem->level ?? 1,
-                'followers_count' => $userItem->followers()->count(),
+            $leaderboard = [];
+            $rank = ($page - 1) * $perPage + 1;
+
+            foreach ($users->items() as $userItem) {
+                $leaderboard[] = [
+                    'rank' => $rank++,
+                    'user_id' => $userItem->id,
+                    'username' => $userItem->username,
+                    'avatar' => $userItem->avatar,
+                    'score' => match($type) {
+                        'points' => (float) $userItem->pp,
+                        'weekly' => (float) ($userItem->weekly_points ?? 0),
+                        'monthly' => (float) ($userItem->monthly_points ?? 0),
+                        'streak' => (int) ($userItem->pointStreak->current_streak ?? 0),
+                        'achievements' => (int) ($userItem->user_achievements_count ?? 0),
+                        default => (float) $userItem->pp,
+                    },
+                    'level' => $userItem->level ?? 1,
+                ];
+            }
+
+            return [
+                'leaderboard' => $leaderboard,
+                'pagination' => [
+                    'total' => $users->total(),
+                    'per_page' => $users->perPage(),
+                    'current_page' => $users->currentPage(),
+                    'last_page' => $users->lastPage(),
+                ],
             ];
-        }
-
-        return [
-            'type' => $type,
-            'period' => match($type) {
-                'points' => 'all_time',
-                'weekly' => 'this_week',
-                'monthly' => 'this_month',
-                'streak' => 'all_time',
-                'achievements' => 'all_time',
-                default => 'all_time',
-            },
-            'leaderboard' => $leaderboard,
-            'pagination' => [
-                'current_page' => $users->currentPage(),
-                'total_pages' => $users->lastPage(),
-                'per_page' => $users->perPage(),
-                'total_items' => $users->total(),
-            ],
-        ];
+        });
     }
 
     /**

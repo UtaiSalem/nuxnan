@@ -2,7 +2,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 
-const { $apiFetch } = useNuxtApp()
+const api = useApi()
 
 interface Props {
   status: number | null | undefined
@@ -105,10 +105,7 @@ const selectStatus = async (newStatus: number | null) => {
   try {
     // Call API to update status
     const apiStatus = newStatus === null ? 0 : newStatus
-    await $apiFetch(`/api/attendances/${props.attendanceId}/member/${props.memberId}/update-status`, {
-      method: 'POST',
-      body: { status: apiStatus }
-    })
+    await api.post(`/api/attendances/${props.attendanceId}/member/${props.memberId}/update-status`, { status: apiStatus })
     
     // Update local state
     currentStatus.value = newStatus

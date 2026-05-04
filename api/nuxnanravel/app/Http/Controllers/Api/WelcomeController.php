@@ -11,7 +11,6 @@ use App\Models\Lesson;
 use App\Models\VisitorCounter;
 use App\Http\Resources\UserResource;
 use App\Http\Resources\Earn\DonateResource;
-use Illuminate\Http\Request;
 
 class WelcomeController extends Controller
 {
@@ -35,7 +34,7 @@ class WelcomeController extends Controller
                 'postsCount'        => Post::count(),
                 'visitorCounter'    => $visitorCounter,
 
-                'donates'           => DonateResource::collection(Donate::whereNotIn('status', [2])->orderBy('remaining_points', 'DESC')->latest()->paginate(8)),
+                'donates'           => DonateResource::collection(Donate::with('donor')->whereNotIn('status', [2])->orderBy('remaining_points', 'DESC')->latest()->paginate(8)),
                 'donateRecipients'  => UserResource::collection(User::whereNotIn('id', [1])->orderBy('pp', 'DESC')->latest()->paginate(12)),
 
                 'ceo'               => User::find(1) ? new UserResource(User::find(1)) : null,

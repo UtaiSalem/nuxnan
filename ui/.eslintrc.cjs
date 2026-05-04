@@ -10,5 +10,11 @@ module.exports = {
   },
   extends: ['@nuxtjs/eslint-config-typescript', 'plugin:prettier/recommended'],
   plugins: [],
-  rules: {},
+  rules: {
+    // Block raw console.log; allow warn/error.
+    // Wrap dev-only debug logs in if (import.meta.dev) or
+    // add // eslint-disable-next-line no-console on the line.
+    'no-console': ['warn', { allow: ['warn', 'error'] }],
+  },
+  ignorePatterns: ['public/js/**'],
 }

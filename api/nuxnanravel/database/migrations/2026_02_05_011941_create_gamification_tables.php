@@ -11,31 +11,37 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('gamification_tables', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('gamification_tables')) {
+            Schema::create('gamification_tables', function (Blueprint $table) {
+                $table->id();
+                $table->timestamps();
+            });
+        }
 
-        Schema::create('badges', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->text('description')->nullable();
-            $table->string('icon')->nullable(); // URL or Iconify identifier
-            $table->integer('xp_reward')->default(0);
-            $table->string('category')->default('general'); // e.g., 'social', 'learning', 'activity'
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('badges')) {
+            Schema::create('badges', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->text('description')->nullable();
+                $table->string('icon')->nullable(); // URL or Iconify identifier
+                $table->integer('xp_reward')->default(0);
+                $table->string('category')->default('general'); // e.g., 'social', 'learning', 'activity'
+                $table->timestamps();
+            });
+        }
 
-        Schema::create('user_badges', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('badge_id')->constrained()->onDelete('cascade');
-            $table->timestamp('unlocked_at')->useCurrent();
-            $table->timestamps();
-            
-            // Prevent duplicate badges for same user
-            $table->unique(['user_id', 'badge_id']);
-        });
+        if (!Schema::hasTable('user_badges')) {
+            Schema::create('user_badges', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('user_id')->constrained()->onDelete('cascade');
+                $table->foreignId('badge_id')->constrained()->onDelete('cascade');
+                $table->timestamp('unlocked_at')->useCurrent();
+                $table->timestamps();
+                
+                // Prevent duplicate badges for same user
+                $table->unique(['user_id', 'badge_id']);
+            });
+        }
     }
 
     /**
@@ -45,5 +51,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('user_badges');
         Schema::dropIfExists('badges');
+        Schema::dropIfExists('gamification_tables');
     }
 };

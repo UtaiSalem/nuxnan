@@ -3,6 +3,9 @@
 use App\Http\Controllers\Api\Learn\Student\Card\StudentCardController;
 use Inertia\Inertia;
 
+use App\Http\Controllers\Api\Learn\StudentAnalyticsController;
+use Illuminate\Support\Facades\Route;
+
 /*
 |--------------------------------------------------------------------------
 | Student Management Routes
@@ -10,10 +13,15 @@ use Inertia\Inertia;
 | 
 | Routes for managing student-related functionality including:
 | - Student Cards (CRUD operations, photo management)
+| - Student Analytics
 |
 | Note: Home Visit System routes have been moved to /routes/homevisit/homevisit.php
 |
 */
+
+Route::middleware(['auth:api'])->group(function () {
+    Route::get('/student/analytics', [StudentAnalyticsController::class, 'getDashboardAnalytics'])->name('student.analytics');
+});
 
 // =====================================
 // STUDENT ROUTES GROUP  

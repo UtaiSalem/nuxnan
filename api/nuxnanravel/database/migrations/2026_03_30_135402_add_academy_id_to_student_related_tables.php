@@ -74,12 +74,21 @@ return new class extends Migration
         if (Schema::hasColumn('students', 'academy_id')) {
             foreach ($this->tablesWithStudentId as $tableName) {
                 if (Schema::hasTable($tableName) && Schema::hasColumn($tableName, 'academy_id') && Schema::hasColumn($tableName, 'student_id')) {
-                    DB::statement("
-                        UPDATE `{$tableName}` t
-                        INNER JOIN `students` s ON t.student_id = s.id
-                        SET t.academy_id = s.academy_id
-                        WHERE t.academy_id IS NULL AND s.academy_id IS NOT NULL
-                    ");
+                    if (DB::getDriverName() === 'mysql') {
+                        DB::statement("
+                            UPDATE `{$tableName}` t
+                            INNER JOIN `students` s ON t.student_id = s.id
+                            SET t.academy_id = s.academy_id
+                            WHERE t.academy_id IS NULL AND s.academy_id IS NOT NULL
+                        ");
+                    } elseif (DB::getDriverName() === 'sqlite') {
+                        DB::statement("
+                            UPDATE `{$tableName}` 
+                            SET academy_id = (SELECT academy_id FROM students WHERE students.id = `{$tableName}`.student_id)
+                            WHERE academy_id IS NULL 
+                            AND EXISTS (SELECT 1 FROM students WHERE students.id = `{$tableName}`.student_id AND academy_id IS NOT NULL)
+                        ");
+                    }
                 }
             }
         }

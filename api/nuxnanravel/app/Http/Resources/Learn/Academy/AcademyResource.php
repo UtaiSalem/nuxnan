@@ -42,7 +42,7 @@ class AcademyResource extends JsonResource
             'logo'                  => $this->logo_url,
             'cover'                 => $this->cover_url,
             // 'isMember'           => $this->isMember(auth()->user()),
-            'setting'               => $this->academySetting,
+            'setting'               => $this->getSettings(),
             'memberStatus'          => $this->memberStatus ?? $this->member_status($this->id),
             'authIsAcademyAdmin'    => auth()->id() === $this->user_id
         ];

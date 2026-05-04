@@ -19,17 +19,21 @@ class AcademyCourseController extends Controller
 {
     public function index(Academy $academy)
     {
-        // $authMemberCourseIds = CourseMember::where('user_id', auth()->id())->get('user_id');
-        // $authMemberCourses = CourseResource::collection(Course::where('user_id', $authMemberCourseIds));
-        $courses = $academy->courses;
+        $perPage = request()->get('per_page', 12);
+        $courses = $academy->courses()->paginate($perPage);
         $coursesresource = CourseResource::collection($courses);
         $isAcademyAdmin = $academy->user_id == auth()->id();
         
         return response()->json([
-            // 'authMemberCourses' => $authMemberCourses,
             'allCourses'        => $coursesresource,
             'courses'           => $coursesresource,
-            'authOwnerCourses'  => CourseResource::collection(auth()->user()->courses),
+            'pagination' => [
+                'current_page' => $courses->currentPage(),
+                'last_page' => $courses->lastPage(),
+                'per_page' => $courses->perPage(),
+                'total' => $courses->total(),
+            ],
+            'authOwnerCourses'  => CourseResource::collection(auth()->user()->courses()->take(10)->get()),
             'authMemberCourses' => [],
             'academy'           => new AcademyResource($academy),
             'isAcademyAdmin'    => $isAcademyAdmin,

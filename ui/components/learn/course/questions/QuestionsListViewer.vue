@@ -300,7 +300,6 @@ const confirmAnswer = async (question) => {
         answer_id: selectedOptionId,
         course_id: props.courseId || props.quiz.course_id
     };
-    console.log('Sending answer payload:', payload);
 
     try {
         let response;
@@ -333,10 +332,8 @@ const confirmAnswer = async (question) => {
         // Handle 422 (Answer already exists)
         // Check various properties for status code as it depends on the fetch client wrapper
         const status = e.statusCode || e.status || e.response?.status;
-        console.log('Error caught in confirmAnswer:', { status, data: e.data, error: e });
-        
+
         if (status === 422 && e.data && e.data.existing_answer_id) {
-             console.log('Answer already exists, switching to update...', e.data.existing_answer_id);
              const existingId = e.data.existing_answer_id;
              
              try {

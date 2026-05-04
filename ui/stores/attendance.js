@@ -124,27 +124,24 @@ export const useAttendanceStore = defineStore('attendance', () => {
     // API Actions
     const fetchGroupAttendances = async (courseId, groupId, isCourseAdmin = false, forceRefresh = false) => {
         const cacheKey = `group_${groupId}`;
-        
+        const api = useApi();
+
         // Return cached data if valid and not forcing refresh
         if (!forceRefresh && isCacheValid.value(cacheKey)) {
             return attendances.value[groupId] || [];
         }
-        
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.get(`/courses/${courseId}/groups/${groupId}/attendances`, {
-                params: {
-                    isCourseAdmin: isCourseAdmin
-                }
-            });
-            
-            if (response.data && response.data.success) {
-                setGroupAttendances(groupId, response.data.attendances);
-                return response.data.attendances;
+            const response = await api.get(`/courses/${courseId}/groups/${groupId}/attendances?isCourseAdmin=${isCourseAdmin}`);
+
+            if (response && response.success) {
+                setGroupAttendances(groupId, response.attendances);
+                return response.attendances;
             } else {
-                throw new Error(response.data.message || 'Failed to fetch attendances');
+                throw new Error(response?.message || 'Failed to fetch attendances');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to fetch attendances');
@@ -153,26 +150,27 @@ export const useAttendanceStore = defineStore('attendance', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const fetchAttendanceDetails = async (attendanceId, forceRefresh = false) => {
         const cacheKey = `attendance_${attendanceId}`;
-        
+        const api = useApi();
+
         // Return cached data if valid and not forcing refresh
         if (!forceRefresh && isCacheValid.value(cacheKey)) {
             return attendanceDetails.value[attendanceId];
         }
-        
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.get(`/attendances/${attendanceId}/details`);
-            
-            if (response.data && response.data.success) {
-                setAttendanceDetails(attendanceId, response.data.details);
-                return response.data.details;
+            const response = await api.get(`/attendances/${attendanceId}/details`);
+
+            if (response && response.success) {
+                setAttendanceDetails(attendanceId, response.details);
+                return response.details;
             } else {
-                throw new Error(response.data.message || 'Failed to fetch attendance details');
+                throw new Error(response?.message || 'Failed to fetch attendance details');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to fetch attendance details');
@@ -181,21 +179,22 @@ export const useAttendanceStore = defineStore('attendance', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const createAttendance = async (courseId, groupId, attendanceData) => {
         const cacheKey = `create_${groupId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.post(`/courses/${courseId}/groups/${groupId}/attendances`, attendanceData);
-            
-            if (response.data && response.data.success) {
-                addAttendance(groupId, response.data.attendance);
-                return response.data.attendance;
+            const response = await api.post(`/courses/${courseId}/groups/${groupId}/attendances`, attendanceData);
+
+            if (response && response.success) {
+                addAttendance(groupId, response.attendance);
+                return response.attendance;
             } else {
-                throw new Error(response.data.message || 'Failed to create attendance');
+                throw new Error(response?.message || 'Failed to create attendance');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to create attendance');
@@ -204,24 +203,25 @@ export const useAttendanceStore = defineStore('attendance', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const updateAttendance = async (attendanceId, updateData) => {
         const cacheKey = `update_${attendanceId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.patch(`/attendances/${attendanceId}`, updateData);
-            
-            if (response.data && response.data.success) {
+            const response = await api.patch(`/attendances/${attendanceId}`, updateData);
+
+            if (response && response.success) {
                 // Find which group this attendance belongs to and update it
                 Object.keys(attendances.value).forEach(groupId => {
-                    updateAttendanceInGroup(groupId, attendanceId, response.data.attendance);
+                    updateAttendanceInGroup(groupId, attendanceId, response.attendance);
                 });
-                return response.data.attendance;
+                return response.attendance;
             } else {
-                throw new Error(response.data.message || 'Failed to update attendance');
+                throw new Error(response?.message || 'Failed to update attendance');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to update attendance');
@@ -230,17 +230,18 @@ export const useAttendanceStore = defineStore('attendance', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const deleteAttendance = async (attendanceId) => {
         const cacheKey = `delete_${attendanceId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.delete(`/attendances/${attendanceId}`);
-            
-            if (response.data && response.data.success) {
+            const response = await api.delete(`/attendances/${attendanceId}`);
+
+            if (response && response.success) {
                 // Find and remove from all groups
                 Object.keys(attendances.value).forEach(groupId => {
                     deleteAttendanceFromGroup(groupId, attendanceId);
@@ -248,7 +249,7 @@ export const useAttendanceStore = defineStore('attendance', () => {
                 clearAttendanceCache(attendanceId);
                 return true;
             } else {
-                throw new Error(response.data.message || 'Failed to delete attendance');
+                throw new Error(response?.message || 'Failed to delete attendance');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to delete attendance');
@@ -257,26 +258,27 @@ export const useAttendanceStore = defineStore('attendance', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const submitMemberAttendance = async (attendanceId, memberId, status, comments = null) => {
         const cacheKey = `submit_${attendanceId}_${memberId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.post(`/attendances/${attendanceId}/details`, {
+            const response = await api.post(`/attendances/${attendanceId}/details`, {
                 course_attendance_id: attendanceId,
                 course_member_id: memberId,
                 status,
                 comments
             });
-            
-            if (response.data && response.data.success) {
-                updateMemberAttendanceStatus(attendanceId, memberId, response.data.attendance_detail.status);
-                return response.data.attendance_detail;
+
+            if (response && response.success) {
+                updateMemberAttendanceStatus(attendanceId, memberId, response.attendance_detail.status);
+                return response.attendance_detail;
             } else {
-                throw new Error(response.data.message || 'Failed to submit attendance');
+                throw new Error(response?.message || 'Failed to submit attendance');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to submit attendance');
@@ -285,17 +287,18 @@ export const useAttendanceStore = defineStore('attendance', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const fetchMemberJoinStatus = async (attendanceId, memberId) => {
         const cacheKey = `member_status_${attendanceId}_${memberId}`;
-        
+        const api = useApi();
+
         try {
-            const response = await axios.get(`/attendances/${attendanceId}/member/${memberId}/join-status`);
-            
-            if (response.data && response.data.success) {
-                return response.data.status;
+            const response = await api.get(`/attendances/${attendanceId}/member/${memberId}/join-status`);
+
+            if (response && response.success) {
+                return response.status;
             } else {
-                throw new Error(response.data.message || 'Failed to fetch member join status');
+                throw new Error(response?.message || 'Failed to fetch member join status');
             }
         } catch (error) {
             // Only log errors that are not 404 (to avoid console spam when attendance is deleted)

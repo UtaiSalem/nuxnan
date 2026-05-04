@@ -11,18 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('student_guardians', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('student_id')->index();
-            $table->string('full_name')->comment('ชื่อ-สกุล ผู้ปกครอง');
-            $table->string('relation')->comment('ความสัมพันธ์ (บิดา, มารดา, ฯลฯ)');
-            $table->string('phone_number')->nullable()->comment('เบอร์โทรศัพท์');
-            $table->string('occupation')->nullable()->comment('อาชีพ');
-            $table->boolean('is_emergency_contact')->default(false)->comment('เป็นบุคคลติดต่อฉุกเฉิน');
-            $table->timestamps();
+        if (!Schema::hasTable('student_guardians')) {
+            Schema::create('student_guardians', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('student_id')->index();
+                $table->string('full_name')->comment('ชื่อ-สกุล ผู้ปกครอง');
+                $table->string('relation')->comment('ความสัมพันธ์ (บิดา, มารดา, ฯลฯ)');
+                $table->string('phone_number')->nullable()->comment('เบอร์โทรศัพท์');
+                $table->string('occupation')->nullable()->comment('อาชีพ');
+                $table->boolean('is_emergency_contact')->default(false)->comment('เป็นบุคคลติดต่อฉุกเฉิน');
+                $table->timestamps();
 
-            $table->foreign('student_id')->references('id')->on('students')->onDelete('cascade');
-        });
+                $table->foreign('student_id')->references('id')->on('students')->onDelete('cascade');
+            });
+        }
     }
 
     /**

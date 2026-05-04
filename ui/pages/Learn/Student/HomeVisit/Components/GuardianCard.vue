@@ -308,8 +308,9 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import axios from 'axios'
 import Swal from 'sweetalert2'
+
+const api = useApi()
 
 const props = defineProps({
   student: {
@@ -360,7 +361,7 @@ const form = ref({
 // API endpoints
 const getApiUrl = (endpoint) => {
   const studentId = props.student?.id
-  return `/home-visit/student/${studentId}/guardian${endpoint ? '/' + endpoint : ''}`
+  return `/api/home-visit/student/${studentId}/guardian${endpoint ? '/' + endpoint : ''}`
 }
 
 // Load guardian data from API
@@ -370,10 +371,10 @@ const loadGuardianData = async () => {
   saveStatus.value = null
   
   try {
-    const response = await axios.get(getApiUrl())
-    
-    if (response.data.success && response.data.data) {
-      const { guardian, contact } = response.data.data
+    const response = await api.get(getApiUrl())
+
+    if (response.success && response.data) {
+      const { guardian, contact } = response.data
       
       // Update form with guardian data
       if (guardian) {
@@ -454,20 +455,21 @@ const saveGuardianData = async () => {
   }
 
   try {
-    const method = hasGuardianData.value ? 'put' : 'post'
-    const response = await axios[method](getApiUrl(), {
+    const url = getApiUrl()
+    const body = {
       guardian: form.value.guardian,
       contact: form.value.guardianContact
-    })
+    }
+    const response = hasGuardianData.value ? await api.put(url, body) : await api.post(url, body)
 
-    if (response.data.success) {
+    if (response.success) {
       hasGuardianData.value = true
       saveStatus.value = 'success'
       await nextTick()
       isSaving.value = false
       await Swal.fire({
         title: 'สำเร็จ!',
-        text: response.data.message || 'บันทึกข้อมูลผู้ปกครองเรียบร้อย',
+        text: response.message || 'บันทึกข้อมูลผู้ปกครองเรียบร้อย',
         icon: 'success',
         confirmButtonText: 'ตกลง',
         confirmButtonColor: '#8b5cf6',
@@ -479,7 +481,7 @@ const saveGuardianData = async () => {
       emit('save', {
         success: true,
         type: 'guardian',
-        data: response.data.data
+        data: response.data
       })
     }
   } catch (err) {

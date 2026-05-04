@@ -57,7 +57,6 @@ import AppButton from '../atoms/Button.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
-const router = useRouter()
 
 const form = reactive({
   login: '',
@@ -89,12 +88,12 @@ const handleSubmit = async () => {
       password: form.password,
     })
 
-    // Redirect to newsfeed after successful login
-    router.push('/play/newsfeed')
+    // Keep spinner visible during navigation (login() resets isLoading in finally)
+    authStore.isLoading = true
+    await navigateTo('/play/newsfeed')
   } catch (e: any) {
     console.error('Login failed', e)
     error.value = e.message || t('validation.invalidCredentials')
-  } finally {
     loading.value = false
   }
 }

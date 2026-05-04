@@ -138,7 +138,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import axios from 'axios';
+import { useApi } from '@/composables/useApi';
 import Swal from 'sweetalert2';
 
 const props = defineProps({
@@ -155,6 +155,7 @@ const isLoading = ref(true);
 const showAddModal = ref(false);
 const availableCourses = ref([]);
 const isAdding = ref(false);
+const api = useApi();
 const addForm = ref({
     course_id: '',
     year_level: 1,
@@ -175,11 +176,11 @@ const getCourseTypeLabel = (type) => {
 const fetchCourses = async () => {
     isLoading.value = true;
     try {
-        const response = await axios.get(`/api/academies/${props.academyId}/curriculums/${props.curriculumId}/courses`);
-        if (response.data.success) {
-            courses.value = response.data.courses;
-            groupedCourses.value = response.data.grouped_courses;
-            summary.value = response.data.summary;
+        const response = await api.get(`/api/academies/${props.academyId}/curriculums/${props.curriculumId}/courses`);
+        if (response.success) {
+            courses.value = response.courses;
+            groupedCourses.value = response.grouped_courses;
+            summary.value = response.summary;
         }
     } catch (error) {
         console.error("Error fetching courses", error);
@@ -191,9 +192,9 @@ const fetchCourses = async () => {
 const openAddModal = async () => {
     showAddModal.value = true;
     try {
-        const response = await axios.get(`/api/academies/${props.academyId}/curriculums/${props.curriculumId}/available-courses`);
-        if (response.data.success) {
-            availableCourses.value = response.data.courses;
+        const response = await api.get(`/api/academies/${props.academyId}/curriculums/${props.curriculumId}/available-courses`);
+        if (response.success) {
+            availableCourses.value = response.courses;
         }
     } catch (error) {
         console.error("Error fetching available courses", error);
@@ -210,14 +211,14 @@ const onCourseSelect = () => {
 const submitAddCourse = async () => {
     isAdding.value = true;
     try {
-        const response = await axios.post(`/api/academies/${props.academyId}/curriculums/${props.curriculumId}/courses`, addForm.value);
-        if (response.data.success) {
+        const response = await api.post(`/api/academies/${props.academyId}/curriculums/${props.curriculumId}/courses`, addForm.value);
+        if (response.success) {
             Swal.fire('สำเร็จ', 'เพิ่มรายวิชาเรียบร้อยแล้ว', 'success');
             showAddModal.value = false;
             fetchCourses();
             // Reset form
-            addForm.value = { 
-                course_id: '', year_level: 1, semester: '1', course_type: 'required', credits: 0 
+            addForm.value = {
+                course_id: '', year_level: 1, semester: '1', course_type: 'required', credits: 0
             };
         }
     } catch (error) {
@@ -251,8 +252,8 @@ const removeCourse = async (course) => {
              // Controller `removeCourse` takes `(Curriculum $curriculum, CurriculumCourse $curriculumCourse)`.
              // So route is likely `.../courses/{curriculumCourse}`.
              
-            await axios.delete(`/api/academies/${props.academyId}/curriculums/${props.curriculumId}/courses/${course.id}`);
-            
+            await api.delete(`/api/academies/${props.academyId}/curriculums/${props.curriculumId}/courses/${course.id}`);
+
             Swal.fire('ลบสำเร็จ', '', 'success');
             fetchCourses();
         } catch (error) {

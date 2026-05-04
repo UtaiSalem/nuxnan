@@ -7,16 +7,19 @@ use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\ExamEligibilityOverride;
 use App\Services\AttendanceEligibilityService;
+use App\Services\PointsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class ExamEligibilityController extends Controller
 {
     protected AttendanceEligibilityService $eligibilityService;
+    protected PointsService $pointsService;
 
-    public function __construct(AttendanceEligibilityService $eligibilityService)
+    public function __construct(AttendanceEligibilityService $eligibilityService, PointsService $pointsService)
     {
         $this->eligibilityService = $eligibilityService;
+        $this->pointsService = $pointsService;
     }
 
     /**
@@ -104,12 +107,37 @@ class ExamEligibilityController extends Controller
         try {
             $override = $this->eligibilityService->requestUnlockByPoints($member);
 
-            // TODO: Deduct points from user's wallet
-            // $pointsService->deduct($user, $course->unlock_points_cost, 'Unlock exam eligibility');
+            // Deduct points from user's points
+            $pointsCost = $course->unlock_points_cost ?? 0;
+            if ($pointsCost > 0) {
+                // Check if user has enough points
+                $balance = $this->pointsService->getBalance($user);
+                if ($balance['total_points'] < $pointsCost) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'คะแนนสะสมไม่เพียงพอสำหรับการปลดล็อค',
+                    ], 400);
+                }
 
-            // For now, auto-approve if points are available
-            // In production, integrate with wallet service
-            $override = $this->eligibilityService->processPointsUnlock($override, 0);
+                $transaction = $this->pointsService->spend(
+                    $user,
+                    $pointsCost,
+                    'course_exam_unlock',
+                    $course->id,
+                    "ปลดล็อคสิทธิ์สอบวิชา {$course->name}"
+                );
+
+                if (!$transaction) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'ไม่สามารถตัดคะแนนสะสมได้',
+                    ], 400);
+                }
+                
+                $override = $this->eligibilityService->processPointsUnlock($override, $transaction->id);
+            } else {
+                $override = $this->eligibilityService->processPointsUnlock($override, 0);
+            }
 
             return response()->json([
                 'success' => true,

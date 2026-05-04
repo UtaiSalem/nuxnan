@@ -4,7 +4,7 @@ import { useDebounceFn } from "@vueuse/core";
 import { Icon } from '@iconify/vue';
 import Swal from 'sweetalert2';
 
-const { $apiFetch } = useNuxtApp();
+const api = useApi();
 
 definePageMeta({
     layout: 'admin',
@@ -102,12 +102,9 @@ const handleSearchUsers = useDebounceFn(async () => {
         isSearching.value = true;
         hasSearched.value = true;
         
-        const response = await $apiFetch('/api/forgot-password/getuser', {
-            method: 'POST',
-            body: { 
-                email: searchQuery.value.trim(),
-                search_type: searchType.value
-            }
+        const response = await api.post('/api/forgot-password/getuser', {
+            email: searchQuery.value.trim(),
+            search_type: searchType.value
         });
         
         if (response?.users) {
@@ -219,11 +216,8 @@ async function handleResetPassword(user) {
 
     try {
         const passwordToSet = result.value || '00000000';
-        const response = await $apiFetch(`/api/forgot-password/reset/${user.id}`, {
-            method: 'POST',
-            body: {
-                new_password: passwordToSet
-            }
+        const response = await api.post(`/api/forgot-password/reset/${user.id}`, {
+            new_password: passwordToSet
         });
         
         if (response.success) {
@@ -348,10 +342,7 @@ async function handleTopUpPoints(user) {
 
     try {
         const amount = result.value;
-        const response = await $apiFetch(`/api/forgot-password/exchange/${user.id}`, {
-            method: 'POST',
-            body: { money: amount }
-        });
+        const response = await api.post(`/api/forgot-password/exchange/${user.id}`, { money: amount });
 
         if (response.success) {
             // Refresh search results

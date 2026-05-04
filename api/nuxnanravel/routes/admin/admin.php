@@ -277,31 +277,24 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             return response()->json(['success' => true, 'data' => $courses]);
         })->name('admin.courses.index');
         
-        Route::post('/', function (\Illuminate\Http\Request $request) {
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'description' => 'required|string',
-                'category_id' => 'nullable|exists:course_categories,id',
-                'price' => 'nullable|numeric|min:0',
-                'status' => 'nullable|in:draft,pending,published,archived',
-            ]);
-            
+        Route::post('/', function (\App\Http\Requests\Admin\StoreCourseRequest $request) {
             $course = \App\Models\Course::create([
-                ...$validated,
+                ...$request->validated(),
                 'creator_id' => auth()->id(),
             ]);
-            
+
             return response()->json(['success' => true, 'data' => $course], 201);
         })->middleware('permission:course-create')->name('admin.courses.store');
-        
+
         Route::get('/{id}', function ($id) {
             $course = \App\Models\Course::with(['user'])->findOrFail($id);
             return response()->json(['success' => true, 'data' => $course]);
         })->name('admin.courses.show');
-        
-        Route::put('/{id}', function (\Illuminate\Http\Request $request, $id) {
+
+        Route::put('/{id}', function (\App\Http\Requests\Admin\UpdateCourseRequest $request, $id) {
             $course = \App\Models\Course::findOrFail($id);
-            $course->update($request->all());
+            // ใช้ validated() แทน all() เพื่อป้องกัน mass assignment
+            $course->update($request->validated());
             return response()->json(['success' => true, 'data' => $course]);
         })->middleware('permission:course-edit')->name('admin.courses.update');
         
@@ -324,28 +317,24 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             return response()->json(['success' => true, 'data' => $academies]);
         })->name('admin.academies.index');
         
-        Route::post('/', function (\Illuminate\Http\Request $request) {
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-            ]);
-            
+        Route::post('/', function (\App\Http\Requests\Admin\StoreAcademyRequest $request) {
             $academy = \App\Models\Academy::create([
-                ...$validated,
+                ...$request->validated(),
                 'owner_id' => auth()->id(),
             ]);
-            
+
             return response()->json(['success' => true, 'data' => $academy], 201);
         })->middleware('permission:academy-create')->name('admin.academies.store');
-        
+
         Route::get('/{id}', function ($id) {
             $academy = \App\Models\Academy::with('owner')->findOrFail($id);
             return response()->json(['success' => true, 'data' => $academy]);
         })->name('admin.academies.show');
-        
-        Route::put('/{id}', function (\Illuminate\Http\Request $request, $id) {
+
+        Route::put('/{id}', function (\App\Http\Requests\Admin\UpdateAcademyRequest $request, $id) {
             $academy = \App\Models\Academy::findOrFail($id);
-            $academy->update($request->all());
+            // ใช้ validated() แทน all() เพื่อป้องกัน mass assignment
+            $academy->update($request->validated());
             return response()->json(['success' => true, 'data' => $academy]);
         })->middleware('permission:academy-edit')->name('admin.academies.update');
         
@@ -396,9 +385,10 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             return response()->json(['success' => true, 'data' => $coupon]);
         })->name('admin.coupons.show');
         
-        Route::put('/{id}', function (\Illuminate\Http\Request $request, $id) {
+        Route::put('/{id}', function (\App\Http\Requests\Admin\UpdateCouponRequest $request, $id) {
             $coupon = \App\Models\Coupon::findOrFail($id);
-            $coupon->update($request->all());
+            // ใช้ validated() แทน all() เพื่อป้องกัน mass assignment
+            $coupon->update($request->validated());
             return response()->json(['success' => true, 'data' => $coupon]);
         })->middleware('permission:coupon-edit')->name('admin.coupons.update');
         

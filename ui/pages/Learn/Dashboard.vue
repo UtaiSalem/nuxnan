@@ -2,6 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
+import AnalyticsCharts from '~/components/learning/AnalyticsCharts.vue'
+import { useApi } from '~/composables/useApi'
 
 definePageMeta({
   layout: 'main',
@@ -13,6 +15,7 @@ useHead({
 })
 
 const authStore = useAuthStore()
+const api = useApi()
 
 // State
 const isLoading = ref(true)
@@ -20,6 +23,7 @@ const userCourses = ref<any[]>([])
 const recentCourses = ref<any[]>([])
 const upcomingAssignments = ref<any[]>([])
 const recentActivities = ref<any[]>([])
+const analyticsData = ref<any>(null)
 const learningStats = ref({
   totalCourses: 0,
   activeCourses: 0,
@@ -92,6 +96,14 @@ const loadDashboardData = async () => {
   try {
     isLoading.value = true
     
+    // Fetch analytics data
+    try {
+      const response = await api.get('/api/student/analytics')
+      analyticsData.value = response.data
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error)
+    }
+
     // Simulate loading data (in real app, fetch from API)
     // This is a mock implementation - replace with actual API calls
     
@@ -418,6 +430,18 @@ onMounted(() => {
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ระบบเยี่ยมบ้าน</p>
               </NuxtLink>
             </div>
+          </div>
+
+          <!-- Advanced Analytics -->
+          <div v-if="analyticsData" class="space-y-4">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 px-1">
+              <Icon icon="fluent:data-trending-24-filled" class="w-5 h-5 text-indigo-500" />
+              การวิเคราะห์การเรียนเชิงลึก
+            </h2>
+            <AnalyticsCharts 
+              :trend-data="analyticsData.trend" 
+              :comparison-data="analyticsData.comparison" 
+            />
           </div>
 
           <!-- Recent Courses -->

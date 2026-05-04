@@ -463,9 +463,8 @@ const loadBudgets = async () => {
 }
 
 // Actions
-const viewFeeDetails = (fee: any) => {
+const viewFeeDetails = (_fee: any) => {
   // TODO: Show fee details modal
-  console.log('View fee:', fee)
 }
 
 const saveExpense = async () => {

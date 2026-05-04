@@ -15,15 +15,64 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Academy extends Model
 {
     use HasFactory;
     // use HasUlids;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::updated(function ($academy) {
+            Cache::forget("academy_settings_{$academy->id}");
+        });
+    }
+
+    /**
+     * Get cached settings
+     */
+    public function getSettings()
+    {
+        return Cache::remember("academy_settings_{$this->id}", now()->addHours(24), function () {
+            return $this->academySetting()->first();
+        });
+    }
     
-    // protected $fillable = [];
-    protected $guarded = [];
+    /**
+     * Mass-assignable attributes.
+     *
+     * ใช้ whitelist แบบ $fillable เพื่อป้องกัน mass assignment attack.
+     * ถ้าเพิ่มคอลัมน์ใหม่ใน migration ต้องเพิ่มในลิสต์นี้ด้วย.
+     */
+    protected $fillable = [
+        'user_id',
+        'owner_id',
+        'name',
+        'slogan',
+        'description',
+        'address',
+        'email',
+        'phone',
+        'director',
+        'established_year',
+        'type',
+        'accreditation',
+        'accreditation_body',
+        'total_students',
+        'total_teachers',
+        'membership_fees_points',
+        'courses_offered',
+        'facilities',
+        'academy_timings',
+        'holidays',
+        'social_media_links',
+        'logo',
+        'cover',
+    ];
 
     /**
      * Get the academySetting associated with the Academy

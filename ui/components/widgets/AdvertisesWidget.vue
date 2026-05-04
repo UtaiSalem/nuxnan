@@ -26,12 +26,8 @@ const fetchAdvertises = async () => {
 
 async function handleAdView(advertId) {
   try {
-    const data = await api.post(`/api/advertises/${advertId}/view`)
-    if (data) {
-      // Handle success, e.g., refresh the list if needed, or just log
-      // For now, we'll just log and not refresh, as per the instruction's new handleAdView
-      console.log('Advertise viewed successfully:', data);
-    }
+    await api.post(`/api/advertises/${advertId}/view`)
+    // View recorded; no refresh required per current UX
   } catch (err) {
     console.error('Error viewing advertise:', err)
   }

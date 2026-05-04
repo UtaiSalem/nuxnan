@@ -112,8 +112,7 @@ const handleGroupClick = (group: any) => {
 // Handle group join
 const handleGroupJoin = async (groupId: number) => {
   // TODO: Implement API call to join group
-  console.log('Joining group:', groupId)
-  
+
   // Update local state
   const group = groups.value.find(g => g.id === groupId)
   if (group) {

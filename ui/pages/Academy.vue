@@ -1,6 +1,5 @@
 <script setup>
 import { ref } from 'vue';
-import axios from 'axios';
 import { Link, Head, useForm } from '@inertiajs/vue3';
 import MainLayout from '~/layouts/main.vue';
 import Navbar from '@/components/partials/Navbar.vue';
@@ -8,6 +7,8 @@ import ProfileCover from '@/components/partials/ProfileCover.vue';
 // import PostViewer from '@/HopeuiComponents/partials/PostViewer.vue';
 // import PollViewer from '@/HopeuiComponents/partials/PollViewer.vue';
 import Swal from 'sweetalert2';
+
+const api = useApi();
 
 const props = defineProps({
     academy: Object,
@@ -32,33 +33,33 @@ const formAcademyUpdate = useForm({
 
 async function onCoverImageChange(coverFile) {
     const academyCoverUpdate = new FormData();
-    academyCoverUpdate.append('cover', coverFile); 
+    academyCoverUpdate.append('cover', coverFile);
     academyCoverUpdate.append('_method', 'patch');
-    await axios.post(`/academies/${props.academy.data.id}/update`, academyCoverUpdate);
+    await api.post(`/api/academies/${props.academy.data.id}/update`, academyCoverUpdate);
 }
 
 async function onLogoImageChange(logoFile) {
     const academyLogoUpdate = new FormData();
-    academyLogoUpdate.append('logo', logoFile); 
+    academyLogoUpdate.append('logo', logoFile);
     academyLogoUpdate.append('_method', 'patch');
-    await axios.post(`/academies/${props.academy.data.id}/update`, academyLogoUpdate);
+    await api.post(`/api/academies/${props.academy.data.id}/update`, academyLogoUpdate);
 }
 
 async function onHeaderChange(academyName) {
-    await axios.patch(`/academies/${props.academy.data.id}/update`, { name:academyName });
+    await api.patch(`/api/academies/${props.academy.data.id}/update`, { name:academyName });
 }
 
 async function onSubheaderChange(academySlogan) {
-    await axios.patch(`/academies/${props.academy.data.id}/update`, { slogan:academySlogan });
+    await api.patch(`/api/academies/${props.academy.data.id}/update`, { slogan:academySlogan });
 }
 
 async function onRequestToBeAMember(){
     try {
-        let memberResp = await axios.post(`/academies/${props.academy.data.id}/members`);
-        if (memberResp.data.success) {
-            props.academy.data.isMember=memberResp.data.isMember;
-            props.academy.data.total_students = memberResp.data.totalStudents;
-            if (memberResp.data.isMember) {
+        let memberResp = await api.post(`/api/academies/${props.academy.data.id}/members`, {});
+        if (memberResp.success) {
+            props.academy.data.isMember=memberResp.isMember;
+            props.academy.data.total_students = memberResp.totalStudents;
+            if (memberResp.isMember) {
                 Swal.fire(
                     'เสร็จสิ้น',
                     'ขอเป็นสมาชิกเรียบร้อยแล้ว',

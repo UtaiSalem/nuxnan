@@ -23,8 +23,99 @@ class Course extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
-    // protected $fillable = ['title', 'description', 'instructor_id', 'duration', 'price', 'category', 'level', 'language', 'start_date', 'end_date', 'enrolled_students', 'rating', 'image', 'syllabus', 'prerequisites', 'certificate'];
+    /**
+     * Mass-assignable attributes.
+     *
+     * ใช้ whitelist แบบ $fillable (ไม่ใช่ $guarded = []) เพื่อป้องกัน
+     * mass assignment attack — ฟิลด์ใดที่ไม่อยู่ในลิสต์นี้จะตั้งค่าผ่าน
+     * $model->update($request->all()) ไม่ได้
+     */
+    protected $fillable = [
+        // Relations / ownership
+        'user_id',
+        'instructor_id',
+        'academy_id',
+        'creator_id',
+        'category_id',
+
+        // Core info
+        'name',
+        'slug',
+        'code',
+        'description',
+        'category',
+        'level',
+        'language',
+
+        // Schedule
+        'duration',
+        'start_date',
+        'end_date',
+        'class_schedule',
+        'semester',
+        'academic_year',
+        'hours_per_week',
+
+        // Commerce
+        'tuition_fees',
+        'price',
+        'discount',
+        'discount_type',
+        'points',
+        'saleable',
+
+        // Capacity / counts
+        'credit_units',
+        'capacity',
+        'enrolled_students',
+        'lessons',
+        'assignments',
+        'quizzes',
+        'groups',
+
+        // Content
+        'prerequisites',
+        'course_materials',
+        'syllabus',
+
+        // Media
+        'cover',
+        'logo',
+        'cover_header',
+        'cover_subheader',
+
+        // Accreditation / certificate
+        'accreditation',
+        'accreditation_body',
+        'certificate',
+        'certificate_download_cost',
+        'certificate_free_download',
+
+        // Status
+        'status',
+        'rating',
+        'total_score',
+
+        // Attendance & exam eligibility
+        'max_absence_percent',
+        'allow_unlock_by_points',
+        'unlock_points_cost',
+        'allow_unlock_by_reading',
+        'unlock_reading_minutes',
+
+        // Finalization
+        'finalization_status',
+        'finalized_at',
+        'finalized_by',
+
+        // Remediation / appeal
+        'allow_remediation',
+        'max_remediation_attempts',
+        'remediation_max_grade',
+        'allow_grade_appeal',
+        'appeal_deadline_days',
+    ];
+
     protected $casts = [
         'price' => 'integer',
         'credit_units' => 'integer',

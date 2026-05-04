@@ -576,17 +576,17 @@ const loadKpis = async () => {
   }
 }
 
-// Actions
-const generateReport = (report: any) => {
-  console.log('Generate report:', report)
+// Actions (TODO: wire up to backend once endpoints are ready)
+const generateReport = (_report: any) => {
+  // placeholder
 }
 
-const downloadReport = (report: any, format: string) => {
-  console.log('Download report:', report, format)
+const downloadReport = (_report: any, _format: string) => {
+  // placeholder
 }
 
-const generateQuickReport = (type: string) => {
-  console.log('Generate quick report:', type)
+const generateQuickReport = (_type: string) => {
+  // placeholder
 }
 
 // Watch

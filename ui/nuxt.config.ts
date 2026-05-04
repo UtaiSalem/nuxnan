@@ -27,6 +27,20 @@ export default defineNuxtConfig({
     optimizeDeps: {
       include: ['vue', 'vue-router', 'pinia'],
     },
+    ssr: {
+      // Bundle ESM-only packages for SSR instead of treating them as externals.
+      // All @tiptap/* v3, lowlight v3+, and v3-infinite-loading ship as pure
+      // ESM ("type":"module"), which causes "Unexpected token 'export'" in
+      // Nitro's CJS server bundle without this setting.
+      noExternal: [
+        'lowlight',
+        'v3-infinite-loading',
+        'plyr',
+        'vue-plyr',
+        'laravel-echo',
+        /^@tiptap\/.*/,
+      ],
+    },
   },
 
   // Configure Vue to recognize Vidstack custom elements
@@ -68,6 +82,11 @@ export default defineNuxtConfig({
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000',
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+      reverbEnabled: process.env.NUXT_PUBLIC_REVERB_ENABLED === 'true',
+      reverbAppKey: process.env.NUXT_PUBLIC_REVERB_APP_KEY || '',
+      reverbHost: process.env.NUXT_PUBLIC_REVERB_HOST || '',
+      reverbPort: Number(process.env.NUXT_PUBLIC_REVERB_PORT || 8080),
+      reverbScheme: process.env.NUXT_PUBLIC_REVERB_SCHEME || 'http',
     },
   },
 
@@ -121,6 +140,6 @@ export default defineNuxtConfig({
   },
 
   build: {
-    // transpile: ['lowlight', 'highlight.js'], // Force transpile for named export
+    transpile: ['lowlight', 'v3-infinite-loading', 'plyr', 'vue-plyr', 'laravel-echo', /^@tiptap\/.*/],
   },
 })

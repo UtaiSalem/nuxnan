@@ -97,7 +97,8 @@ import { Link } from '@inertiajs/vue3';
 import AcademyLayout from '@/layouts/AcademyLayout.vue';
 import CurriculumForm from '@/components/learn/academy/curriculum/CurriculumForm.vue';
 import CurriculumCourseList from '@/components/learn/academy/curriculum/CurriculumCourseList.vue';
-import axios from 'axios';
+
+const api = useApi();
 
 const route = useRoute();
 const academyName = route.params.name;
@@ -112,10 +113,10 @@ const showEditModal = ref(false);
 
 const fetchAcademy = async () => {
     try {
-        const response = await axios.get(`/api/academies/${academyName}`);
-        if(response.data.success) {
-            academy.value = response.data.academy;
-            isAcademyAdmin.value = response.data.isAcademyAdmin;
+        const response = await api.get(`/api/academies/${academyName}`);
+        if(response.success) {
+            academy.value = response.academy;
+            isAcademyAdmin.value = response.isAcademyAdmin;
             fetchCurriculumDetails();
         }
     } catch (error) {
@@ -126,9 +127,9 @@ const fetchAcademy = async () => {
 const fetchCurriculumDetails = async () => {
     isLoading.value = true;
     try {
-        const response = await axios.get(`/api/academies/curriculums/${curriculumId}`); // Uses curriculum route
-        if(response.data.success) {
-            curriculum.value = response.data.curriculum;
+        const response = await api.get(`/api/academies/curriculums/${curriculumId}`); // Uses curriculum route
+        if(response.success) {
+            curriculum.value = response.curriculum;
         }
     } catch (error) {
          console.error("Error fetching curriculum detail", error);

@@ -183,9 +183,7 @@ const svgToBase64Png = async (svgUrl: string, couponCode?: string): Promise<stri
     try {
       // Add timestamp to prevent caching issues
       const cleanUrl = svgUrl.split('?')[0] + '?t=' + new Date().getTime()
-      
-      console.log('Fetching SVG for PDF:', cleanUrl)
-      
+
       const response = await fetch(cleanUrl)
       if (!response.ok) {
         throw new Error(`Failed to fetch SVG: ${response.status} ${response.statusText}`)

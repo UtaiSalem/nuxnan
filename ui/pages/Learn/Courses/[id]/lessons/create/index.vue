@@ -26,9 +26,6 @@ onMounted(async () => {
   }
 })
 
-// Debug log
-console.log('Create page - course:', course?.value, 'isCourseAdmin:', isCourseAdmin?.value)
-
 // Handle form submit
 const handleSubmit = (response: any) => {
   // Navigate back to lessons list

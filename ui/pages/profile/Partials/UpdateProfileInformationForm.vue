@@ -24,9 +24,9 @@ const verificationLinkSent = ref(null);
 const photoPreview = ref(null);
 const photoInput = ref(null);
 
-const updateProfileInformation = () => {
-    // console.log('form submitted');
-    if (photoInput.value) {
+    const updateProfileInformation = () => {
+      // Dev-only logging
+      if (photoInput.value) {
         form.photo = photoInput.value.files[0];
     }
 

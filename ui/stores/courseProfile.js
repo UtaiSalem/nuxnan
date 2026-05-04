@@ -44,7 +44,7 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
     
     const getShowOptionGroups = computed(() => () => {
         const result = showOptionGroups.value || false;
-        // console.log('getShowOptionGroups called:', { courseId, result, allStates: showOptionGroups.value });
+        // Dev-only logging
         return result;
     });
     
@@ -139,23 +139,24 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
     // API Actions
     const fetchCourseProfile = async (courseId, forceRefresh = false) => {
         const cacheKey = `course_${courseId}`;
-        
+        const api = useApi();
+
         // Return cached data if valid and not forcing refresh
         if (!forceRefresh && isCacheValid.value(cacheKey)) {
             return courseProfiles.value[courseId];
         }
-        
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.get(`/courses/${courseId}/profile`);
-            
-            if (response.data && response.data.success) {
-                setCourseProfile(courseId, response.data.course);
-                return response.data.course;
+            const response = await api.get(`/courses/${courseId}/profile`);
+
+            if (response && response.success) {
+                setCourseProfile(courseId, response.course);
+                return response.course;
             } else {
-                throw new Error(response.data.message || 'Failed to fetch course profile');
+                throw new Error(response?.message || 'Failed to fetch course profile');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to fetch course profile');
@@ -164,28 +165,25 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const updateCourseCover = async (courseId, coverImage) => {
         const cacheKey = `update_cover_${courseId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
             const formData = new FormData();
             formData.append('cover_image', coverImage);
-            
-            const response = await axios.post(`/courses/${courseId}/cover`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-            
-            if (response.data && response.data.success) {
-                updateCourseProfile(courseId, { cover_image: response.data.cover_image });
-                return response.data.cover_image;
+
+            const response = await api.post(`/courses/${courseId}/cover`, formData);
+
+            if (response && response.success) {
+                updateCourseProfile(courseId, { cover_image: response.cover_image });
+                return response.cover_image;
             } else {
-                throw new Error(response.data.message || 'Failed to update course cover');
+                throw new Error(response?.message || 'Failed to update course cover');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to update course cover');
@@ -194,28 +192,25 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const updateCourseLogo = async (courseId, logoImage) => {
         const cacheKey = `update_logo_${courseId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
             const formData = new FormData();
             formData.append('logo_image', logoImage);
-            
-            const response = await axios.post(`/courses/${courseId}/logo`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-            
-            if (response.data && response.data.success) {
-                updateCourseProfile(courseId, { logo_image: response.data.logo_image });
-                return response.data.logo_image;
+
+            const response = await api.post(`/courses/${courseId}/logo`, formData);
+
+            if (response && response.success) {
+                updateCourseProfile(courseId, { logo_image: response.logo_image });
+                return response.logo_image;
             } else {
-                throw new Error(response.data.message || 'Failed to update course logo');
+                throw new Error(response?.message || 'Failed to update course logo');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to update course logo');
@@ -224,21 +219,22 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const updateCourseHeader = async (courseId, header) => {
         const cacheKey = `update_header_${courseId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.patch(`/courses/${courseId}/header`, { header });
-            
-            if (response.data && response.data.success) {
-                updateCourseProfile(courseId, { cover_header: response.data.header });
-                return response.data.header;
+            const response = await api.patch(`/courses/${courseId}/header`, { header });
+
+            if (response && response.success) {
+                updateCourseProfile(courseId, { cover_header: response.header });
+                return response.header;
             } else {
-                throw new Error(response.data.message || 'Failed to update course header');
+                throw new Error(response?.message || 'Failed to update course header');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to update course header');
@@ -247,21 +243,22 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const updateCourseSubheader = async (courseId, subheader) => {
         const cacheKey = `update_subheader_${courseId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.patch(`/courses/${courseId}/subheader`, { subheader });
-            
-            if (response.data && response.data.success) {
-                updateCourseProfile(courseId, { cover_subheader: response.data.subheader });
-                return response.data.subheader;
+            const response = await api.patch(`/courses/${courseId}/subheader`, { subheader });
+
+            if (response && response.success) {
+                updateCourseProfile(courseId, { cover_subheader: response.subheader });
+                return response.subheader;
             } else {
-                throw new Error(response.data.message || 'Failed to update course subheader');
+                throw new Error(response?.message || 'Failed to update course subheader');
             }
         } catch (error) {
             setError(cacheKey, error.message || 'Failed to update course subheader');
@@ -270,19 +267,20 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const requestToBeMember = async (courseId, groupId = null) => {
         const cacheKey = `request_member_${courseId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
             // Check if user has enough points
             const page = usePage();
             const userPoints = page.props.auth.user.pp;
             const tuitionFees = page.props.course.data.tuition_fees;
-            
+
             if (userPoints < tuitionFees) {
                 if (Swal) {
                     Swal.fire(
@@ -293,31 +291,30 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
                 }
                 return;
             }
-            
-            const response = await axios.post(`/courses/${courseId}/members`, { group_id: groupId });
-            
-            if (response.data && response.data.success) {
+
+            const response = await api.post(`/courses/${courseId}/members`, { group_id: groupId });
+
+            if (response && response.success) {
                 // Update course profile with new member status
-                // console.log('Membership request successful:', response.data);
                 updateCourseProfile(courseId, {
-                    member_status: response.data.newCourseMember.course_member_status,
-                    course_member_of_auth: response.data.newCourseMember
+                    member_status: response.newCourseMember.course_member_status,
+                    course_member_of_auth: response.newCourseMember
                 });
 
                 page.props.course.data.enrolled_students++;
-                
+
                 // Update page props to reflect changes
                 if (page.props.courseMemberOfAuth !== undefined) {
-                    page.props.courseMemberOfAuth = response.data.newCourseMember;
+                    page.props.courseMemberOfAuth = response.newCourseMember;
                 }
-                
+
                 // Update course member status
-                if (response.data.newCourseMember && response.data.newCourseMember.course_member_status == 1) {
+                if (response.newCourseMember && response.newCourseMember.course_member_status == 1) {
                     page.props.course.data.isMember = true;
                 } else {
                     page.props.course.data.isMember = false;
                 }
-                
+
                 // Show success message
                 if (Swal) {
                     Swal.fire(
@@ -326,25 +323,25 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
                         'success'
                     );
                 } else if (window.$toast) {
-                    window.$toast.success(response.data.message || 'ส่งคำขอเข้าร่วมรายวิชาสำเร็จ');
+                    window.$toast.success(response.message || 'ส่งคำขอเข้าร่วมรายวิชาสำเร็จ');
                 }
-                
-                return response.data;
+
+                return response;
             } else {
                 if (Swal) {
                     Swal.fire(
                         'ขออภัย',
                         'เกิดข้อผิดพลาดในการขอเข้าร่วมกลุ่ม',
-                        response.data.msg || response.data.message || 'กรุณาลองใหม่อีกครั้ง'
+                        response?.msg || response?.message || 'กรุณาลองใหม่อีกครั้ง'
                     );
                 } else {
-                    throw new Error(response.data.message || 'Failed to request membership');
+                    throw new Error(response?.message || 'Failed to request membership');
                 }
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || error.message || 'Failed to request membership';
             setError(cacheKey, errorMessage);
-            
+
             // Show error message
             if (Swal) {
                 Swal.fire(
@@ -355,36 +352,37 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
             } else if (window.$toast) {
                 window.$toast.error(errorMessage);
             }
-            
+
             throw error;
         } finally {
             setLoading(cacheKey, false);
         }
     };
-    
+
     const requestToBeUnmember = async (courseId, memberId) => {
         const cacheKey = `request_unmember_${courseId}`;
-        
+        const api = useApi();
+
         setLoading(cacheKey, true);
         clearError(cacheKey);
-        
+
         try {
-            const response = await axios.delete(`/courses/${courseId}/members/${memberId}`);
-            
-            if (response.data && response.data.success) {
+            const response = await api.delete(`/courses/${courseId}/members/${memberId}`);
+
+            if (response && response.success) {
                 // Update course profile with new member status
                 updateCourseProfile(courseId, {
-                    member_status: response.data.member_status,
+                    member_status: response.member_status,
                     course_member_of_auth: null
                 });
-                
+
                 // Update page props to reflect changes
                 const page = usePage();
                 if (page.props.courseMemberOfAuth !== undefined) {
                     page.props.courseMemberOfAuth = null;
                 }
                 page.props.course.data.isMember = false;
-                
+
                 // Show success message
                 if (Swal) {
                     Swal.fire(
@@ -393,25 +391,25 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
                         'success'
                     );
                 } else if (window.$toast) {
-                    window.$toast.success(response.data.message || 'ออกจากรายวิชาสำเร็จ');
+                    window.$toast.success(response.message || 'ออกจากรายวิชาสำเร็จ');
                 }
-                
-                return response.data;
+
+                return response;
             } else {
                 if (Swal) {
                     Swal.fire(
                         'ขออภัย',
                         'เกิดข้อผิดพลาดในการออกจากรายวิชา',
-                        response.data.msg || response.data.message || 'กรุณาลองใหม่อีกครั้ง'
+                        response?.msg || response?.message || 'กรุณาลองใหม่อีกครั้ง'
                     );
                 } else {
-                    throw new Error(response.data.message || 'Failed to cancel membership');
+                    throw new Error(response?.message || 'Failed to cancel membership');
                 }
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || error.message || 'Failed to cancel membership';
             setError(cacheKey, errorMessage);
-            
+
             // Show error message
             if (Swal) {
                 Swal.fire(
@@ -422,7 +420,7 @@ export const useCourseProfileStore = defineStore('courseProfile', () => {
             } else if (window.$toast) {
                 window.$toast.error(errorMessage);
             }
-            
+
             throw error;
         } finally {
             setLoading(cacheKey, false);

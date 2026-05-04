@@ -18,18 +18,20 @@ return new class extends Migration
     public function up(): void
     {
         // Step 1: Convert tables from MyISAM to InnoDB
-        $tablesToConvert = [
-            'users',
-            'academies',
-            'academy_members',
-            'students',
-        ];
+        if (DB::getDriverName() === 'mysql') {
+            $tablesToConvert = [
+                'users',
+                'academies',
+                'academy_members',
+                'students',
+            ];
 
-        foreach ($tablesToConvert as $table) {
-            if (Schema::hasTable($table)) {
-                $engine = DB::selectOne("SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?", [$table]);
-                if ($engine && strtolower($engine->ENGINE) !== 'innodb') {
-                    DB::statement("ALTER TABLE `{$table}` ENGINE = InnoDB");
+            foreach ($tablesToConvert as $table) {
+                if (Schema::hasTable($table)) {
+                    $engine = DB::selectOne("SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?", [$table]);
+                    if ($engine && strtolower($engine->ENGINE) !== 'innodb') {
+                        DB::statement("ALTER TABLE `{$table}` ENGINE = InnoDB");
+                    }
                 }
             }
         }
@@ -46,14 +48,20 @@ return new class extends Migration
 
         // Step 3: Add indexes
         Schema::table('students', function (Blueprint $table) {
-            // Check if index already exists before adding
-            $indexes = collect(DB::select("SHOW INDEX FROM students WHERE Key_name = 'students_academy_id_index'"));
-            if ($indexes->isEmpty()) {
-                $table->index('academy_id', 'students_academy_id_index');
-            }
+            if (DB::getDriverName() === 'mysql') {
+                // Check if index already exists before adding
+                $indexes = collect(DB::select("SHOW INDEX FROM students WHERE Key_name = 'students_academy_id_index'"));
+                if ($indexes->isEmpty()) {
+                    $table->index('academy_id', 'students_academy_id_index');
+                }
 
-            $indexes2 = collect(DB::select("SHOW INDEX FROM students WHERE Key_name = 'students_user_id_index'"));
-            if ($indexes2->isEmpty()) {
+                $indexes2 = collect(DB::select("SHOW INDEX FROM students WHERE Key_name = 'students_user_id_index'"));
+                if ($indexes2->isEmpty()) {
+                    $table->index('user_id', 'students_user_id_index');
+                }
+            } else {
+                // For SQLite/others, assume we need them
+                $table->index('academy_id', 'students_academy_id_index');
                 $table->index('user_id', 'students_user_id_index');
             }
         });
@@ -70,9 +78,13 @@ return new class extends Migration
         });
 
         Schema::table('academy_members', function (Blueprint $table) {
-            // Add index on student_id if not exists
-            $indexes = collect(DB::select("SHOW INDEX FROM academy_members WHERE Key_name = 'academy_members_student_id_index'"));
-            if ($indexes->isEmpty()) {
+            if (DB::getDriverName() === 'mysql') {
+                // Add index on student_id if not exists
+                $indexes = collect(DB::select("SHOW INDEX FROM academy_members WHERE Key_name = 'academy_members_student_id_index'"));
+                if ($indexes->isEmpty()) {
+                    $table->index('student_id', 'academy_members_student_id_index');
+                }
+            } else {
                 $table->index('student_id', 'academy_members_student_id_index');
             }
 
@@ -81,8 +93,13 @@ return new class extends Migration
                   ->onDelete('set null');
 
             // Add FK for academy_id if not exists
-            $fks = collect(DB::select("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'academy_members' AND CONSTRAINT_NAME = 'fk_academy_members_academy_id'"));
-            if ($fks->isEmpty()) {
+            $addFk = true;
+            if (DB::getDriverName() === 'mysql') {
+                $fks = collect(DB::select("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'academy_members' AND CONSTRAINT_NAME = 'fk_academy_members_academy_id'"));
+                $addFk = $fks->isEmpty();
+            }
+            
+            if ($addFk) {
                 $table->foreign('academy_id', 'fk_academy_members_academy_id')
                       ->references('id')->on('academies')
                       ->onDelete('cascade');

@@ -1,24 +1,101 @@
+<script setup>
+import { ref, computed } from 'vue'
+import StudentTable from './StudentTable.vue'
+import StudentForm from './StudentForm.vue'
+import StudentImportModal from './StudentImportModal.vue'
+import StudentVisitHistory from './StudentVisitHistory.vue'
+
+const props = defineProps({
+  students: {
+    type: Array,
+    default: () => []
+  },
+  visits: {
+    type: Array,
+    default: () => []
+  }
+})
+
+const studentsData = ref(props.students || [])
+const allVisits = ref(props.visits || [])
+
+const isFormOpen = ref(false)
+const isImportOpen = ref(false)
+const isHistoryOpen = ref(false)
+const selectedStudent = ref(null)
+
+// Student statistics
+const activeStudentsCount = computed(() => {
+  return studentsData.value.filter(student => student.status === 'active').length
+})
+
+const pendingVisitCount = computed(() => {
+  return studentsData.value.filter(student => student.visit_status === 'pending').length
+})
+
+const visitCompletionRate = computed(() => {
+  const totalActive = studentsData.value.filter(student => student.status === 'active').length
+  const completedVisits = studentsData.value.filter(student => student.visit_status === 'completed').length
+  return totalActive > 0 ? Math.round((completedVisits / totalActive) * 100) : 0
+})
+
+// Handlers
+const openAddForm = () => {
+  selectedStudent.value = null
+  isFormOpen.value = true
+}
+
+const openEditForm = (student) => {
+  selectedStudent.value = student
+  isFormOpen.value = true
+}
+
+const openImportModal = () => {
+  isImportOpen.value = true
+}
+
+const openHistory = (student) => {
+  selectedStudent.value = student
+  isHistoryOpen.value = true
+}
+
+const handleSaveStudent = (formData) => {
+  if (selectedStudent.value) {
+    // Update existing student
+    const index = studentsData.value.findIndex(s => s.id === selectedStudent.value.id)
+    if (index !== -1) {
+      studentsData.value[index] = { ...studentsData.value[index], ...formData }
+    }
+  } else {
+    // Add new student
+    const newStudent = {
+      ...formData,
+      id: Date.now(), // Temporary ID
+      visit_status: 'pending'
+    }
+    studentsData.value.push(newStudent)
+  }
+  isFormOpen.value = false
+}
+
+const handleImportStudents = (file) => {
+
+  // Here you would typically call an API to process the file
+  alert('นำเข้าข้อมูลสำเร็จ (จำลองการทำงาน)')
+  isImportOpen.value = false
+}
+</script>
+
 <template>
-  <!-- 
-    TODO: Student Management Component - Under Development
-    This component will handle student CRUD operations, import/export, and visit history
-    Features to be implemented:
-    - Student list with search and filters
-    - Add/Edit student modal
-    - Import students from Excel/CSV
-    - Export student data
-    - View visit history
-    - Bulk operations (assign visit, export, delete)
-  -->
   <div class="student-management">
     <!-- Student Statistics Cards -->
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-      <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="bg-white overflow-hidden shadow rounded-lg border-l-4 border-blue-500">
         <div class="p-5">
           <div class="flex items-center">
             <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <i class="fas fa-users text-white text-sm"></i>
+              <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-users text-blue-600"></i>
               </div>
             </div>
             <div class="ml-5 w-0 flex-1">
@@ -26,8 +103,8 @@
                 <dt class="text-sm font-medium text-gray-500 truncate">
                   นักเรียนทั้งหมด
                 </dt>
-                <dd class="text-lg font-medium text-gray-900">
-                  {{ studentsData?.length || 0 }}
+                <dd class="text-2xl font-bold text-gray-900">
+                  {{ studentsData.length }}
                 </dd>
               </dl>
             </div>
@@ -35,12 +112,12 @@
         </div>
       </div>
 
-      <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="bg-white overflow-hidden shadow rounded-lg border-l-4 border-green-500">
         <div class="p-5">
           <div class="flex items-center">
             <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                <i class="fas fa-check text-white text-sm"></i>
+              <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-user-check text-green-600"></i>
               </div>
             </div>
             <div class="ml-5 w-0 flex-1">
@@ -48,7 +125,7 @@
                 <dt class="text-sm font-medium text-gray-500 truncate">
                   กำลังเรียน
                 </dt>
-                <dd class="text-lg font-medium text-gray-900">
+                <dd class="text-2xl font-bold text-gray-900">
                   {{ activeStudentsCount }}
                 </dd>
               </dl>
@@ -57,12 +134,12 @@
         </div>
       </div>
 
-      <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="bg-white overflow-hidden shadow rounded-lg border-l-4 border-yellow-500">
         <div class="p-5">
           <div class="flex items-center">
             <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                <i class="fas fa-clock text-white text-sm"></i>
+              <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-clock text-yellow-600"></i>
               </div>
             </div>
             <div class="ml-5 w-0 flex-1">
@@ -70,7 +147,7 @@
                 <dt class="text-sm font-medium text-gray-500 truncate">
                   รอการเยี่ยมบ้าน
                 </dt>
-                <dd class="text-lg font-medium text-gray-900">
+                <dd class="text-2xl font-bold text-gray-900">
                   {{ pendingVisitCount }}
                 </dd>
               </dl>
@@ -79,20 +156,20 @@
         </div>
       </div>
 
-      <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="bg-white overflow-hidden shadow rounded-lg border-l-4 border-purple-500">
         <div class="p-5">
           <div class="flex items-center">
             <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                <i class="fas fa-percentage text-white text-sm"></i>
+              <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-chart-line text-purple-600"></i>
               </div>
             </div>
             <div class="ml-5 w-0 flex-1">
               <dl>
                 <dt class="text-sm font-medium text-gray-500 truncate">
-                  เยี่ยมบ้านแล้ว
+                  ความสำเร็จ
                 </dt>
-                <dd class="text-lg font-medium text-gray-900">
+                <dd class="text-2xl font-bold text-gray-900">
                   {{ visitCompletionRate }}%
                 </dd>
               </dl>
@@ -102,73 +179,56 @@
       </div>
     </div>
 
-    <!-- Coming Soon Notice -->
-    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
-        <i class="fas fa-tools text-yellow-600 text-xl"></i>
-      </div>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">
-        ฟีเจอร์กำลังพัฒนา
-      </h3>
-      <p class="text-sm text-gray-600 mb-4">
-        ฟีเจอร์การจัดการนักเรียนยังอยู่ระหว่างการพัฒนา<br>
-        จะเปิดให้ใช้งานในเร็วๆ นี้
-      </p>
-      <div class="text-xs text-gray-500">
-        <p>ฟีเจอร์ที่กำลังพัฒนา:</p>
-        <ul class="mt-2 space-y-1">
-          <li>✓ ค้นหาและกรองข้อมูลนักเรียน</li>
-          <li>✓ เพิ่ม/แก้ไข/ลบข้อมูลนักเรียน</li>
-          <li>✓ นำเข้าข้อมูลจาก Excel/CSV</li>
-          <li>✓ ส่งออกข้อมูลนักเรียน</li>
-          <li>✓ ดูประวัติการเยี่ยมบ้าน</li>
-          <li>✓ การจัดการแบบกลุ่ม (Bulk Operations)</li>
-        </ul>
+    <!-- Actions Header -->
+    <div class="mb-6 flex flex-wrap gap-3 items-center justify-between">
+      <h2 class="text-xl font-bold text-gray-800">จัดการข้อมูลนักเรียน</h2>
+      <div class="flex gap-2">
+        <button 
+          @click="openImportModal"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <i class="fas fa-file-import mr-2"></i>
+          นำเข้าข้อมูล
+        </button>
+        <button 
+          @click="openAddForm"
+          class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <i class="fas fa-plus mr-2"></i>
+          เพิ่มนักเรียน
+        </button>
       </div>
     </div>
+
+    <!-- Student Table -->
+    <StudentTable 
+      :students="studentsData"
+      @edit="openEditForm"
+      @view-history="openHistory"
+    />
+
+    <!-- Modals -->
+    <StudentForm 
+      v-if="isFormOpen"
+      :student="selectedStudent"
+      @save="handleSaveStudent"
+      @cancel="isFormOpen = false"
+    />
+
+    <StudentImportModal
+      v-if="isImportOpen"
+      @import="handleImportStudents"
+      @cancel="isImportOpen = false"
+    />
+
+    <StudentVisitHistory
+      v-if="isHistoryOpen"
+      :student="selectedStudent"
+      :visits="allVisits"
+      @close="isHistoryOpen = false"
+    />
   </div>
 </template>
-
-<script>
-import { ref, computed } from 'vue'
-
-export default {
-  name: 'StudentManagement',
-  
-  props: {
-    students: {
-      type: Array,
-      default: () => []
-    }
-  },
-
-  setup(props) {
-    const studentsData = ref(props.students || [])
-
-    // Student statistics
-    const activeStudentsCount = computed(() => {
-      return studentsData.value.filter(student => student.status === 'active').length
-    })
-
-    const pendingVisitCount = computed(() => {
-      return studentsData.value.filter(student => student.visit_status === 'pending').length
-    })
-
-    const visitCompletionRate = computed(() => {
-      const totalActive = studentsData.value.filter(student => student.status === 'active').length
-      const completedVisits = studentsData.value.filter(student => student.visit_status === 'completed').length
-      return totalActive > 0 ? Math.round((completedVisits / totalActive) * 100) : 0
-    })
-
-    return {
-      studentsData,
-      activeStudentsCount,
-      pendingVisitCount,
-      visitCompletionRate
-    }
-  }
-}
-</script>
 
 <style scoped>
 .student-management {

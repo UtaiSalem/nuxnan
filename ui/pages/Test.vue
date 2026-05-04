@@ -34,37 +34,36 @@
 
 <script setup>
 import { ref } from 'vue';
-import axios from 'axios';
 import { Link } from '@inertiajs/vue3'
 // const name = ref('');
 // const file = ref(null);
 // const img = ref(null);
 // const success = ref('');
 
+const api = useApi()
+
 const form = ref({
-    name:'', 
-    cover:null, 
-    img:'', 
-    success:'' 
+    name:'',
+    cover:null,
+    img:'',
+    success:''
 });
 
-function onChange(event) { 
-    form.value.cover = event.target.files[0]; 
+function onChange(event) {
+    form.value.cover = event.target.files[0];
     form.value.img = URL.createObjectURL(event.target.files[0]);
 }
 
 function formSubmit(e) {
     e.preventDefault();
-    // let existingObj = this;
-    const config = { headers: { 'content-type': 'multipart/form-data' } }
 
     let data = new FormData();
     data.append('cover', form.value.cover);
 
-    axios.post('test/upload', data, config)
+    api.post('/api/test/upload', data)
         .then(function (res) {
-            form.value.success = res.data.success;
-            form.value.name = res.data.cover
+            form.value.success = res.success;
+            form.value.name = res.cover
         })
         .catch(function (err) {
             // Handle error silently

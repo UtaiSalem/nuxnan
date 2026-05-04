@@ -1,9 +1,10 @@
 <script setup>
 import { ref, onMounted, nextTick, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
-import axios from 'axios'
 import Swal from 'sweetalert2'
 import { useStudentRoutes } from '../Composables/useStudentRoutes'
+
+const api = useApi()
 
 const props = defineProps({
   student: {
@@ -92,10 +93,8 @@ const loadAcademicInfoFromAPI = async () => {
   }
   
   try {
-    // ใช้ axios แทน fetch เพราะมี CSRF token setup แล้ว
-    const response = await axios.get(route('homevisit.student.academic-info.index', props.student.id))
-    const result = response.data
-    
+    const result = await api.get(route('homevisit.student.academic-info.index', props.student.id))
+
     if (result.success && result.data && result.data.length > 0) {
       // Convert API data to component format - multiple records
       academicRecords.value = result.data.map(record => ({
@@ -206,8 +205,7 @@ const deleteRecord = async (index) => {
   saveStatus.value = null
   
   try {
-    const response = await axios.delete(route('homevisit.student.academic-info.destroy', [props.student.id, record.id]))
-    const result = response.data
+    const result = await api.delete(route('homevisit.student.academic-info.destroy', [props.student.id, record.id]))
 
     if (result.success) {
       // Remove from local array
@@ -271,8 +269,7 @@ const setAsCurrent = async (record, index) => {
   saveStatus.value = null
   
   try {
-    const response = await axios.put(route('homevisit.student.academic-info.set-current', [props.student.id, record.id]))
-    const result = response.data
+    const result = await api.put(route('homevisit.student.academic-info.set-current', [props.student.id, record.id]), {})
 
     if (result.success) {
       // Update local state
@@ -502,20 +499,18 @@ const submitForm = async () => {
       notes: formData.value.notes || null
     }
 
-    let response
+    let result
     let requestUrl
-    
+
     if (modalMode.value === 'edit' && editingRecord.value?.id) {
       // PUT request for update
       requestUrl = route('homevisit.student.academic-info.update', [props.student.id, editingRecord.value.id])
-      response = await axios.put(requestUrl, apiData)
+      result = await api.put(requestUrl, apiData)
     } else {
       // POST request for create
       requestUrl = route('homevisit.student.academic-info.store', props.student.id)
-      response = await axios.post(requestUrl, apiData)
+      result = await api.post(requestUrl, apiData)
     }
-
-    const result = response.data
 
     if (result.success) {
       // Reload data from API

@@ -48,6 +48,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/deposit', [WalletController::class, 'deposit']);
         Route::post('/withdraw', [WalletController::class, 'withdraw']);
         Route::post('/transfer', [WalletController::class, 'transfer']);
+        Route::post('/deduct', [WalletController::class, 'deduct']);
         Route::post('/convert-points', [WalletController::class, 'convertPoints']);
         Route::post('/convert-to-points', [WalletController::class, 'convertToPoints']);
         Route::get('/transactions', [WalletController::class, 'transactions']);

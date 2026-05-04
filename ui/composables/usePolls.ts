@@ -87,7 +87,7 @@ export interface UpdatePollOptions {
 }
 
 export const usePolls = () => {
-  const { $apiFetch } = useNuxtApp()
+  const api = useApi()
   const authStore = useAuthStore()
   
   // Create a new poll
@@ -124,22 +124,19 @@ export const usePolls = () => {
         })
       }
       
-      const response = await $apiFetch('/api/polls', {
-        method: 'POST',
-        body: formData,
-      }) as ApiResponse<Poll>
-      
+      const response = await api.post('/api/polls', formData) as ApiResponse<Poll>
+
       return response
     } catch (error) {
       console.error('Error creating poll:', error)
       throw error
     }
   }
-  
+
   // Get poll details
   const getPoll = async (pollId: number): Promise<Poll | null> => {
     try {
-      const response = await $apiFetch(`/api/polls/${pollId}`) as ApiResponse<Poll>
+      const response = await api.get(`/api/polls/${pollId}`) as ApiResponse<Poll>
       if (response.success && response.data) {
         return response.data
       }
@@ -153,12 +150,9 @@ export const usePolls = () => {
   // Vote on a poll
   const votePoll = async (pollId: number, optionId: number) => {
     try {
-      const response = await $apiFetch('/api/polls/vote', {
-        method: 'POST',
-        body: {
-          poll_id: pollId,
-          option_id: optionId,
-        },
+      const response = await api.post('/api/polls/vote', {
+        poll_id: pollId,
+        option_id: optionId,
       }) as ApiResponse
       
       return response
@@ -192,10 +186,7 @@ export const usePolls = () => {
         })
       }
       
-      const response = await $apiFetch(`/api/polls/${pollId}`, {
-        method: 'POST', // Using POST with _method override for FormData
-        body: formData,
-      }) as ApiResponse<Poll>
+      const response = await api.post(`/api/polls/${pollId}`, formData) as ApiResponse<Poll>
       
       return response
     } catch (error) {
@@ -207,9 +198,7 @@ export const usePolls = () => {
   // Close a poll
   const closePoll = async (pollId: number) => {
     try {
-      const response = await $apiFetch(`/api/polls/${pollId}/close`, {
-        method: 'POST',
-      }) as ApiResponse<Poll>
+      const response = await api.post(`/api/polls/${pollId}/close`, {}) as ApiResponse<Poll>
       
       return response
     } catch (error) {
@@ -221,9 +210,7 @@ export const usePolls = () => {
   // Delete a poll
   const deletePoll = async (pollId: number) => {
     try {
-      const response = await $apiFetch(`/api/polls/${pollId}`, {
-        method: 'DELETE',
-      }) as ApiResponse
+      const response = await api.delete(`/api/polls/${pollId}`) as ApiResponse
       
       return response
     } catch (error) {
@@ -235,7 +222,7 @@ export const usePolls = () => {
   // Get poll results
   const getPollResults = async (pollId: number) => {
     try {
-      const response = await $apiFetch(`/api/polls/${pollId}/results`) as ApiResponse<Poll>
+      const response = await api.get(`/api/polls/${pollId}/results`) as ApiResponse<Poll>
       if (response.success && response.data) {
         return response.data
       }
@@ -284,9 +271,7 @@ export const usePolls = () => {
   // Like a poll
   const likePoll = async (pollId: number) => {
     try {
-      const response = await $apiFetch(`/api/polls/${pollId}/like`, {
-        method: 'POST',
-      }) as ApiResponse
+      const response = await api.post(`/api/polls/${pollId}/like`, {}) as ApiResponse
       return response
     } catch (error) {
       console.error('Error liking poll:', error)
@@ -297,9 +282,7 @@ export const usePolls = () => {
   // Dislike a poll
   const dislikePoll = async (pollId: number) => {
     try {
-      const response = await $apiFetch(`/api/polls/${pollId}/dislike`, {
-        method: 'POST',
-      }) as ApiResponse
+      const response = await api.post(`/api/polls/${pollId}/dislike`, {}) as ApiResponse
       return response
     } catch (error) {
       console.error('Error disliking poll:', error)
@@ -310,10 +293,7 @@ export const usePolls = () => {
   // Comment on a poll
   const commentOnPoll = async (pollId: number, content: string) => {
     try {
-      const response = await $apiFetch(`/api/polls/${pollId}/comment`, {
-        method: 'POST',
-        body: { content },
-      }) as ApiResponse<PollComment>
+      const response = await api.post(`/api/polls/${pollId}/comment`, { content }) as ApiResponse<PollComment>
       return response
     } catch (error) {
       console.error('Error commenting on poll:', error)
@@ -324,9 +304,7 @@ export const usePolls = () => {
   // Delete a poll comment
   const deletePollComment = async (commentId: number) => {
     try {
-      const response = await $apiFetch(`/api/poll_comments/${commentId}`, {
-        method: 'DELETE',
-      }) as ApiResponse
+      const response = await api.delete(`/api/poll_comments/${commentId}`) as ApiResponse
       return response
     } catch (error) {
       console.error('Error deleting poll comment:', error)

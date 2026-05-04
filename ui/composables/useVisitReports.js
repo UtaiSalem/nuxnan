@@ -101,58 +101,34 @@ export function useVisitReports(allVisits, zones) {
   const exportToExcel = async () => {
     isExporting.value = true
     try {
+      const api = useApi();
       // Validate we have visits to export
       if (!filteredVisits.value || filteredVisits.value.length === 0) {
         alert('ไม่มีข้อมูลที่จะส่งออก กรุณาเลือกข้อมูลก่อน')
         return
       }
 
-      const response = await axios.post('/api/home-visit/admin/visits/export/excel', {
+      const { blob, filename } = await api.getBlob('/api/home-visit/admin/visits/export/excel', {
         filters: filters.value,
         visits: filteredVisits.value.map(v => v.id)
-      }, {
-        responseType: 'blob'
-      })
-      
-      // Validate response
-      if (!response.data || response.data.size === 0) {
-        throw new Error('ไม่สามารถสร้างไฟล์ Excel ได้')
-      }
+      }, 'POST');
 
-      // Create blob URL and download with correct MIME type
-      const blob = new Blob([response.data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', `home-visits-${new Date().toISOString().split('T')[0]}.xlsx`)
+      link.setAttribute('download', filename || `home-visits-${new Date().toISOString().split('T')[0]}.xlsx`)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-      
+
       // Show success message with count
       alert(`ส่งออกข้อมูลเรียบร้อยแล้ว (${filteredVisits.value.length} รายการ)`)
     } catch (error) {
       console.error('Export failed:', error)
-      
+
       // Better error handling
-      if (error.response && error.response.data instanceof Blob) {
-        // Try to read error message from blob
-        const reader = new FileReader()
-        reader.onload = () => {
-          try {
-            const errorData = JSON.parse(reader.result)
-            alert('เกิดข้อผิดพลาด: ' + (errorData.message || 'ไม่สามารถส่งออกข้อมูลได้'))
-          } catch {
-            alert('เกิดข้อผิดพลาดในการส่งออก กรุณาลองใหม่อีกครั้ง')
-          }
-        }
-        reader.readAsText(error.response.data)
-      } else {
-        alert('เกิดข้อผิดพลาดในการส่งออก: ' + (error.message || 'กรุณาลองใหม่อีกครั้ง'))
-      }
+      alert('เกิดข้อผิดพลาดในการส่งออก: ' + (error.message || 'กรุณาลองใหม่อีกครั้ง'))
     } finally {
       isExporting.value = false
     }

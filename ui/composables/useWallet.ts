@@ -122,6 +122,45 @@ export const useWallet = () => {
   }
 
   /**
+   * Deduct money from wallet (for internal purchases/exams)
+   */
+  const deduct = async (data: {
+    amount: number
+    reason: string
+    metadata?: Record<string, any>
+  }) => {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const response = await $fetch(`${apiBase.value}/api/wallet/deduct`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+        },
+        body: data,
+      }) as any
+
+      if (response.success) {
+        // Update wallet balance in store
+        if (response.data && response.data.new_balance !== undefined) {
+          authStore.setWallet(response.data.new_balance)
+        }
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to deduct money')
+      }
+    } catch (err: any) {
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to deduct money'
+      error.value = msg
+      console.error('Deduct error:', err)
+      throw new Error(msg)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
    * Transfer money to another user
    */
   const transfer = async (data: {
@@ -380,6 +419,7 @@ export const useWallet = () => {
     getBalance,
     deposit,
     withdraw,
+    deduct,
     transfer,
     convertToPoints,
     getTransactions,

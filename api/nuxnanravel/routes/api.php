@@ -1,12 +1,7 @@
 <?php
 
-use App\Models\Post;
-use App\Models\User;
-
 // Import Controllers
-use App\Models\Activity;
 use Illuminate\Http\Request;
-use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\WelcomeController;
 use App\Http\Controllers\Api\SettingsController;
@@ -31,25 +26,10 @@ use App\Http\Controllers\Api\Learn\Course\info\MentalMathController;
 |
 */
 
-Route::get('/user1', function () {
-    $user1 = User::find(2);
-    $user1Resource = new UserResource($user1);
-    return response()->json([
-        'user' => $user1Resource
-    ]);
-});
-
+// Health check endpoint (safe for production)
 Route::get('/ping', function () {
-    return response()->json([
-        'status' => 'ok',
-        'message' => 'Laravel is working!',
-        'timestamp' => now()->toDateTimeString()
-    ]);
-});
-
-Route::get('/test-debug', function () {
-    return 'Hello from Debug - ' . now();
-});
+    return response()->json(['status' => 'ok']);
+})->name('api.ping');
 
 // Public Routes
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
@@ -61,70 +41,6 @@ Route::get('/check-username-exists/{name}', [UserProfileController::class, 'chec
 Route::get('/check-email-exists/{email}', [UserProfileController::class, 'checkEmailExists'])->name('profile.email.check');
 
 Route::get('/mental-math', [MentalMathController::class, 'index'])->name('mental-math');
-
-Route::get('/debug-data', function () {
-    return response()->json([
-        'user_id' => auth()->id(),
-        'activity_count' => Activity::count(),
-        'post_count' => Post::count(),
-        'my_activities' => Activity::where('user_id', auth()->id())->get(),
-        'all_activities' => Activity::latest()->take(5)->get(),
-    ]);
-})->middleware('auth:api');
-
-// Simple ping test
-Route::get('/ping', function () {
-    \Log::info('Ping endpoint called');
-    return response()->json([
-        'status' => 'ok',
-        'message' => 'Laravel is working!',
-        'timestamp' => now()->toDateTimeString()
-    ]);
-});
-
-// Test endpoint for debugging login (remove in production)
-if (env('APP_DEBUG')) {
-    Route::post('/test-login-now', function (Request $request) {
-        $loginInput = $request->input('login', '0938403000');
-        $password = $request->input('password', 'password');
-
-        $user = User::where('email', $loginInput)
-            ->orWhere('phone_number', $loginInput)
-            ->orWhere('personal_code', $loginInput)
-            ->orWhere('name', $loginInput)
-            ->first();
-
-        $result = ['input' => $loginInput, 'user_found' => $user ? true : false];
-
-        if ($user) {
-            $result['user'] = [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone_number,
-                'has_password' => !empty($user->password),
-            ];
-
-            $passwordMatch = \Hash::check($password, $user->password);
-            $result['password_matches'] = $passwordMatch;
-
-            if ($passwordMatch) {
-                try {
-                    $token = \Auth::guard('api')->login($user);
-                    $result['token_created'] = $token ? true : false;
-                    if ($token) {
-                        $result['token'] = substr($token, 0, 30) . '...';
-                        \Auth::guard('api')->logout();
-                    }
-                } catch (\Exception $e) {
-                    $result['token_error'] = $e->getMessage();
-                }
-            }
-        }
-
-        return response()->json($result, 200);
-    });
-}
 
 // Auth Routes (API)
 Route::get('/login', function () {
@@ -302,10 +218,8 @@ require __DIR__ . '/studentcard/studentcard.php';
 // Note: Admin routes are loaded in bootstrap/app.php with /api/admin prefix
 // Do not include them here to avoid route conflicts
 
-// Debug routes (remove in production)
-if (env('APP_DEBUG')) {
-    require __DIR__ . '/debug/debug_login.php';
-    require __DIR__ . '/debug/test_simple.php';
-    require __DIR__ . '/debug/diagnostic.php';
-    require __DIR__ . '/debug/test_phone.php';
-}
+// NOTE: Debug routes were removed for security.
+// ปลอดภัยกว่าในการทำ debug ผ่าน `artisan tinker` / local-only routes
+// ถ้าจำเป็น ให้สร้าง routes ใน routes/local.php ที่โหลดเฉพาะ
+// `app()->environment('local')` ไม่ใช่ `env('APP_DEBUG')` เพราะ APP_DEBUG
+// อาจถูกเปิดชั่วคราวใน production เพื่อ debug error

@@ -581,8 +581,8 @@ const saveAnnouncement = async () => {
   }
 }
 
-const viewEventDetails = (event: any) => {
-  console.log('View event:', event)
+const viewEventDetails = (_event: any) => {
+  // TODO: open event detail modal
 }
 
 const saveEvent = async () => {
