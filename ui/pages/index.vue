@@ -2,6 +2,7 @@
 import { useAuthStore } from '~/stores/auth'
 import IconWrapper from '~/components/IconWrapper.vue'
 import DonorCard from '~/components/DonorCard.vue'
+import Swal from 'sweetalert2'
 
 definePageMeta({
   layout: false,
@@ -69,73 +70,24 @@ interface WelcomeData {
   coursesCount: number
   lessonsCount: number
   visitorCounter: number
-  donates: Donate[]  // Laravel Resource Collection returns array directly
-  donateRecipients: DonateRecipient[]  // Laravel Resource Collection returns array directly
+  donates: Donate[]
+  donateRecipients: DonateRecipient[]
 }
 
 const authStore = useAuthStore()
+const apiBase = useRuntimeConfig().public.apiBase
 const { data: welcomeData, pending, error } = await useFetch<WelcomeData>('/api/welcome', {
-  baseURL: useRuntimeConfig().public.apiBase
+  baseURL: apiBase,
 })
 
-// Helper function to get full avatar URL
-const getAvatarUrl = (avatar: string) => {
-  if (avatar.startsWith('http')) {
-    return avatar // Already a full URL (e.g., UI Avatars)
-  }
-  return `${useRuntimeConfig().public.apiBase}${avatar}` // Prepend backend URL
-}
+const getAvatarUrl = (avatar: string) =>
+  avatar.startsWith('http') ? avatar : `${apiBase}${avatar}`
 
-const currentTimes = ref('')
-const seconds = ref(0)
-const minutes = ref(0)
-const hours = ref(0)
-const daysNameTh = ref('')
-const todayDate = ref(0)
-const months = ref('')
-const years = ref(0)
-
-const isCreateDonateLoading = ref(false)
 const isGetDonateLoading = ref(false)
 const isCreateDonatePageLoading = ref(false)
 
-onMounted(() => {
-  getDayOfWeek()
-  setInterval(function () {
-    let datetime = new Date()
-    currentTimes.value = datetime.toLocaleTimeString()
-    seconds.value = datetime.getSeconds()
-    minutes.value = datetime.getMinutes()
-    hours.value = datetime.getHours()
-  }, 1000)
-})
-
-const getDayOfWeek = () => {
-  const today = new Date()
-  const weekDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์']
-  const todayMonth = [
-    'มกราคม',
-    'กุมภาพันธ์',
-    'มีนาคม',
-    'เมษายน',
-    'พฤษภาคม',
-    'มิถุนายน',
-    'กรกฎาคม',
-    'สิงหาคม',
-    'กันยายน',
-    'ตุลาคม',
-    'พฤศจิกายน',
-    'ธันวาคม',
-  ]
-  daysNameTh.value = weekDays[today.getDay()]
-  months.value = todayMonth[today.getMonth()]
-  years.value = today.getFullYear()
-  todayDate.value = today.getDate()
-}
-
-import Swal from 'sweetalert2'
-
-
+const sinceDate = new Date('1/1/2024').toLocaleDateString('th-TH')
+const formatNumber = (n?: number) => (n ?? 0).toLocaleString('th-TH')
 
 const handleLinkToCreateDonate = async () => {
   if (!authStore.isAuthenticated) {
@@ -146,39 +98,33 @@ const handleLinkToCreateDonate = async () => {
       confirmButtonText: 'ตกลง',
       confirmButtonColor: '#3085d6',
     }).then((result) => {
-      if (result.isConfirmed) {
-        navigateTo('/auth')
-      }
+      if (result.isConfirmed) navigateTo('/auth')
     })
     return
   }
-
-  isCreateDonateLoading.value = true
+  isCreateDonatePageLoading.value = true
   await navigateTo('/earn/donates/create')
-  isCreateDonateLoading.value = false
+  isCreateDonatePageLoading.value = false
 }
 
 const handleGetDonate = async (donateId: number, idx: number) => {
   if (!authStore.isAuthenticated) {
-     Swal.fire({
+    Swal.fire({
       icon: 'warning',
       title: 'กรุณาเข้าสู่ระบบ',
       text: 'คุณต้องเข้าสู่ระบบก่อนจึงจะสามารถรับการสนับสนุนได้',
       confirmButtonText: 'ตกลง',
       confirmButtonColor: '#3085d6',
     }).then((result) => {
-      if (result.isConfirmed) {
-        navigateTo('/auth')
-      }
+      if (result.isConfirmed) navigateTo('/auth')
     })
     return
   }
 
   try {
-    isCreateDonateLoading.value = true
-    
+    isGetDonateLoading.value = true
     const response = (await $fetch(`/api/donates/${donateId}/get-donate`, {
-      baseURL: useRuntimeConfig().public.apiBase
+      baseURL: apiBase,
     })) as any
 
     if (response.success) {
@@ -189,25 +135,15 @@ const handleGetDonate = async (donateId: number, idx: number) => {
         showConfirmButton: false,
         timer: 1500,
       })
-
-      if (authStore.user) {
-        // Assuming user.pp or user.wallet is the field. The legacy code used 'pp'.
-        // We'll update both if unsure, or check the interface. 
-        // Based on legacy: usePage().props.auth.user.pp += 270
-        // We will assert it exists or check type.
-         if (typeof (authStore.user as any).pp !== 'undefined') {
-            (authStore.user as any).pp += (response.donate_point || 270);
-         }
+      if (authStore.user && typeof (authStore.user as any).pp !== 'undefined') {
+        (authStore.user as any).pp += response.donate_point || 270
       }
-
-      if (welcomeData.value && welcomeData.value.donates) {
+      if (welcomeData.value?.donates) {
         welcomeData.value.donates[idx].remaining_points = response.donate.remaining_points
         if (welcomeData.value.donates[idx].remaining_points <= 0) {
           welcomeData.value.donates.splice(idx, 1)
         }
       }
-
-      isCreateDonateLoading.value = false
     } else {
       Swal.fire({
         title: 'เกิดข้อผิดพลาด',
@@ -216,647 +152,435 @@ const handleGetDonate = async (donateId: number, idx: number) => {
         showConfirmButton: false,
         timer: 1500,
       })
-      isCreateDonateLoading.value = false
     }
   } catch (error: any) {
     console.error('Donate Error:', error)
     Swal.fire({
-        title: 'เกิดข้อผิดพลาด',
-        text: error.data?.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
-        icon: 'error',
-        showConfirmButton: true,
-      })
-    isCreateDonateLoading.value = false
+      title: 'เกิดข้อผิดพลาด',
+      text: error.data?.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
+      icon: 'error',
+      showConfirmButton: true,
+    })
+  } finally {
+    isGetDonateLoading.value = false
   }
 }
 </script>
 
 <template>
-  <div v-if="pending" class="flex justify-center items-center min-h-screen">
-    <div
-      class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-vikinger-blue"
-    ></div>
+  <!-- Loading -->
+  <div v-if="pending" class="flex flex-col items-center justify-center min-h-screen bg-white gap-4">
+    <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+    <p class="text-gray-400 font-prompt text-sm">กำลังโหลด...</p>
   </div>
-  <div v-else-if="error" class="flex justify-center items-center min-h-screen">
-    <p class="text-red-500">Error loading data: {{ error.message }}</p>
+
+  <!-- Error -->
+  <div v-else-if="error" class="flex flex-col items-center justify-center min-h-screen bg-white gap-4">
+    <IconWrapper icon="solar:danger-bold" class="w-14 h-14 text-red-400" />
+    <p class="text-red-500 font-prompt">{{ error.message }}</p>
   </div>
+
   <div v-else>
     <Head>
-      <Title>Welcome</Title>
+      <Title>NUXNAN — เรียนบ้าง เล่นบ้าง สร้างรายได้</Title>
     </Head>
 
-    <!-- Loading Overlay -->
-    <div
-      v-if="isGetDonateLoading"
-      class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-    >
-      <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
-    </div>
-
-    <div
-      class="relative flex justify-center items-center min-h-screen bg-[url('/storage/landing/joanna-kosinska-education-unsplash.png')] bg-cover bg-no-repeat dark:bg-gray-900 selection:bg-red-500 selection:text-white"
-    >
-      <!-- Gradient Overlay -->
+    <!-- Global loading overlay -->
+    <Transition name="fade">
       <div
-        class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60"
-      ></div>
+        v-if="isGetDonateLoading"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+      >
+        <div class="bg-white rounded-2xl px-10 py-8 flex flex-col items-center gap-4 shadow-2xl">
+          <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-gray-600 font-prompt font-medium text-sm">กำลังดำเนินการ...</p>
+        </div>
+      </div>
+    </Transition>
 
-      <div class="flex flex-col items-center justify-center w-full h-full mt-8 relative z-10">
+    <!-- ① Sticky Navbar -->
+    <nav class="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/80 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-14 sm:h-16">
+          <!-- Logo -->
+          <div class="flex items-center shrink-0 whitespace-nowrap">
+            <span class="hidden sm:inline text-sm text-gray-400 font-light">www.</span>
+            <span class="audiowide-font text-base sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500">NUXNAN</span>
+            <span class="hidden sm:inline text-sm text-gray-400 font-light">.com</span>
+          </div>
+          <!-- Auth -->
+          <div class="flex items-center gap-2 sm:gap-3">
+            <NuxtLink
+              v-if="authStore.isAuthenticated"
+              to="/play/newsfeed"
+              class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl hover:shadow-md hover:shadow-blue-500/25 hover:-translate-y-px transition-all duration-200"
+            >
+              <IconWrapper icon="mdi:newspaper-variant-outline" class="w-4 h-4" />
+              <span class="hidden sm:inline">กระดานข่าว</span>
+            </NuxtLink>
+            <template v-else>
+              <NuxtLink
+                to="/auth"
+                class="inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-xl hover:border-blue-300 hover:text-blue-600 hover:-translate-y-px transition-all duration-200"
+              >
+                <IconWrapper icon="mdi:login" class="w-4 h-4 shrink-0" />
+                <span class="hidden sm:inline">เข้าใช้งาน</span>
+              </NuxtLink>
+              <NuxtLink
+                to="/auth?tab=register"
+                class="inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-emerald-500 rounded-xl hover:shadow-md hover:shadow-teal-500/25 hover:-translate-y-px transition-all duration-200"
+              >
+                <IconWrapper icon="mdi:account-plus" class="w-4 h-4 shrink-0" />
+                <span class="hidden sm:inline">สมัครสมาชิก</span>
+              </NuxtLink>
+            </template>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ② Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-14 sm:pt-16">
+      <!-- CSS animated mesh background — no image required -->
+      <div class="absolute inset-0 mesh-bg"></div>
+      <!-- Decorative blobs -->
+      <div class="absolute top-1/4 left-1/6 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400/10 rounded-full blur-3xl blob-1 pointer-events-none"></div>
+      <div class="absolute bottom-1/4 right-1/6 w-64 sm:w-96 h-64 sm:h-96 bg-purple-400/10 rounded-full blur-3xl blob-2 pointer-events-none"></div>
+      <div class="absolute top-1/2 right-1/4 w-48 sm:w-72 h-48 sm:h-72 bg-pink-400/8 rounded-full blur-3xl blob-3 pointer-events-none"></div>
+
+      <div class="relative z-10 text-center px-4 sm:px-6 max-w-5xl mx-auto py-16 sm:py-24">
+        <!-- Dev badge -->
         <div
-          class="z-20 p-6 text-center sm:fixed sm:top-0 sm:right-0 md:text-right animate-fade-in"
+          class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full mb-6 sm:mb-8 hero-enter"
+          style="animation-delay: 0ms"
+        >
+          <IconWrapper icon="svg-spinners:blocks-shuffle-3" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <span>อยู่ระหว่างการพัฒนาและทดลองใช้งาน</span>
+        </div>
+
+        <!-- Brand name — all inline, no wrapping -->
+        <h1
+          class="font-bold leading-none mb-4 sm:mb-6 hero-enter whitespace-nowrap"
+          style="animation-delay: 80ms"
+        >
+          <span class="text-lg sm:text-3xl text-gray-400 font-light">www.</span><span class="audiowide-font text-5xl sm:text-7xl md:text-8xl lg:text-9xl bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">NUXNAN</span><span class="text-lg sm:text-3xl text-gray-400 font-light">.com</span>
+        </h1>
+
+        <!-- Tagline -->
+        <p
+          class="text-base sm:text-xl md:text-2xl text-gray-600 font-prompt mb-6 sm:mb-10 leading-relaxed hero-enter"
+          style="animation-delay: 160ms"
+        >
+          หนุกหนานๆ
+          <span class="text-blue-600 font-semibold">เรียนบ้าง</span>
+          <span class="text-gray-300 mx-1.5">·</span>
+          <span class="text-purple-600 font-semibold">เล่นบ้าง</span>
+          <span class="text-gray-300 mx-1.5">·</span>
+          <span class="text-emerald-600 font-semibold">สร้างรายได้ด้วย</span>
+        </p>
+
+        <!-- Feature pills -->
+        <div
+          class="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-8 sm:mb-12 hero-enter"
+          style="animation-delay: 240ms"
+        >
+          <div class="flex items-center gap-1.5 sm:gap-2 bg-blue-50 text-blue-700 px-3 sm:px-5 py-2 rounded-full border border-blue-200 font-medium text-sm sm:text-base">
+            <IconWrapper icon="solar:graduation-hat-bold" class="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>เรียนรู้</span>
+          </div>
+          <div class="flex items-center gap-1.5 sm:gap-2 bg-purple-50 text-purple-700 px-3 sm:px-5 py-2 rounded-full border border-purple-200 font-medium text-sm sm:text-base">
+            <IconWrapper icon="fluent-emoji-flat:party-popper" class="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>สนุกสนาน</span>
+          </div>
+          <div class="flex items-center gap-1.5 sm:gap-2 bg-emerald-50 text-emerald-700 px-3 sm:px-5 py-2 rounded-full border border-emerald-200 font-medium text-sm sm:text-base">
+            <IconWrapper icon="noto:money-with-wings" class="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>สร้างรายได้</span>
+          </div>
+        </div>
+
+        <!-- CTA buttons -->
+        <div
+          class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 hero-enter"
+          style="animation-delay: 320ms"
         >
           <NuxtLink
             v-if="authStore.isAuthenticated"
             to="/play/newsfeed"
-            class="text-md font-semibold text-white md:text-lg bg-gradient-to-r from-blue-500 to-indigo-600 p-4 rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transform transition-all duration-300 inline-flex items-center gap-2 backdrop-blur-sm"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 sm:px-9 py-3.5 sm:py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-base sm:text-lg rounded-2xl hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 transition-all duration-200"
           >
             <IconWrapper icon="mdi:newspaper-variant-outline" class="w-5 h-5" />
-            <span>กระดานข่าว</span>
+            เข้าสู่แพลตฟอร์ม
           </NuxtLink>
-
           <template v-else>
-            <div class="flex flex-wrap items-center justify-center gap-4 sm:justify-end">
-              <NuxtLink
-                to="/auth"
-                class="p-3 px-6 text-base font-semibold text-white bg-white/20 backdrop-blur-md rounded-xl md:text-lg font-prompt hover:bg-white/30 hover:scale-105 transform transition-all duration-300 inline-flex items-center gap-2 shadow-lg hover:shadow-xl active:scale-95"
-              >
-                <IconWrapper icon="mdi:login" class="w-6 h-6" />
-                <span>เข้าใช้งาน</span>
-              </NuxtLink>
-
-              <NuxtLink
-                to="/auth?tab=register"
-                class="p-3 px-6 text-base font-semibold text-white bg-gradient-to-r from-teal-500 to-emerald-600 rounded-xl md:text-lg font-prompt hover:from-teal-600 hover:to-emerald-700 hover:scale-105 transform transition-all duration-300 inline-flex items-center gap-2 shadow-lg hover:shadow-xl active:scale-95"
-              >
-                <IconWrapper icon="mdi:account-plus" class="w-6 h-6" />
-                <span>สมัครสมาชิก</span>
-              </NuxtLink>
-            </div>
+            <NuxtLink
+              to="/auth"
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 sm:px-9 py-3.5 sm:py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-base sm:text-lg rounded-2xl hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <IconWrapper icon="mdi:login" class="w-5 h-5" />
+              เข้าใช้งาน
+            </NuxtLink>
+            <NuxtLink
+              to="/auth?tab=register"
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 sm:px-9 py-3.5 sm:py-4 bg-white text-gray-700 font-bold text-base sm:text-lg rounded-2xl border-2 border-gray-200 hover:border-purple-400 hover:text-purple-600 hover:-translate-y-0.5 transition-all duration-200 shadow-sm"
+            >
+              <IconWrapper icon="mdi:account-plus" class="w-5 h-5" />
+              สมัครสมาชิก
+            </NuxtLink>
           </template>
         </div>
 
-        <div class="animate-fade-in-up text-center space-y-6">
-          <div class="relative inline-block">
-            <div
-              class="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 blur-3xl opacity-30 animate-pulse-slow"
-            ></div>
-            <p
-              class="relative text-lg text-white sm:text-3xl font-prompt drop-shadow-2xl flex items-center justify-center gap-3 animate-bounce-slow"
-            >
-              <IconWrapper
-                icon="fluent:book-open-globe-20-filled  "
-                class="w-10 h-10 sm:w-12 sm:h-12 text-yellow-300 animate-spin-slow"
-              />
-              <span
-                class="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20 shadow-xl audiowide-font"
-                >หนุกหนานๆ เรียนบ้าง เล่นบ้าง สร้างรายได้ด้วย </span
-              >
-              <IconWrapper
-                icon="fluent:emoji:money-bag"
-                class="w-10 h-10 sm:w-12 sm:h-12 animate-bounce-slow"
-              />
+        <!-- Scroll cue -->
+        <div
+          class="mt-12 sm:mt-16 flex flex-col items-center gap-1.5 text-gray-400 hero-enter"
+          style="animation-delay: 400ms"
+        >
+          <span class="text-xs sm:text-sm font-prompt">เลื่อนลงเพื่อดูเพิ่มเติม</span>
+          <IconWrapper icon="solar:arrow-down-bold" class="w-4 h-4 sm:w-5 sm:h-5 animate-bounce" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ③ Stats Bar -->
+    <section class="bg-white border-y border-gray-100 py-6 sm:py-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-gray-100 rounded-2xl overflow-hidden shadow-sm">
+          <div class="bg-white px-4 sm:px-6 py-4 sm:py-5 text-center group hover:bg-blue-50 transition-colors duration-200 cursor-default">
+            <p class="text-2xl sm:text-3xl font-bold text-blue-600 font-prompt group-hover:scale-110 transition-transform duration-200 origin-bottom">{{ formatNumber(welcomeData?.usersCount) }}</p>
+            <p class="text-xs sm:text-sm text-gray-500 mt-1 flex items-center justify-center gap-1 font-prompt">
+              <IconWrapper icon="solar:users-group-two-rounded-bold-duotone" class="w-3.5 h-3.5 text-blue-400" />
+              ผู้ใช้งาน
             </p>
           </div>
-          <h3 class="text-2xl text-white md:text-6xl drop-shadow-2xl animate-pulse-slow">
-            <span class="text-3xl md:text-5xl font-light">www.</span
-            ><b
-              class="audiowide-font text-4xl md:text-8xl bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 drop-shadow-[0_0_30px_rgba(168,85,247,0.5)]"
-              >NUXNAN</b
-            ><span class="text-3xl md:text-5xl font-light">.com</span>
-          </h3>
-          <div
-            class="flex flex-wrap items-center justify-center gap-3 px-4 text-white/90 text-sm sm:text-base animate-fade-in-up delay-200"
-          >
-            <div
-              class="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20 hover:bg-white/20 transform hover:scale-110 transition-all duration-300 shadow-lg"
-            >
-              <IconWrapper icon="solar:graduation-hat-bold" class="w-5 h-5 text-green-300" />
-              <span>เรียนรู้</span>
-            </div>
-            <div
-              class="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20 hover:bg-white/20 transform hover:scale-110 transition-all duration-300 shadow-lg"
-            >
-              <IconWrapper icon="fluent-emoji-flat:party-popper" class="w-5 h-5" />
-              <span>สนุกสนาน</span>
-            </div>
-            <div
-              class="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20 hover:bg-white/20 transform hover:scale-110 transition-all duration-300 shadow-lg"
-            >
-              <IconWrapper icon="noto:money-with-wings" class="w-5 h-5" />
-              <span>สร้างรายได้</span>
-            </div>
+          <div class="bg-white px-4 sm:px-6 py-4 sm:py-5 text-center group hover:bg-purple-50 transition-colors duration-200 cursor-default">
+            <p class="text-2xl sm:text-3xl font-bold text-purple-600 font-prompt group-hover:scale-110 transition-transform duration-200 origin-bottom">{{ formatNumber(welcomeData?.postsCount) }}</p>
+            <p class="text-xs sm:text-sm text-gray-500 mt-1 flex items-center justify-center gap-1 font-prompt">
+              <IconWrapper icon="solar:chat-round-bold-duotone" class="w-3.5 h-3.5 text-purple-400" />
+              โพสต์
+            </p>
           </div>
-        </div>
-
-        <div class="p-3 mb-4 font-medium min-w-40 min-h-48 animate-fade-in-up delay-200 mt-6 sm:mt-0">
-            <div
-              class="flex-none w-40 text-center rounded-t shadow-2xl lg:rounded-t-none lg:rounded-l transform hover:scale-110 transition-all duration-300"
-            >
-            <div
-              class="block overflow-hidden text-center rounded-lg font-prompt shadow-xl hover:shadow-2xl"
-            >
-              <div
-                class="py-1 bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center gap-1"
-              >
-                <IconWrapper icon="mdi:calendar-month" class="w-4 h-4 text-white" />
-                <p class="text-white font-prompt">
-                  {{ months }}
-                </p>
-              </div>
-              <div class="py-1 bg-gradient-to-r from-blue-500 to-indigo-600">
-                <p class="text-white font-prompt flex items-center justify-center gap-1">
-                  <IconWrapper icon="mdi:calendar" class="w-4 h-4" />
-                  {{ years }}
-                </p>
-              </div>
-              <div class="pt-3 bg-white border-l border-r border-white">
-                <span
-                  class="text-6xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-br from-blue-500 to-purple-600"
-                >
-                  {{ todayDate }}
-                </span>
-              </div>
-              <div
-                class="pb-3 -mb-1 text-center bg-white border-b border-l border-r border-white rounded-b-lg"
-              >
-                <span
-                  class="font-extrabold text-blue-600 text-lg flex items-center justify-center gap-1"
-                >
-                  <IconWrapper icon="mdi:weather-sunny" class="w-5 h-5" />
-                  {{ daysNameTh }}
-                </span>
-              </div>
-              <div
-                class="py-2 mt-2 text-center bg-gradient-to-br from-gray-50 to-gray-100 border-b border-l border-r border-white rounded-lg shadow-inner"
-              >
-                <span
-                  class="text-xl leading-normal text-gray-800 font-semibold flex items-center justify-center gap-1"
-                >
-                  <IconWrapper icon="mdi:clock-outline" class="w-5 h-5 text-blue-500" />
-                  {{ currentTimes }}
-                </span>
-              </div>
-            </div>
+          <div class="bg-white px-4 sm:px-6 py-4 sm:py-5 text-center group hover:bg-emerald-50 transition-colors duration-200 cursor-default">
+            <p class="text-2xl sm:text-3xl font-bold text-emerald-600 font-prompt group-hover:scale-110 transition-transform duration-200 origin-bottom">{{ formatNumber(welcomeData?.coursesCount) }}</p>
+            <p class="text-xs sm:text-sm text-gray-500 mt-1 flex items-center justify-center gap-1 font-prompt">
+              <IconWrapper icon="solar:notebook-bold-duotone" class="w-3.5 h-3.5 text-emerald-400" />
+              รายวิชา
+            </p>
           </div>
-        </div>
-
-        <section class="text-gray-700 body-font animate-fade-in-up delay-300">
-          <div class="container px-5 py-12 mx-auto">
-            <div class="flex flex-wrap -m-4 text-center text-blue-500">
-              <div
-                class="w-full px-4 py-2 lg:w-1/4 md:w-1/2 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
-              >
-                <div
-                  class="relative w-full h-full p-6 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-blue-500 overflow-hidden group"
-                >
-                  <div
-                    class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"
-                  ></div>
-                  <div
-                    class="absolute -top-2 -left-2 w-4 h-4 bg-blue-400 rounded-full animate-pulse-slow"
-                  ></div>
-                  <div
-                    class="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-400 rounded-full animate-pulse-slow delay-100"
-                  ></div>
-                  <div class="relative z-10">
-                    <div class="flex justify-center mb-4">
-                      <div
-                        class="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg transform group-hover:rotate-12 transition-transform duration-500 animate-pulse-slow"
-                      >
-                        <IconWrapper
-                          icon="fluent:people-community-20-filled"
-                          class="w-12 h-12 text-white"
-                        />
-                      </div>
-                    </div>
-                    <div class="my-4">
-                      <h2
-                        class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-700 drop-shadow-sm"
-                      >
-                        <span>{{ welcomeData?.usersCount }}</span>
-                      </h2>
-                    </div>
-                    <div
-                      class="text-gray-700 font-bold text-lg flex items-center justify-center gap-2"
-                    >
-                      <IconWrapper
-                        icon="solar:users-group-two-rounded-bold-duotone"
-                        class="w-6 h-6 text-blue-600"
-                      />
-                      <span class="whitespace-nowrap">ผู้ใช้งาน</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div
-                class="w-full px-4 py-2 lg:w-1/4 md:w-1/2 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
-              >
-                <div
-                  class="relative w-full h-full p-6 bg-gradient-to-br from-purple-50 to-pink-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-purple-500 overflow-hidden group"
-                >
-                  <div
-                    class="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"
-                  ></div>
-                  <div
-                    class="absolute -top-2 -left-2 w-4 h-4 bg-purple-400 rounded-full animate-pulse-slow"
-                  ></div>
-                  <div
-                    class="absolute -bottom-2 -right-2 w-4 h-4 bg-purple-400 rounded-full animate-pulse-slow delay-100"
-                  ></div>
-                  <div class="relative z-10">
-                    <div class="flex justify-center mb-4">
-                      <div
-                        class="p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg transform group-hover:rotate-12 transition-transform duration-500 animate-pulse-slow"
-                      >
-                        <IconWrapper
-                          icon="fluent:chat-bubbles-question-20-filled"
-                          class="w-12 h-12 text-white"
-                        />
-                      </div>
-                    </div>
-                    <div class="my-4">
-                      <h2
-                        class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-700 drop-shadow-sm"
-                      >
-                        <span>{{ welcomeData?.postsCount }}</span>
-                      </h2>
-                    </div>
-                    <div
-                      class="text-gray-700 font-bold text-lg flex items-center justify-center gap-2"
-                    >
-                      <IconWrapper
-                        icon="solar:chat-round-bold-duotone"
-                        class="w-6 h-6 text-purple-600"
-                      />
-                      <span class="whitespace-nowrap">โพสต์</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div
-                class="w-full px-4 py-2 lg:w-1/4 md:w-1/2 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
-              >
-                <div
-                  class="relative w-full h-full p-6 bg-gradient-to-br from-green-50 to-emerald-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-green-500 overflow-hidden group"
-                >
-                  <div
-                    class="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"
-                  ></div>
-                  <div
-                    class="absolute -top-2 -left-2 w-4 h-4 bg-green-400 rounded-full animate-pulse-slow"
-                  ></div>
-                  <div
-                    class="absolute -bottom-2 -right-2 w-4 h-4 bg-green-400 rounded-full animate-pulse-slow delay-100"
-                  ></div>
-                  <div class="relative z-10">
-                    <div class="flex justify-center mb-4">
-                      <div
-                        class="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg transform group-hover:rotate-12 transition-transform duration-500 animate-pulse-slow"
-                      >
-                        <IconWrapper
-                          icon="fluent:book-open-globe-20-filled"
-                          class="w-12 h-12 text-white"
-                        />
-                      </div>
-                    </div>
-                    <div class="my-4">
-                      <h2
-                        class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-emerald-700 drop-shadow-sm"
-                      >
-                        <span>{{ welcomeData?.coursesCount }}</span>
-                      </h2>
-                    </div>
-                    <div
-                      class="text-gray-700 font-bold text-lg flex items-center justify-center gap-2"
-                    >
-                      <IconWrapper
-                        icon="solar:notebook-bold-duotone"
-                        class="w-6 h-6 text-green-600"
-                      />
-                      <span class="whitespace-nowrap">รายวิชา</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div
-                class="w-full px-4 py-2 lg:w-1/4 md:w-1/2 sm:w-1/2 transform hover:scale-110 transition-all duration-500"
-              >
-                <div
-                  class="relative w-full h-full p-6 bg-gradient-to-br from-orange-50 to-red-100 rounded-3xl shadow-xl hover:shadow-2xl border-t-4 border-orange-500 overflow-hidden group"
-                >
-                  <div
-                    class="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"
-                  ></div>
-                  <div
-                    class="absolute -top-2 -left-2 w-4 h-4 bg-orange-400 rounded-full animate-pulse-slow"
-                  ></div>
-                  <div
-                    class="absolute -bottom-2 -right-2 w-4 h-4 bg-orange-400 rounded-full animate-pulse-slow delay-100"
-                  ></div>
-                  <div class="relative z-10">
-                    <div class="flex justify-center mb-4">
-                      <div
-                        class="p-4 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl shadow-lg transform group-hover:rotate-12 transition-transform duration-500 animate-pulse-slow"
-                      >
-                        <IconWrapper icon="fluent:book-template-20-filled" class="w-12 h-12 text-white" />
-                      </div>
-                    </div>
-                    <div class="my-4">
-                      <h2
-                        class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-red-700 drop-shadow-sm"
-                      >
-                        <span>{{ welcomeData?.lessonsCount }}</span>
-                      </h2>
-                    </div>
-                    <div
-                      class="text-gray-700 font-bold text-lg flex items-center justify-center gap-2"
-                    >
-                      <IconWrapper
-                        icon="solar:document-text-bold-duotone"
-                        class="w-6 h-6 text-orange-600"
-                      />
-                      <span class="whitespace-nowrap">บทเรียน</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="bg-white px-4 sm:px-6 py-4 sm:py-5 text-center group hover:bg-orange-50 transition-colors duration-200 cursor-default">
+            <p class="text-2xl sm:text-3xl font-bold text-orange-500 font-prompt group-hover:scale-110 transition-transform duration-200 origin-bottom">{{ formatNumber(welcomeData?.lessonsCount) }}</p>
+            <p class="text-xs sm:text-sm text-gray-500 mt-1 flex items-center justify-center gap-1 font-prompt">
+              <IconWrapper icon="solar:document-text-bold-duotone" class="w-3.5 h-3.5 text-orange-400" />
+              บทเรียน
+            </p>
           </div>
-        </section>
-
-        <section class="container flex justify-center w-full animate-fade-in-up delay-400">
-          <div
-            class="relative flex items-center justify-center w-full m-5 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-3xl sm:w-64 shadow-2xl hover:shadow-3xl transform hover:scale-110 hover:rotate-2 transition-all duration-500 overflow-hidden group"
-          >
-            <div
-              class="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-            ></div>
-            <div
-              class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"
-            ></div>
-            <!-- Floating particles -->
-            <div
-              class="absolute top-4 left-4 w-2 h-2 bg-white/60 rounded-full animate-float-slow"
-            ></div>
-            <div
-              class="absolute top-8 right-8 w-3 h-3 bg-white/40 rounded-full animate-float-slow delay-200"
-            ></div>
-            <div
-              class="absolute bottom-6 left-6 w-2 h-2 bg-white/50 rounded-full animate-float-slow delay-400"
-            ></div>
-            <div
-              class="absolute bottom-4 right-4 w-4 h-4 bg-white/30 rounded-full animate-float-slow delay-600"
-            ></div>
-
-            <div class="relative z-10 p-6 space-y-4">
-              <div class="text-center">
-                <div
-                  class="inline-block p-4 bg-white/20 backdrop-blur-sm rounded-2xl animate-pulse-slow"
-                >
-                  <IconWrapper
-                    icon="fluent:people-community-20-filled"
-                    class="w-16 h-16 mx-auto text-white animate-bounce-slow"
-                  />
-                </div>
-              </div>
-              <div class="my-3 text-center">
-                <h2 class="text-5xl font-bold text-white drop-shadow-2xl animate-pulse-slow">
-                  <span>{{ welcomeData?.visitorCounter }}</span>
-                </h2>
-              </div>
-              <div
-                class="text-center text-white font-bold text-xl flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm rounded-full py-2 px-4 hover:bg-white/20 transition-all duration-300"
-              >
-                <IconWrapper icon="solar:eye-bold-duotone" class="w-6 h-6 animate-pulse-slow" />
-                <span>ผู้เข้าชม</span>
-              </div>
-              <div
-                class="text-sm text-center text-yellow-200 font-medium flex items-center justify-center gap-2 bg-yellow-500/20 rounded-full py-2 px-3 hover:bg-yellow-500/30 transition-all duration-300"
-              >
-                <IconWrapper icon="solar:calendar-bold-duotone" class="w-5 h-5" />
-                <span>ตั้งแต่ {{ new Date('1/1/2024').toLocaleDateString('th-TH') }}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div class="max-w-6xl mt-10 md:mt-20 mb-4 text-center animate-fade-in-up delay-500">
-          <div class="relative inline-block">
-            <div
-              class="absolute inset-0 bg-yellow-500/30 blur-2xl rounded-full animate-pulse-slow"
-            ></div>
-            <p
-              class="relative text-white text-md sm:text-lg font-prompt bg-gradient-to-r from-yellow-500/30 to-orange-500/30 backdrop-blur-md px-8 py-4 rounded-full inline-flex items-center gap-3 shadow-2xl border border-yellow-500/50"
-            >
-              <IconWrapper icon="svg-spinners:blocks-shuffle-3" class="w-6 h-6 text-yellow-300" />
-              <span class="font-bold">***อยู่ระหว่างการพัฒนาและทดลองใช้งาน***</span>
-              <IconWrapper icon="fluent-emoji:construction" class="w-6 h-6" />
+          <!-- Visitor: spans 2 cols on mobile/tablet, 1 col on lg -->
+          <div class="bg-white px-4 sm:px-6 py-4 sm:py-5 text-center col-span-2 sm:col-span-3 lg:col-span-1 group hover:bg-pink-50 transition-colors duration-200 cursor-default">
+            <p class="text-2xl sm:text-3xl font-bold text-pink-600 font-prompt group-hover:scale-110 transition-transform duration-200 origin-bottom">{{ formatNumber(welcomeData?.visitorCounter) }}</p>
+            <p class="text-xs sm:text-sm text-gray-500 mt-1 flex items-center justify-center gap-1 font-prompt">
+              <IconWrapper icon="solar:eye-bold-duotone" class="w-3.5 h-3.5 text-pink-400" />
+              ผู้เข้าชมตั้งแต่ {{ sinceDate }}
             </p>
           </div>
         </div>
       </div>
-    </div>
-    <section
-      class="text-gray-700 border-t border-gray-200 body-font bg-gradient-to-b from-white to-blue-50"
-    >
-      <div class="container px-5 py-16 mx-auto">
-        <div class="flex flex-col w-full mb-12 text-center animate-fade-in-up">
-          <div class="flex items-center justify-center gap-3 mb-4">
-            <IconWrapper icon="noto:sparkling-heart" class="w-12 h-12 animate-bounce-slow" />
-            <h1
-              class="text-3xl m-6 font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 sm:text-5xl title-font drop-shadow-lg"
-            >
-              ผู้ให้การสนับสนุนทุนการเรียนรู้
-            </h1>
-            <IconWrapper
-              icon="noto:sparkling-heart"
-              class="w-12 h-12 animate-bounce-slow delay-100"
-            />
-          </div>
-          <p
-            class="text-gray-600 text-base font-medium flex items-center justify-center gap-2 bg-pink-50 py-2 px-6 rounded-full mx-auto"
-          >
-            <IconWrapper icon="twemoji:red-heart" class="w-5 h-5 animate-pulse-slow" />
-            <span>ขอบคุณทุกท่านที่ให้การสนับสนุน</span>
-            <IconWrapper icon="twemoji:folded-hands" class="w-5 h-5" />
+    </section>
+
+    <!-- ④ Three Pillars -->
+    <section class="py-16 sm:py-24 bg-gray-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-10 sm:mb-16">
+          <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 font-prompt">
+            ทำอะไรได้บ้างบน
+            <span class="audiowide-font bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">NUXNAN</span>?
+          </h2>
+          <p class="text-gray-500 text-sm sm:text-base md:text-lg max-w-2xl mx-auto font-prompt">
+            แพลตฟอร์มเดียวที่รวม
+            <strong class="text-blue-600">การเรียนรู้</strong>
+            <strong class="text-purple-600"> ความสนุก</strong> และ
+            <strong class="text-emerald-600">การสร้างรายได้</strong> ไว้ด้วยกัน
           </p>
         </div>
-        <div class="flex flex-wrap">
-          <div
-            class="grid grid-cols-1 gap-6 p-4 mx-auto sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          >
-            <DonorCard
-              v-for="(donate, index) in welcomeData?.donates" :key="donate.id || index"
-              :donate="donate"
-            />
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+          <!-- Learn -->
+          <div class="group bg-white rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-blue-100 hover:-translate-y-1 cursor-default">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-5 sm:mb-6 group-hover:bg-blue-500 transition-colors duration-300">
+              <IconWrapper icon="solar:graduation-hat-bold" class="w-6 h-6 sm:w-7 sm:h-7 text-blue-500 group-hover:text-white transition-colors duration-300" />
+            </div>
+            <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 font-prompt">เรียนรู้</h3>
+            <p class="text-gray-500 text-sm sm:text-base leading-relaxed font-prompt">เรียนรู้ทักษะใหม่ๆ ผ่านคอร์สที่หลากหลาย เข้าถึงได้ทุกที่ทุกเวลา พัฒนาตัวเองได้อย่างต่อเนื่อง</p>
+            <div class="mt-5 sm:mt-6 flex items-center gap-2 text-blue-500 font-semibold text-sm group-hover:gap-3 transition-all duration-200">
+              <span class="font-prompt">{{ formatNumber(welcomeData?.coursesCount) }} รายวิชา</span>
+              <IconWrapper icon="solar:arrow-right-bold" class="w-4 h-4" />
+            </div>
+          </div>
+
+          <!-- Play -->
+          <div class="group bg-white rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-purple-100 hover:-translate-y-1 cursor-default">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-purple-50 rounded-2xl flex items-center justify-center mb-5 sm:mb-6 group-hover:bg-purple-500 transition-colors duration-300">
+              <IconWrapper icon="fluent-emoji-flat:party-popper" class="w-6 h-6 sm:w-7 sm:h-7 group-hover:scale-125 transition-transform duration-300" />
+            </div>
+            <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 font-prompt">สนุกสนาน</h3>
+            <p class="text-gray-500 text-sm sm:text-base leading-relaxed font-prompt">ร่วมกิจกรรม เล่นเกม แชร์ประสบการณ์ พร้อมชุมชนที่มีชีวิตชีวา</p>
+            <div class="mt-5 sm:mt-6 flex items-center gap-2 text-purple-500 font-semibold text-sm group-hover:gap-3 transition-all duration-200">
+              <span class="font-prompt">{{ formatNumber(welcomeData?.postsCount) }} โพสต์</span>
+              <IconWrapper icon="solar:arrow-right-bold" class="w-4 h-4" />
+            </div>
+          </div>
+
+          <!-- Earn -->
+          <div class="group bg-white rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-emerald-100 hover:-translate-y-1 cursor-default">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-5 sm:mb-6 group-hover:bg-emerald-500 transition-colors duration-300">
+              <IconWrapper icon="noto:money-with-wings" class="w-6 h-6 sm:w-7 sm:h-7 group-hover:scale-125 transition-transform duration-300" />
+            </div>
+            <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 font-prompt">สร้างรายได้</h3>
+            <p class="text-gray-500 text-sm sm:text-base leading-relaxed font-prompt">รับทุนการเรียนรู้ สร้างรายได้จากทักษะ แปลงความรู้เป็นรายได้จริง</p>
+            <div class="mt-5 sm:mt-6 flex items-center gap-2 text-emerald-500 font-semibold text-sm group-hover:gap-3 transition-all duration-200">
+              <span class="font-prompt">เริ่มต้นได้เลย</span>
+              <IconWrapper icon="solar:arrow-right-bold" class="w-4 h-4" />
+            </div>
           </div>
         </div>
       </div>
-      <div class="container mx-auto mb-20 text-center rounded-lg animate-fade-in-up delay-300">
-        <button
-          @click.prevent="handleLinkToCreateDonate"
-          class="relative px-20 py-8 text-2xl font-bold text-white bg-gradient-to-r from-teal-500 via-emerald-500 to-green-500 rounded-3xl hover:from-teal-600 hover:via-emerald-600 hover:to-green-600 transform hover:scale-110 transition-all duration-500 shadow-2xl hover:shadow-3xl inline-flex items-center gap-4 overflow-hidden group"
-        >
-          <div
-            class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"
-          ></div>
-          <!-- Floating particles around button -->
-          <div
-            class="absolute -top-2 -left-2 w-3 h-3 bg-white/60 rounded-full animate-float-slow"
-          ></div>
-          <div
-            class="absolute -bottom-2 -right-2 w-4 h-4 bg-white/40 rounded-full animate-float-slow delay-200"
-          ></div>
-          <div
-            class="absolute top-4 right-8 w-2 h-2 bg-white/50 rounded-full animate-float-slow delay-400"
-          ></div>
+    </section>
 
-          <IconWrapper
-            icon="svg-spinners:pulse-3"
-            class="w-10 h-10 relative z-10"
-            v-if="isCreateDonatePageLoading"
+    <!-- ⑤ Donors Section -->
+    <section class="py-16 sm:py-24 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-10 sm:mb-16">
+          <div class="inline-flex items-center gap-2 bg-pink-50 text-pink-600 text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full border border-pink-200 mb-4">
+            <IconWrapper icon="noto:sparkling-heart" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>ขอบคุณทุกท่านที่ให้การสนับสนุน</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 font-prompt">ผู้ให้การสนับสนุนทุนการเรียนรู้</h2>
+          <p class="text-gray-500 font-prompt text-sm sm:text-base">ร่วมเป็นส่วนหนึ่งของการสร้างโอกาสทางการศึกษา</p>
+        </div>
+
+        <div
+          v-if="welcomeData?.donates?.length"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-10 sm:mb-14"
+        >
+          <DonorCard
+            v-for="(donate, index) in welcomeData.donates"
+            :key="donate.id || index"
+            :donate="donate"
           />
-          <IconWrapper icon="noto:money-bag" class="w-10 h-10 relative z-10 animate-bounce-slow" v-else />
-          <span class="relative z-10">สนับสนุนทุนการเรียนรู้</span>
-          <IconWrapper
-            icon="fluent-emoji:sparkles"
-            class="w-8 h-8 relative z-10 animate-pulse-slow"
-          />
-        </button>
+        </div>
+        <div v-else class="text-center py-12 text-gray-400 font-prompt mb-10 sm:mb-14">
+          <IconWrapper icon="solar:heart-bold-duotone" class="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p class="text-sm sm:text-base">ยังไม่มีผู้สนับสนุนในขณะนี้</p>
+        </div>
+
+        <div class="text-center">
+          <button
+            @click.prevent="handleLinkToCreateDonate"
+            class="group relative inline-flex items-center gap-2 sm:gap-3 px-7 sm:px-12 py-3.5 sm:py-5 text-base sm:text-xl font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-500 rounded-2xl hover:from-teal-600 hover:to-emerald-600 hover:shadow-2xl hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+          >
+            <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+            <IconWrapper
+              v-if="isCreateDonatePageLoading"
+              icon="svg-spinners:pulse-3"
+              class="w-5 h-5 sm:w-6 sm:h-6 relative z-10"
+            />
+            <IconWrapper v-else icon="noto:money-bag" class="w-5 h-5 sm:w-6 sm:h-6 relative z-10" />
+            <span class="relative z-10 font-prompt">สนับสนุนทุนการเรียนรู้</span>
+            <IconWrapper icon="fluent-emoji:sparkles" class="w-4 h-4 sm:w-5 sm:h-5 relative z-10" />
+          </button>
+        </div>
       </div>
     </section>
 
-    <section class="text-gray-700 border-t bg-slate-200 body-font sm:px-4">
-      <div class="container px-5 py-10 mx-auto">
-        <div class="flex flex-col w-full mb-4 text-center">
-          <h1 class="text-2xl font-semibold text-gray-700 sm:text-3xl title-font">ผู้ได้รับการสนับสนุนทุนการเรียนรู้</h1>
+    <!-- ⑥ Recipients Section -->
+    <section class="py-12 sm:py-16 bg-gray-50 border-t border-gray-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-8 sm:mb-12">
+          <h2 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 font-prompt">ผู้ได้รับการสนับสนุนทุนการเรียนรู้</h2>
         </div>
-      </div>
-      <div class="pb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-4">
-        <div v-for="(recipient, index) in welcomeData?.donateRecipients" :key="index">
-          <div class="p-2 max-w-md mx-auto bg-white rounded-lg shadow-lg space-y-2 sm:py-4 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <img class="h-16 w-16 rounded-full sm:mx-0 sm:shrink-0" :src="getAvatarUrl(recipient.avatar)" alt="recipient-image">
-              <div class="">
-                <div class="mb-2">
-                  <p class="text-sm text-gray-700 font-semibold">{{ recipient.username }}</p>
-                  <p class="text-xs text-gray-500">{{ recipient.reference_code }}</p>
-                </div>
+        <div
+          v-if="welcomeData?.donateRecipients?.length"
+          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
+        >
+          <div
+            v-for="(recipient, index) in welcomeData.donateRecipients"
+            :key="index"
+            class="flex items-center justify-between gap-3 bg-white rounded-2xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100"
+          >
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+              <img
+                class="h-10 w-10 sm:h-12 sm:w-12 rounded-full shrink-0 object-cover border-2 border-gray-100"
+                :src="getAvatarUrl(recipient.avatar)"
+                alt="recipient"
+              />
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-800 truncate font-prompt">{{ recipient.username }}</p>
+                <p class="text-xs text-gray-400 truncate">{{ recipient.personal_code }}</p>
               </div>
             </div>
-            <span class="text-green-500 font-semibold">{{ recipient.points }} แต้ม</span>
+            <span class="shrink-0 text-sm font-bold text-emerald-600 font-prompt whitespace-nowrap">
+              {{ formatNumber(recipient.points) }} แต้ม
+            </span>
           </div>
+        </div>
+        <div v-else class="text-center py-8 text-gray-400 font-prompt text-sm">
+          ยังไม่มีข้อมูลผู้รับทุน
         </div>
       </div>
     </section>
-    <!-- <section class="w-full px-4 mx-auto bg-blue-100 max-w-container sm:px-6 lg:px-8">
-        <div class="container px-5 py-10 mx-auto">
-            <div class="flex flex-col w-full mb-10 text-center">
-                <h1 class="text-2xl font-semibold text-gray-700 sm:text-3xl title-font">สินค้าร่วมรายการ</h1>
-            </div>
-        </div>
-    </section> -->
-    <footer
-      class="w-full px-4 mx-auto bg-gradient-to-b from-gray-100 via-gray-200 to-gray-300 max-w-container sm:px-6 lg:px-8"
-    >
-      <div
-        class="py-16 text-center border-t-4 border-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
-      >
-        <h3 class="text-gray-700 mb-4">
-          <span class="text-2xl font-light">www.</span>
-          <b
-            class="audiowide-font text-5xl md:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-lg"
-            >nuxnan</b
-          >
-          <span class="text-2xl font-light">.com</span>
-        </h3>
-        <p
-          class="mt-6 text-lg leading-6 text-center text-gray-800 font-prompt font-bold flex items-center justify-center gap-3 bg-blue-50 py-3 px-8 rounded-full mx-auto"
-        >
-          <IconWrapper icon="fluent-emoji:books" class="w-6 h-6 animate-bounce-slow" />
-          <span>เล่นบ้าง เรียนบ้าง สร้างรายได้ด้วย หนุกหนาน!!</span>
-          <IconWrapper icon="noto:smiling-face-with-hearts" class="w-6 h-6 animate-pulse-slow" />
-        </p>
-        <div class="mt-10 flex justify-center">
-          <div class="relative group">
-            <div
-              class="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"
-            ></div>
-            <!-- Floating particles around CEO image -->
-            <div
-              class="absolute -top-2 -left-2 w-3 h-3 bg-purple-400 rounded-full animate-float-slow"
-            ></div>
-            <div
-              class="absolute -bottom-2 -right-2 w-4 h-4 bg-pink-400 rounded-full animate-float-slow delay-200"
-            ></div>
-            <div
-              class="absolute top-4 right-4 w-2 h-2 bg-indigo-400 rounded-full animate-float-slow delay-400"
-            ></div>
 
+    <!-- ⑦ Footer -->
+    <footer class="bg-white border-t border-gray-100 py-12 sm:py-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col items-center gap-8 sm:gap-10">
+          <!-- Brand -->
+          <div class="text-center">
+            <div class="flex items-center justify-center whitespace-nowrap">
+              <span class="text-base sm:text-lg text-gray-400 font-light">www.</span>
+              <span class="audiowide-font text-2xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500">nuxnan</span>
+              <span class="text-base sm:text-lg text-gray-400 font-light">.com</span>
+            </div>
+            <p class="mt-2 text-gray-500 font-prompt text-sm sm:text-base">เล่นบ้าง เรียนบ้าง สร้างรายได้ด้วย หนุกหนาน!</p>
+          </div>
+
+          <!-- CEO photo -->
+          <div class="relative">
+            <div class="absolute inset-0 bg-gradient-to-r from-purple-300 to-pink-300 rounded-full blur-xl opacity-40"></div>
             <img
-              :src="'/storage/landing/ceo.jpg'"
+              :src="`${apiBase}/storage/landing/ceo.jpg`"
               alt="CEO"
-              class="relative w-32 h-32 rounded-full border-4 border-white shadow-2xl transform group-hover:scale-110 transition-transform duration-500"
+              class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white shadow-xl object-cover"
             />
           </div>
-        </div>
-        <div
-          class="mt-10 max-w-md mx-auto bg-gradient-to-br from-white to-blue-50 rounded-3xl p-8 shadow-2xl border-2 border-blue-200"
-        >
-          <h4 class="text-xl font-bold text-gray-800 mb-6 flex items-center justify-center gap-2">
-            <IconWrapper
-              icon="solar:letter-bold-duotone"
-              class="w-7 h-7 text-blue-600 animate-pulse-slow"
-            />
-            <span>ติดต่อเรา</span>
-          </h4>
-          <div class="space-y-4">
-            <div
-              class="flex items-center gap-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md group"
-            >
-              <IconWrapper
-                icon="logos:facebook"
-                class="w-8 h-8 group-hover:scale-110 transition-transform duration-300"
-              />
-              <span class="text-base font-bold text-slate-700">Utai Salem</span>
-            </div>
-            <div
-              class="flex items-center gap-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md group"
-            >
-              <IconWrapper
-                icon="logos:messenger"
-                class="w-8 h-8 group-hover:scale-110 transition-transform duration-300"
-              />
-              <span class="text-base font-bold text-slate-700">Bhupha MustaFa</span>
-            </div>
-            <div
-              class="flex items-center gap-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md group"
-            >
-              <IconWrapper
-                icon="simple-icons:line"
-                class="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform duration-300"
-              />
-              <span class="text-base font-bold text-slate-700">babobhupha</span>
-            </div>
-            <div
-              class="flex items-center gap-4 p-3 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md group"
-            >
-              <IconWrapper
-                icon="solar:phone-bold-duotone"
-                class="w-8 h-8 text-purple-600 group-hover:scale-110 transition-transform duration-300"
-              />
-              <span class="text-base font-bold text-slate-700">093-840-3000</span>
+
+          <!-- Contact grid -->
+          <div class="w-full max-w-xs sm:max-w-sm">
+            <h4 class="text-center text-xs sm:text-sm font-bold text-gray-600 mb-3 sm:mb-4 font-prompt flex items-center justify-center gap-1.5">
+              <IconWrapper icon="solar:letter-bold-duotone" class="w-4 h-4 text-blue-500" />
+              ติดต่อเรา
+            </h4>
+            <div class="grid grid-cols-2 gap-2 sm:gap-3">
+              <div class="flex items-center gap-2 p-2.5 sm:p-3 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors duration-200 cursor-default">
+                <IconWrapper icon="logos:facebook" class="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                <span class="text-xs sm:text-sm font-medium text-gray-700 truncate font-prompt">Utai Salem</span>
+              </div>
+              <div class="flex items-center gap-2 p-2.5 sm:p-3 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors duration-200 cursor-default">
+                <IconWrapper icon="logos:messenger" class="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                <span class="text-xs sm:text-sm font-medium text-gray-700 truncate font-prompt">Bhupha MustaFa</span>
+              </div>
+              <div class="flex items-center gap-2 p-2.5 sm:p-3 bg-gray-50 rounded-xl hover:bg-green-50 transition-colors duration-200 cursor-default">
+                <IconWrapper icon="simple-icons:line" class="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-green-600" />
+                <span class="text-xs sm:text-sm font-medium text-gray-700 truncate font-prompt">babobhupha</span>
+              </div>
+              <div class="flex items-center gap-2 p-2.5 sm:p-3 bg-gray-50 rounded-xl hover:bg-purple-50 transition-colors duration-200 cursor-default">
+                <IconWrapper icon="solar:phone-bold-duotone" class="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-purple-600" />
+                <span class="text-xs sm:text-sm font-medium text-gray-700 truncate font-prompt">093-840-3000</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div
-          class="mt-10 text-sm text-gray-600 items-center justify-center gap-2 bg-gray-100 py-3 px-6 rounded-full inline-flex mx-auto"
-        >
-          <IconWrapper
-            icon="solar:copyright-bold-duotone"
-            class="w-5 h-5 text-gray-500 animate-pulse-slow"
-          />
-          <span class="font-semibold">2024 Plearnd. All rights reserved.</span>
+
+          <!-- Copyright -->
+          <p class="text-xs sm:text-sm text-gray-400 flex items-center gap-1.5 font-prompt">
+            <IconWrapper icon="solar:copyright-bold-duotone" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            2024 NUXNAN. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>
@@ -874,116 +598,44 @@ const handleGetDonate = async (donateId: number, idx: number) => {
   font-family: 'Audiowide', cursive;
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* CSS gradient mesh — no image, pure CSS */
+.mesh-bg {
+  background-color: #f5f7ff;
+  background-image:
+    radial-gradient(ellipse 70% 70% at 10% 10%, rgba(59, 130, 246, 0.20) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 90% 10%, rgba(168, 85, 247, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 80% 90%, rgba(236, 72, 153, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 10% 90%, rgba(6, 182, 212, 0.12) 0%, transparent 60%);
 }
 
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Subtle blob drift */
+.blob-1 { animation: blob-drift 12s ease-in-out infinite; }
+.blob-2 { animation: blob-drift 15s ease-in-out infinite reverse; }
+.blob-3 { animation: blob-drift 10s ease-in-out infinite 3s; }
+
+@keyframes blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(24px, -16px) scale(1.04); }
+  66%       { transform: translate(-16px, 12px) scale(0.96); }
 }
 
-@keyframes bounce-slow {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+/* Hero entrance — staggered via inline animation-delay */
+.hero-enter {
+  animation: hero-in 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes pulse-slow {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.8;
-  }
+@keyframes hero-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Loading overlay transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
 }
-
-@keyframes float-slow {
-  0%,
-  100% {
-    transform: translateY(0px) translateX(0px);
-  }
-  25% {
-    transform: translateY(-10px) translateX(5px);
-  }
-  50% {
-    transform: translateY(-5px) translateX(-5px);
-  }
-  75% {
-    transform: translateY(-15px) translateX(3px);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 1s ease-out;
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 1s ease-out;
-}
-
-.animate-bounce-slow {
-  animation: bounce-slow 3s ease-in-out infinite;
-}
-
-.animate-pulse-slow {
-  animation: pulse-slow 3s ease-in-out infinite;
-}
-
-.animate-spin-slow {
-  animation: spin-slow 3s linear infinite;
-}
-
-.animate-float-slow {
-  animation: float-slow 4s ease-in-out infinite;
-}
-
-.delay-100 {
-  animation-delay: 0.1s;
-}
-
-.delay-200 {
-  animation-delay: 0.2s;
-}
-
-.delay-300 {
-  animation-delay: 0.3s;
-}
-
-.delay-400 {
-  animation-delay: 0.4s;
-}
-
-.delay-500 {
-  animation-delay: 0.5s;
-}
-
-.delay-600 {
-  animation-delay: 0.6s;
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
