@@ -6,7 +6,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import AcademiesLoadingSkeleton from '@/components/accessories/AcademiesLoadingSkeleton.vue'
 import AcademyCard from '@/components/learn/academy/AcademyCard.vue'
-import { useApi } from '@/stores/composables/useApi'
+import { useApi } from '@/composables/useApi'
 
 const isLoading = ref(false)
 const authUser = usePage().props.auth.user

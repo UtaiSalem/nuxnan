@@ -15,6 +15,7 @@ export default defineNuxtConfig({
     build: {
       chunkSizeWarningLimit: 1500,
       rollupOptions: {
+        external: [/^\/storage\//],
         output: {
           manualChunks: {
             'vendor-vue': ['vue', 'vue-router'],
