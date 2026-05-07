@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Academy Admin - Department Management
- * หน้าจัดการฝ่ายงาน/แผนกของโรงเรียน
+ * หน้าจัดการแผนกของโรงเรียน
  */
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
@@ -36,7 +36,17 @@ const pagination = ref({
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showMembersModal = ref(false)
+const showPermissionsModal = ref(false)
 const selectedDepartment = ref<any>(null)
+
+// Permission Management
+const isLoadingPermissions = ref(false)
+const departmentPermissions = ref<string[]>([])
+const permissionOptions = [
+  { key: 'departments.view', label: 'การมองเห็นแผนก', description: 'อนุญาตให้สมาชิกทั่วไปมองเห็นแผนกนี้' },
+  { key: 'departments.manage', label: 'การจัดการข้อมูลแผนก', description: 'อนุญาตให้แก้ไขข้อมูลและลบแผนก' },
+  { key: 'departments.manage-members', label: 'การจัดการสมาชิก', description: 'อนุญาตให้เพิ่ม/ลบ และแก้ไขบทบาทสมาชิก' }
+]
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -178,8 +188,8 @@ const createDepartment = async () => {
       
       Swal.fire({
         icon: 'success',
-        title: 'สร้างฝ่ายงานสำเร็จ',
-        text: `สร้างฝ่าย "${departmentForm.value.name}" เรียบร้อยแล้ว`,
+        title: 'สร้างแผนกสำเร็จ',
+        text: `สร้างแผนก "${departmentForm.value.name}" เรียบร้อยแล้ว`,
         timer: 2000,
         showConfirmButton: false
       })
@@ -191,7 +201,7 @@ const createDepartment = async () => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถสร้างฝ่ายงานได้'
+        text: err.response?.data?.message || 'ไม่สามารถสร้างแผนกได้'
       })
     }
   } finally {
@@ -220,7 +230,7 @@ const updateDepartment = async () => {
       Swal.fire({
         icon: 'success',
         title: 'อัปเดตสำเร็จ',
-        text: 'อัปเดตข้อมูลฝ่ายงานเรียบร้อยแล้ว',
+        text: 'อัปเดตข้อมูลแผนกเรียบร้อยแล้ว',
         timer: 2000,
         showConfirmButton: false
       })
@@ -232,7 +242,7 @@ const updateDepartment = async () => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถอัปเดตฝ่ายงานได้'
+        text: err.response?.data?.message || 'ไม่สามารถอัปเดตแผนกได้'
       })
     }
   } finally {
@@ -245,7 +255,7 @@ const deleteDepartment = async (department: any) => {
   const result = await Swal.fire({
     icon: 'warning',
     title: 'ยืนยันการลบ',
-    text: `คุณต้องการลบฝ่าย "${department.name}" หรือไม่?`,
+    text: `คุณต้องการลบแผนก "${department.name}" หรือไม่?`,
     showCancelButton: true,
     confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
@@ -263,7 +273,7 @@ const deleteDepartment = async (department: any) => {
         Swal.fire({
           icon: 'success',
           title: 'ลบสำเร็จ',
-          text: 'ลบฝ่ายงานเรียบร้อยแล้ว',
+          text: 'ลบแผนกเรียบร้อยแล้ว',
           timer: 2000,
           showConfirmButton: false
         })
@@ -272,7 +282,7 @@ const deleteDepartment = async (department: any) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถลบฝ่ายงานได้'
+        text: err.response?.data?.message || 'ไม่สามารถลบแผนกได้'
       })
     }
   }
@@ -285,13 +295,73 @@ const openMembersModal = async (department: any) => {
   await fetchDepartmentMembers(department.id)
 }
 
+// Open permissions modal
+const openPermissionsModal = async (department: any) => {
+  selectedDepartment.value = department
+  showPermissionsModal.value = true
+  await fetchDepartmentPermissions(department.id)
+}
+
+// Fetch department permissions
+const fetchDepartmentPermissions = async (departmentId: number) => {
+  if (!academyId.value) return
+  isLoadingPermissions.value = true
+  try {
+    const response: any = await api.get(
+      `/academies/${academyId.value}/departments/${departmentId}/permissions`
+    )
+    if (response.success) {
+      departmentPermissions.value = response.data.enabled_keys || []
+    }
+  } catch (err) {
+    console.error('Failed to fetch permissions:', err)
+  } finally {
+    isLoadingPermissions.value = false
+  }
+}
+
+// Save department permissions
+const saveDepartmentPermissions = async () => {
+  if (!selectedDepartment.value || !academyId.value) return
+
+  isSubmitting.value = true
+  try {
+    const response: any = await api.put(
+      `/academies/${academyId.value}/departments/${selectedDepartment.value.id}/permissions`,
+      { permission_keys: departmentPermissions.value }
+    )
+
+    if (response.success) {
+      showPermissionsModal.value = false
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกสำเร็จ',
+        text: 'อัปเดตสิทธิ์การใช้งานแผนกเรียบร้อยแล้ว',
+        timer: 2000,
+        showConfirmButton: false
+      })
+    }
+  } catch (err: any) {
+    Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: err.response?.data?.message || 'ไม่สามารถบันทึกสิทธิ์ได้'
+    })
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
 // Fetch department members
 const fetchDepartmentMembers = async (departmentId: number) => {
+  if (!academyId.value) return
   isLoadingMembers.value = true
   try {
-    const response: any = await api.get(`/api/academies/departments/${departmentId}/members`)
+    const response: any = await api.get(
+      `/academies/${academyId.value}/departments/${departmentId}/members`
+    )
     if (response.success) {
-      departmentMembers.value = response.members || []
+      departmentMembers.value = response.data?.members || response.members || []
     }
   } catch (err) {
     console.error('Failed to fetch members:', err)
@@ -311,13 +381,13 @@ const openAddMemberModal = async () => {
 // Fetch available members (academy members not in this department)
 const fetchAvailableMembers = async () => {
   if (!academyId.value) return
-  
+
   try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/members`, {
+    const response: any = await api.get(`/academies/${academyId.value}/members`, {
       status: 2, // Approved members
       per_page: 100
     })
-    
+
     if (response.success) {
       const existingMemberIds = departmentMembers.value.map((m: any) => m.user_id)
       availableMembers.value = (response.members || []).filter(
@@ -331,27 +401,27 @@ const fetchAvailableMembers = async () => {
 
 // Add members to department
 const addMembersToDepartment = async () => {
-  if (!selectedDepartment.value || selectedMemberIds.value.length === 0) return
-  
+  if (!selectedDepartment.value || !academyId.value || selectedMemberIds.value.length === 0) return
+
   isSubmitting.value = true
   try {
     const response: any = await api.post(
-      `/api/academies/departments/${selectedDepartment.value.id}/members/bulk`,
+      `/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members/bulk`,
       {
         user_ids: selectedMemberIds.value,
         role: memberRole.value
       }
     )
-    
+
     if (response.success) {
       showAddMemberModal.value = false
       await fetchDepartmentMembers(selectedDepartment.value.id)
       await fetchDepartments()
-      
+
       Swal.fire({
         icon: 'success',
         title: 'เพิ่มสมาชิกสำเร็จ',
-        text: `เพิ่ม ${selectedMemberIds.value.length} คนเข้าฝ่ายงานเรียบร้อยแล้ว`,
+        text: `เพิ่ม ${selectedMemberIds.value.length} คนเข้าแผนกเรียบร้อยแล้ว`,
         timer: 2000,
         showConfirmButton: false
       })
@@ -369,28 +439,28 @@ const addMembersToDepartment = async () => {
 
 // Remove member from department
 const removeMember = async (memberId: number) => {
-  if (!selectedDepartment.value) return
-  
+  if (!selectedDepartment.value || !academyId.value) return
+
   const result = await Swal.fire({
     icon: 'warning',
     title: 'ยืนยันการนำออก',
-    text: 'คุณต้องการนำสมาชิกออกจากฝ่ายงานนี้หรือไม่?',
+    text: 'คุณต้องการนำสมาชิกออกจากแผนกนี้หรือไม่?',
     showCancelButton: true,
     confirmButtonText: 'นำออก',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#ef4444'
   })
-  
+
   if (result.isConfirmed) {
     try {
       const response: any = await api.delete(
-        `/api/academies/departments/${selectedDepartment.value.id}/members/${memberId}`
+        `/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members/${memberId}`
       )
-      
+
       if (response.success) {
         await fetchDepartmentMembers(selectedDepartment.value.id)
         await fetchDepartments()
-        
+
         Swal.fire({
           icon: 'success',
           title: 'นำออกสำเร็จ',
@@ -410,17 +480,17 @@ const removeMember = async (memberId: number) => {
 
 // Update member role
 const updateMemberRole = async (memberId: number, newRole: string) => {
-  if (!selectedDepartment.value) return
-  
+  if (!selectedDepartment.value || !academyId.value) return
+
   try {
     const response: any = await api.put(
-      `/api/academies/departments/${selectedDepartment.value.id}/members/${memberId}/role`,
+      `/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members/${memberId}/role`,
       { role: newRole }
     )
-    
+
     if (response.success) {
       await fetchDepartmentMembers(selectedDepartment.value.id)
-      
+
       Swal.fire({
         icon: 'success',
         title: 'อัปเดตบทบาทสำเร็จ',
@@ -450,8 +520,8 @@ const filteredAvailableMembers = computed(() => {
 // Role options
 const roleOptions = [
   { value: 'member', label: 'สมาชิก' },
-  { value: 'head', label: 'หัวหน้าฝ่าย' },
-  { value: 'deputy', label: 'รองหัวหน้าฝ่าย' },
+  { value: 'head', label: 'หัวหน้าแผนก' },
+  { value: 'deputy', label: 'รองหัวหน้าแผนก' },
   { value: 'secretary', label: 'เลขานุการ' }
 ]
 
@@ -479,15 +549,15 @@ const getRoleLabel = (role: string) => {
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">จัดการฝ่ายงาน</h1>
-          <p class="text-gray-600 dark:text-gray-400 mt-1">จัดการฝ่ายงาน/แผนกต่างๆ ของโรงเรียน</p>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">จัดการแผนก</h1>
+          <p class="text-gray-600 dark:text-gray-400 mt-1">จัดการแผนกต่างๆ ของโรงเรียน</p>
         </div>
         <button
           @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
           <Icon name="fluent:add-24-filled" class="w-5 h-5" />
-          <span>สร้างฝ่ายงาน</span>
+          <span>สร้างแผนก</span>
         </button>
       </div>
 
@@ -500,7 +570,7 @@ const getRoleLabel = (role: string) => {
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.total_departments }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">ฝ่ายงานทั้งหมด</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">แผนกทั้งหมด</p>
             </div>
           </div>
         </div>
@@ -524,7 +594,7 @@ const getRoleLabel = (role: string) => {
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.departments_with_head }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">มีหัวหน้าฝ่าย</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">มีหัวหน้าแผนก</p>
             </div>
           </div>
         </div>
@@ -536,7 +606,7 @@ const getRoleLabel = (role: string) => {
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ (statistics.total_members / (statistics.total_departments || 1)).toFixed(1) }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">เฉลี่ย/ฝ่าย</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">เฉลี่ย/แผนก</p>
             </div>
           </div>
         </div>
@@ -550,7 +620,7 @@ const getRoleLabel = (role: string) => {
             v-model="searchQuery"
             @input="handleSearch"
             type="text"
-            placeholder="ค้นหาฝ่ายงาน..."
+            placeholder="ค้นหาแผนก..."
             class="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         </div>
@@ -563,14 +633,14 @@ const getRoleLabel = (role: string) => {
 
       <div v-else-if="departments.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
         <Icon name="fluent:building-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีฝ่ายงาน</h3>
-        <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างฝ่ายงานแรกของโรงเรียน</p>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีแผนก</h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างแผนกแรกของโรงเรียน</p>
         <button
           @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
           <Icon name="fluent:add-24-filled" class="w-5 h-5" />
-          <span>สร้างฝ่ายงาน</span>
+          <span>สร้างแผนก</span>
         </button>
       </div>
 
@@ -604,6 +674,13 @@ const getRoleLabel = (role: string) => {
                     จัดการสมาชิก
                   </button>
                   <button
+                    @click="openPermissionsModal(department)"
+                    class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Icon name="fluent:shield-lock-24-regular" class="w-4 h-4" />
+                    สิทธิ์การใช้งาน
+                  </button>
+                  <button
                     @click="openEditModal(department)"
                     class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                   >
@@ -634,11 +711,11 @@ const getRoleLabel = (role: string) => {
               />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ department.head_user.name }}</p>
-                <p class="text-xs text-amber-600 dark:text-amber-400">หัวหน้าฝ่าย</p>
+                <p class="text-xs text-amber-600 dark:text-amber-400">หัวหน้าแผนก</p>
               </div>
             </div>
             <div v-else class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-center">
-              <p class="text-sm text-gray-500 dark:text-gray-400">ยังไม่มีหัวหน้าฝ่าย</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">ยังไม่มีหัวหน้าแผนก</p>
             </div>
           </div>
 
@@ -685,7 +762,7 @@ const getRoleLabel = (role: string) => {
         <div class="absolute inset-0 bg-black/50" @click="showCreateModal = false"></div>
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">สร้างฝ่ายงานใหม่</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">สร้างแผนกใหม่</h3>
             <button @click="showCreateModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
@@ -693,13 +770,13 @@ const getRoleLabel = (role: string) => {
           
           <form @submit.prevent="createDepartment" class="p-5 space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ชื่อฝ่ายงาน *</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ชื่อแผนก *</label>
               <input
                 v-model="departmentForm.name"
                 type="text"
                 required
                 class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="เช่น ฝ่ายวิชาการ, ฝ่ายบุคคล"
+                placeholder="เช่น แผนกวิชาการ, แผนกบุคคล"
               />
               <p v-if="formErrors.name" class="mt-1 text-sm text-red-500">{{ formErrors.name[0] }}</p>
             </div>
@@ -710,7 +787,7 @@ const getRoleLabel = (role: string) => {
                 v-model="departmentForm.description"
                 rows="3"
                 class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                placeholder="รายละเอียดฝ่ายงาน..."
+                placeholder="รายละเอียดแผนก..."
               ></textarea>
             </div>
             
@@ -728,7 +805,7 @@ const getRoleLabel = (role: string) => {
                 class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                <span>{{ isSubmitting ? 'กำลังสร้าง...' : 'สร้างฝ่ายงาน' }}</span>
+                <span>{{ isSubmitting ? 'กำลังสร้าง...' : 'สร้างแผนก' }}</span>
               </button>
             </div>
           </form>
@@ -742,7 +819,7 @@ const getRoleLabel = (role: string) => {
         <div class="absolute inset-0 bg-black/50" @click="showEditModal = false"></div>
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">แก้ไขฝ่ายงาน</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">แก้ไขแผนก</h3>
             <button @click="showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
@@ -750,7 +827,7 @@ const getRoleLabel = (role: string) => {
           
           <form @submit.prevent="updateDepartment" class="p-5 space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ชื่อฝ่ายงาน *</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ชื่อแผนก *</label>
               <input
                 v-model="departmentForm.name"
                 type="text"
@@ -798,7 +875,7 @@ const getRoleLabel = (role: string) => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">สมาชิกฝ่ายงาน</h3>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">สมาชิกแผนก</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedDepartment?.name }}</p>
             </div>
             <div class="flex items-center gap-2">
@@ -822,7 +899,7 @@ const getRoleLabel = (role: string) => {
             
             <div v-else-if="departmentMembers.length === 0" class="text-center py-12">
               <Icon name="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p class="text-gray-500 dark:text-gray-400">ยังไม่มีสมาชิกในฝ่ายงานนี้</p>
+              <p class="text-gray-500 dark:text-gray-400">ยังไม่มีสมาชิกในแผนกนี้</p>
             </div>
             
             <div v-else class="space-y-3">
@@ -886,7 +963,7 @@ const getRoleLabel = (role: string) => {
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">บทบาทในฝ่ายงาน</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">บทบาทในแผนก</label>
               <select
                 v-model="memberRole"
                 class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
@@ -944,6 +1021,69 @@ const getRoleLabel = (role: string) => {
                 <span>เพิ่มสมาชิก</span>
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Permissions Modal -->
+    <Teleport to="body">
+      <div v-if="showPermissionsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50" @click="showPermissionsModal = false"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+          <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ตั้งค่าสิทธิ์การใช้งาน</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedDepartment?.name }}</p>
+            </div>
+            <button @click="showPermissionsModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          
+          <div class="p-5 flex-1 overflow-y-auto">
+            <div v-if="isLoadingPermissions" class="flex items-center justify-center py-12">
+              <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent"></div>
+            </div>
+            
+            <div v-else class="space-y-4">
+              <div
+                v-for="permission in permissionOptions"
+                :key="permission.key"
+                class="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl"
+              >
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-gray-900 dark:text-white">{{ permission.label }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ permission.description }}</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    :value="permission.key"
+                    v-model="departmentPermissions"
+                    class="sr-only peer"
+                  />
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50">
+            <button
+              @click="showPermissionsModal = false"
+              class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              ยกเลิก
+            </button>
+            <button
+              @click="saveDepartmentPermissions"
+              :disabled="isSubmitting"
+              class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors shadow-lg shadow-primary-500/20"
+            >
+              <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+              <span>บันทึกตั้งค่า</span>
+            </button>
           </div>
         </div>
       </div>

@@ -177,7 +177,7 @@ const updateRole = async (userId, newRole) => {
 // Group type info
 const typeInfo = computed(() => {
     const types = {
-        department: { label: 'ฝ่ายงาน', icon: 'heroicons:briefcase-solid', color: 'indigo' },
+        department: { label: 'แผนก', icon: 'heroicons:briefcase-solid', color: 'indigo' },
         classroom: { label: 'ห้องเรียน', icon: 'heroicons:academic-cap-solid', color: 'cyan' },
         club: { label: 'ชมรม', icon: 'heroicons:star-solid', color: 'green' }
     };

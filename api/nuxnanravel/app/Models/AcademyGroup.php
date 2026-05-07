@@ -46,4 +46,9 @@ class AcademyGroup extends Model
             ->withPivot('role')
             ->withTimestamps();
     }
+
+    public function permissions(): HasMany
+    {
+        return $this->hasMany(AcademyGroupPermission::class, 'academy_group_id');
+    }
 }

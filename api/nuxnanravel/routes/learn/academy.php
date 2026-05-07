@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Learn\Academy\AcademyMemberController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyActivityController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyGroupController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyRoleController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyGroupPermissionController;
 use App\Http\Controllers\Api\Learn\Academy\DepartmentController;
 use App\Http\Controllers\Api\Learn\Academy\ClassroomController;
 use App\Http\Controllers\Api\Learn\Academy\CurriculumController;
@@ -284,6 +285,10 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('members/bulk', [DepartmentController::class, 'bulkAddMembers'])->name('api.academy.departments.members.bulk');
         Route::delete('members', [DepartmentController::class, 'removeMember'])->name('api.academy.departments.members.remove');
         Route::patch('members/role', [DepartmentController::class, 'updateMemberRole'])->name('api.academy.departments.members.updateRole');
+        
+        // Permission management
+        Route::get('permissions', [AcademyGroupPermissionController::class, 'index'])->name('api.academy.departments.permissions.index');
+        Route::put('permissions', [AcademyGroupPermissionController::class, 'update'])->name('api.academy.departments.permissions.update');
     });
 
     // ============================================

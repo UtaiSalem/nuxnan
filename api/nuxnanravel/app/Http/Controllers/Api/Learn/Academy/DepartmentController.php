@@ -7,6 +7,7 @@ use App\Models\Academy;
 use App\Models\AcademyGroup;
 use App\Models\AcademyGroupMember;
 use App\Models\User;
+use App\Services\AcademyGroupPermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,26 @@ class DepartmentController extends Controller
 {
     use AuthorizesRequests;
 
+    protected $permissionService;
+
+    public function __construct(AcademyGroupPermissionService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
+
+    /**
+     * Ensure the department has the required permission enabled
+     */
+    protected function checkPermission(AcademyGroup $department, string $permissionKey): void
+    {
+        if (!$this->permissionService->hasPermission($department, $permissionKey)) {
+            abort(response()->json([
+                'success' => false,
+                'message' => "ฝ่ายงานนี้ไม่ได้เปิดใช้งานสิทธิ์: {$permissionKey}"
+            ], 403));
+        }
+    }
+
     /**
      * Get all departments of an academy
      */
@@ -29,6 +50,10 @@ class DepartmentController extends Controller
     {
         $query = $academy->academyGroups()
             ->where('type', 'department')
+            // Filter departments that have 'departments.view' enabled (default true)
+            ->whereDoesntHave('permissions', function ($q) {
+                $q->where('permission_key', 'departments.view')->where('enabled', false);
+            })
             ->withCount('members');
 
         // Search by name
@@ -101,6 +126,8 @@ class DepartmentController extends Controller
             ], 404);
         }
 
+        $this->checkPermission($department, 'departments.view');
+
         $department->load(['members:id,name,email,profile_photo_path', 'academy:id,name']);
         $department->loadCount('members');
 
@@ -133,6 +160,8 @@ class DepartmentController extends Controller
                 'message' => 'ไม่พบฝ่ายงานที่ระบุ'
             ], 404);
         }
+
+        $this->checkPermission($department, 'departments.manage');
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -178,6 +207,8 @@ class DepartmentController extends Controller
             ], 404);
         }
 
+        $this->checkPermission($department, 'departments.manage');
+
         $membersCount = $department->members()->count();
 
         if ($membersCount > 0) {
@@ -206,6 +237,8 @@ class DepartmentController extends Controller
                 'message' => 'ไม่พบฝ่ายงานที่ระบุ'
             ], 404);
         }
+
+        $this->checkPermission($department, 'departments.manage-members');
 
         $query = $department->members()
             ->select('users.id', 'users.name', 'users.email', 'users.profile_photo_path')
@@ -257,6 +290,8 @@ class DepartmentController extends Controller
             ], 404);
         }
 
+        $this->checkPermission($department, 'departments.manage-members');
+
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'role' => 'nullable|string|in:member,staff,admin,head',
@@ -292,6 +327,8 @@ class DepartmentController extends Controller
             ], 404);
         }
 
+        $this->checkPermission($department, 'departments.manage-members');
+
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
         ]);
@@ -315,6 +352,8 @@ class DepartmentController extends Controller
                 'message' => 'ไม่พบฝ่ายงานที่ระบุ'
             ], 404);
         }
+
+        $this->checkPermission($department, 'departments.manage-members');
 
         $validated = $request->validate([
             'user_ids' => 'required|array|min:1',

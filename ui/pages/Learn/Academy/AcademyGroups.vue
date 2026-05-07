@@ -258,7 +258,7 @@ onMounted(async () => {
                                             ]"
                                         >
                                             <Icon icon="heroicons:briefcase-solid" class="w-6 h-6 text-indigo-500 mb-1" />
-                                            <span class="text-xs font-medium">ฝ่ายงาน</span>
+                                            <span class="text-xs font-medium">แผนก</span>
                                         </button>
                                         <button
                                             @click="newGroup.type = 'classroom'"

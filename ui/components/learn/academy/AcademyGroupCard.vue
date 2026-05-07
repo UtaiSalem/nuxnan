@@ -32,7 +32,7 @@ const groupColor = computed(() => {
 
 // Group type label in Thai
 const typeLabels: Record<string, string> = {
-  'department': 'ฝ่ายงาน',
+  'department': 'แผนก',
   'classroom': 'ห้องเรียน',
   'club': 'ชมรม'
 }
