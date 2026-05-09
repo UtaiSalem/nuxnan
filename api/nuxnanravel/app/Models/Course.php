@@ -114,6 +114,13 @@ class Course extends Model
         'remediation_max_grade',
         'allow_grade_appeal',
         'appeal_deadline_days',
+
+        // Marketplace
+        'is_for_marketplace',
+        'price_points',
+        'price_type',
+        'total_sales',
+        'source_course_id',
     ];
 
     protected $casts = [
@@ -128,6 +135,10 @@ class Course extends Model
         'discount' => 'integer',
         'certificate_download_cost' => 'decimal:2',
         'certificate_free_download' => 'boolean',
+        'is_for_marketplace' => 'boolean',
+        'price_points' => 'integer',
+        'total_sales' => 'integer',
+        'source_course_id' => 'integer',
     ];
 
     public function courseSettings(): HasOne
@@ -140,9 +151,34 @@ class Course extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function sourceCourse(): BelongsTo
+    {
+        return $this->belongsTo(Course::class, 'source_course_id');
+    }
+
+    public function clonedCourses(): HasMany
+    {
+        return $this->hasMany(Course::class, 'source_course_id');
+    }
+
     public function academy(): BelongsTo
     {
         return $this->belongsTo(Academy::class);
+    }
+
+    public function scopeForMarketplace($query)
+    {
+        return $query->where('is_for_marketplace', true);
+    }
+
+    public function scopeCloned($query)
+    {
+        return $query->whereNotNull('source_course_id');
+    }
+
+    public function scopeOriginal($query)
+    {
+        return $query->whereNull('source_course_id');
     }
 
     public function course_lessons(): HasMany
@@ -358,5 +394,19 @@ class Course extends Model
             ->where('user_id', $user->id)
             ->where('status', 1)
             ->first();
+    }
+
+    /**
+     * Check if the given user already has a clone of this course.
+     */
+    public function isOwnedBy(User $user): bool
+    {
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        return $user->courses()
+            ->where('source_course_id', $this->id)
+            ->exists();
     }
 }

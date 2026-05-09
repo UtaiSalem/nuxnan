@@ -44,8 +44,17 @@ use App\Http\Controllers\CoursePostShareController;
 use App\Http\Controllers\Api\Learn\Course\admins\CourseAdminController;
 use App\Http\Controllers\Api\Learn\Course\reviews\CourseReviewController;
 use App\Http\Controllers\Api\Learn\Course\CoursePurchaseController;
+use App\Http\Controllers\Api\Learn\Course\CourseMarketplaceController;
+use App\Http\Controllers\Api\Learn\Course\info\CourseSettingController;
+
+// Public marketplace listing
+Route::get('/courses/marketplace', [CourseMarketplaceController::class, 'index'])->name('courses.marketplace');
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
+    Route::post('/courses/{course}/purchase', [CourseMarketplaceController::class, 'purchase'])->name('courses.purchase');
+    Route::get('/courses/{course}/marketplace/stats', [CourseMarketplaceController::class, 'stats'])->name('courses.marketplace.stats');
+    Route::patch('/courses/{course}/marketplace', [CourseSettingController::class, 'updateMarketplace'])->name('course.marketplace.update');
+
     Route::get('/courses/{course}/settings', [CourseController::class, 'settings'])->name('course.settings.page.show');
     Route::get('/courses/{course}/basic-info', [CourseController::class, 'basicInfo'])->name('course.basic-info.page.show');
     Route::get('/me/recent-courses', [CourseController::class, 'getRecentCourses'])->name('api.courses.recent');

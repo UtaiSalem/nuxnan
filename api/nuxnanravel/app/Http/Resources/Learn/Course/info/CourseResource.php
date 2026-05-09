@@ -73,6 +73,13 @@ class CourseResource extends JsonResource
                 return $member?->getPercentageScore() ?? 0;
             }),
             'saleable'          => $this->saleable,
+            'is_for_marketplace' => $this->is_for_marketplace,
+            'price_points'      => $this->price_points,
+            'price_type'        => $this->price_type,
+            'total_sales'       => $this->total_sales,
+            'is_owned'          => $this->when(auth()->guard('api')->check(), function() {
+                return $this->isOwnedBy(auth()->guard('api')->user());
+            }),
             'pending_invitation' => $this->when(auth()->guard('api')->check(), function() {
                 return \App\Models\CourseInvitation::where('course_id', $this->id)
                     ->where('invitee_id', auth()->guard('api')->id())

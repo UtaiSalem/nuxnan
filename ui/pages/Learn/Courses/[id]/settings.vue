@@ -75,7 +75,10 @@ const form = ref({
   discount_type: 'fixed',
   semester: '',
   academic_year: '',
-  status: 'draft'
+  status: 'draft',
+  is_for_marketplace: false,
+  price_points: 0,
+  price_type: 'free'
 })
 
 // Course categories
@@ -130,7 +133,10 @@ watch(() => course?.value, (newCourse) => {
       discount_type: newCourse.discount_type || 'fixed',
       semester: newCourse.semester || '',
       academic_year: newCourse.academic_year || '',
-      status: newCourse.status || 'draft'
+      status: newCourse.status || 'draft',
+      is_for_marketplace: Boolean(newCourse.is_for_marketplace),
+      price_points: newCourse.price_points || 0,
+      price_type: newCourse.price_type || 'free'
     }
   }
 }, { immediate: true })
@@ -577,6 +583,88 @@ const deleteCourse = async () => {
 
             </div>
 
+          </div>
+        </section>
+
+        <!-- Marketplace Settings -->
+        <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Icon icon="heroicons:shopping-cart" class="w-5 h-5 text-amber-500" />
+              ตั้งค่า Marketplace
+            </h2>
+          </div>
+          <div class="p-6 space-y-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="font-semibold text-gray-900 dark:text-white">วางขายใน Marketplace</div>
+                <div class="text-xs text-gray-500">อนุญาตให้คนอื่นซื้อสำเนาวิชานี้ได้</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input v-model="form.is_for_marketplace" type="checkbox" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 dark:peer-focus:ring-amber-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
+
+            <div v-if="form.is_for_marketplace" class="pt-2 animate-fade-in-down space-y-4">
+              <div class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ประเภทการชำระเงิน</label>
+                <select v-model="form.price_type" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm font-medium dark:text-white">
+                  <option value="free">ฟรี</option>
+                  <option value="points">ใช้แต้ม (Points)</option>
+                  <option value="wallet">ใช้เงิน (Wallet)</option>
+                  <option value="both">ใช้ได้ทั้งสองอย่าง</option>
+                </select>
+              </div>
+
+              <div v-if="form.price_type === 'points' || form.price_type === 'both'" class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ราคาเป็นแต้ม (Points)</label>
+                <div class="relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <Icon icon="mdi:database" class="w-5 h-5" />
+                  </span>
+                  <input
+                    v-model.number="form.price_points"
+                    type="number"
+                    min="0"
+                    placeholder="ใส่จำนวนแต้ม..."
+                    class="w-full pl-12 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div v-if="form.price_type === 'wallet' || form.price_type === 'both'" class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ราคาเป็นเงิน (บาท)</label>
+                <div class="relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">฿</span>
+                  <input
+                    v-model.number="form.price"
+                    type="number"
+                    min="0"
+                    placeholder="0.00"
+                    class="w-full pl-12 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Sales Stats (แสดงเฉพาะถ้าเคยขาย) -->
+            <div v-if="form.is_for_marketplace && course?.total_sales > 0" 
+              class="mt-4 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800">
+              <div class="text-xs font-bold text-amber-600 uppercase mb-3">สถิติการขาย</div>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="text-center">
+                  <div class="text-2xl font-black text-slate-800 dark:text-white">{{ course?.total_sales || 0 }}</div>
+                  <div class="text-xs text-slate-500">ยอดขายทั้งหมด</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-black text-slate-800 dark:text-white">
+                    {{ course?.price_type === 'points' ? (course?.price_points * course?.total_sales) + ' P' : '฿' + (course?.price * course?.total_sales) }}
+                  </div>
+                  <div class="text-xs text-slate-500">รายได้ทั้งหมด (ประมาณ)</div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

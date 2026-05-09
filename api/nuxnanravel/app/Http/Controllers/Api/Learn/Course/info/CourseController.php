@@ -203,19 +203,29 @@ class CourseController extends Controller
     public function getMyCourses(User $user, Request $request)
     {
         $perPage = $request->input('per_page', 8);
-        $query = $user->courses()->latest()->paginate($perPage);
+        $query = $user->courses();
+
+        if ($request->has('cloned')) {
+            if ($request->cloned == '1') {
+                $query->whereNotNull('source_course_id');
+            } else {
+                $query->whereNull('source_course_id');
+            }
+        }
+
+        $paginated = $query->latest()->paginate($perPage);
 
         return response()->json([
             'success'   => true,
-            'courses'   => CourseResource::collection($query),
+            'courses'   => CourseResource::collection($paginated),
             'create_course_threshold' => config('features.create_course_threshold', 100),
             'pagination' => [
-                'total'        => $query->total(),
-                'per_page'     => $query->perPage(),
-                'current_page' => $query->currentPage(),
-                'last_page'    => $query->lastPage(),
-                'from'         => $query->firstItem(),
-                'to'           => $query->lastItem(),
+                'total'        => $paginated->total(),
+                'per_page'     => $paginated->perPage(),
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'from'         => $paginated->firstItem(),
+                'to'           => $paginated->lastItem(),
             ]
         ], 200);
     }
@@ -516,6 +526,9 @@ class CourseController extends Controller
             'category'          => 'nullable',
             'capacity'          => 'nullable|numeric',
             'level'             => 'nullable',
+            'is_for_marketplace' => 'nullable|boolean',
+            'price_points'      => 'nullable|numeric',
+            'price_type'        => 'nullable|string|in:free,points,wallet,both',
 
         ]);
 
