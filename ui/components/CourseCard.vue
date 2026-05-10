@@ -73,7 +73,7 @@ const getBadgeType = (course: any, index: number) => {
 }
 
 const goToCourse = () => {
-  router.push(`/courses/${props.course.id}`)
+  router.push(`/Learn/Courses/${props.course.id}`)
 }
 </script>
 

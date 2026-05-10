@@ -44,7 +44,7 @@ onMounted(() => {
       <NuxtLink
         v-for="course in recentCourses"
         :key="course.id"
-        :to="`/courses/${course.id}`"
+        :to="`/Learn/Courses/${course.id}`"
         class="flex gap-3 group hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 p-2 -mx-2 rounded-lg transition-colors"
       >
         <div class="relative shrink-0 w-12 h-12">

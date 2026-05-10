@@ -18,11 +18,9 @@ import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
-import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
-import { common, createLowlight } from 'lowlight'
 import { Icon } from '@iconify/vue'
 
-const lowlight = createLowlight(common)
+
 
 interface Props {
   modelValue: string
@@ -97,7 +95,7 @@ const editor = useEditor({
   extensions: [
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
-      codeBlock: false, // Use CodeBlockLowlight instead
+      codeBlock: true,
       // Disable built-in extensions that we're adding separately
       link: false,
       underline: false,
@@ -122,7 +120,7 @@ const editor = useEditor({
     TableRow,
     TableCell,
     TableHeader,
-    CodeBlockLowlight.configure({ lowlight })
+    
   ],
   onUpdate: ({ editor }) => {
     emit('update:modelValue', editor.getHTML())

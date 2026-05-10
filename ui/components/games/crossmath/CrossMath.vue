@@ -97,10 +97,33 @@
           <p class="text-amber-400 font-bold text-sm truncate">{{ playerName }}</p>
         </div>
         <div class="flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-emerald-500/60 shadow-lg text-center">
-          <p class="text-emerald-400 font-bold text-sm">ด่าน {{ currentLevel }}</p>
+          <p class="text-emerald-400 font-bold text-sm">ระดับ {{ Math.ceil(currentLevel/10) }} / ด่าน {{ currentLevel }}</p>
         </div>
         <div class="flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-yellow-500/60 shadow-lg text-center">
           <p class="text-yellow-400 font-bold text-sm">{{ score }} <span class="text-yellow-500/80 text-xs">แต้ม</span></p>
+        </div>
+        <div class="shrink-0">
+          <button @click="openStageList" class="py-2 px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow">รายการด่าน</button>
+        </div>
+      </div>
+
+      <!-- Stage list modal -->
+      <div v-if="showStages" class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60" @click="closeStageList"></div>
+        <div class="relative bg-slate-900 p-4 rounded-2xl shadow-2xl max-w-3xl w-full">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-white font-bold">รายการด่านทั้งหมด</h3>
+            <button @click="closeStageList" class="text-slate-300">ปิด</button>
+          </div>
+          <div class="grid grid-cols-10 gap-2">
+            <button v-for="s in stages" :key="s.id" @click="goToStage(s.stage)"
+              :class="[
+                'py-2 text-sm rounded-md',
+                s.status === 'completed' ? 'bg-emerald-500 text-white' : s.status === 'unlocked' ? 'bg-amber-400 text-slate-800' : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+              ]">
+              {{ s.stage }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -367,11 +390,20 @@ const timeLeft = ref(60);
 const activeCellId = ref(null);
 const cellRefs = ref({});
 const gridCells = ref([]);
-const gridSize = computed(() => {
-  if (currentLevel.value <= 3) return 2;
-  if (currentLevel.value <= 10) return 3;
-  return 4;
-});
+function getGridSizeForStage(stage) {
+  if (stage >= 1 && stage <= 20) return 2;
+  if (stage >= 21 && stage <= 39) return 3;
+  if (stage >= 40 && stage <= 49) return 4;
+  if (stage >= 50 && stage <= 59) return 5;
+  if (stage >= 60 && stage <= 69) return 6;
+  if (stage >= 70 && stage <= 79) return 7;
+  if (stage >= 80 && stage <= 89) return 8;
+  if (stage >= 90 && stage <= 99) return 9;
+  if (stage === 100) return 10;
+  return 2;
+}
+
+const gridSize = computed(() => getGridSizeForStage(currentLevel.value));
 
 const cellCount = computed(() => gridSize.value * 2 + 1);
 
@@ -405,6 +437,41 @@ const owlMessage = ref(owlMessages.welcome);
 
 let timerInterval = null;
 
+const showStages = ref(false);
+const stages = ref([]);
+
+function createStages() {
+  stages.value = [];
+  for (let i = 1; i <= 100; i++) {
+    const size = getGridSizeForStage(i);
+    stages.value.push({ id: `stage-${i}`, stage: i, level: Math.ceil(i / 10), size, status: i === 1 ? 'unlocked' : 'locked' });
+  }
+}
+
+function unlockNextStage(stageNum) {
+  const nextIdx = stageNum; // zero-based index for next stage
+  if (nextIdx < stages.value.length) {
+    if (stages.value[nextIdx].status === 'locked') stages.value[nextIdx].status = 'unlocked';
+  }
+}
+
+function openStageList() { showStages.value = true; }
+function closeStageList() { showStages.value = false; }
+
+function goToStage(stageNum) {
+  if (!stageNum || stageNum < 1 || stageNum > 100) return;
+  const s = stages.value[stageNum - 1];
+  if (s.status === 'locked') return;
+  currentLevel.value = stageNum;
+  timeLeft.value = selectedTime.value;
+  gameState.value = 'playing';
+  generatePuzzle(stageNum);
+  startTimer();
+  showStages.value = false;
+}
+
+let timerInterval = null;
+
 const timeLimit = computed(() => selectedTime.value);
 
 function evaluateExpression(numbers, operators) {
@@ -429,16 +496,23 @@ function evaluateExpression(numbers, operators) {
   return result;
 }
 
-function generatePuzzle(level) {
-  const size = gridSize.value;
+function generatePuzzle(stage) {
+  const size = getGridSizeForStage(stage);
   const lastIdx = size * 2;
   const count = lastIdx + 1;
 
+  // Gradually increase available operators by stage ranges (keeps difficulty middle-school friendly)
   let allowedOps = ['+'];
-  if (level > 3) allowedOps = ['+', '-'];
-  if (level > 7) allowedOps = ['+', '-', '*'];
+  if (stage >= 21) allowedOps = ['+', '-'];
+  if (stage >= 40) allowedOps = ['+', '-', '*'];
+  if (stage >= 60) allowedOps = ['+', '-', '*', '/'];
 
-  const maxNum = level <= 3 ? 9 : level <= 7 ? 7 : 5;
+  // Control maximum numbers to keep puzzles suitable for lower-secondary students
+  let maxNum = 9;
+  if (stage >= 40 && stage <= 59) maxNum = 8;
+  else if (stage >= 60 && stage <= 79) maxNum = 9;
+  else if (stage >= 80 && stage <= 99) maxNum = 10;
+  else if (stage === 100) maxNum = 12;
 
   let numbers = {}, hOps = {}, vOps = {}, hResults = {}, vResults = {};
   let attempts = 0;
@@ -651,15 +725,20 @@ function startTimer() {
 
 function levelComplete() {
   clearInterval(timerInterval);
-  
+
   const baseScore = gridSize.value * gridSize.value * 10;
   levelScore.value = baseScore;
   timeBonus.value = Math.floor(timeLeft.value * 2);
   score.value += baseScore + timeBonus.value;
-  
+
   owlMessage.value = owlMessages.levelComplete;
-  
-  if (currentLevel.value >= 16) {
+
+  // mark current stage as completed and unlock next
+  const idx = currentLevel.value - 1;
+  if (stages.value[idx]) stages.value[idx].status = 'completed';
+  unlockNextStage(currentLevel.value);
+
+  if (currentLevel.value >= 100) {
     gameState.value = 'gameWin';
     owlMessage.value = owlMessages.gameWin;
   } else {
@@ -727,6 +806,7 @@ function handleKeydown(event) {
 }
 
 onMounted(() => {
+  createStages();
   window.addEventListener('keydown', handleKeydown);
 });
 

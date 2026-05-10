@@ -15,8 +15,8 @@ class CourseResource extends JsonResource
     {
         return [
             'id'                => $this->id,
-            'user'              => new UserResource($this->user),
-            'academy'           => new AcademyResource($this->academy),
+            'user'              => $this->user ? new UserResource($this->user) : null,
+            'academy'           => $this->academy ? new AcademyResource($this->academy) : null,
             'name'              => $this->name,
             'slug'              => $this->slug,
             'code'              => $this->code,
@@ -55,7 +55,7 @@ class CourseResource extends JsonResource
             'rating'            => $this->rating,
             'syllabus'          => $this->syllabus,
             'certificate'       => $this->certificate,
-            'isMember'          => $this->isMember(auth()->user()),
+            'isMember'          => $this->isMember(auth()->guard('api')->user()),
             'member_status'     => $this->member_status($this->id), //Course member status
             'lessons_count'     => $this->lessons,
             'isCourseAdmin'     => $this->isAdmin(auth()->guard('api')->user()),

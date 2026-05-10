@@ -141,7 +141,7 @@ const formatPoints = (num: number) => {
       <!-- Top Right Plus Icon Button -->
       <NuxtLink 
         v-if="canCreateCourse"
-        to="/courses/create" 
+        to="/Learn/Courses/create" 
         class="text-xs font-medium text-white bg-vikinger-purple hover:bg-vikinger-purple-dark p-1.5 rounded-lg transition-colors shadow-sm shadow-vikinger-purple/50"
         title="สร้างคอร์สใหม่"
       >
@@ -200,7 +200,7 @@ const formatPoints = (num: number) => {
         <NuxtLink
           v-for="course in myCourses"
           :key="course.id"
-          :to="`/courses/${course.id}`"
+          :to="`/Learn/Courses/${course.id}`"
           class="flex items-start gap-3 group hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 p-2 -mx-2 rounded-lg transition-colors"
         >
           <div class="relative shrink-0 w-12 h-12 mt-1">
@@ -257,7 +257,7 @@ const formatPoints = (num: number) => {
         <!-- Big Create Course Button at Bottom -->
         <div v-if="points >= createCourseThreshold">
             <NuxtLink 
-                to="/courses/create" 
+                to="/Learn/Courses/create" 
                 class="w-full py-2 text-xs font-medium text-white bg-vikinger-purple hover:bg-vikinger-purple-dark rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm shadow-vikinger-purple/50"
             >
                 <Icon icon="mdi:plus" class="w-4 h-4" />

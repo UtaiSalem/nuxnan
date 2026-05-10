@@ -17,8 +17,8 @@ class AcademyPostResource extends JsonResource
     {
         return [
             'id'                => $this->id,
-            'academy'           => new AcademyResource($this->academy),
-            'author'            => new UserResource($this->user),       
+            'academy'           => $this->academy ? new AcademyResource($this->academy) : null,
+            'author'            => $this->user ? new UserResource($this->user) : null,       
             'content'           => $this->content,
             'images'            => $this->images,
             'imagesResources'   => AcademyPostImageResource::collection($this->images),

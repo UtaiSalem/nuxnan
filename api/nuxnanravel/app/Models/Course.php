@@ -229,15 +229,18 @@ class Course extends Model
         return $this->hasMany(CourseExternalScore::class);
     }
 
-    public function isMember(User $user)
+    public function isMember(?User $user)
     {
+        if (!$user) {
+            return false;
+        }
         return $this->members->contains($user);
     }
 
     public function member_status($id)
     {
-        // return CourseMember::where('user_id', auth()->id())->where('course_id', $id)->pluck('member_status')->first();
-        return CourseMember::where('user_id', auth()->id())->where('course_id', $id)->pluck('course_member_status')->first();
+        $userId = auth()->guard('api')->id() ?? auth()->id();
+        return CourseMember::where('user_id', $userId)->where('course_id', $id)->pluck('course_member_status')->first();
     }
 
     public function assignments(): MorphMany

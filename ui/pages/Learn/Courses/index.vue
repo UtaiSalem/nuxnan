@@ -182,7 +182,7 @@ const getCoverUrl = (course: any) => {
 }
 
 const goToCourse = (courseId: number) => {
-  router.push(`/courses/${courseId}`)
+  router.push(`/Learn/Courses/${courseId}`)
 }
 const fetchFilterOptions = async () => {
   try {

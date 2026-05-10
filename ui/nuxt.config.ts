@@ -26,7 +26,7 @@ export default defineNuxtConfig({
       },
     },
     optimizeDeps: {
-      include: ['vue', 'vue-router', 'pinia'],
+      include: ['vue', 'vue-router', 'pinia', 'highlight.js', 'lowlight'],
     },
     ssr: {
       // Bundle ESM-only packages for SSR instead of treating them as externals.
@@ -35,6 +35,7 @@ export default defineNuxtConfig({
       // Nitro's CJS server bundle without this setting.
       noExternal: [
         'lowlight',
+        'highlight.js',
         'v3-infinite-loading',
         'plyr',
         'vue-plyr',
@@ -141,6 +142,6 @@ export default defineNuxtConfig({
   },
 
   build: {
-    transpile: ['lowlight', 'v3-infinite-loading', 'plyr', 'vue-plyr', 'laravel-echo', /^@tiptap\/.*/],
+    transpile: ['lowlight', 'highlight.js', 'v3-infinite-loading', 'plyr', 'vue-plyr', 'laravel-echo', /^@tiptap\/.*/],
   },
 })

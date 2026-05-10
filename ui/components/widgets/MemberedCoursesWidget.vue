@@ -81,7 +81,7 @@ onMounted(() => {
         <NuxtLink 
           v-for="course in courses" 
           :key="course.id"
-          :to="`/courses/${course.id}`"
+          :to="`/Learn/Courses/${course.id}`"
           class="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
         >
           <!-- Course Cover Image -->

@@ -17,8 +17,8 @@ class AcademyAdminResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'user'      => new UserResource($this->user),
-            'academy'   => new AcademyResource($this->academy),
+            'user'      => $this->user ? new UserResource($this->user) : null,
+            'academy'   => $this->academy ? new AcademyResource($this->academy) : null,
         ];
     }
 }
