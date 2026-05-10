@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import RichTextEditor from '~/components/Common/RichTextEditor.vue'
+import ResponsiveCard from '~/components/Common/ResponsiveCard.vue'
+
+import Swal from 'sweetalert2'
 
 const DEFAULT_DESCRIPTION_TEMPLATE = `<h2>📋 ภาพรวมรายวิชา</h2>
 <p>ใส่คำอธิบายรายวิชาที่นี่...</p>
@@ -176,35 +179,55 @@ const saveSettings = async () => {
 // Delete course
 const deleteCourse = async () => {
   if (!course?.value) return
-  if (!confirm(`คุณแน่ใจหรือไม่ที่จะลบรายวิชา "${course.value.name}"? การกระทำนี้ไม่สามารถย้อนกลับได้`)) return
+  
+  const result = await Swal.fire({
+    title: 'ยืนยันการลบรายวิชา?',
+    html: `คุณแน่ใจหรือไม่ที่จะลบรายวิชา<br><strong class="text-red-600">"${course.value.name}"</strong><br><br><span class="text-sm text-gray-500">การกระทำนี้ไม่สามารถย้อนกลับได้</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ใช่, ลบเลย',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#6b7280',
+    reverseButtons: true
+  })
+  
+  if (!result.isConfirmed) return
   
   try {
     const response = await api.delete(`/api/courses/${course.value.id}`)
     if (response) {
+      await Swal.fire({
+        title: 'ลบสำเร็จ',
+        text: 'รายวิชาถูกลบเรียบร้อยแล้ว',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      })
       navigateTo('/learn/courses')
     }
   } catch (err: any) {
-    useToast().error(err.data?.msg || 'ไม่สามารถลบรายวิชาได้')
+    Swal.fire('ผิดพลาด', err.data?.msg || 'ไม่สามารถลบรายวิชาได้', 'error')
   }
 }
 </script>
 
 <template>
-  <div class="space-y-8 max-w-7xl mx-auto pb-20">
+  <div class="space-y-6 sm:space-y-8 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pb-32 sm:pb-20">
     
     <!-- Header -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 p-4 sm:p-8 text-white shadow-lg">
+    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 p-3 sm:p-6 lg:p-8 text-white shadow-lg">
       <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
       <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-black/10 rounded-full blur-3xl"></div>
       
       <div class="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div class="flex items-center gap-3 sm:gap-4">
-          <div class="p-2 sm:p-3 bg-white/20 backdrop-blur-md rounded-xl">
-             <Icon icon="mdi-light:settings" class="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+        <div class="flex items-center gap-2.5 sm:gap-4 min-w-0">
+          <div class="p-2 sm:p-3 bg-white/20 backdrop-blur-md rounded-xl flex-shrink-0">
+             <Icon icon="mdi-light:settings" class="w-5 h-5 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-white" />
           </div>
-          <div>
-            <h1 class="text-lg sm:text-2xl font-bold">ตั้งค่ารายวิชา</h1>
-            <p class="text-blue-100 opacity-90 text-sm sm:text-base">จัดการข้อมูลและสถานะของรายวิชา</p>
+          <div class="min-w-0">
+            <h1 class="text-base sm:text-xl lg:text-2xl font-bold truncate">ตั้งค่ารายวิชา</h1>
+            <p class="text-blue-100 opacity-90 text-xs sm:text-sm lg:text-base truncate">จัดการข้อมูลและสถานะของรายวิชา</p>
           </div>
         </div>
         
@@ -228,15 +251,8 @@ const deleteCourse = async () => {
       <div class="lg:col-span-2 space-y-8">
         
         <!-- General Information Card -->
-        <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Icon icon="heroicons:information-circle" class="w-5 h-5 text-cyan-500" />
-              ข้อมูลทั่วไป
-            </h2>
-          </div>
-          
-          <div class="p-6 space-y-6">
+        <ResponsiveCard title="ข้อมูลทั่วไป" icon="heroicons:information-circle" icon-color="text-cyan-500">
+          <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div class="space-y-2">
                 <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">รหัสวิชา</label>
@@ -315,17 +331,11 @@ const deleteCourse = async () => {
               </div>
             </div>
           </div>
-        </section>
+        </ResponsiveCard>
 
         <!-- Academic Details Card -->
-        <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Icon icon="heroicons:academic-cap" class="w-5 h-5 text-purple-500" />
-              ข้อมูลเชิงวิชาการ
-            </h2>
-          </div>
-          <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ResponsiveCard title="ข้อมูลเชิงวิชาการ" icon="heroicons:academic-cap" icon-color="text-purple-500">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
              <div class="space-y-2">
                 <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ภาคเรียนที่</label>
                 <div class="relative">
@@ -388,7 +398,7 @@ const deleteCourse = async () => {
                   />
                 </div>
               </div>
-              <div class="space-y-2">
+              <div class="space-y-2 min-w-0">
                 <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">วันเริ่มต้น</label>
                 <ClientOnly>
                   <VueDatePicker
@@ -399,11 +409,11 @@ const deleteCourse = async () => {
                     :enable-time-picker="false"
                     teleport="body"
                     placeholder="เลือกวันเริ่มต้น"
-                    input-class-name="!bg-gray-50 dark:!bg-gray-900 !border-gray-200 dark:!border-gray-700 !rounded-xl dark:!text-white !py-2.5"
+                    input-class-name="!bg-gray-50 dark:!bg-gray-900 !border-gray-200 dark:!border-gray-700 !rounded-xl dark:!text-white !py-2.5 !w-full !text-sm sm:!text-base"
                   />
                 </ClientOnly>
               </div>
-              <div class="space-y-2">
+              <div class="space-y-2 min-w-0">
                 <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">วันสิ้นสุด</label>
                 <ClientOnly>
                   <VueDatePicker
@@ -414,24 +424,12 @@ const deleteCourse = async () => {
                     :enable-time-picker="false"
                     teleport="body"
                     placeholder="เลือกวันสิ้นสุด"
-                    input-class-name="!bg-gray-50 dark:!bg-gray-900 !border-gray-200 dark:!border-gray-700 !rounded-xl dark:!text-white !py-2.5"
+                    input-class-name="!bg-gray-50 dark:!bg-gray-900 !border-gray-200 dark:!border-gray-700 !rounded-xl dark:!text-white !py-2.5 !w-full !text-sm sm:!text-base"
                   />
                 </ClientOnly>
               </div>
           </div>
-          <!-- Card Footer with Save Button -->
-           <div class="px-6 pb-6 pt-2 hidden lg:flex justify-end border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-             <button
-              type="submit"
-              :disabled="isSaving"
-              class="mt-4 flex items-center gap-2 px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
-             >
-              <Icon v-if="isSaving" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-              <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />
-              บันทึกการเปลี่ยนแปลง
-             </button>
-           </div>
-        </section>
+        </ResponsiveCard>
 
 
 
@@ -441,16 +439,10 @@ const deleteCourse = async () => {
       <div class="space-y-8">
         
         <!-- Status & Visibility -->
-        <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Icon icon="heroicons:globe-alt" class="w-5 h-5 text-green-500" />
-              การเผยแพร่
-            </h2>
-          </div>
-          <div class="p-6 space-y-4">
+        <ResponsiveCard title="การเผยแพร่" icon="heroicons:globe-alt" icon-color="text-green-500">
+          <div class="space-y-4">
              <div class="space-y-3">
-              <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50" :class="{'ring-2 ring-green-500 border-transparent': form.status === 'published'}">
+              <label class="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 min-h-[64px]" :class="{'ring-2 ring-green-500 border-transparent': form.status === 'published'}">
                 <div class="flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 dark:border-gray-600">
                   <div class="w-3 h-3 rounded-full bg-green-500" v-if="form.status === 'published'"></div>
                 </div>
@@ -461,7 +453,7 @@ const deleteCourse = async () => {
                  </div>
               </label>
 
-               <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50" :class="{'ring-2 ring-gray-400 border-transparent': form.status === 'draft'}">
+               <label class="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 min-h-[64px]" :class="{'ring-2 ring-gray-400 border-transparent': form.status === 'draft'}">
                 <div class="flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 dark:border-gray-600">
                   <div class="w-3 h-3 rounded-full bg-gray-400" v-if="form.status === 'draft'"></div>
                 </div>
@@ -472,7 +464,7 @@ const deleteCourse = async () => {
                  </div>
               </label>
 
-              <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50" :class="{'ring-2 ring-orange-500 border-transparent': form.status === 'archived'}">
+              <label class="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 min-h-[64px]" :class="{'ring-2 ring-orange-500 border-transparent': form.status === 'archived'}">
                 <div class="flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 dark:border-gray-600">
                   <div class="w-3 h-3 rounded-full bg-orange-500" v-if="form.status === 'archived'"></div>
                 </div>
@@ -484,48 +476,42 @@ const deleteCourse = async () => {
               </label>
              </div>
           </div>
-        </section>
+        </ResponsiveCard>
 
         <!-- Configuration -->
-        <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Icon icon="heroicons:cog-6-tooth" class="w-5 h-5 text-orange-500" />
-              การจัดการ
-            </h2>
-          </div>
-          <div class="p-6 space-y-6">
+        <ResponsiveCard title="การจัดการ" icon="heroicons:cog-6-tooth" icon-color="text-orange-500">
+          <div class="space-y-6">
              <!-- Auto Accept -->
-            <div class="flex items-center justify-between">
-              <div>
+            <label class="flex items-center justify-between cursor-pointer min-h-[56px] gap-4">
+              <div class="min-w-0">
                 <div class="font-semibold text-gray-900 dark:text-white">อนุมัติสมาชิกอัตโนมัติ</div>
                 <div class="text-xs text-gray-500">ไม่ต้องกดยืนยันคำขอ</div>
               </div>
-              <label class="relative inline-flex items-center cursor-pointer">
+              <div class="relative inline-flex items-center flex-shrink-0 p-2 -m-2">
                 <input v-model="form.auto_accept_members" type="checkbox" class="sr-only peer">
                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
-              </label>
-            </div>
+              </div>
+            </label>
 
             <hr class="border-gray-100 dark:border-gray-700">
             
-            <!-- Saleable -->
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="font-semibold text-gray-900 dark:text-white">เปิดขายรายวิชา</div>
-                <div class="text-xs text-gray-500">กำหนดราคาและขาย</div>
+            <!-- Saleable (Enrollment Fee) -->
+            <label class="flex items-center justify-between cursor-pointer min-h-[56px] gap-4">
+              <div class="min-w-0">
+                <div class="font-semibold text-gray-900 dark:text-white">เปิดรับสมัครเรียน (แบบเก็บค่าธรรมเนียม)</div>
+                <div class="text-xs text-gray-500">เก็บค่าธรรมเนียมสำหรับผู้ที่ต้องการเข้าเรียน</div>
               </div>
-              <label class="relative inline-flex items-center cursor-pointer">
+              <div class="relative inline-flex items-center flex-shrink-0 p-2 -m-2">
                 <input v-model="form.saleable" type="checkbox" class="sr-only peer">
                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
-              </label>
-            </div>
+              </div>
+            </label>
 
             <!-- Price Input -->
             <div v-if="form.saleable" class="pt-2 animate-fade-in-down grid grid-cols-1 gap-4">
                
                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ราคา (บาท)</label>
+                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ค่าธรรมเนียมสมัครเรียน (บาท)</label>
                   <div class="relative">
                       <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                         <Icon icon="heroicons:currency-dollar" class="w-5 h-5" />
@@ -542,10 +528,10 @@ const deleteCourse = async () => {
 
 
                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ส่วนลด</label>
+                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ส่วนลดค่าสมัคร</label>
                   <div class="flex gap-2">
-                    <div class="relative flex-1">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <div class="relative flex-1 min-w-0">
+                        <span class="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400">
                            <Icon v-if="form.discount_type === 'fixed'" icon="heroicons:currency-dollar" class="w-5 h-5" />
                            <Icon v-else icon="heroicons:receipt-percent" class="w-5 h-5" />
                         </span>
@@ -555,12 +541,12 @@ const deleteCourse = async () => {
                           min="0"
                           :max="form.discount_type === 'percent' ? 100 : form.price"
                           placeholder="0"
-                          class="w-full pl-12 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all dark:text-white"
+                          class="w-full pl-10 sm:pl-12 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all dark:text-white"
                         />
                     </div>
                     <select
                       v-model="form.discount_type"
-                      class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-sm font-medium dark:text-white appearance-none cursor-pointer"
+                      class="flex-shrink-0 w-20 sm:w-24 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-2 sm:px-4 py-2.5 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 text-sm font-medium dark:text-white appearance-none cursor-pointer text-center"
                     >
                       <option value="fixed">บาท</option>
                       <option value="percent">%</option>
@@ -570,7 +556,7 @@ const deleteCourse = async () => {
 
                <div v-if="form.saleable" class="col-span-1 border-t pt-4 mt-2">
                  <div class="flex justify-between items-center text-lg font-bold">
-                   <span class="text-gray-700 dark:text-gray-300">ราคาขายจริง (สุทธิ):</span>
+                   <span class="text-gray-700 dark:text-gray-300">ค่าสมัครสุทธิ:</span>
                    <span class="text-green-600 dark:text-green-400">
                      {{ netPrice.toLocaleString() }} บาท
                    </span>
@@ -584,41 +570,67 @@ const deleteCourse = async () => {
             </div>
 
           </div>
-        </section>
+        </ResponsiveCard>
 
         <!-- Marketplace Settings -->
-        <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Icon icon="heroicons:shopping-cart" class="w-5 h-5 text-amber-500" />
-              ตั้งค่า Marketplace
-            </h2>
-          </div>
-          <div class="p-6 space-y-6">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="font-semibold text-gray-900 dark:text-white">วางขายใน Marketplace</div>
-                <div class="text-xs text-gray-500">อนุญาตให้คนอื่นซื้อสำเนาวิชานี้ได้</div>
+        <ResponsiveCard title="ตั้งค่าตลาดต้นฉบับรายวิชา (Marketplace)" icon="heroicons:shopping-cart" icon-color="text-amber-500">
+          <div class="space-y-6">
+            <label class="flex items-center justify-between cursor-pointer min-h-[56px] gap-4">
+              <div class="min-w-0">
+                <div class="font-semibold text-gray-900 dark:text-white">เปิดขายสำเนาต้นฉบับ (Clone)</div>
+                <div class="text-xs text-gray-500">อนุญาตให้ครูท่านอื่นซื้อรายวิชานี้ไปสอนต่อ</div>
               </div>
-              <label class="relative inline-flex items-center cursor-pointer">
+              <div class="relative inline-flex items-center flex-shrink-0 p-2 -m-2">
                 <input v-model="form.is_for_marketplace" type="checkbox" class="sr-only peer">
                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 dark:peer-focus:ring-amber-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-amber-500"></div>
-              </label>
-            </div>
+              </div>
+            </label>
 
             <div v-if="form.is_for_marketplace" class="pt-2 animate-fade-in-down space-y-4">
               <div class="space-y-2">
-                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ประเภทการชำระเงิน</label>
+                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ประเภทการรับเงินค่าลิขสิทธิ์</label>
                 <select v-model="form.price_type" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm font-medium dark:text-white">
-                  <option value="free">ฟรี</option>
+                  <option value="free">เปิดให้ Clone ฟรี</option>
                   <option value="points">ใช้แต้ม (Points)</option>
                   <option value="wallet">ใช้เงิน (Wallet)</option>
                   <option value="both">ใช้ได้ทั้งสองอย่าง</option>
                 </select>
               </div>
 
-              <div v-if="form.price_type === 'points' || form.price_type === 'both'" class="space-y-2">
-                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ราคาเป็นแต้ม (Points)</label>
+              <div v-if="form.price_type === 'both'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ราคาขายต้นฉบับ (แต้ม)</label>
+                  <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Icon icon="mdi:database" class="w-5 h-5" />
+                    </span>
+                    <input
+                      v-model.number="form.price_points"
+                      type="number"
+                      min="0"
+                      placeholder="แต้ม..."
+                      class="w-full pl-12 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ราคาขายต้นฉบับ (บาท)</label>
+                  <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">฿</span>
+                    <input
+                      v-model.number="form.price"
+                      type="number"
+                      min="0"
+                      placeholder="0.00"
+                      class="w-full pl-12 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div v-else-if="form.price_type === 'points'" class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ราคาขายต้นฉบับ (แต้ม)</label>
                 <div class="relative">
                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                     <Icon icon="mdi:database" class="w-5 h-5" />
@@ -633,8 +645,8 @@ const deleteCourse = async () => {
                 </div>
               </div>
 
-              <div v-if="form.price_type === 'wallet' || form.price_type === 'both'" class="space-y-2">
-                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ราคาเป็นเงิน (บาท)</label>
+              <div v-else-if="form.price_type === 'wallet'" class="space-y-2">
+                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">ราคาขายต้นฉบับ (บาท)</label>
                 <div class="relative">
                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">฿</span>
                   <input
@@ -651,32 +663,26 @@ const deleteCourse = async () => {
             <!-- Sales Stats (แสดงเฉพาะถ้าเคยขาย) -->
             <div v-if="form.is_for_marketplace && course?.total_sales > 0" 
               class="mt-4 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800">
-              <div class="text-xs font-bold text-amber-600 uppercase mb-3">สถิติการขาย</div>
-              <div class="grid grid-cols-2 gap-4">
-                <div class="text-center">
-                  <div class="text-2xl font-black text-slate-800 dark:text-white">{{ course?.total_sales || 0 }}</div>
-                  <div class="text-xs text-slate-500">ยอดขายทั้งหมด</div>
+              <div class="text-xs font-bold text-amber-600 uppercase mb-3">สถิติลิขสิทธิ์รายวิชา</div>
+              <div class="grid grid-cols-2 gap-2 sm:gap-4">
+                <div class="text-center min-w-0">
+                  <div class="text-lg sm:text-2xl font-black text-slate-800 dark:text-white truncate">{{ course?.total_sales || 0 }}</div>
+                  <div class="text-xs text-slate-500">จำนวนที่ถูกซื้อไปสอน</div>
                 </div>
-                <div class="text-center">
-                  <div class="text-2xl font-black text-slate-800 dark:text-white">
+                <div class="text-center min-w-0">
+                  <div class="text-lg sm:text-2xl font-black text-slate-800 dark:text-white truncate">
                     {{ course?.price_type === 'points' ? (course?.price_points * course?.total_sales) + ' P' : '฿' + (course?.price * course?.total_sales) }}
                   </div>
-                  <div class="text-xs text-slate-500">รายได้ทั้งหมด (ประมาณ)</div>
+                  <div class="text-xs text-slate-500">รายได้จากค่าลิขสิทธิ์</div>
                 </div>
               </div>
             </div>
           </div>
-        </section>
+        </ResponsiveCard>
 
         <!-- Danger Zone -->
-        <section class="bg-red-50 dark:bg-red-900/10 rounded-2xl shadow-sm border border-red-100 dark:border-red-900/30 overflow-hidden">
-           <div class="p-6 border-b border-red-100 dark:border-red-900/30 bg-red-100/50 dark:bg-red-900/20">
-            <h2 class="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
-              <Icon icon="heroicons:exclamation-triangle" class="w-5 h-5" />
-              โซนอันตราย
-            </h2>
-          </div>
-          <div class="p-6 text-center">
+        <ResponsiveCard title="โซนอันตราย" icon="heroicons:exclamation-triangle" icon-color="text-red-500" variant="danger">
+          <div class="text-center">
             <p class="text-sm text-red-600/80 dark:text-red-400/80 mb-4">
               การลบรายวิชาจะไม่สามารถกู้คืนได้ ข้อมูลทั้งหมดจะหายไปถาวร
             </p>
@@ -689,18 +695,19 @@ const deleteCourse = async () => {
               ลบรายวิชาถาวร
             </button>
           </div>
-        </section>
+        </ResponsiveCard>
 
       </div>
 
 
 
       <!-- Mobile Save Button (Sticky Bottom) -->
-      <div class="fixed bottom-16 sm:bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 lg:hidden z-50">
+      <div class="fixed bottom-16 sm:bottom-0 left-0 right-0 px-4 pt-3 pb-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 lg:hidden z-40"
+           style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
         <button
           type="submit"
           :disabled="isSaving"
-          class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
+          class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-50 min-h-[48px]"
         >
           <Icon v-if="isSaving" icon="svg-spinners:ring-resize" class="w-5 h-5" />
           <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />

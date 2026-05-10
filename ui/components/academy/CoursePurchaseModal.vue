@@ -28,17 +28,17 @@
               <!-- Step 1: Summary -->
               <div v-if="step === 1">
                 <DialogTitle as="h3" class="text-xl font-black text-slate-900 dark:text-white mb-4">
-                  ยืนยันการซื้อรายวิชา
+                  ยืนยันการซื้อลิขสิทธิ์ต้นฉบับ
                 </DialogTitle>
                 
                 <div class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 mb-6 flex gap-4">
                   <img :src="course.cover_url || '/images/course-placeholder.jpg'" class="w-20 h-20 rounded-xl object-cover" />
                   <div>
                     <h4 class="font-bold text-slate-800 dark:text-white text-sm line-clamp-2">{{ course.name }}</h4>
-                    <p class="text-xs text-slate-500 mt-1">ผู้ขาย: {{ course.user?.name }}</p>
+                    <p class="text-xs text-slate-500 mt-1">เจ้าของลิขสิทธิ์: {{ course.user?.name }}</p>
                     <div class="flex gap-2 mt-2">
                       <span class="text-[10px] bg-primary-100 dark:bg-primary-900/30 text-primary-600 px-2 py-0.5 rounded font-bold">
-                        {{ course.course_lessons_count }} บทเรียน
+                        คัดลอก {{ course.course_lessons_count }} บทเรียน
                       </span>
                     </div>
                   </div>
@@ -46,7 +46,7 @@
 
                 <div class="space-y-3 mb-6">
                   <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">ราคาสุทธิ</span>
+                    <span class="text-slate-500">ค่าลิขสิทธิ์สุทธิ</span>
                     <div class="flex flex-col items-end">
                       <span v-if="course.price_type === 'points' || course.price_type === 'both'" class="font-bold text-amber-600">
                         {{ formatNumber(course.price_points) }} แต้ม
@@ -54,7 +54,7 @@
                       <span v-if="course.price_type === 'wallet' || course.price_type === 'both'" class="font-bold text-primary-600">
                         ฿ {{ formatNumber(course.price) }}
                       </span>
-                      <span v-if="course.price_type === 'free'" class="font-bold text-green-600">FREE</span>
+                      <span v-if="course.price_type === 'free'" class="font-bold text-green-600">ฟรี (Clone ฟรี)</span>
                     </div>
                   </div>
                 </div>
@@ -64,7 +64,7 @@
                     ยกเลิก
                   </button>
                   <button @click="nextStep" class="flex-2 bg-primary-600 hover:bg-primary-700 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary-500/30">
-                    ดำเนินการต่อ
+                    ยืนยันคำสั่งซื้อ
                   </button>
                 </div>
               </div>

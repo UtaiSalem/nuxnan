@@ -331,7 +331,7 @@ onUnmounted(() => {
     <div class="relative w-full bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800 transition-all duration-300">
         <!-- Cover Photo Section -->
         <div 
-            class="relative h-48 sm:h-64 md:h-72 lg:h-80 bg-cover bg-center bg-no-repeat transition-all duration-500"
+            class="relative h-40 sm:h-56 md:h-72 lg:h-80 bg-cover bg-center bg-no-repeat transition-all duration-500"
             :style="{ backgroundImage: `url(${coverUrl})` }"
         >
             <!-- Enhanced Overlay gradient for better visual depth -->
@@ -342,40 +342,40 @@ onUnmounted(() => {
             <div class="absolute inset-0 opacity-10 dark:opacity-5" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 40px 40px;"></div>
             
             <!-- Edit Cover Button (Admin Only) -->
-            <div class="absolute top-4 left-4 z-10" v-if="isAdmin">
+            <div class="absolute top-3 left-3 sm:top-4 sm:left-4 z-10" v-if="isAdmin">
                 <input type="file" class="hidden" ref="coverInput" accept="image/*" @change="onCoverInputChange">
                 <button type="button" @click.prevent="browseCover" :disabled="isUpdatingCover"
-                    class="group relative p-3 text-gray-700 dark:text-gray-200 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-xl hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 shadow-lg hover:shadow-xl hover:scale-110 border border-white/20">
+                    class="group relative p-2.5 sm:p-3 text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl active:scale-95 sm:hover:bg-white sm:dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 shadow-lg sm:hover:shadow-xl sm:hover:scale-110 border border-white/20 min-w-[44px] min-h-[44px] flex items-center justify-center">
                     <Icon v-if="isUpdatingCover" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                    <Icon v-else icon="fluent:camera-edit-20-filled" class="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    <div class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    <Icon v-else icon="fluent:camera-edit-20-filled" class="w-5 h-5 sm:group-hover:scale-110 transition-transform" />
+                    <div class="hidden sm:block absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                         แก้ไขปก
                     </div>
                 </button>
             </div>
             
             <!-- Tuition Fees Badge with enhanced styling -->
-            <div v-if="tuitionFees" class="absolute top-4 right-4 z-10 animate-pulse">
+            <div v-if="tuitionFees" class="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 animate-pulse">
                 <div class="relative group">
                     <div class="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl blur-md opacity-75 group-hover:opacity-100 transition-opacity"></div>
-                    <div class="relative flex items-center px-4 py-2.5 space-x-2 font-bold text-white rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-yellow-300/50">
-                        <Icon icon="ri:bit-coin-fill" class="w-6 h-6 animate-spin-slow" />
-                        <span class="text-lg">{{ tuitionFees }}</span>
-                        <span class="text-sm opacity-90">บาท</span>
+                    <div class="relative flex items-center px-2.5 sm:px-4 py-2 sm:py-2.5 space-x-1.5 sm:space-x-2 font-bold text-white rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 shadow-lg sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 border border-yellow-300/50">
+                        <Icon icon="ri:bit-coin-fill" class="w-4 h-4 sm:w-6 sm:h-6 animate-spin-slow" />
+                        <span class="text-sm sm:text-lg">{{ tuitionFees }}</span>
+                        <span class="text-xs sm:text-sm opacity-90">บาท</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Avatar + Name Section (Overlapping Cover) -->
-        <div class="flex flex-col sm:flex-row items-center justify-between w-full px-4 sm:px-6 -mt-[70px] sm:-mt-[80px] md:-mt-[90px] transition-all duration-300">
+        <div class="flex flex-col sm:flex-row items-center justify-between w-full px-3 sm:px-6 -mt-12 sm:-mt-[80px] md:-mt-[90px] transition-all duration-300 gap-4 sm:gap-0">
             <div class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
                 <!-- Avatar with enhanced styling -->
                 <div class="relative flex-shrink-0 group">
                     <!-- Glow effect -->
                     <div class="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-500 animate-pulse pointer-events-none -z-10"></div>
                     
-                    <div class="relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 rounded-full border-4 border-white dark:border-gray-800 overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-2xl transition-all duration-300 group-hover:scale-105 group-hover:shadow-3xl z-10">
+                    <div class="relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 rounded-full border-4 border-white dark:border-gray-800 overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-2xl transition-all duration-300 sm:group-hover:scale-105 sm:group-hover:shadow-3xl z-10">
                         <img :src="logoUrl" alt="Course Logo" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                         
                         <!-- Overlay effect on hover -->
@@ -384,43 +384,43 @@ onUnmounted(() => {
                     
                     <input type="file" class="hidden" ref="logoInput" accept="image/*" @change="onLogoInputChange" v-if="isAdmin">
                     <button v-if="isAdmin" type="button" @click.prevent="browseLogo" :disabled="isUpdatingLogo"
-                        class="absolute bottom-2 right-2 p-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 shadow-lg hover:shadow-xl hover:scale-110 border-2 border-white dark:border-gray-800 z-10">
+                        class="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 p-2 sm:p-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full active:scale-95 sm:hover:from-blue-600 sm:hover:to-purple-700 transition-all duration-300 disabled:opacity-50 shadow-lg sm:hover:shadow-xl sm:hover:scale-110 border-2 border-white dark:border-gray-800 z-10 min-w-[36px] min-h-[36px] flex items-center justify-center">
                         <Icon v-if="isUpdatingLogo" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                         <Icon v-else icon="fluent:camera-edit-20-filled" class="w-4 h-4" />
                     </button>
                 </div>
 
                 <!-- Course Name & Code -->
-                <div class="space-y-2 text-center sm:text-left mt-3 sm:mt-6">
+                <div class="space-y-2 text-center sm:text-left mt-2 sm:mt-6 min-w-0 w-full sm:w-auto max-w-full">
                     <!-- Course Name -->
-                    <div class="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-                        <div class="relative group">
+                    <div class="flex items-start gap-2 flex-wrap justify-center sm:justify-start max-w-full">
+                        <div class="relative group max-w-full min-w-0 flex-1 sm:flex-initial">
                             <!-- Glow effect -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500 pointer-events-none -z-10"></div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl blur-xl opacity-0 sm:group-hover:opacity-30 transition-opacity duration-500 pointer-events-none -z-10"></div>
                             
-                            <h1 class="relative z-10 px-5 py-3 text-lg sm:text-xl md:text-2xl font-black text-white bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-2xl shadow-2xl border border-slate-700/50 dark:border-gray-600/50 backdrop-blur-sm transition-all duration-300 group-hover:shadow-3xl group-hover:scale-105">
-                                <span class="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                            <h1 class="relative z-10 px-3 py-2 sm:px-5 sm:py-3 text-base sm:text-xl md:text-2xl font-black text-white bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-2xl shadow-2xl border border-slate-700/50 dark:border-gray-600/50 backdrop-blur-sm transition-all duration-300 sm:group-hover:shadow-3xl sm:group-hover:scale-105 break-words leading-snug">
+                                <span class="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent line-clamp-3 sm:line-clamp-2">
                                     {{ courseName || 'ไม่มีชื่อรายวิชา' }}
                                 </span>
                             </h1>
                         </div>
                         <button v-if="isAdmin" @click="startEditingName" 
-                            class="group relative z-20 p-2.5 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl border border-gray-200 dark:border-gray-600 hover:scale-110">
-                            <Icon icon="fluent:edit-24-filled" class="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-                            <div class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                            class="group relative z-20 p-2 sm:p-2.5 bg-white sm:hover:bg-gray-50 dark:bg-gray-800 sm:dark:hover:bg-gray-700 rounded-xl transition-all duration-300 shadow-lg sm:hover:shadow-xl border border-gray-200 dark:border-gray-600 sm:hover:scale-110 active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center flex-shrink-0">
+                            <Icon icon="fluent:edit-24-filled" class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
+                            <div class="hidden sm:block absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                                 แก้ไขข้อมูล
                             </div>
                         </button>
                     </div>
 
                     <!-- Course Code -->
-                    <div class="flex items-center gap-2 justify-center sm:justify-start">
-                        <span v-if="courseCode" class="group relative px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 rounded-full shadow-xl border-2 border-cyan-400/30 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-default">
-                            <Icon icon="fluent:number-symbol-square-24-filled" class="w-4 h-4 inline-block mr-1.5" />
-                            <span class="tracking-wider">{{ courseCode }}</span>
+                    <div class="flex items-center gap-2 justify-center sm:justify-start flex-wrap max-w-full">
+                        <span v-if="courseCode" class="group relative px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 rounded-full shadow-xl border-2 border-cyan-400/30 transition-all duration-300 sm:hover:shadow-2xl sm:hover:scale-105 cursor-default max-w-full overflow-hidden">
+                            <Icon icon="fluent:number-symbol-square-24-filled" class="w-3 h-3 sm:w-4 sm:h-4 inline-block mr-1 sm:mr-1.5" />
+                            <span class="tracking-wider truncate inline-block max-w-[200px] sm:max-w-none align-middle">{{ courseCode }}</span>
                             
                             <!-- Shine effect -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 translate-x-full sm:group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
                         </span>
                         <span v-else-if="isAdmin" @click="startEditingCode" class="px-4 py-2 text-sm font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-cyan-400 dark:hover:border-cyan-600 transition-colors cursor-pointer">
                             <Icon icon="fluent:add-circle-24-regular" class="w-4 h-4 inline-block mr-1" />
@@ -503,58 +503,58 @@ onUnmounted(() => {
         </div>
 
         <!-- Stats Section -->
-        <div class="py-6 px-4 sm:px-6">
-            <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+        <div class="py-4 sm:py-6 px-3 sm:px-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap md:justify-center gap-2.5 sm:gap-4 md:gap-6">
                 <!-- Lessons Count -->
-                <div class="group relative flex items-center gap-3 px-5 py-3 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-2 border-blue-200 dark:border-blue-700 hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden">
+                <div class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-2 border-blue-200 dark:border-blue-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 cursor-pointer overflow-hidden min-w-0">
                     <!-- Animated background -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-blue-500/0 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-blue-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                     
-                    <div class="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-                        <Icon icon="heroicons:book-open-solid" class="w-6 h-6 text-white" />
+                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl shadow-lg sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
+                        <Icon icon="heroicons:book-open-solid" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div class="relative">
-                        <div class="text-2xl font-black text-blue-600 dark:text-blue-400 leading-none">{{ lessonsCount }}</div>
-                        <div class="text-xs font-semibold text-blue-700/70 dark:text-blue-300/70 mt-0.5">บทเรียน</div>
+                    <div class="relative min-w-0">
+                        <div class="text-lg sm:text-2xl font-black text-blue-600 dark:text-blue-400 leading-none truncate">{{ lessonsCount }}</div>
+                        <div class="text-[10px] sm:text-xs font-semibold text-blue-700/70 dark:text-blue-300/70 mt-0.5 truncate">บทเรียน</div>
                     </div>
                 </div>
 
                 <!-- Enrolled Students -->
-                <div class="group relative flex items-center gap-3 px-5 py-3 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border-2 border-purple-200 dark:border-purple-700 hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/10 to-purple-500/0 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                <div class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border-2 border-purple-200 dark:border-purple-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 cursor-pointer overflow-hidden min-w-0">
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/10 to-purple-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                     
-                    <div class="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-                        <Icon icon="heroicons:users-solid" class="w-6 h-6 text-white" />
+                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-50 to-purple-600 rounded-lg sm:rounded-xl shadow-lg sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
+                        <Icon icon="heroicons:users-solid" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div class="relative">
-                        <div class="text-2xl font-black text-purple-600 dark:text-purple-400 leading-none">{{ enrolledStudents || 0 }}</div>
-                        <div class="text-xs font-semibold text-purple-700/70 dark:text-purple-300/70 mt-0.5">ผู้เรียน</div>
+                    <div class="relative min-w-0">
+                        <div class="text-lg sm:text-2xl font-black text-purple-600 dark:text-purple-400 leading-none truncate">{{ enrolledStudents || 0 }}</div>
+                        <div class="text-[10px] sm:text-xs font-semibold text-purple-700/70 dark:text-purple-300/70 mt-0.5 truncate">ผู้เรียน</div>
                     </div>
                 </div>
 
                 <!-- Groups Count -->
-                <div class="group relative flex items-center gap-3 px-5 py-3 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-2 border-green-200 dark:border-green-700 hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/10 to-green-500/0 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                <div class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-2 border-green-200 dark:border-green-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 cursor-pointer overflow-hidden min-w-0">
+                    <div class="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/10 to-green-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                     
-                    <div class="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-                        <Icon icon="heroicons:user-group-solid" class="w-6 h-6 text-white" />
+                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg sm:rounded-xl shadow-lg sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
+                        <Icon icon="heroicons:user-group-solid" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div class="relative">
-                        <div class="text-2xl font-black text-green-600 dark:text-green-400 leading-none">{{ groupsCount || 0 }}</div>
-                        <div class="text-xs font-semibold text-green-700/70 dark:text-green-300/70 mt-0.5">กลุ่ม</div>
+                    <div class="relative min-w-0">
+                        <div class="text-lg sm:text-2xl font-black text-green-600 dark:text-green-400 leading-none truncate">{{ groupsCount || 0 }}</div>
+                        <div class="text-[10px] sm:text-xs font-semibold text-green-700/70 dark:text-green-300/70 mt-0.5 truncate">กลุ่ม</div>
                     </div>
                 </div>
 
                 <!-- Rating Stats -->
-                <div v-if="course?.rating" class="group relative flex items-center gap-3 px-5 py-3 rounded-2xl bg-gradient-to-br from-yellow-50 to-amber-100 dark:from-yellow-900/30 dark:to-amber-800/30 border-2 border-yellow-200 dark:border-yellow-700 hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/10 to-yellow-500/0 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                <div v-if="course?.rating" class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-50 to-amber-100 dark:from-yellow-900/30 dark:to-amber-800/30 border-2 border-yellow-200 dark:border-yellow-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 cursor-pointer overflow-hidden min-w-0">
+                    <div class="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/10 to-yellow-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                     
-                    <div class="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-                        <Icon icon="fluent:star-24-filled" class="w-6 h-6 text-white" />
+                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-lg sm:rounded-xl shadow-lg sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
+                        <Icon icon="fluent:star-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div class="relative">
+                    <div class="relative min-w-0">
                         <div class="flex items-center gap-1">
-                            <span class="text-2xl font-black text-yellow-600 dark:text-yellow-400 leading-none">
+                            <span class="text-lg sm:text-2xl font-black text-yellow-600 dark:text-yellow-400 leading-none">
                                 {{ typeof course.rating === 'number' ? course.rating.toFixed(1) : course.rating }}
                             </span>
                             <div class="flex items-center">
@@ -566,7 +566,7 @@ onUnmounted(() => {
                                 />
                             </div>
                         </div>
-                        <div class="text-xs font-semibold text-yellow-700/70 dark:text-yellow-300/70 mt-0.5">
+                        <div class="text-[10px] sm:text-xs font-semibold text-yellow-700/70 dark:text-yellow-300/70 mt-0.5 truncate">
                             {{ course.reviews_count || 0 }} รีวิว
                         </div>
                     </div>
@@ -574,26 +574,26 @@ onUnmounted(() => {
 
                 <!-- Academy Info -->
                 <NuxtLink v-if="academy" :to="`/academies/${academy.id}`" 
-                    class="group relative flex items-center gap-3 px-5 py-3 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-2 border-orange-200 dark:border-orange-700 hover:shadow-xl transition-all duration-300 hover:scale-105 overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                    class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-2 border-orange-200 dark:border-orange-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 overflow-hidden min-w-0">
+                    <div class="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                     
-                    <div class="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg overflow-hidden group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg sm:rounded-xl shadow-lg overflow-hidden sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
                         <img v-if="academy.logo" :src="`${$config.public.apiBase}/storage/images/academies/logos/${academy.logo}`" class="w-full h-full object-cover" />
-                        <Icon v-else icon="heroicons:academic-cap-solid" class="w-6 h-6 text-white" />
+                        <Icon v-else icon="heroicons:academic-cap-solid" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
-                    <div class="relative text-left">
-                        <div class="text-sm font-black text-orange-700 dark:text-orange-400 truncate max-w-[140px] leading-tight">{{ academy.name }}</div>
-                        <div class="text-xs font-semibold text-orange-600/70 dark:text-orange-300/70">สถาบัน</div>
+                    <div class="relative text-left min-w-0">
+                        <div class="text-xs sm:text-sm font-black text-orange-700 dark:text-orange-400 truncate max-w-[100px] sm:max-w-[180px] leading-tight">{{ academy.name }}</div>
+                        <div class="text-[10px] sm:text-xs font-semibold text-orange-600/70 dark:text-orange-300/70">สถาบัน</div>
                     </div>
                 </NuxtLink>
             </div>
 
             <!-- Mobile: Join/Member Button -->
-            <div v-if="!isAdmin" class="flex justify-center mt-4 md:hidden">
+            <div v-if="!isAdmin" class="flex justify-center mt-4 md:hidden px-3">
                 <!-- Pending Status (Mobile) -->
-                <div v-if="courseMemberOfAuth && (memberStatus === '0' || memberStatus === 'pending')" class="relative w-56">
+                <div v-if="courseMemberOfAuth && (memberStatus === '0' || memberStatus === 'pending')" class="relative w-full max-w-xs">
                     <button @click.prevent="toggleAcceptMemberOption"
-                        class="w-full flex items-center justify-between gap-2 px-5 py-2.5 bg-yellow-500 active:bg-yellow-600 text-white font-semibold rounded-lg transition-colors shadow-md">
+                        class="w-full flex items-center justify-between gap-2 px-5 py-3 bg-yellow-500 active:bg-yellow-600 text-white font-semibold rounded-lg transition-colors shadow-md min-h-[48px]">
                         <span class="flex items-center gap-2">
                             <Icon icon="heroicons:clock" class="w-5 h-5" />
                             <span>รอการตอบรับ</span>
@@ -602,7 +602,7 @@ onUnmounted(() => {
                     </button>
                     <div v-if="showAcceptMemberOption" class="absolute left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border z-50">
                         <button @click.prevent="onRequestToBeUnMember" :disabled="isRequestingUnmember"
-                            class="w-full px-4 py-3 text-red-600 active:bg-red-50 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+                            class="w-full px-4 py-3 text-red-600 active:bg-red-50 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 min-h-[48px]">
                             <Icon v-if="isRequestingUnmember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                             <Icon v-else icon="heroicons:x-circle" class="w-5 h-5" />
                             <span>ยกเลิกคำขอ</span>
@@ -613,23 +613,23 @@ onUnmounted(() => {
                 <!-- Active Member (Mobile) -->
                 <button v-else-if="courseMemberOfAuth && (memberStatus === '1' || memberStatus === 'active')"
                     @click.prevent="onRequestToBeUnMember" :disabled="isRequestingUnmember"
-                    class="w-56 flex items-center justify-center gap-2 px-5 py-2.5 bg-yellow-300 active:bg-red-500 active:text-white text-gray-700 font-semibold rounded-lg transition-all shadow-md disabled:opacity-50">
+                    class="w-full max-w-xs flex items-center justify-center gap-2 px-5 py-3 bg-yellow-300 active:bg-red-500 active:text-white text-gray-700 font-semibold rounded-lg transition-all shadow-md disabled:opacity-50 min-h-[48px]">
                     <Icon v-if="isRequestingUnmember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                     <Icon v-else icon="majesticons:door-exit-line" class="w-5 h-5" />
                     <span>ออกจากสมาชิก</span>
                 </button>
 
                 <!-- Join Button (Mobile) -->
-                <div v-else-if="!courseMemberOfAuth" class="relative w-56">
+                <div v-else-if="!courseMemberOfAuth" class="relative w-full max-w-xs">
                     <button v-if="!hasGroups" @click.prevent="onRequestToBeMember(null)" :disabled="isRequestingMember"
-                        class="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-cyan-500 active:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50">
+                        class="w-full flex items-center justify-center gap-2 px-5 py-3 bg-cyan-500 active:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50 min-h-[48px]">
                         <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                         <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />
                         <span>สมัครเรียน</span>
                     </button>
                     <template v-else>
                         <button @click.prevent="toggleOptionGroups"
-                            class="w-full flex items-center justify-between gap-2 px-5 py-2.5 bg-cyan-500 active:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md">
+                            class="w-full flex items-center justify-between gap-2 px-5 py-3 bg-cyan-500 active:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md min-h-[48px]">
                             <span class="flex items-center gap-2">
                                 <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                                 <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />
@@ -649,7 +649,7 @@ onUnmounted(() => {
                             <!-- Groups list -->
                             <button v-for="group in courseGroups" :key="group.id"
                                 @click.prevent="onRequestToBeMember(group.id)" :disabled="isRequestingMember"
-                                class="w-full px-4 py-3 text-left active:bg-cyan-50 flex items-center gap-3 border-b last:border-b-0 disabled:opacity-50">
+                                class="w-full px-4 py-3 text-left active:bg-cyan-50 flex items-center gap-3 border-b last:border-b-0 disabled:opacity-50 min-h-[48px]">
                                 <div class="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center flex-shrink-0">
                                     <Icon icon="heroicons:user-group" class="w-4 h-4 text-cyan-600" />
                                 </div>
@@ -663,103 +663,103 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Edit Course Info Modal -->
-    <DialogModal :show="showEditModal" @close="closeEditModal" max-width="2xl">
-        <template #title>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
-                    <Icon icon="fluent:edit-24-filled" class="w-6 h-6 text-white" />
+        <!-- Edit Course Info Modal -->
+        <DialogModal :show="showEditModal" @close="closeEditModal" max-width="2xl">
+            <template #title>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
+                        <Icon icon="fluent:edit-24-filled" class="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">แก้ไขข้อมูลรายวิชา</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">อัพเดทชื่อและรหัสวิชา</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">แก้ไขข้อมูลรายวิชา</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">อัพเดทชื่อและรหัสวิชา</p>
-                </div>
-            </div>
-        </template>
+            </template>
 
-        <template #content>
-            <div class="space-y-6">
-                <!-- Course Name -->
-                <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        <Icon icon="heroicons:book-open-solid" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        <span>ชื่อรายวิชา</span>
-                        <span class="text-red-500">*</span>
-                    </label>
-                    <textarea
-                        v-model="tempName"
-                        rows="3"
-                        placeholder="กรอกชื่อรายวิชา (สามารถใส่ชื่อยาวได้)"
-                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-medium text-base focus:outline-none focus:ring-4 focus:ring-blue-500/50 border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-all resize-none"
-                        :class="{ 'border-red-500 focus:ring-red-500/50': !tempName.trim() }"
-                    ></textarea>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        <Icon icon="heroicons:information-circle" class="w-4 h-4" />
-                        <span>ตัวอักษร: {{ tempName.length }} / 500</span>
-                    </p>
-                </div>
+            <template #content>
+                <div class="space-y-6">
+                    <!-- Course Name -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            <Icon icon="heroicons:book-open-solid" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            <span>ชื่อรายวิชา</span>
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            v-model="tempName"
+                            rows="3"
+                            placeholder="กรอกชื่อรายวิชา (สามารถใส่ชื่อยาวได้)"
+                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-medium text-base focus:outline-none focus:ring-4 focus:ring-blue-500/50 border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 transition-all resize-none"
+                            :class="{ 'border-red-500 focus:ring-red-500/50': !tempName.trim() }"
+                        ></textarea>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <Icon icon="heroicons:information-circle" class="w-4 h-4" />
+                            <span>ตัวอักษร: {{ tempName.length }} / 500</span>
+                        </p>
+                    </div>
 
-                <!-- Course Code -->
-                <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        <Icon icon="fluent:number-symbol-square-24-filled" class="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-                        <span>รหัสวิชา</span>
-                        <span class="text-gray-400 text-xs">(ไม่บังคับ)</span>
-                    </label>
-                    <input
-                        v-model="tempCode"
-                        type="text"
-                        placeholder="เช่น CS101, MATH201"
-                        maxlength="50"
-                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-medium text-base focus:outline-none focus:ring-4 focus:ring-cyan-500/50 border-2 border-gray-200 dark:border-gray-700 hover:border-cyan-400 dark:hover:border-cyan-600 transition-all"
-                    />
-                    <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        <Icon icon="heroicons:light-bulb" class="w-4 h-4" />
-                        <span>รหัสวิชาจะแสดงเป็น badge ที่สวยงาม</span>
-                    </p>
-                </div>
+                    <!-- Course Code -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            <Icon icon="fluent:number-symbol-square-24-filled" class="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                            <span>รหัสวิชา</span>
+                            <span class="text-gray-400 text-xs">(ไม่บังคับ)</span>
+                        </label>
+                        <input
+                            v-model="tempCode"
+                            type="text"
+                            placeholder="เช่น CS101, MATH201"
+                            maxlength="50"
+                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-medium text-base focus:outline-none focus:ring-4 focus:ring-cyan-500/50 border-2 border-gray-200 dark:border-gray-700 hover:border-cyan-400 dark:hover:border-cyan-600 transition-all"
+                        />
+                        <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <Icon icon="heroicons:light-bulb" class="w-4 h-4" />
+                            <span>รหัสวิชาจะแสดงเป็น badge ที่สวยงาม</span>
+                        </p>
+                    </div>
 
-                <!-- Preview Section -->
-                <div class="p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
-                    <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
-                        <Icon icon="heroicons:eye" class="w-4 h-4" />
-                        <span>ตัวอย่างการแสดงผล:</span>
-                    </p>
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <div class="px-4 py-2 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-xl shadow-lg border border-slate-700/50">
-                            <span class="text-sm font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                                {{ tempName || 'ชื่อรายวิชา' }}
-                            </span>
-                        </div>
-                        <div v-if="tempCode.trim()" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 rounded-full shadow-lg">
-                            <span class="text-xs font-bold text-white tracking-wider">{{ tempCode }}</span>
+                    <!-- Preview Section -->
+                    <div class="p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+                        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
+                            <Icon icon="heroicons:eye" class="w-4 h-4" />
+                            <span>ตัวอย่างการแสดงผล:</span>
+                        </p>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <div class="px-4 py-2 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-xl shadow-lg border border-slate-700/50">
+                                <span class="text-sm font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                                    {{ tempName || 'ชื่อรายวิชา' }}
+                                </span>
+                            </div>
+                            <div v-if="tempCode.trim()" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 rounded-full shadow-lg">
+                                <span class="text-xs font-bold text-white tracking-wider">{{ tempCode }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </template>
+            </template>
 
-        <template #footer>
-            <div class="flex items-center justify-end gap-3">
-                <button
-                    @click="closeEditModal"
-                    :disabled="isUpdatingName"
-                    class="px-6 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    ยกเลิก
-                </button>
-                <button
-                    @click="saveCourseInfo"
-                    :disabled="!tempName.trim() || isUpdatingName"
-                    class="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold rounded-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-                >
-                    <Icon v-if="isUpdatingName" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                    <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />
-                    <span>{{ isUpdatingName ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข' }}</span>
-                </button>
-            </div>
-        </template>
-    </DialogModal>
+            <template #footer>
+                <div class="flex items-center justify-end gap-3">
+                    <button
+                        @click="closeEditModal"
+                        :disabled="isUpdatingName"
+                        class="px-6 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        ยกเลิก
+                    </button>
+                    <button
+                        @click="saveCourseInfo"
+                        :disabled="!tempName.trim() || isUpdatingName"
+                        class="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold rounded-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                    >
+                        <Icon v-if="isUpdatingName" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+                        <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />
+                        <span>{{ isUpdatingName ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข' }}</span>
+                    </button>
+                </div>
+            </template>
+        </DialogModal>
+    </div>
 </template>

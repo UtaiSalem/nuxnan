@@ -7,8 +7,8 @@ const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
 </script>
 
 <template>
-  <div>
-    <AttendancesList 
+  <div class="px-3 sm:px-4 lg:px-0 pb-6">
+    <AttendancesList
       v-if="course?.id"
       :course-id="course.id"
       :is-course-admin="isCourseAdmin"

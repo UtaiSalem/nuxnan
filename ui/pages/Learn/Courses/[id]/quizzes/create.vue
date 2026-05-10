@@ -239,7 +239,7 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-6 max-w-4xl">
+  <div class="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 pb-32 sm:pb-12 space-y-4 sm:space-y-6">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
       <button 
@@ -256,7 +256,7 @@ const handleSubmit = async () => {
 
     <!-- Form -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div class="p-6 space-y-6">
+      <div class="p-4 sm:p-6 space-y-6">
         
         <!-- Basic Info -->
         <div class="grid gap-6">
@@ -508,6 +508,19 @@ const handleSubmit = async () => {
           <span>{{ isLoading ? 'กำลังบันทึก...' : 'สร้างแบบทดสอบ' }}</span>
         </button>
       </div>
+    </div>
+
+
+    <!-- Mobile Save Button (Sticky Bottom) -->
+    <div class="fixed bottom-16 sm:bottom-0 left-0 right-0 px-4 pt-3 pb-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 lg:hidden z-40" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
+      <button
+        @click="handleSubmit"
+        :disabled="!isFormValid || isLoading"
+        class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-50 min-h-[48px]"
+      >
+        <Icon v-if="isLoading" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+        <span>{{ isLoading ? 'กำลังบันทึก...' : 'สร้างแบบทดสอบ' }}</span>
+      </button>
     </div>
 
     <!-- Loading overlay for duplicating -->

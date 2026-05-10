@@ -180,7 +180,7 @@ const getStatusBadge = computed(() => {
   <div class="container mx-auto px-4 py-6 max-w-4xl">
     
     <!-- Loading -->
-    <div v-if="pending" class="flex justify-center p-12">
+    <div v-if="pending" class="flex justify-center p-8 sm:p-12">
       <Icon icon="svg-spinners:3-dots-fade" class="w-10 h-10 text-gray-400" />
     </div>
 
@@ -224,7 +224,7 @@ const getStatusBadge = computed(() => {
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         
         <!-- Cover / Banner Area -->
-        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 sm:p-8 text-white">
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 sm:p-6 sm:p-8 text-white">
           <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
             <div class="w-16 h-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shrink-0">
               <Icon icon="fluent:quiz-new-24-filled" class="w-8 h-8 text-white" />
@@ -247,19 +247,19 @@ const getStatusBadge = computed(() => {
 
         <!-- Info Grid -->
         <div class="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700">
-          <div class="p-6 text-center">
+          <div class="p-4 sm:p-6 text-center">
             <div class="text-sm text-gray-500 mb-1">จำนวนข้อ</div>
             <div class="text-2xl font-bold text-gray-900 dark:text-white">
               {{ quiz.questions?.length || 0 }}
             </div>
           </div>
-          <div class="p-6 text-center">
+          <div class="p-4 sm:p-6 text-center">
             <div class="text-sm text-gray-500 mb-1">คะแนนเต็ม</div>
             <div class="text-2xl font-bold text-gray-900 dark:text-white">
               {{ quiz.total_score || 0 }}
             </div>
           </div>
-          <div class="p-6 text-center">
+          <div class="p-4 sm:p-6 text-center">
             <div class="text-sm text-gray-500 mb-1">เกณฑ์ผ่าน</div>
             <div class="text-2xl font-bold text-gray-900 dark:text-white">
               {{ quiz.passing_score }}%
@@ -268,7 +268,7 @@ const getStatusBadge = computed(() => {
         </div>
 
         <!-- Dates -->
-        <div class="p-6 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-700">
+        <div class="p-4 sm:p-6 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-700">
           <div class="grid md:grid-cols-2 gap-4 text-sm">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -294,7 +294,7 @@ const getStatusBadge = computed(() => {
         <!-- Action Area -->
         <div class="p-8 text-center">
           <div v-if="!isCourseAdmin">
-             <div v-if="quiz.current_result && quiz.current_result.completed_at" class="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-6 mb-6">
+             <div v-if="quiz.current_result && quiz.current_result.completed_at" class="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4 sm:p-6 mb-6">
                 <h3 class="text-lg font-semibold mb-4 text-center">ผลการทดสอบของคุณ</h3>
                 <div class="flex justify-center gap-12 text-center py-4">
                     <div class="flex flex-col items-center">
@@ -386,7 +386,7 @@ const getStatusBadge = computed(() => {
               </div>
             </div>
 
-            <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-6">
+            <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 sm:p-6">
                 <h3 class="text-lg font-semibold mb-4">
                   ผลการสอบของนักเรียน
                   <span v-if="selectedGroupId" class="text-sm font-normal text-gray-500 ml-2">

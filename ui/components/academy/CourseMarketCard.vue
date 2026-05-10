@@ -41,8 +41,8 @@
           {{ course.course_lessons_count || 0 }} บทเรียน
         </div>
         <div class="flex items-center gap-1">
-          <Icon icon="mdi:cart" class="w-3 h-3" />
-          {{ course.total_sales || 0 }} ยอดขาย
+          <Icon icon="mdi:content-copy" class="w-3 h-3" />
+          ถูก Clone ไปแล้ว {{ course.total_sales || 0 }} ครั้ง
         </div>
       </div>
 

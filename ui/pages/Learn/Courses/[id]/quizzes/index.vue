@@ -114,7 +114,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="px-3 sm:px-4 lg:px-0 pb-6">
     <!-- Child Route Content -->
     <NuxtPage />
 

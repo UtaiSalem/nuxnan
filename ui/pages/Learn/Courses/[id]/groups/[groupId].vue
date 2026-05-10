@@ -438,7 +438,7 @@ onMounted(() => {
       <div v-if="activeTab === 'about'" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
           <h2 class="text-xl font-bold mb-4">เกี่ยวกับกลุ่ม</h2>
           <p class="text-gray-600 dark:text-gray-300 whitespace-pre-line">{{ group.description || 'ไม่มีคำอธิบาย' }}</p>
-          <div class="mt-6 grid grid-cols-2 gap-4">
+          <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
                   <div class="text-sm text-gray-500">วันที่สร้าง</div>
                   <div class="font-medium">

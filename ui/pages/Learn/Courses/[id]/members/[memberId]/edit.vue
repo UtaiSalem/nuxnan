@@ -93,7 +93,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-3xl pb-24 lg:pb-8">
+  <div class="max-w-3xl mx-auto px-3 sm:px-4 lg:px-6 pb-32 sm:pb-12 space-y-4 sm:space-y-6">
     <!-- Back Button -->
     <button 
       @click="goBack"
@@ -129,7 +129,7 @@ onMounted(() => {
       </div>
 
       <!-- Edit Form -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-6">
           <Icon icon="fluent:person-edit-24-regular" class="w-5 h-5 text-blue-500" />
           แก้ไขข้อมูลสมาชิก

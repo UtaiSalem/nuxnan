@@ -261,7 +261,7 @@ onMounted(() => {
       </div>
 
       <!-- Progress Bar -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <Icon icon="heroicons:chart-bar-solid" class="w-5 h-5 text-indigo-500" />
@@ -285,7 +285,7 @@ onMounted(() => {
       </div>
 
       <!-- Detail Info -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <Icon icon="fluent:info-24-regular" class="w-5 h-5 text-blue-500" />

@@ -208,7 +208,7 @@ onMounted(() => {
 
     <div v-if="!isLoading && assignment" class="space-y-8">
       <!-- Header Card -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div class="flex items-start justify-between mb-4">
           <div class="flex items-center gap-3">
              <div class="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
@@ -267,7 +267,7 @@ onMounted(() => {
       <!-- Student Submission Section -->
       <div v-else class="space-y-6">
         <!-- Existing Answer -->
-        <div v-if="userAnswer && !isEditing" class="bg-blue-50 dark:bg-blue-900/10 rounded-2xl p-6 border border-blue-100 dark:border-blue-800">
+        <div v-if="userAnswer && !isEditing" class="bg-blue-50 dark:bg-blue-900/10 rounded-2xl p-4 sm:p-6 border border-blue-100 dark:border-blue-800">
            <div class="flex justify-between items-start mb-4">
               <h3 class="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2">
                  <Icon icon="fluent:document-checkmark-24-filled" class="w-6 h-6" />

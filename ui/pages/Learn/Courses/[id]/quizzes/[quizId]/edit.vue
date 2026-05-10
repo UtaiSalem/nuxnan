@@ -451,7 +451,7 @@ const deleteQuestion = async (qId: number) => {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-6 max-w-4xl">
+  <div class="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 pb-32 sm:pb-12 space-y-4 sm:space-y-6">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
       <button 
@@ -491,7 +491,7 @@ const deleteQuestion = async (qId: number) => {
         </div>
 
         <!-- Settings Tab -->
-        <div v-show="activeTab === 'settings'" class="p-6 space-y-6">
+        <div v-show="activeTab === 'settings'" class="p-4 sm:p-6 space-y-6">
              <!-- Same form content as create.vue -->
              <!-- Basic Info -->
             <div class="grid gap-6">
@@ -580,7 +580,7 @@ const deleteQuestion = async (qId: number) => {
         </div>
 
         <!-- Questions Tab -->
-        <div v-show="activeTab === 'questions'" class="p-6">
+        <div v-show="activeTab === 'questions'" class="p-4 sm:p-6">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="font-bold text-gray-900 dark:text-white">รายการคำถาม</h3>
                 <button 
@@ -642,6 +642,14 @@ const deleteQuestion = async (qId: number) => {
 
     </div>
 
+    <!-- Mobile Save Button (Sticky Bottom) -->
+    <div class="fixed bottom-16 sm:bottom-0 left-0 right-0 px-4 pt-3 pb-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 lg:hidden z-40" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
+      <div class="max-w-4xl mx-auto flex items-center gap-3">
+        <button @click="$router.back()" class="flex-1 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-[48px]">ยกเลิก</button>
+        <button @click="handleUpdate" :disabled="!isFormValid || isSaving" class="flex-1 px-4 py-3 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors min-h-[48px]">{{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}</button>
+      </div>
+    </div>
+
     <!-- Question Modal -->
     <div v-if="questionModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
@@ -654,7 +662,7 @@ const deleteQuestion = async (qId: number) => {
                 </button>
             </div>
             
-            <div class="p-6 overflow-y-auto flex-1 space-y-6">
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6">
                 <!-- คำถาม -->
                 <div>
                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำถาม</label>

@@ -101,6 +101,16 @@ const scrollToEnd = async () => {
   }
 }
 
+const showTableLeftFade = ref(false)
+const showTableRightFade = ref(false)
+
+const updateTableFades = () => {
+  if (!tableContainer.value) return
+  const el = tableContainer.value
+  showTableLeftFade.value = el.scrollLeft > 8
+  showTableRightFade.value = el.scrollLeft < (el.scrollWidth - el.clientWidth - 8)
+}
+
 // Fetch table data
 const fetchTableData = async (groupId?: number | null) => {
   if (!course?.value?.id) return
@@ -409,6 +419,8 @@ const onClickOutside = (event: MouseEvent) => {
 onMounted(() => {
   fetchTableData()
   document.addEventListener('click', onClickOutside)
+  nextTick(() => updateTableFades())
+  tableContainer.value?.addEventListener('scroll', updateTableFades, { passive: true })
 })
 
 onUnmounted(() => {
@@ -417,7 +429,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4 sm:space-y-6 px-3 sm:px-4 lg:px-0 pb-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div>
@@ -507,7 +519,12 @@ onUnmounted(() => {
 
     <!-- Matrix Table -->
     <div v-else-if="members.length > 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div ref="tableContainer" class="relative overflow-x-auto">
+      <div class="relative">
+  <div v-show="showTableLeftFade" class="pointer-events-none absolute left-0 top-0 bottom-0 w-6 z-30 bg-gradient-to-r from-white dark:from-gray-800 to-transparent"></div>
+  <div v-show="showTableRightFade" class="pointer-events-none absolute right-0 top-0 bottom-0 w-6 z-30 bg-gradient-to-l from-white dark:from-gray-800 to-transparent"></div>
+  <div ref="tableContainer" 
+       class="relative overflow-x-auto scroll-smooth -mx-3 sm:mx-0 px-3 sm:px-0"
+       style="-webkit-overflow-scrolling: touch;">
         <table class="w-full">
           <!-- Table Header -->
           <thead class="bg-gradient-to-r from-gray-50 via-gray-100 to-slate-100 dark:from-gray-700 dark:via-gray-800 dark:to-gray-700 border-b-2 border-gray-200 dark:border-gray-600">
@@ -669,6 +686,7 @@ onUnmounted(() => {
             </tr>
           </tfoot>
         </table>
+      </div>
       </div>
 
       <!-- Bottom save bar -->

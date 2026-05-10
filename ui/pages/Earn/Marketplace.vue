@@ -34,8 +34,8 @@ const filters = ref({
 
 const priceTypes = [
   { label: 'ทั้งหมด', value: 'all' },
-  { label: 'ฟรี', value: 'free' },
-  { label: 'ใช้แต้ม', value: 'points' },
+  { label: 'ฟรี (Clone ฟรี)', value: 'free' },
+  { label: 'ใช้แต้ม (Points)', value: 'points' },
   { label: 'ใช้เงิน (Wallet)', value: 'wallet' },
   { label: 'ใช้ได้ทั้งสองอย่าง', value: 'both' }
 ]
@@ -129,7 +129,7 @@ onMounted(() => {
 })
 
 useHead({
-  title: 'ตลาดรายวิชา - Marketplace',
+  title: 'ตลาดลิขสิทธิ์รายวิชา - Marketplace',
 })
 </script>
 
@@ -141,12 +141,12 @@ useHead({
       <div v-if="activeTab === 'browse'" class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 p-5 sticky top-24 mb-4">
         <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Icon icon="fluent:filter-24-regular" class="w-5 h-5 text-vikinger-purple" />
-          ตัวกรอง
+          ตัวกรองตลาดลิขสิทธิ์
         </h3>
 
         <!-- Search -->
         <div class="mb-5">
-          <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 block">ค้นหา</label>
+          <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 block">ค้นหาต้นฉบับ</label>
           <div class="relative">
             <input 
               v-model="filters.search" 
@@ -161,7 +161,7 @@ useHead({
 
         <!-- Price Type -->
         <div class="mb-5">
-          <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 block">ประเภทราคา</label>
+          <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 block">เงื่อนไขการ Clone</label>
           <div class="flex flex-col gap-2">
             <label v-for="type in priceTypes" :key="type.value" class="flex items-center gap-2 cursor-pointer group">
               <input type="radio" v-model="filters.price_type" :value="type.value" class="text-vikinger-purple focus:ring-vikinger-purple border-gray-300 dark:border-vikinger-dark-50" />
@@ -213,10 +213,10 @@ useHead({
           <div>
             <h1 class="text-2xl md:text-3xl font-black mb-2 flex items-center gap-2">
               <Icon icon="fluent:shopping-bag-24-filled" class="w-8 h-8 text-white/90" />
-              ตลาดรายวิชา
+              ตลาดลิขสิทธิ์รายวิชา
             </h1>
             <p class="text-white/80 text-sm md:text-base max-w-xl font-medium">
-              เลือกซื้อรายวิชาคุณภาพเพื่อพัฒนาทักษะของคุณ หรือนำไปใช้สอนต่อได้อย่างอิสระ
+              เลือกซื้อสำเนาต้นฉบับรายวิชา (Master Copy) เพื่อนำไปจัดการเรียนการสอนในสถาบันของคุณได้ทันที
             </p>
           </div>
           
@@ -251,7 +251,7 @@ useHead({
           :class="activeTab === 'browse' ? 'bg-vikinger-purple/10 text-vikinger-purple dark:text-vikinger-cyan' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 dark:text-gray-400'"
         >
           <Icon icon="fluent:search-24-filled" class="w-4 h-4" />
-          เลือกดูรายวิชา
+          เลือกซื้อลิขสิทธิ์
         </button>
         <button 
           @click="activeTab = 'history'" 
@@ -259,7 +259,7 @@ useHead({
           :class="activeTab === 'history' ? 'bg-vikinger-purple/10 text-vikinger-purple dark:text-vikinger-cyan' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 dark:text-gray-400'"
         >
           <Icon icon="fluent:history-24-filled" class="w-4 h-4" />
-          ประวัติการซื้อ
+          ประวัติการซื้อต้นฉบับ
         </button>
         <button 
           @click="activeTab = 'analytics'" 
@@ -267,7 +267,7 @@ useHead({
           :class="activeTab === 'analytics' ? 'bg-vikinger-purple/10 text-vikinger-purple dark:text-vikinger-cyan' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 dark:text-gray-400'"
         >
           <Icon icon="fluent:data-line-24-filled" class="w-4 h-4" />
-          รายได้จากการขาย
+          รายได้จากการขายลิขสิทธิ์
         </button>
       </div>
 
@@ -296,7 +296,7 @@ useHead({
 
         <div v-else-if="courses.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-12 text-center border-2 border-dashed border-gray-200 dark:border-vikinger-dark-100">
           <Icon icon="fluent:box-search-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h4 class="text-lg font-bold text-gray-800 dark:text-white mb-2">ไม่พบรายวิชาที่ต้องการ</h4>
+          <h4 class="text-lg font-bold text-gray-800 dark:text-white mb-2">ไม่พบรายวิชาต้นฉบับ</h4>
           <p class="text-sm text-gray-500">ลองเปลี่ยนตัวกรองหรือคำค้นหาใหม่</p>
         </div>
 
@@ -344,7 +344,7 @@ useHead({
         </div>
         <div v-else-if="history.length === 0" class="text-center py-16 bg-white dark:bg-vikinger-dark-200 rounded-xl border border-gray-100 dark:border-vikinger-dark-100">
           <Icon icon="fluent:history-dismiss-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h4 class="text-lg font-bold text-gray-800 dark:text-white">ไม่พบประวัติการซื้อ</h4>
+          <h4 class="text-lg font-bold text-gray-800 dark:text-white">ไม่พบประวัติการซื้อลิขสิทธิ์</h4>
         </div>
         <div v-else class="space-y-3">
           <div v-for="item in history" :key="item.id" class="bg-white dark:bg-vikinger-dark-200 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 flex items-center gap-4 transition-transform hover:-translate-y-0.5">
@@ -372,9 +372,9 @@ useHead({
         <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div v-for="i in 2" :key="i" class="h-32 bg-gray-200 dark:bg-vikinger-dark-200 rounded-xl animate-pulse"></div>
         </div>
-        <div v-else-if="!analytics" class="text-center py-16 bg-white dark:bg-vikinger-dark-200 rounded-xl border border-gray-100 dark:border-vikinger-dark-100">
+        <div v-else-if="!analytics" class="text-center py-16 bg-white dark:bg-vikinger-dark-200 rounded-xl border border-gray-100 dark:border-gray-100">
            <Icon icon="fluent:data-line-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-           <h4 class="text-lg font-bold text-gray-800 dark:text-white">ยังไม่มีข้อมูลรายได้</h4>
+           <h4 class="text-lg font-bold text-gray-800 dark:text-white">ยังไม่มีข้อมูลรายได้จากลิขสิทธิ์</h4>
         </div>
         <div v-else class="space-y-6">
            <!-- Summary Cards -->
@@ -383,7 +383,7 @@ useHead({
                  <Icon icon="fluent:money-24-filled" class="absolute -right-4 -bottom-4 w-24 h-24 text-white/10" />
                  <div class="relative z-10">
                    <div class="text-xs font-bold uppercase opacity-80 mb-1 flex items-center gap-1">
-                     <Icon icon="fluent:arrow-trending-up-24-filled" class="w-4 h-4" /> รายได้ทั้งหมด (รวม)
+                     <Icon icon="fluent:arrow-trending-up-24-filled" class="w-4 h-4" /> รายได้ลิขสิทธิ์ทั้งหมด
                    </div>
                    <div class="text-3xl font-black">฿{{ formatNumber(analytics.total_revenue) }}</div>
                  </div>
@@ -391,8 +391,8 @@ useHead({
               <div class="bg-white dark:bg-vikinger-dark-200 p-5 rounded-xl border border-gray-100 dark:border-vikinger-dark-100 shadow-sm relative overflow-hidden">
                  <Icon icon="fluent:receipt-24-filled" class="absolute -right-4 -bottom-4 w-24 h-24 text-gray-100 dark:text-vikinger-dark-50" />
                  <div class="relative z-10">
-                   <div class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">ยอดขายรวม</div>
-                   <div class="text-3xl font-black text-gray-800 dark:text-white">{{ formatNumber(analytics.total_sales) }} <span class="text-sm font-normal text-gray-500">รายการ</span></div>
+                   <div class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">จำนวนที่ถูก Clone ไปสอน</div>
+                   <div class="text-3xl font-black text-gray-800 dark:text-white">{{ formatNumber(analytics.total_sales) }} <span class="text-sm font-normal text-gray-500">ครั้ง</span></div>
                  </div>
               </div>
            </div>
@@ -401,14 +401,14 @@ useHead({
            <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 overflow-hidden">
               <div class="px-5 py-4 border-b border-gray-100 dark:border-vikinger-dark-100 flex items-center gap-2">
                 <Icon icon="fluent:table-24-regular" class="w-5 h-5 text-vikinger-purple" />
-                <h4 class="font-bold text-gray-800 dark:text-white">ยอดขายแยกตามรายวิชา</h4>
+                <h4 class="font-bold text-gray-800 dark:text-white">ยอดขายลิขสิทธิ์แยกตามรายวิชา</h4>
               </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left whitespace-nowrap">
                   <thead class="bg-gray-50 dark:bg-vikinger-dark-100/50 text-gray-500 dark:text-gray-400">
                       <tr>
-                        <th class="px-5 py-3 text-xs font-bold uppercase tracking-wider">รายวิชา</th>
-                        <th class="px-5 py-3 text-xs font-bold uppercase tracking-wider text-center">จำนวนที่ขายได้</th>
+                        <th class="px-5 py-3 text-xs font-bold uppercase tracking-wider">รายวิชาต้นฉบับ</th>
+                        <th class="px-5 py-3 text-xs font-bold uppercase tracking-wider text-center">จำนวนครั้งที่ขายได้</th>
                         <th class="px-5 py-3 text-xs font-bold uppercase tracking-wider text-right">รายได้</th>
                       </tr>
                   </thead>
@@ -421,7 +421,7 @@ useHead({
                         <td class="px-5 py-4 text-right font-black text-emerald-600 dark:text-emerald-400">฿{{ formatNumber(item.total_revenue) }}</td>
                       </tr>
                       <tr v-if="!analytics.sales_by_course?.length">
-                        <td colspan="3" class="px-5 py-8 text-center text-gray-500 text-sm">ยังไม่มีข้อมูลยอดขายแยกตามรายวิชา</td>
+                        <td colspan="3" class="px-5 py-8 text-center text-gray-500 text-sm">ยังไม่มีข้อมูลการขายลิขสิทธิ์ต้นฉบับ</td>
                       </tr>
                   </tbody>
                 </table>
