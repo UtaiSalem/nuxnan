@@ -18,7 +18,7 @@ withDefaults(defineProps<Props>(), {
 
 <template>
   <section 
-    class="rounded-2xl border overflow-hidden transition-all duration-300"
+    class="rounded-xl sm:rounded-2xl border overflow-hidden transition-all duration-300"
     :class="{
       'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm': variant === 'default',
       'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30': variant === 'danger',

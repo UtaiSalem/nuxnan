@@ -1991,7 +1991,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
     </Teleport>
 
     <!-- Mobile Bottom Tab Bar -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 safe-area-bottom">
+    <div class="md:hidden fixed bottom-16 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 safe-area-bottom">
       <div class="flex items-center justify-around px-2 py-2">
         <button
           v-for="tab in mobileBottomTabs"

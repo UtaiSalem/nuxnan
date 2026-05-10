@@ -328,102 +328,88 @@ onUnmounted(() => {
 </style>
 
 <template>
-    <div class="relative w-full bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800 transition-all duration-300">
+    <div class="relative w-full bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl sm:shadow-2xl border border-gray-100 dark:border-gray-800 transition-all duration-300">
         <!-- Cover Photo Section -->
         <div 
-            class="relative h-40 sm:h-56 md:h-72 lg:h-80 bg-cover bg-center bg-no-repeat transition-all duration-500"
+            class="relative h-32 sm:h-48 md:h-64 lg:h-72 bg-cover bg-center bg-no-repeat transition-all duration-500"
             :style="{ backgroundImage: `url(${coverUrl})` }"
         >
             <!-- Enhanced Overlay gradient for better visual depth -->
-            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-600/10 to-pink-600/20 dark:from-blue-900/30 dark:via-purple-900/20 dark:to-pink-900/30"></div>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-pink-600/10 dark:from-blue-900/20 dark:via-purple-900/10 dark:to-pink-900/20"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div>
             
-            <!-- Animated Background Pattern -->
-            <div class="absolute inset-0 opacity-10 dark:opacity-5" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 40px 40px;"></div>
+            <!-- Animated Background Pattern (Hidden on small mobile for performance) -->
+            <div class="absolute inset-0 opacity-5 dark:opacity-[0.03] hidden sm:block" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 40px 40px;"></div>
             
             <!-- Edit Cover Button (Admin Only) -->
-            <div class="absolute top-3 left-3 sm:top-4 sm:left-4 z-10" v-if="isAdmin">
+            <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-10" v-if="isAdmin">
                 <input type="file" class="hidden" ref="coverInput" accept="image/*" @change="onCoverInputChange">
                 <button type="button" @click.prevent="browseCover" :disabled="isUpdatingCover"
-                    class="group relative p-2.5 sm:p-3 text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl active:scale-95 sm:hover:bg-white sm:dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 shadow-lg sm:hover:shadow-xl sm:hover:scale-110 border border-white/20 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                    class="group relative p-2 text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-lg active:scale-95 sm:hover:bg-white sm:dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 shadow-lg sm:hover:shadow-xl sm:hover:scale-105 border border-white/20 min-w-[40px] min-h-[40px] flex items-center justify-center">
                     <Icon v-if="isUpdatingCover" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                     <Icon v-else icon="fluent:camera-edit-20-filled" class="w-5 h-5 sm:group-hover:scale-110 transition-transform" />
-                    <div class="hidden sm:block absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                    <div class="hidden md:block absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                         แก้ไขปก
                     </div>
                 </button>
             </div>
             
             <!-- Tuition Fees Badge with enhanced styling -->
-            <div v-if="tuitionFees" class="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 animate-pulse">
+            <div v-if="tuitionFees" class="absolute top-2 right-2 sm:top-4 sm:right-4 z-10">
                 <div class="relative group">
-                    <div class="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl blur-md opacity-75 group-hover:opacity-100 transition-opacity"></div>
-                    <div class="relative flex items-center px-2.5 sm:px-4 py-2 sm:py-2.5 space-x-1.5 sm:space-x-2 font-bold text-white rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 shadow-lg sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 border border-yellow-300/50">
-                        <Icon icon="ri:bit-coin-fill" class="w-4 h-4 sm:w-6 sm:h-6 animate-spin-slow" />
+                    <div class="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg sm:rounded-xl blur-sm opacity-50 hidden sm:block"></div>
+                    <div class="relative flex items-center px-2 sm:px-4 py-1.5 sm:py-2.5 space-x-1 sm:space-x-2 font-bold text-white rounded-lg sm:rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 shadow-lg border border-yellow-300/30">
+                        <Icon icon="ri:bit-coin-fill" class="w-4 h-4 sm:w-6 sm:h-6" />
                         <span class="text-sm sm:text-lg">{{ tuitionFees }}</span>
-                        <span class="text-xs sm:text-sm opacity-90">บาท</span>
+                        <span class="text-[10px] sm:text-sm opacity-90">บาท</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Avatar + Name Section (Overlapping Cover) -->
-        <div class="flex flex-col sm:flex-row items-center justify-between w-full px-3 sm:px-6 -mt-12 sm:-mt-[80px] md:-mt-[90px] transition-all duration-300 gap-4 sm:gap-0">
-            <div class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+        <div class="flex flex-col sm:flex-row items-center justify-between w-full px-4 sm:px-6 -mt-10 sm:-mt-16 md:-mt-20 transition-all duration-300 gap-4 sm:gap-6">
+            <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto">
                 <!-- Avatar with enhanced styling -->
                 <div class="relative flex-shrink-0 group">
-                    <!-- Glow effect -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-500 animate-pulse pointer-events-none -z-10"></div>
-                    
-                    <div class="relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 rounded-full border-4 border-white dark:border-gray-800 overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-2xl transition-all duration-300 sm:group-hover:scale-105 sm:group-hover:shadow-3xl z-10">
+                    <div class="relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 rounded-full border-4 border-white dark:border-gray-800 overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-xl sm:shadow-2xl transition-all duration-300 sm:group-hover:scale-105 z-10">
                         <img :src="logoUrl" alt="Course Logo" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                        
-                        <!-- Overlay effect on hover -->
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </div>
                     
                     <input type="file" class="hidden" ref="logoInput" accept="image/*" @change="onLogoInputChange" v-if="isAdmin">
                     <button v-if="isAdmin" type="button" @click.prevent="browseLogo" :disabled="isUpdatingLogo"
-                        class="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 p-2 sm:p-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full active:scale-95 sm:hover:from-blue-600 sm:hover:to-purple-700 transition-all duration-300 disabled:opacity-50 shadow-lg sm:hover:shadow-xl sm:hover:scale-110 border-2 border-white dark:border-gray-800 z-10 min-w-[36px] min-h-[36px] flex items-center justify-center">
+                        class="absolute bottom-0 right-0 sm:bottom-2 sm:right-2 p-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full active:scale-95 transition-all duration-300 disabled:opacity-50 shadow-lg border-2 border-white dark:border-gray-800 z-10 min-w-[36px] min-h-[36px] flex items-center justify-center">
                         <Icon v-if="isUpdatingLogo" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                         <Icon v-else icon="fluent:camera-edit-20-filled" class="w-4 h-4" />
                     </button>
                 </div>
 
                 <!-- Course Name & Code -->
-                <div class="space-y-2 text-center sm:text-left mt-2 sm:mt-6 min-w-0 w-full sm:w-auto max-w-full">
+                <div class="flex-1 space-y-2 text-center sm:text-left mt-1 sm:mt-12 md:mt-16 min-w-0 w-full sm:w-auto">
                     <!-- Course Name -->
-                    <div class="flex items-start gap-2 flex-wrap justify-center sm:justify-start max-w-full">
-                        <div class="relative group max-w-full min-w-0 flex-1 sm:flex-initial">
-                            <!-- Glow effect -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl blur-xl opacity-0 sm:group-hover:opacity-30 transition-opacity duration-500 pointer-events-none -z-10"></div>
-                            
-                            <h1 class="relative z-10 px-3 py-2 sm:px-5 sm:py-3 text-base sm:text-xl md:text-2xl font-black text-white bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-2xl shadow-2xl border border-slate-700/50 dark:border-gray-600/50 backdrop-blur-sm transition-all duration-300 sm:group-hover:shadow-3xl sm:group-hover:scale-105 break-words leading-snug">
+                    <div class="flex items-start gap-2 flex-wrap justify-center sm:justify-start">
+                        <div class="relative group min-w-0 max-w-full">
+                            <h1 class="relative z-10 px-3 py-1.5 sm:px-5 sm:py-3 text-sm sm:text-xl md:text-2xl font-black text-white bg-slate-900/90 dark:bg-gray-800/90 rounded-xl sm:rounded-2xl shadow-xl border border-slate-700/50 dark:border-gray-600/50 backdrop-blur-sm transition-all duration-300 sm:hover:scale-[1.02] break-words leading-snug">
                                 <span class="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent line-clamp-3 sm:line-clamp-2">
                                     {{ courseName || 'ไม่มีชื่อรายวิชา' }}
                                 </span>
                             </h1>
                         </div>
                         <button v-if="isAdmin" @click="startEditingName" 
-                            class="group relative z-20 p-2 sm:p-2.5 bg-white sm:hover:bg-gray-50 dark:bg-gray-800 sm:dark:hover:bg-gray-700 rounded-xl transition-all duration-300 shadow-lg sm:hover:shadow-xl border border-gray-200 dark:border-gray-600 sm:hover:scale-110 active:scale-95 min-w-[40px] min-h-[40px] flex items-center justify-center flex-shrink-0">
+                            class="group relative z-20 p-2 sm:p-2.5 bg-white sm:hover:bg-gray-50 dark:bg-gray-800 sm:dark:hover:bg-gray-700 rounded-lg sm:rounded-xl transition-all duration-300 shadow-lg border border-gray-200 dark:border-gray-600 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center flex-shrink-0">
                             <Icon icon="fluent:edit-24-filled" class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
-                            <div class="hidden sm:block absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                                แก้ไขข้อมูล
-                            </div>
                         </button>
                     </div>
 
                     <!-- Course Code -->
-                    <div class="flex items-center gap-2 justify-center sm:justify-start flex-wrap max-w-full">
-                        <span v-if="courseCode" class="group relative px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 rounded-full shadow-xl border-2 border-cyan-400/30 transition-all duration-300 sm:hover:shadow-2xl sm:hover:scale-105 cursor-default max-w-full overflow-hidden">
+                    <div class="flex items-center gap-2 justify-center sm:justify-start flex-wrap">
+                        <span v-if="courseCode" class="group relative px-3 sm:px-5 py-1.5 sm:py-2 text-[10px] sm:text-sm font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full shadow-lg border border-cyan-400/20 transition-all duration-300 cursor-default max-w-full overflow-hidden">
                             <Icon icon="fluent:number-symbol-square-24-filled" class="w-3 h-3 sm:w-4 sm:h-4 inline-block mr-1 sm:mr-1.5" />
-                            <span class="tracking-wider truncate inline-block max-w-[200px] sm:max-w-none align-middle">{{ courseCode }}</span>
-                            
-                            <!-- Shine effect -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 translate-x-full sm:group-hover:translate-x-[-200%] transition-transform duration-1000"></div>
+                            <span class="tracking-wider truncate inline-block max-w-[150px] sm:max-w-none align-middle">{{ courseCode }}</span>
                         </span>
-                        <span v-else-if="isAdmin" @click="startEditingCode" class="px-4 py-2 text-sm font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-cyan-400 dark:hover:border-cyan-600 transition-colors cursor-pointer">
-                            <Icon icon="fluent:add-circle-24-regular" class="w-4 h-4 inline-block mr-1" />
+                        <span v-else-if="isAdmin" @click="startEditingCode" class="px-3 py-1.5 text-[10px] sm:text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full border border-dashed border-gray-300 dark:border-gray-600 hover:border-cyan-400 dark:hover:border-cyan-600 transition-colors cursor-pointer">
+                            <Icon icon="fluent:add-circle-24-regular" class="w-3.5 h-3.5 inline-block mr-1" />
                             เพิ่มรหัสวิชา
                         </span>
                     </div>
@@ -431,18 +417,18 @@ onUnmounted(() => {
             </div>
 
             <!-- Desktop: Join/Member Button -->
-            <div v-if="!isAdmin" class="hidden md:block mt-4 sm:mt-0">
+            <div v-if="!isAdmin" class="hidden md:block mt-0">
                 <!-- Pending Status -->
                 <div v-if="courseMemberOfAuth && (memberStatus === '0' || memberStatus === 'pending')" ref="membershipDropdownRef" class="relative">
                     <button @click.prevent="toggleAcceptMemberOption"
-                        class="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors shadow-md">
+                        class="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors shadow-md min-h-[44px]">
                         <Icon icon="heroicons:clock" class="w-5 h-5" />
                         <span>รอการตอบรับ</span>
                         <Icon icon="heroicons:chevron-down" class="w-4 h-4 transition-transform" :class="{'rotate-180': showAcceptMemberOption}" />
                     </button>
-                    <div v-if="showAcceptMemberOption" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border z-50">
+                    <div v-if="showAcceptMemberOption" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
                         <button @click.prevent="onRequestToBeUnMember" :disabled="isRequestingUnmember"
-                            class="w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50">
+                            class="w-full px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium flex items-center gap-2 disabled:opacity-50">
                             <Icon v-if="isRequestingUnmember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                             <Icon v-else icon="heroicons:x-circle" class="w-5 h-5" />
                             <span>ยกเลิกคำขอ</span>
@@ -453,7 +439,7 @@ onUnmounted(() => {
                 <!-- Active Member -->
                 <button v-else-if="courseMemberOfAuth && (memberStatus === '1' || memberStatus === 'active')"
                     @click.prevent="onRequestToBeUnMember" :disabled="isRequestingUnmember"
-                    class="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-red-500 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50">
+                    class="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-red-500 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50 min-h-[44px]">
                     <Icon v-if="isRequestingUnmember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                     <Icon v-else icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
                     <span>เป็นสมาชิก</span>
@@ -462,38 +448,33 @@ onUnmounted(() => {
                 <!-- Join Button -->
                 <div v-else-if="!courseMemberOfAuth" ref="dropdownRef" class="relative">
                     <button v-if="!hasGroups" @click.prevent="onRequestToBeMember(null)" :disabled="isRequestingMember"
-                        class="flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50">
+                        class="flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50 min-h-[44px]">
                         <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                         <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />
                         <span>สมัครเรียน</span>
                     </button>
                     <template v-else>
                         <button @click.prevent="toggleOptionGroups"
-                            class="flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md">
+                            class="flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md min-h-[44px]">
                             <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                             <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />
                             <span>สมัครเรียน</span>
                             <Icon icon="heroicons:chevron-down" class="w-4 h-4 transition-transform" :class="{'rotate-180': showOptionGroups}" />
                         </button>
-                        <div v-if="showOptionGroups" class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border z-50 max-h-64 overflow-y-auto">
-                            <div class="sticky top-0 bg-gray-50 px-4 py-2 border-b">
-                                <p class="text-xs font-medium text-gray-600">เลือกกลุ่มที่ต้องการเข้าร่วม</p>
-                            </div>
-                            <!-- Empty state -->
-                            <div v-if="!courseGroups || courseGroups.length === 0" class="px-4 py-6 text-center text-gray-500">
-                                <Icon icon="heroicons:user-group" class="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                <p class="text-sm">ไม่มีกลุ่มในรายวิชานี้</p>
+                        <div v-if="showOptionGroups" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 max-h-64 overflow-y-auto">
+                            <div class="sticky top-0 bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b border-gray-100 dark:border-gray-600">
+                                <p class="text-xs font-medium text-gray-600 dark:text-gray-300">เลือกกลุ่มที่ต้องการเข้าร่วม</p>
                             </div>
                             <!-- Groups list -->
                             <button v-for="group in courseGroups" :key="group.id"
                                 @click.prevent="onRequestToBeMember(group.id)" :disabled="isRequestingMember"
-                                class="w-full px-4 py-3 text-left hover:bg-cyan-50 flex items-center gap-3 disabled:opacity-50">
-                                <div class="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center flex-shrink-0">
-                                    <Icon icon="heroicons:user-group" class="w-4 h-4 text-cyan-600" />
+                                class="w-full px-4 py-3 text-left hover:bg-cyan-50 dark:hover:bg-cyan-900/20 flex items-center gap-3 disabled:opacity-50">
+                                <div class="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900/40 flex items-center justify-center flex-shrink-0">
+                                    <Icon icon="heroicons:user-group" class="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-gray-900 truncate">{{ group.name }}</p>
-                                    <p class="text-xs text-gray-500">{{ group.members_count || 0 }} สมาชิก</p>
+                                    <p class="font-medium text-gray-900 dark:text-white truncate">{{ group.name }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ group.members_count || 0 }} สมาชิก</p>
                                 </div>
                             </button>
                         </div>

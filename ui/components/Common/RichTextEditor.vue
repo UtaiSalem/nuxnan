@@ -395,47 +395,37 @@ onUnmounted(() => {
 <template>
   <div class="rich-text-editor border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden" @click.stop>
     <!-- Toolbar -->
-    <div v-if="editable && editor" class="flex flex-wrap items-center gap-1 p-2 bg-gray-50 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600">
+    <div v-if="editable && editor" class="flex flex-wrap items-center gap-0.5 sm:gap-1 p-1.5 sm:p-2 bg-gray-50 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600">
       <!-- Text Style -->
-      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-2 mr-1">
+      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-1 sm:pr-2 mr-0.5 sm:mr-1">
         <button type="button" @click="editor.chain().focus().toggleBold().run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('bold') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ตัวหนา">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ตัวหนา">
           <Icon icon="fluent:text-bold-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
         <button type="button" @click="editor.chain().focus().toggleItalic().run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('italic') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ตัวเอียง">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ตัวเอียง">
           <Icon icon="fluent:text-italic-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
         <button type="button" @click="editor.chain().focus().toggleUnderline().run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('underline') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ขีดเส้นใต้">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ขีดเส้นใต้">
           <Icon icon="fluent:text-underline-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
         <button type="button" @click="editor.chain().focus().toggleStrike().run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('strike') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ขีดฆ่า">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ขีดฆ่า">
           <Icon icon="fluent:text-strikethrough-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
-        </button>
-        <button type="button" @click="editor.chain().focus().toggleSubscript().run()"
-          :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('subscript') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ตัวห้อย">
-          <Icon icon="fluent:text-subscript-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
-        </button>
-        <button type="button" @click="editor.chain().focus().toggleSuperscript().run()"
-          :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('superscript') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ตัวยก">
-          <Icon icon="fluent:text-superscript-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
       </div>
 
       <!-- Colors -->
-      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-2 mr-1">
+      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-1 sm:pr-2 mr-0.5 sm:mr-1">
         <!-- Text Color -->
         <div class="relative">
           <button type="button" @click.stop="showTextColorPicker = !showTextColorPicker; showHighlightPicker = false; showTableMenu = false"
-            class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="สีตัวอักษร">
+            class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="สีตัวอักษร">
             <Icon icon="fluent:text-color-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
           </button>
           <div v-if="showTextColorPicker" class="absolute top-full left-0 mt-1 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 grid grid-cols-5 gap-1">
@@ -448,7 +438,7 @@ onUnmounted(() => {
         <div class="relative">
           <button type="button" @click.stop="showHighlightPicker = !showHighlightPicker; showTextColorPicker = false; showTableMenu = false"
             :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('highlight') }"
-            class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ไฮไลท์">
+            class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ไฮไลท์">
             <Icon icon="fluent:highlight-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
           </button>
           <div v-if="showHighlightPicker" class="absolute top-full left-0 mt-1 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 grid grid-cols-5 gap-1">
@@ -460,107 +450,67 @@ onUnmounted(() => {
       </div>
 
       <!-- Headings -->
-      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-2 mr-1">
+      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-1 sm:pr-2 mr-0.5 sm:mr-1">
         <button type="button" @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('heading', { level: 1 }) }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="หัวข้อ 1">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="หัวข้อ 1">
           <Icon icon="fluent:text-header-1-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
         <button type="button" @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('heading', { level: 2 }) }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="หัวข้อ 2">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="หัวข้อ 2">
           <Icon icon="fluent:text-header-2-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
         <button type="button" @click="editor.chain().focus().toggleHeading({ level: 3 }).run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('heading', { level: 3 }) }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="หัวข้อ 3">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="หัวข้อ 3">
           <Icon icon="fluent:text-header-3-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
       </div>
 
       <!-- Lists -->
-      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-2 mr-1">
+      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-1 sm:pr-2 mr-0.5 sm:mr-1">
         <button type="button" @click="editor.chain().focus().toggleBulletList().run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('bulletList') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="รายการแบบจุด">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="รายการแบบจุด">
           <Icon icon="fluent:text-bullet-list-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
         <button type="button" @click="editor.chain().focus().toggleOrderedList().run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('orderedList') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="รายการแบบตัวเลข">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="รายการแบบตัวเลข">
           <Icon icon="fluent:text-number-list-ltr-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
-        </button>
-        <button type="button" @click="editor.chain().focus().toggleTaskList().run()"
-          :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('taskList') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="รายการ Checklist">
-          <Icon icon="fluent:task-list-square-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
       </div>
 
       <!-- Alignment -->
-      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-2 mr-1">
+      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-1 sm:pr-2 mr-0.5 sm:mr-1">
         <button type="button" @click="editor.chain().focus().setTextAlign('left').run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive({ textAlign: 'left' }) }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ชิดซ้าย">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ชิดซ้าย">
           <Icon icon="fluent:text-align-left-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
         <button type="button" @click="editor.chain().focus().setTextAlign('center').run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive({ textAlign: 'center' }) }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="กึ่งกลาง">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="กึ่งกลาง">
           <Icon icon="fluent:text-align-center-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
         <button type="button" @click="editor.chain().focus().setTextAlign('right').run()"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive({ textAlign: 'right' }) }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ชิดขวา">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ชิดขวา">
           <Icon icon="fluent:text-align-right-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
       </div>
 
-      <!-- Table -->
-      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-2 mr-1">
-        <div class="relative">
-          <button type="button" @click.stop="showTableMenu = !showTableMenu; showTextColorPicker = false; showHighlightPicker = false"
-            :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('table') }"
-            class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ตาราง">
-            <Icon icon="fluent:table-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
-          </button>
-          <div v-if="showTableMenu" class="absolute top-full left-0 mt-1 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 min-w-[160px]">
-            <button @click="insertTable" class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
-              <Icon icon="fluent:table-add-24-regular" class="w-4 h-4" /> แทรกตาราง
-            </button>
-            <template v-if="editor.isActive('table')">
-              <hr class="my-1 border-gray-200 dark:border-gray-600">
-              <button @click="addColumnBefore" class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700">เพิ่มคอลัมน์ซ้าย</button>
-              <button @click="addColumnAfter" class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700">เพิ่มคอลัมน์ขวา</button>
-              <button @click="addRowBefore" class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700">เพิ่มแถวบน</button>
-              <button @click="addRowAfter" class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700">เพิ่มแถวล่าง</button>
-              <hr class="my-1 border-gray-200 dark:border-gray-600">
-              <button @click="deleteColumn" class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500">ลบคอลัมน์</button>
-              <button @click="deleteRow" class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500">ลบแถว</button>
-              <button @click="deleteTable" class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500">ลบตาราง</button>
-            </template>
-          </div>
-        </div>
-      </div>
-
       <!-- Media & Links -->
-      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-2 mr-1">
+      <div class="flex items-center gap-0.5 border-r border-gray-300 dark:border-gray-600 pr-1 sm:pr-2 mr-0.5 sm:mr-1">
         <button type="button" @click="addLink"
           :class="{ 'bg-gray-200 dark:bg-gray-600': editor.isActive('link') }"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="เพิ่มลิงก์">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="เพิ่มลิงก์">
           <Icon icon="fluent:link-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
         </button>
-        <button v-if="editor.isActive('link')" type="button" @click="removeLink"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="ลบลิงก์">
-          <Icon icon="fluent:link-dismiss-24-regular" class="w-4 h-4 text-red-500" />
-        </button>
         <button type="button" @click="addImage"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="เพิ่มรูปภาพ">
+          class="p-1 sm:p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="เพิ่มรูปภาพ">
           <Icon icon="fluent:image-24-regular" class="w-4 h-4 text-gray-700 dark:text-gray-300" />
-        </button>
-        <button type="button" @click="addYoutube"
-          class="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="เพิ่ม YouTube">
-          <Icon icon="logos:youtube-icon" class="w-4 h-4" />
         </button>
       </div>
 

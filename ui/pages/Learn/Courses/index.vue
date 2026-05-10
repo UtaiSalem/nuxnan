@@ -15,7 +15,7 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Courses - Marketplace',
+  title: 'รายวิชาทั้งหมด - Nuxnan',
 })
 
 const api = useApi()
@@ -248,7 +248,7 @@ watch([selectedCategory, selectedLevel, sortBy, selectedSemester, selectedYear],
   <NuxtLayout name="main">
     <!-- Hero Banner -->
     <template #hero>
-      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-400">
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-400 shadow-xl">
         <!-- Animated Background Pattern -->
         <div class="absolute inset-0 opacity-20">
           <div class="absolute inset-0" style="background-image: url('/images/resources/animate-bg.png'); background-size: cover;"></div>
@@ -274,10 +274,10 @@ watch([selectedCategory, selectedLevel, sortBy, selectedSemester, selectedYear],
         
         <!-- Content -->
         <div class="relative z-10 px-6 py-8 md:py-10 ml-24 sm:ml-36 md:ml-44">
-          <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">
+          <h1 class="text-2xl md:text-3xl font-black text-white mb-2">
             รายวิชาทั้งหมด
           </h1>
-          <p class="text-blue-100 text-sm md:text-base">
+          <p class="text-blue-50 font-medium text-sm md:text-base">
             ค้นหาและเข้าร่วมเรียนรู้ในรายวิชาที่คุณสนใจ
           </p>
         </div>
@@ -308,274 +308,168 @@ watch([selectedCategory, selectedLevel, sortBy, selectedSemester, selectedYear],
             style="animation-duration: 2.8s; animation-delay: 0.2s;"
           />
         </div>
-        
-        <!-- Sparkle effects -->
-        <div class="absolute top-4 left-1/3 w-2 h-2 bg-white rounded-full animate-ping opacity-75"></div>
-        <div class="absolute bottom-6 left-1/2 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping opacity-60" style="animation-delay: 0.5s;"></div>
-        <div class="absolute top-6 right-1/3 w-1 h-1 bg-white rounded-full animate-ping opacity-50" style="animation-delay: 1s;"></div>
       </div>
     </template>
 
-    <!-- Main Content (Default Slot) -->
-    <div class="max-w-7xl mx-auto px-4 py-6">
-      <!-- Main Layout: 3 Columns Grid (1:2:1) -->
-      <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        
-        <!-- Left Sidebar (Search & Filters) -->
-        <div class="col-span-1 order-2 xl:order-1 space-y-6">
-        <CourseSearchFilterWidget
-          v-model:searchQuery="searchQuery"
-          v-model:selectedCategory="selectedCategory"
-          v-model:selectedLevel="selectedLevel"
-          v-model:selectedSemester="selectedSemester"
-          v-model:selectedYear="selectedYear"
-          v-model:sortBy="sortBy"
-          :categories="categories"
-          :levels="levels"
-          :semesters="semesters"
-          :years="years"
-          :sortOptions="sortOptions"
-          @handleSearch="handleSearch"
-        />
-        <RecentlyViewedCoursesWidget />
-        <FavoriteCoursesWidget />
-      </div>
+    <!-- Left Sidebar Slots -->
+    <template #leftWidgets>
+      <CourseSearchFilterWidget
+        v-model:searchQuery="searchQuery"
+        v-model:selectedCategory="selectedCategory"
+        v-model:selectedLevel="selectedLevel"
+        v-model:selectedSemester="selectedSemester"
+        v-model:selectedYear="selectedYear"
+        v-model:sortBy="sortBy"
+        :categories="categories"
+        :levels="levels"
+        :semesters="semesters"
+        :years="years"
+        :sortOptions="sortOptions"
+        @handleSearch="handleSearch"
+      />
+      <RecentlyViewedCoursesWidget />
+      <FavoriteCoursesWidget />
+    </template>
 
-      <!-- Main Content (Center) -->
-      <div class="col-span-1 xl:col-span-2 min-w-0 order-1 xl:order-2">
-        <!-- Loading State -->
-        <template v-if="isLoading">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div
-              v-for="i in 6"
-              :key="i"
-              class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden animate-pulse shadow-lg"
-            >
-              <div class="h-44 bg-gray-200 dark:bg-gray-700"></div>
-              <div class="p-4 space-y-3">
-                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <!-- Error State -->
-        <div
-          v-else-if="error"
-          class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-lg"
-        >
-          <Icon icon="fluent:error-circle-24-regular" class="w-20 h-20 text-red-500 mx-auto mb-4" />
-          <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">เกิดข้อผิดพลาด</h3>
-          <p class="text-gray-500 mb-4">{{ error }}</p>
-          <button
-            @click="fetchCourses(1)"
-            class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            ลองใหม่
-          </button>
+    <!-- Right Sidebar Slots -->
+    <template #rightWidgets>
+      <MemberedCoursesWidget />
+      <MyCoursesWidget />
+      <!-- Popular Courses Widget -->
+      <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 overflow-hidden">
+        <div class="p-4 border-b border-gray-100 dark:border-vikinger-dark-100">
+          <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <Icon icon="fluent:star-24-filled" class="w-5 h-5 text-amber-500" />
+            รายวิชายอดนิยม
+          </h3>
         </div>
-
-        <!-- Empty State -->
-        <div
-          v-else-if="courses.length === 0"
-          class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-lg"
-        >
-          <Icon icon="fluent:book-24-regular" class="w-20 h-20 text-gray-400 mx-auto mb-4" />
-          <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">ไม่พบรายวิชา</h3>
-          <p class="text-gray-500">ลองค้นหาด้วยคำค้นอื่น หรือเปลี่ยนตัวกรอง</p>
-        </div>
-
-        <!-- Course Grid - 2 Columns -->
-        <template v-else>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <CourseCard
-              v-for="(course, index) in courses"
-              :key="course.id"
-              :course="course"
-              :index="index"
-            />
-          </div>
-
-          <!-- Load More -->
-          <div v-if="hasMorePages" class="mt-8 text-center">
-            <button
-              @click="loadMore"
-              :disabled="isLoadingMore"
-              class="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto font-medium"
-            >
-              <Icon
-                :icon="
-                  isLoadingMore ? 'fluent:spinner-ios-20-regular' : 'fluent:arrow-down-24-regular'
-                "
-                :class="['w-5 h-5', { 'animate-spin': isLoadingMore }]"
-              />
-              {{ isLoadingMore ? 'กำลังโหลด...' : 'โหลดเพิ่มเติม' }}
-            </button>
-          </div>
-        </template>
-      </div>
-
-      <!-- Right Sidebar -->
-      <div class="col-span-1 space-y-6 order-3">
-        <MemberedCoursesWidget />
-        <MyCoursesWidget />
-        <!-- Popular Courses Widget -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          <div class="p-4 border-b border-gray-100 dark:border-gray-700">
-            <h3 class="font-bold text-gray-800 dark:text-white">Popular Courses</h3>
-          </div>
-          <div class="divide-y divide-gray-100 dark:divide-gray-700">
-            <div
-              v-for="course in popularCourses"
-              :key="course.id"
-              class="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
-              @click="goToCourse(course.id)"
-            >
-              <img
-                :src="getCoverUrl(course)"
-                :alt="course.name"
-                class="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-              />
-              <div class="flex-1 min-w-0">
-                <h4 class="text-sm font-medium text-gray-800 dark:text-white line-clamp-2 mb-1">
-                  {{ course.name }}
-                </h4>
-                <p class="text-xs text-blue-500">{{ course.user?.name || 'Unknown' }}</p>
-              </div>
-              <button class="p-1 text-gray-400 hover:text-blue-500 transition-colors flex-shrink-0">
-                <Icon icon="fluent:bookmark-24-regular" class="w-5 h-5" />
-              </button>
-            </div>
-
-            <!-- Empty state -->
-            <div
-              v-if="popularCourses.length === 0 && !isLoading"
-              class="p-4 text-center text-gray-500 text-sm"
-            >
-              ไม่มีข้อมูล
-            </div>
-          </div>
-        </div>
-
-        <!-- Ask Question Widget -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
-          <h3 class="font-bold text-gray-800 dark:text-white mb-3">Ask Research Question?</h3>
-          <div class="flex items-start gap-3 mb-4">
-            <div
-              class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0"
-            >
-              <Icon icon="fluent:question-circle-24-regular" class="w-5 h-5 text-blue-500" />
-            </div>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Ask questions in Q&A to get help from experts in your field.
-            </p>
-          </div>
-          <button
-            class="w-full py-2.5 border-2 border-blue-500 text-blue-500 rounded-lg font-medium hover:bg-blue-500 hover:text-white transition-colors"
-          >
-            Ask a question
-          </button>
-        </div>
-
-        <!-- Explore Events Widget -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="divide-y divide-gray-100 dark:divide-vikinger-dark-100">
           <div
-            class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between"
+            v-for="course in popularCourses"
+            :key="course.id"
+            class="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors cursor-pointer"
+            @click="goToCourse(course.id)"
           >
-            <h3 class="font-bold text-gray-800 dark:text-white">Explore Events</h3>
-            <NuxtLink to="/events" class="text-sm text-blue-500 hover:underline">See All</NuxtLink>
-          </div>
-          <div class="p-4 space-y-3">
-            <!-- Event Card 1 -->
-            <div
-              class="relative h-24 rounded-lg overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 p-3 flex items-end cursor-pointer hover:opacity-90 transition-opacity"
-            >
-              <div class="absolute inset-0 bg-black/20"></div>
-              <div class="relative">
-                <Icon icon="fluent:building-24-regular" class="w-6 h-6 text-white mb-1" />
-                <p class="text-white text-sm font-medium line-clamp-2">
-                  University good night event in columbia
-                </p>
-              </div>
-            </div>
-
-            <!-- Event Card 2 -->
-            <div
-              class="relative h-24 rounded-lg overflow-hidden bg-gradient-to-r from-green-500 to-teal-500 p-3 flex items-end cursor-pointer hover:opacity-90 transition-opacity"
-            >
-              <div class="absolute inset-0 bg-black/20"></div>
-              <div class="relative">
-                <Icon icon="fluent:people-audience-24-regular" class="w-6 h-6 text-white mb-1" />
-                <p class="text-white text-sm font-medium">The 3rd International Conference 2020</p>
-              </div>
+            <img
+              :src="getCoverUrl(course)"
+              :alt="course.name"
+              class="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-100 dark:border-vikinger-dark-50"
+            />
+            <div class="flex-1 min-w-0">
+              <h4 class="text-xs font-bold text-gray-800 dark:text-white line-clamp-2 mb-1">
+                {{ course.name }}
+              </h4>
+              <p class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">{{ course.user?.name || 'Unknown' }}</p>
             </div>
           </div>
-        </div>
 
-        <!-- Who's Following Widget -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          <div class="p-4 border-b border-gray-100 dark:border-gray-700">
-            <h3 class="font-bold text-gray-800 dark:text-white">Who's Following</h3>
-          </div>
-          <div class="divide-y divide-gray-100 dark:divide-gray-700">
-            <div class="p-4 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="relative">
-                  <img
-                    src="/images/default-avatar.png"
-                    alt="User"
-                    class="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-400 rounded text-[8px] flex items-center justify-center font-bold text-gray-900"
-                  >
-                    5
-                  </div>
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-gray-800 dark:text-white">Kelly Bill</p>
-                  <p class="text-xs text-gray-500">Dept colleague</p>
-                </div>
-              </div>
-              <button class="text-blue-500 text-sm font-medium hover:underline">Follow</button>
-            </div>
-
-            <div class="p-4 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="relative">
-                  <img
-                    src="/images/default-avatar.png"
-                    alt="User"
-                    class="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-400 rounded text-[8px] flex items-center justify-center font-bold text-gray-900"
-                  >
-                    5
-                  </div>
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-gray-800 dark:text-white">Issabel</p>
-                  <p class="text-xs text-gray-500">Dept colleague</p>
-                </div>
-              </div>
-              <button class="text-blue-500 text-sm font-medium hover:underline">Follow</button>
-            </div>
+          <!-- Empty state -->
+          <div
+            v-if="popularCourses.length === 0 && !isLoading"
+            class="p-4 text-center text-gray-500 text-xs italic"
+          >
+            ไม่มีข้อมูล
           </div>
         </div>
       </div>
+    </template>
+
+    <!-- Main Content (Center Slot) -->
+    <div class="min-w-0">
+      <!-- Sorting & Info Bar -->
+      <div class="flex items-center justify-between mb-6 px-1">
+        <div class="flex items-center gap-2">
+          <div class="bg-vikinger-purple/10 text-vikinger-purple px-3 py-1 rounded-full text-xs font-black">
+            {{ formatNumber(pagination.total) }} รายวิชา
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <Icon icon="fluent:arrow-sort-24-regular" class="text-gray-400 w-4 h-4" />
+          <select v-model="sortBy" class="bg-white dark:bg-vikinger-dark-200 border-none rounded-lg py-1.5 px-3 text-xs font-bold focus:ring-2 focus:ring-vikinger-purple dark:text-white focus:outline-none shadow-sm">
+            <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
       </div>
+
+      <!-- Loading State -->
+      <template v-if="isLoading">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <div
+            v-for="i in 6"
+            :key="i"
+            class="bg-white dark:bg-vikinger-dark-200 rounded-2xl overflow-hidden animate-pulse shadow-sm h-80"
+          >
+            <div class="h-44 bg-gray-100 dark:bg-vikinger-dark-100"></div>
+            <div class="p-5 space-y-3">
+              <div class="h-4 bg-gray-100 dark:bg-vikinger-dark-100 rounded w-3/4"></div>
+              <div class="h-3 bg-gray-100 dark:bg-vikinger-dark-100 rounded w-1/2"></div>
+              <div class="h-8 bg-gray-100 dark:bg-vikinger-dark-100 rounded mt-4"></div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Error State -->
+      <div
+        v-else-if="error"
+        class="bg-white dark:bg-vikinger-dark-200 rounded-2xl p-12 text-center shadow-sm border border-gray-100 dark:border-vikinger-dark-100"
+      >
+        <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 text-red-500 mx-auto mb-4" />
+        <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">เกิดข้อผิดพลาด</h3>
+        <p class="text-sm text-gray-500 mb-6">{{ error }}</p>
+        <button
+          @click="fetchCourses(1)"
+          class="px-8 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger transition-all hover:scale-105"
+        >
+          ลองใหม่อีกครั้ง
+        </button>
+      </div>
+
+      <!-- Empty State -->
+      <div
+        v-else-if="courses.length === 0"
+        class="bg-white dark:bg-vikinger-dark-200 rounded-2xl p-16 text-center shadow-sm border border-dashed border-gray-300 dark:border-vikinger-dark-100"
+      >
+        <Icon icon="fluent:book-search-24-regular" class="w-20 h-20 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">ไม่พบรายวิชาที่ค้นหา</h3>
+        <p class="text-gray-500">ลองใช้คำค้นอื่น หรือปรับเปลี่ยนตัวกรอง</p>
+      </div>
+
+      <!-- Course Grid -->
+      <template v-else>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <CourseCard
+            v-for="(course, index) in courses"
+            :key="course.id"
+            :course="course"
+            :index="index"
+          />
+        </div>
+
+        <!-- Load More -->
+        <div v-if="hasMorePages" class="mt-10 text-center">
+          <button
+            @click="loadMore"
+            :disabled="isLoadingMore"
+            class="group relative inline-flex items-center gap-2 px-8 py-3.5 bg-white dark:bg-vikinger-dark-200 text-vikinger-purple dark:text-vikinger-cyan font-black rounded-2xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 transition-all hover:shadow-md hover:-translate-y-1 active:scale-95 disabled:opacity-50"
+          >
+            <Icon
+              :icon="isLoadingMore ? 'svg-spinners:ring-resize' : 'fluent:arrow-down-24-filled'"
+              class="w-5 h-5 transition-transform group-hover:translate-y-1"
+            />
+            {{ isLoadingMore ? 'กำลังโหลดข้อมูล...' : 'ดูรายวิชาเพิ่มเติม' }}
+          </button>
+        </div>
+      </template>
     </div>
   </NuxtLayout>
 </template>
 
 <style scoped>
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.bg-gradient-vikinger {
+  background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
+}
+.shadow-vikinger {
+  box-shadow: 0 10px 25px -5px rgba(111, 66, 193, 0.3), 0 8px 10px -6px rgba(111, 66, 193, 0.1);
 }
 </style>
