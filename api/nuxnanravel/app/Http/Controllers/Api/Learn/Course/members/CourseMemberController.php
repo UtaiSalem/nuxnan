@@ -80,7 +80,7 @@ class CourseMemberController extends Controller
 
     public function show(Course $course, CourseMember $member)
     {
-        $member->load(['user', 'group']);
+        $member->load(['user', 'group', 'course']);
         $userId = $member->user_id;
         
         // Get all lessons with completion status

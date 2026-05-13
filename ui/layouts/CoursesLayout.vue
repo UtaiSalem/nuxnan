@@ -1,35 +1,46 @@
 <script setup>
-import { ref } from 'vue'
-import { Link, usePage, router } from '@inertiajs/vue3'
-
+import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import MainLayout from '~/layouts/main.vue'
+import { useAuthStore } from '~/stores/auth'
 
 defineProps({
   coursePageTitle: String,
 })
-const authUser = usePage().props.auth.user
+
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+
+const authUser = computed(() => authStore.user)
 const isLoadingPage = ref(false)
 
 const handleLoadingPage = (option) => {
   isLoadingPage.value = true
   switch (option) {
     case 1:
-      router.visit(`/courses/users/${usePage().props.auth.user.id}`)
+      router.push(`/Learn/Course/UserCourses`)
       break
     case 2:
-      router.visit(`/courses/users/${usePage().props.auth.user.id}/member`)
+      router.push(`/Learn/Course/AuthMemberCourses`)
       break
     case 3:
-      router.visit(`/courses`)
+      router.push(`/Learn/Courses`)
       break
     case 4:
-      router.visit(`/courses/create`)
+      router.push(`/Learn/Courses/create`)
       break
     default:
-    // router.visit(option);
+      isLoadingPage.value = false
   }
 }
+
+// Active state checks
+const isMyCoursesActive = computed(() => route.path === '/Learn/Course/UserCourses' || route.path === '/learn/course/usercourses')
+const isMemberCoursesActive = computed(() => route.path === '/Learn/Course/AuthMemberCourses' || route.path === '/learn/course/authmembercourses')
+const isAllCoursesActive = computed(() => route.path === '/Learn/Courses' || route.path === '/learn/courses' || route.path === '/Learn/Courses/' || route.path === '/learn/courses/')
+const isCreateCourseActive = computed(() => route.path === '/Learn/Courses/create' || route.path === '/learn/courses/create')
+
 </script>
 
 <template>
@@ -37,11 +48,11 @@ const handleLoadingPage = (option) => {
     <template #coverProfileCard>
       <div
         v-if="isLoadingPage"
-        class="fixed top-0 left-0 z-20 flex items-center justify-center w-full h-full modal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
       >
-        <div class="absolute w-full h-full bg-gray-900 opacity-75 modal-overlay"></div>
-        <div class="flex items-center justify-center h-64">
-          <Icon icon="svg-spinners:bars-rotate-fade" class="z-30 w-32 h-32 text-white" />
+        <div class="flex flex-col items-center gap-4">
+          <Icon icon="svg-spinners:bars-rotate-fade" class="w-16 h-16 text-white" />
+          <span class="text-white font-medium animate-pulse">กำลังเปลี่ยนหน้า...</span>
         </div>
       </div>
 
@@ -57,97 +68,104 @@ const handleLoadingPage = (option) => {
         <p class="text-xl lg:text-4xl font-bold text-white">รวมรายวิชา</p>
       </div>
 
-      <div class="w-full mx-auto mt-4 overflow-hidden bg-white rounded-lg shadow-xl max-w-7xl">
+      <div class="w-full mx-auto mt-4 overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-7xl">
         <div class="flex flex-row justify-around">
-          <!-- <Link :href="`/courses`" v-if="$page.url===`/courses/feeds`" class="flex-row justify-center w-full text-center border-b-4 rounded-none hover:border-cyan-500"
-                            :class="{'border-b-4 border-cyan-500 bg-cyan-100': $page.url===`/courses/feeds`}"
-                        >
-                            <div class="flex flex-col items-center justify-center py-2 text-slate-700 ">
-                                <Icon icon="bi:view-list" class="w-8 h-8" :class="{'text-cyan-500': $page.url===`/courses/feeds`}" />
-                                <span :class="{'text-cyan-500': $page.url===`/courses/feeds`}">กระดานข่าวรายวิชา</span>
-                            </div>
-                        </Link> -->
           <button
             type="button"
             @click="handleLoadingPage(1)"
-            class="flex-row justify-center w-full text-center border-b-4 rounded-none hover:border-gray-400"
+            class="flex-row justify-center w-full text-center border-b-4 rounded-none hover:border-gray-400 transition-all duration-300"
             :class="{
-              'border-b-4 border-cyan-500 bg-cyan-100':
-                $page.url === `/courses/users/${$page.props.auth.user.id}`,
+              'border-b-4 border-cyan-500 bg-cyan-100/50 dark:bg-cyan-900/20': isMyCoursesActive,
+              'border-transparent': !isMyCoursesActive
             }"
           >
-            <div class="flex flex-col items-center justify-center py-2 text-slate-700">
+            <div class="flex flex-col items-center justify-center py-2 text-slate-700 dark:text-gray-300">
               <Icon
                 icon="lucide:layout-list"
                 class="w-8 h-8"
                 :class="{
-                  'text-cyan-500': $page.url === `/courses/users/${$page.props.auth.user.id}`,
+                  'text-cyan-500 scale-110': isMyCoursesActive,
+                  'text-gray-400': !isMyCoursesActive
                 }"
               />
               <span
                 :class="{
-                  'text-cyan-500': $page.url === `/courses/users/${$page.props.auth.user.id}`,
+                  'text-cyan-500 font-bold': isMyCoursesActive,
                 }"
                 >รายวิชาของฉัน</span
               >
             </div>
           </button>
+
           <button
             type="button"
             @click="handleLoadingPage(2)"
-            class="flex-row justify-center w-full text-center border-b-4 rounded-none hover:border-gray-400"
+            class="flex-row justify-center w-full text-center border-b-4 rounded-none hover:border-gray-400 transition-all duration-300"
             :class="{
-              'border-b-4 border-cyan-500 bg-cyan-100':
-                $page.url === `/courses/users/${$page.props.auth.user.id}/member`,
+              'border-b-4 border-cyan-500 bg-cyan-100/50 dark:bg-cyan-900/20': isMemberCoursesActive,
+              'border-transparent': !isMemberCoursesActive
             }"
           >
-            <div class="flex flex-col items-center justify-center py-2 text-slate-700">
+            <div class="flex flex-col items-center justify-center py-2 text-slate-700 dark:text-gray-300">
               <Icon
                 icon="lucide:layout-list"
                 class="w-8 h-8"
                 :class="{
-                  'text-cyan-500':
-                    $page.url === `/courses/users/${$page.props.auth.user.id}/member`,
+                  'text-cyan-500 scale-110': isMemberCoursesActive,
+                  'text-gray-400': !isMemberCoursesActive
                 }"
               />
               <span
                 :class="{
-                  'text-cyan-500':
-                    $page.url === `/courses/users/${$page.props.auth.user.id}/member`,
+                  'text-cyan-500 font-bold': isMemberCoursesActive,
                 }"
                 >รายวิชาที่ฉันเป็นสมาชิก</span
               >
             </div>
           </button>
+
           <button
             type="button"
             @click="handleLoadingPage(3)"
-            class="flex-row justify-center w-full text-center border-b-4 rounded-none hover:border-gray-400"
-            :class="{ 'border-b-4 border-cyan-500 bg-cyan-100': $page.url === `/courses` }"
+            class="flex-row justify-center w-full text-center border-b-4 rounded-none hover:border-gray-400 transition-all duration-300"
+            :class="{ 
+              'border-b-4 border-cyan-500 bg-cyan-100/50 dark:bg-cyan-900/20': isAllCoursesActive,
+              'border-transparent': !isAllCoursesActive
+            }"
           >
-            <div class="flex flex-col items-center justify-center py-2 text-slate-700">
+            <div class="flex flex-col items-center justify-center py-2 text-slate-700 dark:text-gray-300">
               <Icon
                 icon="lucide:layout-list"
                 class="w-8 h-8"
-                :class="{ 'text-cyan-500': $page.url === `/courses` }"
+                :class="{ 
+                  'text-cyan-500 scale-110': isAllCoursesActive,
+                  'text-gray-400': !isAllCoursesActive
+                }"
               />
-              <span :class="{ 'text-cyan-500': $page.url === `/courses` }">รวมรายวิชาทั้งหมด</span>
+              <span :class="{ 'text-cyan-500 font-bold': isAllCoursesActive }">รวมรายวิชาทั้งหมด</span>
             </div>
           </button>
+
           <button
             type="button"
             @click="handleLoadingPage(4)"
-            v-if="authUser.pp > 120000"
-            class="flex-row justify-center w-full text-center border-b-4 rounded-none hover:border-gray-400"
-            :class="{ 'border-b-4 border-cyan-500 bg-cyan-100': $page.url === `/courses/create` }"
+            v-if="authUser && authUser.pp > 120000"
+            class="flex-row justify-center w-full text-center border-b-4 rounded-none hover:border-gray-400 transition-all duration-300"
+            :class="{ 
+              'border-b-4 border-cyan-500 bg-cyan-100/50 dark:bg-cyan-900/20': isCreateCourseActive,
+              'border-transparent': !isCreateCourseActive
+            }"
           >
-            <div class="flex flex-col items-center justify-center py-2 text-slate-700">
+            <div class="flex flex-col items-center justify-center py-2 text-slate-700 dark:text-gray-300">
               <Icon
                 icon="lucide:layout-list"
                 class="w-8 h-8"
-                :class="{ 'text-cyan-500': $page.url === `/courses/create` }"
+                :class="{ 
+                  'text-cyan-500 scale-110': isCreateCourseActive,
+                  'text-gray-400': !isCreateCourseActive
+                }"
               />
-              <span :class="{ 'text-cyan-500': $page.url === `/courses/create` }"
+              <span :class="{ 'text-cyan-500 font-bold': isCreateCourseActive }"
                 >เพิ่มรายวิชาใหม่</span
               >
             </div>
@@ -157,7 +175,7 @@ const handleLoadingPage = (option) => {
     </template>
 
     <template #leftSideWidget>
-      <div></div>
+      <slot name="coursesLeftWidget"></slot>
     </template>
 
     <template #default>
@@ -165,3 +183,4 @@ const handleLoadingPage = (option) => {
     </template>
   </MainLayout>
 </template>
+

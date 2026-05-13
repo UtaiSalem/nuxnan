@@ -184,6 +184,10 @@ const getCoverUrl = (course: any) => {
 const goToCourse = (courseId: number) => {
   router.push(`/Learn/Courses/${courseId}`)
 }
+
+const formatNumber = (num: number) => {
+  return num?.toLocaleString('th-TH') ?? '0'
+}
 const fetchFilterOptions = async () => {
   try {
     const res: any = await api.get('/api/courses/filters')

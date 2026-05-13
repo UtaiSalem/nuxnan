@@ -23,7 +23,7 @@ class StudentCardController extends Controller
     /**
      * Main index page
      */
-    public function index($academy) 
+    public function index($academy = null) 
     {
         return response()->json(['success' => true]);
     }
@@ -31,7 +31,7 @@ class StudentCardController extends Controller
     /**
      * Dashboard - show overview
      */
-    public function dashboard($academy)
+    public function dashboard($academy = null)
     {
         $baseQuery = fn() => $academy ? $this->academyQuery($academy) : StudentCard::query();
         $totalStudents = $baseQuery()->count();
@@ -47,7 +47,7 @@ class StudentCardController extends Controller
     /**
      * Get statistics for student cards - for academy admin dashboard
      */
-    public function statistics($academy)
+    public function statistics($academy = null)
     {
         $query = $this->academyQuery($academy);
         $totalStudents = $query->count();
@@ -89,7 +89,7 @@ class StudentCardController extends Controller
     /**
      * Get all class levels
      */
-    public function getLevels($academy)
+    public function getLevels($academy = null)
     {
         $levels = $this->academyQuery($academy)->distinct()->pluck('class_level')->sort()->values();
         
@@ -102,7 +102,7 @@ class StudentCardController extends Controller
     /**
      * Get all sections/rooms
      */
-    public function getSections($academy)
+    public function getSections($academy = null)
     {
         $sections = $this->academyQuery($academy)->distinct()->pluck('class_section')->sort()->values();
         
@@ -115,7 +115,7 @@ class StudentCardController extends Controller
     /**
      * Search functionality
      */
-    public function search($academy, Request $request)
+    public function search(Request $request, $academy = null)
     {
         $query = $academy ? $this->academyQuery($academy) : StudentCard::query();
         
@@ -152,7 +152,7 @@ class StudentCardController extends Controller
     /**
      * Student profile view
      */
-    public function profile($academy, StudentCard $student_card)
+    public function profile(StudentCard $student_card, $academy = null)
     {
         return response()->json([
             'success' => true,
@@ -163,7 +163,7 @@ class StudentCardController extends Controller
     /**
      * Admin main page
      */
-    public function adminIndex($academy) 
+    public function adminIndex($academy = null) 
     {
         return response()->json(['success' => true]);
     }
@@ -171,7 +171,7 @@ class StudentCardController extends Controller
     /**
      * Admin student management with search/filter
      */
-    public function adminStudents($academy, Request $request)
+    public function adminStudents(Request $request, $academy = null)
     {
         $query = $academy ? $this->academyQuery($academy) : StudentCard::query();
         
@@ -253,7 +253,7 @@ class StudentCardController extends Controller
     /**
      * Upload/update student photo
      */
-    public function updateImage($academy, StudentCard $student_card, Request $request)
+    public function updateImage(Request $request, StudentCard $student_card, $academy = null)
     {
         $request->validate([
             'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
@@ -305,7 +305,7 @@ class StudentCardController extends Controller
     /**
      * Update student number/code
      */
-    public function updateStudentID($academy, StudentCard $student_card, Request $request)
+    public function updateStudentID(Request $request, StudentCard $student_card, $academy = null)
     {
         $request->validate([
             'student_number' => 'required|string|max:255',
@@ -332,7 +332,7 @@ class StudentCardController extends Controller
     /**
      * Update student Thai name
      */
-    public function updateStudentNameTh($academy, StudentCard $student_card, Request $request)
+    public function updateStudentNameTh(Request $request, StudentCard $student_card, $academy = null)
     {
         $request->validate([
             'title_name' => 'nullable|string|max:50',
@@ -368,7 +368,7 @@ class StudentCardController extends Controller
     /**
      * Update student English name
      */
-    public function updateStudentNameEn($academy, StudentCard $student_card, Request $request)
+    public function updateStudentNameEn(Request $request, StudentCard $student_card, $academy = null)
     {
         $request->validate([
             'first_name_english' => 'nullable|string|max:255',
@@ -395,7 +395,7 @@ class StudentCardController extends Controller
     /**
      * Update full student card info
      */
-    public function update($academy, StudentCard $student_card, Request $request)
+    public function update(Request $request, StudentCard $student_card, $academy = null)
     {
         $request->validate([
             'student_number' => 'nullable|string|max:255',
@@ -513,7 +513,7 @@ class StudentCardController extends Controller
     /**
      * Delete student photo
      */
-    public function destroyPhoto($academy, StudentCard $student_card)
+    public function destroyPhoto(StudentCard $student_card, $academy = null)
     {
         try {
             if ($student_card->profile_image) {
@@ -545,7 +545,7 @@ class StudentCardController extends Controller
     /**
      * Import student cards from CSV/Excel
      */
-    public function import($academy, Request $request)
+    public function import(Request $request, $academy = null)
     {
         return response()->json([
             'success' => false,
@@ -556,7 +556,7 @@ class StudentCardController extends Controller
     /**
      * Export student cards to CSV/Excel
      */
-    public function export($academy, Request $request)
+    public function export(Request $request, $academy = null)
     {
         return response()->json([
             'success' => false,
@@ -567,7 +567,7 @@ class StudentCardController extends Controller
     /**
      * Bulk upload photos
      */
-    public function bulkUploadPhotos($academy, Request $request)
+    public function bulkUploadPhotos(Request $request, $academy = null)
     {
         return response()->json([
             'success' => false,
@@ -578,7 +578,7 @@ class StudentCardController extends Controller
     /**
      * Bulk update student cards
      */
-    public function bulkUpdate($academy, Request $request)
+    public function bulkUpdate(Request $request, $academy = null)
     {
         return response()->json([
             'success' => false,

@@ -14,6 +14,8 @@ use Exception;
 
 class CoursePurchaseService
 {
+    const POINTS_PER_THB = 1200;
+
     public function __construct(
         protected CourseCloneService $cloneService,
         protected PointsService $pointsService,
@@ -25,90 +27,44 @@ class CoursePurchaseService
      */
     public function purchase(User $buyer, Course $course, ?string $paymentMode = null): array
     {
-        $paymentMode = $paymentMode ?? 'auto';
-        
+        $paymentMode = $paymentMode ?? 'wallet';
+
         return DB::transaction(function () use ($buyer, $course, $paymentMode) {
-            // 1. ตรวจว่า course อยู่ใน marketplace
             if (!$course->is_for_marketplace) {
                 throw new Exception('Course is not available for purchase.');
             }
-
-            // 2. ตรวจว่า buyer ไม่ใช่ seller
             if ($buyer->id === $course->user_id) {
                 throw new Exception('You cannot purchase your own course.');
             }
 
-            // 3. ตรวจว่ายังไม่เคยซื้อ (check source_course_id)
             $alreadyPurchased = Course::where('user_id', $buyer->id)
                 ->where('source_course_id', $course->id)
                 ->exists();
-            
             if ($alreadyPurchased) {
                 throw new Exception('You already own this course.');
             }
 
-            // 4. คำนวณราคาตาม paymentMode + price_type
-            $usedMode = $this->determinePaymentMode($buyer, $course, $paymentMode);
-            
-            // 5-7. ตรวจ balance, หักยอด buyer, โอนให้ seller
+            // ราคา 0 = ฟรี (skip payment)
+            $usedMode = ((float) $course->price) <= 0 ? 'free' : $paymentMode;
             $paymentResult = $this->processPayment($buyer, $course, $usedMode);
 
-            // 8. Trigger Cloning
+            // Clone
             $lessonCount = $course->courseLessons()->count();
-            
             if ($lessonCount > 20) {
-                // Dispatch Job if large
                 CloneCourseJob::dispatch($course, $buyer, $paymentResult['transaction_id'], $usedMode);
                 $newCourse = null;
             } else {
-                // Sync clone if small
                 $newCourse = $this->cloneService->clone($course, $buyer);
             }
 
-            // 9. อัปเดต course->total_sales + 1
             $course->increment('total_sales');
 
-            // 10. return ['new_course' => ..., 'payment' => ...]
             return [
                 'new_course' => $newCourse,
                 'is_queued' => ($newCourse === null),
-                'payment' => [
-                    'mode' => $usedMode,
-                    'amount' => $paymentResult['amount'],
-                    'transaction_id' => $paymentResult['transaction_id']
-                ]
+                'payment' => $paymentResult,
             ];
         });
-    }
-
-    protected function determinePaymentMode(User $buyer, Course $course, string $paymentMode): string
-    {
-        $priceType = $course->price_type;
-
-        if ($priceType === 'free') {
-            return 'free';
-        }
-
-        if ($priceType === 'points') {
-            return 'points';
-        }
-
-        if ($priceType === 'wallet') {
-            return 'wallet';
-        }
-
-        if ($priceType === 'both') {
-            if ($paymentMode === 'auto') {
-                if ($buyer->pp >= $course->price_points) {
-                    return 'points';
-                } else {
-                    return 'wallet';
-                }
-            }
-            return $paymentMode;
-        }
-
-        throw new Exception('This course cannot be purchased with the selected payment method.');
     }
 
     protected function processPayment(User $buyer, Course $course, string $usedMode): array
@@ -118,80 +74,110 @@ class CoursePurchaseService
             throw new Exception('Course owner not found.');
         }
 
-        if ($usedMode === 'free') {
-            return ['amount' => 0, 'transaction_id' => null];
+        $priceTHB = (float) $course->price;
+
+        // ฟรี
+        if ($priceTHB <= 0) {
+            return ['amount' => 0, 'transaction_id' => null, 'mode' => 'free'];
         }
 
-        if ($usedMode === 'points') {
-            $amount = $course->price_points;
-            if ($buyer->pp < $amount) {
-                throw new Exception('Insufficient points balance.');
-            }
+        $pricePoints = (int) ceil($priceTHB * self::POINTS_PER_THB);
 
-            // Deduct from buyer
-            $transaction = $this->pointsService->spend(
-                $buyer, 
-                $amount, 
-                'App\Models\Course', 
-                $course->id, 
-                "Purchased course copy: {$course->name}"
-            );
-
-            if (!$transaction) {
-                throw new Exception('Failed to process points payment.');
-            }
-
-            // Earn for seller
-            $this->pointsService->earn(
-                $seller, 
-                $amount, 
-                'App\Models\Course', 
-                $course->id, 
-                "Sold course copy: {$course->name} to {$buyer->name}"
-            );
-
-            return ['amount' => $amount, 'transaction_id' => $transaction->id];
-        }
+        // คำนวณการหักตามวิธีจ่าย
+        $payFromWallet = 0;
+        $payFromPoints = 0;
 
         if ($usedMode === 'wallet') {
-            $amount = $course->price;
-            if ($buyer->wallet < $amount) {
-                throw new Exception('Insufficient wallet balance.');
+            if ($buyer->wallet < $priceTHB) {
+                throw new Exception('ยอดเงินไม่เพียงพอ');
             }
+            $payFromWallet = $priceTHB;
+        } elseif ($usedMode === 'points') {
+            if ($buyer->pp < $pricePoints) {
+                throw new Exception('แต้มไม่เพียงพอ');
+            }
+            $payFromPoints = $pricePoints;
+        } elseif ($usedMode === 'mixed') {
+            // ใช้ wallet ให้หมดก่อน แล้วค่อยเอาแต้มมาเติม
+            $payFromWallet = min($buyer->wallet, $priceTHB);
+            $thbShortfall = $priceTHB - $payFromWallet;
+            $payFromPoints = (int) ceil($thbShortfall * self::POINTS_PER_THB);
 
-            // Deduct from buyer
-            $transaction = WalletTransaction::create([
-                'user_id' => $buyer->id,
-                'transaction_type' => 'purchase',
-                'amount' => $amount,
-                'balance_before' => $buyer->wallet,
-                'balance_after' => $buyer->wallet - $amount,
-                'currency' => 'THB',
-                'description' => "Purchased course copy: {$course->name}",
-                'metadata' => ['course_id' => $course->id],
-                'status' => 'completed',
-            ]);
-
-            $buyer->decrement('wallet', $amount);
-
-            // Earn for seller
-            WalletTransaction::create([
-                'user_id' => $seller->id,
-                'transaction_type' => 'course_income',
-                'amount' => $amount,
-                'balance_before' => $seller->wallet,
-                'balance_after' => $seller->wallet + $amount,
-                'currency' => 'THB',
-                'description' => "Sold course copy: {$course->name} to {$buyer->name}",
-                'metadata' => ['course_id' => $course->id, 'buyer_id' => $buyer->id],
-                'status' => 'completed',
-            ]);
-
-            $seller->increment('wallet', $amount);
-
-            return ['amount' => $amount, 'transaction_id' => $transaction->id];
+            if ($buyer->pp < $payFromPoints) {
+                throw new Exception('ยอดเงินและแต้มรวมกันไม่เพียงพอ');
+            }
+        } else {
+            throw new Exception('Invalid payment method.');
         }
 
-        throw new Exception('Invalid payment method.');
+        // หักจาก buyer
+        $transactionId = null;
+        if ($payFromWallet > 0) {
+            $tx = WalletTransaction::create([
+                'user_id' => $buyer->id,
+                'transaction_type' => 'purchase',
+                'amount' => $payFromWallet,
+                'balance_before' => $buyer->wallet,
+                'balance_after' => $buyer->wallet - $payFromWallet,
+                'currency' => 'THB',
+                'description' => "ซื้อลิขสิทธิ์: {$course->name}",
+                'metadata' => [
+                    'course_id' => $course->id,
+                    'payment_mode' => $usedMode,
+                    'thb_portion' => $payFromWallet,
+                    'points_portion' => $payFromPoints,
+                ],
+                'status' => 'completed',
+            ]);
+            $buyer->decrement('wallet', $payFromWallet);
+            $transactionId = $tx->id;
+        }
+
+        if ($payFromPoints > 0) {
+            $ptsTx = $this->pointsService->spend(
+                $buyer,
+                $payFromPoints,
+                'App\Models\Course',
+                $course->id,
+                "ซื้อลิขสิทธิ์ (แต้ม): {$course->name}",
+                [
+                    'course_id' => $course->id,
+                    'payment_mode' => $usedMode,
+                    'thb_equivalent' => $payFromPoints / self::POINTS_PER_THB,
+                ]
+            );
+            if (!$ptsTx) {
+                throw new Exception('Failed to deduct points.');
+            }
+            $transactionId = $transactionId ?? $ptsTx->id;
+        }
+
+        // เครดิตให้ seller เป็น THB เต็มจำนวนเสมอ
+        WalletTransaction::create([
+            'user_id' => $seller->id,
+            'transaction_type' => 'course_income',
+            'amount' => $priceTHB,
+            'balance_before' => $seller->wallet,
+            'balance_after' => $seller->wallet + $priceTHB,
+            'currency' => 'THB',
+            'description' => "ขายลิขสิทธิ์: {$course->name} ให้ {$buyer->name}",
+            'metadata' => [
+                'course_id' => $course->id,
+                'buyer_id' => $buyer->id,
+                'buyer_payment_mode' => $usedMode,
+            ],
+            'status' => 'completed',
+        ]);
+        $seller->increment('wallet', $priceTHB);
+
+        return [
+            'amount' => $priceTHB,
+            'transaction_id' => $transactionId,
+            'mode' => $usedMode,
+            'breakdown' => [
+                'thb' => $payFromWallet,
+                'points' => $payFromPoints,
+            ],
+        ];
     }
 }

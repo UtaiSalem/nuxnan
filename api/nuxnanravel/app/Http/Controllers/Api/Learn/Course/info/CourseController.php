@@ -567,6 +567,109 @@ class CourseController extends Controller
         ], 200);
     }
 
+    public function updateCover(Course $course, Request $request)
+    {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'cover' => 'required|image|mimes:jpg,jpeg,png,gif,svg|max:4096',
+        ]);
+
+        if ($request->hasFile('cover')) {
+            // Delete old cover
+            if ($course->cover) {
+                $oldFile = public_path('storage/images/courses/covers/' . $course->cover);
+                if (File::exists($oldFile)) {
+                    File::delete($oldFile);
+                }
+            }
+
+            $file = $request->file('cover');
+            $filename = uniqid() . '.' . $file->getClientOriginalExtension();
+            Storage::disk('public')->putFileAs('images/courses/covers', $file, $filename);
+
+            $course->update(['cover' => $filename]);
+
+            return response()->json([
+                'success' => true,
+                'cover' => $filename,
+                'cover_url' => $course->cover_url,
+            ]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'No file uploaded'], 400);
+    }
+
+    public function updateLogo(Course $course, Request $request)
+    {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'logo' => 'required|image|mimes:jpg,jpeg,png,gif,svg|max:4096',
+        ]);
+
+        if ($request->hasFile('logo')) {
+            // Delete old logo
+            if ($course->logo) {
+                $oldFile = public_path('storage/images/courses/logos/' . $course->logo);
+                if (File::exists($oldFile)) {
+                    File::delete($oldFile);
+                }
+            }
+
+            $file = $request->file('logo');
+            $filename = uniqid() . '.' . $file->getClientOriginalExtension();
+            Storage::disk('public')->putFileAs('images/courses/logos', $file, $filename);
+
+            $course->update(['logo' => $filename]);
+
+            return response()->json([
+                'success' => true,
+                'logo' => $filename,
+                'logo_url' => $course->logo_url,
+            ]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'No file uploaded'], 400);
+    }
+
+    public function updateHeader(Course $course, Request $request)
+    {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate(['header' => 'required|string|max:255']);
+        $course->update(['cover_header' => $request->header]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function updateSubheader(Course $course, Request $request)
+    {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate(['subheader' => 'required|string|max:255']);
+        $course->update(['cover_subheader' => $request->subheader]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function profile(Course $course)
+    {
+        return response()->json([
+            'success' => true,
+            'course' => new CourseResource($course->load(['user', 'academy'])),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
+        ]);
+    }
+
     /**
      * Remove the specified resource from storage.
      */

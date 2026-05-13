@@ -567,7 +567,7 @@ async function handleSubmitForm(){
                 
                 <!-- Action Buttons -->
                 <div class="flex items-center justify-end gap-4 pt-4 pb-12">
-                     <button type="button" @click="router.visit('/learn/courses')" 
+                     <button type="button" @click="router.push('/Learn/Courses')" 
                         class="px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                      >
                          ยกเลิก

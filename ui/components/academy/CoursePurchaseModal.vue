@@ -32,30 +32,36 @@
                 </DialogTitle>
                 
                 <div class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 mb-6 flex gap-4">
-                  <img :src="course.cover_url || '/images/course-placeholder.jpg'" class="w-20 h-20 rounded-xl object-cover" />
+                  <img :src="course.cover || `${config.public.apiBase}/storage/images/courses/covers/default_cover.jpg`" class="w-20 h-20 rounded-xl object-cover" />
                   <div>
                     <h4 class="font-bold text-slate-800 dark:text-white text-sm line-clamp-2">{{ course.name }}</h4>
                     <p class="text-xs text-slate-500 mt-1">เจ้าของลิขสิทธิ์: {{ course.user?.name }}</p>
                     <div class="flex gap-2 mt-2">
                       <span class="text-[10px] bg-primary-100 dark:bg-primary-900/30 text-primary-600 px-2 py-0.5 rounded font-bold">
-                        คัดลอก {{ course.course_lessons_count }} บทเรียน
+                        คัดลอก {{ course.course_lessons_count || course.lessons_count }} บทเรียน
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div class="space-y-3 mb-6">
-                  <div class="flex justify-between text-sm">
-                    <span class="text-slate-500">ค่าลิขสิทธิ์สุทธิ</span>
-                    <div class="flex flex-col items-end">
-                      <span v-if="course.price_type === 'points' || course.price_type === 'both'" class="font-bold text-amber-600">
-                        {{ formatNumber(course.price_points) }} แต้ม
-                      </span>
-                      <span v-if="course.price_type === 'wallet' || course.price_type === 'both'" class="font-bold text-primary-600">
-                        ฿ {{ formatNumber(course.price) }}
-                      </span>
-                      <span v-if="course.price_type === 'free'" class="font-bold text-green-600">ฟรี (Clone ฟรี)</span>
-                    </div>
+                <div v-if="checking" class="py-12 flex flex-col items-center justify-center gap-3">
+                  <Icon icon="svg-spinners:ring-resize" class="w-8 h-8 text-primary-600" />
+                  <span class="text-sm text-slate-500">กำลังตรวจสอบข้อมูลราคา...</span>
+                </div>
+
+                <div v-else-if="checkResult" class="space-y-3 mb-6">
+                  <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-500">ราคาลิขสิทธิ์ (THB)</span>
+                    <span class="font-black text-primary-600 text-lg">฿ {{ formatNumber(checkResult.price_thb) }}</span>
+                  </div>
+                  <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-500">ราคาลิขสิทธิ์ (Points)</span>
+                    <span class="font-bold text-amber-600">{{ formatNumber(checkResult.price_points) }} P</span>
+                  </div>
+                  <div class="pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <p class="text-[10px] text-slate-400 text-center uppercase tracking-wider font-bold">
+                      อัตราแลกเปลี่ยน 1 THB = {{ formatNumber(checkResult.exchange_rate) }} Points
+                    </p>
                   </div>
                 </div>
 
@@ -63,7 +69,7 @@
                   <button @click="$emit('close')" class="flex-1 px-4 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                     ยกเลิก
                   </button>
-                  <button @click="nextStep" class="flex-2 bg-primary-600 hover:bg-primary-700 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary-500/30">
+                  <button @click="nextStep" :disabled="checking" class="flex-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary-500/30">
                     ยืนยันคำสั่งซื้อ
                   </button>
                 </div>
@@ -75,46 +81,70 @@
                   เลือกวิธีชำระเงิน
                 </DialogTitle>
 
-                <div class="space-y-4 mb-8">
-                  <!-- Points Option -->
-                  <button 
-                    v-if="course.price_type === 'points' || course.price_type === 'both'"
-                    @click="paymentMode = 'points'"
-                    class="w-full p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between"
-                    :class="paymentMode === 'points' ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200'"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
-                        <Icon icon="mdi:database" class="w-6 h-6" />
-                      </div>
-                      <div>
-                        <div class="font-bold text-slate-800 dark:text-white">ชำระด้วยแต้ม</div>
-                        <div class="text-xs text-slate-500">คงเหลือ: {{ formatNumber(user?.pp || 0) }} P</div>
-                      </div>
-                    </div>
-                    <div class="text-right">
-                      <div class="font-black text-amber-600">{{ formatNumber(course.price_points) }} P</div>
-                    </div>
-                  </button>
-
+                <div class="space-y-3 mb-8">
                   <!-- Wallet Option -->
                   <button 
-                    v-if="course.price_type === 'wallet' || course.price_type === 'both'"
                     @click="paymentMode = 'wallet'"
-                    class="w-full p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between"
+                    :disabled="!checkResult?.can_pay.wallet"
+                    class="w-full p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between group disabled:opacity-50 disabled:grayscale"
                     :class="paymentMode === 'wallet' ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200'"
                   >
                     <div class="flex items-center gap-3">
                       <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600">
-                        <Icon icon="mdi:wallet" class="w-6 h-6" />
+                        <Icon icon="fluent:wallet-24-filled" class="w-6 h-6" />
                       </div>
                       <div>
-                        <div class="font-bold text-slate-800 dark:text-white">ชำระด้วยเงิน (Wallet)</div>
-                        <div class="text-xs text-slate-500">คงเหลือ: ฿ {{ formatNumber(user?.wallet || 0) }}</div>
+                        <div class="font-bold text-slate-800 dark:text-white">ชำระด้วย Wallet</div>
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">คงเหลือ: ฿ {{ formatNumber(checkResult?.balance.wallet) }}</div>
                       </div>
                     </div>
                     <div class="text-right">
-                      <div class="font-black text-primary-600">฿ {{ formatNumber(course.price) }}</div>
+                      <div class="font-black text-primary-600">฿ {{ formatNumber(checkResult?.price_thb) }}</div>
+                      <div v-if="!checkResult?.can_pay.wallet" class="text-[10px] text-red-500 font-bold">ยอดเงินไม่พอ</div>
+                    </div>
+                  </button>
+
+                  <!-- Points Option -->
+                  <button 
+                    @click="paymentMode = 'points'"
+                    :disabled="!checkResult?.can_pay.points"
+                    class="w-full p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between group disabled:opacity-50 disabled:grayscale"
+                    :class="paymentMode === 'points' ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200'"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
+                        <Icon icon="fluent:star-24-filled" class="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div class="font-bold text-slate-800 dark:text-white">ชำระด้วยแต้มสะสม</div>
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">คงเหลือ: {{ formatNumber(checkResult?.balance.points) }} P</div>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="font-black text-amber-600">{{ formatNumber(checkResult?.price_points) }} P</div>
+                      <div v-if="!checkResult?.can_pay.points" class="text-[10px] text-red-500 font-bold">แต้มไม่พอ</div>
+                    </div>
+                  </button>
+
+                  <!-- Mixed Option -->
+                  <button 
+                    v-if="checkResult?.can_pay.mixed"
+                    @click="paymentMode = 'mixed'"
+                    class="w-full p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between group"
+                    :class="paymentMode === 'mixed' ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/10' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200'"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600">
+                        <Icon icon="fluent:money-hand-24-filled" class="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div class="font-bold text-slate-800 dark:text-white">Mixed: Wallet + Points</div>
+                        <div class="text-[10px] text-slate-500 font-medium">ใช้ Wallet ทั้งหมดที่มี แล้วจ่ายส่วนต่างด้วยแต้ม</div>
+                      </div>
+                    </div>
+                    <div class="text-right flex flex-col items-end">
+                      <div class="font-black text-slate-700 dark:text-slate-200 text-xs">฿ {{ formatNumber(checkResult?.mixed_breakdown.wallet_portion) }}</div>
+                      <div class="font-black text-violet-600">+ {{ formatNumber(checkResult?.mixed_breakdown.points_portion) }} P</div>
                     </div>
                   </button>
                 </div>
@@ -192,7 +222,8 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'success'])
 
 const { user, refreshUser } = useAuth()
-const { api } = useApi()
+const api = useApi()
+const config = useRuntimeConfig()
 
 const step = ref(1)
 const paymentMode = ref('')
@@ -200,6 +231,20 @@ const loading = ref(false)
 const error = ref('')
 const newCourseId = ref(null)
 const isQueued = ref(false)
+const checkResult = ref(null)
+const checking = ref(false)
+
+const fetchCheckResult = async () => {
+  checking.value = true
+  try {
+    const response = await api.get(`/api/courses/${props.course.id}/purchase/check`)
+    checkResult.value = response
+  } catch (err) {
+    console.error('Failed to check purchase:', err)
+  } finally {
+    checking.value = false
+  }
+}
 
 watch(() => props.visible, (val) => {
   if (val) {
@@ -209,12 +254,13 @@ watch(() => props.visible, (val) => {
     newCourseId.value = null
     isQueued.value = false
     loading.value = false
+    fetchCheckResult()
   }
 })
 
 const nextStep = () => {
-  if (props.course.price_type === 'free') {
-    paymentMode.value = 'auto'
+  if (checkResult.value?.is_free) {
+    paymentMode.value = 'wallet' // Default for free
     handlePurchase()
   } else {
     step.value = 2
@@ -229,8 +275,8 @@ const handlePurchase = async () => {
       payment_mode: paymentMode.value
     })
     
-    newCourseId.value = response.data.new_course_id
-    isQueued.value = response.data.is_queued
+    newCourseId.value = response.new_course_id
+    isQueued.value = response.is_queued
     step.value = 3
     
     // Refresh user balance
@@ -238,7 +284,7 @@ const handlePurchase = async () => {
     
     emit('success', response)
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'เกิดข้อผิดพลาดในการสั่งซื้อ'
+    error.value = err.data?.message || 'เกิดข้อผิดพลาดในการสั่งซื้อ'
   } finally {
     loading.value = false
   }

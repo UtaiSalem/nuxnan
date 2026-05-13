@@ -12,6 +12,10 @@ import AcademyNavbarTab from '~/components/learn/academy/AcademyNavbarTab.vue';
 const props = defineProps({
     academy: Object,
     isAcademyAdmin: Boolean,
+    activeTab: {
+        type: Number,
+        default: 0
+    }
 });
 
 const api = useApi();
@@ -216,7 +220,7 @@ async function onSubheaderChange(academySlogan) {
                         @request-tobe-unmember="onRequestToBeUnmember"
                     ></AcademyCoverProfile>
 
-                    <AcademyNavbarTab :academy="academy" :activeTab="0" :isAcademyAdmin="props.isAcademyAdmin" />
+                    <AcademyNavbarTab :academy="academy" :activeTab="props.activeTab" :isAcademyAdmin="props.isAcademyAdmin" />
 
         </template>
 

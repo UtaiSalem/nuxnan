@@ -26,7 +26,11 @@ class CourseMemberResource extends JsonResource
             'access_expiry_date'    =>  $this->access_expiry_date,
             'completion_date'       =>  $this->completion_date,
             'enrollment_date'       =>  $this->enrollment_date,
-            'grade_progress'        =>  $this->grade_progress,
+            // ถ้า course ถูก eager-load แล้ว ให้คำนวณ grade จาก achieved_score จริง
+            // เพื่อแก้บัคที่ grade_progress = 0 ค้างอยู่ใน DB จากค่า default เดิม
+            'grade_progress'        =>  $this->relationLoaded('course')
+                ? ($this->getCalculatedGrade() ?? $this->grade_progress)
+                : $this->grade_progress,
             'group_id'              =>  $this->group_id,
             'achieved_score'        =>  $this->achieved_score,
             'bonus_points'          =>  $this->bonus_points,

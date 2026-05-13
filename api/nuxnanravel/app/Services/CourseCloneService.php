@@ -108,8 +108,6 @@ class CourseCloneService
         $data['is_for_marketplace'] = false;
         $data['saleable'] = false;
         $data['price'] = 0;
-        $data['price_points'] = 0;
-        $data['price_type'] = 'free';
         $data['total_sales'] = 0;
         $data['enrolled_students'] = 0;
         

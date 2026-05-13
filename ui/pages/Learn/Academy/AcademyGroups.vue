@@ -167,6 +167,7 @@ onMounted(async () => {
         v-else
         :academy
         :isAcademyAdmin
+        :activeTab="1"
     >
         <template #academyContent>
             <div class="mt-4">

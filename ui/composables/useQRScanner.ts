@@ -343,7 +343,7 @@ export function useQRScanner() {
     const courseId = parsed.data[0]
 
     // Navigate to course page
-    router.push(`/learn/courses/${courseId}`)
+    router.push(`/Learn/Courses/${courseId}`)
 
     return {
       success: true,

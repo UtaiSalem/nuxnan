@@ -17,7 +17,7 @@ const navigation = [
   },
   { 
     name: 'คอร์สเรียน', 
-    href: '/learn/courses', 
+    href: '/Learn/Courses', 
     icon: 'fluent:book-24-regular', 
     activeIcon: 'fluent:book-24-filled' 
   },

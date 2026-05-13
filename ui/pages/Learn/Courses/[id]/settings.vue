@@ -204,7 +204,7 @@ const deleteCourse = async () => {
         timer: 1500,
         showConfirmButton: false
       })
-      navigateTo('/learn/courses')
+      navigateTo('/Learn/Courses')
     }
   } catch (err: any) {
     Swal.fire('ผิดพลาด', err.data?.msg || 'ไม่สามารถลบรายวิชาได้', 'error')

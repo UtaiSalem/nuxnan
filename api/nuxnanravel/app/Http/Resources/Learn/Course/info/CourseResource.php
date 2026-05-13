@@ -23,6 +23,8 @@ class CourseResource extends JsonResource
             'description'       => $this->description,
             'logo'              => $this->logo_url,
             'cover'             => $this->cover_url,
+            'header'            => $this->cover_header,
+            'subheader'         => $this->cover_subheader,
             'duration'          => $this->duration,
             'start_date'        => $this->start_date,
             'end_date'          => $this->end_date,
@@ -35,29 +37,38 @@ class CourseResource extends JsonResource
             'category'          => $this->category,
             'instructor'        => $this->instructor,
             'capacity'          => $this->capacity,
-            'enrolled_students' => $this->enrolled_students,
-            'lessons'           => $this->lessons,
+            'enrolled_students' => $this->course_members_count ?? $this->enrolled_students,
+            'lessons'           => $this->course_lessons_count ?? $this->lessons,
             'assignments'       => $this->whenLoaded('courseAssignments', function() {
                 return AssignmentResource::collection($this->courseAssignments);
             }),
-            'assignments_count' => $this->assignments,
+            'assignments_count' => $this->course_assignments_count ?? $this->assignments,
             'quizzes'           => $this->quizzes,
+            'quizzes_count'     => $this->course_quizzes_count ?? $this->quizzes,
             'groups'            => $this->groups,
             'class_schedule'    => $this->class_schedule,
             'prerequisites'     => $this->prerequisites,
             'course_materials'  => $this->course_materials,
             'status'            => $this->status,
             'location'          => $this->location,
-            'is_favorited'      => $this->is_favorited,
+            'is_favorited'      => $this->when(isset($this->favorites), function() {
+                return $this->favorites->isNotEmpty();
+            }, $this->is_favorited),
             'accreditation'     => $this->accreditation,
             'accreditation_body'=> $this->accreditation_body,
             'level'             => $this->level,
             'rating'            => $this->rating,
             'syllabus'          => $this->syllabus,
             'certificate'       => $this->certificate,
-            'isMember'          => $this->isMember(auth()->guard('api')->user()),
-            'member_status'     => $this->member_status($this->id), //Course member status
-            'lessons_count'     => $this->lessons,
+            'isMember'          => $this->when(isset($this->courseMembers), function() {
+                return $this->courseMembers->where('user_id', auth()->guard('api')->id())->where('status', 1)->isNotEmpty();
+            }, $this->isMember(auth()->guard('api')->user())),
+            'member_status'     => $this->when(isset($this->courseMembers), function() {
+                $member = $this->courseMembers->where('user_id', auth()->guard('api')->id())->first();
+                return $member?->course_member_status;
+            }, $this->member_status($this->id)), //Course member status
+            'lessons_count'          => $this->course_lessons_count ?? $this->lessons,
+            'course_lessons_count'   => $this->course_lessons_count,
             'isCourseAdmin'     => $this->isAdmin(auth()->guard('api')->user()),
             'total_score'       => $this->total_score,
             'setting'           => $this->courseSettings,
@@ -79,6 +90,18 @@ class CourseResource extends JsonResource
             'total_sales'       => $this->total_sales,
             'is_owned'          => $this->when(auth()->guard('api')->check(), function() {
                 return $this->isOwnedBy(auth()->guard('api')->user());
+            }),
+            'enrollment_status' => $this->when(auth()->guard('api')->check(), function () {
+                $member = $this->courseMembers
+                    ->where('user_id', auth()->guard('api')->id())
+                    ->first();
+                return $member
+                    ? [
+                        'is_member'   => true,
+                        'status'      => $member->course_member_status,
+                        'enrolled_at' => $member->enrollment_date,
+                    ]
+                    : ['is_member' => false, 'status' => null, 'enrolled_at' => null];
             }),
             'pending_invitation' => $this->when(auth()->guard('api')->check(), function() {
                 return \App\Models\CourseInvitation::where('course_id', $this->id)

@@ -2,11 +2,13 @@
 import { ref, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import CourseMarketCard from '~/components/academy/CourseMarketCard.vue'
+import CourseMarketCardSkeleton from '~/components/academy/CourseMarketCardSkeleton.vue'
 import CoursePurchaseModal from '~/components/academy/CoursePurchaseModal.vue'
 import RecentlyViewedCoursesWidget from '~/components/widgets/RecentlyViewedCoursesWidget.vue'
 import PopularCoursesWidget from '~/components/widgets/PopularCoursesWidget.vue'
 import MemberedAcademiesWidget from '~/components/widgets/MemberedAcademiesWidget.vue'
 import AllAcademiesWidget from '~/components/widgets/AllAcademiesWidget.vue'
+import MarketplaceFilterWidget from '~/components/marketplace/MarketplaceFilterWidget.vue'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
@@ -14,7 +16,7 @@ definePageMeta({
 })
 
 const authStore = useAuthStore()
-const { api } = useApi()
+const api = useApi()
 
 const activeTab = ref('browse')
 const courses = ref([])
@@ -25,37 +27,59 @@ const totalCourses = ref(0)
 const currentPage = ref(1)
 const totalPages = ref(1)
 
-const filters = ref({
+const defaultFilters = () => ({
   search: '',
-  price_type: 'all',
   category: '',
-  sort: 'newest'
+  level: '',
+  language: '',
+  semester: '',
+  academic_year: '',
+  credit_units_min: null,
+  credit_units_max: null,
+  hours_per_week_min: null,
+  hours_per_week_max: null,
+  price_min: null,
+  price_max: null,
+  is_free: false,
+  rating_min: null,
+  sort: 'newest',
 })
 
-const priceTypes = [
-  { label: 'ทั้งหมด', value: 'all' },
-  { label: 'ฟรี (Clone ฟรี)', value: 'free' },
-  { label: 'ใช้แต้ม (Points)', value: 'points' },
-  { label: 'ใช้เงิน (Wallet)', value: 'wallet' },
-  { label: 'ใช้ได้ทั้งสองอย่าง', value: 'both' }
-]
+const filters = ref(defaultFilters())
 
-const categories = ref(['การเขียนโปรแกรม', 'การออกแบบ', 'ธุรกิจ', 'ภาษา', 'ดนตรี', 'สุขภาพ'])
+const resetFilters = () => {
+  filters.value = defaultFilters()
+  currentPage.value = 1
+  fetchCourses()
+}
+
+const onSortChange = () => {
+  currentPage.value = 1
+  fetchCourses()
+}
 
 const fetchCourses = async () => {
   loading.value = true
   try {
-    const response = await api.get('/api/courses/marketplace', {
+    const response: any = await api.get('/api/courses/marketplace', {
       params: {
         ...filters.value,
         page: currentPage.value
       }
     })
-    courses.value = response.data?.data || response.data || []
-    totalCourses.value = response.data?.meta?.total || courses.value.length || 0
-    totalPages.value = response.data?.meta?.last_page || 1
+    
+    // Response data mapping based on backend structure
+    // Backend returns { success: true, data: [...], meta: {...} }
+    // CourseResource::collection might wrap data in 'data' key if paginated
+    const responseData = response.data?.data || response.data || []
+    courses.value = Array.isArray(responseData) ? responseData : []
+    
+    // Meta is at the top level in the controller's response
+    totalCourses.value = response.meta?.total || courses.value.length || 0
+    totalPages.value = response.meta?.last_page || 1
   } catch (error) {
     console.error('Failed to fetch marketplace courses:', error)
+    courses.value = []
   } finally {
     loading.value = false
   }
@@ -93,9 +117,14 @@ const changePage = (page: number) => {
 const selectedCourse = ref(null)
 const showPurchaseModal = ref(false)
 
-const openPurchaseModal = (course: any) => {
+const openCloneModal = (course: any) => {
   selectedCourse.value = course
   showPurchaseModal.value = true
+}
+
+const openEnrollModal = (course: any) => {
+  // TODO: open enrollment modal or navigate to course page
+  navigateTo(`/Learn/Courses/${course.id}`)
 }
 
 const handlePurchaseSuccess = (result: any) => {
@@ -137,58 +166,14 @@ useHead({
   <NuxtLayout name="main">
     <!-- Left Widgets Slot -->
     <template #leftWidgets>
-      <!-- Filter Widget specifically for Marketplace -->
-      <div v-if="activeTab === 'browse'" class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 p-5 sticky top-24 mb-4">
-        <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Icon icon="fluent:filter-24-regular" class="w-5 h-5 text-vikinger-purple" />
-          ตัวกรองตลาดลิขสิทธิ์
-        </h3>
-
-        <!-- Search -->
-        <div class="mb-5">
-          <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 block">ค้นหาต้นฉบับ</label>
-          <div class="relative">
-            <input 
-              v-model="filters.search" 
-              type="text" 
-              placeholder="ชื่อวิชา..." 
-              class="w-full bg-gray-50 dark:bg-vikinger-dark-100 border-none rounded-lg py-2 pl-9 pr-3 text-sm focus:ring-2 focus:ring-vikinger-purple text-gray-800 dark:text-white"
-              @keyup.enter="fetchCourses"
-            />
-            <Icon icon="fluent:search-24-regular" class="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-          </div>
-        </div>
-
-        <!-- Price Type -->
-        <div class="mb-5">
-          <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 block">เงื่อนไขการ Clone</label>
-          <div class="flex flex-col gap-2">
-            <label v-for="type in priceTypes" :key="type.value" class="flex items-center gap-2 cursor-pointer group">
-              <input type="radio" v-model="filters.price_type" :value="type.value" class="text-vikinger-purple focus:ring-vikinger-purple border-gray-300 dark:border-vikinger-dark-50" />
-              <span class="text-sm text-gray-600 dark:text-gray-300 group-hover:text-vikinger-purple transition-colors">{{ type.label }}</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Categories -->
-        <div class="mb-5">
-          <label class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 block">หมวดหมู่</label>
-          <select v-model="filters.category" class="w-full bg-gray-50 dark:bg-vikinger-dark-100 border-none rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-vikinger-purple text-gray-800 dark:text-white">
-            <option value="">ทั้งหมด</option>
-            <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-          </select>
-        </div>
-
-        <button 
-          @click="fetchCourses" 
-          class="w-full bg-gradient-vikinger hover:shadow-vikinger text-white font-bold py-2.5 rounded-lg transition-all flex items-center justify-center gap-2"
-        >
-          <Icon icon="fluent:search-24-filled" class="w-4 h-4" />
-          ค้นหา
-        </button>
-      </div>
-      
-      <!-- Standard left widgets -->
+      <MarketplaceFilterWidget 
+        v-if="activeTab === 'browse'"
+        v-model="filters"
+        :loading="loading"
+        @apply="fetchCourses"
+        @reset="resetFilters"
+        class="mb-4"
+      />
       <RecentlyViewedCoursesWidget class="mb-4" />
       <PopularCoursesWidget class="mb-4" />
     </template>
@@ -203,44 +188,90 @@ useHead({
     <!-- Main Center Content -->
     <div class="space-y-6">
       
-      <!-- Hero Header -->
-      <div class="bg-gradient-vikinger rounded-2xl p-6 md:p-8 text-white relative overflow-hidden shadow-vikinger">
+      <!-- Hero Banner — Responsive -->
+      <div class="relative overflow-hidden rounded-2xl shadow-vikinger">
+        <!-- Background layers -->
+        <div class="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-600 to-cyan-500"></div>
         <div class="absolute inset-0 bg-[url('/images/noise.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
-        <div class="absolute -top-24 -right-24 w-48 h-48 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-vikinger-cyan/40 rounded-full blur-3xl pointer-events-none"></div>
-        
-        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 class="text-2xl md:text-3xl font-black mb-2 flex items-center gap-2">
-              <Icon icon="fluent:shopping-bag-24-filled" class="w-8 h-8 text-white/90" />
-              ตลาดลิขสิทธิ์รายวิชา
-            </h1>
-            <p class="text-white/80 text-sm md:text-base max-w-xl font-medium">
-              เลือกซื้อสำเนาต้นฉบับรายวิชา (Master Copy) เพื่อนำไปจัดการเรียนการสอนในสถาบันของคุณได้ทันที
-            </p>
-          </div>
-          
-          <!-- Balance Cards -->
-          <div class="flex items-center gap-3 shrink-0">
-            <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-3 flex gap-4">
-              <div class="flex flex-col">
-                <span class="text-[10px] text-white/70 uppercase font-bold tracking-wider">เงินคงเหลือ</span>
-                <span class="font-black text-white flex items-center gap-1 text-lg">
-                  <Icon icon="fluent:wallet-24-filled" class="w-4 h-4 text-emerald-400" />
-                  ฿{{ formatNumber(authStore.user?.wallet || 0) }}
-                </span>
+        <div class="absolute -top-32 -right-20 w-72 h-72 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-32 -left-20 w-72 h-72 bg-cyan-300/40 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Content -->
+        <div class="relative z-10 p-5 sm:p-6 md:p-8 lg:p-10">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            
+            <!-- Title block -->
+            <div class="flex-1 min-w-0">
+              <!-- Badge -->
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-white/90 text-xs font-bold uppercase tracking-wider border border-white/20 mb-3">
+                <Icon icon="fluent:sparkle-24-filled" class="w-3.5 h-3.5" />
+                Master Copy Marketplace
               </div>
-              <div class="w-px bg-white/20"></div>
-              <div class="flex flex-col">
-                <span class="text-[10px] text-white/70 uppercase font-bold tracking-wider">แต้มของคุณ</span>
-                <span class="font-black text-white flex items-center gap-1 text-lg">
-                  <Icon icon="fluent:star-24-filled" class="w-4 h-4 text-amber-400" />
-                  {{ formatNumber(authStore.points || 0) }} P
-                </span>
+
+              <h1 class="text-white text-2xl sm:text-3xl md:text-4xl font-black leading-tight mb-2 flex items-start gap-2 sm:gap-3">
+                <Icon icon="fluent:shopping-bag-24-filled" class="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 flex-shrink-0 mt-0.5 text-amber-300 drop-shadow-lg" />
+                <span class="break-words">ตลาดลิขสิทธิ์รายวิชา</span>
+              </h1>
+
+              <p class="text-white/85 text-sm sm:text-base max-w-2xl font-medium leading-relaxed">
+                เลือกซื้อสำเนาต้นฉบับรายวิชา (Master Copy) เพื่อนำไปจัดการเรียนการสอนในสถาบันของคุณได้ทันที
+              </p>
+
+              <!-- Quick stats (visible on tablet+) -->
+              <div class="hidden sm:flex items-center gap-4 mt-4">
+                <div class="flex items-center gap-1.5 text-white/80 text-xs">
+                  <Icon icon="fluent:checkmark-circle-24-filled" class="w-4 h-4 text-emerald-300" />
+                  <span>คัดลอกทันที</span>
+                </div>
+                <div class="w-1 h-1 rounded-full bg-white/30"></div>
+                <div class="flex items-center gap-1.5 text-white/80 text-xs">
+                  <Icon icon="fluent:shield-checkmark-24-filled" class="w-4 h-4 text-emerald-300" />
+                  <span>ลิขสิทธิ์ถูกต้อง</span>
+                </div>
+                <div class="w-1 h-1 rounded-full bg-white/30"></div>
+                <div class="flex items-center gap-1.5 text-white/80 text-xs">
+                  <Icon icon="fluent:money-24-filled" class="w-4 h-4 text-emerald-300" />
+                  <span>จ่ายได้หลายวิธี</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Balance Cards — Stack on mobile, row on lg -->
+            <div class="grid grid-cols-2 lg:flex lg:flex-col xl:flex-row gap-2 sm:gap-3 lg:min-w-[280px] xl:min-w-[420px]">
+              <!-- Wallet Card -->
+              <div class="bg-white/15 backdrop-blur-md border border-white/25 rounded-xl p-3 sm:p-4 hover:bg-white/20 transition-colors">
+                <div class="flex items-center gap-2 mb-1">
+                  <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-400/30 flex items-center justify-center">
+                    <Icon icon="fluent:wallet-24-filled" class="w-4 h-4 sm:w-5 sm:h-5 text-emerald-200" />
+                  </div>
+                  <span class="text-[10px] sm:text-xs text-white/80 uppercase font-bold tracking-wider">เงินคงเหลือ</span>
+                </div>
+                <div class="font-black text-white text-lg sm:text-xl md:text-2xl">
+                  ฿{{ formatNumber(authStore.user?.wallet || 0) }}
+                </div>
+              </div>
+
+              <!-- Points Card -->
+              <div class="bg-white/15 backdrop-blur-md border border-white/25 rounded-xl p-3 sm:p-4 hover:bg-white/20 transition-colors">
+                <div class="flex items-center gap-2 mb-1">
+                  <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-400/30 flex items-center justify-center">
+                    <Icon icon="fluent:star-24-filled" class="w-4 h-4 sm:w-5 sm:h-5 text-amber-200" />
+                  </div>
+                  <span class="text-[10px] sm:text-xs text-white/80 uppercase font-bold tracking-wider">แต้มสะสม</span>
+                </div>
+                <div class="font-black text-white text-lg sm:text-xl md:text-2xl">
+                  {{ formatNumber(authStore.points || 0) }}
+                  <span class="text-xs sm:text-sm font-bold opacity-70">P</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Bottom decorative wave (visible md+) -->
+        <svg class="hidden md:block absolute bottom-0 left-0 right-0 w-full" viewBox="0 0 1440 60" preserveAspectRatio="none" style="height: 30px;">
+          <path d="M0,30 C320,60 640,0 960,30 C1280,60 1440,30 1440,30 L1440,60 L0,60 Z" fill="rgba(255,255,255,0.08)"/>
+        </svg>
       </div>
 
       <!-- Tab Navigation -->
@@ -281,7 +312,7 @@ useHead({
           </h3>
           <div class="flex items-center gap-2">
             <Icon icon="fluent:arrow-sort-24-regular" class="text-gray-400 w-4 h-4" />
-            <select v-model="filters.sort" @change="fetchCourses" class="bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-100 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-vikinger-purple dark:text-white focus:outline-none">
+            <select v-model="filters.sort" @change="onSortChange" class="bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-100 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-vikinger-purple dark:text-white focus:outline-none">
               <option value="newest">ใหม่ล่าสุด</option>
               <option value="popular">ยอดนิยม</option>
               <option value="price_asc">ราคา: ต่ำ-สูง</option>
@@ -291,7 +322,7 @@ useHead({
         </div>
 
         <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div v-for="i in 4" :key="i" class="h-64 bg-gray-200 dark:bg-vikinger-dark-200 rounded-xl animate-pulse"></div>
+          <CourseMarketCardSkeleton v-for="i in 4" :key="i" />
         </div>
 
         <div v-else-if="courses.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-12 text-center border-2 border-dashed border-gray-200 dark:border-vikinger-dark-100">
@@ -301,11 +332,12 @@ useHead({
         </div>
 
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <CourseMarketCard 
-            v-for="course in courses" 
-            :key="course.id" 
-            :course="course" 
-            @buy="openPurchaseModal"
+          <CourseMarketCard
+            v-for="course in courses"
+            :key="course.id"
+            :course="course"
+            @clone="openCloneModal"
+            @enroll="openEnrollModal"
           />
         </div>
 

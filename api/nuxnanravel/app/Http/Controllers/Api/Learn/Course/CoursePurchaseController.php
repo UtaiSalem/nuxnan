@@ -25,40 +25,45 @@ class CoursePurchaseController extends Controller
     public function checkPurchase(Course $course): JsonResponse
     {
         $user = auth()->user();
-        
-        // Calculate price with discount
-        $originalPrice = $course->tuition_fees ?? $course->price ?? 0;
-        $discount = $course->discount ?? 0;
-        $finalPrice = $originalPrice;
-        
-        if ($originalPrice > 0 && $discount > 0) {
-            $finalPrice = $originalPrice - ($originalPrice * $discount / 100);
-        }
-        
-        $balance = $user->wallet ?? 0;
-        $canPurchase = $balance >= $finalPrice;
-        $isFree = $finalPrice == 0;
-        
-        // Check if already a member
-        $isMember = $course->courseMembers()
-            ->where('user_id', $user->id)
-            ->exists();
-        
-        // Check if already purchased
-        $hasPurchased = $this->walletService->hasPurchased($user, $course);
+        $POINTS_PER_THB = 1200;
+
+        $priceTHB = (float) ($course->price ?? 0);
+        $pricePoints = (int) ceil($priceTHB * $POINTS_PER_THB);
+
+        $walletBalance = (float) ($user->wallet ?? 0);
+        $pointsBalance = (int) ($user->pp ?? 0);
+
+        $canPayWallet = $walletBalance >= $priceTHB;
+        $canPayPoints = $pointsBalance >= $pricePoints;
+
+        // mixed: wallet เท่าที่มี + แปลงส่วนต่างเป็น points
+        $thbShortfall = max(0, $priceTHB - $walletBalance);
+        $mixedPointsNeeded = (int) ceil($thbShortfall * $POINTS_PER_THB);
+        $canPayMixed = $walletBalance > 0
+            && $pointsBalance >= $mixedPointsNeeded
+            && !$canPayWallet;
 
         return response()->json([
             'success' => true,
-            'can_purchase' => $canPurchase,
-            'original_price' => $originalPrice,
-            'discount_percent' => $discount,
-            'discount_amount' => $originalPrice - $finalPrice,
-            'final_price' => $finalPrice,
-            'balance' => $balance,
-            'shortfall' => $canPurchase ? 0 : $finalPrice - $balance,
-            'is_free' => $isFree,
-            'is_member' => $isMember,
-            'has_purchased' => $hasPurchased,
+            'is_free' => $priceTHB <= 0,
+            'price_thb' => $priceTHB,
+            'price_points' => $pricePoints,
+            'exchange_rate' => $POINTS_PER_THB,
+            'balance' => [
+                'wallet' => $walletBalance,
+                'points' => $pointsBalance,
+            ],
+            'can_pay' => [
+                'wallet' => $canPayWallet,
+                'points' => $canPayPoints,
+                'mixed'  => $canPayMixed,
+            ],
+            'mixed_breakdown' => [
+                'wallet_portion' => min($walletBalance, $priceTHB),
+                'points_portion' => $mixedPointsNeeded,
+            ],
+            'has_purchased' => $this->walletService->hasPurchased($user, $course),
+            'is_self' => $user->id === $course->user_id,
             'course' => [
                 'id' => $course->id,
                 'name' => $course->name,

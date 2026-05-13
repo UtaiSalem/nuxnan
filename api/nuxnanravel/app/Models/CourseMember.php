@@ -163,8 +163,9 @@ class CourseMember extends Model
      */
     public function getGradeName(): ?string
     {
-        // Prioritize edited_grade, then grade_progress, then calculation
-        $grade = $this->edited_grade ?? $this->grade_progress ?? $this->getCalculatedGrade();
+        // edited_grade = manual override by teacher (highest priority)
+        // Otherwise, always calculate from actual achieved_score (never use stale grade_progress = 0)
+        $grade = $this->edited_grade ?? $this->getCalculatedGrade() ?? $this->grade_progress;
         return self::getGradeNameFromGrade($grade);
     }
 

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Course;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Services\CoursePurchaseService;
-use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Http\Resources\Learn\Course\info\MarketplaceCourseResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -22,56 +22,83 @@ class CourseMarketplaceController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Course::forMarketplace()
-            ->with(['user', 'academy'])
-            ->withCount(['courseLessons', 'assignments', 'courseQuizzes']);
+        $currentUserId = Auth::guard('api')->id();
 
-        // Filter: category
-        if ($request->category) {
-            $query->where('category', $request->category);
+        $query = Course::where(function ($q) {
+                $q->where('is_for_marketplace', true)
+                  ->orWhere('saleable', true);
+            })
+            ->with([
+                'user', 
+                'academy', 
+                'courseMembers' => function($q) use ($currentUserId) {
+                    $q->where('user_id', $currentUserId);
+                },
+                'favorites' => function($q) use ($currentUserId) {
+                    $q->where('user_id', $currentUserId);
+                }
+            ])
+            ->withCount([
+                'courseLessons', 
+                'courseAssignments', 
+                'courseQuizzes',
+                'courseMembers as enrolled_students_count' => function($q) {
+                    $q->where('status', 1);
+                }
+            ]);
+
+        // Text
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', "%{$request->search}%")
+                  ->orWhere('code', 'like', "%{$request->search}%");
+            });
         }
 
-        // Filter: level
-        if ($request->level) {
-            $query->where('level', $request->level);
+        // Categorical
+        if ($request->filled('category')) $query->where('category', $request->category);
+        if ($request->filled('level')) $query->where('level', $request->level);
+        if ($request->filled('language')) $query->where('language', $request->language);
+        if ($request->filled('semester')) $query->where('semester', $request->semester);
+        if ($request->filled('academic_year')) $query->where('academic_year', $request->academic_year);
+
+        // Ranges
+        if ($request->filled('credit_units_min')) $query->where('credit_units', '>=', $request->credit_units_min);
+        if ($request->filled('credit_units_max')) $query->where('credit_units', '<=', $request->credit_units_max);
+        if ($request->filled('hours_per_week_min')) $query->where('hours_per_week', '>=', $request->hours_per_week_min);
+        if ($request->filled('hours_per_week_max')) $query->where('hours_per_week', '<=', $request->hours_per_week_max);
+
+        // Price
+        if ($request->boolean('is_free')) {
+            $query->where('price', 0);
+        } else {
+            if ($request->filled('price_min')) $query->where('price', '>=', $request->price_min);
+            if ($request->filled('price_max')) $query->where('price', '<=', $request->price_max);
         }
 
-        // Filter: price_type
-        if ($request->price_type && $request->price_type !== 'all') {
-            $query->where('price_type', $request->price_type);
-        }
-
-        // Filter: search
-        if ($request->search) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
+        // Rating
+        if ($request->filled('rating_min')) $query->where('rating', '>=', $request->rating_min);
 
         // Sort
-        $sort = $request->sort ?? 'newest';
-        switch ($sort) {
-            case 'price_asc':
-                $query->orderBy('price', 'asc');
-                break;
-            case 'popular':
-                $query->orderBy('total_sales', 'desc');
-                break;
-            case 'newest':
-            default:
-                $query->orderBy('created_at', 'desc');
-                break;
-        }
+        match ($request->sort ?? 'newest') {
+            'price_asc' => $query->orderBy('price', 'asc'),
+            'price_desc' => $query->orderBy('price', 'desc'),
+            'popular' => $query->orderBy('total_sales', 'desc'),
+            'rating' => $query->orderBy('rating', 'desc'),
+            default => $query->orderBy('created_at', 'desc'),
+        };
 
         $courses = $query->paginate($request->per_page ?? 20);
 
         return response()->json([
             'success' => true,
-            'data' => CourseResource::collection($courses),
+            'data' => MarketplaceCourseResource::collection($courses),
             'meta' => [
                 'current_page' => $courses->currentPage(),
                 'last_page' => $courses->lastPage(),
                 'per_page' => $courses->perPage(),
                 'total' => $courses->total(),
-            ]
+            ],
         ]);
     }
 
@@ -82,7 +109,7 @@ class CourseMarketplaceController extends Controller
     public function purchase(Request $request, Course $course): JsonResponse
     {
         $request->validate([
-            'payment_mode' => 'nullable|in:points,wallet,auto',
+            'payment_mode' => 'nullable|in:wallet,points,mixed',
         ]);
 
         try {
@@ -123,8 +150,6 @@ class CourseMarketplaceController extends Controller
                 'total_sales' => $course->total_sales,
                 'is_for_marketplace' => $course->is_for_marketplace,
                 'price' => $course->price,
-                'price_points' => $course->price_points,
-                'price_type' => $course->price_type,
             ]
         ]);
     }

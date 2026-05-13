@@ -21,7 +21,7 @@ onMounted(async () => {
       await courseStore.fetchCourse(courseId)
     } catch (err) {
       console.error('Failed to fetch course:', err)
-      router.push('/learn/courses')
+      router.push('/Learn/Courses')
     }
   }
 })
