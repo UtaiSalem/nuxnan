@@ -128,14 +128,22 @@
           </span>
         </div>
 
-        <!-- Right: Membership status badge -->
+        <!-- Right: Membership status / action button -->
         <div class="shrink-0">
-          <span v-if="isOwner" class="flex items-center gap-1 px-2.5 py-1 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-[10px] font-bold rounded-full">
-            <Icon icon="mdi:crown" class="w-3 h-3" /> เจ้าของ
-          </span>
-          <span v-else-if="isMember && memberStatus === 'active'" class="flex items-center gap-1 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[10px] font-bold rounded-full">
-            <Icon icon="mdi:school" class="w-3 h-3" /> กำลังเรียน
-          </span>
+          <NuxtLink
+            v-if="isOwner"
+            :to="`/Learn/Courses/${course.id}`"
+            class="flex items-center gap-1 px-2.5 py-1 bg-violet-500 hover:bg-violet-600 text-white text-[10px] font-bold rounded-full transition-colors"
+          >
+            <Icon icon="mdi:cog" class="w-3 h-3" /> จัดการวิชา
+          </NuxtLink>
+          <NuxtLink
+            v-else-if="isMember && memberStatus === 'active'"
+            :to="`/Learn/Courses/${course.id}`"
+            class="flex items-center gap-1 px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-full transition-colors"
+          >
+            <Icon icon="mdi:play-circle" class="w-3 h-3" /> เข้าสู่รายวิชา
+          </NuxtLink>
           <span v-else-if="isMember && memberStatus === 'pending'" class="flex items-center gap-1 px-2.5 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold rounded-full">
             <Icon icon="mdi:clock-outline" class="w-3 h-3" /> รออนุมัติ
           </span>
