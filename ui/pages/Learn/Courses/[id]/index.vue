@@ -13,7 +13,8 @@ const props = defineProps<{
 const injectedCourse = inject<Ref<any>>('course')
 const injectedAcademy = inject<Ref<any>>('academy')
 const injectedIsCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
-const refreshCourse = inject<() => void>('refreshCourse')
+const injectedCourseMemberOfAuth = inject<Ref<any>>('courseMemberOfAuth')
+const refreshCourse = inject<(force?: boolean) => void>('refreshCourse')
 
 // Use course store
 const courseStore = useCourseStore()
@@ -42,6 +43,7 @@ const course = computed(() => props.course || injectedCourse?.value || courseSto
 const academy = computed(() => props.academy || injectedAcademy?.value || courseStore.academy)
 const isCourseAdmin = computed(() => props.isCourseAdmin || injectedIsCourseAdmin?.value || courseStore.isCourseAdmin)
 
+const courseGroupStore = useCourseGroupStore()
 const api = useApi()
 const router = useRouter()
 const isEnrolling = ref(false)
@@ -49,6 +51,12 @@ const isWishlisted = ref(false)
 const isTogglingFavorite = ref(false)
 const expandedSections = ref<number[]>([0])
 const showPurchaseModal = ref(false)
+const selectedGroupId = ref<number | null>(null)
+
+// Membership state from parent layout (source of truth)
+const isMember = computed(() => !!injectedCourseMemberOfAuth?.value)
+const courseGroups = computed(() => courseGroupStore.groups || [])
+const hasGroups = computed(() => courseGroups.value.length > 0)
 
 // Description editing state
 const isEditingDescription = ref(false)
@@ -155,26 +163,31 @@ const enrollCourse = async () => {
 // Process the actual enrollment
 const processEnrollment = async () => {
   if (!course.value) return
-  
+
   isEnrolling.value = true
   try {
-    const response = await api.post(`/api/courses/${course.value.id}/members`, {})
+    const payload: Record<string, any> = {}
+    if (selectedGroupId.value) payload.group_id = selectedGroupId.value
+
+    const response = await api.post(`/api/courses/${course.value.id}/members`, payload)
     if (response.success) {
-      course.value.isMember = true
-      course.value.member_status = response.memberStatus
-      // Update store
-      courseStore.updateCourse({ 
-        isMember: true, 
-        member_status: response.memberStatus 
-      })
-      
-      // Show success message for paid purchases
+      // Refresh parent layout state so CourseProfileCover updates too
+      if (refreshCourse) refreshCourse(true)
+
+      // Show success message for paid enrollment
       if (response.paid) {
         Swal.fire({
           icon: 'success',
-          title: 'ซื้อรายวิชาสำเร็จ!',
+          title: 'สมัครเรียนสำเร็จ!',
           text: `หักเงินจำนวน ฿${response.amount_paid} เรียบร้อยแล้ว`,
           timer: 3000,
+          showConfirmButton: false
+        })
+      } else {
+        Swal.fire({
+          icon: 'success',
+          title: 'สมัครเรียนสำเร็จ!',
+          timer: 2000,
           showConfirmButton: false
         })
       }
@@ -487,26 +500,39 @@ const respondToInvitation = async (accept: boolean) => {
           </div>
 
           <!-- Price -->
-          <div v-if="course.price" class="text-center mb-4">
+          <div v-if="coursePrice > 0" class="text-center mb-4">
             <span class="text-3xl font-bold text-gray-900 dark:text-white">
-              ฿{{ formatPrice(course.price) }}
+              ฿{{ formatPrice(coursePrice) }}
             </span>
+          </div>
+          <div v-else class="text-center mb-4">
+            <span class="text-lg font-bold text-green-600 dark:text-green-400">ฟรี</span>
           </div>
 
           <!-- Action Buttons -->
           <div class="space-y-3 mb-6">
-            <button
-              v-if="!course.isMember"
-              @click="enrollCourse"
-              :disabled="isEnrolling"
-              class="w-full py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
-              {{ isEnrolling ? 'กำลังสมัคร...' : 'สมัครเรียน' }}
-            </button>
+            <template v-if="!isMember">
+              <!-- Group Selector -->
+              <select
+                v-if="hasGroups"
+                v-model="selectedGroupId"
+                class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option :value="null">-- ไม่ระบุกลุ่ม --</option>
+                <option v-for="g in courseGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+              </select>
+              <button
+                @click="enrollCourse"
+                :disabled="isEnrolling"
+                class="w-full py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
+                {{ isEnrolling ? 'กำลังสมัคร...' : 'สมัครเรียน' }}
+              </button>
+            </template>
             <NuxtLink
-              v-else
-              :to="`/courses/${course.id}/lessons`"
+              v-else-if="isMember"
+              :to="`/Learn/Courses/${course.id}/lessons`"
               class="w-full py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
             >
               <Icon icon="fluent:play-24-filled" class="w-5 h-5" />

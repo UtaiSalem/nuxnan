@@ -5,7 +5,6 @@ import MemberedCoursesWidget from '~/components/widgets/MemberedCoursesWidget.vu
 import RecentlyViewedCoursesWidget from '~/components/widgets/RecentlyViewedCoursesWidget.vue'
 import FavoriteCoursesWidget from '~/components/widgets/FavoriteCoursesWidget.vue'
 import CourseMarketCard from '~/components/academy/CourseMarketCard.vue'
-import CoursePurchaseModal from '~/components/academy/CoursePurchaseModal.vue'
 import CourseSearchFilterWidget from '~/components/widgets/CourseSearchFilterWidget.vue'
 import { useAuthStore } from '~/stores/auth'
 
@@ -25,26 +24,6 @@ const authStore = useAuthStore()
 
 // ── Tab ────────────────────────────────────────────────────────────────────
 const activeTab = ref<'all' | 'my' | 'enrolled'>('all')
-
-// ── Purchase Modal ─────────────────────────────────────────────────────────
-const selectedCourse = ref<any>(null)
-const showPurchaseModal = ref(false)
-
-const openCloneModal = (course: any) => {
-  selectedCourse.value = course
-  showPurchaseModal.value = true
-}
-
-const openEnrollModal = (course: any) => {
-  navigateTo(`/Learn/Courses/${course.id}`)
-}
-
-const handlePurchaseSuccess = () => {
-  if (activeTab.value === 'all') fetchCourses(1)
-  else if (activeTab.value === 'my') fetchMyCourses()
-  else fetchEnrolledCourses()
-  if (authStore.fetchUser) authStore.fetchUser()
-}
 
 // ── All Courses (tab: ทั้งหมด) ─────────────────────────────────────────────
 const courses = ref<any[]>([])
@@ -144,7 +123,7 @@ const fetchMyCourses = async () => {
   try {
     const userId = authStore.user?.id
     const res: any = await api.get(`/api/courses/users/${userId}/my-courses`)
-    myCourses.value = res.courses?.data || res.data || []
+    myCourses.value = res.courses?.data || res.courses || res.data || []
   } catch (e) {
     myCoursesError.value = 'ไม่สามารถโหลดรายวิชาของฉันได้'
     myCourses.value = []
@@ -413,8 +392,6 @@ onMounted(() => {
             v-for="course in activeCourses"
             :key="course.id"
             :course="course"
-            @clone="openCloneModal"
-            @enroll="openEnrollModal"
           />
         </div>
 
@@ -432,13 +409,6 @@ onMounted(() => {
       </template>
     </div>
 
-    <CoursePurchaseModal
-      v-if="selectedCourse"
-      :course="selectedCourse"
-      :visible="showPurchaseModal"
-      @close="showPurchaseModal = false"
-      @success="handlePurchaseSuccess"
-    />
   </NuxtLayout>
 </template>
 

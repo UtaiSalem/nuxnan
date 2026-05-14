@@ -21,8 +21,6 @@ const courseStore = useCourseStore();
 const course = computed(() => courseStore.currentCourse);
 const academy = computed(() => courseStore.academy);
 const isAdmin = computed(() => courseStore.isCourseAdmin);
-const courseGroups = computed(() => course.value?.groups || []);
-
 // Computed course data
 const courseId = computed(() => course.value?.id);
 const courseName = computed(() => course.value?.name || '');
@@ -33,17 +31,12 @@ const enrolledStudents = computed(() => course.value?.enrolled_students ?? 0);
 const groupsCount = computed(() => course.value?.groups ?? 0);
 const memberStatus = computed(() => props.courseMemberOfAuth?.status || course.value?.member_status);
 
-// Check if groups are available
-const hasGroups = computed(() => (course.value?.groups?.length ?? 0) > 0);
-
 // Refs for file inputs and dropdown
 const logoInput = ref(null);
 const coverInput = ref(null);
-const dropdownRef = ref(null);
 const membershipDropdownRef = ref(null);
 
 // UI States
-const showOptionGroups = ref(false);
 const showAcceptMemberOption = ref(false);
 const showEditModal = ref(false);
 const tempName = ref('');
@@ -54,7 +47,6 @@ const isUpdatingCover = ref(false);
 const isUpdatingLogo = ref(false);
 const isUpdatingName = ref(false);
 const isUpdatingCode = ref(false);
-const isRequestingMember = ref(false);
 const isRequestingUnmember = ref(false);
 
 // Temp images for preview
@@ -203,30 +195,6 @@ function startEditingCode() {
 }
 
 // Membership handlers
-async function onRequestToBeMember(groupId = null) {
-    if (isRequestingMember.value) return;
-    
-    isRequestingMember.value = true;
-    try {
-        const data = groupId ? { group_id: groupId } : {};
-        const response = await api.post(`/api/courses/${courseId.value}/members`, data);
-        
-        // Update store with membership status
-        courseStore.updateCourse({ 
-            isMember: true,
-            member_status: response.memberStatus || 'pending'
-        });
-        
-        showOptionGroups.value = false;
-        emit('request-member', groupId);
-        emit('refresh');
-    } catch (error) {
-        console.error('Failed to request membership:', error);
-    } finally {
-        isRequestingMember.value = false;
-    }
-}
-
 async function onRequestToBeUnMember() {
     if (!props.courseMemberOfAuth?.id) return;
     if (isRequestingUnmember.value) return;
@@ -258,21 +226,12 @@ async function onRequestToBeUnMember() {
 }
 
 // Toggle handlers
-function toggleOptionGroups() {
-    showOptionGroups.value = !showOptionGroups.value;
-    showAcceptMemberOption.value = false;
-}
-
 function toggleAcceptMemberOption() {
     showAcceptMemberOption.value = !showAcceptMemberOption.value;
-    showOptionGroups.value = false;
 }
 
 // Close dropdowns when clicking outside
 function handleClickOutside(event) {
-    if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
-        showOptionGroups.value = false;
-    }
     if (membershipDropdownRef.value && !membershipDropdownRef.value.contains(event.target)) {
         showAcceptMemberOption.value = false;
     }
@@ -280,7 +239,6 @@ function handleClickOutside(event) {
 
 function handleEscapeKey(event) {
     if (event.key === 'Escape') {
-        showOptionGroups.value = false;
         showAcceptMemberOption.value = false;
     }
 }
@@ -445,40 +403,19 @@ onUnmounted(() => {
                     <span>เป็นสมาชิก</span>
                 </button>
 
-                <!-- Join Button -->
-                <div v-else-if="!courseMemberOfAuth" ref="dropdownRef" class="relative">
-                    <button v-if="!hasGroups" @click.prevent="onRequestToBeMember(null)" :disabled="isRequestingMember"
-                        class="flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50 min-h-[44px]">
-                        <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                        <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />
-                        <span>สมัครเรียน</span>
-                    </button>
-                    <template v-else>
-                        <button @click.prevent="toggleOptionGroups"
-                            class="flex items-center gap-2 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md min-h-[44px]">
-                            <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                            <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />
-                            <span>สมัครเรียน</span>
-                            <Icon icon="heroicons:chevron-down" class="w-4 h-4 transition-transform" :class="{'rotate-180': showOptionGroups}" />
-                        </button>
-                        <div v-if="showOptionGroups" class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 max-h-64 overflow-y-auto">
-                            <div class="sticky top-0 bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b border-gray-100 dark:border-gray-600">
-                                <p class="text-xs font-medium text-gray-600 dark:text-gray-300">เลือกกลุ่มที่ต้องการเข้าร่วม</p>
-                            </div>
-                            <!-- Groups list -->
-                            <button v-for="group in courseGroups" :key="group.id"
-                                @click.prevent="onRequestToBeMember(group.id)" :disabled="isRequestingMember"
-                                class="w-full px-4 py-3 text-left hover:bg-cyan-50 dark:hover:bg-cyan-900/20 flex items-center gap-3 disabled:opacity-50">
-                                <div class="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900/40 flex items-center justify-center flex-shrink-0">
-                                    <Icon icon="heroicons:user-group" class="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-gray-900 dark:text-white truncate">{{ group.name }}</p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ group.members_count || 0 }} สมาชิก</p>
-                                </div>
-                            </button>
-                        </div>
-                    </template>
+                <!-- Not a member: show price info only, enrollment is in the sidebar below -->
+                <div v-else-if="!courseMemberOfAuth" class="flex items-center gap-3">
+                    <span v-if="course?.tuition_fees > 0"
+                        class="flex items-center gap-1.5 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-semibold rounded-lg text-sm">
+                        <Icon icon="heroicons:banknotes" class="w-4 h-4" />
+                        ฿{{ course.tuition_fees?.toLocaleString() }}
+                    </span>
+                    <span v-else
+                        class="flex items-center gap-1.5 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold rounded-lg text-sm">
+                        <Icon icon="heroicons:check-badge" class="w-4 h-4" />
+                        ฟรี
+                    </span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">สมัครเรียนด้านล่าง</span>
                 </div>
             </div>
         </div>
@@ -600,47 +537,19 @@ onUnmounted(() => {
                     <span>ออกจากสมาชิก</span>
                 </button>
 
-                <!-- Join Button (Mobile) -->
-                <div v-else-if="!courseMemberOfAuth" class="relative w-full max-w-xs">
-                    <button v-if="!hasGroups" @click.prevent="onRequestToBeMember(null)" :disabled="isRequestingMember"
-                        class="w-full flex items-center justify-center gap-2 px-5 py-3 bg-cyan-500 active:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50 min-h-[48px]">
-                        <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                        <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />
-                        <span>สมัครเรียน</span>
-                    </button>
-                    <template v-else>
-                        <button @click.prevent="toggleOptionGroups"
-                            class="w-full flex items-center justify-between gap-2 px-5 py-3 bg-cyan-500 active:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-md min-h-[48px]">
-                            <span class="flex items-center gap-2">
-                                <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                                <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />
-                                <span>สมัครเรียน</span>
-                            </span>
-                            <Icon icon="heroicons:chevron-down" class="w-4 h-4 transition-transform" :class="{'rotate-180': showOptionGroups}" />
-                        </button>
-                        <div v-if="showOptionGroups" class="absolute left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border z-50 max-h-64 overflow-y-auto">
-                            <div class="sticky top-0 bg-gray-50 px-4 py-2 border-b">
-                                <p class="text-xs font-medium text-gray-600">เลือกกลุ่มที่ต้องการเข้าร่วม</p>
-                            </div>
-                            <!-- Empty state -->
-                            <div v-if="!courseGroups || courseGroups.length === 0" class="px-4 py-6 text-center text-gray-500">
-                                <Icon icon="heroicons:user-group" class="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                <p class="text-sm">ไม่มีกลุ่มในรายวิชานี้</p>
-                            </div>
-                            <!-- Groups list -->
-                            <button v-for="group in courseGroups" :key="group.id"
-                                @click.prevent="onRequestToBeMember(group.id)" :disabled="isRequestingMember"
-                                class="w-full px-4 py-3 text-left active:bg-cyan-50 flex items-center gap-3 border-b last:border-b-0 disabled:opacity-50 min-h-[48px]">
-                                <div class="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center flex-shrink-0">
-                                    <Icon icon="heroicons:user-group" class="w-4 h-4 text-cyan-600" />
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-gray-900 truncate">{{ group.name }}</p>
-                                    <p class="text-xs text-gray-500">{{ group.members_count || 0 }} สมาชิก</p>
-                                </div>
-                            </button>
-                        </div>
-                    </template>
+                <!-- Not a member (Mobile): show price info only -->
+                <div v-else-if="!courseMemberOfAuth" class="flex items-center justify-center gap-3 w-full max-w-xs">
+                    <span v-if="course?.tuition_fees > 0"
+                        class="flex items-center gap-1.5 px-4 py-2.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-semibold rounded-lg text-sm">
+                        <Icon icon="heroicons:banknotes" class="w-4 h-4" />
+                        ฿{{ course.tuition_fees?.toLocaleString() }}
+                    </span>
+                    <span v-else
+                        class="flex items-center gap-1.5 px-4 py-2.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold rounded-lg text-sm">
+                        <Icon icon="heroicons:check-badge" class="w-4 h-4" />
+                        ฟรี
+                    </span>
+                    <span class="text-xs text-gray-400">เลื่อนลงเพื่อสมัคร</span>
                 </div>
             </div>
         </div>
