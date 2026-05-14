@@ -98,7 +98,11 @@ class CourseResource extends JsonResource
                 return $member
                     ? [
                         'is_member'   => true,
-                        'status'      => $member->course_member_status,
+                        'status'      => match((int) $member->course_member_status) {
+                            1 => 'active',
+                            0 => 'pending',
+                            default => 'unknown',
+                        },
                         'enrolled_at' => $member->enrollment_date,
                     ]
                     : ['is_member' => false, 'status' => null, 'enrolled_at' => null];

@@ -44,6 +44,11 @@
                   </div>
                 </div>
 
+                <div v-if="course.is_owned" class="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs flex items-start gap-2 border border-amber-100 dark:border-amber-900/30">
+                  <Icon icon="mdi:information" class="w-4 h-4 flex-shrink-0" />
+                  <span>คุณมี Master Copy นี้อยู่แล้ว ต้องการซื้อเพิ่มอีกชุดหรือไม่?</span>
+                </div>
+
                 <div v-if="checking" class="py-12 flex flex-col items-center justify-center gap-3">
                   <Icon icon="svg-spinners:ring-resize" class="w-8 h-8 text-primary-600" />
                   <span class="text-sm text-slate-500">กำลังตรวจสอบข้อมูลราคา...</span>

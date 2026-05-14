@@ -19,10 +19,10 @@ const handleLoadingPage = (option) => {
   isLoadingPage.value = true
   switch (option) {
     case 1:
-      router.push(`/Learn/Course/UserCourses`)
+      router.push(`/Learn/Courses?tab=my`)
       break
     case 2:
-      router.push(`/Learn/Course/AuthMemberCourses`)
+      router.push(`/Learn/Courses?tab=enrolled`)
       break
     case 3:
       router.push(`/Learn/Courses`)
@@ -36,9 +36,9 @@ const handleLoadingPage = (option) => {
 }
 
 // Active state checks
-const isMyCoursesActive = computed(() => route.path === '/Learn/Course/UserCourses' || route.path === '/learn/course/usercourses')
-const isMemberCoursesActive = computed(() => route.path === '/Learn/Course/AuthMemberCourses' || route.path === '/learn/course/authmembercourses')
-const isAllCoursesActive = computed(() => route.path === '/Learn/Courses' || route.path === '/learn/courses' || route.path === '/Learn/Courses/' || route.path === '/learn/courses/')
+const isMyCoursesActive = computed(() => route.path === '/Learn/Courses' && route.query.tab === 'my')
+const isMemberCoursesActive = computed(() => route.path === '/Learn/Courses' && route.query.tab === 'enrolled')
+const isAllCoursesActive = computed(() => route.path === '/Learn/Courses' && !route.query.tab)
 const isCreateCourseActive = computed(() => route.path === '/Learn/Courses/create' || route.path === '/learn/courses/create')
 
 </script>

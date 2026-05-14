@@ -144,10 +144,10 @@ watch(() => course?.value, (newCourse) => {
   }
 }, { immediate: true })
 
-// Net Price Calculation
+// Net Price Calculation (ใช้ tuition_fees สำหรับค่าสมัครเรียน)
 const netPrice = computed(() => {
     if (!form.value.saleable) return 0
-    const price = Number(form.value.price) || 0
+    const price = Number(form.value.tuition_fees) || 0
     const discount = Number(form.value.discount) || 0
     
     if (form.value.discount_type === 'percent') {
@@ -161,10 +161,15 @@ const netPrice = computed(() => {
 // Save settings
 const saveSettings = async () => {
   if (!course?.value) return
-  
+
   isSaving.value = true
   try {
-    const response = await api.put(`/api/courses/${course.value.id}`, form.value)
+    // price_type กำหนดโดยระบบเสมอ — ผู้ซื้อใช้ wallet หรือ points ตามอัตราแลกเปลี่ยน
+    const payload = {
+      ...form.value,
+      price_type: form.value.is_for_marketplace && form.value.price > 0 ? 'wallet' : 'free',
+    }
+    const response = await api.put(`/api/courses/${course.value.id}`, payload)
     if (response) {
        useToast().success('บันทึกการตั้งค่าเรียบร้อยแล้ว')
        if (refreshCourse) refreshCourse()
@@ -485,7 +490,7 @@ const deleteCourse = async () => {
               </div>
               <div class="relative inline-flex items-center flex-shrink-0">
                 <input v-model="form.auto_accept_members" type="checkbox" class="sr-only peer">
-                <div class="w-12 h-6.5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
               </div>
             </label>
 
@@ -499,13 +504,13 @@ const deleteCourse = async () => {
               </div>
               <div class="relative inline-flex items-center flex-shrink-0">
                 <input v-model="form.saleable" type="checkbox" class="sr-only peer">
-                <div class="w-12 h-6.5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
               </div>
             </label>
 
             <!-- Price Input -->
             <div v-if="form.saleable" class="pt-2 animate-fade-in-down grid grid-cols-1 gap-5">
-               
+
                <div class="space-y-2">
                   <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ค่าธรรมเนียมสมัครเรียน (บาท)</label>
                   <div class="relative group">
@@ -513,7 +518,7 @@ const deleteCourse = async () => {
                         <Icon icon="heroicons:currency-dollar" class="w-5 h-5" />
                       </span>
                       <input
-                        v-model.number="form.price"
+                        v-model.number="form.tuition_fees"
                         type="number"
                         min="0"
                         placeholder="0.00"
@@ -535,7 +540,7 @@ const deleteCourse = async () => {
                           v-model.number="form.discount"
                           type="number"
                           min="0"
-                          :max="form.discount_type === 'percent' ? 100 : form.price"
+                          :max="form.discount_type === 'percent' ? 100 : form.tuition_fees"
                           placeholder="0"
                           class="w-full pl-12 pr-3 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all dark:text-white text-base"
                         />
@@ -558,7 +563,7 @@ const deleteCourse = async () => {
                    </span>
                  </div>
                  <p class="text-[10px] text-gray-500 text-right mt-1" v-if="form.discount > 0">
-                   (จากราคาปกติ {{ form.price.toLocaleString() }} บาท ลด {{ form.discount_type === 'percent' ? form.discount + '%' : form.discount.toLocaleString() + ' บาท' }})
+                   (จากราคาปกติ {{ form.tuition_fees.toLocaleString() }} บาท ลด {{ form.discount_type === 'percent' ? form.discount + '%' : form.discount.toLocaleString() + ' บาท' }})
                  </p>
                </div>
             </div>
@@ -566,85 +571,34 @@ const deleteCourse = async () => {
         </ResponsiveCard>
 
         <!-- Marketplace Settings -->
-        <ResponsiveCard title="ตลาดรายวิชา (Marketplace)" icon="heroicons:shopping-cart" icon-color="text-amber-500">
+        <ResponsiveCard title="ตลาด Master Copy" icon="mdi:content-copy" icon-color="text-amber-500">
           <div class="space-y-6">
+
+            <!-- What is Master Copy -->
+            <div class="flex gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300">
+              <Icon icon="mdi:information-outline" class="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>
+                <strong>Master Copy</strong> คือต้นฉบับรายวิชาที่ครูหรือสถาบันอื่นสามารถซื้อไปเป็นฐานสำหรับการสอนของตัวเอง
+                — ต่างจากการสมัครเรียน ซึ่งนักเรียนจ่ายเงินเพื่อเข้าเรียนในรายวิชานี้โดยตรง
+              </span>
+            </div>
+
             <label class="flex items-center justify-between cursor-pointer min-h-[64px] gap-4">
               <div class="min-w-0">
-                <div class="font-bold text-gray-900 dark:text-white text-base">เปิดขายสำเนา (Clone)</div>
-                <div class="text-[11px] text-gray-500 dark:text-gray-400">ให้ครูท่านอื่นซื้อไปสอนต่อ</div>
+                <div class="font-bold text-gray-900 dark:text-white text-base">เปิดขาย Master Copy</div>
+                <div class="text-[11px] text-gray-500 dark:text-gray-400">ครู/สถาบันอื่นสามารถซื้อต้นฉบับไปใช้สอนได้</div>
               </div>
               <div class="relative inline-flex items-center flex-shrink-0">
                 <input v-model="form.is_for_marketplace" type="checkbox" class="sr-only peer">
-                <div class="w-12 h-6.5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 dark:peer-focus:ring-amber-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-amber-500"></div>
+                <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 dark:peer-focus:ring-amber-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-amber-500"></div>
               </div>
             </label>
 
-            <div v-if="form.is_for_marketplace" class="pt-2 animate-fade-in-down space-y-5">
+            <div v-if="form.is_for_marketplace" class="space-y-5">
+
+              <!-- Price in THB -->
               <div class="space-y-2">
-                <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ประเภทการชำระเงิน</label>
-                <div class="relative">
-                  <select v-model="form.price_type" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-base font-bold dark:text-white appearance-none cursor-pointer">
-                    <option value="free">เปิดให้ Clone ฟรี</option>
-                    <option value="points">ใช้แต้ม (Points)</option>
-                    <option value="wallet">ใช้เงิน (Wallet)</option>
-                    <option value="both">ใช้ได้ทั้งสองอย่าง</option>
-                  </select>
-                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                    <Icon icon="heroicons:chevron-down" class="w-5 h-5" />
-                  </span>
-                </div>
-              </div>
-
-              <div v-if="form.price_type === 'both'" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div class="space-y-2">
-                  <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ราคา (แต้ม)</label>
-                  <div class="relative group">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-amber-500">
-                      <Icon icon="mdi:database" class="w-5 h-5" />
-                    </span>
-                    <input
-                      v-model.number="form.price_points"
-                      type="number"
-                      min="0"
-                      placeholder="แต้ม..."
-                      class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all dark:text-white text-base"
-                    />
-                  </div>
-                </div>
-
-                <div class="space-y-2">
-                  <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ราคา (บาท)</label>
-                  <div class="relative group">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black group-focus-within:text-amber-500">฿</span>
-                    <input
-                      v-model.number="form.price"
-                      type="number"
-                      min="0"
-                      placeholder="0.00"
-                      class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all dark:text-white text-base"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div v-else-if="form.price_type === 'points'" class="space-y-2">
-                <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ราคา (แต้ม)</label>
-                <div class="relative group">
-                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-amber-500">
-                    <Icon icon="mdi:database" class="w-5 h-5" />
-                  </span>
-                  <input
-                    v-model.number="form.price_points"
-                    type="number"
-                    min="0"
-                    placeholder="ใส่จำนวนแต้ม..."
-                    class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all dark:text-white text-base"
-                  />
-                </div>
-              </div>
-
-              <div v-else-if="form.price_type === 'wallet'" class="space-y-2">
-                <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ราคา (บาท)</label>
+                <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ราคา Master Copy (บาท)</label>
                 <div class="relative group">
                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black group-focus-within:text-amber-500">฿</span>
                   <input
@@ -655,26 +609,60 @@ const deleteCourse = async () => {
                     class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all dark:text-white text-base"
                   />
                 </div>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400">ใส่ 0 หากต้องการให้ฟรี</p>
+              </div>
+
+              <!-- Payment info -->
+              <div class="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800 text-[11px] text-blue-700 dark:text-blue-300 flex gap-2">
+                <Icon icon="mdi:information-outline" class="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  ผู้ซื้อสามารถชำระด้วย <strong>เงิน Wallet</strong> หรือ <strong>แต้มสะสม</strong> หรือทั้งสองอย่างผสมกันได้
+                  <br/>อัตราแลกเปลี่ยน: <strong>1 บาท = 1,200 แต้ม</strong> (กำหนดโดยระบบ)
+                </div>
+              </div>
+
+              <!-- Preview -->
+              <div class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-2 flex items-center gap-1">
+                  <Icon icon="mdi:eye-outline" class="w-3.5 h-3.5" />
+                  ตัวอย่างปุ่มในหน้ารายวิชา:
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="px-2.5 py-1.5 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 rounded-lg text-[11px] font-bold flex items-center gap-1.5">
+                    <Icon icon="mdi:cart-plus" class="w-3.5 h-3.5" />
+                    {{ form.price > 0 ? 'ซื้อ Master Copy' : 'รับ Master Copy ฟรี' }}
+                  </span>
+                  <div v-if="form.price > 0" class="flex items-center gap-2 text-[11px] font-bold">
+                    <span class="text-violet-600">฿{{ form.price.toLocaleString() }}</span>
+                    <span class="text-slate-400">หรือ</span>
+                    <span class="text-amber-600 flex items-center gap-0.5">
+                      <Icon icon="mdi:database" class="w-3 h-3" />
+                      {{ (form.price * 1200).toLocaleString() }} P
+                    </span>
+                  </div>
+                  <span v-else class="text-[11px] text-green-600 font-bold">ฟรี</span>
+                </div>
               </div>
             </div>
 
-            <!-- Sales Stats (แสดงเฉพาะถ้าเคยขาย) -->
-            <div v-if="form.is_for_marketplace && course?.total_sales > 0" 
-              class="mt-4 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800">
-              <div class="text-[10px] font-black text-amber-600 uppercase mb-3 tracking-wider">สถิติลิขสิทธิ์รายวิชา</div>
+            <!-- Sales Stats -->
+            <div v-if="form.is_for_marketplace && course?.total_sales > 0"
+              class="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800">
+              <div class="text-[10px] font-black text-amber-600 uppercase mb-3 tracking-wider">สถิติการขาย Master Copy</div>
               <div class="grid grid-cols-2 gap-4">
                 <div class="text-center min-w-0">
-                  <div class="text-xl sm:text-2xl font-black text-slate-800 dark:text-white truncate">{{ course?.total_sales || 0 }}</div>
-                  <div class="text-[10px] text-slate-500 font-bold">ยอด Clone</div>
+                  <div class="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">{{ course?.total_sales || 0 }}</div>
+                  <div class="text-[10px] text-slate-500 font-bold">ครั้งที่ขายได้</div>
                 </div>
                 <div class="text-center min-w-0 border-l border-amber-200 dark:border-amber-800">
                   <div class="text-xl sm:text-2xl font-black text-slate-800 dark:text-white truncate">
-                    {{ course?.price_type === 'points' ? (course?.price_points * course?.total_sales) + ' P' : '฿' + (course?.price * course?.total_sales).toLocaleString() }}
+                    {{ form.price_type === 'points' ? (form.price_points * course?.total_sales).toLocaleString() + ' P' : '฿' + (form.price * (course?.total_sales || 0)).toLocaleString() }}
                   </div>
                   <div class="text-[10px] text-slate-500 font-bold">รายได้รวม</div>
                 </div>
               </div>
             </div>
+
           </div>
         </ResponsiveCard>
 

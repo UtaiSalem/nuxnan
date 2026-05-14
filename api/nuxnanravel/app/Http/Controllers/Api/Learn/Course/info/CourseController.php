@@ -203,7 +203,9 @@ class CourseController extends Controller
     public function getMyCourses(User $user, Request $request)
     {
         $perPage = $request->input('per_page', 8);
-        $query = $user->courses();
+        $query = $user->courses()->with(['user', 'courseMembers' => function($q) {
+            $q->where('user_id', auth()->guard('api')->id());
+        }]);
 
         if ($request->has('cloned')) {
             if ($request->cloned == '1') {
@@ -234,10 +236,15 @@ class CourseController extends Controller
     public function getAuthMemberCourses(User $user)
     {
         $authMemberCourse = CourseMember::where('user_id', auth()->id())->pluck('course_id')->all();
-        $coursesAuthMember = CourseResource::collection(Course::whereIn('id', $authMemberCourse)->latest()->paginate());
+        $paginated = Course::whereIn('id', $authMemberCourse)
+            ->with(['user', 'courseMembers' => function($q) {
+                $q->where('user_id', auth()->guard('api')->id());
+            }])
+            ->latest()
+            ->paginate();
 
         return response()->json([
-            'courses'           => $coursesAuthMember,
+            'courses' => CourseResource::collection($paginated),
         ]);
     }
 

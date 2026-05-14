@@ -143,10 +143,8 @@ onMounted(() => {
           // Default to feeds
           navigateTo(`/Learn/Courses/${courseId.value}/feeds`)
         }
-      } else {
-        // Non-member: Redirect to feeds
-        navigateTo(`/Learn/Courses/${courseId.value}/feeds`)
       }
+      // Non-members stay on the base info page (index.vue)
     }
   })
 })

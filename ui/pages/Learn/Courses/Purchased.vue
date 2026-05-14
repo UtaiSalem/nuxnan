@@ -18,8 +18,8 @@
         <Icon icon="mdi:shopping-outline" class="w-20 h-20 text-slate-200 mx-auto mb-6" />
         <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">คุณยังไม่มีวิชาที่ซื้อมา</h2>
         <p class="text-slate-500 mb-8">ไปลองเลือกวิชาเจ๋งๆ ใน Marketplace กันเถอะ!</p>
-        <NuxtLink to="/Earn/Marketplace" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/30">
-          ไปที่ Marketplace
+        <NuxtLink to="/Learn/Courses?marketplace_only=1" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/30">
+          ไปเลือกซื้อลิขสิทธิ์
         </NuxtLink>
       </div>
 

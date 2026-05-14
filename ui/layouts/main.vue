@@ -85,7 +85,9 @@ const toggleEarnMenu = () => {
 // Earn submenu items
 const earnSubmenu = [
   { name: 'คะแนน', href: '/earn/points', icon: 'fluent:coin-stack-24-regular' },
-  { name: 'ตลาดรายวิชา', href: '/earn/marketplace', icon: 'fluent:shopping-bag-24-regular' },
+  { name: 'ตลาดลิขสิทธิ์', href: '/Learn/Courses?marketplace_only=1', icon: 'fluent:shopping-bag-24-regular' },
+  { name: 'ประวัติการซื้อ', href: '/Earn/PurchaseHistory', icon: 'fluent:history-24-regular' },
+  { name: 'รายได้ของฉัน', href: '/Earn/SalesAnalytics', icon: 'fluent:data-line-24-regular' },
   { name: 'กระเป๋าเงิน', href: '/earn/wallet', icon: 'fluent:wallet-24-regular' },
   { name: 'คูปอง', href: '/earn/coupons', icon: 'fluent:ticket-diagonal-24-regular' },
   { name: 'รางวัล', href: '/earn/rewards', icon: 'fluent:gift-24-regular' },

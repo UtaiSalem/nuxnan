@@ -7,9 +7,9 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "build": "npx --node-options=--max-old-space-size=4096 nuxt build",
-    "dev": "npx --node-options=--max-old-space-size=4096 nuxt dev",
-    "generate": "npx --node-options=--max-old-space-size=4096 nuxt generate",
+    "build": "npx --node-options=--max-old-space-size=8192 nuxt build",
+    "dev": "npx --node-options=--max-old-space-size=8192 nuxt dev",
+    "generate": "npx --node-options=--max-old-space-size=8192 nuxt generate",
     "preview": "npx --node-options=--max-old-space-size=2048 nuxt preview",
     "postinstall": "nuxt prepare"
   },
