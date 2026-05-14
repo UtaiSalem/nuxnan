@@ -510,9 +510,8 @@ export const useApi = () => {
             continue;
           } else {
             // Refresh failed, logout
-            authStore.logout();
-            apiError.message = 'Session expired. Please login again.';
-            throw apiError;
+            await authStore.logout();
+            return undefined as any;
           }
         }
 

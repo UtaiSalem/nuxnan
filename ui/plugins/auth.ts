@@ -1,20 +1,24 @@
 import { useAuthStore } from '~/stores/auth'
 
-export default defineNuxtPlugin(async (nuxtApp) => {
+export default defineNuxtPlugin((nuxtApp) => {
   const authStore = useAuthStore()
   const token = useCookie('token')
 
-  if (token.value && !authStore.user) {
-    try {
-      await authStore.fetchUser()
-    } catch (error: any) {
-      if (error?.statusCode !== 401 && !error?.message?.includes('401')) {
-        console.error('Failed to fetch user on init', error)
+  // Move user fetch logic to app:mounted hook to defer execution.
+  // This prevents blocking the Nuxt module runner during cold start.
+  nuxtApp.hook('app:mounted', async () => {
+    if (token.value && !authStore.user) {
+      try {
+        await authStore.fetchUser()
+      } catch (error: any) {
+        if (error?.statusCode !== 401 && !error?.message?.includes('401')) {
+          console.error('Failed to fetch user on mounted', error)
+        }
+        token.value = null
+        authStore.user = null
       }
-      token.value = null
-      authStore.user = null
     }
-  }
+  })
 
   // Dynamic token refresh: schedule the next refresh based on the token's
   // actual expires_in value (returned by login/refresh endpoints).

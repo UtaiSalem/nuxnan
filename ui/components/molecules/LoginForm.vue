@@ -88,13 +88,14 @@ const handleSubmit = async () => {
       password: form.password,
     })
 
-    // Keep spinner visible during navigation (login() resets isLoading in finally)
-    authStore.isLoading = true
+    // Enable app-level transition overlay
+    authStore.isLoginTransitioning = true
     await navigateTo('/play/newsfeed')
   } catch (e: any) {
     console.error('Login failed', e)
     error.value = e.message || t('validation.invalidCredentials')
     loading.value = false
+    authStore.isLoginTransitioning = false
   }
 }
 

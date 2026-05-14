@@ -226,7 +226,9 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'success'])
 
-const { user, refreshUser } = useAuth()
+const authStore = useAuthStore()
+const user = computed(() => authStore.user)
+const refreshUser = () => authStore.fetchUser()
 const api = useApi()
 const config = useRuntimeConfig()
 

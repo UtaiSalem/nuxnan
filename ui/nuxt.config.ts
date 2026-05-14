@@ -2,8 +2,8 @@
 import { fileURLToPath } from 'url'
 
 export default defineNuxtConfig({
-  compatibilityDate: '2024-04-04',
-  devtools: { enabled: true },
+  compatibilityDate: '2025-07-15',
+  devtools: { enabled: false },
 
   vite: {
     resolve: {
@@ -13,7 +13,7 @@ export default defineNuxtConfig({
     },
     // Optimize Vite build for memory efficiency
     build: {
-      chunkSizeWarningLimit: 1500,
+      chunkSizeWarningLimit: 2000,
       rollupOptions: {
         external: [/^\/storage\//],
         output: {
@@ -26,7 +26,7 @@ export default defineNuxtConfig({
       },
     },
     optimizeDeps: {
-      include: ['vue', 'vue-router', 'pinia', 'highlight.js', 'lowlight'],
+      include: ['vue', 'pinia', 'highlight.js'],
     },
     ssr: {
       // Bundle ESM-only packages for SSR instead of treating them as externals.
@@ -43,6 +43,30 @@ export default defineNuxtConfig({
         /^@tiptap\/.*/,
       ],
     },
+    server: {
+      hmr: {
+        timeout: 60000,
+      },
+      watch: {
+        usePolling: true,
+        interval: 2000,
+        ignored: ['**/.nuxt/**', '**/node_modules/**', '**/.git/**', '**/dist/**'],
+      },
+    },
+  },
+
+  // Vite Node options for better IPC stability on Windows
+  viteNode: {
+    maxRetryAttempts: 10,
+    baseRetryDelay: 500,
+    maxRetryDelay: 5000,
+    requestTimeout: 120000,
+  },
+
+  experimental: {
+    viteEnvironmentApi: true,
+    asyncContext: true,
+    incrementalSession: true,
   },
 
   // Configure Vue to recognize Vidstack custom elements
@@ -137,8 +161,8 @@ export default defineNuxtConfig({
       link: [{ rel: 'icon', type: 'image/png', href: '/favicon.png' }],
       script: [],
     },
-    // Disable page transition to avoid warnings with multi-slot layouts
-    // pageTransition: false,
+    // Enable page transition for smoother navigation
+    pageTransition: { name: 'page', mode: 'out-in' },
   },
 
   build: {

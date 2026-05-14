@@ -1,25 +1,5 @@
 <template>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center min-h-screen w-full relative py-4 overflow-hidden">
-    <!-- Loading Overlay -->
-    <Transition name="fade">
-      <div
-        v-if="authStore.isLoading"
-        class="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center"
-      >
-        <div class="bg-white/95 rounded-3xl p-10 shadow-2xl flex flex-col items-center space-y-6">
-          <div class="relative w-20 h-20">
-            <div class="absolute inset-0 border-4 border-vikinger-purple/30 rounded-full"></div>
-            <div class="absolute inset-0 border-4 border-transparent border-t-vikinger-purple border-r-vikinger-cyan rounded-full animate-spin"></div>
-            <div class="absolute inset-2 border-4 border-transparent border-b-vikinger-cyan rounded-full animate-spin" style="animation-direction: reverse; animation-duration: 1s;"></div>
-          </div>
-          <div class="text-center">
-            <p class="text-gray-800 font-bold text-xl">กำลังดำเนินการ...</p>
-            <p class="text-gray-500 text-sm mt-1">โปรดรอสักครู่</p>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
     <!-- Left Side: Branding & Welcome -->
     <div class="flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 lg:space-y-6 relative px-4 lg:px-8">
       <!-- Logo with glow effect -->

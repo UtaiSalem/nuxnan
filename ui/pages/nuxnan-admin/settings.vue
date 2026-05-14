@@ -33,7 +33,7 @@ const generalSettings = ref({
 // Appearance settings
 const appearanceSettings = ref({
   primaryColor: '#6366f1',
-  logoUrl: '/storage/images/plearnd-logo.png',
+  logoUrl: '/images/plearnd-logo.png',
   faviconUrl: '/favicon.ico',
   enableDarkMode: true,
   showFooter: true

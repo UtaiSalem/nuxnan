@@ -374,13 +374,14 @@ const handleSubmit = async () => {
       reference_code: referralCode.value,
     })
 
-    // Keep spinner visible during navigation (register() resets isLoading in finally)
-    authStore.isLoading = true
+    // Enable app-level transition overlay
+    authStore.isLoginTransitioning = true
     await navigateTo('/play/newsfeed')
   } catch (e: any) {
     console.error('Registration failed', e)
     error.value = e.message || e.data?.message || 'Registration failed. Please try again.'
     loading.value = false
+    authStore.isLoginTransitioning = false
   }
 }
 

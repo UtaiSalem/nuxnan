@@ -46,7 +46,8 @@ export default defineNuxtPlugin(() => {
           }
 
           // Refresh failed — log out
-          authStore.logout()
+          await authStore.logout()
+          return
         } else {
           navigateTo('/auth')
         }

@@ -76,7 +76,7 @@ const handleLogin = async () => {
         <!-- Logo & Title -->
         <div class="text-center mb-8">
           <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-xl mb-4">
-            <img src="/storage/images/plearnd-logo.png" alt="Logo" class="w-10 h-10" />
+            <img src="/images/plearnd-logo.png" alt="Logo" class="w-10 h-10" />
           </div>
           <h1 class="text-2xl font-bold text-white mb-2">Nuxnan Admin</h1>
           <p class="text-gray-300 text-sm">เข้าสู่ระบบเพื่อจัดการข้อมูล</p>

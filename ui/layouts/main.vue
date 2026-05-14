@@ -189,6 +189,11 @@ const logout = async () => {
   await authStore.logout()
 }
 
+const handleLogoutFromSettings = async () => {
+  closeSettings()
+  await authStore.logout()
+}
+
 // Fetch user on mount
 onMounted(async () => {
   // Load theme from localStorage
@@ -218,6 +223,12 @@ onMounted(async () => {
   }
 
   fetchLeaderboard()
+
+  // Reset login transition flag once layout is mounted and data is ready
+  if (authStore.isLoginTransitioning) {
+    await nextTick()
+    authStore.isLoginTransitioning = false
+  }
 })
 
 // Cleanup resize listener
@@ -548,7 +559,7 @@ const onQRActionComplete = (result) => {
                 
                 <div class="border-t my-1" :class="isDarkMode ? 'border-vikinger-dark-50/30' : 'border-gray-200'"></div>
                 <button
-                  @click="authStore.logout(); closeSettings()"
+                  @click="handleLogoutFromSettings"
                   class="w-full flex items-center gap-3 px-4 py-3 transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
                   <Icon icon="fluent:sign-out-24-regular" class="w-5 h-5" />

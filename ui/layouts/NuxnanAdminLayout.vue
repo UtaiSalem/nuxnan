@@ -167,7 +167,7 @@ onBeforeUnmount(() => {
       <div class="flex items-center justify-between h-16 px-4 border-b border-white/10">
         <NuxtLink to="/nuxnan-admin" class="flex items-center gap-3">
           <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-            <img src="/storage/images/plearnd-logo.png" alt="Logo" class="w-6 h-6" />
+            <img src="/images/plearnd-logo.png" alt="Logo" class="w-6 h-6" />
           </div>
           <span v-if="!isSidebarCollapsed" class="text-white font-bold text-lg">
             Nuxnan Admin

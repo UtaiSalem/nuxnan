@@ -12,9 +12,9 @@ interface Props {
   sortBy: string
   
   // New props for integrated marketplace
-  marketplaceOnly: boolean
-  enrollableOnly: boolean
-  isFree: boolean
+  marketplaceOnly?: boolean
+  enrollableOnly?: boolean
+  isFree?: boolean
 
   categories: Array<{ value: string; label: string }>
   levels: Array<{ value: string; label: string }>

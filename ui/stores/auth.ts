@@ -12,7 +12,9 @@ export const useAuthStore = defineStore('auth', () => {
   })
   const isAuthenticated = computed(() => !!token.value)
   const isRefreshing = ref(false)
+  const isLoggingOut = ref(false)
   const isLoading = ref(false)
+  const isLoginTransitioning = ref(false)
 
   async function login(credentials: any) {
     isLoading.value = true
@@ -243,6 +245,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    if (isLoggingOut.value) return
+    isLoggingOut.value = true
+
     try {
       if (token.value) {
         await $fetch(`${apiBase}/api/logout`, {
@@ -259,7 +264,8 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       token.value = null
       user.value = null
-      navigateTo('/auth')
+      isLoggingOut.value = false
+      await navigateTo('/auth')
     }
   }
 
@@ -397,7 +403,9 @@ export const useAuthStore = defineStore('auth', () => {
     token: skipHydrate(token),
     isAuthenticated,
     isRefreshing,
+    isLoggingOut,
     isLoading,
+    isLoginTransitioning,
     tokenExpiresIn,
     login,
     adminLogin,
