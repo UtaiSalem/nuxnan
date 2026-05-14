@@ -199,6 +199,13 @@ const toggleFavorite = async (e: Event) => {
   }
 }
 
+const levelLabel = computed(() => {
+  const lvl = props.course.education_level
+  const yr  = props.course.education_year
+  if (!lvl) return null
+  return yr ? `${lvl} ปี ${yr}` : lvl
+})
+
 const isOwner = computed(() => props.course.auth_role === 4)
 const isOwned = computed(() => props.course.is_owned)
 const isMember = computed(() => props.course.enrollment_status?.is_member)
