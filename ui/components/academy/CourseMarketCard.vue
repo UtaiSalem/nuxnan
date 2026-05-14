@@ -19,8 +19,8 @@
         >
           {{ getBadgeType(course, index ?? 0) === 'bestseller' ? 'Best Seller' : 'Trending' }}
         </div>
-        <span v-if="course.level" class="bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold w-fit">
-          {{ course.level }}
+        <span v-if="levelLabel" class="bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold w-fit">
+          {{ levelLabel }}
         </span>
         <span v-if="isOwned" class="bg-green-500/80 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold flex items-center gap-1 w-fit">
           <Icon icon="mdi:check-circle" class="w-3 h-3" />
@@ -198,6 +198,13 @@ const toggleFavorite = async (e: Event) => {
     isLoadingFavorite.value = false
   }
 }
+
+const levelLabel = computed(() => {
+  const lvl = props.course.education_level
+  const yr  = props.course.education_year
+  if (!lvl) return null
+  return yr ? `${lvl} ปี ${yr}` : lvl
+})
 
 const isOwner = computed(() => props.course.auth_role === 4)
 const isOwned = computed(() => props.course.is_owned)
