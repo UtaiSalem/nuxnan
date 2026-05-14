@@ -89,7 +89,11 @@ class CourseResource extends JsonResource
             'price_type'        => $this->price_type,
             'total_sales'       => $this->total_sales,
             'is_owned'          => $this->when(auth()->guard('api')->check(), function() {
-                return $this->isOwnedBy(auth()->guard('api')->user());
+                $user = auth()->guard('api')->user();
+                if ($this->user_id === $user->id) return false;
+                return $user->courses()
+                    ->where('source_course_id', $this->id)
+                    ->exists();
             }),
             'enrollment_status' => $this->when(auth()->guard('api')->check(), function () {
                 $member = $this->courseMembers
