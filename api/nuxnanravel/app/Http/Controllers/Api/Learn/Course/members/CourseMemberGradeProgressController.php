@@ -197,6 +197,7 @@ class CourseMemberGradeProgressController extends Controller
 
     public function memberGradeProgress(Course $course, CourseMember $member)
     {
+        $member->load('course');
         $courseAssignments = $course->courseAssignments;
 
         $user_assignments_answers = AssignmentAnswer::with([

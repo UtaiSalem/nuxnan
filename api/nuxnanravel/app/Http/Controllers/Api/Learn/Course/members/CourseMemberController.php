@@ -28,7 +28,7 @@ class CourseMemberController extends Controller
 
     public function index(Course $course, Request $request)
     {
-        $query = $course->courseMembers()->with('user', 'group');
+        $query = $course->courseMembers()->with('user', 'group', 'course');
 
         // Apply filters for V2
         if ($request->has('status') && $request->status !== null) {
@@ -518,7 +518,7 @@ class CourseMemberController extends Controller
     public function memberSettings(Course $course, CourseMember $course_member)
     {
         // Eager load relationships to avoid N+1 queries
-        $course_member->load(['user', 'group']);
+        $course_member->load(['user', 'group', 'course']);
         $course->load(['courseLessons', 'courseGroups', 'courseAssignments', 'courseQuizzes']);
 
         return response()->json([
@@ -535,6 +535,7 @@ class CourseMemberController extends Controller
 
     public function memberProgress(Course $course, CourseMember $course_member)
     {
+        $course_member->load('course');
         $userId = $course_member->user_id;
         
         // Get quiz data for THE SELECTED member (not auth user)
@@ -1025,7 +1026,7 @@ class CourseMemberController extends Controller
      */
     public function indexV2(Course $course, Request $request)
     {
-        $query = $course->courseMembers()->with('user', 'group');
+        $query = $course->courseMembers()->with('user', 'group', 'course');
 
         // Apply filters for V2
         if ($request->has('status') && $request->status !== null) {
