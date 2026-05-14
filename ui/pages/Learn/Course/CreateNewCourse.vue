@@ -22,6 +22,7 @@ const tempCover = ref(`${config.public.apiBase}/storage/images/courses/covers/de
 const coverInput = ref(null);
 const isOpenCategoryOptions = ref(false);
 const isOpenLevelOptions = ref(false);
+const isOpenYearOptions = ref(false);
 const crsStartDate = ref(new Date());
 const crsEndDate = ref(new Date());
 const courseRange = ref([crsStartDate.value,crsEndDate.value]);
@@ -62,7 +63,8 @@ const defaultFormValue = ref({
   name: '',
   description: '',
   category: '',
-  level: '',
+  education_level: '',
+  education_year: null,
   credit_units: '',
   hours_per_week: '',
   start_date: courseRange.value[0],
@@ -86,7 +88,8 @@ const form = ref({
   name: '',
   description: '', //
   category: '',
-  level: '',
+  education_level: '',
+  education_year: null,
   credit_units: 1,
   hours_per_week: 1,
   start_date: courseRange.value[0] ? new Date(courseRange.value[0]) : null,
@@ -114,21 +117,23 @@ const courseCategories = ref([
     { name: 'การงานอาชีพและเทคโนโลยี' },
     { name: 'ภาษาต่างประเทศ' },
 ]);
-const courseLevelOptions = ref([
-    { level: 'ชั้นประถมศึกษาปีที่ 1' },
-    { level: 'ชั้นประถมศึกษาปีที่ 2' },
-    { level: 'ชั้นประถมศึกษาปีที่ 3' },
-    { level: 'ชั้นประถมศึกษาปีที่ 4' },
-    { level: 'ชั้นประถมศึกษาปีที่ 5' },
-    { level: 'ชั้นประถมศึกษาปีที่ 6' },
-    { level: 'ชั้นมัธยมศึกษาปีที่ 1' },
-    { level: 'ชั้นมัธยมศึกษาปีที่ 2' },
-    { level: 'ชั้นมัธยมศึกษาปีที่ 3' },
-    { level: 'ชั้นมัธยมศึกษาปีที่ 4' },
-    { level: 'ชั้นมัธยมศึกษาปีที่ 5' },
-    { level: 'ชั้นมัธยมศึกษาปีที่ 6' },
+const educationLevelOptions = [
+    { value: 'ประถมศึกษา', label: 'ประถมศึกษา', maxYear: 6 },
+    { value: 'มัธยมศึกษา', label: 'มัธยมศึกษา', maxYear: 6 },
+    { value: 'ปวช.',        label: 'ปวช.',        maxYear: 3 },
+    { value: 'ปวส.',        label: 'ปวส.',        maxYear: 2 },
+    { value: 'อุดมศึกษา',  label: 'อุดมศึกษา',  maxYear: 4 },
+    { value: 'อื่นๆ',      label: 'อื่นๆ',      maxYear: 0 },
+]
 
-]);
+const selectedLevelConfig = computed(() =>
+    educationLevelOptions.find(l => l.value === form.value.education_level) ?? null
+)
+
+const educationYearOptions = computed(() => {
+    if (!selectedLevelConfig.value || selectedLevelConfig.value.maxYear === 0) return []
+    return Array.from({ length: selectedLevelConfig.value.maxYear }, (_, i) => i + 1)
+})
 const browseCover = () => { coverInput.value.click() };
 function onCoverInputChange(event){
   form.value.cover = event.target.files[0];
@@ -138,9 +143,16 @@ function handleSelectCategory(category){
   form.value.category = category;
   isOpenCategoryOptions.value = false;
 }
-function handleSelectLevel(level){
-  form.value.level = level;
-  isOpenLevelOptions.value = false;
+function handleSelectLevel(level) {
+    form.value.education_level = level
+    form.value.education_year = null
+    isOpenLevelOptions.value = false
+    isOpenYearOptions.value = false
+}
+
+function handleSelectYear(year) {
+    form.value.education_year = year
+    isOpenYearOptions.value = false
 }
 // function handleDateSelect(modelData){
 //   courseRange.value = modelData;
@@ -186,7 +198,8 @@ async function handleSubmitForm(){
     courseFormData.append('name', form.value.name);
     courseFormData.append('description', form.value.description);
     courseFormData.append('category', form.value.category);
-    courseFormData.append('level', form.value.level);   
+    if (form.value.education_level) courseFormData.append('education_level', form.value.education_level)
+    if (form.value.education_year)  courseFormData.append('education_year',  form.value.education_year)
     courseFormData.append('credit_units', form.value.credit_units);
     courseFormData.append('hours_per_week', form.value.hours_per_week);
     courseFormData.append('start_date', new Date(form.value.start_date).toISOString() ?? null);
@@ -371,25 +384,46 @@ async function handleSubmitForm(){
                         </div>
 
                         <!-- Level -->
-                        <div class="relative">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ระดับชั้น</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- education_level dropdown -->
                             <div class="relative">
-                                <button type="button" @click="isOpenLevelOptions = !isOpenLevelOptions"
-                                    class="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-left px-4 py-3 rounded-xl flex items-center justify-between hover:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-                                >
-                                    <span :class="form.level ? 'text-gray-900 dark:text-white' : 'text-gray-400'">
-                                        {{ form.level || 'เลือกระดับชั้น' }}
-                                    </span>
-                                    <Icon icon="heroicons:chevron-down" class="w-5 h-5 text-gray-400" />
-                                </button>
-
-                                <!-- Dropdown -->
-                                <div v-if="isOpenLevelOptions" class="absolute z-10 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto">
-                                    <div v-for="lvl in courseLevelOptions" :key="lvl.level" 
-                                        @click="handleSelectLevel(lvl.level)"
-                                        class="px-4 py-3 hover:bg-violet-50 dark:hover:bg-violet-900/20 cursor-pointer text-gray-700 dark:text-gray-200 text-sm transition-colors border-b border-gray-50 dark:border-gray-700/50 last:border-0"
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ระดับการศึกษา</label>
+                                <div class="relative">
+                                    <button type="button" @click="isOpenLevelOptions = !isOpenLevelOptions"
+                                        class="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-left px-4 py-3 rounded-xl flex items-center justify-between hover:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
                                     >
-                                        {{ lvl.level }}
+                                        <span :class="form.education_level ? 'text-gray-900 dark:text-white' : 'text-gray-400'">
+                                            {{ form.education_level || 'เลือกระดับ' }}
+                                        </span>
+                                        <Icon icon="heroicons:chevron-down" class="w-5 h-5 text-gray-400" />
+                                    </button>
+                                    <div v-if="isOpenLevelOptions" class="absolute z-10 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                                        <div v-for="lvl in educationLevelOptions" :key="lvl.value"
+                                            @click="handleSelectLevel(lvl.value)"
+                                            class="px-4 py-3 hover:bg-violet-50 dark:hover:bg-violet-900/20 cursor-pointer text-gray-700 dark:text-gray-200 text-sm transition-colors border-b border-gray-50 dark:border-gray-700/50 last:border-0"
+                                        >{{ lvl.label }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- education_year dropdown -->
+                            <div class="relative">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ชั้นปีที่</label>
+                                <div class="relative">
+                                    <button type="button"
+                                        :disabled="!educationYearOptions.length"
+                                        @click="isOpenYearOptions = !isOpenYearOptions"
+                                        class="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-left px-4 py-3 rounded-xl flex items-center justify-between hover:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <span :class="form.education_year ? 'text-gray-900 dark:text-white' : 'text-gray-400'">
+                                            {{ form.education_year ? `ปีที่ ${form.education_year}` : 'เลือกชั้นปี' }}
+                                        </span>
+                                        <Icon icon="heroicons:chevron-down" class="w-5 h-5 text-gray-400" />
+                                    </button>
+                                    <div v-if="isOpenYearOptions && educationYearOptions.length" class="absolute z-10 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                                        <div v-for="yr in educationYearOptions" :key="yr"
+                                            @click="handleSelectYear(yr)"
+                                            class="px-4 py-3 hover:bg-violet-50 dark:hover:bg-violet-900/20 cursor-pointer text-gray-700 dark:text-gray-200 text-sm transition-colors border-b border-gray-50 dark:border-gray-700/50 last:border-0"
+                                        >ปีที่ {{ yr }}</div>
                                     </div>
                                 </div>
                             </div>

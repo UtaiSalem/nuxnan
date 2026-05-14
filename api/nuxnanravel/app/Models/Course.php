@@ -44,7 +44,8 @@ class Course extends Model
         'code',
         'description',
         'category',
-        'level',
+        'education_level',
+        'education_year',
         'language',
 
         // Schedule

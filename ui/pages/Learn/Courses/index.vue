@@ -33,7 +33,8 @@ const isLoadingMore = ref(false)
 const error = ref<string | null>(null)
 const searchQuery = ref('')
 const selectedCategory = ref('all')
-const selectedLevel = ref('all')
+const selectedEducationLevel = ref('all')
+const selectedEducationYear = ref('all')
 const sortBy = ref('latest')
 const selectedSemester = ref('all')
 const selectedYear = ref('all')
@@ -47,7 +48,7 @@ const semesters = ref([
 ])
 const years = ref([{ value: 'all', label: 'ทุกปีการศึกษา' }])
 const categories = ref([{ value: 'all', label: 'ทุกหมวดหมู่' }])
-const levels = ref([{ value: 'all', label: 'ทุกระดับ' }])
+const educationLevels = ref([{ value: 'all', label: 'ทุกระดับ' }])
 const sortOptions = [
   { value: 'latest', label: 'ล่าสุด' },
   { value: 'popular', label: 'ยอดนิยม' },
@@ -66,7 +67,8 @@ const fetchCourses = async (page = 1, append = false) => {
     const params = new URLSearchParams({ page: String(page), per_page: String(pagination.value.perPage) })
     if (searchQuery.value) params.append('search', searchQuery.value)
     if (selectedCategory.value !== 'all') params.append('category', selectedCategory.value)
-    if (selectedLevel.value !== 'all') params.append('level', selectedLevel.value)
+    if (selectedEducationLevel.value !== 'all') params.append('education_level', selectedEducationLevel.value)
+    if (selectedEducationYear.value !== 'all') params.append('education_year', selectedEducationYear.value)
     if (sortBy.value) params.append('sort', sortBy.value)
     if (selectedSemester.value !== 'all') params.append('semester', selectedSemester.value)
     if (selectedYear.value !== 'all') params.append('academic_year', selectedYear.value)
@@ -182,7 +184,7 @@ const fetchFilterOptions = async () => {
         ? [{ value: 'all', label: 'ทุกปีการศึกษา' }, ...res.years.map((y: string) => ({ value: y, label: y }))]
         : [{ value: 'all', label: 'ทุกปีการศึกษา' }, { value: '2567', label: '2567' }, { value: '2568', label: '2568' }, { value: '2569', label: '2569' }]
       if (res.categories?.length) categories.value = [{ value: 'all', label: 'ทุกหมวดหมู่' }, ...res.categories.map((c: string) => ({ value: c, label: c }))]
-      if (res.levels?.length) levels.value = [{ value: 'all', label: 'ทุกระดับ' }, ...res.levels.map((l: string) => ({ value: l, label: l }))]
+      if (res.education_levels?.length) educationLevels.value = [{ value: 'all', label: 'ทุกระดับ' }, ...res.education_levels.map((l: string) => ({ value: l, label: l }))]
     }
   } catch (e) {
     console.error('Failed to fetch filter options', e)
@@ -208,7 +210,9 @@ watch(activeTab, (tab) => {
   else fetchEnrolledCourses()
 })
 
-watch([selectedCategory, selectedLevel, sortBy, selectedSemester, selectedYear], () => {
+watch(selectedEducationLevel, () => { selectedEducationYear.value = 'all' })
+
+watch([selectedCategory, selectedEducationLevel, selectedEducationYear, sortBy, selectedSemester, selectedYear], () => {
   if (activeTab.value === 'all') fetchCourses(1)
 })
 
@@ -252,12 +256,13 @@ onMounted(() => {
         v-if="activeTab === 'all'"
         v-model:searchQuery="searchQuery"
         v-model:selectedCategory="selectedCategory"
-        v-model:selectedLevel="selectedLevel"
+        v-model:selectedEducationLevel="selectedEducationLevel"
+        v-model:selectedEducationYear="selectedEducationYear"
         v-model:selectedSemester="selectedSemester"
         v-model:selectedYear="selectedYear"
         v-model:sortBy="sortBy"
         :categories="categories"
-        :levels="levels"
+        :educationLevels="educationLevels"
         :semesters="semesters"
         :years="years"
         :sortOptions="sortOptions"

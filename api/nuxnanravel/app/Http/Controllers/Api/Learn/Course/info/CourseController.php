@@ -132,10 +132,13 @@ class CourseController extends Controller
             $query->where('category', $request->category);
         }
 
-        if ($request->filled('level') && $request->level !== 'all') {
-            $query->where('level', $request->level);
+        if ($request->filled('education_level') && $request->education_level !== 'all') {
+            $query->where('education_level', $request->education_level);
         }
-        
+        if ($request->filled('education_year') && $request->education_year !== 'all') {
+            $query->where('education_year', $request->education_year);
+        }
+
         if ($request->filled('semester') && $request->semester !== 'all') {
             $query->where('semester', $request->semester);
         }
@@ -377,19 +380,19 @@ class CourseController extends Controller
             ->orderBy('category')
             ->pluck('category');
 
-        $levels = Course::select('level')
-            ->whereNotNull('level')
-            ->where('level', '!=', '')
+        $educationLevels = Course::select('education_level')
+            ->whereNotNull('education_level')
+            ->where('education_level', '!=', '')
             ->distinct()
-            ->orderBy('level')
-            ->pluck('level');
+            ->orderBy('education_level')
+            ->pluck('education_level');
 
         return response()->json([
-            'success'       => true,
-            'semesters'     => $semesters,
-            'years'         => $years,
-            'categories'    => $categories,
-            'levels'        => $levels,
+            'success'           => true,
+            'semesters'         => $semesters,
+            'years'             => $years,
+            'categories'        => $categories,
+            'education_levels'  => $educationLevels,
         ]);
     }
 
@@ -414,7 +417,8 @@ class CourseController extends Controller
                 'name'              => 'required|string|max:255',
                 'description'       => 'nullable|string',
                 'category'          => 'nullable|string',
-                'level'             => 'nullable|string',
+                'education_level'   => ['nullable', \Illuminate\Validation\Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],
+                'education_year'    => ['nullable', 'integer', 'min:1', 'max:6'],
                 'credit_units'      => 'nullable|numeric',
                 'hours_per_week'    => 'nullable|numeric',
                 'start_date'        => 'nullable|date',
@@ -448,7 +452,8 @@ class CourseController extends Controller
             $newCourse->slug             = Str::slug($request->name);
             $newCourse->description      = $request->description;
             $newCourse->category         = $request->category;
-            $newCourse->level            = $request->level;
+            $newCourse->education_level  = $request->education_level;
+            $newCourse->education_year   = $request->education_year;
             $newCourse->credit_units     = $request->credit_units;
             $newCourse->hours_per_week   = $request->hours_per_week;
             $newCourse->start_date       = Carbon::parse($validated['start_date'])->setTimezone('Asia/Bangkok');
@@ -532,7 +537,8 @@ class CourseController extends Controller
             'hours_per_week'    => 'nullable|numeric',
             'category'          => 'nullable',
             'capacity'          => 'nullable|numeric',
-            'level'             => 'nullable',
+            'education_level'   => ['nullable', \Illuminate\Validation\Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],
+            'education_year'    => ['nullable', 'integer', 'min:1', 'max:6'],
             'is_for_marketplace' => 'nullable|boolean',
             'price_points'      => 'nullable|numeric',
             'price_type'        => 'nullable|string|in:free,points,wallet,both',
