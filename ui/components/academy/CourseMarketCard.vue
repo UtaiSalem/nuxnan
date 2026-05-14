@@ -22,6 +22,9 @@
         <span v-if="levelLabel" class="bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold w-fit">
           {{ levelLabel }}
         </span>
+        <span v-if="semesterBadge" class="bg-indigo-500/80 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded font-bold w-fit uppercase">
+          {{ semesterBadge }}
+        </span>
         <span v-if="isOwned" class="bg-green-500/80 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold flex items-center gap-1 w-fit">
           <Icon icon="mdi:check-circle" class="w-3 h-3" />
           โคลนแล้ว
@@ -206,16 +209,28 @@ const levelLabel = computed(() => {
   return yr ? `${lvl} ปี ${yr}` : lvl
 })
 
+const semesterLabels: Record<string, string> = {
+  '1': 'ภาค 1',
+  '2': 'ภาค 2',
+  '3': 'ภาค 3',
+  'summer': 'ภาคฤดูร้อน',
+  'weekend': 'เสา-อาทิตย์'
+}
+
+const semesterBadge = computed(() => {
+  const s = props.course.semester
+  const y = props.course.academic_year
+  if (!s && !y) return null
+  const parts: string[] = []
+  if (s) parts.push(semesterLabels[s] ?? s)
+  if (y) parts.push(String(y))
+  return parts.join(' / ')
+})
+
 const isOwner = computed(() => props.course.auth_role === 4)
 const isOwned = computed(() => props.course.is_owned)
 const isMember = computed(() => props.course.enrollment_status?.is_member)
 const memberStatus = computed(() => props.course.enrollment_status?.status)
-const levelLabel = computed(() => {
-    const lvl = props.course.education_level
-    const yr  = props.course.education_year
-    if (!lvl) return null
-    return yr ? `${lvl} ปี ${yr}` : lvl
-})
 
 const getBadgeType = (course: any, index: number) => {
   if (index === undefined) return null
