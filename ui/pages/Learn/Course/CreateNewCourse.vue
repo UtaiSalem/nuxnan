@@ -4,7 +4,7 @@ import { Icon } from '@iconify/vue';
 import Swal from 'sweetalert2';
 import { router } from '@inertiajs/vue3';
 
-import CoursesLayout from '@/layouts/CoursesLayout.vue';
+import CoursesLayout from '~/layouts/CoursesLayout.vue';
 
 // VueDatePicker is imported as a global plugin (Backup: local import)
 import { VueDatePicker } from '@vuepic/vue-datepicker';
@@ -134,6 +134,13 @@ const educationYearOptions = computed(() => {
     if (!selectedLevelConfig.value || selectedLevelConfig.value.maxYear === 0) return []
     return Array.from({ length: selectedLevelConfig.value.maxYear }, (_, i) => i + 1)
 })
+
+const academicYearOptions = computed(() => {
+    const current = new Date().getFullYear() + 543
+    return Array.from({ length: 5 }, (_, i) => current - 1 + i)
+    // Example: 2568, 2569, 2570, 2571, 2572
+})
+
 const browseCover = () => { coverInput.value.click() };
 function onCoverInputChange(event){
   form.value.cover = event.target.files[0];
@@ -231,7 +238,7 @@ async function handleSubmitForm(){
       );
 
       // router.get(`/academies/${props.academy.data.id}/courses/${newCourse.id}`);
-      router.get(`/courses/${courseResp.data.newCourse.id}`);
+      router.get(`/Learn/Courses/${courseResp.data.newCourse.id}`);
 
     }
 
@@ -449,15 +456,17 @@ async function handleSubmitForm(){
                                     <option value="2">ภาคเรียนที่ 2</option>
                                     <option value="3">ภาคเรียนที่ 3</option>
                                     <option value="summer">ภาคเรียนฤดูร้อน</option>
+                                    <option value="weekend">เสาร์-อาทิตย์</option>
                                 </select>
                             </div>
 
                             <!-- Year -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ปีการศึกษา</label>
-                                <input type="text" v-model="form.academic_year" placeholder="เช่น 2567"
-                                    class="block w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                                />
+                                <select v-model="form.academic_year" class="block w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+                                    <option value="">เลือกปีการศึกษา</option>
+                                    <option v-for="year in academicYearOptions" :key="year" :value="year.toString()">{{ year }}</option>
+                                </select>
                             </div>
 
                             <!-- Credits -->
