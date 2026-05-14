@@ -12,9 +12,9 @@ interface Props {
   selectedYear: string
   sortBy: string
 
-  marketplaceOnly: boolean
-  enrollableOnly: boolean
-  isFree: boolean
+  marketplaceOnly?: boolean
+  enrollableOnly?: boolean
+  isFree?: boolean
 
   categories: Array<{ value: string; label: string }>
   educationLevels: Array<{ value: string; label: string }>
