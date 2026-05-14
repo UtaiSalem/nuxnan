@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 // Props
 interface Props {
   searchQuery: string
   selectedCategory: string
-  selectedLevel: string
+  selectedEducationLevel: string
+  selectedEducationYear: string
   selectedSemester: string
   selectedYear: string
   sortBy: string
-  
-  // New props for integrated marketplace
+
   marketplaceOnly: boolean
   enrollableOnly: boolean
   isFree: boolean
 
   categories: Array<{ value: string; label: string }>
-  levels: Array<{ value: string; label: string }>
+  educationLevels: Array<{ value: string; label: string }>
   semesters: Array<{ value: string; label: string }>
   years: Array<{ value: string; label: string }>
   sortOptions: Array<{ value: string; label: string }>
@@ -29,18 +29,30 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:searchQuery': [value: string]
   'update:selectedCategory': [value: string]
-  'update:selectedLevel': [value: string]
+  'update:selectedEducationLevel': [value: string]
+  'update:selectedEducationYear': [value: string]
   'update:selectedSemester': [value: string]
   'update:selectedYear': [value: string]
   'update:sortBy': [value: string]
-  
-  // New emits
   'update:marketplaceOnly': [value: boolean]
   'update:enrollableOnly': [value: boolean]
   'update:isFree': [value: boolean]
-  
   'handleSearch': []
 }>()
+
+// Year options per education level
+const yearRangeMap: Record<string, number> = {
+  'ประถมศึกษา': 6,
+  'มัธยมศึกษา': 6,
+  'ปวช.': 3,
+  'ปวส.': 2,
+  'อุดมศึกษา': 4,
+}
+const educationYearOptions = computed(() => {
+  const max = yearRangeMap[props.selectedEducationLevel] ?? 0
+  if (!max) return []
+  return Array.from({ length: max }, (_, i) => ({ value: String(i + 1), label: `ปีที่ ${i + 1}` }))
+})
 
 // Sections toggle
 const showMarketplaceFilters = ref(true)
@@ -107,19 +119,29 @@ const onSearchInput = (event: Event) => {
           </select>
         </div>
 
-        <!-- Level -->
+        <!-- Education Level -->
         <div>
-          <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1.5">
-            ระดับ
-          </label>
+          <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1.5">ระดับการศึกษา</label>
           <select
-            :value="selectedLevel"
-            @change="$emit('update:selectedLevel', ($event.target as HTMLSelectElement).value)"
+            :value="selectedEducationLevel"
+            @change="$emit('update:selectedEducationLevel', ($event.target as HTMLSelectElement).value); $emit('update:selectedEducationYear', 'all')"
             class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option v-for="level in levels" :key="level.value" :value="level.value">
-              {{ level.label }}
-            </option>
+            <option value="all">ทุกระดับ</option>
+            <option v-for="lvl in educationLevels" :key="lvl.value" :value="lvl.value">{{ lvl.label }}</option>
+          </select>
+        </div>
+
+        <!-- Education Year (dependent) -->
+        <div v-if="educationYearOptions.length">
+          <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1.5">ชั้นปีที่</label>
+          <select
+            :value="selectedEducationYear"
+            @change="$emit('update:selectedEducationYear', ($event.target as HTMLSelectElement).value)"
+            class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">ทุกชั้นปี</option>
+            <option v-for="yr in educationYearOptions" :key="yr.value" :value="yr.value">{{ yr.label }}</option>
           </select>
         </div>
       </div>

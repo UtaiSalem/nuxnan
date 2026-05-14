@@ -57,7 +57,7 @@ class CourseMarketplaceController extends Controller
 
         // Categorical
         if ($request->filled('category')) $query->where('category', $request->category);
-        if ($request->filled('level')) $query->where('level', $request->level);
+        if ($request->filled('education_level')) $query->where('education_level', $request->education_level);
         if ($request->filled('language')) $query->where('language', $request->language);
         if ($request->filled('semester')) $query->where('semester', $request->semester);
         if ($request->filled('academic_year')) $query->where('academic_year', $request->academic_year);
