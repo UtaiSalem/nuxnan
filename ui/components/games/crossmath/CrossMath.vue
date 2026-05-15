@@ -470,8 +470,6 @@ function goToStage(stageNum) {
   showStages.value = false;
 }
 
-let timerInterval = null;
-
 const timeLimit = computed(() => selectedTime.value);
 
 function evaluateExpression(numbers, operators) {

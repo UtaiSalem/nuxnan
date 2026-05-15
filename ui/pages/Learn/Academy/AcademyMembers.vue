@@ -41,7 +41,7 @@ const academyData = ref(props.academy?.data || {});
 
 const tempLogo = ref(academyData.value.logo ? '/storage/images/academies/logos/' + academyData.value.logo : '/storage/images/academies/logos/default_logo.png');
 const tempCover = ref(academyData.value.cover ? '/storage/images/academies/covers/' + academyData.value.cover : '/storage/images/academies/covers/default_cover.png');
-consttempHeader = ref(academyData.value.name || '');
+const tempHeader = ref(academyData.value.name || '');
 const tempSubheader = ref(academyData.value.slogan || '');
 
 async function fetchMembers() {

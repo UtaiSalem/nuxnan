@@ -420,7 +420,6 @@ onMounted(() => {
     </div>
 
   </NuxtLayout>
-  </div>
 </template>
 
 <style scoped>
