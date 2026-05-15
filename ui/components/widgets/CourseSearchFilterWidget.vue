@@ -48,7 +48,7 @@ const yearRangeMap: Record<string, number> = {
   'ปวส.': 2,
   'อุดมศึกษา': 4,
 }
-const educationYearOptions = computed(() => {
+const educationYearOptions = computed((): { value: string; label: string }[] => {
   const max = yearRangeMap[props.selectedEducationLevel] ?? 0
   if (!max) return []
   return Array.from({ length: max }, (_, i) => ({ value: String(i + 1), label: `ปีที่ ${i + 1}` }))
