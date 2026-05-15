@@ -40,8 +40,8 @@ class UpdateCourseRequest extends FormRequest
             'start_date'         => ['sometimes', 'nullable', 'date'],
             'end_date'           => ['sometimes', 'nullable', 'date', 'after_or_equal:start_date'],
             'class_schedule'     => ['sometimes', 'nullable', 'string'],
-            'semester'           => ['sometimes', 'nullable', 'string', 'max:50'],
-            'academic_year'      => ['sometimes', 'nullable', 'string', 'max:20'],
+            'semester'           => ['sometimes', 'nullable', Rule::in(['1','2','3','summer','weekend'])],
+            'academic_year'      => ['sometimes', 'nullable', 'integer', 'min:2560', 'max:2580'],
             'hours_per_week'     => ['sometimes', 'nullable', 'integer', 'min:0'],
 
             'tuition_fees'       => ['sometimes', 'nullable', 'numeric', 'min:0'],

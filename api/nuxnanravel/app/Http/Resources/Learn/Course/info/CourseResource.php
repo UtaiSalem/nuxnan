@@ -34,6 +34,8 @@ class CourseResource extends JsonResource
             'points'            => $this->points,
             'credit_units'      => $this->credit_units,
             'hours_per_week'    => $this->hours_per_week,
+            'semester'          => $this->semester,
+            'academic_year'     => $this->academic_year,
             'category'          => $this->category,
             'instructor'        => $this->instructor,
             'capacity'          => $this->capacity,

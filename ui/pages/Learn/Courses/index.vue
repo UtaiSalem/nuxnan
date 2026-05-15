@@ -38,13 +38,17 @@ const selectedEducationYear = ref('all')
 const sortBy = ref('latest')
 const selectedSemester = ref('all')
 const selectedYear = ref('all')
+const marketplaceOnly = ref(false)
+const enrollableOnly = ref(false)
+const isFree = ref(false)
 
 const semesters = ref([
   { value: 'all', label: 'ทุกภาคเรียน' },
   { value: '1', label: 'ภาคเรียนที่ 1' },
   { value: '2', label: 'ภาคเรียนที่ 2' },
   { value: '3', label: 'ภาคเรียนที่ 3' },
-  { value: 'summer', label: 'Summer' }
+  { value: 'summer', label: 'ภาคฤดูร้อน' },
+  { value: 'weekend', label: 'เสา-อาทิตย์' }
 ])
 const years = ref([{ value: 'all', label: 'ทุกปีการศึกษา' }])
 const categories = ref([{ value: 'all', label: 'ทุกหมวดหมู่' }])
@@ -179,10 +183,8 @@ const fetchFilterOptions = async () => {
   try {
     const res: any = await api.get('/api/courses/filters')
     if (res.success) {
-      if (res.semesters?.length) semesters.value = [{ value: 'all', label: 'ทุกภาคเรียน' }, ...res.semesters.map((s: string) => ({ value: s, label: `ภาคเรียนที่ ${s}` }))]
-      years.value = res.years?.length
-        ? [{ value: 'all', label: 'ทุกปีการศึกษา' }, ...res.years.map((y: string) => ({ value: y, label: y }))]
-        : [{ value: 'all', label: 'ทุกปีการศึกษา' }, { value: '2567', label: '2567' }, { value: '2568', label: '2568' }, { value: '2569', label: '2569' }]
+      if (res.semesters?.length) semesters.value = [{ value: 'all', label: 'ทุกภาคเรียน' }, ...res.semesters]
+      if (res.years?.length) years.value = [{ value: 'all', label: 'ทุกปีการศึกษา' }, ...res.years]
       if (res.categories?.length) categories.value = [{ value: 'all', label: 'ทุกหมวดหมู่' }, ...res.categories.map((c: string) => ({ value: c, label: c }))]
       if (res.education_levels?.length) educationLevels.value = [{ value: 'all', label: 'ทุกระดับ' }, ...res.education_levels.map((l: string) => ({ value: l, label: l }))]
     }
@@ -261,6 +263,9 @@ onMounted(() => {
         v-model:selectedSemester="selectedSemester"
         v-model:selectedYear="selectedYear"
         v-model:sortBy="sortBy"
+        v-model:marketplaceOnly="marketplaceOnly"
+        v-model:enrollableOnly="enrollableOnly"
+        v-model:isFree="isFree"
         :categories="categories"
         :educationLevels="educationLevels"
         :semesters="semesters"
@@ -415,6 +420,7 @@ onMounted(() => {
     </div>
 
   </NuxtLayout>
+  </div>
 </template>
 
 <style scoped>

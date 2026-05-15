@@ -408,6 +408,7 @@ onUnmounted(() => {
       </div>
     </template>
   </NuxtLayout>
+  </div>
 </template>
 
 <style scoped>
@@ -493,6 +494,10 @@ onUnmounted(() => {
 @media (max-width: 640px) {
   .vikinger-card {
     @apply rounded-lg;
+  }
+}
+</style>
+lg;
   }
 }
 </style>

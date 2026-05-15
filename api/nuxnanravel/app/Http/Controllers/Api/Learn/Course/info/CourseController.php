@@ -359,19 +359,39 @@ class CourseController extends Controller
      */
     public function getSearchFilterOptions()
     {
+        $semesterLabels = [
+            '1' => 'ภาคเรียนที่ 1',
+            '2' => 'ภาคเรียนที่ 2',
+            '3' => 'ภาคเรียนที่ 3',
+            'summer' => 'ภาคฤดูร้อน',
+            'weekend' => 'เสา-อาทิตย์',
+        ];
+
         $semesters = Course::select('semester')
             ->whereNotNull('semester')
             ->where('semester', '!=', '')
             ->distinct()
             ->orderBy('semester')
-            ->pluck('semester');
+            ->get()
+            ->map(function ($c) use ($semesterLabels) {
+                return [
+                    'value' => $c->semester,
+                    'label' => $semesterLabels[$c->semester] ?? $c->semester
+                ];
+            });
 
         $years = Course::select('academic_year')
             ->whereNotNull('academic_year')
             ->where('academic_year', '!=', '')
             ->distinct()
             ->orderBy('academic_year', 'desc')
-            ->pluck('academic_year');
+            ->get()
+            ->map(function ($c) {
+                return [
+                    'value' => (string)$c->academic_year,
+                    'label' => (string)$c->academic_year
+                ];
+            });
 
         $categories = Course::select('category')
             ->whereNotNull('category')
@@ -417,6 +437,8 @@ class CourseController extends Controller
                 'name'              => 'required|string|max:255',
                 'description'       => 'nullable|string',
                 'category'          => 'nullable|string',
+                'semester'          => ['nullable', \Illuminate\Validation\Rule::in(['1', '2', '3', 'summer', 'weekend'])],
+                'academic_year'     => ['nullable', 'integer', 'min:2560', 'max:2580'],
                 'education_level'   => ['nullable', \Illuminate\Validation\Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],
                 'education_year'    => ['nullable', 'integer', 'min:1', 'max:6'],
                 'credit_units'      => 'nullable|numeric',
@@ -452,6 +474,8 @@ class CourseController extends Controller
             $newCourse->slug             = Str::slug($request->name);
             $newCourse->description      = $request->description;
             $newCourse->category         = $request->category;
+            $newCourse->semester         = $request->semester;
+            $newCourse->academic_year    = $request->academic_year;
             $newCourse->education_level  = $request->education_level;
             $newCourse->education_year   = $request->education_year;
             $newCourse->credit_units     = $request->credit_units;
@@ -535,6 +559,8 @@ class CourseController extends Controller
             'price'             => 'nullable|numeric',
             'credit_units'      => 'nullable|numeric',
             'hours_per_week'    => 'nullable|numeric',
+            'semester'          => ['nullable', \Illuminate\Validation\Rule::in(['1', '2', '3', 'summer', 'weekend'])],
+            'academic_year'     => ['nullable', 'integer', 'min:2560', 'max:2580'],
             'category'          => 'nullable',
             'capacity'          => 'nullable|numeric',
             'education_level'   => ['nullable', \Illuminate\Validation\Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],

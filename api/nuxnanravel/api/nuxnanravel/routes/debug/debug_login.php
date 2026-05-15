@@ -1,3 +1,0 @@
-<?php
-// Debug route placeholder
-

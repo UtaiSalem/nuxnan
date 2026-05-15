@@ -134,7 +134,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <NuxtLayout name="main">
+  <div class="academies-index-page">
+    <NuxtLayout name="main">
     <!-- Hero Banner -->
     <template #hero>
       <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 shadow-xl">

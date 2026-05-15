@@ -188,7 +188,8 @@ const declineInvite = async () => {
 </script>
 
 <template>
-  <NuxtLayout name="main">
+  <div class="course-detail-page">
+    <NuxtLayout name="main">
     <!-- Hero Slot: Course Profile Cover & Navigation -->
     <template #hero>
       <!-- Loading State -->
@@ -256,4 +257,5 @@ const declineInvite = async () => {
     <!-- Main Content: Child Routes -->
     <NuxtPage v-if="course && !isLoading && !error" />
   </NuxtLayout>
+  </div>
 </template>
