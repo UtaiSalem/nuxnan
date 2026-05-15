@@ -2,7 +2,7 @@
 import { fileURLToPath } from 'url'
 
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: '2024-04-04',
   devtools: { enabled: false },
 
   vite: {
