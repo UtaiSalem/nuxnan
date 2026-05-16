@@ -26,6 +26,7 @@ class CourseMember extends Model
             'edited_grade' => 'float',
             'achieved_score' => 'integer',
             'bonus_points' => 'integer',
+            'external_score_points' => 'float',
             'efficiency' => 'integer',
             'grade_progress' => 'float',
             'order_number' => 'integer',
@@ -75,11 +76,13 @@ class CourseMember extends Model
     }
 
     /**
-     * Calculate the total achieved score including bonus points
+     * Calculate the total achieved score including bonus points and external scores
      */
-    public function getTotalAchievedScore(): int
+    public function getTotalAchievedScore(): float
     {
-        return ($this->achieved_score ?? 0) + ($this->bonus_points ?? 0);
+        return (float)($this->achieved_score ?? 0) + 
+               (float)($this->external_score_points ?? 0) + 
+               (float)($this->bonus_points ?? 0);
     }
 
     /**

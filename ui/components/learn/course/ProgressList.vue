@@ -790,6 +790,7 @@ watch(members, () => {
                     <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">บทเรียน</th>
                     <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">งาน</th>
                     <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">ทดสอบ</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">ภายนอก</th>
                     <th scope="col" class="px-2 py-2.5 whitespace-nowrap">พิเศษ</th>
                     <th scope="col" class="px-2 py-2.5 whitespace-nowrap">รวม</th>
                     <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">%</th>
@@ -857,6 +858,7 @@ watch(members, () => {
                     </td>
                     <td class="px-2 py-2 text-center">{{ member.scores?.course_assignments || 0 }}</td>
                     <td class="px-2 py-2 text-center">{{ member.scores?.course_quizzes || 0 }}</td>
+                    <td class="px-2 py-2 text-center text-indigo-600 font-medium">{{ member.scores?.external_score_points || 0 }}</td>
                     <td class="px-2 py-2">
                     <div v-if="isCourseAdmin" class="flex items-center gap-1">
                         <input 
@@ -1208,9 +1210,15 @@ watch(members, () => {
                 <p class="text-xs text-gray-500">ทดสอบรายวิชา</p>
               </div>
             </div>
-            <div class="mt-3 flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <span class="text-sm font-medium text-blue-700 dark:text-blue-300">คะแนนพิเศษ (Bonus)</span>
-              <span class="text-lg font-bold text-blue-600 dark:text-blue-400">+{{ selectedMember?.scores?.bonus_points || 0 }}</span>
+            <div class="mt-3 space-y-2">
+              <div class="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">คะแนนภายนอก (External)</span>
+                <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400">+{{ selectedMember?.scores?.external_score_points || 0 }}</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <span class="text-sm font-medium text-blue-700 dark:text-blue-300">คะแนนพิเศษ (Bonus)</span>
+                <span class="text-lg font-bold text-blue-600 dark:text-blue-400">+{{ selectedMember?.scores?.bonus_points || 0 }}</span>
+              </div>
             </div>
           </div>
           

@@ -935,7 +935,9 @@ class CourseController extends Controller
         $maxLessonQuizzes = $lessonQuestions->sum('points');
         $maxCourseAssignments = $courseAssignments->sum('points');
         $maxCourseQuizzes = $courseQuizzes->sum('total_score');
-        $computedMaxTotal = $maxCourseAssignments + $maxLessonAssignments + $maxCourseQuizzes + $maxLessonQuizzes;
+        
+        // ใช้ total_score จากตาราง courses
+        $totalScoreCap = (float)($course->total_score ?? ($maxCourseAssignments + $maxLessonAssignments + $maxCourseQuizzes + $maxLessonQuizzes));
 
         $courseMembersProgress = [];
         foreach ($courseMembers as $member) {
@@ -988,8 +990,10 @@ class CourseController extends Controller
             $attendanceRate = ($totalGroupAttendanceSessions > 0) ? round(($attendancePresent / $totalGroupAttendanceSessions) * 100) : 0;
 
             // Calculate totals and grade
-            $rawTotal = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
-            $percentage = ($computedMaxTotal > 0) ? ($rawTotal / $computedMaxTotal) * 100 : 0;
+            $achievedScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore;
+            $rawTotal = $achievedScore + (float)($member->external_score_points ?? 0) + (float)($member->bonus_points ?? 0);
+            
+            $percentage = ($totalScoreCap > 0) ? ($rawTotal / $totalScoreCap) * 100 : 0;
             $percentage = min(100, max(0, $percentage));
             $realtimeGrade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
             
@@ -1016,7 +1020,8 @@ class CourseController extends Controller
                     'lesson_quizzes' => $lessonTestScore,
                     'course_assignments' => $courseAssignScore,
                     'course_quizzes' => $courseQuizScore,
-                    'bonus_points' => $member->bonus_points ?? 0,
+                    'external_score_points' => (float)($member->external_score_points ?? 0),
+                    'bonus_points' => (float)($member->bonus_points ?? 0),
                     'edited_grade' => $member->edited_grade,
                     'total_score' => $rawTotal,
                     'score_percentage' => round($percentage),
@@ -1028,7 +1033,7 @@ class CourseController extends Controller
                     'max_lesson_quizzes' => $maxLessonQuizzes,
                     'max_course_assignments' => $maxCourseAssignments,
                     'max_course_quizzes' => $maxCourseQuizzes,
-                    'max_total' => $computedMaxTotal,
+                    'max_total' => $totalScoreCap,
                 ]
             ];
         }
@@ -1119,7 +1124,8 @@ class CourseController extends Controller
         $maxLessonAssign = $lessonAssignments->sum('points');
         $maxCourseQuiz = $courseQuizzes->sum('total_score');
         $maxLessonQuiz = $lessonQuestions->sum('points');
-        $computedMaxTotal = $maxCourseAssign + $maxLessonAssign + $maxCourseQuiz + $maxLessonQuiz;
+        
+        $totalScoreCap = (float)($course->total_score ?? ($maxCourseAssign + $maxLessonAssign + $maxCourseQuiz + $maxLessonQuiz));
 
         // Calculate scores for each member
         $membersWithScores = [];
@@ -1147,10 +1153,11 @@ class CourseController extends Controller
                 }
             }
 
-            $totalScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
+            $achievedScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore;
+            $totalScore = $achievedScore + (float)($member->external_score_points ?? 0) + (float)($member->bonus_points ?? 0);
             
             // Calculate grade
-            $percentage = ($computedMaxTotal > 0) ? ($totalScore / $computedMaxTotal) * 100 : 0;
+            $percentage = ($totalScoreCap > 0) ? ($totalScore / $totalScoreCap) * 100 : 0;
             $percentage = min(100, max(0, $percentage));
             $grade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
             $finalGrade = $member->edited_grade ?? $grade;
@@ -1166,7 +1173,9 @@ class CourseController extends Controller
                 'overall_progress' => round($percentage),
                 'scores' => [
                     'total_score' => $totalScore,
-                    'bonus_points' => $member->bonus_points ?? 0,
+                    'achieved_score' => $achievedScore,
+                    'external_score_points' => (float)($member->external_score_points ?? 0),
+                    'bonus_points' => (float)($member->bonus_points ?? 0),
                     'grade_progress' => $finalGrade,
                     'grade_name' => $gradeName,
                 ]
