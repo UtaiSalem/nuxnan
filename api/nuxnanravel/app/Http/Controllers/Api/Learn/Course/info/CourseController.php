@@ -53,7 +53,8 @@ class CourseController extends Controller
         
         // Fetch the course objects, preserving the order
         // MySQL FIELD() function usage for custom ordering
-        $courses = Course::whereIn('id', $recentCourseIds)
+        $courses = Course::withCount('courseLessons')
+            ->whereIn('id', $recentCourseIds)
             ->orderByRaw("FIELD(id, " . implode(',', $recentCourseIds->toArray()) . ")")
             ->get();
 
@@ -67,7 +68,7 @@ class CourseController extends Controller
     {
         // Get top 5 courses by member count
         $courses = Course::with('user')
-            ->withCount('courseMembers')
+            ->withCount(['courseMembers', 'courseLessons'])
             ->orderBy('course_members_count', 'desc')
             ->take(5)
             ->get();
@@ -90,6 +91,7 @@ class CourseController extends Controller
             $q->where('user_id', auth()->id());
         })
         ->with(['user'])
+        ->withCount('courseLessons')
         ->orderBy('created_at', 'desc')
         ->paginate($request->input('limit', 12));
 
@@ -115,7 +117,7 @@ class CourseController extends Controller
 
     public function getMoreCourses(Request $request = null) {
         $request = $request ?? request();
-        $query = Course::query();
+        $query = Course::withCount('courseLessons');
 
         // Search
         if ($request->filled('search')) {
@@ -135,7 +137,15 @@ class CourseController extends Controller
         if ($request->filled('level') && $request->level !== 'all') {
             $query->where('level', $request->level);
         }
-        
+
+        if ($request->filled('education_level') && $request->education_level !== 'all') {
+            $query->where('education_level', $request->education_level);
+        }
+
+        if ($request->filled('education_year') && $request->education_year !== 'all') {
+            $query->where('education_year', $request->education_year);
+        }
+
         if ($request->filled('semester') && $request->semester !== 'all') {
             $query->where('semester', $request->semester);
         }
@@ -196,14 +206,14 @@ class CourseController extends Controller
     public function getUserCourses(User $user)
     {
         return response()->json([
-            'courses'           => CourseResource::collection($user->courses()->latest()->paginate()),
+            'courses'           => CourseResource::collection($user->courses()->withCount('courseLessons')->latest()->paginate()),
         ]);
     }
 
     public function getMyCourses(User $user, Request $request)
     {
         $perPage = $request->input('per_page', 8);
-        $query = $user->courses()->with(['user', 'courseMembers' => function($q) {
+        $query = $user->courses()->withCount('courseLessons')->with(['user', 'courseMembers' => function($q) {
             $q->where('user_id', auth()->guard('api')->id());
         }]);
 
@@ -237,6 +247,7 @@ class CourseController extends Controller
     {
         $authMemberCourse = CourseMember::where('user_id', auth()->id())->pluck('course_id')->all();
         $paginated = Course::whereIn('id', $authMemberCourse)
+            ->withCount('courseLessons')
             ->with(['user', 'courseMembers' => function($q) {
                 $q->where('user_id', auth()->guard('api')->id());
             }])
@@ -294,9 +305,13 @@ class CourseController extends Controller
         $authMemberCourse = CourseMember::where('user_id', auth()->id())
             ->pluck('course_id')
             ->all();
-        
+
         $query = Course::whereIn('id', $authMemberCourse)
             ->where('user_id', '!=', auth()->id()) // Exclude courses owned by the user
+            ->withCount('courseLessons')
+            ->with(['courseMembers' => function($q) {
+                $q->where('user_id', auth()->id());
+            }])
             ->latest()
             ->paginate($perPage);
         $coursesAuthMember = MemberedCourseResource::collection($query);
@@ -384,12 +399,20 @@ class CourseController extends Controller
             ->orderBy('level')
             ->pluck('level');
 
+        $educationLevels = Course::select('education_level')
+            ->whereNotNull('education_level')
+            ->where('education_level', '!=', '')
+            ->distinct()
+            ->orderBy('education_level')
+            ->pluck('education_level');
+
         return response()->json([
-            'success'       => true,
-            'semesters'     => $semesters,
-            'years'         => $years,
-            'categories'    => $categories,
-            'levels'        => $levels,
+            'success'           => true,
+            'semesters'         => $semesters,
+            'years'             => $years,
+            'categories'        => $categories,
+            'levels'            => $levels,
+            'education_levels'  => $educationLevels,
         ]);
     }
 
@@ -415,6 +438,8 @@ class CourseController extends Controller
                 'description'       => 'nullable|string',
                 'category'          => 'nullable|string',
                 'level'             => 'nullable|string',
+                'education_level'   => 'nullable|string|max:30',
+                'education_year'    => 'nullable|integer|min:1|max:6',
                 'credit_units'      => 'nullable|numeric',
                 'hours_per_week'    => 'nullable|numeric',
                 'start_date'        => 'nullable|date',
@@ -449,6 +474,8 @@ class CourseController extends Controller
             $newCourse->description      = $request->description;
             $newCourse->category         = $request->category;
             $newCourse->level            = $request->level;
+            $newCourse->education_level  = $request->education_level;
+            $newCourse->education_year   = $request->education_year;
             $newCourse->credit_units     = $request->credit_units;
             $newCourse->hours_per_week   = $request->hours_per_week;
             $newCourse->start_date       = Carbon::parse($validated['start_date'])->setTimezone('Asia/Bangkok');
@@ -533,6 +560,8 @@ class CourseController extends Controller
             'category'          => 'nullable',
             'capacity'          => 'nullable|numeric',
             'level'             => 'nullable',
+            'education_level'   => 'nullable|string|max:30',
+            'education_year'    => 'nullable|integer|min:1|max:6',
             'is_for_marketplace' => 'nullable|boolean',
             'price_points'      => 'nullable|numeric',
             'price_type'        => 'nullable|string|in:free,points,wallet,both',
@@ -1120,7 +1149,7 @@ class CourseController extends Controller
      */
     public function indexV2(Request $request)
     {
-        $query = Course::with(['user', 'academy', 'courseSettings']);
+        $query = Course::with(['user', 'academy', 'courseSettings'])->withCount('courseLessons');
 
         // Apply filters
         if ($request->has('category') && $request->category) {
@@ -1129,6 +1158,10 @@ class CourseController extends Controller
 
         if ($request->has('level') && $request->level) {
             $query->where('level', $request->level);
+        }
+
+        if ($request->has('education_level') && $request->education_level) {
+            $query->where('education_level', $request->education_level);
         }
 
         if ($request->has('status') && $request->status) {
@@ -1163,7 +1196,7 @@ class CourseController extends Controller
      */
     public function showV2(Course $course, Request $request)
     {
-        $course->load([
+        $course->loadCount('courseLessons')->load([
             'user',
             'academy',
             'courseSettings',
@@ -1200,6 +1233,8 @@ class CourseController extends Controller
             'description' => 'nullable|string',
             'category' => 'nullable|string',
             'level' => 'nullable|string',
+            'education_level' => 'nullable|string|max:30',
+            'education_year' => 'nullable|integer|min:1|max:6',
             'credit_units' => 'nullable|numeric',
             'hours_per_week' => 'nullable|numeric',
             'start_date' => 'nullable|date',
@@ -1244,6 +1279,8 @@ class CourseController extends Controller
                 'code' => $course->code,
                 'category' => $course->category,
                 'level' => $course->level,
+                'education_level' => $course->education_level,
+                'education_year' => $course->education_year,
                 'status' => $course->status,
                 'enrolled_students' => $course->enrolled_students,
             ],

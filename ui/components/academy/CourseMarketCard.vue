@@ -19,8 +19,8 @@
         >
           {{ getBadgeType(course, index ?? 0) === 'bestseller' ? 'Best Seller' : 'Trending' }}
         </div>
-        <span v-if="course.level" class="bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold w-fit">
-          {{ course.level }}
+        <span v-if="course.education_level" class="bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold w-fit">
+          {{ course.education_level }} {{ course.education_year ? 'ปีที่ ' + course.education_year : '' }}
         </span>
         <span v-if="isOwned" class="bg-green-500/80 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold flex items-center gap-1 w-fit">
           <Icon icon="mdi:check-circle" class="w-3 h-3" />
@@ -79,11 +79,11 @@
       <div class="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400 mb-3">
         <div class="flex items-center gap-1">
           <Icon icon="mdi:book-open-variant" class="w-3 h-3" />
-          {{ course.course_lessons_count || 0 }} บท
+          {{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บท
         </div>
         <div class="flex items-center gap-1">
           <Icon icon="mdi:clock-outline" class="w-3 h-3" />
-          {{ course.hours || 0 }} ชม.
+          {{ course.hours ?? course.duration ?? course.hours_per_week ?? 0 }} ชม.
         </div>
         <div v-if="course.is_for_marketplace" class="flex items-center gap-1">
           <Icon icon="mdi:content-copy" class="w-3 h-3" />
@@ -113,17 +113,18 @@
 
         <!-- Left: Price / marketplace info -->
         <div class="flex items-center gap-1.5 flex-wrap">
+          <span v-if="course.tuition_fees > 0 && !isMember && !isOwner" class="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400">
+            <Icon icon="mdi:currency-thb" class="w-3.5 h-3.5" />
+            ค่าเรียน ฿{{ formatNumber(course.tuition_fees) }}
+          </span>
           <span v-if="course.is_for_marketplace && course.price > 0" class="flex items-center gap-1 text-xs font-bold text-violet-600 dark:text-violet-400">
             <Icon icon="mdi:content-copy" class="w-3.5 h-3.5" />
-            ฿{{ formatNumber(course.price) }}
+            ซื้อ ฿{{ formatNumber(course.price) }}
           </span>
           <span v-else-if="course.is_for_marketplace" class="text-xs font-bold text-violet-600 dark:text-violet-400 flex items-center gap-1">
             <Icon icon="mdi:content-copy" class="w-3.5 h-3.5" /> ตลาดวิชา
           </span>
-          <span v-if="course.tuition_fees > 0 && !isMember && !isOwner" class="text-xs font-bold text-blue-600 dark:text-blue-400">
-            ค่าเรียน ฿{{ formatNumber(course.tuition_fees) }}
-          </span>
-          <span v-else-if="!course.tuition_fees && !course.is_for_marketplace && !isMember && !isOwner" class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">
+          <span v-if="!course.tuition_fees && !course.price && !course.is_for_marketplace && !isMember && !isOwner" class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">
             ฟรี
           </span>
         </div>

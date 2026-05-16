@@ -34,10 +34,12 @@ const isLoginTransitioning = computed(() => authStore.isLoginTransitioning)
     </Transition>
 
     <NuxtLayout>
-      <NuxtPage />
-      
-      <!-- Toast Notifications -->
-      <NotificationsToastNotification />
+      <div class="app-container">
+        <NuxtPage />
+        
+        <!-- Toast Notifications -->
+        <NotificationsToastNotification />
+      </div>
     </NuxtLayout>
   </div>
 </template>

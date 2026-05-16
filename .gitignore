@@ -13,6 +13,8 @@
 # WHITELIST - Only these folders are tracked
 # ===========================================
 !.gitignore
+!/.agents/
+!/.agents/**
 !/api/
 !/ui/
 

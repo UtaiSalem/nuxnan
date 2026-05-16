@@ -66,6 +66,8 @@ const form = ref({
   description: '',
   category: '',
   level: '',
+  education_level: '',
+  education_year: null,
   credit_units: 0,
   hours_per_week: 0,
   start_date: '',
@@ -97,23 +99,18 @@ const courseCategories = [
   'อื่นๆ'
 ]
 
-// Course levels
-const courseLevels = [
-  'ชั้นประถมศึกษาปีที่ 1',
-  'ชั้นประถมศึกษาปีที่ 2',
-  'ชั้นประถมศึกษาปีที่ 3',
-  'ชั้นประถมศึกษาปีที่ 4',
-  'ชั้นประถมศึกษาปีที่ 5',
-  'ชั้นประถมศึกษาปีที่ 6',
-  'ชั้นมัธยมศึกษาปีที่ 1',
-  'ชั้นมัธยมศึกษาปีที่ 2',
-  'ชั้นมัธยมศึกษาปีที่ 3',
-  'ชั้นมัธยมศึกษาปีที่ 4',
-  'ชั้นมัธยมศึกษาปีที่ 5',
-  'ชั้นมัธยมศึกษาปีที่ 6',
-  'อุดมศึกษา',
-  'ทั่วไป'
+// Education level options
+const educationLevelOptions = [
+  { value: 'ประถมศึกษา', label: 'ประถมศึกษา', hasYear: true, maxYear: 6 },
+  { value: 'มัธยมศึกษา', label: 'มัธยมศึกษา', hasYear: true, maxYear: 6 },
+  { value: 'ปวช.', label: 'ปวช.', hasYear: true, maxYear: 3 },
+  { value: 'ปวส.', label: 'ปวส.', hasYear: true, maxYear: 2 },
+  { value: 'อุดมศึกษา', label: 'อุดมศึกษา', hasYear: false },
+  { value: 'อื่นๆ', label: 'อื่นๆ', hasYear: false },
 ]
+const selectedEducationLevelOption = computed(() =>
+  educationLevelOptions.find(opt => opt.value === form.value.education_level)
+)
 
 // Initialize form with course data
 watch(() => course?.value, (newCourse) => {
@@ -124,6 +121,8 @@ watch(() => course?.value, (newCourse) => {
       description: newCourse.description || DEFAULT_DESCRIPTION_TEMPLATE,
       category: newCourse.category || '',
       level: newCourse.level || '',
+      education_level: newCourse.education_level || '',
+      education_year: newCourse.education_year || null,
       credit_units: newCourse.credit_units || 0,
       hours_per_week: newCourse.hours_per_week || 0,
       start_date: newCourse.start_date ? newCourse.start_date.split(/[T ]/)[0] : '',
@@ -319,14 +318,31 @@ const deleteCourse = async () => {
               </div>
               
                <div class="space-y-2">
-                <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ระดับชั้น</label>
+                <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ระดับการศึกษา</label>
                  <div class="relative">
                   <select
-                    v-model="form.level"
+                    v-model="form.education_level"
+                    @change="!selectedEducationLevelOption?.hasYear && (form.education_year = null)"
                     class="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all dark:text-white text-base appearance-none cursor-pointer"
                   >
-                    <option value="">เลือกระดับชั้น</option>
-                    <option v-for="level in courseLevels" :key="level" :value="level">{{ level }}</option>
+                    <option value="">เลือกระดับการศึกษา</option>
+                    <option v-for="opt in educationLevelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  </select>
+                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                    <Icon icon="heroicons:chevron-down" class="w-5 h-5" />
+                  </span>
+                </div>
+              </div>
+
+              <div v-if="selectedEducationLevelOption?.hasYear" class="space-y-2">
+                <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ปีที่</label>
+                <div class="relative">
+                  <select
+                    v-model="form.education_year"
+                    class="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all dark:text-white text-base appearance-none cursor-pointer"
+                  >
+                    <option :value="null">เลือกปีที่</option>
+                    <option v-for="y in selectedEducationLevelOption.maxYear" :key="y" :value="y">ปีที่ {{ y }}</option>
                   </select>
                   <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                     <Icon icon="heroicons:chevron-down" class="w-5 h-5" />

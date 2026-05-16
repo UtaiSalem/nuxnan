@@ -568,14 +568,14 @@ const respondToInvitation = async (accept: boolean) => {
                 <Icon icon="fluent:book-24-regular" class="w-5 h-5" />
                 <span>บทเรียน</span>
               </div>
-              <span class="font-medium text-gray-900 dark:text-white">{{ course.lessons_count || curriculum.length }} บท</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? curriculum.length }} บท</span>
             </div>
-            <div v-if="course.duration" class="flex items-center justify-between text-gray-600 dark:text-gray-400">
+            <div class="flex items-center justify-between text-gray-600 dark:text-gray-400">
               <div class="flex items-center gap-2">
                 <Icon icon="fluent:clock-24-regular" class="w-5 h-5" />
                 <span>ระยะเวลา</span>
               </div>
-              <span class="font-medium text-gray-900 dark:text-white">{{ course.duration }}</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ course.hours ?? course.duration ?? course.hours_per_week ?? 0 }} ชม.</span>
             </div>
             <div class="flex items-center justify-between text-gray-600 dark:text-gray-400">
               <div class="flex items-center gap-2">

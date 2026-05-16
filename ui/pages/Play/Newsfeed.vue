@@ -241,7 +241,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <NuxtLayout name="main">
+  <div>
+    <NuxtLayout name="main">
     <!-- Left Widgets Column -->
     <template #leftWidgets>
       <RecentlyViewedCoursesWidget class="mb-6" />
@@ -408,8 +409,8 @@ onUnmounted(() => {
       </div>
     </template>
   </NuxtLayout>
-</template>
-
+  </div>
+  </template>
 <style scoped>
 /* Hide scrollbar but allow scrolling */
 .scrollbar-hide {
@@ -496,3 +497,4 @@ onUnmounted(() => {
   }
 }
 </style>
+

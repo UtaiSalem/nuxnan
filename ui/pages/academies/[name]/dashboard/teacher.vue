@@ -268,14 +268,14 @@ const quickActions = computed(() => [
                     alt=""
                   />
                   <div class="flex-1 min-w-0">
-                    <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ course.title }}</h3>
+                    <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ course.title || course.name }}</h3>
                     <p class="text-sm text-gray-500 mt-1">
                       <Icon name="fluent:people-24-regular" class="w-4 h-4 inline" />
-                      {{ course.enrolled_students_count || 0 }} นักเรียน
+                      {{ course.enrolled_students_count || course.course_members_count || course.enrolled_students || 0 }} นักเรียน
                     </p>
                     <p class="text-sm text-gray-500">
                       <Icon name="fluent:book-24-regular" class="w-4 h-4 inline" />
-                      {{ course.lessons_count || 0 }} บทเรียน
+                      {{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บทเรียน
                     </p>
                   </div>
                 </div>

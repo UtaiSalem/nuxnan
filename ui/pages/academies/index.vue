@@ -134,7 +134,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <NuxtLayout name="main">
+  <div>
+    <NuxtLayout name="main">
     <!-- Hero Banner -->
     <template #hero>
       <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 shadow-xl">
@@ -376,8 +377,8 @@ onMounted(() => {
       </div>
     </div>
   </NuxtLayout>
-</template>
-
+  </div>
+  </template>
 <style scoped>
 .bg-gradient-vikinger {
   background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
@@ -386,3 +387,4 @@ onMounted(() => {
   box-shadow: 0 10px 25px -5px rgba(111, 66, 193, 0.3), 0 8px 10px -6px rgba(111, 66, 193, 0.1);
 }
 </style>
+

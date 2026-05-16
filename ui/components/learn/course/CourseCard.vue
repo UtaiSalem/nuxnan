@@ -97,9 +97,27 @@ const goToCourse = () => {
         </div>
 
         <!-- Price -->
-        <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 font-bold">
-          <Icon icon="ri:bit-coin-line" class="w-5 h-5 text-yellow-500" />
-          <span>{{ formatPrice(course.price) }}</span>
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- Tuition Fees -->
+          <template v-if="course.tuition_fees > 0">
+            <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 font-bold">
+              <Icon icon="mdi:currency-thb" class="w-5 h-5 text-blue-500" />
+              <span>ค่าเรียน {{ formatPrice(course.tuition_fees) }}</span>
+            </div>
+          </template>
+          <!-- Price -->
+          <template v-if="course.price > 0">
+            <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 font-bold">
+              <Icon icon="ri:bit-coin-line" class="w-5 h-5 text-yellow-500" />
+              <span>{{ formatPrice(course.price) }}</span>
+            </div>
+          </template>
+          <!-- Free badge -->
+          <template v-if="!course.tuition_fees && !course.price">
+            <span class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">
+              ฟรี
+            </span>
+          </template>
         </div>
       </div>
 
@@ -116,11 +134,11 @@ const goToCourse = () => {
       >
         <div class="flex items-center gap-1">
           <Icon icon="fluent:book-open-16-regular" class="w-4 h-4" />
-          <span>{{ course.lessons_count || 20 }} Lectures</span>
+          <span>{{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} Lectures</span>
         </div>
         <div class="flex items-center gap-1">
           <Icon icon="fluent:clock-16-regular" class="w-4 h-4" />
-          <span>{{ course.hours || 20 }}Hrs</span>
+          <span>{{ course.hours ?? course.duration ?? course.hours_per_week ?? 0 }}Hrs</span>
         </div>
       </div>
 

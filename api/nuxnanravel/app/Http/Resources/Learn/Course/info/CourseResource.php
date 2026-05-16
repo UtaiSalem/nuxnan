@@ -34,6 +34,7 @@ class CourseResource extends JsonResource
             'points'            => $this->points,
             'credit_units'      => $this->credit_units,
             'hours_per_week'    => $this->hours_per_week,
+            'hours'             => $this->duration ?? $this->hours_per_week ?? 0,
             'category'          => $this->category,
             'instructor'        => $this->instructor,
             'capacity'          => $this->capacity,
@@ -57,6 +58,8 @@ class CourseResource extends JsonResource
             'accreditation'     => $this->accreditation,
             'accreditation_body'=> $this->accreditation_body,
             'level'             => $this->level,
+            'education_level'   => $this->education_level,
+            'education_year'    => $this->education_year,
             'rating'            => $this->rating,
             'syllabus'          => $this->syllabus,
             'certificate'       => $this->certificate,
@@ -68,7 +71,7 @@ class CourseResource extends JsonResource
                 return $member?->course_member_status;
             }, $this->member_status($this->id)), //Course member status
             'lessons_count'          => $this->course_lessons_count ?? $this->lessons,
-            'course_lessons_count'   => $this->course_lessons_count,
+            'course_lessons_count'   => $this->course_lessons_count ?? $this->lessons,
             'isCourseAdmin'     => $this->isAdmin(auth()->guard('api')->user()),
             'total_score'       => $this->total_score,
             'setting'           => $this->courseSettings,

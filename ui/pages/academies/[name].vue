@@ -1107,7 +1107,7 @@ onMounted(() => {
                       </span>
                       <span class="flex items-center gap-1">
                         <Icon icon="fluent:book-open-24-regular" class="w-4 h-4" />
-                        {{ course.lessons_count || 0 }} บท
+                        {{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บท
                       </span>
                     </div>
                     <span 

@@ -33,6 +33,8 @@ class UpdateCourseRequest extends FormRequest
             'category'           => ['sometimes', 'nullable', 'string', 'max:100'],
             'category_id'        => ['sometimes', 'nullable', 'integer', 'exists:course_categories,id'],
             'level'              => ['sometimes', 'nullable', 'string', 'max:50'],
+            'education_level'    => ['sometimes', 'nullable', 'string', 'max:30'],
+            'education_year'     => ['sometimes', 'nullable', 'integer', 'min:1', 'max:6'],
             'language'           => ['sometimes', 'nullable', 'string', 'max:50'],
 
             'duration'           => ['sometimes', 'nullable', 'integer', 'min:0'],

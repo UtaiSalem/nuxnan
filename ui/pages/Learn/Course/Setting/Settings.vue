@@ -19,7 +19,9 @@ async function onUpdateCourseHandler(courseData){
         courseUpdateForm.append('code', courseData.code);
         courseUpdateForm.append('description', courseData.description);
         courseUpdateForm.append('category', courseData.category);
-        courseUpdateForm.append('level', courseData.level);   
+        courseUpdateForm.append('level', courseData.level);
+        courseUpdateForm.append('education_level', courseData.education_level || '');
+        courseUpdateForm.append('education_year', courseData.education_year || '');
         courseUpdateForm.append('credit_units', courseData.credit_units);
         courseUpdateForm.append('hours_per_week', courseData.hours_per_week);
         courseUpdateForm.append('start_date', courseData.start_date);

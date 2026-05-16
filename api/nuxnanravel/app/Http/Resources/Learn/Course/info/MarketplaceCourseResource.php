@@ -35,6 +35,8 @@ class MarketplaceCourseResource extends JsonResource
             'discount'          => $this->discount,
             'category'          => $this->category,
             'level'             => $this->level,
+            'education_level'   => $this->education_level,
+            'education_year'    => $this->education_year,
             'rating'            => $this->rating,
             
             // Live count from withCount(['courseMembers as enrolled_students_count' => ...])

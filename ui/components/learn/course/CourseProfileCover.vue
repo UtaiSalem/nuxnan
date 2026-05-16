@@ -26,7 +26,7 @@ const courseId = computed(() => course.value?.id);
 const courseName = computed(() => course.value?.name || '');
 const courseCode = computed(() => course.value?.code || '');
 const tuitionFees = computed(() => course.value?.tuition_fees);
-const lessonsCount = computed(() => course.value?.lessons_count ?? 0);
+const lessonsCount = computed(() => course.value?.course_lessons_count ?? course.value?.lessons_count ?? course.value?.lessons ?? 0);
 const enrolledStudents = computed(() => course.value?.enrolled_students ?? 0);
 const groupsCount = computed(() => course.value?.groups ?? 0);
 const memberStatus = computed(() => props.courseMemberOfAuth?.status || course.value?.member_status);
