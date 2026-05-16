@@ -1,6 +1,8 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Icon } from '@iconify/vue';
+import CourseCoverActionGroup from './CourseCoverActionGroup.vue';
+import AcademyCoursePurchaseModal from '~/components/academy/CoursePurchaseModal.vue';
 
 const props = defineProps({
     courseMemberOfAuth: { type: Object, default: null },
@@ -16,20 +18,48 @@ const emit = defineEmits([
 const api = useApi();
 const config = useRuntimeConfig();
 const courseStore = useCourseStore();
+const courseGroupStore = useCourseGroupStore();
 
 // Get data from stores
 const course = computed(() => courseStore.currentCourse);
 const academy = computed(() => courseStore.academy);
 const isAdmin = computed(() => courseStore.isCourseAdmin);
+
 // Computed course data
 const courseId = computed(() => course.value?.id);
 const courseName = computed(() => course.value?.name || '');
 const courseCode = computed(() => course.value?.code || '');
+const courseOwner = computed(() => course.value?.user || course.value?.owner || null);
+const courseOwnerName = computed(() => courseOwner.value?.name || courseOwner.value?.username || '');
+const courseOwnerProfilePath = computed(() => {
+    if (!courseOwner.value) return null;
+    return `/profile/${courseOwner.value.reference_code || courseOwner.value.id}`;
+});
 const tuitionFees = computed(() => course.value?.tuition_fees);
 const lessonsCount = computed(() => course.value?.course_lessons_count ?? course.value?.lessons_count ?? course.value?.lessons ?? 0);
 const enrolledStudents = computed(() => course.value?.enrolled_students ?? 0);
 const groupsCount = computed(() => course.value?.groups ?? 0);
 const memberStatus = computed(() => props.courseMemberOfAuth?.status || course.value?.member_status);
+
+// Academic Meta
+const educationLevelLabel = computed(() => course.value?.education_level);
+const educationYearLabel = computed(() => course.value?.education_year ? `ปีที่ ${course.value.education_year}` : null);
+const semesterLabel = computed(() => course.value?.semester ? `ภาคเรียนที่ ${course.value.semester}` : null);
+const academicYearLabel = computed(() => course.value?.academic_year ? `ปีการศึกษา ${course.value.academic_year}` : null);
+
+const courseAcademicMeta = computed(() => {
+    const meta = [];
+    if (educationLevelLabel.value) {
+        if (educationYearLabel.value) {
+            meta.push(`ระดับชั้น: ${educationLevelLabel.value} ${educationYearLabel.value}`);
+        } else {
+            meta.push(`ระดับชั้น: ${educationLevelLabel.value}`);
+        }
+    }
+    if (semesterLabel.value) meta.push(semesterLabel.value);
+    if (academicYearLabel.value) meta.push(academicYearLabel.value);
+    return meta;
+});
 
 // Refs for file inputs and dropdown
 const logoInput = ref(null);
@@ -39,6 +69,9 @@ const membershipDropdownRef = ref(null);
 // UI States
 const showAcceptMemberOption = ref(false);
 const showEditModal = ref(false);
+const showGroupSelector = ref(false);
+const showCopyPurchaseModal = ref(false);
+const selectedGroupId = ref(null);
 const tempName = ref('');
 const tempCode = ref('');
 
@@ -47,6 +80,7 @@ const isUpdatingCover = ref(false);
 const isUpdatingLogo = ref(false);
 const isUpdatingName = ref(false);
 const isUpdatingCode = ref(false);
+const isRequestingMember = ref(false);
 const isRequestingUnmember = ref(false);
 
 // Temp images for preview
@@ -57,10 +91,7 @@ const logoPreview = ref(null);
 const coverUrl = computed(() => {
     if (coverPreview.value) return coverPreview.value;
     if (course.value?.cover) {
-        // Check if it's already a full URL
-        if (course.value.cover.startsWith('http')) {
-            return course.value.cover;
-        }
+        if (course.value.cover.startsWith('http')) return course.value.cover;
         return `${config.public.apiBase}/storage/images/courses/covers/${course.value.cover}`;
     }
     return `${config.public.apiBase}/storage/images/courses/covers/default_cover.jpg`;
@@ -69,17 +100,24 @@ const coverUrl = computed(() => {
 const logoUrl = computed(() => {
     if (logoPreview.value) return logoPreview.value;
     if (course.value?.logo) {
-        // Check if it's already a full URL
-        if (course.value.logo.startsWith('http')) {
-            return course.value.logo;
-        }
+        if (course.value.logo.startsWith('http')) return course.value.logo;
         return `${config.public.apiBase}/storage/images/courses/logos/${course.value.logo}`;
     }
-    if (course.value?.user?.avatar) {
-        return course.value.user.avatar;
-    }
+    if (course.value?.user?.avatar) return course.value.user.avatar;
     return '/images/default-avatar.png';
 });
+
+const courseGroups = computed(() => courseGroupStore.groups || []);
+const hasMultipleGroups = computed(() => courseGroups.value.length > 1);
+const courseJoinPrice = computed(() => Number(course.value?.tuition_fees ?? course.value?.price ?? 0));
+const canPurchaseCopy = computed(() => Boolean(course.value?.is_for_marketplace));
+
+function formatMoney(value) {
+    return new Intl.NumberFormat('th-TH', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    }).format(Number(value) || 0);
+}
 
 // File input handlers
 const browseCover = () => coverInput.value?.click();
@@ -100,53 +138,42 @@ function closeEditModal() {
     isUpdatingCode.value = false;
 }
 
+function startEditingName() {
+    openEditModal();
+}
+
 async function saveCourseInfo() {
-    if (!tempName.value.trim()) {
-        alert('กรุณากรอกชื่อรายวิชา');
-        return;
-    }
-    
+    if (!tempName.value.trim()) return;
     isUpdatingName.value = true;
     try {
-        const data = {
-            name: tempName.value.trim(),
-            code: tempCode.value.trim()
-        };
-        
+        const data = { name: tempName.value.trim(), code: tempCode.value.trim() };
         await api.put(`/api/courses/${courseId.value}`, data);
-        
-        // Update store
         courseStore.updateCourse(data);
-        
         emit('refresh');
         closeEditModal();
     } catch (error) {
         console.error('Failed to update course info:', error);
-        alert('เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
     } finally {
         isUpdatingName.value = false;
     }
+}
+
+function onCopyPurchaseSuccess() {
+    showCopyPurchaseModal.value = false;
+    emit('refresh', true);
 }
 
 // Cover upload
 async function onCoverInputChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    
     coverPreview.value = URL.createObjectURL(file);
     isUpdatingCover.value = true;
-    
     try {
         const formData = new FormData();
         formData.append('cover', file);
-        
         const response = await api.post(`/api/courses/${courseId.value}/cover`, formData);
-        
-        // Update store with new cover
-        if (response.cover) {
-            courseStore.updateCourse({ cover: response.cover });
-        }
-        
+        if (response.cover) courseStore.updateCourse({ cover: response.cover });
         emit('refresh');
     } catch (error) {
         console.error('Failed to update cover:', error);
@@ -160,21 +187,13 @@ async function onCoverInputChange(event) {
 async function onLogoInputChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    
     logoPreview.value = URL.createObjectURL(file);
     isUpdatingLogo.value = true;
-    
     try {
         const formData = new FormData();
         formData.append('logo', file);
-        
         const response = await api.post(`/api/courses/${courseId.value}/logo`, formData);
-        
-        // Update store with new logo
-        if (response.logo) {
-            courseStore.updateCourse({ logo: response.logo });
-        }
-        
+        if (response.logo) courseStore.updateCourse({ logo: response.logo });
         emit('refresh');
     } catch (error) {
         console.error('Failed to update logo:', error);
@@ -184,37 +203,57 @@ async function onLogoInputChange(event) {
     }
 }
 
-// Name editing
-function startEditingName() {
-    openEditModal();
-}
-
-// Code editing
-function startEditingCode() {
-    openEditModal();
-}
-
 // Membership handlers
+function openMembershipRequest() {
+    if (isRequestingMember.value) return;
+    if (hasMultipleGroups.value) {
+        selectedGroupId.value = courseGroups.value[0]?.id ?? null;
+        showGroupSelector.value = true;
+        return;
+    }
+    const groupId = courseGroups.value.length === 1 ? courseGroups.value[0].id : null;
+    requestToBeMember(groupId);
+}
+
+async function requestToBeMember(groupId = null) {
+    if (!courseId.value || isRequestingMember.value) return;
+    if (courseJoinPrice.value > 0) {
+        const confirmed = confirm(`ยืนยันสมัครสมาชิกในรายวิชานี้ ค่าเรียน ฿${formatMoney(courseJoinPrice.value)}?`);
+        if (!confirmed) return;
+    }
+    isRequestingMember.value = true;
+    try {
+        const payload = groupId ? { group_id: groupId } : {};
+        const response = await api.post(`/api/courses/${courseId.value}/members`, payload);
+        courseStore.updateCourse({
+            isMember: true,
+            member_status: response.memberStatus ?? response.newCourseMember?.status ?? null
+        });
+        showGroupSelector.value = false;
+        emit('request-member', groupId);
+        emit('refresh', true);
+    } catch (error) {
+        console.error('Failed to request membership:', error);
+    } finally {
+        isRequestingMember.value = false;
+    }
+}
+
+function confirmGroupMembership() {
+    requestToBeMember(selectedGroupId.value);
+}
+
 async function onRequestToBeUnMember() {
     if (!props.courseMemberOfAuth?.id) return;
     if (isRequestingUnmember.value) return;
-    
-    // Confirm for active members
     if (memberStatus.value === '1' || memberStatus.value === 'active') {
         const confirmed = confirm('คุณต้องการออกจากรายวิชานี้ใช่หรือไม่?');
         if (!confirmed) return;
     }
-    
     isRequestingUnmember.value = true;
     try {
         await api.delete(`/api/courses/${courseId.value}/members/${props.courseMemberOfAuth.id}`);
-        
-        // Update store
-        courseStore.updateCourse({ 
-            isMember: false,
-            member_status: null
-        });
-        
+        courseStore.updateCourse({ isMember: false, member_status: null });
         showAcceptMemberOption.value = false;
         emit('request-unmember', props.courseMemberOfAuth.id);
         emit('refresh');
@@ -225,334 +264,242 @@ async function onRequestToBeUnMember() {
     }
 }
 
-// Toggle handlers
 function toggleAcceptMemberOption() {
     showAcceptMemberOption.value = !showAcceptMemberOption.value;
 }
 
-// Close dropdowns when clicking outside
 function handleClickOutside(event) {
     if (membershipDropdownRef.value && !membershipDropdownRef.value.contains(event.target)) {
         showAcceptMemberOption.value = false;
     }
 }
 
-function handleEscapeKey(event) {
-    if (event.key === 'Escape') {
-        showAcceptMemberOption.value = false;
-    }
-}
-
 onMounted(() => {
     document.addEventListener('click', handleClickOutside);
-    document.addEventListener('keydown', handleEscapeKey);
 });
 
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside);
-    document.removeEventListener('keydown', handleEscapeKey);
     if (coverPreview.value) URL.revokeObjectURL(coverPreview.value);
     if (logoPreview.value) URL.revokeObjectURL(logoPreview.value);
 });
 </script>
 
 <style scoped>
-@keyframes spin-slow {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.animate-spin-slow {
-    animation: spin-slow 3s linear infinite;
-}
-
-.shadow-3xl {
-    box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
-}
-
-/* Glassmorphism effect */
-.backdrop-blur-md {
-    backdrop-filter: blur(12px);
-}
-
-/* Smooth transitions for all interactive elements */
-* {
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+* { transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
 </style>
 
 <template>
-    <div class="relative w-full bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl sm:shadow-2xl border border-gray-100 dark:border-gray-800 transition-all duration-300">
-        <!-- Cover Photo Section -->
+    <div class="relative w-full bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl overflow-visible shadow-xl sm:shadow-2xl border border-gray-100 dark:border-gray-800 transition-all duration-300">
+        <!-- 1. Cover Photo Section (overflow-hidden) -->
         <div 
-            class="relative h-32 sm:h-48 md:h-64 lg:h-72 bg-cover bg-center bg-no-repeat transition-all duration-500"
+            class="relative h-48 sm:h-64 md:h-80 lg:h-[320px] bg-cover bg-center bg-no-repeat transition-all duration-500 overflow-hidden rounded-t-xl sm:rounded-t-2xl z-0"
             :style="{ backgroundImage: `url(${coverUrl})` }"
         >
-            <!-- Enhanced Overlay gradient for better visual depth -->
-            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-pink-600/10 dark:from-blue-900/20 dark:via-purple-900/10 dark:to-pink-900/20"></div>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div>
-            
-            <!-- Animated Background Pattern (Hidden on small mobile for performance) -->
-            <div class="absolute inset-0 opacity-5 dark:opacity-[0.03] hidden sm:block" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 40px 40px;"></div>
+            <!-- Enhanced Overlay gradient -->
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-pink-600/10 dark:from-blue-900/20 dark:via-purple-900/10 dark:to-pink-900/20 z-0"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-0"></div>
             
             <!-- Edit Cover Button (Admin Only) -->
-            <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-10" v-if="isAdmin">
+            <div class="absolute top-4 left-4 z-10" v-if="isAdmin">
                 <input type="file" class="hidden" ref="coverInput" accept="image/*" @change="onCoverInputChange">
                 <button type="button" @click.prevent="browseCover" :disabled="isUpdatingCover"
-                    class="group relative p-2 text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-lg active:scale-95 sm:hover:bg-white sm:dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 shadow-lg sm:hover:shadow-xl sm:hover:scale-105 border border-white/20 min-w-[40px] min-h-[40px] flex items-center justify-center">
+                    class="group relative p-2 text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-lg active:scale-95 transition-all duration-300 disabled:opacity-50 shadow-lg border border-white/20 min-w-[40px] min-h-[40px] flex items-center justify-center">
                     <Icon v-if="isUpdatingCover" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                    <Icon v-else icon="fluent:camera-edit-20-filled" class="w-5 h-5 sm:group-hover:scale-110 transition-transform" />
-                    <div class="hidden md:block absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                        แก้ไขปก
-                    </div>
+                    <Icon v-else icon="fluent:camera-edit-20-filled" class="w-5 h-5" />
                 </button>
             </div>
             
-            <!-- Tuition Fees Badge with enhanced styling -->
-            <div v-if="tuitionFees" class="absolute top-2 right-2 sm:top-4 sm:right-4 z-10">
-                <div class="relative group">
-                    <div class="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg sm:rounded-xl blur-sm opacity-50 hidden sm:block"></div>
-                    <div class="relative flex items-center px-2 sm:px-4 py-1.5 sm:py-2.5 space-x-1 sm:space-x-2 font-bold text-white rounded-lg sm:rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 shadow-lg border border-yellow-300/30">
-                        <Icon icon="ri:bit-coin-fill" class="w-4 h-4 sm:w-6 sm:h-6" />
-                        <span class="text-sm sm:text-lg">{{ tuitionFees }}</span>
-                        <span class="text-[10px] sm:text-sm opacity-90">บาท</span>
-                    </div>
+            <!-- Tuition Fees Badge -->
+            <div v-if="tuitionFees" class="absolute top-4 right-4 z-10">
+                <div class="relative flex items-center px-4 py-2 space-x-2 font-black text-white rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 shadow-xl border border-yellow-300/30">
+                    <Icon icon="ri:bit-coin-fill" class="w-5 h-5" />
+                    <span class="text-base sm:text-xl">{{ tuitionFees }}</span>
+                    <span class="text-xs opacity-90 uppercase">THB</span>
                 </div>
             </div>
         </div>
 
-        <!-- Avatar + Name Section (Overlapping Cover) -->
-        <div class="flex flex-col sm:flex-row items-center justify-between w-full px-4 sm:px-6 -mt-10 sm:-mt-16 md:-mt-20 transition-all duration-300 gap-4 sm:gap-6">
-            <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto">
-                <!-- Avatar with enhanced styling -->
-                <div class="relative flex-shrink-0 group">
-                    <div class="relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 rounded-full border-4 border-white dark:border-gray-800 overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-xl sm:shadow-2xl transition-all duration-300 sm:group-hover:scale-105 z-10">
-                        <img :src="logoUrl" alt="Course Logo" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <!-- 2. Profile Main Section (Avatar + Actions) -->
+        <div class="relative px-4 sm:px-8 pb-4">
+            <div class="flex flex-col lg:flex-row items-center lg:items-end gap-6 relative">
+                <!-- Avatar Block (Centered/Bottom-aligned) -->
+                <div class="relative -mt-16 sm:-mt-24 lg:-mt-28 flex-shrink-0 z-30 order-1">
+                    <div class="relative w-32 h-32 sm:w-44 sm:h-44 lg:w-48 lg:h-48 rounded-3xl border-[6px] border-white dark:border-gray-900 overflow-hidden bg-white dark:bg-gray-800 shadow-2xl transition-all duration-300 group">
+                        <img :src="logoUrl" alt="Course Logo" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </div>
                     
                     <input type="file" class="hidden" ref="logoInput" accept="image/*" @change="onLogoInputChange" v-if="isAdmin">
                     <button v-if="isAdmin" type="button" @click.prevent="browseLogo" :disabled="isUpdatingLogo"
-                        class="absolute bottom-0 right-0 sm:bottom-2 sm:right-2 p-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full active:scale-95 transition-all duration-300 disabled:opacity-50 shadow-lg border-2 border-white dark:border-gray-800 z-10 min-w-[36px] min-h-[36px] flex items-center justify-center">
-                        <Icon v-if="isUpdatingLogo" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-                        <Icon v-else icon="fluent:camera-edit-20-filled" class="w-4 h-4" />
+                        class="absolute bottom-2 right-2 p-2.5 bg-indigo-600 text-white rounded-2xl active:scale-95 transition-all shadow-xl border-4 border-white dark:border-gray-900 z-10">
+                        <Icon v-if="isUpdatingLogo" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+                        <Icon v-else icon="fluent:camera-edit-20-filled" class="w-5 h-5" />
                     </button>
                 </div>
 
-                <!-- Course Name & Code -->
-                <div class="flex-1 space-y-2 text-center sm:text-left mt-1 sm:mt-12 md:mt-16 min-w-0 w-full sm:w-auto">
-                    <!-- Course Name -->
-                    <div class="flex items-start gap-2 flex-wrap justify-center sm:justify-start">
-                        <div class="relative group min-w-0 max-w-full">
-                            <h1 class="relative z-10 px-3 py-1.5 sm:px-5 sm:py-3 text-sm sm:text-xl md:text-2xl font-black text-white bg-slate-900/90 dark:bg-gray-800/90 rounded-xl sm:rounded-2xl shadow-xl border border-slate-700/50 dark:border-gray-600/50 backdrop-blur-sm transition-all duration-300 sm:hover:scale-[1.02] break-words leading-snug">
-                                <span class="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent line-clamp-3 sm:line-clamp-2">
-                                    {{ courseName || 'ไม่มีชื่อรายวิชา' }}
-                                </span>
+                <!-- Owner Info (Beside Logo on Right) -->
+                <div v-if="courseOwnerName" class="flex flex-col items-center lg:items-start lg:mb-5 lg:text-left order-2 lg:min-w-[180px] max-w-full">
+                    <NuxtLink v-if="courseOwnerProfilePath" :to="courseOwnerProfilePath" class="max-w-[280px] text-center lg:text-left text-2xl sm:text-3xl lg:text-4xl leading-tight font-black text-gray-900 dark:text-white hover:text-indigo-600 transition-colors break-words">
+                        <span>{{ courseOwnerName }}</span>
+                    </NuxtLink>
+                    <span v-else class="max-w-[280px] text-center lg:text-left text-2xl sm:text-3xl lg:text-4xl leading-tight font-black text-gray-900 dark:text-white break-words">{{ courseOwnerName }}</span>
+                </div>
+
+                <!-- Floating Actions (Desktop right-aligned) -->
+                <div v-if="!isAdmin" ref="membershipDropdownRef" class="lg:absolute lg:right-0 lg:bottom-0 w-full lg:w-auto z-30 mt-4 lg:mt-0 order-3">
+                    <CourseCoverActionGroup
+                        :course="course"
+                        :courseMemberOfAuth="courseMemberOfAuth"
+                        :memberStatus="memberStatus"
+                        :isRequestingMember="isRequestingMember"
+                        :isRequestingUnmember="isRequestingUnmember"
+                        :canPurchaseCopy="canPurchaseCopy"
+                        :showAcceptMemberOption="showAcceptMemberOption"
+                        @request-member="openMembershipRequest"
+                        @purchase-course="showCopyPurchaseModal = true"
+                        @cancel-member="onRequestToBeUnMember"
+                        @toggle-pending-menu="toggleAcceptMemberOption"
+                    />
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Profile Info row (Stats + Title) -->
+        <div class="px-4 sm:px-8 py-6 border-t border-gray-50 dark:border-gray-800/50">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <!-- Left/Center: Stats & Course Info -->
+                <div class="flex flex-col gap-4 flex-1">
+                    <!-- Stats Bar -->
+                    <div class="flex items-center gap-4 text-[11px] sm:text-sm font-bold text-gray-500 dark:text-gray-400 overflow-x-auto no-scrollbar pb-1">
+                        <div class="flex items-center gap-1.5 whitespace-nowrap bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-full">
+                            <Icon icon="heroicons:book-open-solid" class="w-4 h-4" />
+                            <span>{{ lessonsCount }} บทเรียน</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 whitespace-nowrap bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1.5 rounded-full">
+                            <Icon icon="heroicons:users-solid" class="w-4 h-4" />
+                            <span>{{ enrolledStudents }} ผู้เรียน</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 whitespace-nowrap bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-full">
+                            <Icon icon="heroicons:user-group-solid" class="w-4 h-4" />
+                            <span>{{ groupsCount }} กลุ่ม</span>
+                        </div>
+                        <div v-if="course?.rating" class="flex items-center gap-1.5 whitespace-nowrap bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-full">
+                            <Icon icon="fluent:star-24-filled" class="w-4 h-4" />
+                            <span>{{ typeof course.rating === 'number' ? course.rating.toFixed(1) : course.rating }} ({{ course.reviews_count || 0 }})</span>
+                        </div>
+                    </div>
+
+                    <!-- Course Title & Code -->
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <h1 class="text-xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                                {{ courseName || 'ไม่มีชื่อรายวิชา' }}
                             </h1>
+                            <button v-if="isAdmin" @click="startEditingName"
+                                class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors">
+                                <Icon icon="fluent:edit-24-filled" class="w-5 h-5" />
+                            </button>
                         </div>
-                        <button v-if="isAdmin" @click="startEditingName" 
-                            class="group relative z-20 p-2 sm:p-2.5 bg-white sm:hover:bg-gray-50 dark:bg-gray-800 sm:dark:hover:bg-gray-700 rounded-lg sm:rounded-xl transition-all duration-300 shadow-lg border border-gray-200 dark:border-gray-600 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center flex-shrink-0">
-                            <Icon icon="fluent:edit-24-filled" class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
-                        </button>
-                    </div>
-
-                    <!-- Course Code -->
-                    <div class="flex items-center gap-2 justify-center sm:justify-start flex-wrap">
-                        <span v-if="courseCode" class="group relative px-3 sm:px-5 py-1.5 sm:py-2 text-[10px] sm:text-sm font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full shadow-lg border border-cyan-400/20 transition-all duration-300 cursor-default max-w-full overflow-hidden">
-                            <Icon icon="fluent:number-symbol-square-24-filled" class="w-3 h-3 sm:w-4 sm:h-4 inline-block mr-1 sm:mr-1.5" />
-                            <span class="tracking-wider truncate inline-block max-w-[150px] sm:max-w-none align-middle">{{ courseCode }}</span>
-                        </span>
-                        <span v-else-if="isAdmin" @click="startEditingCode" class="px-3 py-1.5 text-[10px] sm:text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full border border-dashed border-gray-300 dark:border-gray-600 hover:border-cyan-400 dark:hover:border-cyan-600 transition-colors cursor-pointer">
-                            <Icon icon="fluent:add-circle-24-regular" class="w-3.5 h-3.5 inline-block mr-1" />
-                            เพิ่มรหัสวิชา
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Desktop: Join/Member Button -->
-            <div v-if="!isAdmin" class="hidden md:block mt-0">
-                <!-- Pending Status -->
-                <div v-if="courseMemberOfAuth && (memberStatus === '0' || memberStatus === 'pending')" ref="membershipDropdownRef" class="relative">
-                    <button @click.prevent="toggleAcceptMemberOption"
-                        class="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors shadow-md min-h-[44px]">
-                        <Icon icon="heroicons:clock" class="w-5 h-5" />
-                        <span>รอการตอบรับ</span>
-                        <Icon icon="heroicons:chevron-down" class="w-4 h-4 transition-transform" :class="{'rotate-180': showAcceptMemberOption}" />
-                    </button>
-                    <div v-if="showAcceptMemberOption" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
-                        <button @click.prevent="onRequestToBeUnMember" :disabled="isRequestingUnmember"
-                            class="w-full px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium flex items-center gap-2 disabled:opacity-50">
-                            <Icon v-if="isRequestingUnmember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                            <Icon v-else icon="heroicons:x-circle" class="w-5 h-5" />
-                            <span>ยกเลิกคำขอ</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Active Member -->
-                <button v-else-if="courseMemberOfAuth && (memberStatus === '1' || memberStatus === 'active')"
-                    @click.prevent="onRequestToBeUnMember" :disabled="isRequestingUnmember"
-                    class="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-red-500 text-white font-semibold rounded-lg transition-colors shadow-md disabled:opacity-50 min-h-[44px]">
-                    <Icon v-if="isRequestingUnmember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                    <Icon v-else icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
-                    <span>เป็นสมาชิก</span>
-                </button>
-
-                <!-- Not a member: show price info only, enrollment is in the sidebar below -->
-                <div v-else-if="!courseMemberOfAuth" class="flex items-center gap-3">
-                    <span v-if="course?.tuition_fees > 0"
-                        class="flex items-center gap-1.5 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-semibold rounded-lg text-sm">
-                        <Icon icon="heroicons:banknotes" class="w-4 h-4" />
-                        ฿{{ course.tuition_fees?.toLocaleString() }}
-                    </span>
-                    <span v-else
-                        class="flex items-center gap-1.5 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold rounded-lg text-sm">
-                        <Icon icon="heroicons:check-badge" class="w-4 h-4" />
-                        ฟรี
-                    </span>
-                    <span class="text-xs text-gray-400 dark:text-gray-500">สมัครเรียนด้านล่าง</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Stats Section -->
-        <div class="py-4 sm:py-6 px-3 sm:px-6">
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap md:justify-center gap-2.5 sm:gap-4 md:gap-6">
-                <!-- Lessons Count -->
-                <div class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-2 border-blue-200 dark:border-blue-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 cursor-pointer overflow-hidden min-w-0">
-                    <!-- Animated background -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-blue-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                    
-                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl shadow-lg sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                        <Icon icon="heroicons:book-open-solid" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                    </div>
-                    <div class="relative min-w-0">
-                        <div class="text-lg sm:text-2xl font-black text-blue-600 dark:text-blue-400 leading-none truncate">{{ lessonsCount }}</div>
-                        <div class="text-[10px] sm:text-xs font-semibold text-blue-700/70 dark:text-blue-300/70 mt-0.5 truncate">บทเรียน</div>
-                    </div>
-                </div>
-
-                <!-- Enrolled Students -->
-                <div class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border-2 border-purple-200 dark:border-purple-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 cursor-pointer overflow-hidden min-w-0">
-                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/10 to-purple-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                    
-                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-50 to-purple-600 rounded-lg sm:rounded-xl shadow-lg sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                        <Icon icon="heroicons:users-solid" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                    </div>
-                    <div class="relative min-w-0">
-                        <div class="text-lg sm:text-2xl font-black text-purple-600 dark:text-purple-400 leading-none truncate">{{ enrolledStudents || 0 }}</div>
-                        <div class="text-[10px] sm:text-xs font-semibold text-purple-700/70 dark:text-purple-300/70 mt-0.5 truncate">ผู้เรียน</div>
-                    </div>
-                </div>
-
-                <!-- Groups Count -->
-                <div class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-2 border-green-200 dark:border-green-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 cursor-pointer overflow-hidden min-w-0">
-                    <div class="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/10 to-green-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                    
-                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg sm:rounded-xl shadow-lg sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                        <Icon icon="heroicons:user-group-solid" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                    </div>
-                    <div class="relative min-w-0">
-                        <div class="text-lg sm:text-2xl font-black text-green-600 dark:text-green-400 leading-none truncate">{{ groupsCount || 0 }}</div>
-                        <div class="text-[10px] sm:text-xs font-semibold text-green-700/70 dark:text-green-300/70 mt-0.5 truncate">กลุ่ม</div>
-                    </div>
-                </div>
-
-                <!-- Rating Stats -->
-                <div v-if="course?.rating" class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-50 to-amber-100 dark:from-yellow-900/30 dark:to-amber-800/30 border-2 border-yellow-200 dark:border-yellow-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 cursor-pointer overflow-hidden min-w-0">
-                    <div class="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/10 to-yellow-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                    
-                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-lg sm:rounded-xl shadow-lg sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                        <Icon icon="fluent:star-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                    </div>
-                    <div class="relative min-w-0">
-                        <div class="flex items-center gap-1">
-                            <span class="text-lg sm:text-2xl font-black text-yellow-600 dark:text-yellow-400 leading-none">
-                                {{ typeof course.rating === 'number' ? course.rating.toFixed(1) : course.rating }}
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span v-if="courseCode" class="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
+                                #{{ courseCode }}
                             </span>
-                            <div class="flex items-center">
-                                <Icon 
-                                    v-for="star in 5" 
-                                    :key="star" 
-                                    :icon="star <= Math.round(course.rating) ? 'fluent:star-12-filled' : 'fluent:star-12-regular'" 
-                                    class="w-3 h-3 text-yellow-500"
-                                />
-                            </div>
+                            <NuxtLink v-if="academy" :to="`/academies/${academy.id}`" class="text-xs sm:text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
+                                <span v-if="courseCode" class="mr-1">•</span>
+                                {{ academy.name }}
+                            </NuxtLink>
                         </div>
-                        <div class="text-[10px] sm:text-xs font-semibold text-yellow-700/70 dark:text-yellow-300/70 mt-0.5 truncate">
-                            {{ course.reviews_count || 0 }} รีวิว
+
+                        <!-- Academic Meta Badges -->
+                        <div v-if="courseAcademicMeta.length > 0" class="flex flex-wrap items-center gap-2 pt-2">
+                            <span v-for="(meta, index) in courseAcademicMeta" :key="index"
+                                class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                                {{ meta }}
+                            </span>
                         </div>
                     </div>
-                </div>
-
-                <!-- Academy Info -->
-                <NuxtLink v-if="academy" :to="`/academies/${academy.id}`" 
-                    class="group relative flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-2 border-orange-200 dark:border-orange-700 sm:hover:shadow-xl transition-all duration-300 sm:hover:scale-105 overflow-hidden min-w-0">
-                    <div class="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/10 to-orange-500/0 transform translate-x-[-100%] sm:group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                    
-                    <div class="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg sm:rounded-xl shadow-lg overflow-hidden sm:group-hover:shadow-xl sm:group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                        <img v-if="academy.logo" :src="`${$config.public.apiBase}/storage/images/academies/logos/${academy.logo}`" class="w-full h-full object-cover" />
-                        <Icon v-else icon="heroicons:academic-cap-solid" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                    </div>
-                    <div class="relative text-left min-w-0">
-                        <div class="text-xs sm:text-sm font-black text-orange-700 dark:text-orange-400 truncate max-w-[100px] sm:max-w-[180px] leading-tight">{{ academy.name }}</div>
-                        <div class="text-[10px] sm:text-xs font-semibold text-orange-600/70 dark:text-orange-300/70">สถาบัน</div>
-                    </div>
-                </NuxtLink>
-            </div>
-
-            <!-- Mobile: Join/Member Button -->
-            <div v-if="!isAdmin" class="flex justify-center mt-4 md:hidden px-3">
-                <!-- Pending Status (Mobile) -->
-                <div v-if="courseMemberOfAuth && (memberStatus === '0' || memberStatus === 'pending')" class="relative w-full max-w-xs">
-                    <button @click.prevent="toggleAcceptMemberOption"
-                        class="w-full flex items-center justify-between gap-2 px-5 py-3 bg-yellow-500 active:bg-yellow-600 text-white font-semibold rounded-lg transition-colors shadow-md min-h-[48px]">
-                        <span class="flex items-center gap-2">
-                            <Icon icon="heroicons:clock" class="w-5 h-5" />
-                            <span>รอการตอบรับ</span>
-                        </span>
-                        <Icon icon="heroicons:chevron-down" class="w-4 h-4 transition-transform" :class="{'rotate-180': showAcceptMemberOption}" />
-                    </button>
-                    <div v-if="showAcceptMemberOption" class="absolute left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border z-50">
-                        <button @click.prevent="onRequestToBeUnMember" :disabled="isRequestingUnmember"
-                            class="w-full px-4 py-3 text-red-600 active:bg-red-50 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 min-h-[48px]">
-                            <Icon v-if="isRequestingUnmember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                            <Icon v-else icon="heroicons:x-circle" class="w-5 h-5" />
-                            <span>ยกเลิกคำขอ</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Active Member (Mobile) -->
-                <button v-else-if="courseMemberOfAuth && (memberStatus === '1' || memberStatus === 'active')"
-                    @click.prevent="onRequestToBeUnMember" :disabled="isRequestingUnmember"
-                    class="w-full max-w-xs flex items-center justify-center gap-2 px-5 py-3 bg-yellow-300 active:bg-red-500 active:text-white text-gray-700 font-semibold rounded-lg transition-all shadow-md disabled:opacity-50 min-h-[48px]">
-                    <Icon v-if="isRequestingUnmember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                    <Icon v-else icon="majesticons:door-exit-line" class="w-5 h-5" />
-                    <span>ออกจากสมาชิก</span>
-                </button>
-
-                <!-- Not a member (Mobile): show price info only -->
-                <div v-else-if="!courseMemberOfAuth" class="flex items-center justify-center gap-3 w-full max-w-xs">
-                    <span v-if="course?.tuition_fees > 0"
-                        class="flex items-center gap-1.5 px-4 py-2.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-semibold rounded-lg text-sm">
-                        <Icon icon="heroicons:banknotes" class="w-4 h-4" />
-                        ฿{{ course.tuition_fees?.toLocaleString() }}
-                    </span>
-                    <span v-else
-                        class="flex items-center gap-1.5 px-4 py-2.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold rounded-lg text-sm">
-                        <Icon icon="heroicons:check-badge" class="w-4 h-4" />
-                        ฟรี
-                    </span>
-                    <span class="text-xs text-gray-400">เลื่อนลงเพื่อสมัคร</span>
                 </div>
             </div>
         </div>
+
+        <Teleport to="body">
+            <div
+                v-if="showGroupSelector"
+                class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                @click.self="showGroupSelector = false"
+            >
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+                <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-lg font-black text-gray-900 dark:text-white">เลือกกลุ่มเรียน</h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">เลือกกลุ่มที่ต้องการสมัครเข้าร่วม</p>
+                            </div>
+                            <button
+                                type="button"
+                                @click="showGroupSelector = false"
+                                class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-colors"
+                            >
+                                <Icon icon="heroicons:x-mark" class="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-5 space-y-3 max-h-[50vh] overflow-y-auto">
+                        <label
+                            v-for="group in courseGroups"
+                            :key="group.id"
+                            class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors"
+                            :class="selectedGroupId === group.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'"
+                        >
+                            <input
+                                v-model="selectedGroupId"
+                                type="radio"
+                                :value="group.id"
+                                class="text-blue-600 focus:ring-blue-500"
+                            >
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-gray-900 dark:text-white truncate">{{ group.name || `กลุ่ม ${group.id}` }}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ group.members_count || group.members?.length || 0 }} สมาชิก
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="p-5 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
+                        <button
+                            type="button"
+                            @click="showGroupSelector = false"
+                            class="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            type="button"
+                            @click="confirmGroupMembership"
+                            :disabled="!selectedGroupId || isRequestingMember"
+                            class="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+                            <span>สมัครกลุ่มนี้</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <AcademyCoursePurchaseModal
+            v-if="course"
+            :course="course"
+            :visible="showCopyPurchaseModal"
+            @close="showCopyPurchaseModal = false"
+            @success="onCopyPurchaseSuccess"
+        />
 
         <!-- Edit Course Info Modal -->
         <DialogModal :show="showEditModal" @close="closeEditModal" max-width="2xl">

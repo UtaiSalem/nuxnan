@@ -123,10 +123,28 @@ const goToCourse = () => {
 
       <!-- Title -->
       <h3
-        class="text-gray-800 dark:text-white font-bold mb-3 line-clamp-2 group-hover:text-blue-500 transition-colors flex-grow"
+        class="text-gray-800 dark:text-white font-bold mb-2 line-clamp-2 group-hover:text-blue-500 transition-colors"
       >
         {{ course.name }}
       </h3>
+
+      <!-- Semester & Academic Year Badges -->
+      <div v-if="course.semester || course.academic_year" class="flex flex-wrap gap-2 mb-3">
+        <div 
+          v-if="course.semester" 
+          class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-medium rounded border border-blue-100 dark:border-blue-800"
+        >
+          <Icon icon="fluent:calendar-16-regular" class="w-3 h-3" />
+          <span>ภาคเรียนที่ {{ course.semester }}</span>
+        </div>
+        <div 
+          v-if="course.academic_year" 
+          class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 dark:bg-gray-700/30 text-gray-600 dark:text-gray-400 text-[10px] font-medium rounded border border-gray-100 dark:border-gray-700"
+        >
+          <Icon icon="fluent:hat-graduation-16-regular" class="w-3 h-3" />
+          <span>ปีการศึกษา {{ course.academic_year }}</span>
+        </div>
+      </div>
 
       <!-- Stats Row -->
       <div

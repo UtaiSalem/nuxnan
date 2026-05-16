@@ -15,7 +15,7 @@ return new class extends Migration
         // Update groups count from course_groups table
         DB::statement('
             UPDATE courses
-            SET groups = (
+            SET `groups` = (
                 SELECT COUNT(*)
                 FROM course_groups cg
                 WHERE cg.course_id = courses.id

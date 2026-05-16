@@ -616,7 +616,7 @@ const respondToInvitation = async (accept: boolean) => {
     </div>
     
     <!-- Purchase Modal -->
-    <LearnCourseCoursePurchaseModal
+    <LearnCoursePurchaseModal
       v-model="showPurchaseModal"
       :course="course"
       @confirm="onPurchaseConfirm"

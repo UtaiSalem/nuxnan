@@ -75,6 +75,24 @@
         {{ course.name }}
       </h3>
 
+      <!-- Semester & Academic Year Badges -->
+      <div v-if="course.semester || course.academic_year" class="flex flex-wrap gap-1.5 mb-2">
+        <div 
+          v-if="course.semester" 
+          class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] font-medium rounded border border-blue-100 dark:border-blue-800"
+        >
+          <Icon icon="fluent:calendar-16-regular" class="w-2.5 h-2.5" />
+          <span>ภาคเรียนที่ {{ course.semester }}</span>
+        </div>
+        <div 
+          v-if="course.academic_year" 
+          class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 dark:bg-slate-700/30 text-slate-600 dark:text-slate-400 text-[9px] font-medium rounded border border-slate-100 dark:border-slate-700"
+        >
+          <Icon icon="fluent:hat-graduation-16-regular" class="w-2.5 h-2.5" />
+          <span>ปีการศึกษา {{ course.academic_year }}</span>
+        </div>
+      </div>
+
       <!-- Stats -->
       <div class="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400 mb-3">
         <div class="flex items-center gap-1">
@@ -130,7 +148,7 @@
         </div>
 
         <!-- Right: Membership status / action button -->
-        <div class="shrink-0">
+        <div class="shrink-0 flex flex-col items-end gap-1">
           <NuxtLink
             v-if="isOwner"
             :to="`/Learn/Courses/${course.id}`"
@@ -151,6 +169,13 @@
           <span v-else-if="isOwned" class="flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">
             <Icon icon="mdi:check-circle" class="w-3 h-3" /> โคลนแล้ว
           </span>
+          <NuxtLink
+            v-else
+            :to="`/Learn/Courses/${course.id}`"
+            class="flex items-center gap-1 px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-full transition-colors"
+          >
+            <Icon icon="mdi:arrow-right-circle" class="w-3 h-3" /> รายละเอียด
+          </NuxtLink>
         </div>
 
       </div>

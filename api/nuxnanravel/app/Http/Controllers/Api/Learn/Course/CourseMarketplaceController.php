@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Course;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Services\CoursePurchaseService;
+use App\Services\WalletService;
 use App\Http\Resources\Learn\Course\info\MarketplaceCourseResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -13,7 +14,8 @@ use Illuminate\Support\Facades\Auth;
 class CourseMarketplaceController extends Controller
 {
     public function __construct(
-        protected CoursePurchaseService $purchaseService
+        protected CoursePurchaseService $purchaseService,
+        protected WalletService $walletService
     ) {}
 
     /**
@@ -125,12 +127,253 @@ class CourseMarketplaceController extends Controller
                     : 'Course purchased successfully.',
                 'new_course_id' => $result['new_course'] ? $result['new_course']->id : null,
                 'is_queued' => $result['is_queued'],
-                'payment' => $result['payment']
+                'payment' => $result['payment'],
+                'purchase_id' => $result['purchase_id'] ?? null
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Check if user can purchase a course
+     * Returns pricing and balance info
+     */
+    public function checkPurchase(Course $course): JsonResponse
+    {
+        $user = auth()->user();
+        $POINTS_PER_THB = CoursePurchaseService::POINTS_PER_THB;
+
+        $priceTHB = (float) ($course->price ?? 0);
+        $pricePoints = (int) ceil($priceTHB * $POINTS_PER_THB);
+
+        $walletBalance = (float) ($user->wallet ?? 0);
+        $pointsBalance = (int) ($user->pp ?? 0);
+
+        $canPayWallet = $walletBalance >= $priceTHB;
+        $canPayPoints = $pointsBalance >= $pricePoints;
+
+        // mixed: wallet เท่าที่มี + แปลงส่วนต่างเป็น points
+        $thbShortfall = max(0, $priceTHB - $walletBalance);
+        $mixedPointsNeeded = (int) ceil($thbShortfall * $POINTS_PER_THB);
+        $canPayMixed = $walletBalance > 0
+            && $pointsBalance >= $mixedPointsNeeded
+            && !$canPayWallet;
+
+        return response()->json([
+            'success' => true,
+            'is_free' => $priceTHB <= 0,
+            'price_thb' => $priceTHB,
+            'price_points' => $pricePoints,
+            'exchange_rate' => $POINTS_PER_THB,
+            'balance' => [
+                'wallet' => $walletBalance,
+                'points' => $pointsBalance,
+            ],
+            'can_pay' => [
+                'wallet' => $canPayWallet,
+                'points' => $canPayPoints,
+                'mixed'  => $canPayMixed,
+            ],
+            'mixed_breakdown' => [
+                'wallet_portion' => min($walletBalance, $priceTHB),
+                'points_portion' => $mixedPointsNeeded,
+            ],
+            'has_purchased' => $this->walletService->hasPurchased($user, $course),
+            'is_self' => $user->id === $course->user_id,
+            'course' => [
+                'id' => $course->id,
+                'name' => $course->name,
+                'cover' => $course->cover_url,
+            ],
+        ]);
+    }
+
+    /**
+     * Get user's course purchase history
+     */
+    public function getPurchaseHistory(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        $perPage = $request->get('per_page', 20);
+        
+        $purchases = \App\Models\CoursePurchase::with(['sourceCourse', 'clonedCourse'])
+            ->where('buyer_id', $user->id)
+            ->whereIn('status', ['completed', 'pending_clone', 'paid'])
+            ->latest()
+            ->paginate($perPage);
+        
+        // Map to a consistent format
+        $data = collect($purchases->items())->map(function ($purchase) {
+            $course = $purchase->sourceCourse;
+            return [
+                'id' => $purchase->id,
+                'status' => $purchase->status,
+                'amount_wallet' => $purchase->amount_wallet,
+                'amount_points' => $purchase->amount_points,
+                'payment_mode' => $purchase->payment_mode,
+                'created_at' => $purchase->created_at,
+                'course' => $course ? [
+                    'id' => $course->id,
+                    'name' => $course->name,
+                    'cover' => $course->cover_url,
+                ] : null,
+                'cloned_course_id' => $purchase->cloned_course_id,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'purchases' => $data,
+            'pagination' => [
+                'current_page' => $purchases->currentPage(),
+                'last_page' => $purchases->lastPage(),
+                'per_page' => $purchases->perPage(),
+                'total' => $purchases->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get sales analytics for course owners
+     */
+    public function getSalesAnalytics(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        
+        // Get sales records
+        $salesQuery = \App\Models\CoursePurchase::where('seller_id', $user->id)
+            ->whereIn('status', ['completed', 'pending_clone', 'paid']);
+        
+        // Apply date filters
+        if ($request->has('from')) {
+            $salesQuery->whereDate('created_at', '>=', $request->from);
+        }
+        if ($request->has('to')) {
+            $salesQuery->whereDate('created_at', '<=', $request->to);
+        }
+        
+        $sales = $salesQuery->get();
+        
+        // Calculate totals
+        $totalRevenue = $sales->sum('amount_wallet');
+        $totalSales = $sales->count();
+        
+        // Group by course
+        $salesByCourse = $sales->groupBy('source_course_id')
+            ->map(function ($group, $courseId) {
+                $course = Course::find($courseId);
+                return [
+                    'course_id' => $courseId,
+                    'course_name' => $course->name ?? 'Unknown',
+                    'total_sales' => $group->count(),
+                    'total_revenue' => $group->sum('amount_wallet'),
+                ];
+            })->values();
+
+        return response()->json([
+            'success' => true,
+            'analytics' => [
+                'total_revenue' => $totalRevenue,
+                'total_sales' => $totalSales,
+                'sales_by_course' => $salesByCourse,
+            ],
+            'transactions' => $sales->take(50),
+        ]);
+    }
+
+    /**
+     * Refund a course purchase (admin only)
+     */
+    public function refundPurchase(Request $request, Course $course): JsonResponse
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        // Check if requester is admin or course owner
+        if (!$course->isAdmin(auth()->user()) && $course->user_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่มีสิทธิ์คืนเงิน',
+            ], 403);
+        }
+
+        $buyerUser = \App\Models\User::find($request->user_id);
+        
+        // Find the record in course_purchases
+        $purchase = \App\Models\CoursePurchase::where('buyer_id', $buyerUser->id)
+            ->where('source_course_id', $course->id)
+            ->whereIn('status', ['completed', 'pending_clone', 'paid'])
+            ->latest()
+            ->first();
+
+        if (!$purchase) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบประวัติการซื้อ',
+            ], 404);
+        }
+
+        try {
+            \DB::transaction(function () use ($purchase, $buyerUser, $course, $request) {
+                // 1. Refund Buyer Wallet
+                if ($purchase->wallet_transaction_id) {
+                    $this->walletService->refundCoursePurchase(
+                        $buyerUser,
+                        $course,
+                        $purchase->amount_wallet,
+                        $request->reason
+                    );
+                }
+
+                // 2. Refund Buyer Points
+                if ($purchase->points_transaction_id) {
+                    $pointsService = app(\App\Services\PointsService::class);
+                    $pointsService->refund(
+                        $buyerUser,
+                        $purchase->amount_points,
+                        'App\Models\Course',
+                        $course->id,
+                        "Refund: " . ($request->reason ?? "Course Purchase Refund")
+                    );
+                }
+
+                // 3. Reverse Seller Income
+                if ($purchase->seller_income_transaction_id) {
+                    $incomeTransaction = \App\Models\WalletTransaction::find($purchase->seller_income_transaction_id);
+                    if ($incomeTransaction && $incomeTransaction->status === 'completed') {
+                        $seller = $incomeTransaction->user;
+                        $seller->decrement('wallet', $incomeTransaction->amount);
+                        $incomeTransaction->update([
+                            'status' => 'failed',
+                            'description' => $incomeTransaction->description . " (Refunded: " . ($request->reason ?? "Manual Refund") . ")"
+                        ]);
+                    }
+                }
+
+                // Update purchase status
+                $purchase->update([
+                    'status' => 'refunded',
+                    'refunded_at' => now(),
+                ]);
+
+                // Remove membership
+                $course->courseMembers()->where('user_id', $buyerUser->id)->delete();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'คืนเงินสำเร็จ',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คืนเงินล้มเหลว: ' . $e->getMessage(),
             ], 400);
         }
     }

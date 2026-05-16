@@ -40,6 +40,13 @@ const handleDeleteClick = (e: Event) => {
   e.stopPropagation()
   emit('delete', props.topic)
 }
+
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  if (img.dataset.fallbackApplied) return
+  img.dataset.fallbackApplied = 'true'
+  img.src = '/images/default-avatar.png'
+}
 </script>
 
 <template>
@@ -138,6 +145,7 @@ const handleDeleteClick = (e: Event) => {
             :src="image.full_url"
             :alt="topic.title"
             class="rounded-lg object-cover w-full h-48 border border-gray-200 dark:border-gray-700 hover:scale-105 transition-transform cursor-pointer"
+            @error="handleImageError"
           />
         </div>
 

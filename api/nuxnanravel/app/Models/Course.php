@@ -164,6 +164,11 @@ class Course extends Model
         return $this->hasMany(Course::class, 'source_course_id');
     }
 
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(CoursePurchase::class, 'source_course_id');
+    }
+
     public function academy(): BelongsTo
     {
         return $this->belongsTo(Academy::class);

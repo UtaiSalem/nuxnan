@@ -14,6 +14,7 @@ use App\Models\CourseInvitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
+use App\Services\CourseCloneService;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
@@ -29,11 +30,43 @@ use App\Http\Resources\Learn\Course\members\CourseMemberResource;
 use App\Http\Resources\Learn\Course\info\MemberedCourseResource;
 use App\Http\Resources\Learn\Course\info\UserProfileCourseResource;
 use App\Models\RecentlyViewedCourse;
+use App\Services\CourseMediaService;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LearningResultsExport;
 
 class CourseController extends Controller
 {
+    public function duplicate(Course $course, CourseCloneService $cloneService)
+    {
+        $user = auth()->user();
+
+        if (!$user || (int) $course->user_id !== (int) $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the course owner can duplicate this course.',
+            ], 403);
+        }
+
+        try {
+            $context = new \App\Services\Support\CourseCloneContext(
+                mode: 'self_duplicate',
+                addCopySuffix: true
+            );
+            $newCourse = $cloneService->clone($course, $user, $context);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Course duplicated successfully.',
+                'course' => $newCourse,
+            ], 201);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function getRecentCourses(Request $request)
     {
         $user = auth()->user();
@@ -603,7 +636,7 @@ class CourseController extends Controller
         ], 200);
     }
 
-    public function updateCover(Course $course, Request $request)
+    public function updateCover(Course $course, Request $request, CourseMediaService $mediaService)
     {
         if (!$course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -614,12 +647,15 @@ class CourseController extends Controller
         ]);
 
         if ($request->hasFile('cover')) {
-            // Delete old cover
+            // Delete old cover if unused
             if ($course->cover) {
-                $oldFile = public_path('storage/images/courses/covers/' . $course->cover);
-                if (File::exists($oldFile)) {
-                    File::delete($oldFile);
-                }
+                $mediaService->deleteIfUnused(
+                    'images/courses/covers/' . $course->cover,
+                    Course::class,
+                    'cover',
+                    $course->cover,
+                    $course->id
+                );
             }
 
             $file = $request->file('cover');
@@ -638,7 +674,7 @@ class CourseController extends Controller
         return response()->json(['success' => false, 'message' => 'No file uploaded'], 400);
     }
 
-    public function updateLogo(Course $course, Request $request)
+    public function updateLogo(Course $course, Request $request, CourseMediaService $mediaService)
     {
         if (!$course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -649,12 +685,15 @@ class CourseController extends Controller
         ]);
 
         if ($request->hasFile('logo')) {
-            // Delete old logo
+            // Delete old logo if unused
             if ($course->logo) {
-                $oldFile = public_path('storage/images/courses/logos/' . $course->logo);
-                if (File::exists($oldFile)) {
-                    File::delete($oldFile);
-                }
+                $mediaService->deleteIfUnused(
+                    'images/courses/logos/' . $course->logo,
+                    Course::class,
+                    'logo',
+                    $course->logo,
+                    $course->id
+                );
             }
 
             $file = $request->file('logo');
@@ -709,7 +748,7 @@ class CourseController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Course $course)
+    public function destroy(Course $course, CourseMediaService $mediaService)
     {
         if (!$course->isAdmin(auth()->user())) { // Usually only owner can destroy course, but if user wants admin = owner, then this is fine.
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -720,7 +759,13 @@ class CourseController extends Controller
             foreach ($lessons as $lesson) {
                 if ($lesson->images) {
                     foreach ($lesson->images as $image) {
-                        Storage::disk('public')->delete('images/courses/lessons/'. $image->image_url);
+                        $mediaService->deleteUnused(
+                            'lesson_image',
+                            \App\Models\LessonImage::class,
+                            'filename',
+                            $image->filename,
+                            $image->id
+                        );
                         $image->delete();   
                     }
                 }
@@ -728,7 +773,30 @@ class CourseController extends Controller
             }
         }
 
-        $course->courseSettings->delete();
+        // Delete cover and logo if unused
+        if ($course->cover) {
+            $mediaService->deleteUnused(
+                'course_cover',
+                Course::class,
+                'cover',
+                $course->cover,
+                $course->id
+            );
+        }
+        if ($course->logo) {
+            $mediaService->deleteUnused(
+                'course_logo',
+                Course::class,
+                'logo',
+                $course->logo,
+                $course->id
+            );
+        }
+
+        if ($course->courseSettings) {
+            $course->courseSettings->delete();
+        }
+        
         $course->delete();
         return response()->json([
             'success' => true,

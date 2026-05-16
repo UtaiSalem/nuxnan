@@ -160,21 +160,21 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'content' => 'nullable|string',
-                'youtube_url' => 'nullable|url',
+                'youtube_url' => 'nullable|string',
                 'order' => 'nullable|integer|min:0',
                 'min_read' => 'nullable|integer|min:0',
                 'point_tuition_fee' => 'nullable|numeric|min:0',
-                'status' => 'required|in:0,1', // 0=draft, 1=published
-                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
+                'status' => 'required', // Relaxed as it's an enum/in
+                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240', // 10MB max
             ]);
 
             // Create lesson
             $lesson = $course->courseLessons()->create([
                 'user_id' => auth()->id(),
                 'title' => $validated['title'],
-                'description' => $validated['description'] ?? null,
-                'content' => $validated['content'] ?? null,
-                'youtube_url' => $validated['youtube_url'] ?? null,
+                'description' => ($validated['description'] === "null" || $validated['description'] === "") ? null : $validated['description'],
+                'content' => ($validated['content'] === "null" || $validated['content'] === "") ? null : $validated['content'],
+                'youtube_url' => ($validated['youtube_url'] === "null" || $validated['youtube_url'] === "") ? null : $validated['youtube_url'],
                 'order' => $validated['order'] ?? 0,
                 'min_read' => $validated['min_read'] ?? 1,
                 'point_tuition_fee' => $validated['point_tuition_fee'] ?? 0,
@@ -274,23 +274,23 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'content' => 'nullable|string',
-                'youtube_url' => 'nullable|url',
+                'youtube_url' => 'nullable|string',
                 'min_read' => 'nullable|integer|min:0',
                 'order' => 'nullable|integer|min:0',
                 'point_tuition_fee' => 'nullable|numeric|min:0',
-                'status' => 'required|in:0,1',
-                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+                'status' => 'required',
+                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             ]);
 
             // Update lesson
             $lesson->update([
                 'title' => $validated['title'],
-                'description' => $validated['description'] === "null" ? null : $validated['description'],
-                'content' => $validated['content'] === "null" ? null : $validated['content'],
-                'youtube_url' => $validated['youtube_url'] === "null" ? null : $validated['youtube_url'],
-                'min_read' => $validated['min_read'] ?? 1,
-                'order' => $validated['order'] ?? 0,
-                'point_tuition_fee' => $validated['point_tuition_fee'] ?? 0,
+                'description' => ($validated['description'] === "null" || $validated['description'] === "") ? null : $validated['description'],
+                'content' => ($validated['content'] === "null" || $validated['content'] === "") ? null : $validated['content'],
+                'youtube_url' => ($validated['youtube_url'] === "null" || $validated['youtube_url'] === "") ? null : $validated['youtube_url'],
+                'min_read' => $validated['min_read'] ?? $lesson->min_read,
+                'order' => $validated['order'] ?? $lesson->order,
+                'point_tuition_fee' => $validated['point_tuition_fee'] ?? $lesson->point_tuition_fee,
                 'status' => $validated['status']
             ]);
 
@@ -322,12 +322,18 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     /**
      * Helper method to delete assignment and its related data
      */
-    private function deleteAssignment($assignment): void
+    private function deleteAssignment($assignment, CourseMediaService $mediaService): void
     {
-        // Delete assignment images
+        // Delete assignment images if unused
         if ($assignment->images && $assignment->images->count() > 0) {
             foreach ($assignment->images as $image) {
-                Storage::disk('public')->delete('images/lessons/assignments/' . $image->image_url);
+                $mediaService->deleteUnused(
+                    'assignment_image',
+                    \App\Models\AssignmentImage::class,
+                    'image_url',
+                    $image->image_url,
+                    $image->id
+                );
                 $image->delete();
             }
         }
@@ -337,7 +343,13 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             foreach ($assignment->answers as $answer) {
                 if ($answer->images && $answer->images->count() > 0) {
                     foreach ($answer->images as $answerImage) {
-                        Storage::disk('public')->delete($answerImage->image_url);
+                        $mediaService->deleteUnused(
+                            'assignment_answer_image',
+                            \App\Models\AssignmentAnswerImage::class,
+                            'filename',
+                            $answerImage->filename,
+                            $answerImage->id
+                        );
                         $answerImage->delete();
                     }
                 }
@@ -351,12 +363,20 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     /**
      * Helper method to delete question and its related data
      */
-    private function deleteQuestion($question): void
+    private function deleteQuestion($question, CourseMediaService $mediaService): void
     {
-        // Delete question images
+        // Delete question images if unused
         if ($question->images && $question->images->count() > 0) {
             foreach ($question->images as $image) {
-                Storage::disk('public')->delete($image->image_url ?? $image->filename ?? '');
+                $filename = $image->filename ?? $image->image_url;
+                $field = $image->filename ? 'filename' : 'image_url';
+                $mediaService->deleteUnused(
+                    'question_image',
+                    \App\Models\QuestionImage::class,
+                    $field,
+                    $filename,
+                    $image->id
+                );
                 $image->delete();
             }
         }
@@ -366,7 +386,15 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             foreach ($question->options as $option) {
                 if (method_exists($option, 'images') && $option->images && $option->images->count() > 0) {
                     foreach ($option->images as $optImage) {
-                        Storage::disk('public')->delete($optImage->image_url ?? $optImage->filename ?? '');
+                        $optFilename = $optImage->filename ?? $optImage->image_url;
+                        $optField = $optImage->filename ? 'filename' : 'image_url';
+                        $mediaService->deleteUnused(
+                            'option_image',
+                            \App\Models\QuestionImage::class,
+                            $optField,
+                            $optFilename,
+                            $optImage->id
+                        );
                         $optImage->delete();
                     }
                 }
@@ -385,12 +413,18 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     /**
      * Helper method to delete topic and its related data
      */
-    private function deleteTopic($topic): void
+    private function deleteTopic($topic, CourseMediaService $mediaService): void
     {
-        // Delete topic images
+        // Delete topic images if unused
         if ($topic->images && $topic->images->count() > 0) {
             foreach ($topic->images as $topic_image) {
-                Storage::disk('public')->delete('images/courses/lessons/topics/' . $topic_image->filename);
+                $mediaService->deleteUnused(
+                    'topic_image',
+                    \App\Models\TopicImage::class,
+                    'filename',
+                    $topic_image->filename,
+                    $topic_image->id
+                );
                 $topic_image->delete();
             }
         }
@@ -398,14 +432,14 @@ class CourseLessonController extends \App\Http\Controllers\Controller
         // Delete topic assignments
         if ($topic->assignments && $topic->assignments->count() > 0) {
             foreach ($topic->assignments as $assignment) {
-                $this->deleteAssignment($assignment);
+                $this->deleteAssignment($assignment, $mediaService);
             }
         }
 
         // Delete topic questions
         if ($topic->questions && $topic->questions->count() > 0) {
             foreach ($topic->questions as $question) {
-                $this->deleteQuestion($question);
+                $this->deleteQuestion($question, $mediaService);
             }
         }
 
@@ -415,7 +449,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     /**
      * Remove the specified lesson
      */
-    public function destroy(Course $course, Lesson $lesson)
+    public function destroy(Course $course, Lesson $lesson, CourseMediaService $mediaService)
     {
         try {
             // Check permission
@@ -442,7 +476,13 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                     // Delete comment images
                     if ($comment->lessonCommentImages && $comment->lessonCommentImages->count() > 0) {
                         foreach ($comment->lessonCommentImages as $comment_image) {
-                            Storage::disk('public')->delete('images/courses/lessons/comments/' . $comment_image->filename);
+                            $mediaService->deleteUnused(
+                                'lesson_comment_image',
+                                \App\Models\LessonCommentImage::class,
+                                'filename',
+                                $comment_image->filename,
+                                $comment_image->id
+                            );
                             $comment_image->delete();
                         }
                     }
@@ -456,28 +496,34 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             // 2. Delete lesson topics and their related data (including assignments/questions)
             if ($lesson->topics && $lesson->topics->count() > 0) {
                 foreach ($lesson->topics as $topic) {
-                    $this->deleteTopic($topic);
+                    $this->deleteTopic($topic, $mediaService);
                 }
             }
 
             // 3. Delete lesson assignments (direct assignments on lesson)
             if ($lesson->assignments && $lesson->assignments->count() > 0) {
                 foreach ($lesson->assignments as $assignment) {
-                    $this->deleteAssignment($assignment);
+                    $this->deleteAssignment($assignment, $mediaService);
                 }
             }
 
             // 4. Delete lesson questions (direct questions on lesson)
             if ($lesson->questions && $lesson->questions->count() > 0) {
                 foreach ($lesson->questions as $question) {
-                    $this->deleteQuestion($question);
+                    $this->deleteQuestion($question, $mediaService);
                 }
             }
 
-            // 5. Delete lesson images
+            // 5. Delete lesson images if unused
             if ($lesson->images && $lesson->images->count() > 0) {
                 foreach ($lesson->images as $lesson_image) {
-                    Storage::disk('public')->delete('images/courses/lessons/' . $lesson_image->filename);
+                    $mediaService->deleteUnused(
+                        'lesson_image',
+                        \App\Models\LessonImage::class,
+                        'filename',
+                        $lesson_image->filename,
+                        $lesson_image->id
+                    );
                     $lesson_image->delete();
                 }
             }

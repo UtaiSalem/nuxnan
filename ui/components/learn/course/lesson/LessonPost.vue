@@ -326,7 +326,11 @@ const closeImagePreview = () => {
 
 const handleImageError = (event: Event, index: number) => {
   const img = event.target as HTMLImageElement
-  img.src = '/images/placeholder-lesson.png'
+  // Prevent infinite loop if fallback image also fails
+  if (img.dataset.fallbackApplied) return
+  img.dataset.fallbackApplied = 'true'
+  
+  img.src = '/images/default-avatar.png'
   img.alt = `รูปภาพ ${index + 1} ไม่สามารถโหลดได้`
 }
 
@@ -473,6 +477,7 @@ const handleTopicComplete = (topicId: number) => {
               :src="lesson.creater?.avatar || '/images/default-avatar.png'"
               :alt="lesson.creater?.name"
               class="w-10 h-10 rounded-full ring-2 ring-blue-500 object-cover"
+              @error="(e) => (e.target as HTMLImageElement).src = '/images/default-avatar.png'"
             />
             <div>
               <p class="font-medium text-gray-900 dark:text-white">
@@ -644,6 +649,7 @@ const handleTopicComplete = (topicId: number) => {
               :src="lesson.images[previewIndex]?.full_url || lesson.images[previewIndex]?.url"
               :alt="`รูปที่ ${previewIndex + 1}`"
               class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              @error="handleImageError($event, previewIndex)"
             />
             <!-- Image Counter -->
             <div class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 rounded-full text-white font-medium">

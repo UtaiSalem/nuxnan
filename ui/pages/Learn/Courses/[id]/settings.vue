@@ -57,7 +57,28 @@ watch(() => isLoadingParent?.value, (loading) => {
 
 // State
 const isSaving = ref(false)
+const savingSection = ref<string | null>(null)
+const isDuplicating = ref(false)
 const api = useApi()
+
+// Section fields definition
+const sectionFields: Record<string, string[]> = {
+  general: ['name', 'code', 'description', 'category', 'education_level', 'education_year'],
+  academic: ['semester', 'academic_year', 'credit_units', 'hours_per_week', 'start_date', 'end_date'],
+  publishing: ['status', 'auto_accept_members'],
+  management: ['saleable', 'tuition_fees', 'discount', 'discount_type'],
+  marketplace: ['is_for_marketplace', 'price']
+}
+
+const sectionLabels: Record<string, string> = {
+  general: 'ข้อมูลทั่วไป',
+  academic: 'ข้อมูลเชิงวิชาการ',
+  publishing: 'การเผยแพร่',
+  management: 'การจัดการ',
+  marketplace: 'ตลาด Master Copy'
+}
+
+const isSavingSection = (section: string) => savingSection.value === section
 
 // Form data
 const form = ref({
@@ -85,6 +106,37 @@ const form = ref({
   price_points: 0,
   price_type: 'free'
 })
+
+// Snapshot for dirty checking
+const initialForm = ref<any>(null)
+
+const normalizeValue = (value: any) => {
+  if (value === undefined || value === null || value === '') return null
+  if (typeof value === 'string') return value.trim()
+  return value
+}
+
+const isSectionDirty = (section: string) => {
+  if (!initialForm.value) return false
+  const fields = sectionFields[section]
+  if (!fields) return false
+  
+  return fields.some(field => {
+    return normalizeValue((form.value as any)[field]) !== normalizeValue(initialForm.value[field])
+  })
+}
+
+const isAnySectionDirty = computed(() => {
+  return Object.keys(sectionFields).some(section => isSectionDirty(section))
+})
+
+const markSectionClean = (section: string) => {
+  if (!initialForm.value) return
+  const fields = sectionFields[section]
+  fields.forEach(field => {
+    initialForm.value[field] = JSON.parse(JSON.stringify((form.value as any)[field]))
+  })
+}
 
 // Course categories
 const courseCategories = [
@@ -115,7 +167,7 @@ const selectedEducationLevelOption = computed(() =>
 // Initialize form with course data
 watch(() => course?.value, (newCourse) => {
   if (newCourse) {
-    form.value = {
+    const data = {
       code: newCourse.code || '',
       name: newCourse.name || '',
       description: newCourse.description || DEFAULT_DESCRIPTION_TEMPLATE,
@@ -140,6 +192,8 @@ watch(() => course?.value, (newCourse) => {
       price_points: newCourse.price_points || 0,
       price_type: newCourse.price_type || 'free'
     }
+    form.value = { ...data }
+    initialForm.value = JSON.parse(JSON.stringify(data))
   }
 }, { immediate: true })
 
@@ -170,13 +224,90 @@ const saveSettings = async () => {
     }
     const response = await api.put(`/api/courses/${course.value.id}`, payload)
     if (response) {
-       useToast().success('บันทึกการตั้งค่าเรียบร้อยแล้ว')
+       useToast().success('บันทึกการตั้งค่าทั้งหมดเรียบร้อยแล้ว')
+       initialForm.value = JSON.parse(JSON.stringify(form.value))
        if (refreshCourse) refreshCourse()
     }
   } catch (err: any) {
     useToast().error(err.data?.msg || 'ไม่สามารถบันทึกได้')
   } finally {
     isSaving.value = false
+  }
+}
+
+// Save specific section
+const saveSettingsSection = async (section: string, fields: string[]) => {
+  if (!course?.value) return
+
+  // Validation
+  if (section === 'general' && !form.value.name?.trim()) {
+    useToast().error('กรุณาระบุชื่อรายวิชา')
+    return
+  }
+
+  savingSection.value = section
+  try {
+    const payload: any = {}
+    fields.forEach(field => {
+      payload[field] = (form.value as any)[field]
+    })
+
+    // Additional logic for specific sections
+    if (section === 'marketplace') {
+      payload.price_type = form.value.is_for_marketplace && form.value.price > 0 ? 'wallet' : 'free'
+    }
+
+    const response = await api.put(`/api/courses/${course.value.id}`, payload)
+    if (response) {
+      useToast().success(`บันทึก${sectionLabels[section]}เรียบร้อยแล้ว`)
+      markSectionClean(section)
+      if (refreshCourse) refreshCourse()
+    }
+  } catch (err: any) {
+    useToast().error(err.data?.msg || `ไม่สามารถบันทึก${sectionLabels[section]}ได้`)
+  } finally {
+    savingSection.value = null
+  }
+}
+
+// Duplicate course
+const duplicateCourse = async () => {
+  if (!course?.value || isDuplicating.value) return
+
+  const result = await Swal.fire({
+    title: 'คัดลอกรายวิชา?',
+    html: `ระบบจะสร้างรายวิชาใหม่พร้อมเนื้อหาเหมือน <strong>${course.value.name}</strong> แล้วคุณสามารถแก้รายละเอียดภายหลังได้`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'คัดลอก',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#2563eb',
+    cancelButtonColor: '#6b7280',
+    reverseButtons: true
+  })
+
+  if (!result.isConfirmed) return
+
+  isDuplicating.value = true
+  try {
+    const response = await api.post(`/api/courses/${course.value.id}/duplicate`, {})
+    const newCourseId = response?.course?.id
+
+    await Swal.fire({
+      title: 'คัดลอกสำเร็จ',
+      text: 'สร้างรายวิชาใหม่เรียบร้อยแล้ว',
+      icon: 'success',
+      timer: 1400,
+      showConfirmButton: false
+    })
+
+    if (newCourseId) {
+      navigateTo(`/Learn/Courses/${newCourseId}/settings`)
+    }
+  } catch (err: any) {
+    Swal.fire('ผิดพลาด', err.data?.message || 'ไม่สามารถคัดลอกรายวิชาได้', 'error')
+  } finally {
+    isDuplicating.value = false
   }
 }
 
@@ -237,13 +368,14 @@ const deleteCourse = async () => {
         
         <!-- Save Button (Desktop) -->
         <button
+          v-if="isAnySectionDirty"
           @click="saveSettings"
           :disabled="isSaving"
           class="hidden md:flex items-center gap-2 px-6 py-2.5 bg-white text-blue-600 font-bold rounded-xl shadow-lg hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Icon v-if="isSaving" icon="svg-spinners:ring-resize" class="w-5 h-5" />
           <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />
-          บันทึกการเปลี่ยนแปลง
+          บันทึกการเปลี่ยนแปลงทั้งหมด
         </button>
       </div>
     </div>
@@ -351,6 +483,20 @@ const deleteCourse = async () => {
               </div>
             </div>
           </div>
+          <template #footer v-if="isSectionDirty('general')">
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="saveSettingsSection('general', sectionFields.general)"
+                :disabled="isSavingSection('general')"
+                class="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white font-bold rounded-xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Icon v-if="isSavingSection('general')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกข้อมูลทั่วไป
+              </button>
+            </div>
+          </template>
         </ResponsiveCard>
 
         <!-- Academic Details Card -->
@@ -449,6 +595,20 @@ const deleteCourse = async () => {
                 </ClientOnly>
               </div>
           </div>
+          <template #footer v-if="isSectionDirty('academic')">
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="saveSettingsSection('academic', sectionFields.academic)"
+                :disabled="isSavingSection('academic')"
+                class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-bold rounded-xl shadow-lg hover:bg-purple-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Icon v-if="isSavingSection('academic')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกข้อมูลเชิงวิชาการ
+              </button>
+            </div>
+          </template>
         </ResponsiveCard>
       </div>
 
@@ -493,6 +653,20 @@ const deleteCourse = async () => {
               </label>
              </div>
           </div>
+          <template #footer v-if="isSectionDirty('publishing')">
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="saveSettingsSection('publishing', sectionFields.publishing)"
+                :disabled="isSavingSection('publishing')"
+                class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Icon v-if="isSavingSection('publishing')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกการเผยแพร่
+              </button>
+            </div>
+          </template>
         </ResponsiveCard>
 
         <!-- Configuration -->
@@ -584,6 +758,20 @@ const deleteCourse = async () => {
                </div>
             </div>
           </div>
+          <template #footer v-if="isSectionDirty('management')">
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="saveSettingsSection('management', sectionFields.management)"
+                :disabled="isSavingSection('management')"
+                class="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white font-bold rounded-xl shadow-lg hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Icon v-if="isSavingSection('management')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกค่าเรียน
+              </button>
+            </div>
+          </template>
         </ResponsiveCard>
 
         <!-- Marketplace Settings -->
@@ -678,7 +866,39 @@ const deleteCourse = async () => {
                 </div>
               </div>
             </div>
+          </div>
+          <template #footer v-if="isSectionDirty('marketplace')">
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="saveSettingsSection('marketplace', sectionFields.marketplace)"
+                :disabled="isSavingSection('marketplace')"
+                class="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white font-bold rounded-xl shadow-lg hover:bg-amber-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Icon v-if="isSavingSection('marketplace')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกตลาด Master Copy
+              </button>
+            </div>
+          </template>
+        </ResponsiveCard>
 
+        <!-- Duplicate Course -->
+        <ResponsiveCard title="คัดลอกรายวิชา" icon="heroicons:document-duplicate" icon-color="text-blue-500">
+          <div class="space-y-4">
+            <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              สร้างรายวิชาใหม่จากเนื้อหาเดิม เหมาะสำหรับเปิดรอบเรียนใหม่หรือปรับรายละเอียดบางส่วนโดยไม่ต้องเริ่มจากศูนย์
+            </p>
+            <button
+              type="button"
+              @click="duplicateCourse"
+              :disabled="isDuplicating"
+              class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Icon v-if="isDuplicating" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+              <Icon v-else icon="heroicons:document-duplicate-solid" class="w-5 h-5" />
+              {{ isDuplicating ? 'กำลังคัดลอก...' : 'คัดลอกรายวิชา' }}
+            </button>
           </div>
         </ResponsiveCard>
 
@@ -704,7 +924,8 @@ const deleteCourse = async () => {
 
 
       <!-- Mobile Save Button (Sticky Bottom) -->
-      <div class="fixed bottom-16 left-0 right-0 px-4 pt-3 pb-3 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 md:hidden z-40"
+      <div v-if="isAnySectionDirty"
+           class="fixed bottom-16 left-0 right-0 px-4 pt-3 pb-3 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 md:hidden z-40"
            style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
         <button
           type="submit"
@@ -713,7 +934,7 @@ const deleteCourse = async () => {
         >
           <Icon v-if="isSaving" icon="svg-spinners:ring-resize" class="w-5 h-5" />
           <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />
-          บันทึกการเปลี่ยนแปลง
+          บันทึกการเปลี่ยนแปลงทั้งหมด
         </button>
       </div>
 

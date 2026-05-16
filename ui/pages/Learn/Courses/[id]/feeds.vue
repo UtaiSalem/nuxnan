@@ -47,8 +47,8 @@ useHead({
 </script>
 
 <template>
-  <!-- 3 Column Layout for Course Feeds -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- 3 Column Layout for Course Feeds -->
     <!-- Left Sidebar - Course Info Widgets -->
     <div class="hidden lg:block lg:col-span-3 space-y-4">
       <!-- Course Quick Stats Widget -->

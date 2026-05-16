@@ -12,20 +12,36 @@ use App\Models\CourseQuiz;
 use App\Models\TopicImage;
 use App\Models\LessonImage;
 use App\Models\QuestionOption;
+use App\Services\Support\CourseCloneContext;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class CourseCloneService
 {
+    protected $mediaService;
+
+    public function __construct(CourseMediaService $mediaService)
+    {
+        $this->mediaService = $mediaService;
+    }
+
     /**
      * Clone a course and all its related content.
      */
-    public function clone(Course $source, User $newOwner): Course
+    public function clone(Course $source, User $newOwner, ?CourseCloneContext $context = null): Course
     {
-        return DB::transaction(function () use ($source, $newOwner) {
+        $context = $context ?? new CourseCloneContext();
+
+        return DB::transaction(function () use ($source, $newOwner, $context) {
             // Step 1: Clone Course
-            $newCourse = $this->cloneCourse($source, $newOwner);
+            $newCourse = $this->cloneCourse($source, $newOwner, $context);
+
+            if ($source->courseSettings) {
+                $newSettings = $source->courseSettings->replicate();
+                $newSettings->course_id = $newCourse->id;
+                $newSettings->save();
+            }
 
             // Mapping to track old IDs to new IDs
             $lessonMap = [];
@@ -39,8 +55,9 @@ class CourseCloneService
 
                 // Clone Lesson Images
                 foreach ($lesson->images as $image) {
+                    $newFilename = $this->mediaService->copyLessonImage($image->filename);
                     $newLesson->images()->create([
-                        'filename' => $image->filename,
+                        'filename' => $newFilename, // Strict Isolation: null if copy fails
                     ]);
                 }
 
@@ -51,8 +68,9 @@ class CourseCloneService
 
                     // Clone Topic Images
                     foreach ($topic->images as $image) {
+                        $newFilename = $this->mediaService->copyTopicImage($image->filename);
                         $newTopic->images()->create([
-                            'filename' => $image->filename,
+                            'filename' => $newFilename, // Strict Isolation
                         ]);
                     }
 
@@ -94,7 +112,7 @@ class CourseCloneService
         });
     }
 
-    protected function cloneCourse(Course $source, User $newOwner): Course
+    protected function cloneCourse(Course $source, User $newOwner, CourseCloneContext $context): Course
     {
         $data = $source->toArray();
 
@@ -105,9 +123,16 @@ class CourseCloneService
         unset($data['creator_id']);
         $data['source_course_id'] = $source->id;
         $data['status'] = 1; // Active
-        $data['is_for_marketplace'] = false;
-        $data['saleable'] = false;
-        $data['price'] = 0;
+        
+        // Handle name
+        if ($context->addCopySuffix) {
+            $data['name'] = $source->name . ' (Copy)';
+        }
+
+        // Handle marketplace state
+        $data['is_for_marketplace'] = $context->copyMarketplaceState ? $source->is_for_marketplace : false;
+        $data['saleable'] = $context->copyMarketplaceState ? $source->saleable : false;
+        $data['price'] = $context->copyMarketplaceState ? $source->price : 0;
         $data['total_sales'] = 0;
         $data['enrolled_students'] = 0;
         
@@ -123,8 +148,16 @@ class CourseCloneService
         $data['finalized_by'] = null;
         $data['rating'] = null;
 
-        // Generate unique slug
-        $data['slug'] = Str::slug($source->name) . '-' . Str::random(6);
+        // Clone Cover and Logo (Strict Isolation: no ?? fallback)
+        if ($source->cover) {
+            $data['cover'] = $this->mediaService->copyCourseCover($source->cover);
+        }
+        if ($source->logo) {
+            $data['logo'] = $this->mediaService->copyCourseLogo($source->logo);
+        }
+
+        // Generate unique slug based on (potentially new) name
+        $data['slug'] = Str::slug($data['name']) . '-' . Str::random(6);
 
         // Remove ID to allow auto-increment
         unset($data['id']);
@@ -192,7 +225,15 @@ class CourseCloneService
             unset($data['id']);
             unset($data['is_published']); // Computed attribute
 
-            Assignment::create($data);
+            $newAssignment = Assignment::create($data);
+
+            // Clone Assignment Images
+            foreach ($assignment->images as $image) {
+                $newFilename = $this->mediaService->copyAssignmentImage($image->image_url);
+                $newAssignment->images()->create([
+                    'image_url' => $newFilename, // Strict Isolation
+                ]);
+            }
         }
     }
 
@@ -231,6 +272,17 @@ class CourseCloneService
             unset($data['id']);
             $newQuestion = Question::create($data);
 
+            // Clone Question Images
+            foreach ($question->images as $image) {
+                // Determine target path based on searchable locations or standard
+                $filename = $image->filename ?? $image->image_url;
+                $newFilename = $this->mediaService->copyQuestionImage($filename);
+                
+                $newQuestion->images()->create([
+                    'filename' => $newFilename, // Strict Isolation
+                ]);
+            }
+
             // Clone Question Options
             $options = QuestionOption::where('optionable_type', 'App\Models\Question')
                 ->where('optionable_id', $question->id)
@@ -244,6 +296,16 @@ class CourseCloneService
                 
                 unset($optionData['id']);
                 $newOption = QuestionOption::create($optionData);
+
+                // Clone Option Images
+                foreach ($option->images as $image) {
+                    $filename = $image->filename ?? $image->image_url;
+                    $newFilename = $this->mediaService->copyOptionImage($filename);
+                    
+                    $newOption->images()->create([
+                        'filename' => $newFilename, // Strict Isolation
+                    ]);
+                }
 
                 if ($option->id == $originalCorrectOptionId) {
                     $newCorrectOptionId = $newOption->id;

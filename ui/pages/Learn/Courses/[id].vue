@@ -11,6 +11,8 @@ definePageMeta({
 import { useCourseMemberStore } from '~/stores/courseMember'
 import CourseProfileCover from '~/components/learn/course/CourseProfileCover.vue'
 import CourseNavbarTab from '~/components/learn/course/CourseNavbarTab.vue'
+import CourseEnrollmentPrompt from '~/components/learn/course/CourseEnrollmentPrompt.vue'
+import AcademyCoursePurchaseModal from '~/components/academy/CoursePurchaseModal.vue'
 
 const route = useRoute()
 const api = useApi()
@@ -26,8 +28,23 @@ const courseMemberOfAuth = ref<any>(null)
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 
-// Course ID from route
+// Enrollment state
+const isEnrolling = ref(false)
+const showGroupSelector = ref(false)
+const selectedGroupId = ref<number | null>(null)
+const showCopyPurchaseModal = ref(false)
+
+// Computed
 const courseId = computed(() => route.params.id as string)
+const courseGroups = computed(() => courseGroupStore.groups || [])
+
+const showEnrollmentPrompt = computed(() => {
+  if (isLoading.value || error.value || !course.value) return false
+  if (isCourseAdmin.value) return false
+  // Status definitions: 1=active, 0=pending, 2=invited
+  // We show prompt only if NOT a member at all (courseMemberOfAuth is null)
+  return !courseMemberOfAuth.value
+})
 
 // Fetch course details
 const fetchCourse = async (forceRefresh = false) => {
@@ -36,13 +53,11 @@ const fetchCourse = async (forceRefresh = false) => {
     course.value = courseStore.currentCourse
     academy.value = courseStore.academy
     isCourseAdmin.value = courseStore.isCourseAdmin
-    // We should also try to recover member state from store if possible, or refetch if missing
     if (courseMemberStore.member) {
-         courseMemberOfAuth.value = courseMemberStore.member
+      courseMemberOfAuth.value = courseMemberStore.member
     }
-    
+
     isLoading.value = false
-    // Still fetching fresh member data in background might be good practice, but respecting cache logic for now.
     return
   }
 
@@ -51,20 +66,20 @@ const fetchCourse = async (forceRefresh = false) => {
 
   try {
     const response: any = await api.get(`/api/courses/${courseId.value}/feeds`)
-    
+
     if (response.success) {
       course.value = response.course
       academy.value = response.academy
       isCourseAdmin.value = response.isCourseAdmin
       courseMemberOfAuth.value = response.courseMemberOfAuth
-      
+
       // Update stores
       courseStore.setCourse(response.course)
       courseStore.setAcademy(response.academy)
       courseStore.setIsCourseAdmin(response.isCourseAdmin)
       courseGroupStore.setGroups(response.courseGroups || [], courseId.value)
       courseGroupStore.ungroupedMembers = response.ungroupedMembers || []
-      
+
       // Set Auth Member Store
       courseMemberStore.setMember(response.courseMemberOfAuth)
     }
@@ -73,6 +88,75 @@ const fetchCourse = async (forceRefresh = false) => {
   } finally {
     isLoading.value = false
   }
+}
+
+// Enrollment Handlers
+const handleRequestMember = () => {
+  if (courseGroups.value.length > 1) {
+    selectedGroupId.value = courseGroups.value[0]?.id || null
+    showGroupSelector.value = true
+    return
+  }
+
+  const groupId = courseGroups.value.length === 1 ? courseGroups.value[0].id : null
+  confirmAndEnroll(groupId)
+}
+
+const confirmAndEnroll = async (groupId: number | null = null) => {
+  const price = Number(course.value?.tuition_fees ?? 0)
+
+  if (price > 0) {
+    const result = await Swal.fire({
+      title: 'ยืนยันการสมัครเรียน',
+      text: `รายวิชานี้มีค่าเรียน ฿${price.toLocaleString()} คุณต้องการดำเนินการต่อใช่หรือไม่?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'ยืนยัน',
+      cancelButtonText: 'ยกเลิก'
+    })
+    if (!result.isConfirmed) return
+  }
+
+  await executeEnrollment(groupId)
+}
+
+const executeEnrollment = async (groupId: number | null = null) => {
+  isEnrolling.value = true
+  try {
+    const payload = groupId ? { group_id: groupId } : {}
+    const response: any = await api.post(`/api/courses/${courseId.value}/members`, payload)
+
+    if (response.success) {
+      Swal.fire({
+        title: 'สำเร็จ',
+        text: response.message || 'สมัครสมาชิกเรียบร้อยแล้ว',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      })
+      showGroupSelector.value = false
+      await fetchCourse(true)
+    }
+  } catch (err: any) {
+    Swal.fire({
+      title: 'ผิดพลาด',
+      text: err.data?.message || err.data?.msg || 'ไม่สามารถสมัครสมาชิกได้ กรุณาลองใหม่อีกครั้ง',
+      icon: 'error'
+    })
+  } finally {
+    isEnrolling.value = false
+  }
+}
+
+const confirmGroupMembership = () => {
+  if (selectedGroupId.value) {
+    confirmAndEnroll(selectedGroupId.value)
+  }
+}
+
+const onCopyPurchaseSuccess = async () => {
+  showCopyPurchaseModal.value = false
+  await fetchCourse(true)
 }
 
 // Handle events from CourseProfileCover
@@ -250,6 +334,93 @@ const declineInvite = async () => {
             :course-id="courseId"
             :is-course-admin="isCourseAdmin"
             :course-member-of-auth="courseMemberOfAuth"
+          />
+
+          <!-- Global Enrollment Prompt -->
+          <CourseEnrollmentPrompt
+            v-if="showEnrollmentPrompt"
+            :course="course"
+            :course-groups="courseGroups"
+            :is-enrolling="isEnrolling"
+            @request-member="handleRequestMember"
+            @purchase-course="showCopyPurchaseModal = true"
+          />
+
+          <!-- Group Selection Modal (Teleported to body) -->
+          <Teleport to="body">
+            <div
+                v-if="showGroupSelector"
+                class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+                @click.self="showGroupSelector = false"
+            >
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+                <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in duration-200">
+                    <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-lg font-black text-gray-900 dark:text-white">เลือกกลุ่มเรียน</h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">เลือกกลุ่มที่ต้องการสมัครเข้าร่วม</p>
+                            </div>
+                            <button
+                                type="button"
+                                @click="showGroupSelector = false"
+                                class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-colors"
+                            >
+                                <Icon icon="heroicons:x-mark" class="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-5 space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar">
+                        <label
+                            v-for="group in courseGroups"
+                            :key="group.id"
+                            class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200"
+                            :class="selectedGroupId === group.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'"
+                        >
+                            <input
+                                v-model="selectedGroupId"
+                                type="radio"
+                                :value="group.id"
+                                class="w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700"
+                            >
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-gray-900 dark:text-white truncate">{{ group.name || `กลุ่ม ${group.id}` }}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ group.members_count || 0 }} สมาชิก
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="p-5 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
+                        <button
+                            type="button"
+                            @click="showGroupSelector = false"
+                            class="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            type="button"
+                            @click="confirmGroupMembership"
+                            :disabled="!selectedGroupId || isEnrolling"
+                            class="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            <Icon v-if="isEnrolling" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+                            <span>สมัครกลุ่มนี้</span>
+                        </button>
+                    </div>
+              </div>
+            </div>
+          </Teleport>
+
+          <AcademyCoursePurchaseModal
+            v-if="course"
+            :course="course"
+            :visible="showCopyPurchaseModal"
+            @close="showCopyPurchaseModal = false"
+            @success="onCopyPurchaseSuccess"
           />
         </template>
       </template>

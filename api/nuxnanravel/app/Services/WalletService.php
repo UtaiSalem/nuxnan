@@ -668,10 +668,30 @@ class WalletService
      */
     public function hasPurchased(User $user, Course $course): bool
     {
-        return WalletTransaction::where('user_id', $user->id)
+        // First check CoursePurchase table (new reliable source)
+        $hasRecord = \App\Models\CoursePurchase::where('buyer_id', $user->id)
+            ->where('source_course_id', $course->id)
+            ->whereIn('status', ['completed', 'pending_clone', 'paid'])
+            ->exists();
+
+        if ($hasRecord) {
+            return true;
+        }
+
+        // Fallback for old data: check WalletTransaction
+        $hasLegacyTransaction = WalletTransaction::where('user_id', $user->id)
             ->where('transaction_type', 'purchase')
             ->where('status', 'completed')
             ->whereJsonContains('metadata->course_id', $course->id)
+            ->exists();
+
+        if ($hasLegacyTransaction) {
+            return true;
+        }
+
+        // Double check by looking for actual cloned course owned by user
+        return \App\Models\Course::where('user_id', $user->id)
+            ->where('source_course_id', $course->id)
             ->exists();
     }
 }

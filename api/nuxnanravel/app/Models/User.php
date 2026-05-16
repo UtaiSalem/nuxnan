@@ -151,6 +151,16 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->belongsToMany(Role::class, 'user_roles');
     }
 
+    public function coursePurchases(): HasMany
+    {
+        return $this->hasMany(CoursePurchase::class, 'buyer_id');
+    }
+
+    public function courseSales(): HasMany
+    {
+        return $this->hasMany(CoursePurchase::class, 'seller_id');
+    }
+
     /**
      * Check if user has a specific role.
      */

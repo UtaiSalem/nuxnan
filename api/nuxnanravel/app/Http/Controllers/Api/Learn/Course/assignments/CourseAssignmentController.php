@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 
 use App\Models\Course;
 use App\Models\Assignment;
+use App\Services\CourseMediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Http\Resources\Learn\Course\info\CourseResource;
@@ -155,7 +156,7 @@ class CourseAssignmentController extends Controller
         ], 200);
     }
 
-    public function destroy(Assignment $assignment)
+    public function destroy(Assignment $assignment, CourseMediaService $mediaService)
     {
         $course = $assignment->assignmentable;
         if (!$course->isAdmin(auth()->user())) {
@@ -171,7 +172,13 @@ class CourseAssignmentController extends Controller
         }
 
         foreach ($assignment->images as $image) {
-            Storage::disk('public')->delete('images/courses/assignments/'.$image->image_url);
+            $mediaService->deleteIfUnused(
+                'images/courses/assignments/' . $image->image_url,
+                \App\Models\AssignmentImage::class,
+                'image_url',
+                $image->image_url,
+                $image->id
+            );
         }
 
         $course = $assignment->assignmentable;

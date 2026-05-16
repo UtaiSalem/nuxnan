@@ -11,9 +11,20 @@ use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
+use App\Services\CourseMediaService;
+use App\Services\WalletService;
 
 class LessonController extends Controller
 {
+    protected WalletService $walletService;
+    protected CourseMediaService $mediaService;
+
+    public function __construct(WalletService $walletService, CourseMediaService $mediaService)
+    {
+        $this->walletService = $walletService;
+        $this->mediaService = $mediaService;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -44,7 +55,7 @@ class LessonController extends Controller
             'youtube_url'   => ['nullable','string'],
             'status'        => ['required'],
             // validate the image
-            'images.*'      => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',
+            'images.*'      => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',
         ]);
         
         $validated['user_id'] = auth()->id();
@@ -139,7 +150,7 @@ class LessonController extends Controller
             'point_tuition_fee' => ['nullable','integer'],
             'order'             => ['nullable','integer'],
             'status'            => ['nullable','integer'],
-            'images.*'          => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',
+            'images.*'          => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',
         ]);
 
         $lesson->update([
@@ -181,7 +192,13 @@ class LessonController extends Controller
         // Delete assignment images
         if ($assignment->images && $assignment->images->count() > 0) {
             foreach ($assignment->images as $image) {
-                Storage::disk('public')->delete('images/lessons/assignments/' . $image->image_url);
+                $this->mediaService->deleteUnused(
+                    'lesson_assignment_image',
+                    \App\Models\AssignmentImage::class,
+                    'image_url',
+                    $image->image_url,
+                    $image->id
+                );
                 $image->delete();
             }
         }
@@ -191,7 +208,13 @@ class LessonController extends Controller
             foreach ($assignment->answers as $answer) {
                 if ($answer->images && $answer->images->count() > 0) {
                     foreach ($answer->images as $answerImage) {
-                        Storage::disk('public')->delete($answerImage->image_url);
+                        $this->mediaService->deleteUnused(
+                            'assignment_answer_image',
+                            \App\Models\AssignmentAnswerImage::class,
+                            'filename',
+                            $answerImage->filename,
+                            $answerImage->id
+                        );
                         $answerImage->delete();
                     }
                 }
@@ -210,7 +233,16 @@ class LessonController extends Controller
         // Delete question images
         if ($question->images && $question->images->count() > 0) {
             foreach ($question->images as $image) {
-                Storage::disk('public')->delete($image->image_url ?? $image->filename ?? '');
+                $field = $image->image_url ? 'image_url' : 'filename';
+                $value = $image->image_url ?? $image->filename;
+
+                $this->mediaService->deleteUnused(
+                    'question_image',
+                    \App\Models\QuestionImage::class,
+                    $field,
+                    $value,
+                    $image->id
+                );
                 $image->delete();
             }
         }
@@ -220,7 +252,16 @@ class LessonController extends Controller
             foreach ($question->options as $option) {
                 if (method_exists($option, 'images') && $option->images && $option->images->count() > 0) {
                     foreach ($option->images as $optImage) {
-                        Storage::disk('public')->delete($optImage->image_url ?? $optImage->filename ?? '');
+                        $field = $optImage->image_url ? 'image_url' : 'filename';
+                        $value = $optImage->image_url ?? $optImage->filename;
+
+                        $this->mediaService->deleteUnused(
+                            'option_image',
+                            \App\Models\QuestionImage::class,
+                            $field,
+                            $value,
+                            $optImage->id
+                        );
                         $optImage->delete();
                     }
                 }
@@ -244,7 +285,13 @@ class LessonController extends Controller
         // Delete topic images
         if ($topic->images && $topic->images->count() > 0) {
             foreach ($topic->images as $topic_image) {
-                Storage::disk('public')->delete('images/courses/lessons/topics/' . $topic_image->filename);
+                $this->mediaService->deleteUnused(
+                    'topic_image',
+                    \App\Models\TopicImage::class,
+                    'filename',
+                    $topic_image->filename,
+                    $topic_image->id
+                );
                 $topic_image->delete();
             }
         }
@@ -289,7 +336,13 @@ class LessonController extends Controller
                     // Delete comment images (fixed: removed () from lessonCommentImages)
                     if ($comment->lessonCommentImages && $comment->lessonCommentImages->count() > 0) {
                         foreach ($comment->lessonCommentImages as $comment_image) {
-                            Storage::disk('public')->delete('images/courses/lessons/comments/' . $comment_image->filename);
+                            $this->mediaService->deleteUnused(
+                                'lesson_comment_image',
+                                \App\Models\LessonCommentImage::class,
+                                'filename',
+                                $comment_image->filename,
+                                $comment_image->id
+                            );
                             $comment_image->delete();
                         }
                     }
@@ -324,7 +377,13 @@ class LessonController extends Controller
             // 5. Delete lesson images
             if ($lesson->images && $lesson->images->count() > 0) {
                 foreach ($lesson->images as $lesson_image) {
-                    Storage::disk('public')->delete('images/courses/lessons/' . $lesson_image->filename);
+                    $this->mediaService->deleteUnused(
+                        'lesson_image',
+                        \App\Models\LessonImage::class,
+                        'filename',
+                        $lesson_image->filename,
+                        $lesson_image->id
+                    );
                     $lesson_image->delete();
                 }
             }

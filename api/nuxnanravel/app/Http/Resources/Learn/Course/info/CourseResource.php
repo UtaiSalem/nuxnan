@@ -20,6 +20,8 @@ class CourseResource extends JsonResource
             'name'              => $this->name,
             'slug'              => $this->slug,
             'code'              => $this->code,
+            'semester'          => $this->semester,
+            'academic_year'     => $this->academic_year,
             'description'       => $this->description,
             'logo'              => $this->logo_url,
             'cover'             => $this->cover_url,

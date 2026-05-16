@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('shares', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id')->index();
-            $table->string('shareable_type'); // Post, CoursePost, AcademyPost, etc.
+            $table->string('shareable_type', 150); // Post, CoursePost, AcademyPost, etc.
             $table->unsignedBigInteger('shareable_id');
             $table->text('share_comment')->nullable();
             $table->enum('privacy', ['public', 'friends', 'private'])->default('public');
