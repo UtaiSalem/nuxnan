@@ -259,7 +259,8 @@ class CourseMarketplaceController extends Controller
         $sales = $salesQuery->get();
         
         // Calculate totals
-        $totalRevenue = $sales->sum('amount_wallet');
+        $totalRevenueTHB = $sales->sum('amount_wallet');
+        $totalRevenuePoints = $sales->sum('amount_points');
         $totalSales = $sales->count();
         
         // Group by course
@@ -270,15 +271,17 @@ class CourseMarketplaceController extends Controller
                     'course_id' => $courseId,
                     'course_name' => $course->name ?? 'Unknown',
                     'total_sales' => $group->count(),
-                    'total_revenue' => $group->sum('amount_wallet'),
+                    'total_revenue_thb' => $group->sum('amount_wallet'),
+                    'total_revenue_points' => $group->sum('amount_points'),
                 ];
             })->values();
 
         return response()->json([
             'success' => true,
             'analytics' => [
-                'total_revenue' => $totalRevenue,
-                'total_sales' => $totalSales,
+                'total_revenue_thb' => $totalRevenueTHB,
+                'total_revenue_points' => $totalRevenuePoints,
+                'total_sales_count' => $totalSales,
                 'sales_by_course' => $salesByCourse,
             ],
             'transactions' => $sales->take(50),

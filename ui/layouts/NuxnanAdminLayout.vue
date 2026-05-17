@@ -2,15 +2,17 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
+import { useResponsiveSidebar } from '~/composables/useResponsiveSidebar'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-// Sidebar state
-const isSidebarOpen = ref(true)
-const isSidebarCollapsed = ref(false)
-const isMobileSidebarOpen = ref(false)
+const { 
+  isCollapsed: isSidebarCollapsed, 
+  isMobileOpen: isMobileSidebarOpen,
+  toggleSidebar
+} = useResponsiveSidebar()
 
 // User dropdown
 const isUserDropdownOpen = ref(false)
@@ -113,35 +115,19 @@ const isActiveRoute = (item: any) => {
   return route.path.startsWith(item.href)
 }
 
-// Toggle sidebar
-const toggleSidebar = () => {
-  if (window.innerWidth < 1024) {
-    isMobileSidebarOpen.value = !isMobileSidebarOpen.value
-  } else {
-    isSidebarCollapsed.value = !isSidebarCollapsed.value
-  }
-}
-
 // Handle logout
 const handleLogout = async () => {
   await authStore.logout()
   navigateTo('/nuxnan-admin/login')
 }
 
-// Handle resize
-const handleResize = () => {
-  if (window.innerWidth >= 1024) {
+// Close mobile sidebar on route change
+watch(
+  () => route.fullPath,
+  () => {
     isMobileSidebarOpen.value = false
   }
-}
-
-onMounted(() => {
-  window.addEventListener('resize', handleResize)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize)
-})
+)
 </script>
 
 <template>
@@ -159,7 +145,7 @@ onBeforeUnmount(() => {
     <aside
       :class="[
         'fixed top-0 left-0 z-50 h-full bg-gradient-to-b from-indigo-900 via-purple-900 to-indigo-900 transition-all duration-300',
-        isSidebarCollapsed ? 'w-20' : 'w-64',
+        isSidebarCollapsed ? 'lg:w-20' : 'w-64',
         isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       ]"
     >

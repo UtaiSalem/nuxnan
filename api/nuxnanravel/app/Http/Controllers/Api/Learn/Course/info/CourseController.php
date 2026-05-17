@@ -187,6 +187,28 @@ class CourseController extends Controller
             $query->where('academic_year', $request->academic_year);
         }
 
+        // Marketplace filter
+        if ($request->boolean('marketplace_only')) {
+            $query->where('is_for_marketplace', true);
+        }
+
+        // Enrollable filter
+        if ($request->boolean('enrollable_only')) {
+            // Usually courses that are published/active are enrollable
+            $query->where('status', 'published');
+        }
+
+        // Free courses filter
+        if ($request->boolean('is_free')) {
+            $query->where(function($q) {
+                $q->where(function($sq) {
+                    $sq->where('price', '<=', 0)->orWhereNull('price');
+                })->where(function($sq) {
+                    $sq->where('tuition_fees', '<=', 0)->orWhereNull('tuition_fees');
+                });
+            });
+        }
+
         // Sorting
         if ($request->filled('sort')) {
             switch ($request->sort) {

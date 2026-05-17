@@ -38,6 +38,10 @@ const selectedEducationLevel = ref('all')
 const sortBy = ref('latest')
 const selectedSemester = ref('all')
 const selectedYear = ref('all')
+const marketplaceOnly = ref(false)
+const enrollableOnly = ref(false)
+const isFree = ref(false)
+const isFilterDrawerOpen = ref(false)
 
 const semesters = ref([
   { value: 'all', label: 'ทุกภาคเรียน' },
@@ -72,6 +76,9 @@ const fetchCourses = async (page = 1, append = false) => {
     if (sortBy.value) params.append('sort', sortBy.value)
     if (selectedSemester.value !== 'all') params.append('semester', selectedSemester.value)
     if (selectedYear.value !== 'all') params.append('academic_year', selectedYear.value)
+    if (marketplaceOnly.value) params.append('marketplace_only', '1')
+    if (enrollableOnly.value) params.append('enrollable_only', '1')
+    if (isFree.value) params.append('is_free', '1')
 
     const response: any = await api.get(`/api/courses?${params.toString()}`)
     const coursesData = response.courses || response.data
@@ -204,6 +211,19 @@ const getCoverUrl = (course: any) => {
 const goToCourse = (courseId: number) => router.push(`/Learn/Courses/${courseId}`)
 const formatNumber = (num: number) => num?.toLocaleString('th-TH') ?? '0'
 
+const activeFiltersCount = computed(() => {
+  let count = 0
+  if (selectedCategory.value !== 'all') count++
+  if (selectedLevel.value !== 'all') count++
+  if (selectedEducationLevel.value !== 'all') count++
+  if (selectedSemester.value !== 'all') count++
+  if (selectedYear.value !== 'all') count++
+  if (marketplaceOnly.value) count++
+  if (enrollableOnly.value) count++
+  if (isFree.value) count++
+  return count
+})
+
 // ── Watch & Mount ──────────────────────────────────────────────────────────
 watch(activeTab, (tab) => {
   if (tab === 'all') fetchCourses(1)
@@ -211,9 +231,23 @@ watch(activeTab, (tab) => {
   else fetchEnrolledCourses()
 })
 
-watch([selectedCategory, selectedEducationLevel, sortBy, selectedSemester, selectedYear], () => {
+watch([selectedCategory, selectedEducationLevel, sortBy, selectedSemester, selectedYear, marketplaceOnly, enrollableOnly, isFree], () => {
   if (activeTab.value === 'all') fetchCourses(1)
 })
+
+const resetFilters = () => {
+  searchQuery.value = ''
+  selectedCategory.value = 'all'
+  selectedLevel.value = 'all'
+  selectedEducationLevel.value = 'all'
+  selectedSemester.value = 'all'
+  selectedYear.value = 'all'
+  sortBy.value = 'latest'
+  marketplaceOnly.value = false
+  enrollableOnly.value = false
+  isFree.value = false
+  fetchCourses(1)
+}
 
 onMounted(() => {
   fetchFilterOptions()
@@ -253,47 +287,55 @@ onMounted(() => {
 
       <!-- Left Sidebar -->
       <template #leftWidgets>
-        <CourseSearchFilterWidget
-          v-if="activeTab === 'all'"
-          v-model:searchQuery="searchQuery"
-          v-model:selectedCategory="selectedCategory"
-          v-model:selectedLevel="selectedLevel"
-          v-model:selectedEducationLevel="selectedEducationLevel"
-          v-model:selectedSemester="selectedSemester"
-          v-model:selectedYear="selectedYear"
-          v-model:sortBy="sortBy"
-          :categories="categories"
-          :levels="levels"
-          :educationLevels="educationLevels"
-          :semesters="semesters"
-          :years="years"
-          :sortOptions="sortOptions"
-          @handleSearch="handleSearch"
-        />
-        <RecentlyViewedCoursesWidget />
-        <FavoriteCoursesWidget />
+        <div class="sticky top-20 space-y-4">
+          <CourseSearchFilterWidget
+            v-if="activeTab === 'all'"
+            v-model:searchQuery="searchQuery"
+            v-model:selectedCategory="selectedCategory"
+            v-model:selectedLevel="selectedLevel"
+            v-model:selectedEducationLevel="selectedEducationLevel"
+            v-model:selectedSemester="selectedSemester"
+            v-model:selectedYear="selectedYear"
+            v-model:sortBy="sortBy"
+            v-model:marketplaceOnly="marketplaceOnly"
+            v-model:enrollableOnly="enrollableOnly"
+            v-model:isFree="isFree"
+            :categories="categories"
+            :levels="levels"
+            :educationLevels="educationLevels"
+            :semesters="semesters"
+            :years="years"
+            :sortOptions="sortOptions"
+            @handleSearch="handleSearch"
+            @clearFilters="resetFilters"
+          />
+          <RecentlyViewedCoursesWidget />
+          <FavoriteCoursesWidget />
+        </div>
       </template>
 
       <!-- Right Sidebar -->
       <template #rightWidgets>
-        <MemberedCoursesWidget />
-        <MyCoursesWidget />
-        <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 overflow-hidden">
-          <div class="p-4 border-b border-gray-100 dark:border-vikinger-dark-100">
-            <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
-              <Icon icon="fluent:star-24-filled" class="w-5 h-5 text-amber-500" />
-              รายวิชายอดนิยม
-            </h3>
-          </div>
-          <div class="divide-y divide-gray-100 dark:divide-vikinger-dark-100">
-            <div v-for="course in popularCourses" :key="course.id" class="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors cursor-pointer" @click="goToCourse(course.id)">
-              <img :src="getCoverUrl(course)" :alt="course.name" class="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-100 dark:border-vikinger-dark-50" />
-              <div class="flex-1 min-w-0">
-                <h4 class="text-xs font-bold text-gray-800 dark:text-white line-clamp-2 mb-1">{{ course.name }}</h4>
-                <p class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">{{ course.user?.name || 'Unknown' }}</p>
-              </div>
+        <div class="sticky top-20 space-y-4">
+          <MemberedCoursesWidget />
+          <MyCoursesWidget />
+          <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-vikinger-dark-100">
+              <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <Icon icon="fluent:star-24-filled" class="w-5 h-5 text-amber-500" />
+                รายวิชายอดนิยม
+              </h3>
             </div>
-            <div v-if="popularCourses.length === 0 && !isLoading" class="p-4 text-center text-gray-500 text-xs italic">ไม่มีข้อมูล</div>
+            <div class="divide-y divide-gray-100 dark:divide-vikinger-dark-100">
+              <div v-for="course in popularCourses" :key="course.id" class="p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors cursor-pointer" @click="goToCourse(course.id)">
+                <img :src="getCoverUrl(course)" :alt="course.name" class="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-100 dark:border-vikinger-dark-50" />
+                <div class="flex-1 min-w-0">
+                  <h4 class="text-xs font-bold text-gray-800 dark:text-white line-clamp-2 mb-1">{{ course.name }}</h4>
+                  <p class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">{{ course.user?.name || 'Unknown' }}</p>
+                </div>
+              </div>
+              <div v-if="popularCourses.length === 0 && !isLoading" class="p-4 text-center text-gray-500 text-xs italic">ไม่มีข้อมูล</div>
+            </div>
           </div>
         </div>
       </template>
@@ -330,15 +372,61 @@ onMounted(() => {
         </div>
 
         <!-- Sort bar (tab: ทั้งหมด เท่านั้น) -->
-        <div v-if="activeTab === 'all'" class="flex items-center justify-between mb-4 px-1">
-          <div class="bg-vikinger-purple/10 text-vikinger-purple px-3 py-1 rounded-full text-xs font-black">
-            {{ formatNumber(pagination.total) }} รายวิชา
+        <div v-if="activeTab === 'all'" class="mb-4 space-y-3">
+          <div class="flex items-center justify-between px-1">
+            <div class="bg-vikinger-purple/10 text-vikinger-purple px-3 py-1 rounded-full text-xs font-black">
+              {{ formatNumber(pagination.total) }} รายวิชา
+            </div>
+            <div class="flex items-center gap-2">
+              <!-- Mobile Filter Button -->
+              <button 
+                @click="isFilterDrawerOpen = true"
+                class="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-white rounded-lg text-xs font-bold border border-gray-100 dark:border-vikinger-dark-100 shadow-sm"
+              >
+                <Icon icon="fluent:filter-24-regular" class="w-4 h-4 text-blue-500" />
+                ตัวกรอง
+                <span v-if="activeFiltersCount > 0" class="flex items-center justify-center w-4 h-4 bg-blue-600 text-white text-[9px] rounded-full">
+                  {{ activeFiltersCount }}
+                </span>
+              </button>
+
+              <Icon icon="fluent:arrow-sort-24-regular" class="text-gray-400 w-4 h-4" />
+              <select v-model="sortBy" class="bg-white dark:bg-vikinger-dark-200 border-none rounded-lg py-1.5 px-3 text-xs font-bold focus:ring-2 focus:ring-vikinger-purple dark:text-white focus:outline-none shadow-sm">
+                <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
           </div>
-          <div class="flex items-center gap-2">
-            <Icon icon="fluent:arrow-sort-24-regular" class="text-gray-400 w-4 h-4" />
-            <select v-model="sortBy" class="bg-white dark:bg-vikinger-dark-200 border-none rounded-lg py-1.5 px-3 text-xs font-bold focus:ring-2 focus:ring-vikinger-purple dark:text-white focus:outline-none shadow-sm">
-              <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
+
+          <!-- Active Filter Chips -->
+          <div v-if="selectedCategory !== 'all' || selectedLevel !== 'all' || selectedEducationLevel !== 'all' || selectedSemester !== 'all' || selectedYear !== 'all' || marketplaceOnly || enrollableOnly || isFree" 
+               class="flex flex-wrap gap-2 px-1">
+            <div v-if="selectedCategory !== 'all'" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-800">
+              หมวดหมู่: {{ categories.find(c => c.value === selectedCategory)?.label || selectedCategory }}
+              <button @click="selectedCategory = 'all'" class="hover:text-blue-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            </div>
+            <div v-if="selectedLevel !== 'all'" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-300 rounded-lg text-xs font-bold border border-cyan-100 dark:border-cyan-800">
+              ระดับ: {{ levels.find(l => l.value === selectedLevel)?.label || selectedLevel }}
+              <button @click="selectedLevel = 'all'" class="hover:text-cyan-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            </div>
+            <div v-if="selectedEducationLevel !== 'all'" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-lg text-xs font-bold border border-indigo-100 dark:border-indigo-800">
+              ระดับการศึกษา: {{ educationLevels.find(e => e.value === selectedEducationLevel)?.label || selectedEducationLevel }}
+              <button @click="selectedEducationLevel = 'all'" class="hover:text-indigo-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            </div>
+            <div v-if="marketplaceOnly" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 rounded-lg text-xs font-bold border border-violet-100 dark:border-violet-800">
+              มี Master Copy
+              <button @click="marketplaceOnly = false" class="hover:text-violet-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            </div>
+            <div v-if="enrollableOnly" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300 rounded-lg text-xs font-bold border border-emerald-100 dark:border-emerald-800">
+              เปิดรับสมัคร
+              <button @click="enrollableOnly = false" class="hover:text-emerald-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            </div>
+            <div v-if="isFree" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300 rounded-lg text-xs font-bold border border-green-100 dark:border-green-800">
+              รายวิชาฟรี
+              <button @click="isFree = false" class="hover:text-green-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            </div>
+            <button @click="resetFilters" class="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline underline-offset-4 px-1">
+              ล้างทั้งหมด
+            </button>
           </div>
         </div>
 
@@ -417,6 +505,40 @@ onMounted(() => {
       </div>
 
     </NuxtLayout>
+
+    <!-- Mobile Filter Modal -->
+    <Modal :show="isFilterDrawerOpen" @close="isFilterDrawerOpen = false" maxWidth="lg">
+      <div class="p-0">
+        <CourseSearchFilterWidget
+          v-model:searchQuery="searchQuery"
+          v-model:selectedCategory="selectedCategory"
+          v-model:selectedLevel="selectedLevel"
+          v-model:selectedEducationLevel="selectedEducationLevel"
+          v-model:selectedSemester="selectedSemester"
+          v-model:selectedYear="selectedYear"
+          v-model:sortBy="sortBy"
+          v-model:marketplaceOnly="marketplaceOnly"
+          v-model:enrollableOnly="enrollableOnly"
+          v-model:isFree="isFree"
+          :categories="categories"
+          :levels="levels"
+          :educationLevels="educationLevels"
+          :semesters="semesters"
+          :years="years"
+          :sortOptions="sortOptions"
+          @handleSearch="handleSearch"
+          @clearFilters="resetFilters"
+        />
+        <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+          <button 
+            @click="isFilterDrawerOpen = false"
+            class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all"
+          >
+            ตกลง
+          </button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
