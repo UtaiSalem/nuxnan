@@ -115,7 +115,7 @@ const onSearchInput = (event: Event) => {
           :value="searchQuery"
           @input="onSearchInput"
           type="text"
-          placeholder="ค้นหารายวิชา..."
+          placeholder="ค้นหารายวิชา, รหัสวิชา, คำอธิบาย..."
           class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg pl-10 pr-10 py-2.5 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all shadow-inner"
         />
         <button 
@@ -128,7 +128,7 @@ const onSearchInput = (event: Event) => {
       </div>
 
       <!-- Basic Filters -->
-      <div class="space-y-4">
+      <div class="space-y-5">
         <!-- Category -->
         <div>
           <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">
@@ -141,22 +141,6 @@ const onSearchInput = (event: Event) => {
           >
             <option v-for="cat in categories" :key="cat.value" :value="cat.value">
               {{ cat.label }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Level -->
-        <div>
-          <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">
-            ระดับ
-          </label>
-          <select
-            :value="selectedLevel"
-            @change="$emit('update:selectedLevel', ($event.target as HTMLSelectElement).value)"
-            class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer select-custom-icon"
-          >
-            <option v-for="level in levels" :key="level.value" :value="level.value">
-              {{ level.label }}
             </option>
           </select>
         </div>
@@ -176,10 +160,57 @@ const onSearchInput = (event: Event) => {
             </option>
           </select>
         </div>
+
+        <!-- Level / Year -->
+        <div>
+          <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">
+            ระดับชั้น / ชั้นปี
+          </label>
+          <select
+            :value="selectedLevel"
+            @change="$emit('update:selectedLevel', ($event.target as HTMLSelectElement).value)"
+            class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer select-custom-icon"
+          >
+            <option v-for="level in levels" :key="level.value" :value="level.value">
+              {{ level.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Academic Info Section -->
+      <div class="pt-5 border-t border-gray-100 dark:border-gray-700">
+         <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-1">
+            ภาคเรียน
+          </label>
+          <div class="grid grid-cols-1 gap-3">
+             <div class="relative">
+                <select
+                  :value="selectedSemester"
+                  @change="$emit('update:selectedSemester', ($event.target as HTMLSelectElement).value)"
+                  class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer select-custom-icon"
+                >
+                  <option v-for="sem in semesters" :key="sem.value" :value="sem.value">
+                    {{ sem.label }}
+                  </option>
+                </select>
+             </div>
+             <div class="relative">
+                <select
+                  :value="selectedYear"
+                  @change="$emit('update:selectedYear', ($event.target as HTMLSelectElement).value)"
+                  class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer select-custom-icon"
+                >
+                  <option v-for="y in years" :key="y.value" :value="y.value">
+                    {{ y.label }}
+                  </option>
+                </select>
+             </div>
+          </div>
       </div>
 
       <!-- Marketplace Section -->
-      <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+      <div class="pt-5 border-t border-gray-100 dark:border-gray-700">
         <button 
           @click="showMarketplaceFilters = !showMarketplaceFilters"
           class="flex items-center justify-between w-full mb-4 group"
@@ -259,55 +290,15 @@ const onSearchInput = (event: Event) => {
         </div>
       </div>
 
-      <!-- Academic Info Section -->
-      <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
-         <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-1">
-            ข้อมูลปีการศึกษา
-          </label>
-          <div class="grid grid-cols-1 gap-3">
-             <div class="relative">
-                <select
-                  :value="selectedSemester"
-                  @change="$emit('update:selectedSemester', ($event.target as HTMLSelectElement).value)"
-                  class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer select-custom-icon"
-                >
-                  <option v-for="sem in semesters" :key="sem.value" :value="sem.value">
-                    {{ sem.label }}
-                  </option>
-                </select>
-             </div>
-             <div class="relative">
-                <select
-                  :value="selectedYear"
-                  @change="$emit('update:selectedYear', ($event.target as HTMLSelectElement).value)"
-                  class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-xs text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer select-custom-icon"
-                >
-                  <option v-for="y in years" :key="y.value" :value="y.value">
-                    {{ y.label }}
-                  </option>
-                </select>
-             </div>
-          </div>
-      </div>
-
-      <!-- Sort -->
-      <div class="pt-4 border-t border-gray-100 dark:border-gray-700 pb-2">
-        <label class="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-1">
-          จัดเรียงตาม
-        </label>
-        <div class="flex flex-wrap gap-2">
-          <button 
-            v-for="option in sortOptions" 
-            :key="option.value"
-            @click="$emit('update:sortBy', option.value)"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border"
-            :class="sortBy === option.value 
-              ? 'bg-blue-600 border-blue-600 text-white shadow-sm' 
-              : 'bg-white border-gray-100 text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 hover:border-blue-200 dark:hover:border-blue-800'"
-          >
-            {{ option.label }}
-          </button>
-        </div>
+      <!-- Reset Button at bottom -->
+      <div v-if="activeFiltersCount > 0 || searchQuery" class="pt-2">
+        <button 
+          @click="$emit('clearFilters')"
+          class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-bold transition-all border border-gray-100 dark:border-gray-600 hover:text-red-500 dark:hover:text-red-400 group"
+        >
+          <Icon icon="fluent:filter-dismiss-24-regular" class="w-4 h-4 group-hover:scale-110 transition-transform" />
+          ล้างตัวกรองทั้งหมด
+        </button>
       </div>
     </div>
   </div>

@@ -194,8 +194,8 @@ class CourseController extends Controller
 
         // Enrollable filter
         if ($request->boolean('enrollable_only')) {
-            // Usually courses that are published/active are enrollable
-            $query->where('status', 'published');
+            // Usually courses that are active (status 1) are enrollable
+            $query->where('status', 1);
         }
 
         // Free courses filter

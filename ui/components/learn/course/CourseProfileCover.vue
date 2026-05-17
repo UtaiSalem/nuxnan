@@ -292,64 +292,102 @@ onUnmounted(() => {
 </style>
 
 <template>
-    <div class="relative w-full bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl overflow-visible shadow-xl sm:shadow-2xl border border-gray-100 dark:border-gray-800 transition-all duration-300">
-        <!-- 1. Cover Photo Section (overflow-hidden) -->
-        <div 
-            class="relative h-48 sm:h-64 md:h-80 lg:h-[320px] bg-cover bg-center bg-no-repeat transition-all duration-500 overflow-hidden rounded-t-xl sm:rounded-t-2xl z-0"
-            :style="{ backgroundImage: `url(${coverUrl})` }"
-        >
-            <!-- Enhanced Overlay gradient -->
-            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-pink-600/10 dark:from-blue-900/20 dark:via-purple-900/10 dark:to-pink-900/20 z-0"></div>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-0"></div>
-            
-            <!-- Edit Cover Button (Admin Only) -->
-            <div class="absolute top-4 left-4 z-10" v-if="isAdmin">
-                <input type="file" class="hidden" ref="coverInput" accept="image/*" @change="onCoverInputChange">
-                <button type="button" @click.prevent="browseCover" :disabled="isUpdatingCover"
-                    class="group relative p-2 text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-lg active:scale-95 transition-all duration-300 disabled:opacity-50 shadow-lg border border-white/20 min-w-[40px] min-h-[40px] flex items-center justify-center">
-                    <Icon v-if="isUpdatingCover" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                    <Icon v-else icon="fluent:camera-edit-20-filled" class="w-5 h-5" />
-                </button>
-            </div>
-            
-            <!-- Tuition Fees Badge -->
-            <div v-if="tuitionFees" class="absolute top-4 right-4 z-10">
-                <div class="relative flex items-center px-4 py-2 space-x-2 font-black text-white rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 shadow-xl border border-yellow-300/30">
-                    <Icon icon="ri:bit-coin-fill" class="w-5 h-5" />
-                    <span class="text-base sm:text-xl">{{ tuitionFees }}</span>
-                    <span class="text-xs opacity-90 uppercase">THB</span>
+    <section class="w-full max-w-full min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:rounded-2xl">
+        <div class="flex min-w-0 flex-col">
+            <div class="relative">
+                <img
+                    :src="coverUrl"
+                    alt="Course Cover"
+                    class="h-[11rem] w-full object-cover sm:h-[14rem] md:h-[16rem] lg:h-[18rem] xl:h-[20rem]"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10"></div>
+
+                <div class="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3 sm:p-4">
+                    <div v-if="isAdmin">
+                        <input type="file" class="hidden" ref="coverInput" accept="image/*" @change="onCoverInputChange">
+                        <button
+                            type="button"
+                            @click.prevent="browseCover"
+                            :disabled="isUpdatingCover"
+                            class="flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/90 text-gray-800 shadow-md backdrop-blur transition hover:bg-white active:scale-95 disabled:opacity-50 dark:bg-gray-900/90 dark:text-white"
+                            aria-label="เปลี่ยนรูปหน้าปกรายวิชา"
+                        >
+                            <Icon v-if="isUpdatingCover" icon="svg-spinners:ring-resize" class="h-5 w-5" />
+                            <Icon v-else icon="fluent:camera-edit-20-filled" class="h-5 w-5" />
+                        </button>
+                    </div>
+                    <div v-else></div>
+
+                    <div v-if="tuitionFees" class="max-w-[72%] rounded-full border border-white/50 bg-white/95 px-3 py-2 text-gray-900 shadow-md backdrop-blur dark:bg-gray-900/95 dark:text-white">
+                        <div class="flex min-w-0 items-center gap-1.5 text-sm font-black leading-none sm:text-base">
+                            <Icon icon="ri:bit-coin-fill" class="h-4 w-4 shrink-0 text-amber-500" />
+                            <span class="min-w-0 truncate">{{ tuitionFees }}</span>
+                            <span class="shrink-0 text-[10px] font-bold text-gray-500 dark:text-gray-400">THB</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 2. Profile Main Section (Avatar + Actions) -->
-        <div class="relative px-4 sm:px-8 pb-4">
-            <div class="flex flex-col lg:flex-row items-center lg:items-end gap-6 relative">
-                <!-- Avatar Block (Centered/Bottom-aligned) -->
-                <div class="relative -mt-16 sm:-mt-24 lg:-mt-28 flex-shrink-0 z-30 order-1">
-                    <div class="relative w-32 h-32 sm:w-44 sm:h-44 lg:w-48 lg:h-48 rounded-3xl border-[6px] border-white dark:border-gray-900 overflow-hidden bg-white dark:bg-gray-800 shadow-2xl transition-all duration-300 group">
-                        <img :src="logoUrl" alt="Course Logo" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="mx-auto flex w-[90%] min-w-0 flex-col items-center justify-center text-center sm:w-[80%]">
+                <div class="relative bottom-[3rem] mx-auto shrink-0 self-center sm:mx-0 sm:self-auto sm:bottom-[4rem] lg:bottom-[5rem]">
+                    <div class="h-[7rem] w-[7rem] overflow-hidden rounded-full bg-gray-100 outline outline-2 outline-offset-2 outline-blue-500 dark:bg-gray-800 sm:h-[8rem] sm:w-[8rem] md:h-[10rem] md:w-[10rem] lg:h-[12rem] lg:w-[12rem]">
+                        <img :src="logoUrl" alt="Course Logo" class="h-full w-full object-cover">
                     </div>
-                    
+
                     <input type="file" class="hidden" ref="logoInput" accept="image/*" @change="onLogoInputChange" v-if="isAdmin">
-                    <button v-if="isAdmin" type="button" @click.prevent="browseLogo" :disabled="isUpdatingLogo"
-                        class="absolute bottom-2 right-2 p-2.5 bg-indigo-600 text-white rounded-2xl active:scale-95 transition-all shadow-xl border-4 border-white dark:border-gray-900 z-10">
-                        <Icon v-if="isUpdatingLogo" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                        <Icon v-else icon="fluent:camera-edit-20-filled" class="w-5 h-5" />
+                    <button
+                        v-if="isAdmin"
+                        type="button"
+                        @click.prevent="browseLogo"
+                        :disabled="isUpdatingLogo"
+                        class="absolute -bottom-2 -right-2 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-indigo-600 text-white shadow-md transition active:scale-95 disabled:opacity-50 dark:border-gray-900"
+                        aria-label="เปลี่ยนโลโก้รายวิชา"
+                    >
+                        <Icon v-if="isUpdatingLogo" icon="svg-spinners:ring-resize" class="h-4 w-4" />
+                        <Icon v-else icon="fluent:camera-edit-20-filled" class="h-4 w-4" />
                     </button>
                 </div>
 
-                <!-- Owner Info (Beside Logo on Right) -->
-                <div v-if="courseOwnerName" class="flex flex-col items-center lg:items-start lg:mb-5 lg:text-left order-2 lg:min-w-[180px] max-w-full">
-                    <NuxtLink v-if="courseOwnerProfilePath" :to="courseOwnerProfilePath" class="max-w-[280px] text-center lg:text-left text-2xl sm:text-3xl lg:text-4xl leading-tight font-black text-gray-900 dark:text-white hover:text-indigo-600 transition-colors break-words">
-                        <span>{{ courseOwnerName }}</span>
-                    </NuxtLink>
-                    <span v-else class="max-w-[280px] text-center lg:text-left text-2xl sm:text-3xl lg:text-4xl leading-tight font-black text-gray-900 dark:text-white break-words">{{ courseOwnerName }}</span>
-                </div>
+                    <div class="relative -top-10 w-full min-w-0 px-1 sm:static sm:my-4 sm:mx-4 sm:flex-1 sm:pl-4">
+                    <div class="flex min-w-0 items-start justify-center gap-2">
+                        <h1 class="min-w-0 break-words text-center text-xl font-black leading-tight text-gray-800 [overflow-wrap:anywhere] dark:text-white sm:text-3xl md:text-3xl lg:text-4xl">
+                            {{ courseName || 'ไม่มีชื่อรายวิชา' }}
+                        </h1>
+                        <button
+                            v-if="isAdmin"
+                            @click="startEditingName"
+                            class="mt-1 shrink-0 rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-indigo-600 dark:hover:bg-gray-800"
+                            aria-label="แก้ไขชื่อรายวิชา"
+                        >
+                            <Icon icon="fluent:edit-24-filled" class="h-5 w-5" />
+                        </button>
+                    </div>
 
-                <!-- Floating Actions (Desktop right-aligned) -->
-                <div v-if="!isAdmin" ref="membershipDropdownRef" class="lg:absolute lg:right-0 lg:bottom-0 w-full lg:w-auto z-30 mt-4 lg:mt-0 order-3">
+                    <div class="mt-2 flex min-w-0 max-w-full flex-wrap items-center justify-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 sm:text-sm">
+                        <NuxtLink
+                            v-if="courseOwnerName && courseOwnerProfilePath"
+                            :to="courseOwnerProfilePath"
+                            class="min-w-0 max-w-full break-words text-center hover:text-indigo-600 [overflow-wrap:anywhere]"
+                        >
+                            {{ courseOwnerName }}
+                        </NuxtLink>
+                        <span v-else class="min-w-0 max-w-full break-words text-center [overflow-wrap:anywhere]">{{ courseOwnerName || 'ไม่ระบุผู้สอน' }}</span>
+                        <span v-if="courseCode" class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
+                            #{{ courseCode }}
+                        </span>
+                        <NuxtLink
+                            v-if="academy"
+                            :to="`/academies/${academy.id}`"
+                            class="min-w-0 max-w-full break-words text-center hover:text-indigo-600 [overflow-wrap:anywhere]"
+                        >
+                            {{ academy.name }}
+                        </NuxtLink>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative -top-8 mx-auto flex w-[90%] min-w-0 flex-col gap-4 sm:w-[92%] md:-top-6 md:w-[90%] lg:-top-8 lg:w-[90%] xl:w-[80%]">
+                <div v-if="!isAdmin" ref="membershipDropdownRef" class="w-full min-w-0 lg:w-auto lg:min-w-[280px] lg:pb-2">
                     <CourseCoverActionGroup
                         :course="course"
                         :courseMemberOfAuth="courseMemberOfAuth"
@@ -364,145 +402,121 @@ onUnmounted(() => {
                         @toggle-pending-menu="toggleAcceptMemberOption"
                     />
                 </div>
-            </div>
-        </div>
 
-        <!-- 3. Profile Info row (Stats + Title) -->
-        <div class="px-4 sm:px-8 py-6 border-t border-gray-50 dark:border-gray-800/50">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <!-- Left/Center: Stats & Course Info -->
-                <div class="flex flex-col gap-4 flex-1">
-                    <!-- Stats Bar -->
-                    <div class="flex items-center gap-4 text-[11px] sm:text-sm font-bold text-gray-500 dark:text-gray-400 overflow-x-auto no-scrollbar pb-1">
-                        <div class="flex items-center gap-1.5 whitespace-nowrap bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-full">
-                            <Icon icon="heroicons:book-open-solid" class="w-4 h-4" />
-                            <span>{{ lessonsCount }} บทเรียน</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 whitespace-nowrap bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-3 py-1.5 rounded-full">
-                            <Icon icon="heroicons:users-solid" class="w-4 h-4" />
-                            <span>{{ enrolledStudents }} ผู้เรียน</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 whitespace-nowrap bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-full">
-                            <Icon icon="heroicons:user-group-solid" class="w-4 h-4" />
-                            <span>{{ groupsCount }} กลุ่ม</span>
-                        </div>
-                        <div v-if="course?.rating" class="flex items-center gap-1.5 whitespace-nowrap bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-full">
-                            <Icon icon="fluent:star-24-filled" class="w-4 h-4" />
-                            <span>{{ typeof course.rating === 'number' ? course.rating.toFixed(1) : course.rating }} ({{ course.reviews_count || 0 }})</span>
-                        </div>
+                <div class="grid min-w-0 grid-cols-3 divide-x divide-gray-200 rounded-xl border border-gray-200 bg-gray-50 dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-950/60">
+                    <div class="flex min-w-0 flex-col items-center gap-1 px-1.5 py-3 text-center sm:flex-row sm:justify-center sm:gap-2 sm:px-2">
+                        <Icon icon="heroicons:book-open-solid" class="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                        <span class="text-sm font-black text-gray-950 dark:text-white">{{ lessonsCount }}</span>
+                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400">บทเรียน</span>
                     </div>
-
-                    <!-- Course Title & Code -->
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <h1 class="text-xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                                {{ courseName || 'ไม่มีชื่อรายวิชา' }}
-                            </h1>
-                            <button v-if="isAdmin" @click="startEditingName"
-                                class="p-1.5 text-gray-400 hover:text-indigo-600 transition-colors">
-                                <Icon icon="fluent:edit-24-filled" class="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span v-if="courseCode" class="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
-                                #{{ courseCode }}
-                            </span>
-                            <NuxtLink v-if="academy" :to="`/academies/${academy.id}`" class="text-xs sm:text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
-                                <span v-if="courseCode" class="mr-1">•</span>
-                                {{ academy.name }}
-                            </NuxtLink>
-                        </div>
-
-                        <!-- Academic Meta Badges -->
-                        <div v-if="courseAcademicMeta.length > 0" class="flex flex-wrap items-center gap-2 pt-2">
-                            <span v-for="(meta, index) in courseAcademicMeta" :key="index"
-                                class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                                {{ meta }}
-                            </span>
-                        </div>
+                    <div class="flex min-w-0 flex-col items-center gap-1 px-1.5 py-3 text-center sm:flex-row sm:justify-center sm:gap-2 sm:px-2">
+                        <Icon icon="heroicons:users-solid" class="h-5 w-5 text-purple-600 dark:text-purple-300" />
+                        <span class="text-sm font-black text-gray-950 dark:text-white">{{ enrolledStudents }}</span>
+                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400">ผู้เรียน</span>
                     </div>
+                    <div class="flex min-w-0 flex-col items-center gap-1 px-1.5 py-3 text-center sm:flex-row sm:justify-center sm:gap-2 sm:px-2">
+                        <Icon v-if="course?.rating" icon="fluent:star-24-filled" class="h-5 w-5 text-amber-500" />
+                        <Icon v-else icon="heroicons:user-group-solid" class="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
+                        <span class="text-sm font-black text-gray-950 dark:text-white">
+                            {{ course?.rating ? (typeof course.rating === 'number' ? course.rating.toFixed(1) : course.rating) : groupsCount }}
+                        </span>
+                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400">{{ course?.rating ? 'คะแนน' : 'กลุ่ม' }}</span>
+                    </div>
+                </div>
+
+                <div v-if="courseAcademicMeta.length > 0" class="flex min-w-0 flex-wrap justify-center gap-2 sm:justify-start">
+                    <span
+                        v-for="(meta, index) in courseAcademicMeta"
+                        :key="index"
+                        class="max-w-full rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-bold text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    >
+                        {{ meta }}
+                    </span>
                 </div>
             </div>
         </div>
 
-        <Teleport to="body">
-            <div
-                v-if="showGroupSelector"
-                class="fixed inset-0 z-50 flex items-center justify-center p-4"
-                @click.self="showGroupSelector = false"
-            >
-                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-                <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    <div class="p-5 border-b border-gray-100 dark:border-gray-700">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white">เลือกกลุ่มเรียน</h3>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">เลือกกลุ่มที่ต้องการสมัครเข้าร่วม</p>
+        <ClientOnly>
+            <Teleport to="body">
+                <div
+                    v-if="showGroupSelector"
+                    class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    @click.self="showGroupSelector = false"
+                >
+                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+                    <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <h3 class="text-lg font-black text-gray-900 dark:text-white">เลือกกลุ่มเรียน</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">เลือกกลุ่มที่ต้องการสมัครเข้าร่วม</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="showGroupSelector = false"
+                                    class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-colors"
+                                >
+                                    <Icon icon="heroicons:x-mark" class="w-5 h-5" />
+                                </button>
                             </div>
+                        </div>
+
+                        <div class="p-5 space-y-3 max-h-[50vh] overflow-y-auto">
+                            <label
+                                v-for="group in courseGroups"
+                                :key="group.id"
+                                class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors"
+                                :class="selectedGroupId === group.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'"
+                            >
+                                <input
+                                    v-model="selectedGroupId"
+                                    type="radio"
+                                    :value="group.id"
+                                    class="text-blue-600 focus:ring-blue-500"
+                                >
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-gray-900 dark:text-white truncate">{{ group.name || `กลุ่ม ${group.id}` }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ group.members_count || group.members?.length || 0 }} สมาชิก
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="p-5 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
                             <button
                                 type="button"
                                 @click="showGroupSelector = false"
-                                class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-colors"
+                                class="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                             >
-                                <Icon icon="heroicons:x-mark" class="w-5 h-5" />
+                                ยกเลิก
+                            </button>
+                            <button
+                                type="button"
+                                @click="confirmGroupMembership"
+                                :disabled="!selectedGroupId || isRequestingMember"
+                                class="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+                                <span>สมัครกลุ่มนี้</span>
                             </button>
                         </div>
                     </div>
-
-                    <div class="p-5 space-y-3 max-h-[50vh] overflow-y-auto">
-                        <label
-                            v-for="group in courseGroups"
-                            :key="group.id"
-                            class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors"
-                            :class="selectedGroupId === group.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'"
-                        >
-                            <input
-                                v-model="selectedGroupId"
-                                type="radio"
-                                :value="group.id"
-                                class="text-blue-600 focus:ring-blue-500"
-                            >
-                            <div class="flex-1 min-w-0">
-                                <div class="font-bold text-gray-900 dark:text-white truncate">{{ group.name || `กลุ่ม ${group.id}` }}</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ group.members_count || group.members?.length || 0 }} สมาชิก
-                                </div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div class="p-5 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
-                        <button
-                            type="button"
-                            @click="showGroupSelector = false"
-                            class="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                            ยกเลิก
-                        </button>
-                        <button
-                            type="button"
-                            @click="confirmGroupMembership"
-                            :disabled="!selectedGroupId || isRequestingMember"
-                            class="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                            <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                            <span>สมัครกลุ่มนี้</span>
-                        </button>
-                    </div>
                 </div>
-            </div>
-        </Teleport>
+            </Teleport>
 
-        <AcademyCoursePurchaseModal
-            v-if="course"
-            :course="course"
-            :visible="showCopyPurchaseModal"
-            @close="showCopyPurchaseModal = false"
-            @success="onCopyPurchaseSuccess"
-        />
+            <AcademyCoursePurchaseModal
+                v-if="course"
+                :course="course"
+                :visible="showCopyPurchaseModal"
+                @close="showCopyPurchaseModal = false"
+                @success="onCopyPurchaseSuccess"
+            />
+        </ClientOnly>
 
         <!-- Edit Course Info Modal -->
-        <DialogModal :show="showEditModal" @close="closeEditModal" max-width="2xl">
+        <ClientOnly>
+            <DialogModal :show="showEditModal" @close="closeEditModal" max-width="2xl">
             <template #title>
                 <div class="flex items-center gap-3">
                     <div class="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
@@ -598,5 +612,6 @@ onUnmounted(() => {
                 </div>
             </template>
         </DialogModal>
-    </div>
+        </ClientOnly>
+    </section>
 </template>

@@ -272,7 +272,7 @@ const declineInvite = async () => {
 </script>
 
 <template>
-  <div>
+  <div class="pb-24 sm:pb-0">
     <NuxtLayout name="main">
       <!-- Hero Slot: Course Profile Cover & Navigation -->
       <template #hero>
@@ -346,82 +346,85 @@ const declineInvite = async () => {
             @purchase-course="showCopyPurchaseModal = true"
           />
 
-          <!-- Group Selection Modal (Teleported to body) -->
-          <Teleport to="body">
-            <div
-                v-if="showGroupSelector"
-                class="fixed inset-0 z-[100] flex items-center justify-center p-4"
-                @click.self="showGroupSelector = false"
-            >
-                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-                <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in duration-200">
-                    <div class="p-5 border-b border-gray-100 dark:border-gray-700">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white">เลือกกลุ่มเรียน</h3>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">เลือกกลุ่มที่ต้องการสมัครเข้าร่วม</p>
-                            </div>
-                            <button
-                                type="button"
-                                @click="showGroupSelector = false"
-                                class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-colors"
-                            >
-                                <Icon icon="heroicons:x-mark" class="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
+          <!-- Client-side only components -->
+          <ClientOnly>
+            <!-- Group Selection Modal (Teleported to body) -->
+            <Teleport to="body">
+              <div
+                  v-if="showGroupSelector"
+                  class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+                  @click.self="showGroupSelector = false"
+              >
+                  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+                  <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in duration-200">
+                      <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+                          <div class="flex items-center justify-between gap-3">
+                              <div>
+                                  <h3 class="text-lg font-black text-gray-900 dark:text-white">เลือกกลุ่มเรียน</h3>
+                                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">เลือกกลุ่มที่ต้องการสมัครเข้าร่วม</p>
+                              </div>
+                              <button
+                                  type="button"
+                                  @click="showGroupSelector = false"
+                                  class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-colors"
+                              >
+                                  <Icon icon="heroicons:x-mark" class="w-5 h-5" />
+                              </button>
+                          </div>
+                      </div>
 
-                    <div class="p-5 space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar">
-                        <label
-                            v-for="group in courseGroups"
-                            :key="group.id"
-                            class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200"
-                            :class="selectedGroupId === group.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'"
-                        >
-                            <input
-                                v-model="selectedGroupId"
-                                type="radio"
-                                :value="group.id"
-                                class="w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700"
-                            >
-                            <div class="flex-1 min-w-0">
-                                <div class="font-bold text-gray-900 dark:text-white truncate">{{ group.name || `กลุ่ม ${group.id}` }}</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ group.members_count || 0 }} สมาชิก
-                                </div>
-                            </div>
-                        </label>
-                    </div>
+                      <div class="p-5 space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar">
+                          <label
+                              v-for="group in courseGroups"
+                              :key="group.id"
+                              class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200"
+                              :class="selectedGroupId === group.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'"
+                          >
+                              <input
+                                  v-model="selectedGroupId"
+                                  type="radio"
+                                  :value="group.id"
+                                  class="w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700"
+                              >
+                              <div class="flex-1 min-w-0">
+                                  <div class="font-bold text-gray-900 dark:text-white truncate">{{ group.name || `กลุ่ม ${group.id}` }}</div>
+                                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                                      {{ group.members_count || 0 }} สมาชิก
+                                  </div>
+                              </div>
+                          </label>
+                      </div>
 
-                    <div class="p-5 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
-                        <button
-                            type="button"
-                            @click="showGroupSelector = false"
-                            class="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                            ยกเลิก
-                        </button>
-                        <button
-                            type="button"
-                            @click="confirmGroupMembership"
-                            :disabled="!selectedGroupId || isEnrolling"
-                            class="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                            <Icon v-if="isEnrolling" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-                            <span>สมัครกลุ่มนี้</span>
-                        </button>
-                    </div>
+                      <div class="p-5 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
+                          <button
+                              type="button"
+                              @click="showGroupSelector = false"
+                              class="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          >
+                              ยกเลิก
+                          </button>
+                          <button
+                              type="button"
+                              @click="confirmGroupMembership"
+                              :disabled="!selectedGroupId || isEnrolling"
+                              class="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                              <Icon v-if="isEnrolling" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+                              <span>สมัครกลุ่มนี้</span>
+                          </button>
+                      </div>
+                </div>
               </div>
-            </div>
-          </Teleport>
+            </Teleport>
 
-          <AcademyCoursePurchaseModal
-            v-if="course"
-            :course="course"
-            :visible="showCopyPurchaseModal"
-            @close="showCopyPurchaseModal = false"
-            @success="onCopyPurchaseSuccess"
-          />
+            <AcademyCoursePurchaseModal
+              v-if="course"
+              :course="course"
+              :visible="showCopyPurchaseModal"
+              @close="showCopyPurchaseModal = false"
+              @success="onCopyPurchaseSuccess"
+            />
+          </ClientOnly>
         </template>
       </template>
 

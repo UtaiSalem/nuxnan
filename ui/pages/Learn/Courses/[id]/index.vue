@@ -339,7 +339,7 @@ const respondToInvitation = async (accept: boolean) => {
         </div>
 
         <!-- Description Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 overflow-hidden">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Icon icon="fluent:text-description-24-regular" class="w-5 h-5 text-blue-500" />
@@ -357,7 +357,16 @@ const respondToInvitation = async (accept: boolean) => {
           </div>
           
           <!-- View Mode -->
-          <div v-if="!isEditingDescription" class="text-gray-600 dark:text-gray-400 leading-relaxed prose dark:prose-invert max-w-none whitespace-pre-wrap">
+          <div v-if="!isEditingDescription" class="text-gray-600 dark:text-gray-400 leading-relaxed prose dark:prose-invert max-w-none break-words [overflow-wrap:anywhere] overflow-hidden 
+            [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:border-collapse [&_table]:mb-4
+            [&_thead]:bg-gray-50 [&_thead]:dark:bg-gray-800/50
+            [&_th]:px-4 [&_th]:py-2 [&_th]:border [&_th]:border-gray-200 [&_th]:dark:border-gray-700 [&_th]:text-left
+            [&_td]:px-4 [&_td]:py-2 [&_td]:border [&_td]:border-gray-200 [&_td]:dark:border-gray-700
+            [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-xl [&_img]:mx-auto [&_img]:my-4
+            [&_iframe]:max-w-full [&_iframe]:aspect-video [&_iframe]:rounded-xl [&_iframe]:w-full [&_iframe]:my-4
+            [&_video]:max-w-full [&_video]:h-auto [&_video]:rounded-xl [&_video]:w-full [&_video]:my-4
+            [&_p]:mb-4 [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:mb-4
+            [&_a]:text-blue-500 [&_a]:underline [&_a]:break-all">
             <div v-if="course.description" v-html="course.description"></div>
             <p v-else class="text-gray-400 italic">ไม่มีรายละเอียด</p>
           </div>

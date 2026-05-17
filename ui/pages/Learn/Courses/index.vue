@@ -73,6 +73,7 @@ const fetchCourses = async (page = 1, append = false) => {
     if (searchQuery.value) params.append('search', searchQuery.value)
     if (selectedCategory.value !== 'all') params.append('category', selectedCategory.value)
     if (selectedEducationLevel.value !== 'all') params.append('education_level', selectedEducationLevel.value)
+    if (selectedLevel.value !== 'all') params.append('level', selectedLevel.value)
     if (sortBy.value) params.append('sort', sortBy.value)
     if (selectedSemester.value !== 'all') params.append('semester', selectedSemester.value)
     if (selectedYear.value !== 'all') params.append('academic_year', selectedYear.value)
@@ -231,7 +232,7 @@ watch(activeTab, (tab) => {
   else fetchEnrolledCourses()
 })
 
-watch([selectedCategory, selectedEducationLevel, sortBy, selectedSemester, selectedYear, marketplaceOnly, enrollableOnly, isFree], () => {
+watch([selectedCategory, selectedLevel, selectedEducationLevel, sortBy, selectedSemester, selectedYear, marketplaceOnly, enrollableOnly, isFree], () => {
   if (activeTab.value === 'all') fetchCourses(1)
 })
 
@@ -404,21 +405,29 @@ onMounted(() => {
               หมวดหมู่: {{ categories.find(c => c.value === selectedCategory)?.label || selectedCategory }}
               <button @click="selectedCategory = 'all'" class="hover:text-blue-800"><Icon icon="fluent:dismiss-12-filled" /></button>
             </div>
-            <div v-if="selectedLevel !== 'all'" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-300 rounded-lg text-xs font-bold border border-cyan-100 dark:border-cyan-800">
-              ระดับ: {{ levels.find(l => l.value === selectedLevel)?.label || selectedLevel }}
-              <button @click="selectedLevel = 'all'" class="hover:text-cyan-800"><Icon icon="fluent:dismiss-12-filled" /></button>
-            </div>
             <div v-if="selectedEducationLevel !== 'all'" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-lg text-xs font-bold border border-indigo-100 dark:border-indigo-800">
               ระดับการศึกษา: {{ educationLevels.find(e => e.value === selectedEducationLevel)?.label || selectedEducationLevel }}
               <button @click="selectedEducationLevel = 'all'" class="hover:text-indigo-800"><Icon icon="fluent:dismiss-12-filled" /></button>
             </div>
-            <div v-if="marketplaceOnly" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 rounded-lg text-xs font-bold border border-violet-100 dark:border-violet-800">
-              มี Master Copy
-              <button @click="marketplaceOnly = false" class="hover:text-violet-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            <div v-if="selectedLevel !== 'all'" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-300 rounded-lg text-xs font-bold border border-cyan-100 dark:border-cyan-800">
+              ระดับชั้น/ชั้นปี: {{ levels.find(l => l.value === selectedLevel)?.label || selectedLevel }}
+              <button @click="selectedLevel = 'all'" class="hover:text-cyan-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            </div>
+            <div v-if="selectedSemester !== 'all'" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 rounded-lg text-xs font-bold border border-amber-100 dark:border-amber-800">
+              ภาคเรียน: {{ semesters.find(s => s.value === selectedSemester)?.label || selectedSemester }}
+              <button @click="selectedSemester = 'all'" class="hover:text-amber-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            </div>
+            <div v-if="selectedYear !== 'all'" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 rounded-lg text-xs font-bold border border-orange-100 dark:border-orange-800">
+              ปีการศึกษา: {{ years.find(y => y.value === selectedYear)?.label || selectedYear }}
+              <button @click="selectedYear = 'all'" class="hover:text-orange-800"><Icon icon="fluent:dismiss-12-filled" /></button>
             </div>
             <div v-if="enrollableOnly" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300 rounded-lg text-xs font-bold border border-emerald-100 dark:border-emerald-800">
               เปิดรับสมัคร
               <button @click="enrollableOnly = false" class="hover:text-emerald-800"><Icon icon="fluent:dismiss-12-filled" /></button>
+            </div>
+            <div v-if="marketplaceOnly" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 rounded-lg text-xs font-bold border border-violet-100 dark:border-violet-800">
+              มี Master Copy
+              <button @click="marketplaceOnly = false" class="hover:text-violet-800"><Icon icon="fluent:dismiss-12-filled" /></button>
             </div>
             <div v-if="isFree" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300 rounded-lg text-xs font-bold border border-green-100 dark:border-green-800">
               รายวิชาฟรี

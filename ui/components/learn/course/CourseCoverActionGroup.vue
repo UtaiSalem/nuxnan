@@ -20,19 +20,19 @@ const emit = defineEmits([
 </script>
 
 <template>
-    <div class="flex flex-col sm:flex-row lg:items-center gap-3 w-full lg:w-auto">
+    <div class="flex w-full min-w-0 flex-col gap-3 sm:flex-row lg:items-center">
         <!-- Pending Status -->
-        <div v-if="courseMemberOfAuth && (memberStatus === '0' || memberStatus === 'pending')" class="relative w-full sm:w-auto">
+        <div v-if="courseMemberOfAuth && (memberStatus === '0' || memberStatus === 'pending')" class="relative w-full min-w-0">
             <button @click.prevent="emit('toggle-pending-menu')"
-                class="w-full sm:min-w-[180px] h-12 flex items-center justify-center gap-2 px-6 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg transition-all shadow-lg shadow-amber-500/25 active:scale-95 text-sm tracking-wide">
+                class="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 text-sm font-black tracking-wide text-white shadow-lg shadow-amber-500/25 transition hover:bg-amber-600 active:scale-95 sm:px-6">
                 <Icon icon="heroicons:clock" class="w-5 h-5" />
                 <span>รอการตอบรับ</span>
                 <Icon icon="heroicons:chevron-down" class="w-4 h-4 transition-transform" :class="{'rotate-180': showAcceptMemberOption}" />
             </button>
             
-            <div v-if="showAcceptMemberOption" class="absolute left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-48 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden backdrop-blur-md bg-opacity-95">
+            <div v-if="showAcceptMemberOption" class="absolute left-0 z-50 mt-2 w-full overflow-hidden rounded-xl border border-gray-100 bg-white/95 shadow-2xl backdrop-blur-md dark:border-gray-700 dark:bg-gray-800/95 sm:right-0 sm:left-auto sm:w-52">
                 <button @click.prevent="emit('cancel-member')" :disabled="isRequestingUnmember"
-                    class="w-full px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold flex items-center justify-center sm:justify-start gap-2 disabled:opacity-50 transition-colors text-sm">
+                    class="flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-900/20 sm:justify-start">
                     <Icon v-if="isRequestingUnmember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                     <Icon v-else icon="heroicons:x-circle" class="w-5 h-5" />
                     <span>ยกเลิกคำขอ</span>
@@ -43,7 +43,7 @@ const emit = defineEmits([
         <!-- Active Member -->
         <button v-else-if="courseMemberOfAuth && (memberStatus === '1' || memberStatus === 'active')"
             @click.prevent="emit('cancel-member')" :disabled="isRequestingUnmember"
-            class="group/active w-full sm:min-w-[180px] h-12 flex items-center justify-center gap-2 px-6 bg-emerald-500 hover:bg-red-500 text-white font-black rounded-lg transition-all shadow-lg shadow-emerald-500/25 disabled:opacity-50 active:scale-95 text-sm tracking-wide">
+            class="group/active flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-black tracking-wide text-white shadow-lg shadow-emerald-500/25 transition hover:bg-red-500 active:scale-95 disabled:opacity-50 sm:px-6">
             <template v-if="isRequestingUnmember">
                 <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" />
                 <span>กำลังดำเนินการ...</span>
@@ -57,12 +57,12 @@ const emit = defineEmits([
         </button>
 
         <!-- Not a member -->
-        <div v-else-if="!courseMemberOfAuth" class="grid grid-cols-1 sm:flex gap-3 w-full">
+        <div v-else-if="!courseMemberOfAuth" class="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
             <button
                 type="button"
                 @click.prevent="emit('request-member')"
                 :disabled="isRequestingMember"
-                class="flex-1 sm:min-w-[180px] h-12 flex items-center justify-center gap-2 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-lg transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50 active:scale-95 text-sm tracking-wide whitespace-nowrap"
+                class="flex h-12 min-w-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-black tracking-wide text-white shadow-lg shadow-indigo-500/25 transition hover:bg-indigo-700 active:scale-95 disabled:opacity-50 sm:px-5"
             >
                 <Icon v-if="isRequestingMember" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                 <Icon v-else icon="heroicons:user-plus-solid" class="w-5 h-5" />
@@ -73,7 +73,7 @@ const emit = defineEmits([
                 v-if="canPurchaseCopy"
                 type="button"
                 @click.prevent="emit('purchase-course')"
-                class="flex-1 sm:min-w-[180px] h-12 flex items-center justify-center gap-2 px-6 bg-cyan-500 hover:bg-cyan-600 text-white font-black rounded-lg transition-all shadow-lg shadow-cyan-500/25 active:scale-95 text-sm tracking-wide whitespace-nowrap"
+                class="flex h-12 min-w-0 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 text-sm font-black tracking-wide text-white shadow-lg shadow-cyan-500/25 transition hover:bg-cyan-600 active:scale-95 sm:px-5"
             >
                 <Icon icon="fluent:cart-24-filled" class="w-5 h-5" />
                 <span>ซื้อรายวิชา</span>
