@@ -70,6 +70,7 @@ const isLeftDrawerOpen = computed({
   set: (val) => isLeftDrawerCollapsed.value = !val
 })
 
+const enableRightSidebar = ref(false)
 const isRightDrawerOpen = ref(false)
 const isSettingsOpen = ref(false)
 const isEarnMenuOpen = ref(false)
@@ -569,6 +570,7 @@ const onQRActionComplete = (result) => {
 
           <!-- Right Drawer Toggle (Desktop) -->
           <button
+            v-if="enableRightSidebar"
             @click="toggleRightDrawer"
             class="hidden lg:flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300 relative overflow-hidden group"
             :class="
@@ -1017,13 +1019,18 @@ const onQRActionComplete = (result) => {
         :class="[
           'flex-1 min-h-screen transition-all duration-300',
           isLeftDrawerOpen ? 'lg:pl-80' : 'lg:pl-20',
-          isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20',
+          enableRightSidebar ? (isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20') : '',
         ]"
       >
         <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 w-full max-w-[1440px] 2xl:max-w-[1600px]">
           <!-- Hero Banner Slot (Full Width) -->
           <div v-if="$slots.hero" class="w-full mb-6">
             <slot name="hero" />
+          </div>
+
+          <!-- Tabs/Navigation Slot (Full Width) -->
+          <div v-if="$slots.tabs" class="w-full mb-6">
+            <slot name="tabs" />
           </div>
 
           <!-- 12 Column Grid Layout -->
@@ -1059,6 +1066,7 @@ const onQRActionComplete = (result) => {
                  RIGHT DRAWER (Chat + Activity)
       ======================================== -->
       <aside
+        v-if="enableRightSidebar"
         :class="[
           'fixed right-0 top-16 h-[calc(100vh-4rem)] overflow-y-auto transition-all duration-300 z-40',
           'hidden lg:block',

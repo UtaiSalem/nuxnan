@@ -39,7 +39,7 @@ const handleModalSubmit = () => {
 
 // Navigate to assignment details
 const navigateToAssignment = (assignment: any) => {
-  navigateTo(`/courses/${props.courseId}/assignments/${assignment.id}`)
+  navigateTo(`/Learn/Courses/${props.courseId}/assignments/${assignment.id}`)
 }
 
 // Edit assignment (triggered by Card)

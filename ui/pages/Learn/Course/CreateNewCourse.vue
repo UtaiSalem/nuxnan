@@ -227,7 +227,7 @@ async function handleSubmitForm(){
       );
 
       // router.get(`/academies/${props.academy.data.id}/courses/${newCourse.id}`);
-      router.get(`/courses/${courseResp.data.newCourse.id}`);
+      router.get(`/Learn/Courses/${courseResp.data.newCourse.id}`);
 
     }
 

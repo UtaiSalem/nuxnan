@@ -165,8 +165,8 @@ const deleteTopic = async (topic) => {
                 />
                 <div class=" bg-white shadow-xl w-full rounded-lg overflow-hidden mt-4">
                     <div class="flex flex-row justify-around">
-                        <!-- <Link :href="`/courses/users/${$page.props.auth.user.id}`" as="button" type="button" @click.prevent="setActiveTab(5)" -->
-                        <Link :href="'/courses/'+ props.course.data.id"
+                        <!-- <Link :href="`/Learn/Courses/users/${$page.props.auth.user.id}`" as="button" type="button" @click.prevent="setActiveTab(5)" -->
+                        <Link :href="'/Learn/Courses/'+ props.course.data.id"
                             class="tab-item border-b-4 hover:border-gray-400 rounded-none w-full text-center flex-row justify-center "
                             :class="{'border-b-4 border-cyan-500': activeTab === 1 }">
                             <div class="flex flex-col items-center py-2 justify-center text-slate-600/80 ">
@@ -176,7 +176,7 @@ const deleteTopic = async (topic) => {
                                     :class="{'text-cyan-500': activeTab === 1}">รายวิชา</span>
                             </div>
                         </Link>
-                        <!-- <Link :href="`/courses/users/${$page.props.auth.user.id}/member`" -->
+                        <!-- <Link :href="`/Learn/Courses/users/${$page.props.auth.user.id}/member`" -->
                         <button type="button" @click.prevent="setActiveTab(2)"
                             class="tab-item border-b-4 hover:border-gray-400 rounded-none w-full text-center flex-row justify-center "
                             :class="{'border-b-4 border-cyan-500': activeTab===2}">
@@ -197,7 +197,7 @@ const deleteTopic = async (topic) => {
                                     :class="{'text-cyan-500': activeTab===3}">แบบฝึกหัด</span>
                             </div>
                         </button>
-                        <!-- <Link :href="`/courses`" -->
+                        <!-- <Link :href="`/Learn/Courses`" -->
                         <button type="button" @click.prevent="setActiveTab(4)"
                             class="tab-item border-b-4 hover:border-gray-400 rounded-none w-full text-center flex-row justify-center "
                             :class="{'border-b-4 border-cyan-500': activeTab === 4}">

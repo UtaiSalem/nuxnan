@@ -363,6 +363,7 @@ const handleTopicComplete = (topicId: number) => {
 
 <template>
   <article
+    :id="`lesson-${lesson.id}`"
     class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden mb-6 border border-gray-200 dark:border-gray-700"
   >
     <!-- Header Section -->

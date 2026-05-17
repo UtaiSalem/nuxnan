@@ -1,5 +1,5 @@
 <template>
-  <Teleport to="body">
+  <Teleport v-if="mounted" to="body">
     <Transition name="modal">
       <div v-if="show" class="fixed inset-0 z-[100] overflow-y-auto" @click.self="closeModal">
         <!-- Backdrop -->
@@ -150,6 +150,12 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 
+const mounted = ref(false)
+onMounted(() => {
+    mounted.value = true
+    document.addEventListener('keydown', handleKeydown)
+})
+
 const currentIndex = ref(0)
 
 const currentImage = computed(() => {
@@ -231,10 +237,6 @@ function handleKeydown(event) {
       break
   }
 }
-
-onMounted(() => {
-    document.addEventListener('keydown', handleKeydown)
-})
 
 onUnmounted(() => {
     document.removeEventListener('keydown', handleKeydown)

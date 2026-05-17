@@ -41,7 +41,9 @@ class CourseResource extends JsonResource
             'instructor'        => $this->instructor,
             'capacity'          => $this->capacity,
             'enrolled_students' => $this->course_members_count ?? $this->enrolled_students,
-            'lessons'           => $this->course_lessons_count ?? $this->lessons,
+            'lessons'           => $this->whenLoaded('courseLessons', function() {
+                return $this->courseLessons;
+            }, $this->course_lessons_count ?? $this->lessons),
             'assignments'       => $this->whenLoaded('courseAssignments', function() {
                 return AssignmentResource::collection($this->courseAssignments);
             }),
