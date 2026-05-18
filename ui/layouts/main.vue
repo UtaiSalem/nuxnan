@@ -59,10 +59,11 @@ const getAvatarUrl = (user, index = 0) => {
 }
 
 // Drawer states
-const { 
-  isCollapsed: isLeftDrawerCollapsed, 
+const {
+  isCollapsed: isLeftDrawerCollapsed,
   isMobileOpen: isMobileSidebarOpen,
-  isDesktop
+  isDesktop,
+  isWideDesktop
 } = useResponsiveSidebar()
 
 const isLeftDrawerOpen = computed({
@@ -1025,42 +1026,72 @@ const onQRActionComplete = (result) => {
           enableRightSidebar ? (isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20') : '',
         ]"
       >
-        <!-- Hero: full-bleed within main, no padding -->
-        <div id="hero-slot" class="w-full empty:hidden">
+        <!-- Hero: with responsive margins matching grid padding -->
+        <div id="hero-slot" class="w-full px-4 sm:px-6 lg:px-8 py-4 empty:hidden">
           <slot name="hero" />
         </div>
 
-        <!-- Tabs: sticky below header, full-width -->
-        <div id="tabs-slot" class="w-full sticky top-16 z-30 empty:hidden">
+        <!-- Tabs: sticky below header, matching grid padding -->
+        <div id="tabs-slot" class="w-full sticky top-16 z-30 px-4 sm:px-6 lg:px-8 empty:hidden">
           <slot name="tabs" />
         </div>
 
         <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 w-full max-w-[1440px] 2xl:max-w-[1600px]">
           <!-- 12 Column Grid Layout -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Left Widgets (3/12) -->
-            <div id="left-widgets-slot" v-show="layoutWidgets.hasLeftWidgets" class="lg:col-span-3 space-y-4">
+          <div class="grid grid-cols-1 lg:grid-cols-12 xl:grid-cols-12 gap-6">
+            <!-- Left Widgets (3/12) - visible lg+, slide-out on mobile -->
+            <div
+              id="left-widgets-slot"
+              v-show="layoutWidgets.hasLeftWidgets"
+              :class="[
+                'lg:col-span-3 space-y-4 transition-all duration-300',
+                'fixed top-16 bottom-0 left-0 w-80 max-w-[85vw] z-40 p-6 bg-white dark:bg-vikinger-dark-100 shadow-xl overflow-y-auto transform',
+                'lg:relative lg:top-auto lg:bottom-auto lg:left-auto lg:w-auto lg:max-w-none lg:z-0 lg:p-0 lg:bg-transparent lg:dark:bg-transparent lg:shadow-none lg:overflow-visible lg:translate-x-0',
+                layoutWidgets.isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+              ]"
+            >
+              <!-- Close button for mobile -->
+              <div class="lg:hidden flex justify-end mb-4">
+                <button @click="layoutWidgets.isLeftPanelOpen = false" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200">
+                  <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
+                </button>
+              </div>
               <slot name="leftWidgets" />
             </div>
 
-            <!-- Center Content (dynamic span based on widgets) -->
+            <!-- Center Content (dynamic span based on widgets + breakpoint) -->
             <div
               :class="[
-                'w-full',
+                'w-full transition-all duration-300',
                 layoutWidgets.hasLeftWidgets && layoutWidgets.hasRightWidgets
-                  ? 'lg:col-span-7'
+                  ? 'lg:col-span-9 xl:col-span-6'
                   : layoutWidgets.hasLeftWidgets
                   ? 'lg:col-span-9'
                   : layoutWidgets.hasRightWidgets
-                  ? 'lg:col-span-10'
+                  ? 'lg:col-span-12 xl:col-span-9'
                   : 'lg:col-span-12',
               ]"
             >
               <slot />
             </div>
 
-            <!-- Right Widgets (2/12) -->
-            <div id="right-widgets-slot" v-show="layoutWidgets.hasRightWidgets" class="lg:col-span-2 space-y-4">
+            <!-- Right Widgets (3/12) - visible xl+, slide-out on tablet/mobile -->
+            <div
+              id="right-widgets-slot"
+              v-show="layoutWidgets.hasRightWidgets"
+              :class="[
+                'xl:col-span-3 space-y-4 transition-all duration-300',
+                'fixed top-16 bottom-0 right-0 w-80 max-w-[85vw] z-40 p-6 bg-white dark:bg-vikinger-dark-100 shadow-xl overflow-y-auto transform',
+                'xl:relative xl:top-auto xl:bottom-auto xl:right-auto xl:w-auto xl:max-w-none xl:z-0 xl:p-0 xl:bg-transparent xl:dark:bg-transparent xl:shadow-none xl:overflow-visible xl:translate-x-0',
+                layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'
+              ]"
+            >
+              <!-- Close button for mobile/tablet -->
+              <div class="xl:hidden flex justify-end mb-4">
+                <button @click="layoutWidgets.isRightPanelOpen = false" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200">
+                  <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
+                </button>
+              </div>
               <slot name="rightWidgets" />
             </div>
           </div>
@@ -1396,6 +1427,43 @@ const onQRActionComplete = (result) => {
       </aside>
     </div>
     
+    <!-- Slide-out Panel Backdrop -->
+    <Transition name="fade">
+      <div
+        v-if="(layoutWidgets.isLeftPanelOpen && !isDesktop) || (layoutWidgets.isRightPanelOpen && !isWideDesktop)"
+        class="fixed inset-0 top-16 bg-black/50 z-[35]"
+        @click="layoutWidgets.isLeftPanelOpen = false; layoutWidgets.isRightPanelOpen = false"
+      ></div>
+    </Transition>
+
+    <!-- Left Panel Toggle (visible < lg when left widgets exist) -->
+    <div
+      class="fixed left-0 top-1/2 -translate-y-1/2 z-30 transition-all duration-300"
+      :class="layoutWidgets.hasLeftWidgets && !layoutWidgets.isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full'"
+    >
+      <button
+        @click="layoutWidgets.isLeftPanelOpen = true"
+        class="lg:hidden bg-gradient-vikinger text-white p-3 rounded-r-2xl shadow-vikinger hover:scale-110 active:scale-95 transition-transform"
+        title="เปิดแถบเครื่องมือด้านซ้าย"
+      >
+        <Icon icon="fluent:panel-left-24-filled" class="w-5 h-5" />
+      </button>
+    </div>
+
+    <!-- Right Panel Toggle (visible < xl when right widgets exist) -->
+    <div
+      class="fixed right-0 top-1/2 -translate-y-1/2 z-30 transition-all duration-300"
+      :class="layoutWidgets.hasRightWidgets && !layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'"
+    >
+      <button
+        @click="layoutWidgets.isRightPanelOpen = true"
+        class="xl:hidden bg-gradient-vikinger text-white p-3 rounded-l-2xl shadow-vikinger hover:scale-110 active:scale-95 transition-transform"
+        title="เปิดแถบเครื่องมือด้านขวา"
+      >
+        <Icon icon="fluent:panel-right-24-filled" class="w-5 h-5" />
+      </button>
+    </div>
+
     <!-- Universal QR Scanner Modal -->
     <QrUniversalQRModal
       v-model="isQRScannerOpen"
@@ -1408,6 +1476,16 @@ const onQRActionComplete = (result) => {
 </template>
 
 <style scoped>
+/* Fade transition for backdrop */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 /* Expand transition for submenu */
 .expand-enter-active,
 .expand-leave-active {

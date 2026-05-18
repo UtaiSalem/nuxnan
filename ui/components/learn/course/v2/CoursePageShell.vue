@@ -82,7 +82,7 @@ onUnmounted(() => {
     </Teleport>
 
     <Teleport to="#left-widgets-slot">
-      <div class="sticky top-20 space-y-4 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar pr-1">
+      <div class="lg:sticky lg:top-20 space-y-4 lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto custom-scrollbar lg:pr-1">
         <CourseInstructorWidget v-if="course" :course="course" :owner="course.user" />
         <RecentlyViewedCoursesWidget />
         <FavoriteCoursesWidget />
@@ -90,7 +90,7 @@ onUnmounted(() => {
     </Teleport>
 
     <Teleport to="#right-widgets-slot">
-      <div class="sticky top-20 space-y-4 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar pr-1">
+      <div class="xl:sticky xl:top-20 space-y-4 xl:max-h-[calc(100vh-6.5rem)] xl:overflow-y-auto custom-scrollbar xl:pr-1">
         <CourseInfoWidget
           v-if="course"
           :course="course"

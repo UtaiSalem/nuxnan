@@ -98,8 +98,8 @@ const courseOwnerPath = computed(() => {
 </script>
 
 <template>
-  <div class="relative w-full bg-white dark:bg-vikinger-dark-200 border-b border-gray-100 dark:border-vikinger-dark-100 shadow-sm">
-    <!-- ── Cover Image: true full-bleed ── -->
+  <div class="relative w-full bg-white dark:bg-vikinger-dark-200 rounded-2xl overflow-hidden border border-gray-100 dark:border-vikinger-dark-100 shadow-sm">
+    <!-- ── Cover Image ── -->
     <div class="relative h-40 xs:h-52 sm:h-60 md:h-72 lg:h-80 w-full overflow-hidden">
       <img :src="coverUrl" alt="Course Cover" class="h-full w-full object-cover" />
       <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent pointer-events-none" />
