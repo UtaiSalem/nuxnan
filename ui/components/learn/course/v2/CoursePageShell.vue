@@ -37,6 +37,16 @@ const emit = defineEmits<{
 const route = useRoute()
 const courseId = computed(() => route.params.id as string)
 
+const layoutWidgets = useLayoutWidgets()
+onMounted(() => {
+  layoutWidgets.value.hasLeftWidgets = true
+  layoutWidgets.value.hasRightWidgets = true
+})
+onUnmounted(() => {
+  layoutWidgets.value.hasLeftWidgets = false
+  layoutWidgets.value.hasRightWidgets = false
+})
+
 </script>
 
 <template>

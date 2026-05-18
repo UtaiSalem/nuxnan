@@ -258,6 +258,9 @@ const handleTestChangePoints = () => {
   authStore.addPoints(100)
 }
 
+// Layout widget signals (set by pages that use Teleport to fill widget columns)
+const layoutWidgets = useLayoutWidgets()
+
 // Universal QR Scanner Modal
 const isQRScannerOpen = ref(false)
 
@@ -1036,7 +1039,7 @@ const onQRActionComplete = (result) => {
           <!-- 12 Column Grid Layout -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <!-- Left Widgets (3/12) -->
-            <div id="left-widgets-slot" class="lg:col-span-3 space-y-4 empty:hidden">
+            <div id="left-widgets-slot" v-show="layoutWidgets.hasLeftWidgets" class="lg:col-span-3 space-y-4">
               <slot name="leftWidgets" />
             </div>
 
@@ -1044,11 +1047,11 @@ const onQRActionComplete = (result) => {
             <div
               :class="[
                 'w-full',
-                $slots.leftWidgets && $slots.rightWidgets
-                  ? 'lg:col-span-7' 
-                  : $slots.leftWidgets
+                layoutWidgets.hasLeftWidgets && layoutWidgets.hasRightWidgets
+                  ? 'lg:col-span-7'
+                  : layoutWidgets.hasLeftWidgets
                   ? 'lg:col-span-9'
-                  : $slots.rightWidgets
+                  : layoutWidgets.hasRightWidgets
                   ? 'lg:col-span-10'
                   : 'lg:col-span-12',
               ]"
@@ -1057,7 +1060,7 @@ const onQRActionComplete = (result) => {
             </div>
 
             <!-- Right Widgets (2/12) -->
-            <div id="right-widgets-slot" class="lg:col-span-2 space-y-4 empty:hidden">
+            <div id="right-widgets-slot" v-show="layoutWidgets.hasRightWidgets" class="lg:col-span-2 space-y-4">
               <slot name="rightWidgets" />
             </div>
           </div>
