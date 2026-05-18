@@ -20,9 +20,14 @@ class AttendanceEligibilityService
         $course = $courseMember->course;
         
         // Get all attendance sessions for this course
-        // Note: course_attendances table doesn't have is_active column
-        $totalSessions = CourseAttendance::where('course_id', $course->id)
-            ->count();
+        // Filter by group if the member is assigned to one
+        $totalSessionsQuery = CourseAttendance::where('course_id', $course->id);
+        
+        if ($courseMember->group_id) {
+            $totalSessionsQuery->where('group_id', $courseMember->group_id);
+        }
+        
+        $totalSessions = $totalSessionsQuery->count();
         
         if ($totalSessions === 0) {
             return [
@@ -39,10 +44,11 @@ class AttendanceEligibilityService
         }
         
         // Get attendance details for this student
-        $attendanceDetails = AttendanceDetail::whereHas('courseAttendance', function ($query) use ($course) {
-                $query->where('course_id', $course->id);
+        $attendanceDetails = AttendanceDetail::where('course_id', $course->id)
+            ->where('course_member_id', $courseMember->id)
+            ->when($courseMember->group_id, function ($query) use ($courseMember) {
+                return $query->where('group_id', $courseMember->group_id);
             })
-            ->where('user_id', $courseMember->user_id)
             ->get();
         
         $stats = [
