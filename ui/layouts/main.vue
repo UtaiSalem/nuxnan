@@ -1049,29 +1049,30 @@ const onQRActionComplete = (result) => {
        ======================================== -->
       <main
         :class="[
-          'flex-1 min-h-screen transition-all duration-300',
+          'flex-1 min-w-0 min-h-screen transition-all duration-300 overflow-x-hidden',
           isLeftDrawerOpen ? 'lg:pl-80' : 'lg:pl-20',
-          enableRightSidebar ? (isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20') : '',
+          layoutWidgets.hasRightWidgets ? 'lg:pr-14 xl:pr-0' : '',
+          enableRightSidebar && isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20',
         ]"
       >
         <!-- Hero: with responsive margins matching grid padding -->
-        <div id="hero-slot" class="w-full px-4 sm:px-6 lg:px-8 py-4 empty:hidden">
+        <div id="hero-slot" :class="['w-full min-w-0 mx-auto max-w-[1440px] 2xl:max-w-[1600px] py-4 empty:hidden px-4 sm:px-6', isLeftDrawerOpen ? 'lg:px-8' : 'lg:px-4']">
           <slot name="hero" />
         </div>
 
         <!-- Tabs: sticky below header, matching grid padding -->
-        <div id="tabs-slot" class="w-full sticky top-16 z-30 px-4 sm:px-6 lg:px-8 empty:hidden">
+        <div id="tabs-slot" :class="['w-full min-w-0 mx-auto max-w-[1440px] 2xl:max-w-[1600px] sticky top-16 z-30 empty:hidden px-4 sm:px-6', isLeftDrawerOpen ? 'lg:px-8' : 'lg:px-4']">
           <slot name="tabs" />
         </div>
 
-        <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 w-full max-w-[1440px] 2xl:max-w-[1600px]">
+        <div :class="['mx-auto py-6 pb-24 lg:pb-8 w-full min-w-0 max-w-[1440px] 2xl:max-w-[1600px] px-4 sm:px-6', isLeftDrawerOpen ? 'lg:px-8' : 'lg:px-4']">
           <!-- 12 Column Grid Layout -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 xl:grid-cols-12 gap-6">
+          <div class="grid min-w-0 grid-cols-1 lg:grid-cols-12 xl:grid-cols-12 gap-6">
             <!-- Left Widgets (3/12) - visible lg+, slide-out on mobile -->
             <div
               v-show="layoutWidgets.hasLeftWidgets"
               :class="[
-                'lg:col-span-3 transition-all duration-300',
+                'min-w-0 lg:col-span-3 transition-all duration-300',
                 'fixed top-16 bottom-0 left-0 w-80 max-w-[85vw] z-40 p-6 bg-white dark:bg-vikinger-dark-100 shadow-xl overflow-y-auto transform',
                 'lg:relative lg:top-auto lg:bottom-auto lg:left-auto lg:w-auto lg:max-w-none lg:z-0 lg:p-0 lg:bg-transparent lg:dark:bg-transparent lg:shadow-none lg:overflow-visible lg:translate-x-0',
                 layoutWidgets.isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -1085,14 +1086,14 @@ const onQRActionComplete = (result) => {
               </div>
 
               <!-- Inner target for widgets (Teleport Target) -->
-              <div id="left-widgets-slot" class="flex flex-col gap-6">
+              <div id="left-widgets-slot" class="flex min-w-0 flex-col gap-6">
                 <slot name="leftWidgets" />
               </div>
             </div>
 
             <!-- Center Content (dynamic span based on widgets + breakpoint) -->
-            <div :class="['w-full transition-all duration-300', centerGridClass]">
-              <div class="flex flex-col gap-6">
+            <div :class="['w-full min-w-0 transition-all duration-300', centerGridClass]">
+              <div class="flex min-w-0 flex-col gap-6">
                 <slot />
               </div>
             </div>
@@ -1101,7 +1102,7 @@ const onQRActionComplete = (result) => {
             <div
               v-show="layoutWidgets.hasRightWidgets"
               :class="[
-                'xl:col-span-3 transition-all duration-300',
+                'min-w-0 xl:col-span-3 transition-all duration-300',
                 'fixed top-16 bottom-0 right-0 w-80 max-w-[85vw] z-40 p-6 bg-white dark:bg-vikinger-dark-100 shadow-xl overflow-y-auto transform',
                 'xl:relative xl:top-auto xl:bottom-auto xl:right-auto xl:w-auto xl:max-w-none xl:z-0 xl:p-0 xl:bg-transparent xl:dark:bg-transparent xl:shadow-none xl:overflow-visible xl:translate-x-0',
                 layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'
@@ -1115,7 +1116,7 @@ const onQRActionComplete = (result) => {
               </div>
 
               <!-- Inner target for widgets (Teleport Target) -->
-              <div id="right-widgets-slot" class="flex flex-col gap-6">
+              <div id="right-widgets-slot" class="flex min-w-0 flex-col gap-6">
                 <slot name="rightWidgets" />
               </div>
             </div>
