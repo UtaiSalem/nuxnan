@@ -116,7 +116,7 @@ watch(activeTab, (newTab, oldTab) => {
 </script>
 
 <template>
-  <div class="w-full max-w-7xl mx-auto bg-white dark:bg-vikinger-dark-200 rounded-2xl shadow-xl border border-gray-100 dark:border-vikinger-dark-100 overflow-hidden">
+  <div class="w-full bg-white dark:bg-vikinger-dark-200 border-b border-gray-200 dark:border-vikinger-dark-50/30 shadow-sm overflow-hidden">
     <div 
       ref="scrollContainer"
       class="flex overflow-x-auto custom-scrollbar scroll-smooth p-1"

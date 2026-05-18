@@ -1025,17 +1025,17 @@ const onQRActionComplete = (result) => {
           enableRightSidebar ? (isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20') : '',
         ]"
       >
+        <!-- Hero: full-bleed within main, no padding -->
+        <div id="hero-slot" class="w-full empty:hidden">
+          <slot name="hero" />
+        </div>
+
+        <!-- Tabs: sticky below header, full-width -->
+        <div id="tabs-slot" class="w-full sticky top-16 z-30 empty:hidden">
+          <slot name="tabs" />
+        </div>
+
         <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 w-full max-w-[1440px] 2xl:max-w-[1600px]">
-          <!-- Hero Banner Slot (Full Width) -->
-          <div id="hero-slot" class="w-full mb-6 empty:hidden">
-            <slot name="hero" />
-          </div>
-
-          <!-- Tabs/Navigation Slot (Full Width) -->
-          <div id="tabs-slot" class="w-full mb-6 empty:hidden">
-            <slot name="tabs" />
-          </div>
-
           <!-- 12 Column Grid Layout -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <!-- Left Widgets (3/12) -->

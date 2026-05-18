@@ -98,122 +98,111 @@ const courseOwnerPath = computed(() => {
 </script>
 
 <template>
-  <div class="relative w-full max-w-7xl mx-auto overflow-hidden bg-white dark:bg-vikinger-dark-200 rounded-2xl shadow-xl border border-gray-100 dark:border-vikinger-dark-100">
-    <!-- Cover Image -->
-    <div class="relative h-[140px] xs:h-[180px] sm:h-[220px] md:h-[260px] lg:h-[300px] w-full">
+  <div class="relative w-full bg-white dark:bg-vikinger-dark-200 border-b border-gray-100 dark:border-vikinger-dark-100 shadow-sm">
+    <!-- ── Cover Image: true full-bleed ── -->
+    <div class="relative h-40 xs:h-52 sm:h-60 md:h-72 lg:h-80 w-full overflow-hidden">
       <img :src="coverUrl" alt="Course Cover" class="h-full w-full object-cover" />
-      <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20"></div>
-      
-      <!-- Cover Edit Button (Admin) -->
-      <div v-if="isAdmin" class="absolute top-4 right-4 z-10">
-        <input type="file" ref="coverInput" class="hidden" accept="image/*" @change="onCoverInputChange">
-        <button 
-          @click="browseCover" 
+      <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent pointer-events-none" />
+
+      <!-- Cover edit button (admin) -->
+      <div v-if="isAdmin" class="absolute top-3 right-3 z-10">
+        <input type="file" ref="coverInput" class="hidden" accept="image/*" @change="onCoverInputChange" />
+        <button
+          @click="browseCover"
           :disabled="isUpdatingCover"
-          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/50 backdrop-blur-md text-white border border-white/20 hover:bg-black/70 transition-all text-xs font-bold shadow-xl"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/50 backdrop-blur-md text-white border border-white/20 hover:bg-black/70 transition-all text-xs font-bold"
         >
-          <Icon v-if="isUpdatingCover" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-          <Icon v-else icon="fluent:camera-24-filled" class="w-4 h-4" />
+          <Icon v-if="isUpdatingCover" icon="svg-spinners:ring-resize" class="w-3.5 h-3.5" />
+          <Icon v-else icon="fluent:camera-24-filled" class="w-3.5 h-3.5" />
           <span class="hidden sm:inline">เปลี่ยนหน้าปก</span>
         </button>
       </div>
 
-      <!-- Price Badge -->
-      <div v-if="course?.tuition_fees" class="absolute top-4 left-4 z-10">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500 text-white font-black shadow-lg border border-amber-400 text-xs">
-          <Icon icon="ri:bit-coin-fill" class="w-4 h-4" />
+      <!-- Price badge -->
+      <div v-if="course?.tuition_fees" class="absolute top-3 left-3 z-10">
+        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500 text-white font-black shadow border border-amber-400 text-xs">
+          <Icon icon="ri:bit-coin-fill" class="w-3.5 h-3.5" />
           <span>฿{{ course.tuition_fees.toLocaleString() }}</span>
         </div>
       </div>
     </div>
 
-    <!-- Course Info Area -->
-    <div class="px-4 sm:px-6 lg:px-8 pb-6 relative z-20">
-      <div class="flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-8 text-center md:text-left">
-        <!-- Logo/Avatar -->
-        <div class="relative -mt-10 xs:-mt-14 sm:-mt-16 md:-mt-20 lg:-mt-24 group">
-          <div class="h-20 w-20 xs:h-28 xs:w-28 sm:h-32 sm:w-32 md:h-40 md:w-40 lg:h-48 lg:w-48 overflow-hidden rounded-3xl border-[4px] sm:border-[6px] border-white dark:border-vikinger-dark-200 bg-gray-100 dark:bg-gray-800 shadow-xl">
+    <!-- ── Info section: matches grid container padding exactly ── -->
+    <div class="mx-auto w-full max-w-[1440px] 2xl:max-w-[1600px] px-4 sm:px-6 lg:px-8 pb-5">
+      <div class="flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
+
+        <!-- Logo with overlap -->
+        <div class="relative shrink-0 self-start -mt-10 sm:-mt-14 md:-mt-18 lg:-mt-20 group">
+          <div class="h-20 w-20 sm:h-28 sm:w-28 md:h-36 md:w-36 lg:h-44 lg:w-44 overflow-hidden rounded-2xl border-4 border-white dark:border-vikinger-dark-200 bg-gray-100 dark:bg-gray-800 shadow-xl">
             <img :src="logoUrl" alt="Course Logo" class="h-full w-full object-cover" />
           </div>
-          
-          <!-- Logo Edit Button (Admin) -->
+          <!-- Logo edit (admin) -->
           <div v-if="isAdmin" class="absolute -bottom-1 -right-1">
-            <input type="file" ref="logoInput" class="hidden" accept="image/*" @change="onLogoInputChange">
-            <button 
-              @click="browseLogo" 
+            <input type="file" ref="logoInput" class="hidden" accept="image/*" @change="onLogoInputChange" />
+            <button
+              @click="browseLogo"
               :disabled="isUpdatingLogo"
-              class="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg hover:scale-110 active:scale-95 transition-all border-2 border-white dark:border-vikinger-dark-200"
+              class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg hover:scale-110 active:scale-95 transition-all border-2 border-white dark:border-vikinger-dark-200"
             >
-              <Icon v-if="isUpdatingLogo" icon="svg-spinners:ring-resize" class="w-4 h-4 sm:w-5 h-5" />
-              <Icon v-else icon="fluent:camera-24-filled" class="w-4 h-4 sm:w-5 h-5" />
+              <Icon v-if="isUpdatingLogo" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+              <Icon v-else icon="fluent:camera-24-filled" class="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        <!-- Title & Subtitle -->
-        <div class="flex-1 pt-2 md:pb-2">
-          <div class="flex items-start justify-center md:justify-start gap-2 mb-2">
-            <h1 class="text-xl xs:text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 dark:text-white leading-tight">
+        <!-- Title block -->
+        <div class="flex-1 min-w-0 pt-2 md:pb-3">
+          <!-- Course name + edit -->
+          <div class="flex items-start gap-2 mb-1.5">
+            <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white leading-tight">
               {{ course?.name || 'รายวิชาไม่มีชื่อ' }}
             </h1>
-            <button 
-              v-if="isAdmin" 
+            <button
+              v-if="isAdmin"
               @click="$emit('edit-name')"
-              class="mt-1 p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all"
+              class="mt-0.5 p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all shrink-0"
             >
-              <Icon icon="fluent:edit-24-filled" class="w-5 h-5" />
+              <Icon icon="fluent:edit-24-filled" class="w-4 h-4" />
             </button>
           </div>
 
-          <div class="flex flex-wrap items-center justify-center md:justify-start gap-3 text-gray-500 dark:text-gray-400 font-bold text-sm sm:text-base">
+          <!-- Owner + code + academy -->
+          <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400 font-semibold mb-4">
             <NuxtLink v-if="courseOwnerPath" :to="courseOwnerPath" class="hover:text-vikinger-purple dark:hover:text-vikinger-cyan transition-colors">
               {{ courseOwnerName }}
             </NuxtLink>
             <span v-else>{{ courseOwnerName }}</span>
-            
-            <span v-if="course?.code" class="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 text-xs font-black">
+
+            <span v-if="course?.code" class="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 text-xs font-black">
               #{{ course.code }}
             </span>
 
-            <NuxtLink v-if="academy" :to="`/academies/${academy.id}`" class="hover:text-vikinger-purple dark:hover:text-vikinger-cyan transition-colors flex items-center gap-1">
-              <Icon icon="mdi:school" class="w-4 h-4" />
+            <NuxtLink
+              v-if="academy"
+              :to="`/academies/${academy.id}`"
+              class="flex items-center gap-1 hover:text-vikinger-purple dark:hover:text-vikinger-cyan transition-colors"
+            >
+              <Icon icon="mdi:school" class="w-3.5 h-3.5" />
               {{ academy.name }}
             </NuxtLink>
           </div>
 
-          <!-- Desktop Stats & Action Row -->
-          <div class="hidden md:flex items-center justify-between mt-6 pt-6 border-t border-gray-100 dark:border-vikinger-dark-100">
-            <div class="flex items-center gap-4">
+          <!-- Stats + Action (desktop inline) -->
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3 flex-wrap">
               <slot name="stats" />
             </div>
-            
-            <div v-if="!isAdmin">
-              <CourseActionButton 
+            <div v-if="!isAdmin" class="shrink-0">
+              <CourseActionButton
                 variant="hero"
-                :course="course" 
-                :course-member-of-auth="courseMemberOfAuth" 
+                :course="course"
+                :course-member-of-auth="courseMemberOfAuth"
                 @refresh="emit('refresh')"
                 @request-member="emit('request-member')"
                 @purchase-course="emit('purchase-course')"
               />
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Mobile Action & Stats Area -->
-      <div class="md:hidden mt-6 pt-6 border-t border-gray-100 dark:border-vikinger-dark-100 space-y-4">
-        <slot name="stats" />
-        
-        <div v-if="!isAdmin">
-          <CourseActionButton 
-            variant="hero"
-            :course="course" 
-            :course-member-of-auth="courseMemberOfAuth" 
-            @refresh="emit('refresh')"
-            @request-member="emit('request-member')"
-            @purchase-course="emit('purchase-course')"
-          />
         </div>
       </div>
     </div>
