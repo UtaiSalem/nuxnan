@@ -52,11 +52,18 @@ class AttendanceEligibilityService
             'leave' => 0,
             'excused' => 0,
         ];
+
+        // Status mapping from DB integers: 1=Present, 2=Late, 3=Leave
+        $statusMap = [
+            1 => 'present',
+            2 => 'late',
+            3 => 'leave',
+        ];
         
         foreach ($attendanceDetails as $detail) {
-            $status = strtolower($detail->status);
-            if (isset($stats[$status])) {
-                $stats[$status]++;
+            $statusKey = $statusMap[$detail->status] ?? 'absent';
+            if (isset($stats[$statusKey])) {
+                $stats[$statusKey]++;
             }
         }
         

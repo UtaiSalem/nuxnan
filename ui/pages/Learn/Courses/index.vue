@@ -186,12 +186,24 @@ const activeError = computed(() => {
 })
 
 // ── Filter options ─────────────────────────────────────────────────────────
+const normalizeOption = (item: any) => {
+  if (typeof item === 'string' || typeof item === 'number') {
+    return { value: String(item), label: String(item) }
+  }
+  if (item && typeof item === 'object') {
+    const val = item.value ?? item.id ?? JSON.stringify(item)
+    const lbl = item.label ?? item.name ?? val
+    return { value: String(val), label: String(lbl) }
+  }
+  return { value: String(item), label: String(item) }
+}
+
 const fetchFilterOptions = async () => {
   try {
     const res: any = await api.get('/api/courses/filters')
     if (res.success) {
-      if (res.semesters?.length) semesters.value = [{ value: 'all', label: 'ทุกภาคเรียน' }, ...res.semesters]
-      if (res.years?.length) years.value = [{ value: 'all', label: 'ทุกปีการศึกษา' }, ...res.years]
+      if (res.semesters?.length) semesters.value = [{ value: 'all', label: 'ทุกภาคเรียน' }, ...res.semesters.map(normalizeOption)]
+      if (res.years?.length) years.value = [{ value: 'all', label: 'ทุกปีการศึกษา' }, ...res.years.map(normalizeOption)]
       if (res.categories?.length) categories.value = [{ value: 'all', label: 'ทุกหมวดหมู่' }, ...res.categories.map((c: string) => ({ value: c, label: c }))]
       if (res.levels?.length) levels.value = [{ value: 'all', label: 'ทุกระดับ' }, ...res.levels.map((l: string) => ({ value: l, label: l }))]
       if (res.education_levels?.length) educationLevels.value = [{ value: 'all', label: 'ทุกระดับการศึกษา' }, ...res.education_levels.map((l: string) => ({ value: l, label: l }))]

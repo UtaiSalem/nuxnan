@@ -437,11 +437,22 @@ class CourseController extends Controller
             ->orderBy('semester')
             ->get()
             ->map(function ($c) use ($semesterLabels) {
+                $val = $c->semester;
+                // If value is a JSON string or already an array/object from casting
+                if (is_string($val) && (str_starts_with($val, '{') || str_starts_with($val, '['))) {
+                    $decoded = json_decode($val, true);
+                    $val = $decoded['value'] ?? ($decoded[0] ?? $val);
+                } elseif (is_array($val)) {
+                    $val = $val['value'] ?? ($val[0] ?? $val);
+                }
+
                 return [
-                    'value' => $c->semester,
-                    'label' => $semesterLabels[$c->semester] ?? $c->semester
+                    'value' => (string)$val,
+                    'label' => $semesterLabels[$val] ?? "ภาคเรียนที่ $val"
                 ];
-            });
+            })
+            ->values()
+            ->toArray();
 
         $years = Course::select('academic_year')
             ->whereNotNull('academic_year')
@@ -450,32 +461,49 @@ class CourseController extends Controller
             ->orderBy('academic_year', 'desc')
             ->get()
             ->map(function ($c) {
+                $val = $c->academic_year;
+                // Handle JSON string or object
+                if (is_string($val) && (str_starts_with($val, '{') || str_starts_with($val, '['))) {
+                    $decoded = json_decode($val, true);
+                    $val = $decoded['value'] ?? ($decoded[0] ?? $val);
+                } elseif (is_array($val)) {
+                    $val = $val['value'] ?? ($val[0] ?? $val);
+                }
+
                 return [
-                    'value' => (string)$c->academic_year,
-                    'label' => (string)$c->academic_year
+                    'value' => (string)$val,
+                    'label' => (string)$val
                 ];
-            });
+            })
+            ->values()
+            ->toArray();
 
         $categories = Course::select('category')
             ->whereNotNull('category')
             ->where('category', '!=', '')
             ->distinct()
             ->orderBy('category')
-            ->pluck('category');
+            ->pluck('category')
+            ->values()
+            ->toArray();
 
         $levels = Course::select('level')
             ->whereNotNull('level')
             ->where('level', '!=', '')
             ->distinct()
             ->orderBy('level')
-            ->pluck('level');
+            ->pluck('level')
+            ->values()
+            ->toArray();
 
         $educationLevels = Course::select('education_level')
             ->whereNotNull('education_level')
             ->where('education_level', '!=', '')
             ->distinct()
             ->orderBy('education_level')
-            ->pluck('education_level');
+            ->pluck('education_level')
+            ->values()
+            ->toArray();
 
         return response()->json([
             'success'           => true,

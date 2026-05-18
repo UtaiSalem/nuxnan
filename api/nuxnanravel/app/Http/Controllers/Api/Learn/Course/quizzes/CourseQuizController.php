@@ -109,7 +109,7 @@ class CourseQuizController extends Controller
             if ($member) {
                 // If course has point deduction for exams, or requires attendance, check it
                 $eligibilityInfo = $this->eligibilityService->canTakeExam($member);
-                $canTakeExam = $eligibilityInfo['is_eligible'] || $eligibilityInfo['status'] === 'unlocked';
+                $canTakeExam = ($eligibilityInfo['can_take_exam'] ?? true) || ($eligibilityInfo['eligibility_status'] ?? '') === 'unlocked';
             }
         }
 
