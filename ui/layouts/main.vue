@@ -262,6 +262,34 @@ const handleTestChangePoints = () => {
 // Layout widget signals (set by pages that use Teleport to fill widget columns)
 const layoutWidgets = useLayoutWidgets()
 
+// Dynamic grid classes for center content
+const centerGridClass = computed(() => {
+  const { hasLeftWidgets, hasRightWidgets } = layoutWidgets.value
+
+  // Case: Both exist
+  if (hasLeftWidgets && hasRightWidgets) {
+    // lg: left(3) + center(9). Right is slide-out.
+    // xl: left(3) + center(6) + right(3).
+    return 'lg:col-span-9 xl:col-span-6'
+  }
+
+  // Case: Only Left exists
+  if (hasLeftWidgets) {
+    // lg+: left(3) + center(9).
+    return 'lg:col-span-9'
+  }
+
+  // Case: Only Right exists
+  if (hasRightWidgets) {
+    // lg: center(12). Right is slide-out.
+    // xl: center(9) + right(3).
+    return 'lg:col-span-12 xl:col-span-9'
+  }
+
+  // Case: No widgets
+  return 'lg:col-span-12'
+})
+
 // Universal QR Scanner Modal
 const isQRScannerOpen = ref(false)
 
@@ -1041,10 +1069,9 @@ const onQRActionComplete = (result) => {
           <div class="grid grid-cols-1 lg:grid-cols-12 xl:grid-cols-12 gap-6">
             <!-- Left Widgets (3/12) - visible lg+, slide-out on mobile -->
             <div
-              id="left-widgets-slot"
               v-show="layoutWidgets.hasLeftWidgets"
               :class="[
-                'lg:col-span-3 space-y-4 transition-all duration-300',
+                'lg:col-span-3 transition-all duration-300',
                 'fixed top-16 bottom-0 left-0 w-80 max-w-[85vw] z-40 p-6 bg-white dark:bg-vikinger-dark-100 shadow-xl overflow-y-auto transform',
                 'lg:relative lg:top-auto lg:bottom-auto lg:left-auto lg:w-auto lg:max-w-none lg:z-0 lg:p-0 lg:bg-transparent lg:dark:bg-transparent lg:shadow-none lg:overflow-visible lg:translate-x-0',
                 layoutWidgets.isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -1056,31 +1083,25 @@ const onQRActionComplete = (result) => {
                   <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
                 </button>
               </div>
-              <slot name="leftWidgets" />
+
+              <!-- Inner target for widgets (Teleport Target) -->
+              <div id="left-widgets-slot" class="flex flex-col gap-6">
+                <slot name="leftWidgets" />
+              </div>
             </div>
 
             <!-- Center Content (dynamic span based on widgets + breakpoint) -->
-            <div
-              :class="[
-                'w-full transition-all duration-300',
-                layoutWidgets.hasLeftWidgets && layoutWidgets.hasRightWidgets
-                  ? 'lg:col-span-9 xl:col-span-6'
-                  : layoutWidgets.hasLeftWidgets
-                  ? 'lg:col-span-9'
-                  : layoutWidgets.hasRightWidgets
-                  ? 'lg:col-span-12 xl:col-span-9'
-                  : 'lg:col-span-12',
-              ]"
-            >
-              <slot />
+            <div :class="['w-full transition-all duration-300', centerGridClass]">
+              <div class="flex flex-col gap-6">
+                <slot />
+              </div>
             </div>
 
             <!-- Right Widgets (3/12) - visible xl+, slide-out on tablet/mobile -->
             <div
-              id="right-widgets-slot"
               v-show="layoutWidgets.hasRightWidgets"
               :class="[
-                'xl:col-span-3 space-y-4 transition-all duration-300',
+                'xl:col-span-3 transition-all duration-300',
                 'fixed top-16 bottom-0 right-0 w-80 max-w-[85vw] z-40 p-6 bg-white dark:bg-vikinger-dark-100 shadow-xl overflow-y-auto transform',
                 'xl:relative xl:top-auto xl:bottom-auto xl:right-auto xl:w-auto xl:max-w-none xl:z-0 xl:p-0 xl:bg-transparent xl:dark:bg-transparent xl:shadow-none xl:overflow-visible xl:translate-x-0',
                 layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'
@@ -1092,7 +1113,11 @@ const onQRActionComplete = (result) => {
                   <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
                 </button>
               </div>
-              <slot name="rightWidgets" />
+
+              <!-- Inner target for widgets (Teleport Target) -->
+              <div id="right-widgets-slot" class="flex flex-col gap-6">
+                <slot name="rightWidgets" />
+              </div>
             </div>
           </div>
         </div>

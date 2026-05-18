@@ -82,47 +82,41 @@ onUnmounted(() => {
     </Teleport>
 
     <Teleport to="#left-widgets-slot">
-      <div class="space-y-4">
-        <CourseInstructorWidget v-if="course" :course="course" :owner="course.user" />
-        <RecentlyViewedCoursesWidget />
-        <FavoriteCoursesWidget />
-      </div>
+      <CourseInstructorWidget v-if="course" :course="course" :owner="course.user" />
+      <RecentlyViewedCoursesWidget />
+      <FavoriteCoursesWidget />
     </Teleport>
 
     <Teleport to="#right-widgets-slot">
-      <div class="space-y-4">
-        <CourseInfoWidget
-          v-if="course"
-          :course="course"
-          :course-member-of-auth="courseMemberOfAuth"
-          :is-course-admin="isCourseAdmin"
-          :course-groups="courseGroups"
-          :is-enrolling="isEnrolling"
-          :is-toggling-favorite="isTogglingFavorite"
-          :is-wishlisted="isWishlisted"
-          @enroll="$emit('request-member')"
-          @toggle-favorite="$emit('toggle-favorite')"
-          @purchase="$emit('purchase-course')"
-          @update:selected-group-id="$emit('update:selected-group-id', $event)"
-        />
+      <CourseInfoWidget
+        v-if="course"
+        :course="course"
+        :course-member-of-auth="courseMemberOfAuth"
+        :is-course-admin="isCourseAdmin"
+        :course-groups="courseGroups"
+        :is-enrolling="isEnrolling"
+        :is-toggling-favorite="isTogglingFavorite"
+        :is-wishlisted="isWishlisted"
+        @enroll="$emit('request-member')"
+        @toggle-favorite="$emit('toggle-favorite')"
+        @purchase="$emit('purchase-course')"
+        @update:selected-group-id="$emit('update:selected-group-id', $event)"
+      />
 
-        <CourseProgressWidget v-if="courseMemberOfAuth" :member="courseMemberOfAuth" :course-id="courseId" />
-        
-        <CourseSidebar 
-          :course="course" 
-          :is-admin="isCourseAdmin" 
-          :course-member-of-auth="courseMemberOfAuth" 
-        />
+      <CourseProgressWidget v-if="courseMemberOfAuth" :member="courseMemberOfAuth" :course-id="courseId" />
+      
+      <CourseSidebar 
+        :course="course" 
+        :is-admin="isCourseAdmin" 
+        :course-member-of-auth="courseMemberOfAuth" 
+      />
 
-        <MemberedCoursesWidget />
-        <MyCoursesWidget />
-      </div>
+      <MemberedCoursesWidget />
+      <MyCoursesWidget />
     </Teleport>
 
     <!-- Main Content Area -->
-    <div class="space-y-6">
-      <slot />
-    </div>
+    <slot />
   </div>
 </template>
 

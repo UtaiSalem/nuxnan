@@ -297,178 +297,173 @@ const respondToInvitation = async (accept: boolean) => {
 </script>
 
 <template>
-  <div class="page-container">
-    <div v-if="course" class="space-y-6">
-      <!-- Main Content (Single Column) -->
-      <div class="space-y-6">
-        <!-- Invitation Alert Card -->
-        <div v-if="pendingInvitation" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 relative overflow-hidden">
-              <div class="absolute top-0 right-0 p-4 opacity-10">
-                  <Icon icon="fluent:mail-read-24-filled" class="w-24 h-24 text-blue-600" />
-              </div>
-              <div class="relative z-10">
-                  <div class="flex items-center gap-3 mb-2">
-                      <div class="p-2 bg-blue-100 dark:bg-blue-800 rounded-full">
-                          <Icon icon="fluent:person-key-20-filled" class="w-6 h-6 text-blue-600 dark:text-blue-300" />
-                      </div>
-                      <div>
-                          <h3 class="font-bold text-lg text-gray-900 dark:text-white">คำเชิญเป็นผู้ดูแลรายวิชา</h3>
-                          <p class="text-blue-700 dark:text-blue-300">
-                              คุณได้รับคำเชิญให้เข้าร่วมเป็น <span class="font-semibold underline">{{ pendingInvitation.role === 4 ? 'ผู้ดูแลระบบ (Admin)' : 'ผู้ช่วยสอน (TA)' }}</span>
-                          </p>
-                      </div>
-                  </div>
-                  
-                  <p class="text-gray-600 dark:text-gray-400 mt-2 mb-4 max-w-xl">
-                      ผู้เชิญ: {{ pendingInvitation.inviter_id }} (ตรวจสอบโดยระบบ)
-                      <br>
-                      เมื่อคุณตอบรับ คุณจะได้รับสิทธิ์ในการจัดการรายวิชานี้ตามบทบาทที่ได้รับมอบหมายทันที
-                  </p>
-
-                  <div class="flex gap-3">
-                      <button @click="respondToInvitation(true)" class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                          ตอบรับคำเชิญ
-                      </button>
-                      <button @click="respondToInvitation(false)" class="px-6 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                          ปฏิเสธ
-                      </button>
-                  </div>
-              </div>
+  <div v-if="course" class="flex flex-col gap-6">
+    <!-- Invitation Alert Card -->
+    <div v-if="pendingInvitation" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 relative overflow-hidden">
+      <div class="absolute top-0 right-0 p-4 opacity-10">
+        <Icon icon="fluent:mail-read-24-filled" class="w-24 h-24 text-blue-600" />
+      </div>
+      <div class="relative z-10">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="p-2 bg-blue-100 dark:bg-blue-800 rounded-full">
+            <Icon icon="fluent:person-key-20-filled" class="w-6 h-6 text-blue-600 dark:text-blue-300" />
           </div>
-
-          <!-- Description Card -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 overflow-hidden">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Icon icon="fluent:text-description-24-regular" class="w-5 h-5 text-blue-500" />
-                รายละเอียดรายวิชา
-              </h3>
-              <!-- Edit button for admin -->
-              <button
-                v-if="isCourseAdmin && !isEditingDescription"
-                @click="startEditDescription"
-                class="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-              >
-                <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
-                แก้ไข
-              </button>
-            </div>
-            
-            <!-- View Mode -->
-            <div v-if="!isEditingDescription" class="text-gray-600 dark:text-gray-400 leading-relaxed prose dark:prose-invert max-w-none break-words [overflow-wrap:anywhere] overflow-hidden 
-              [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:border-collapse [&_table]:mb-4
-              [&_thead]:bg-gray-50 [&_thead]:dark:bg-gray-800/50
-              [&_th]:px-4 [&_th]:py-2 [&_th]:border [&_th]:border-gray-200 [&_th]:dark:border-gray-700 [&_th]:text-left
-              [&_td]:px-4 [&_td]:py-2 [&_td]:border [&_td]:border-gray-200 [&_td]:dark:border-gray-700
-              [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-xl [&_img]:mx-auto [&_img]:my-4
-              [&_iframe]:max-w-full [&_iframe]:aspect-video [&_iframe]:rounded-xl [&_iframe]:w-full [&_iframe]:my-4
-              [&_video]:max-w-full [&_video]:h-auto [&_video]:rounded-xl [&_video]:w-full [&_video]:my-4
-              [&_p]:mb-4 [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:mb-4
-              [&_a]:text-blue-500 [&_a]:underline [&_a]:break-all">
-              <div v-if="course.description" v-html="course.description"></div>
-              <p v-else class="text-gray-400 italic">ไม่มีรายละเอียด</p>
-            </div>
-            
-            <!-- Edit Mode -->
-            <div v-else class="space-y-4">
-              <CommonRichTextEditor
-                v-model="descriptionContent"
-                placeholder="เขียนรายละเอียดรายวิชาที่นี่..."
-                min-height="250px"
-              />
-              <div class="flex items-center justify-end gap-3">
-                <button
-                  @click="cancelEditDescription"
-                  :disabled="isSavingDescription"
-                  class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  @click="saveDescription"
-                  :disabled="isSavingDescription"
-                  class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-                >
-                  <Icon v-if="isSavingDescription" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-                  <Icon v-else icon="fluent:save-24-regular" class="w-4 h-4" />
-                  บันทึก
-                </button>
-              </div>
-            </div>
+          <div>
+            <h3 class="font-bold text-lg text-gray-900 dark:text-white">คำเชิญเป็นผู้ดูแลรายวิชา</h3>
+            <p class="text-blue-700 dark:text-blue-300">
+              คุณได้รับคำเชิญให้เข้าร่วมเป็น <span class="font-semibold underline">{{ pendingInvitation.role === 4 ? 'ผู้ดูแลระบบ (Admin)' : 'ผู้ช่วยสอน (TA)' }}</span>
+            </p>
           </div>
+        </div>
+        
+        <p class="text-gray-600 dark:text-gray-400 mt-2 mb-4 max-w-xl">
+          ผู้เชิญ: {{ pendingInvitation.inviter_id }} (ตรวจสอบโดยระบบ)
+          <br>
+          เมื่อคุณตอบรับ คุณจะได้รับสิทธิ์ในการจัดการรายวิชานี้ตามบทบาทที่ได้รับมอบหมายทันที
+        </p>
 
-          <!-- Curriculum Card -->
-          <div v-if="curriculum.length > 0" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Icon icon="fluent:book-24-regular" class="w-5 h-5 text-blue-500" />
-              เนื้อหาบทเรียน
-            </h3>
-            
-            <!-- Curriculum Accordion -->
-            <div class="space-y-2">
-              <div 
-                v-for="(section, index) in curriculum" 
-                :key="section.id" 
-                class="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden"
-              >
-                <!-- Section Header -->
-                <button
-                  @click="toggleSection(index)"
-                  class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <span class="font-medium text-gray-900 dark:text-white">
-                    {{ section.title }}
-                  </span>
-                  <div class="flex items-center gap-3 text-gray-500 text-sm">
-                    <span>{{ section.videos }} หัวข้อ</span>
-                    <Icon 
-                      :icon="expandedSections.includes(index) ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
-                      class="w-5 h-5" 
-                    />
-                  </div>
-                </button>
+        <div class="flex gap-3">
+          <button @click="respondToInvitation(true)" class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+            ตอบรับคำเชิญ
+          </button>
+          <button @click="respondToInvitation(false)" class="px-6 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            ปฏิเสธ
+          </button>
+        </div>
+      </div>
+    </div>
 
-                <!-- Section Content -->
-                <div v-if="expandedSections.includes(index) && section.items.length > 0" class="divide-y divide-gray-200 dark:divide-gray-600">
-                  <div 
-                    v-for="item in section.items" 
-                    :key="item.id"
-                    class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-                  >
-                    <div class="flex items-center gap-3">
-                      <Icon 
-                        :icon="item.type === 'locked' ? 'fluent:lock-closed-24-regular' : 'fluent:play-circle-24-regular'" 
-                        :class="[
-                          'w-5 h-5',
-                          item.type === 'locked' ? 'text-gray-400' : 'text-blue-500'
-                        ]"
-                      />
-                      <span class="text-gray-700 dark:text-gray-300 text-sm">
-                        {{ item.title }}
-                      </span>
-                    </div>
-                    <span class="text-gray-500 text-sm">{{ item.duration }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Reviews Section -->
-          <LearnCourseRatingCourseReviewsSection
-            v-if="course"
-            :course-id="course.id"
-            :is-member="isMember"
-          />
+    <!-- Description Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 overflow-hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <Icon icon="fluent:text-description-24-regular" class="w-5 h-5 text-blue-500" />
+          รายละเอียดรายวิชา
+        </h3>
+        <!-- Edit button for admin -->
+        <button
+          v-if="isCourseAdmin && !isEditingDescription"
+          @click="startEditDescription"
+          class="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+        >
+          <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
+          แก้ไข
+        </button>
       </div>
       
-      <!-- Purchase Modal -->
-      <LearnCoursePurchaseModal
-        v-model="showPurchaseModal"
-        :course="course"
-        @confirm="onPurchaseConfirm"
-        @topup="goToTopup"
-      />
+      <!-- View Mode -->
+      <div v-if="!isEditingDescription" class="text-gray-600 dark:text-gray-400 leading-relaxed prose dark:prose-invert max-w-none break-words [overflow-wrap:anywhere] overflow-hidden 
+        [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:border-collapse [&_table]:mb-4
+        [&_thead]:bg-gray-50 [&_thead]:dark:bg-gray-800/50
+        [&_th]:px-4 [&_th]:py-2 [&_th]:border [&_th]:border-gray-200 [&_th]:dark:border-gray-700 [&_th]:text-left
+        [&_td]:px-4 [&_td]:py-2 [&_td]:border [&_td]:border-gray-200 [&_td]:dark:border-gray-700
+        [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-xl [&_img]:mx-auto [&_img]:my-4
+        [&_iframe]:max-w-full [&_iframe]:aspect-video [&_iframe]:rounded-xl [&_iframe]:w-full [&_iframe]:my-4
+        [&_video]:max-w-full [&_video]:h-auto [&_video]:rounded-xl [&_video]:w-full [&_video]:my-4
+        [&_p]:mb-4 [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:mb-4
+        [&_a]:text-blue-500 [&_a]:underline [&_a]:break-all">
+        <div v-if="course.description" v-html="course.description"></div>
+        <p v-else class="text-gray-400 italic">ไม่มีรายละเอียด</p>
+      </div>
+      
+      <!-- Edit Mode -->
+      <div v-else class="flex flex-col gap-4">
+        <CommonRichTextEditor
+          v-model="descriptionContent"
+          placeholder="เขียนรายละเอียดรายวิชาที่นี่..."
+          min-height="250px"
+        />
+        <div class="flex items-center justify-end gap-3">
+          <button
+            @click="cancelEditDescription"
+            :disabled="isSavingDescription"
+            class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+          >
+            ยกเลิก
+          </button>
+          <button
+            @click="saveDescription"
+            :disabled="isSavingDescription"
+            class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+          >
+            <Icon v-if="isSavingDescription" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+            <Icon v-else icon="fluent:save-24-regular" class="w-4 h-4" />
+            บันทึก
+          </button>
+        </div>
+      </div>
     </div>
+
+    <!-- Curriculum Card -->
+    <div v-if="curriculum.length > 0" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <Icon icon="fluent:book-24-regular" class="w-5 h-5 text-blue-500" />
+        เนื้อหาบทเรียน
+      </h3>
+      
+      <!-- Curriculum Accordion -->
+      <div class="flex flex-col gap-2">
+        <div 
+          v-for="(section, index) in curriculum" 
+          :key="section.id" 
+          class="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden"
+        >
+          <!-- Section Header -->
+          <button
+            @click="toggleSection(index)"
+            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <span class="font-medium text-gray-900 dark:text-white">
+              {{ section.title }}
+            </span>
+            <div class="flex items-center gap-3 text-gray-500 text-sm">
+              <span>{{ section.videos }} หัวข้อ</span>
+              <Icon 
+                :icon="expandedSections.includes(index) ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
+                class="w-5 h-5" 
+              />
+            </div>
+          </button>
+
+          <!-- Section Content -->
+          <div v-if="expandedSections.includes(index) && section.items.length > 0" class="divide-y divide-gray-200 dark:divide-gray-600">
+            <div 
+              v-for="item in section.items" 
+              :key="item.id"
+              class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+            >
+              <div class="flex items-center gap-3">
+                <Icon 
+                  :icon="item.type === 'locked' ? 'fluent:lock-closed-24-regular' : 'fluent:play-circle-24-regular'" 
+                  :class="[
+                    'w-5 h-5',
+                    item.type === 'locked' ? 'text-gray-400' : 'text-blue-500'
+                  ]"
+                />
+                <span class="text-gray-700 dark:text-gray-300 text-sm">
+                  {{ item.title }}
+                </span>
+              </div>
+              <span class="text-gray-500 text-sm">{{ item.duration }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviews Section -->
+    <LearnCourseRatingCourseReviewsSection
+      v-if="course"
+      :course-id="course.id"
+      :is-member="isMember"
+    />
+
+    <!-- Purchase Modal -->
+    <LearnCoursePurchaseModal
+      v-model="showPurchaseModal"
+      :course="course"
+      @confirm="onPurchaseConfirm"
+      @topup="goToTopup"
+    />
   </div>
 </template>
