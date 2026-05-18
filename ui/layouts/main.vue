@@ -1024,19 +1024,19 @@ const onQRActionComplete = (result) => {
       >
         <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 w-full max-w-[1440px] 2xl:max-w-[1600px]">
           <!-- Hero Banner Slot (Full Width) -->
-          <div v-if="$slots.hero" class="w-full mb-6">
+          <div id="hero-slot" class="w-full mb-6 empty:hidden">
             <slot name="hero" />
           </div>
 
           <!-- Tabs/Navigation Slot (Full Width) -->
-          <div v-if="$slots.tabs" class="w-full mb-6">
+          <div id="tabs-slot" class="w-full mb-6 empty:hidden">
             <slot name="tabs" />
           </div>
 
           <!-- 12 Column Grid Layout -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <!-- Left Widgets (3/12) -->
-            <div v-if="$slots.leftWidgets" class="hidden lg:block lg:col-span-3 space-y-4">
+            <div id="left-widgets-slot" class="lg:col-span-3 space-y-4 empty:hidden">
               <slot name="leftWidgets" />
             </div>
 
@@ -1045,17 +1045,19 @@ const onQRActionComplete = (result) => {
               :class="[
                 'w-full',
                 $slots.leftWidgets && $slots.rightWidgets
-                  ? 'lg:col-span-6'
-                  : $slots.leftWidgets || $slots.rightWidgets
+                  ? 'lg:col-span-7' 
+                  : $slots.leftWidgets
                   ? 'lg:col-span-9'
+                  : $slots.rightWidgets
+                  ? 'lg:col-span-10'
                   : 'lg:col-span-12',
               ]"
             >
               <slot />
             </div>
 
-            <!-- Right Widgets (3/12) -->
-            <div v-if="$slots.rightWidgets" class="hidden lg:block lg:col-span-3 space-y-4">
+            <!-- Right Widgets (2/12) -->
+            <div id="right-widgets-slot" class="lg:col-span-2 space-y-4 empty:hidden">
               <slot name="rightWidgets" />
             </div>
           </div>

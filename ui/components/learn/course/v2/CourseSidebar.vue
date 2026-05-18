@@ -3,6 +3,7 @@ import { Icon } from '@iconify/vue'
 import CourseSidebarInstructor from './CourseSidebarInstructor.vue'
 import CourseSidebarGroup from './CourseSidebarGroup.vue'
 import CourseHeroStats from './CourseHeroStats.vue'
+import CourseLessonsMenu from './CourseLessonsMenu.vue'
 
 const props = defineProps({
   course: { type: Object, required: true },
@@ -12,10 +13,14 @@ const props = defineProps({
 
 const owner = computed(() => props.course?.user || props.course?.owner)
 const memberGroup = computed(() => props.courseMemberOfAuth?.group)
+const courseId = computed(() => props.course?.id)
 </script>
 
 <template>
   <div class="space-y-6">
+    <!-- Lessons Menu -->
+    <CourseLessonsMenu v-if="courseId" :course-id="courseId" :is-admin="isAdmin" />
+
     <!-- Group Card -->
     <CourseSidebarGroup v-if="memberGroup" :group="memberGroup" />
 

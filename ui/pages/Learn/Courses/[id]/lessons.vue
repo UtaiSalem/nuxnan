@@ -13,10 +13,11 @@ const router = useRouter()
 const api = useApi()
 const swal = useSweetAlert()
 
+const courseStore = useCourseStore()
 const course = inject<Ref<any>>('course')
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin') as Ref<boolean>
 
-const lessons = ref<any[]>([])
+const lessons = computed(() => courseStore.lessons)
 const isLoading = ref(true)
 const isDeleting = ref(false)
 const error = ref<string | null>(null)
@@ -31,8 +32,7 @@ const fetchLessons = async () => {
     isLoading.value = true
     error.value = null
     try {
-        const response = (await api.get(`/api/courses/${course.value.id}/lessons`)) as any
-        lessons.value = response.lessons || response.data || response || []
+        await courseStore.fetchLessons(course.value.id, true)
     } catch (err: any) {
         console.error('Error fetching lessons:', err)
         error.value = err.message || 'ไม่สามารถโหลดบทเรียนได้'
