@@ -134,7 +134,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="academies-index-page">
+  <div>
     <NuxtLayout name="main">
     <!-- Hero Banner -->
     <template #hero>
@@ -378,7 +378,7 @@ onMounted(() => {
     </div>
   </NuxtLayout>
   </div>
-</template>
+  </template>
 
 <style scoped>
 .bg-gradient-vikinger {
@@ -388,3 +388,4 @@ onMounted(() => {
   box-shadow: 0 10px 25px -5px rgba(111, 66, 193, 0.3), 0 8px 10px -6px rgba(111, 66, 193, 0.1);
 }
 </style>
+

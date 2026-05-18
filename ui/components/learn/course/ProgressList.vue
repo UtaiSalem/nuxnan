@@ -539,10 +539,10 @@ watch(members, () => {
         </div>
       </div>
 
-      <!-- Detail Charts Row -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <!-- Grade Distribution -->
-        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <!-- Detail Charts Row: Stacked Sections -->
+      <div class="space-y-4">
+        <!-- Grade Distribution (Full Width) -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-6 flex items-center gap-2">
             <Icon icon="fluent:chart-person-24-regular" class="w-5 h-5" />
             การกระจายเกรด (Grade Distribution)
@@ -554,9 +554,8 @@ watch(members, () => {
                     {{ count }} คน
                  </div>
                 <!-- Bar -->
-                <div class="w-full max-w-[40px] bg-blue-100 dark:bg-blue-900/30 rounded-t-md relative overflow-hidden transition-all duration-500 hover:bg-blue-200 dark:hover:bg-blue-800/50"
+                <div class="w-full max-w-[60px] bg-blue-100 dark:bg-blue-900/30 rounded-t-md relative overflow-hidden transition-all duration-500 hover:bg-blue-200 dark:hover:bg-blue-800/50"
                      :style="{ height: `${Math.max((count / members.length) * 100, 4)}%` }">
-                     <!-- Fill animation could go here -->
                      <div v-if="count > 0" class="absolute bottom-0 left-0 right-0 bg-blue-500/20 h-full w-full"></div>
                 </div>
                 <!-- Label -->
@@ -565,28 +564,31 @@ watch(members, () => {
           </div>
         </div>
 
-        <!-- Top Performers -->
+        <!-- Top Performers (Full Width) -->
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
           <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
             <Icon icon="fluent:ribbon-star-24-filled" class="w-5 h-5 text-yellow-500" />
             Top Performers
           </h4>
-          <div class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
              <div v-for="(student, index) in topPerformers" :key="student.id" 
-                  class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                  class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-700 border border-transparent hover:border-blue-100 dark:hover:border-gray-600 transition-all cursor-pointer shadow-sm hover:shadow-md"
                   @click="viewMemberDetails(student)">
                 <div class="relative">
-                    <img :src="getAvatarUrl(student.user, index)" class="w-10 h-10 rounded-full object-cover border border-gray-200" @error="onAvatarError($event, student.user, index)">
-                    <div v-if="index < 3" class="absolute -top-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-white"
+                    <img :src="getAvatarUrl(student.user, index)" class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" @error="onAvatarError($event, student.user, index)">
+                    <div v-if="index < 3" class="absolute -top-1 -left-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm border-2 border-white"
                          :class="getRankColor(index)">
                         {{ index + 1 }}
                     </div>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ student.user?.name }}</p>
-                    <p class="text-xs text-gray-500 truncate">{{ student.scores?.grade_progress ?? 0 }} ({{ student.scores?.grade_name || '-' }}) • {{ student.overall_progress || 0 }}%</p>
+                    <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ student.user?.name }}</p>
+                    <p class="text-[11px] text-gray-500 truncate">เกรด: {{ student.scores?.grade_progress ?? 0 }} ({{ student.scores?.grade_name || '-' }}) • {{ student.overall_progress || 0 }}%</p>
                 </div>
-                <div class="text-sm font-bold text-green-600">{{ student.scores?.total_score || 0 }}</div>
+                <div class="text-right">
+                    <div class="text-sm font-black text-blue-600 dark:text-blue-400">{{ student.scores?.total_score || 0 }}</div>
+                    <div class="text-[9px] text-gray-400 uppercase font-bold">คะแนน</div>
+                </div>
              </div>
           </div>
         </div>
@@ -790,6 +792,7 @@ watch(members, () => {
                     <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">บทเรียน</th>
                     <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">งาน</th>
                     <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">ทดสอบ</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">ภายนอก</th>
                     <th scope="col" class="px-2 py-2.5 whitespace-nowrap">พิเศษ</th>
                     <th scope="col" class="px-2 py-2.5 whitespace-nowrap">รวม</th>
                     <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">%</th>
@@ -857,6 +860,7 @@ watch(members, () => {
                     </td>
                     <td class="px-2 py-2 text-center">{{ member.scores?.course_assignments || 0 }}</td>
                     <td class="px-2 py-2 text-center">{{ member.scores?.course_quizzes || 0 }}</td>
+                    <td class="px-2 py-2 text-center text-indigo-600 font-medium">{{ member.scores?.external_score_points || 0 }}</td>
                     <td class="px-2 py-2">
                     <div v-if="isCourseAdmin" class="flex items-center gap-1">
                         <input 
@@ -1208,9 +1212,15 @@ watch(members, () => {
                 <p class="text-xs text-gray-500">ทดสอบรายวิชา</p>
               </div>
             </div>
-            <div class="mt-3 flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <span class="text-sm font-medium text-blue-700 dark:text-blue-300">คะแนนพิเศษ (Bonus)</span>
-              <span class="text-lg font-bold text-blue-600 dark:text-blue-400">+{{ selectedMember?.scores?.bonus_points || 0 }}</span>
+            <div class="mt-3 space-y-2">
+              <div class="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">คะแนนภายนอก (External)</span>
+                <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400">+{{ selectedMember?.scores?.external_score_points || 0 }}</span>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <span class="text-sm font-medium text-blue-700 dark:text-blue-300">คะแนนพิเศษ (Bonus)</span>
+                <span class="text-lg font-bold text-blue-600 dark:text-blue-400">+{{ selectedMember?.scores?.bonus_points || 0 }}</span>
+              </div>
             </div>
           </div>
           

@@ -43,7 +43,6 @@ use App\Http\Controllers\Api\Learn\Course\lessons\LessonProgressController;
 use App\Http\Controllers\CoursePostShareController;
 use App\Http\Controllers\Api\Learn\Course\admins\CourseAdminController;
 use App\Http\Controllers\Api\Learn\Course\reviews\CourseReviewController;
-use App\Http\Controllers\Api\Learn\Course\CoursePurchaseController;
 use App\Http\Controllers\Api\Learn\Course\CourseMarketplaceController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseSettingController;
 
@@ -73,6 +72,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
     Route::put('/{course}', [CourseController::class, 'update'])->name('course.update');
     Route::patch('/{course}', [CourseController::class, 'update'])->name('course.part.update');
     Route::delete('/{course}', [CourseController::class, 'destroy'])->name('course.destroy');
+    Route::post('/{course}/duplicate', [CourseController::class, 'duplicate'])->name('course.duplicate');
     Route::get('/{course}/progress', [CourseController::class, 'progress'])->name('course.progress');
     Route::get('/{course}/top-performers', [CourseController::class, 'topPerformers'])->name('course.top-performers');
     Route::get('/{course}/export/results', [CourseController::class, 'exportLearningResults'])->name('course.export.results');
@@ -391,16 +391,16 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/reviews')
 // Course Purchase Routes
 Route::middleware(['auth:api', 'verified'])->group(function () {
     // Check purchase eligibility and pricing
-    Route::get('/courses/{course}/purchase/check', [CoursePurchaseController::class, 'checkPurchase'])->name('course.purchase.check');
+    Route::get('/courses/{course}/purchase/check', [CourseMarketplaceController::class, 'checkPurchase'])->name('course.purchase.check');
     
     // User purchase history
-    Route::get('/courses/purchases/history', [CoursePurchaseController::class, 'getPurchaseHistory'])->name('course.purchases.history');
+    Route::get('/courses/purchases/history', [CourseMarketplaceController::class, 'getPurchaseHistory'])->name('course.purchases.history');
     
     // Sales analytics for course owners
-    Route::get('/courses/sales/analytics', [CoursePurchaseController::class, 'getSalesAnalytics'])->name('course.sales.analytics');
+    Route::get('/courses/sales/analytics', [CourseMarketplaceController::class, 'getSalesAnalytics'])->name('course.sales.analytics');
     
     // Refund (admin/owner only)
-    Route::post('/courses/{course}/purchase/refund', [CoursePurchaseController::class, 'refundPurchase'])->name('course.purchase.refund');
+    Route::post('/courses/{course}/purchase/refund', [CourseMarketplaceController::class, 'refundPurchase'])->name('course.purchase.refund');
 });
 
 // Course External Scores Routes (บันทึกคะแนนจากภายนอก)

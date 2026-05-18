@@ -640,7 +640,7 @@ const getTabCount = (tabId) => {
                                           <div v-else class="text-xs text-gray-400 italic mb-2">ซ่อนคะแนน</div>
                                           
                                           <div v-if="!quiz.passed">
-                                             <NuxtLink :to="`/courses/${courseId}/quizzes/${quiz.id}`" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors">
+                                             <NuxtLink :to="`/Learn/Courses/${courseId}/quizzes/${quiz.id}`" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors">
                                                  ทำแบบทดสอบ
                                              </NuxtLink>
                                           </div>

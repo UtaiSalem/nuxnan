@@ -7,11 +7,19 @@ use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\CourseExternalScore;
 use App\Models\CourseExternalScoreEntry;
+use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CourseExternalScoreController extends Controller
 {
+    protected $scoreService;
+
+    public function __construct(CourseScoreService $scoreService)
+    {
+        $this->scoreService = $scoreService;
+    }
+
     /**
      * แสดงรายการหัวข้อคะแนนจากภายนอกทั้งหมดของรายวิชา
      */
@@ -32,7 +40,7 @@ class CourseExternalScoreController extends Controller
                     'title' => $score->title,
                     'description' => $score->description,
                     'category' => $score->category,
-                    'max_score' => $score->max_score,
+                    'max_score' => (float)$score->max_score,
                     'group_id' => $score->group_id,
                     'group_name' => $score->group?->name,
                     'scored_at' => $score->scored_at?->format('Y-m-d'),
@@ -70,7 +78,7 @@ class CourseExternalScoreController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'category' => 'nullable|string|in:exam,activity,project,other',
-            'max_score' => 'required|numeric|min:0.01|max:99999',
+            'max_score' => 'required|numeric|min:0|max:99999',
             'scored_at' => 'nullable|date',
         ]);
 
@@ -84,6 +92,9 @@ class CourseExternalScoreController extends Controller
             'group_id' => null,
             'scored_at' => $validated['scored_at'] ?? now()->toDateString(),
         ]);
+
+        // Sync course total score
+        $this->scoreService->syncCourseTotalScore($course);
 
         return response()->json([
             'success' => true,
@@ -142,7 +153,7 @@ class CourseExternalScoreController extends Controller
                 'title' => $externalScore->title,
                 'description' => $externalScore->description,
                 'category' => $externalScore->category,
-                'max_score' => $externalScore->max_score,
+                'max_score' => (float)$externalScore->max_score,
                 'group_id' => $externalScore->group_id,
                 'scored_at' => $externalScore->scored_at?->format('Y-m-d'),
                 'is_active' => $externalScore->is_active,
@@ -169,11 +180,18 @@ class CourseExternalScoreController extends Controller
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'category' => 'nullable|string|in:exam,activity,project,other',
-            'max_score' => 'sometimes|required|numeric|min:0.01|max:99999',
+            'max_score' => 'sometimes|required|numeric|min:0|max:99999',
             'scored_at' => 'nullable|date',
         ]);
 
         $externalScore->update($validated);
+
+        // Sync course total score if max_score changed
+        if ($request->has('max_score')) {
+            $this->scoreService->syncCourseTotalScore($course);
+            // Also need to update all members grade progress because total_score changed
+            $this->scoreService->syncAllCourseMembers($course);
+        }
 
         return response()->json([
             'success' => true,
@@ -195,13 +213,21 @@ class CourseExternalScoreController extends Controller
             return response()->json(['success' => false, 'message' => 'Not found'], 404);
         }
 
-        // เก็บ member IDs ที่มี entries เพื่ออัปเดต bonus_points หลังลบ
-        $affectedMemberIds = $externalScore->entries()->pluck('course_member_id');
+        // เก็บ member IDs ที่มี entries เพื่ออัปเดตคะแนนหลังลบ
+        $affectedMemberIds = $externalScore->entries()->pluck('course_member_id')->toArray();
 
         $externalScore->delete(); // cascade ลบ entries ด้วย
 
-        // อัปเดต bonus_points ให้สมาชิกที่ได้รับผลกระทบ
-        $this->syncBonusPointsForMembers($course, $affectedMemberIds->toArray());
+        // Sync course total score
+        $this->scoreService->syncCourseTotalScore($course);
+
+        // อัปเดต external_score_points ให้สมาชิกที่ได้รับผลกระทบ
+        foreach ($affectedMemberIds as $memberId) {
+            $member = CourseMember::find($memberId);
+            if ($member) {
+                $this->scoreService->syncMemberExternalScore($member);
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -260,8 +286,13 @@ class CourseExternalScoreController extends Controller
             }
         });
 
-        // Sync bonus_points สำหรับสมาชิกที่ได้รับผลกระทบ
-        $this->syncBonusPointsForMembers($course, $affectedMemberIds);
+        // Sync scores สำหรับสมาชิกที่ได้รับผลกระทบ
+        foreach (array_unique($affectedMemberIds) as $memberId) {
+            $member = CourseMember::find($memberId);
+            if ($member) {
+                $this->scoreService->syncMemberExternalScore($member);
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -280,7 +311,7 @@ class CourseExternalScoreController extends Controller
 
         $groups = $course->courseGroups()->select('id', 'name')->withCount('members')->get();
 
-        // ดึง external scores ทั้งหมดของ course (ไม่กรองตาม group อีกต่อไป)
+        // ดึง external scores ทั้งหมดของ course
         $externalScores = $course->courseExternalScores()
             ->where('is_active', true)
             ->orderBy('created_at', 'asc')
@@ -329,6 +360,9 @@ class CourseExternalScoreController extends Controller
                 'group_id' => $member->group_id,
                 'group' => $member->group ? ['id' => $member->group->id, 'name' => $member->group->name] : null,
                 'scores' => $scores,
+                'external_score_points' => (float)$member->external_score_points,
+                'bonus_points' => (float)$member->bonus_points,
+                'achieved_score' => (float)$member->achieved_score,
             ];
         });
 

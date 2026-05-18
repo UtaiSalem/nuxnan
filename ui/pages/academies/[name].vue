@@ -1060,7 +1060,7 @@ onMounted(() => {
             <!-- Header with Create Button -->
             <div v-if="academy.authIsAcademyAdmin" class="flex justify-end">
               <NuxtLink
-                to="/courses/create"
+                to="/Learn/Courses/create"
                 class="px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium text-sm hover:bg-vikinger-purple/90 transition-colors flex items-center gap-2"
               >
                 <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
@@ -1079,7 +1079,7 @@ onMounted(() => {
               <NuxtLink
                 v-for="course in courses"
                 :key="course.id"
-                :to="`/courses/${course.id}`"
+                :to="`/Learn/Courses/${course.id}`"
                 class="block bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden group"
               >
                 <!-- Course Cover -->
@@ -1107,7 +1107,7 @@ onMounted(() => {
                       </span>
                       <span class="flex items-center gap-1">
                         <Icon icon="fluent:book-open-24-regular" class="w-4 h-4" />
-                        {{ course.lessons_count || 0 }} บท
+                        {{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บท
                       </span>
                     </div>
                     <span 

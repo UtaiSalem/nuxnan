@@ -9,12 +9,13 @@ class MemberedCourseResource extends CourseResource
     public function toArray(Request $request): array
     {
         $data = parent::toArray($request);
-        
+
         $userId = auth()->guard('api')->id() ?? auth()->id();
         $member = $userId ? $this->courseMembers->where('user_id', $userId)->first() : null;
 
         $data['auth_role'] = $member?->role;
         $data['auth_progress'] = $member?->getPercentageScore() ?? 0;
+        $data['isCourseAdmin'] = $this->when($this->isAdmin(auth()->user()), true);
 
         return $data;
     }

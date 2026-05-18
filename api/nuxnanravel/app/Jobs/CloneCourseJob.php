@@ -2,12 +2,12 @@
 
 namespace App\Jobs;
 
-use App\Models\User;
-use App\Models\Course;
 use App\Models\Notification;
 use App\Models\PointsTransaction;
 use App\Models\WalletTransaction;
+use App\Models\CoursePurchase;
 use App\Services\CourseCloneService;
+use App\Services\Support\CourseCloneContext;
 use App\Services\PointsService;
 use App\Services\WalletService;
 use Illuminate\Bus\Queueable;
@@ -22,10 +22,7 @@ class CloneCourseJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $source;
-    protected $newOwner;
-    protected $purchaseTransactionId;
-    protected $paymentMode;
+    protected $purchaseId;
 
     /**
      * The number of times the job may be attempted.
@@ -44,12 +41,9 @@ class CloneCourseJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(Course $source, User $newOwner, ?int $purchaseTransactionId = null, ?string $paymentMode = 'auto')
+    public function __construct(int $purchaseId)
     {
-        $this->source = $source;
-        $this->newOwner = $newOwner;
-        $this->purchaseTransactionId = $purchaseTransactionId;
-        $this->paymentMode = $paymentMode;
+        $this->purchaseId = $purchaseId;
     }
 
     /**
@@ -57,40 +51,64 @@ class CloneCourseJob implements ShouldQueue
      */
     public function handle(CourseCloneService $cloneService): void
     {
+        $purchase = CoursePurchase::with(['sourceCourse', 'buyer'])->find($this->purchaseId);
+        
+        if (!$purchase) {
+            Log::error("CoursePurchase record not found: {$this->purchaseId}");
+            return;
+        }
+
+        // Idempotency check
+        if ($purchase->status === 'completed') {
+            Log::info("Purchase {$this->purchaseId} already completed. Skipping.");
+            return;
+        }
+        if (in_array($purchase->status, ['failed', 'refunded'])) {
+            Log::info("Purchase {$this->purchaseId} is in status {$purchase->status}. Skipping.");
+            return;
+        }
+
+        $source = $purchase->sourceCourse;
+        $newOwner = $purchase->buyer;
+
         try {
-            $newCourse = $cloneService->clone($this->source, $this->newOwner);
+            $context = new CourseCloneContext(mode: 'purchase');
+            $newCourse = $cloneService->clone($source, $newOwner, $context);
             
+            $purchase->update([
+                'cloned_course_id' => $newCourse->id,
+                'status' => 'completed',
+                'cloned_at' => now(),
+            ]);
+
             // Dispatch notification to newOwner
             Notification::create([
-                'user_id' => $this->newOwner->id,
+                'user_id' => $newOwner->id,
                 'type' => Notification::TYPE_COURSE,
                 'title' => 'คัดลอกวิชาสำเร็จ',
-                'message' => "วิชา \"{$this->source->name}\" ถูกเพิ่มในคลังของคุณแล้ว คุณสามารถเริ่มจัดการเนื้อหาได้ทันที",
+                'message' => "วิชา \"{$source->name}\" ถูกเพิ่มในคลังของคุณแล้ว คุณสามารถเริ่มจัดการเนื้อหาได้ทันที",
                 'metadata' => [
                     'course_id' => $newCourse->id,
-                    'source_course_id' => $this->source->id,
+                    'source_course_id' => $source->id,
                     'action_url' => "/Learn/Courses/{$newCourse->id}/settings"
                 ],
                 'read_status' => false
             ]);
             
-            Log::info("Course cloned successfully: {$newCourse->id} from {$this->source->id} for user {$this->newOwner->id}");
+            Log::info("Course cloned successfully: {$newCourse->id} from {$source->id} for user {$newOwner->id}");
         } catch (\Exception $e) {
-            Log::error("Failed to clone course {$this->source->id} for user {$this->newOwner->id}: " . $e->getMessage());
+            Log::error("Failed to clone course {$source->id} for user {$newOwner->id}: " . $e->getMessage());
             
-            // Handle refund if purchaseTransactionId is provided
-            if ($this->purchaseTransactionId) {
-                $this->handleRefund();
-            }
+            $this->handleRefund($purchase);
 
             // Notify user about failure
             Notification::create([
-                'user_id' => $this->newOwner->id,
+                'user_id' => $newOwner->id,
                 'type' => Notification::TYPE_GENERAL,
                 'title' => 'ไม่สามารถคัดลอกวิชาได้',
-                'message' => "เกิดข้อผิดพลาดในการคัดลอกวิชา \"{$this->source->name}\" ระบบได้ทำการคืนเงิน/แต้มให้คุณแล้ว กรุณาลองใหม่อีกครั้ง",
+                'message' => "เกิดข้อผิดพลาดในการคัดลอกวิชา \"{$source->name}\" ระบบได้ทำการคืนเงิน/แต้มให้คุณแล้ว กรุณาลองใหม่อีกครั้ง",
                 'metadata' => [
-                    'source_course_id' => $this->source->id,
+                    'source_course_id' => $source->id,
                     'error' => $e->getMessage()
                 ],
                 'read_status' => false
@@ -100,64 +118,62 @@ class CloneCourseJob implements ShouldQueue
         }
     }
 
-    protected function handleRefund(): void
+    protected function handleRefund(CoursePurchase $purchase): void
     {
-        DB::transaction(function () {
-            if ($this->paymentMode === 'points') {
-                $pointsTransaction = PointsTransaction::find($this->purchaseTransactionId);
-                if ($pointsTransaction && $pointsTransaction->transaction_type === 'spend') {
-                    $pointsService = app(PointsService::class);
-                    $pointsService->refund(
-                        $this->newOwner, 
-                        $pointsTransaction->amount, 
-                        'App\Models\Course', 
-                        $this->source->id, 
-                        "Refund for failed course clone: {$this->source->name}"
-                    );
-                    
-                    // Also deduct from seller if possible (might be tricky if they already spent it)
-                    // For simplicity, we might just assume the platform covers the loss or handle seller deduction manually if needed.
-                    // But to be consistent, we should try to find the seller's 'earn' transaction and reverse it.
-                    $sellerTransaction = PointsTransaction::where('source_type', 'App\Models\Course')
-                        ->where('source_id', $this->source->id)
-                        ->where('transaction_type', 'earn')
-                        ->where('amount', $pointsTransaction->amount)
-                        ->where('created_at', '>=', $pointsTransaction->created_at)
-                        ->latest()
-                        ->first();
-                    
-                    if ($sellerTransaction) {
-                        $seller = $sellerTransaction->user;
-                        $seller->decrement('pp', $sellerTransaction->amount);
-                        $sellerTransaction->update(['status' => 'failed', 'description' => $sellerTransaction->description . " (Refunded due to clone failure)"]);
-                    }
-                }
-            } elseif ($this->paymentMode === 'wallet') {
-                $walletTransaction = WalletTransaction::find($this->purchaseTransactionId);
-                if ($walletTransaction && $walletTransaction->transaction_type === 'purchase') {
-                    $walletService = app(WalletService::class);
+        // Don't refund if already failed/refunded
+        if (in_array($purchase->status, ['failed', 'refunded'])) {
+            return;
+        }
+
+        DB::transaction(function () use ($purchase) {
+            $walletService = app(WalletService::class);
+            $pointsService = app(PointsService::class);
+
+            // 1. Refund Buyer Wallet
+            if ($purchase->wallet_transaction_id) {
+                $walletTransaction = WalletTransaction::find($purchase->wallet_transaction_id);
+                if ($walletTransaction && $walletTransaction->status === 'completed') {
                     $walletService->refundCoursePurchase(
-                        $this->newOwner, 
-                        $this->source, 
-                        $walletTransaction->amount, 
+                        $purchase->buyer, 
+                        $purchase->sourceCourse, 
+                        $purchase->amount_wallet, 
                         "System Refund: Clone failure"
                     );
-
-                    // Reverse seller income
-                    $incomeTransaction = WalletTransaction::where('transaction_type', 'course_income')
-                        ->whereJsonContains('metadata->course_id', $this->source->id)
-                        ->whereJsonContains('metadata->buyer_id', $this->newOwner->id)
-                        ->where('status', 'completed')
-                        ->latest()
-                        ->first();
-
-                    if ($incomeTransaction) {
-                        $seller = $incomeTransaction->user;
-                        $seller->decrement('wallet', $incomeTransaction->amount);
-                        $incomeTransaction->update(['status' => 'failed', 'description' => $incomeTransaction->description . " (Refunded due to clone failure)"]);
-                    }
                 }
             }
+
+            // 2. Refund Buyer Points
+            if ($purchase->points_transaction_id) {
+                $pointsTransaction = PointsTransaction::find($purchase->points_transaction_id);
+                if ($pointsTransaction && $pointsTransaction->transaction_type === 'spend') {
+                    $pointsService->refund(
+                        $purchase->buyer, 
+                        $purchase->amount_points, 
+                        'App\Models\Course', 
+                        $purchase->source_course_id, 
+                        "Refund for failed course clone: {$purchase->sourceCourse->name}"
+                    );
+                }
+            }
+
+            // 3. Reverse Seller Income
+            if ($purchase->seller_income_transaction_id) {
+                $incomeTransaction = WalletTransaction::find($purchase->seller_income_transaction_id);
+                if ($incomeTransaction && $incomeTransaction->status === 'completed') {
+                    $seller = $incomeTransaction->user;
+                    $seller->decrement('wallet', $incomeTransaction->amount);
+                    $incomeTransaction->update([
+                        'status' => 'failed', 
+                        'description' => $incomeTransaction->description . " (Refunded due to clone failure)"
+                    ]);
+                }
+            }
+
+            $purchase->update([
+                'status' => 'refunded',
+                'failed_at' => now(),
+                'refunded_at' => now(),
+            ]);
         });
     }
 }

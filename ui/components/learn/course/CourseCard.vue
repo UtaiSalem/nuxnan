@@ -97,18 +97,54 @@ const goToCourse = () => {
         </div>
 
         <!-- Price -->
-        <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 font-bold">
-          <Icon icon="ri:bit-coin-line" class="w-5 h-5 text-yellow-500" />
-          <span>{{ formatPrice(course.price) }}</span>
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- Tuition Fees -->
+          <template v-if="course.tuition_fees > 0">
+            <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 font-bold">
+              <Icon icon="mdi:currency-thb" class="w-5 h-5 text-blue-500" />
+              <span>ค่าเรียน {{ formatPrice(course.tuition_fees) }}</span>
+            </div>
+          </template>
+          <!-- Price -->
+          <template v-if="course.price > 0">
+            <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 font-bold">
+              <Icon icon="ri:bit-coin-line" class="w-5 h-5 text-yellow-500" />
+              <span>{{ formatPrice(course.price) }}</span>
+            </div>
+          </template>
+          <!-- Free badge -->
+          <template v-if="!course.tuition_fees && !course.price">
+            <span class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">
+              ฟรี
+            </span>
+          </template>
         </div>
       </div>
 
       <!-- Title -->
       <h3
-        class="text-gray-800 dark:text-white font-bold mb-3 line-clamp-2 group-hover:text-blue-500 transition-colors flex-grow"
+        class="text-gray-800 dark:text-white font-bold mb-2 line-clamp-2 group-hover:text-blue-500 transition-colors"
       >
         {{ course.name }}
       </h3>
+
+      <!-- Semester & Academic Year Badges -->
+      <div v-if="course.semester || course.academic_year" class="flex flex-wrap gap-2 mb-3">
+        <div 
+          v-if="course.semester" 
+          class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-medium rounded border border-blue-100 dark:border-blue-800"
+        >
+          <Icon icon="fluent:calendar-16-regular" class="w-3 h-3" />
+          <span>ภาคเรียนที่ {{ course.semester }}</span>
+        </div>
+        <div 
+          v-if="course.academic_year" 
+          class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 dark:bg-gray-700/30 text-gray-600 dark:text-gray-400 text-[10px] font-medium rounded border border-gray-100 dark:border-gray-700"
+        >
+          <Icon icon="fluent:hat-graduation-16-regular" class="w-3 h-3" />
+          <span>ปีการศึกษา {{ course.academic_year }}</span>
+        </div>
+      </div>
 
       <!-- Stats Row -->
       <div
@@ -116,11 +152,11 @@ const goToCourse = () => {
       >
         <div class="flex items-center gap-1">
           <Icon icon="fluent:book-open-16-regular" class="w-4 h-4" />
-          <span>{{ course.lessons_count || 20 }} Lectures</span>
+          <span>{{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} Lectures</span>
         </div>
         <div class="flex items-center gap-1">
           <Icon icon="fluent:clock-16-regular" class="w-4 h-4" />
-          <span>{{ course.hours || 20 }}Hrs</span>
+          <span>{{ course.hours ?? course.duration ?? course.hours_per_week ?? 0 }}Hrs</span>
         </div>
       </div>
 

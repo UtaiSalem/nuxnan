@@ -12,20 +12,36 @@ use App\Models\CourseQuiz;
 use App\Models\TopicImage;
 use App\Models\LessonImage;
 use App\Models\QuestionOption;
+use App\Services\Support\CourseCloneContext;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class CourseCloneService
 {
+    protected $mediaService;
+
+    public function __construct(CourseMediaService $mediaService)
+    {
+        $this->mediaService = $mediaService;
+    }
+
     /**
      * Clone a course and all its related content.
      */
-    public function clone(Course $source, User $newOwner): Course
+    public function clone(Course $source, User $newOwner, ?CourseCloneContext $context = null): Course
     {
-        return DB::transaction(function () use ($source, $newOwner) {
+        $context = $context ?? new CourseCloneContext();
+
+        return DB::transaction(function () use ($source, $newOwner, $context) {
             // Step 1: Clone Course
-            $newCourse = $this->cloneCourse($source, $newOwner);
+            $newCourse = $this->cloneCourse($source, $newOwner, $context);
+
+            if ($source->courseSettings) {
+                $newSettings = $source->courseSettings->replicate();
+                $newSettings->course_id = $newCourse->id;
+                $newSettings->save();
+            }
 
             // Mapping to track old IDs to new IDs
             $lessonMap = [];
@@ -39,8 +55,9 @@ class CourseCloneService
 
                 // Clone Lesson Images
                 foreach ($lesson->images as $image) {
+                    $newFilename = $this->mediaService->copyLessonImage($image->filename);
                     $newLesson->images()->create([
-                        'filename' => $image->filename,
+                        'filename' => $newFilename, // Strict Isolation: null if copy fails
                     ]);
                 }
 
@@ -51,8 +68,9 @@ class CourseCloneService
 
                     // Clone Topic Images
                     foreach ($topic->images as $image) {
+                        $newFilename = $this->mediaService->copyTopicImage($image->filename);
                         $newTopic->images()->create([
-                            'filename' => $image->filename,
+                            'filename' => $newFilename, // Strict Isolation
                         ]);
                     }
 
@@ -94,24 +112,44 @@ class CourseCloneService
         });
     }
 
-    protected function cloneCourse(Course $source, User $newOwner): Course
+    protected function cloneCourse(Course $source, User $newOwner, CourseCloneContext $context): Course
     {
-        $data = $source->toArray();
+        $allowlist = [
+            'name', 'code', 'description', 'category', 'level', 'education_level',
+            'education_year', 'duration', 'start_date', 'end_date',
+            'class_schedule', 'hours_per_week', 'tuition_fees', 'price', 'discount',
+            'discount_type', 'points', 'credit_units', 'capacity', 'prerequisites',
+            'course_materials', 'syllabus',
+            'accreditation', 'accreditation_body', 'certificate',
+            'certificate_download_cost', 'certificate_free_download',
+            'max_absence_percent', 'allow_unlock_by_points', 'unlock_points_cost',
+            'allow_unlock_by_reading', 'unlock_reading_minutes', 'allow_remediation',
+            'max_remediation_attempts', 'remediation_max_grade', 'allow_grade_appeal',
+            'appeal_deadline_days', 'price_points', 'price_type'
+        ];
+
+        $data = array_intersect_key($source->getAttributes(), array_flip($allowlist));
 
         // New ownership and status
         $data['user_id'] = $newOwner->id;
         $data['instructor_id'] = $newOwner->id;
         $data['academy_id'] = null;
-        unset($data['creator_id']);
         $data['source_course_id'] = $source->id;
         $data['status'] = 1; // Active
-        $data['is_for_marketplace'] = false;
-        $data['saleable'] = false;
-        $data['price'] = 0;
-        $data['total_sales'] = 0;
-        $data['enrolled_students'] = 0;
+        
+        // Handle name
+        if ($context->addCopySuffix) {
+            $data['name'] = $source->name . ' (Copy)';
+        }
+
+        // Handle marketplace state
+        $data['is_for_marketplace'] = $context->copyMarketplaceState ? $source->is_for_marketplace : false;
+        $data['saleable'] = $context->copyMarketplaceState ? $source->saleable : false;
+        $data['price'] = $context->copyMarketplaceState ? $source->price : 0;
         
         // Reset counters and schedule
+        $data['total_sales'] = 0;
+        $data['enrolled_students'] = 0;
         $data['lessons'] = 0;
         $data['assignments'] = 0;
         $data['quizzes'] = 0;
@@ -122,19 +160,28 @@ class CourseCloneService
         $data['finalized_at'] = null;
         $data['finalized_by'] = null;
         $data['rating'] = null;
+        $data['total_score'] = 0;
 
-        // Generate unique slug
-        $data['slug'] = Str::slug($source->name) . '-' . Str::random(6);
+        // Clone Cover (Strict Isolation: no ?? fallback)
+        if ($source->cover) {
+            $data['cover'] = $this->mediaService->copyCourseCover($source->cover);
+        }
 
-        // Remove ID to allow auto-increment
-        unset($data['id']);
+        // Generate unique slug based on (potentially new) name
+        $data['slug'] = Str::slug($data['name']) . '-' . Str::random(6);
 
         return Course::create($data);
     }
 
     protected function cloneLesson(Lesson $source, Course $newCourse, User $newOwner): Lesson
     {
-        $data = $source->toArray();
+        $allowlist = [
+            'title', 'description', 'content', 'video_url', 'youtube_url',
+            'duration', 'min_read', 'status', 'order', 'point_tuition_fee'
+        ];
+
+        $data = array_intersect_key($source->getAttributes(), array_flip($allowlist));
+        
         $data['course_id'] = $newCourse->id;
         $data['user_id'] = $newOwner->id;
         
@@ -146,28 +193,32 @@ class CourseCloneService
         $data['share_count'] = 0;
         $data['download_count'] = 0;
 
-        unset($data['id']);
-        unset($data['lesson_url']); // Computed attribute
-
         return Lesson::create($data);
     }
 
     protected function cloneTopic(Topic $source, Course $newCourse, Lesson $newLesson, User $newOwner): Topic
     {
-        $data = $source->toArray();
+        $allowlist = [
+            'title', 'content', 'youtube_url', 'min_read', 'status', 'hashtags',
+            'privacy_settings', 'location', 'url', 'tags', 'source_platform', 'meta'
+        ];
+
+        $data = array_intersect_key($source->getAttributes(), array_flip($allowlist));
+        
         $data['course_id'] = $newCourse->id;
         $data['lesson_id'] = $newLesson->id;
         $data['user_id'] = $newOwner->id;
         $data['academy_id'] = null;
 
-        // Reset counters
+        // Reset counters and metrics
         $data['likes'] = 0;
         $data['dislikes'] = 0;
         $data['comments'] = 0;
         $data['shares'] = 0;
         $data['views'] = 0;
-
-        unset($data['id']);
+        $data['sentiment'] = 0;
+        $data['engagement_rate'] = 0;
+        $data['interacted_at'] = null;
 
         return Topic::create($data);
     }
@@ -179,34 +230,52 @@ class CourseCloneService
             ->get();
 
         foreach ($assignments as $assignment) {
-            $data = $assignment->toArray();
+            $allowlist = [
+                'title', 'description', 'points', 'passing_score', 'increase_points',
+                'decrease_points', 'assignment_type', 'submission_method', 'max_file_size',
+                'is_group_assignment', 'grading_rubric', 'status'
+            ];
+
+            $data = array_intersect_key($assignment->getAttributes(), array_flip($allowlist));
+            
             $data['assignmentable_type'] = $type;
             $data['assignmentable_id'] = $newId;
             
-            // Reset dates and group info
+            // Reset interaction data
             $data['due_date'] = null;
             $data['start_date'] = null;
             $data['end_date'] = null;
             $data['target_groups'] = null;
+            $data['graded_score'] = 0;
+            $data['feedback'] = null;
 
-            unset($data['id']);
-            unset($data['is_published']); // Computed attribute
+            $newAssignment = Assignment::create($data);
 
-            Assignment::create($data);
+            // Clone Assignment Images
+            foreach ($assignment->images as $image) {
+                $newFilename = $this->mediaService->copyAssignmentImage($image->image_url);
+                $newAssignment->images()->create([
+                    'image_url' => $newFilename, // Strict Isolation
+                ]);
+            }
         }
     }
 
     protected function cloneQuiz(CourseQuiz $source, Course $newCourse, User $newOwner): CourseQuiz
     {
-        $data = $source->toArray();
+        $allowlist = [
+            'title', 'description', 'duration', 'pass_percentage', 'max_attempts',
+            'status', 'shuffle_questions', 'shuffle_options', 'view_answers'
+        ];
+
+        $data = array_intersect_key($source->getAttributes(), array_flip($allowlist));
+        
         $data['course_id'] = $newCourse->id;
         $data['user_id'] = $newOwner->id;
         
         // Reset dates
         $data['start_date'] = null;
         $data['end_date'] = null;
-
-        unset($data['id']);
 
         return CourseQuiz::create($data);
     }
@@ -218,18 +287,33 @@ class CourseCloneService
             ->get();
 
         foreach ($questions as $question) {
-            $data = $question->toArray();
+            $allowlist = [
+                'content', 'question_type', 'points', 'difficulty', 'explanation',
+                'order', 'status', 'is_active', 'media_url'
+            ];
+
+            $data = array_intersect_key($question->getAttributes(), array_flip($allowlist));
+            
             $data['questionable_type'] = $type;
             $data['questionable_id'] = $newId;
             $data['course_id'] = $newCourse->id;
             $data['user_id'] = $newOwner->id;
             
             // Temporary null for correct_option_id, will update after cloning options
-            $originalCorrectOptionId = $data['correct_option_id'];
             $data['correct_option_id'] = null;
 
-            unset($data['id']);
             $newQuestion = Question::create($data);
+
+            // Clone Question Images
+            foreach ($question->images as $image) {
+                // Determine target path based on searchable locations or standard
+                $filename = $image->filename ?? $image->image_url;
+                $newFilename = $this->mediaService->copyQuestionImage($filename);
+                
+                $newQuestion->images()->create([
+                    'filename' => $newFilename, // Strict Isolation
+                ]);
+            }
 
             // Clone Question Options
             $options = QuestionOption::where('optionable_type', 'App\Models\Question')
@@ -239,13 +323,28 @@ class CourseCloneService
             $newCorrectOptionId = null;
 
             foreach ($options as $option) {
-                $optionData = $option->toArray();
+                $allowlistOption = [
+                    'content', 'is_correct', 'order', 'points'
+                ];
+
+                $optionData = array_intersect_key($option->getAttributes(), array_flip($allowlistOption));
+                
+                $optionData['optionable_type'] = 'App\Models\Question';
                 $optionData['optionable_id'] = $newQuestion->id;
                 
-                unset($optionData['id']);
                 $newOption = QuestionOption::create($optionData);
 
-                if ($option->id == $originalCorrectOptionId) {
+                // Clone Option Images
+                foreach ($option->images as $image) {
+                    $filename = $image->filename ?? $image->image_url;
+                    $newFilename = $this->mediaService->copyOptionImage($filename);
+                    
+                    $newOption->images()->create([
+                        'filename' => $newFilename, // Strict Isolation
+                    ]);
+                }
+
+                if ($option->id == $question->correct_option_id) {
                     $newCorrectOptionId = $newOption->id;
                 }
             }

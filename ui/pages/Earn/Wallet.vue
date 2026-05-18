@@ -624,6 +624,12 @@ const formatDate = (dateString: string) => {
 
 // Initialize
 onMounted(async () => {
+  // Read tab from query params
+  const route = useRoute()
+  if (route.query.tab && typeof route.query.tab === 'string') {
+    activeTab.value = route.query.tab
+  }
+
   await Promise.all([
     getBalance(),
     loadTransactions(),

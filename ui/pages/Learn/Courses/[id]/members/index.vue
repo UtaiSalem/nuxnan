@@ -389,12 +389,17 @@ async function assignGroupToMember(memberId: number, groupId: number) {
         </div>
 
 
-        <!-- Layout with Leaderboard -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Layout: Top Performers followed by Member List -->
+        <div class="space-y-8">
+            <!-- Top Performers Section (Full Width) -->
+            <div v-if="members.length > 0">
+                <TopPerformers :members="members" />
+            </div>
+
             <!-- Main Content: Member List -->
-            <div class="lg:col-span-3 order-2 lg:order-1">
+            <div class="space-y-6">
                 <!-- Group Tabs (Moved here for better flow) -->
-                <div v-if="isCourseAdmin && courseGroupStore.groups.length > 0" class="mb-6">
+                <div v-if="isCourseAdmin && courseGroupStore.groups.length > 0">
                     <div class="flex flex-wrap items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                         <button 
                             @click="setActiveGroupTab(0)"
@@ -507,11 +512,6 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">ไม่พบสมาชิก</h3>
                     <p class="text-gray-500">ลองเปลี่ยนคำค้นหา หรือตัวกรองกลุ่มเรียน</p>
                 </div>
-            </div>
-
-            <!-- Sidebar: Leaderboard -->
-            <div class="lg:col-span-1 order-1 lg:order-2">
-                <TopPerformers v-if="members.length > 0" :members="members" />
             </div>
         </div>
     </div>

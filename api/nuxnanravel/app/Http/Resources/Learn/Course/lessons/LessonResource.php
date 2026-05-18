@@ -48,6 +48,9 @@ class LessonResource extends JsonResource
             'assigned_groups'       => $this->assigned_groups,
             'point_tuition_fee'     => $this->point_tuition_fee,
             'order'                 => $this->order,
+            'auth_progress'         => $this->when(auth()->guard('api')->check(), function() {
+                return $this->progress->where('user_id', auth()->guard('api')->id())->first();
+            }),
             'images'                => LessonImageResource::collection($this->images),
             'topics'                => TopicResource::collection($this->topics),
             'created_at'            => $this->created_at->format('Y-m-d H:i:s'),

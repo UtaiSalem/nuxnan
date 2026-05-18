@@ -20,6 +20,8 @@ class CourseResource extends JsonResource
             'name'              => $this->name,
             'slug'              => $this->slug,
             'code'              => $this->code,
+            'semester'          => $this->semester,
+            'academic_year'     => $this->academic_year,
             'description'       => $this->description,
             'logo'              => $this->logo_url,
             'cover'             => $this->cover_url,
@@ -36,11 +38,14 @@ class CourseResource extends JsonResource
             'hours_per_week'    => $this->hours_per_week,
             'semester'          => $this->semester,
             'academic_year'     => $this->academic_year,
+            'hours'             => $this->duration ?? $this->hours_per_week ?? 0,
             'category'          => $this->category,
             'instructor'        => $this->instructor,
             'capacity'          => $this->capacity,
             'enrolled_students' => $this->course_members_count ?? $this->enrolled_students,
-            'lessons'           => $this->course_lessons_count ?? $this->lessons,
+            'lessons'           => $this->whenLoaded('courseLessons', function() {
+                return $this->courseLessons;
+            }, $this->course_lessons_count ?? $this->lessons),
             'assignments'       => $this->whenLoaded('courseAssignments', function() {
                 return AssignmentResource::collection($this->courseAssignments);
             }),
@@ -58,6 +63,7 @@ class CourseResource extends JsonResource
             }, $this->is_favorited),
             'accreditation'     => $this->accreditation,
             'accreditation_body'=> $this->accreditation_body,
+            'level'             => $this->level,
             'education_level'   => $this->education_level,
             'education_year'    => $this->education_year,
             'rating'            => $this->rating,
@@ -71,7 +77,7 @@ class CourseResource extends JsonResource
                 return $member?->course_member_status;
             }, $this->member_status($this->id)), //Course member status
             'lessons_count'          => $this->course_lessons_count ?? $this->lessons,
-            'course_lessons_count'   => $this->course_lessons_count,
+            'course_lessons_count'   => $this->course_lessons_count ?? $this->lessons,
             'isCourseAdmin'     => $this->isAdmin(auth()->guard('api')->user()),
             'total_score'       => $this->total_score,
             'setting'           => $this->courseSettings,

@@ -37,12 +37,12 @@ watch(() => props.groups, (newGroups) => {
 
 // Navigate to group
 const navigateToGroup = (group: any) => {
-  navigateTo(`/courses/${props.courseId}/groups/${group.id}`)
+  navigateTo(`/Learn/Courses/${props.courseId}/groups/${group.id}`)
 }
 
 // Edit group
 const editGroup = (group: any) => {
-  navigateTo(`/courses/${props.courseId}/groups/${group.id}/edit`)
+  navigateTo(`/Learn/Courses/${props.courseId}/groups/${group.id}/edit`)
 }
 
 // Delete group

@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import { storeToRefs } from 'pinia'
 
 const api = useApi()
 const { user } = storeToRefs(useAuthStore())
@@ -9,9 +11,16 @@ const courses = ref<any[]>([])
 const isLoading = ref(true)
 const page = ref(1)
 const hasMore = ref(false)
+const isLoadingMore = ref(false)
 
 const fetchMemberedCourses = async (append = false) => {
   if (!user.value) return
+
+  if (append) {
+    isLoadingMore.value = true
+  } else {
+    isLoading.value = true
+  }
 
   try {
     const response: any = await api.get(`/api/courses/users/${user.value.id}/membered`, {
@@ -19,24 +28,31 @@ const fetchMemberedCourses = async (append = false) => {
     })
 
     if (response.success) {
-      const newCourses = response.courses || []
+      const newCourses = Array.isArray(response.courses)
+        ? response.courses
+        : response.courses?.data || []
+
       if (append) {
         courses.value = [...courses.value, ...newCourses]
       } else {
         courses.value = newCourses
       }
       
-      const pagination = response.pagination
-      hasMore.value = pagination.current_page < pagination.last_page
+      const pagination = response.pagination || response.courses?.meta || response.courses
+      hasMore.value = pagination
+        ? pagination.current_page < pagination.last_page
+        : false
     }
   } catch (error) {
     console.error('Failed to fetch membered courses:', error)
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
 
 const loadMore = () => {
+  if (isLoadingMore.value || !hasMore.value) return
   page.value++
   fetchMemberedCourses(true)
 }
@@ -56,7 +72,16 @@ const getProgressColor = (progress: number) => {
 }
 
 onMounted(() => {
-  fetchMemberedCourses()
+  if (user.value) {
+    fetchMemberedCourses()
+  }
+})
+
+watch(user, (newUser) => {
+  if (import.meta.client && newUser && courses.value.length === 0) {
+    page.value = 1
+    fetchMemberedCourses()
+  }
 })
 </script>
 
@@ -116,12 +141,12 @@ onMounted(() => {
               </span>
               
               <!-- Student Progress Text -->
-              <span 
-                v-else 
+              <span
+                v-else
                 class="text-xs font-medium"
                 :class="getProgressColor(course.auth_progress || 0)"
               >
-                {{ (course.auth_progress).toFixed(0) || 0 }}% Completed
+                {{ (course.auth_progress || 0).toFixed(0) }}% Completed
               </span>
             </div>
           </div>
@@ -131,6 +156,7 @@ onMounted(() => {
         <div v-if="hasMore" class="p-2 text-center">
             <button 
               @click="loadMore"
+              :disabled="isLoadingMore"
               class="text-xs text-blue-500 hover:underline py-2"
             >
               โหลดเพิ่มเติม

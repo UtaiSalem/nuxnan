@@ -29,11 +29,23 @@ export const useWallet = () => {
         },
       }) as any
 
-      if (response.success) {
-        return response.data
-      } else {
+      if (!response.success) {
         throw new Error(response.message || 'Failed to get wallet balance')
       }
+
+      // Response shape can vary; try common fields
+      const data = response.data || {}
+      const nextWallet =
+        data.balance ??
+        data.wallet ??
+        data.current_wallet ??
+        data.current_balance ??
+        0
+
+      // Sync to store so dashboard card can use cached value immediately
+      authStore.setWallet(Number(nextWallet) || 0)
+
+      return response.data
     } catch (err: any) {
       const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to get wallet balance'
       error.value = msg

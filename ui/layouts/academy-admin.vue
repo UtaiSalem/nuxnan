@@ -4,6 +4,7 @@
  * เลย์เอาต์สำหรับหน้า Admin ของโรงเรียน
  */
 import { Icon } from '@iconify/vue'
+import { useResponsiveSidebar } from '~/composables/useResponsiveSidebar'
 
 const route = useRoute()
 const api = useApi()
@@ -14,8 +15,20 @@ const academyName = computed(() => route.params.name as string)
 // State
 const academy = ref<any>(null)
 const isLoading = ref(true)
-const isSidebarOpen = ref(true)
-const isMobileSidebarOpen = ref(false)
+const { 
+  isCollapsed: isSidebarCollapsed, 
+  isMobileOpen: isMobileSidebarOpen,
+  toggleSidebar
+} = useResponsiveSidebar()
+
+const isSidebarOpen = computed({
+  get: () => !isSidebarCollapsed.value,
+  set: (val) => isSidebarCollapsed.value = !val
+})
+
+const toggleMobileSidebar = () => {
+  isMobileSidebarOpen.value = !isMobileSidebarOpen.value
+}
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -243,13 +256,13 @@ const isActiveRoute = (to: string, exact = false) => {
   return route.path.startsWith(to)
 }
 
-const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value
-}
-
-const toggleMobileSidebar = () => {
-  isMobileSidebarOpen.value = !isMobileSidebarOpen.value
-}
+// Close mobile sidebar on route change
+watch(
+  () => route.fullPath,
+  () => {
+    isMobileSidebarOpen.value = false
+  }
+)
 </script>
 
 <template>

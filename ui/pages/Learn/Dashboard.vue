@@ -477,11 +477,11 @@ onMounted(() => {
                   <div class="flex items-center gap-4">
                     <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                       <Icon icon="fluent:book-open-24-regular" class="w-4 h-4" />
-                      <span>{{ course.lessons_count }} บทเรียน</span>
+                      <span>{{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บทเรียน</span>
                     </div>
                     <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                       <Icon icon="fluent:clock-24-regular" class="w-4 h-4" />
-                      <span>{{ course.hours }} ชม.</span>
+                      <span>{{ course.hours ?? course.duration ?? course.hours_per_week ?? 0 }} ชม.</span>
                     </div>
                   </div>
                   <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">

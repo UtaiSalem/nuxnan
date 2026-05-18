@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 
 use App\Models\Topic;
 use App\Models\Lesson;
+use App\Services\CourseMediaService;
 use Illuminate\Http\Request;
 use App\Http\Resources\Learn\Course\lessons\TopicResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
@@ -28,7 +29,7 @@ class TopicController extends \App\Http\Controllers\Controller
             'content'       => ['required', 'string'],
             'youtube_url'   => ['nullable', 'string'],
             'min_read'      => ['required', 'numeric'],
-            'images.*'      => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',   
+            'images.*'      => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',   
         ]);
 
         $topic = $lesson->topics()->create([
@@ -107,7 +108,7 @@ class TopicController extends \App\Http\Controllers\Controller
             'content'       => ['required', 'string'],
             'youtube_url'   => ['nullable', 'string'],
             'min_read'      => ['required', 'numeric'],
-            'images.*'      => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',    
+            'images.*'      => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',    
         ]);
 
         $topic->update([
@@ -137,7 +138,7 @@ class TopicController extends \App\Http\Controllers\Controller
         ], 200);
     }
 
-    public function destroy(Lesson $lesson, Topic $topic)
+    public function destroy(Lesson $lesson, Topic $topic, CourseMediaService $mediaService)
     {
         if (!$lesson->course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -145,7 +146,13 @@ class TopicController extends \App\Http\Controllers\Controller
 
         if ($topic->images->count() > 0) {
             foreach ($topic->images as $image) {
-                Storage::disk('public')->delete('images/courses/lessons/topics/'. $image->filename);
+                $mediaService->deleteIfUnused(
+                    'images/courses/lessons/topics/' . $image->filename,
+                    \App\Models\TopicImage::class,
+                    'filename',
+                    $image->filename,
+                    $image->id
+                );
             }
             $topic->images()->delete();
         }

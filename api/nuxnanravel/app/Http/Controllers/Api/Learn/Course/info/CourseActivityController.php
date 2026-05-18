@@ -39,6 +39,14 @@ class CourseActivityController extends Controller implements HasMiddleware
 
             $isCourseAdmin = $course->isAdmin(auth()->user());
             $cma = $course->courseMembers()->where('user_id', auth()->id())->first();
+            $course->loadMissing(['user', 'academy', 'courseSettings', 'courseLessons' => function($query) {
+                $query->select('id', 'course_id', 'title', 'order')
+                      ->with(['progress' => function($q) {
+                          $q->where('user_id', auth()->id());
+                      }])
+                      ->orderBy('order', 'asc');
+            }]);
+            $course->loadCount(['courseLessons', 'courseMembers', 'courseAssignments', 'courseQuizzes']);
             $coursesResource = new CourseResource($course);
             
             // Get course groups with eager loaded members and users

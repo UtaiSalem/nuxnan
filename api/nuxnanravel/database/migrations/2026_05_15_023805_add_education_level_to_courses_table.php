@@ -55,30 +55,10 @@ return new class extends Migration
             ]);
         }
 
-        Schema::table('courses', function (Blueprint $table) {
-            $table->dropColumn('level');
-        });
     }
 
     public function down(): void
     {
-        Schema::table('courses', function (Blueprint $table) {
-            $table->string('level')->nullable()->after('id');
-        });
-
-        DB::table('courses')->whereNotNull('education_level')->get(['id', 'education_level', 'education_year'])->each(function ($course) {
-            $level = $course->education_level;
-            if ($course->education_year) {
-                $prefix = match($course->education_level) {
-                    'ประถมศึกษา' => 'ชั้นประถมศึกษาปีที่',
-                    'มัธยมศึกษา' => 'ชั้นมัธยมศึกษาปีที่',
-                    default => $course->education_level . ' ปีที่',
-                };
-                $level = "{$prefix} {$course->education_year}";
-            }
-            DB::table('courses')->where('id', $course->id)->update(['level' => $level]);
-        });
-
         Schema::table('courses', function (Blueprint $table) {
             $table->dropColumn(['education_level', 'education_year']);
         });

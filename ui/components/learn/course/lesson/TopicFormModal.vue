@@ -105,6 +105,13 @@ const handleDeleteExistingImage = (imageId: number) => {
     emit('delete-image', imageId)
 }
 
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  if (img.dataset.fallbackApplied) return
+  img.dataset.fallbackApplied = 'true'
+  img.src = '/images/default-avatar.png'
+}
+
 const isEditMode = computed(() => !!props.topic)
 </script>
 
@@ -178,7 +185,7 @@ const isEditMode = computed(() => !!props.topic)
                 <p class="text-xs text-gray-500 mb-2 uppercase tracking-wide">รูปภาพเดิม</p>
                 <div class="grid grid-cols-4 gap-3">
                     <div v-for="img in topic.images" :key="img.id" class="relative group aspect-square rounded-lg overflow-hidden border border-gray-200">
-                        <img :src="img.full_url || img.url" class="w-full h-full object-cover">
+                        <img :src="img.full_url || img.url" class="w-full h-full object-cover" @error="handleImageError">
                         <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                              <button type="button" @click="handleDeleteExistingImage(img.id)" class="p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700">
                                 <Icon icon="fluent:delete-20-regular" class="w-4 h-4" />

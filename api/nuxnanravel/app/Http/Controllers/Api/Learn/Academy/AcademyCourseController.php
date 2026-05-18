@@ -109,6 +109,8 @@ class AcademyCourseController extends Controller
             $newCourse->saleable        = $request->saleable ==='true'? 1 : 0;
             $newCourse->price           = $request->price == 'null' || $request->price == null ? null: $request->price;
             $newCourse->level           = $request->level == 'null' || $request->level == null ? null: $request->level;
+            $newCourse->education_level = $request->education_level == 'null' || $request->education_level == null ? null : $request->education_level;
+            $newCourse->education_year  = $request->education_year == 'null' || $request->education_year == null ? null : $request->education_year;
             $newCourse->cover           = $cover_filename ?? null;
             
             $newCourse->save();

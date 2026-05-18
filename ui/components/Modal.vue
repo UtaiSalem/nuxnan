@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 
 const props = defineProps({
     show: {
@@ -17,6 +17,11 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
+
+const mounted = ref(false);
+onMounted(() => {
+    mounted.value = true;
+});
 
 watch(() => props.show, () => {
     if (props.show) {
@@ -57,7 +62,7 @@ const maxWidthClass = computed(() => {
 </script>
 
 <template>
-    <teleport to="body">
+    <teleport v-if="mounted" to="body">
         <transition leave-active-class="duration-200">
             <div v-show="show" class="fixed inset-0 overflow-y-auto px-0 py-0 sm:px-4 sm:py-6 z-50" scroll-region>
                 <transition

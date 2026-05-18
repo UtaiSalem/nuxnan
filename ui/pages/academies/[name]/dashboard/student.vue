@@ -263,8 +263,8 @@ const quickActions = computed(() => [
                       alt=""
                     />
                     <div class="flex-1 min-w-0">
-                      <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ course.title }}</h3>
-                      <p class="text-sm text-gray-500 mt-1">{{ course.lessons_count || 0 }} บทเรียน</p>
+                      <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ course.title || course.name }}</h3>
+                      <p class="text-sm text-gray-500 mt-1">{{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บทเรียน</p>
                       <!-- Progress bar -->
                       <div class="mt-2">
                         <div class="flex justify-between text-xs text-gray-500 mb-1">

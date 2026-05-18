@@ -14,6 +14,7 @@ use App\Models\CourseInvitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
+use App\Services\CourseCloneService;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
@@ -29,11 +30,43 @@ use App\Http\Resources\Learn\Course\members\CourseMemberResource;
 use App\Http\Resources\Learn\Course\info\MemberedCourseResource;
 use App\Http\Resources\Learn\Course\info\UserProfileCourseResource;
 use App\Models\RecentlyViewedCourse;
+use App\Services\CourseMediaService;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LearningResultsExport;
 
 class CourseController extends Controller
 {
+    public function duplicate(Course $course, CourseCloneService $cloneService)
+    {
+        $user = auth()->user();
+
+        if (!$user || (int) $course->user_id !== (int) $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the course owner can duplicate this course.',
+            ], 403);
+        }
+
+        try {
+            $context = new \App\Services\Support\CourseCloneContext(
+                mode: 'self_duplicate',
+                addCopySuffix: true
+            );
+            $newCourse = $cloneService->clone($course, $user, $context);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Course duplicated successfully.',
+                'course' => $newCourse,
+            ], 201);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function getRecentCourses(Request $request)
     {
         $user = auth()->user();
@@ -53,7 +86,8 @@ class CourseController extends Controller
         
         // Fetch the course objects, preserving the order
         // MySQL FIELD() function usage for custom ordering
-        $courses = Course::whereIn('id', $recentCourseIds)
+        $courses = Course::withCount('courseLessons')
+            ->whereIn('id', $recentCourseIds)
             ->orderByRaw("FIELD(id, " . implode(',', $recentCourseIds->toArray()) . ")")
             ->get();
 
@@ -67,7 +101,7 @@ class CourseController extends Controller
     {
         // Get top 5 courses by member count
         $courses = Course::with('user')
-            ->withCount('courseMembers')
+            ->withCount(['courseMembers', 'courseLessons'])
             ->orderBy('course_members_count', 'desc')
             ->take(5)
             ->get();
@@ -90,6 +124,7 @@ class CourseController extends Controller
             $q->where('user_id', auth()->id());
         })
         ->with(['user'])
+        ->withCount('courseLessons')
         ->orderBy('created_at', 'desc')
         ->paginate($request->input('limit', 12));
 
@@ -115,7 +150,7 @@ class CourseController extends Controller
 
     public function getMoreCourses(Request $request = null) {
         $request = $request ?? request();
-        $query = Course::query();
+        $query = Course::withCount('courseLessons');
 
         // Search
         if ($request->filled('search')) {
@@ -135,6 +170,7 @@ class CourseController extends Controller
         if ($request->filled('education_level') && $request->education_level !== 'all') {
             $query->where('education_level', $request->education_level);
         }
+
         if ($request->filled('education_year') && $request->education_year !== 'all') {
             $query->where('education_year', $request->education_year);
         }
@@ -145,6 +181,28 @@ class CourseController extends Controller
 
         if ($request->filled('academic_year') && $request->academic_year !== 'all') {
             $query->where('academic_year', $request->academic_year);
+        }
+
+        // Marketplace filter
+        if ($request->boolean('marketplace_only')) {
+            $query->where('is_for_marketplace', true);
+        }
+
+        // Enrollable filter
+        if ($request->boolean('enrollable_only')) {
+            // Usually courses that are active (status 1) are enrollable
+            $query->where('status', 1);
+        }
+
+        // Free courses filter
+        if ($request->boolean('is_free')) {
+            $query->where(function($q) {
+                $q->where(function($sq) {
+                    $sq->where('price', '<=', 0)->orWhereNull('price');
+                })->where(function($sq) {
+                    $sq->where('tuition_fees', '<=', 0)->orWhereNull('tuition_fees');
+                });
+            });
         }
 
         // Sorting
@@ -199,14 +257,14 @@ class CourseController extends Controller
     public function getUserCourses(User $user)
     {
         return response()->json([
-            'courses'           => CourseResource::collection($user->courses()->latest()->paginate()),
+            'courses'           => CourseResource::collection($user->courses()->withCount('courseLessons')->latest()->paginate()),
         ]);
     }
 
     public function getMyCourses(User $user, Request $request)
     {
         $perPage = $request->input('per_page', 8);
-        $query = $user->courses()->with(['user', 'courseMembers' => function($q) {
+        $query = $user->courses()->withCount('courseLessons')->with(['user', 'courseMembers' => function($q) {
             $q->where('user_id', auth()->guard('api')->id());
         }]);
 
@@ -240,6 +298,7 @@ class CourseController extends Controller
     {
         $authMemberCourse = CourseMember::where('user_id', auth()->id())->pluck('course_id')->all();
         $paginated = Course::whereIn('id', $authMemberCourse)
+            ->withCount('courseLessons')
             ->with(['user', 'courseMembers' => function($q) {
                 $q->where('user_id', auth()->guard('api')->id());
             }])
@@ -297,9 +356,13 @@ class CourseController extends Controller
         $authMemberCourse = CourseMember::where('user_id', auth()->id())
             ->pluck('course_id')
             ->all();
-        
+
         $query = Course::whereIn('id', $authMemberCourse)
             ->where('user_id', '!=', auth()->id()) // Exclude courses owned by the user
+            ->withCount('courseLessons')
+            ->with(['courseMembers' => function($q) {
+                $q->where('user_id', auth()->id());
+            }])
             ->latest()
             ->paginate($perPage);
         $coursesAuthMember = MemberedCourseResource::collection($query);
@@ -400,6 +463,13 @@ class CourseController extends Controller
             ->orderBy('category')
             ->pluck('category');
 
+        $levels = Course::select('level')
+            ->whereNotNull('level')
+            ->where('level', '!=', '')
+            ->distinct()
+            ->orderBy('level')
+            ->pluck('level');
+
         $educationLevels = Course::select('education_level')
             ->whereNotNull('education_level')
             ->where('education_level', '!=', '')
@@ -412,6 +482,7 @@ class CourseController extends Controller
             'semesters'         => $semesters,
             'years'             => $years,
             'categories'        => $categories,
+            'levels'            => $levels,
             'education_levels'  => $educationLevels,
         ]);
     }
@@ -439,6 +510,7 @@ class CourseController extends Controller
                 'category'          => 'nullable|string',
                 'semester'          => ['nullable', \Illuminate\Validation\Rule::in(['1', '2', '3', 'summer', 'weekend'])],
                 'academic_year'     => ['nullable', 'integer', 'min:2560', 'max:2580'],
+                'level'             => 'nullable|string',
                 'education_level'   => ['nullable', \Illuminate\Validation\Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],
                 'education_year'    => ['nullable', 'integer', 'min:1', 'max:6'],
                 'credit_units'      => 'nullable|numeric',
@@ -476,6 +548,7 @@ class CourseController extends Controller
             $newCourse->category         = $request->category;
             $newCourse->semester         = $request->semester;
             $newCourse->academic_year    = $request->academic_year;
+            $newCourse->level            = $request->level;
             $newCourse->education_level  = $request->education_level;
             $newCourse->education_year   = $request->education_year;
             $newCourse->credit_units     = $request->credit_units;
@@ -563,6 +636,7 @@ class CourseController extends Controller
             'academic_year'     => ['nullable', 'integer', 'min:2560', 'max:2580'],
             'category'          => 'nullable',
             'capacity'          => 'nullable|numeric',
+            'level'             => 'nullable',
             'education_level'   => ['nullable', \Illuminate\Validation\Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],
             'education_year'    => ['nullable', 'integer', 'min:1', 'max:6'],
             'is_for_marketplace' => 'nullable|boolean',
@@ -606,7 +680,7 @@ class CourseController extends Controller
         ], 200);
     }
 
-    public function updateCover(Course $course, Request $request)
+    public function updateCover(Course $course, Request $request, CourseMediaService $mediaService)
     {
         if (!$course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -617,12 +691,15 @@ class CourseController extends Controller
         ]);
 
         if ($request->hasFile('cover')) {
-            // Delete old cover
+            // Delete old cover if unused
             if ($course->cover) {
-                $oldFile = public_path('storage/images/courses/covers/' . $course->cover);
-                if (File::exists($oldFile)) {
-                    File::delete($oldFile);
-                }
+                $mediaService->deleteIfUnused(
+                    'images/courses/covers/' . $course->cover,
+                    Course::class,
+                    'cover',
+                    $course->cover,
+                    $course->id
+                );
             }
 
             $file = $request->file('cover');
@@ -641,7 +718,7 @@ class CourseController extends Controller
         return response()->json(['success' => false, 'message' => 'No file uploaded'], 400);
     }
 
-    public function updateLogo(Course $course, Request $request)
+    public function updateLogo(Course $course, Request $request, CourseMediaService $mediaService)
     {
         if (!$course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -652,12 +729,15 @@ class CourseController extends Controller
         ]);
 
         if ($request->hasFile('logo')) {
-            // Delete old logo
+            // Delete old logo if unused
             if ($course->logo) {
-                $oldFile = public_path('storage/images/courses/logos/' . $course->logo);
-                if (File::exists($oldFile)) {
-                    File::delete($oldFile);
-                }
+                $mediaService->deleteIfUnused(
+                    'images/courses/logos/' . $course->logo,
+                    Course::class,
+                    'logo',
+                    $course->logo,
+                    $course->id
+                );
             }
 
             $file = $request->file('logo');
@@ -712,7 +792,7 @@ class CourseController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Course $course)
+    public function destroy(Course $course, CourseMediaService $mediaService)
     {
         if (!$course->isAdmin(auth()->user())) { // Usually only owner can destroy course, but if user wants admin = owner, then this is fine.
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -723,7 +803,13 @@ class CourseController extends Controller
             foreach ($lessons as $lesson) {
                 if ($lesson->images) {
                     foreach ($lesson->images as $image) {
-                        Storage::disk('public')->delete('images/courses/lessons/'. $image->image_url);
+                        $mediaService->deleteUnused(
+                            'lesson_image',
+                            \App\Models\LessonImage::class,
+                            'filename',
+                            $image->filename,
+                            $image->id
+                        );
                         $image->delete();   
                     }
                 }
@@ -731,7 +817,30 @@ class CourseController extends Controller
             }
         }
 
-        $course->courseSettings->delete();
+        // Delete cover and logo if unused
+        if ($course->cover) {
+            $mediaService->deleteUnused(
+                'course_cover',
+                Course::class,
+                'cover',
+                $course->cover,
+                $course->id
+            );
+        }
+        if ($course->logo) {
+            $mediaService->deleteUnused(
+                'course_logo',
+                Course::class,
+                'logo',
+                $course->logo,
+                $course->id
+            );
+        }
+
+        if ($course->courseSettings) {
+            $course->courseSettings->delete();
+        }
+        
         $course->delete();
         return response()->json([
             'success' => true,
@@ -870,7 +979,9 @@ class CourseController extends Controller
         $maxLessonQuizzes = $lessonQuestions->sum('points');
         $maxCourseAssignments = $courseAssignments->sum('points');
         $maxCourseQuizzes = $courseQuizzes->sum('total_score');
-        $computedMaxTotal = $maxCourseAssignments + $maxLessonAssignments + $maxCourseQuizzes + $maxLessonQuizzes;
+        
+        // ใช้ total_score จากตาราง courses
+        $totalScoreCap = (float)($course->total_score ?? ($maxCourseAssignments + $maxLessonAssignments + $maxCourseQuizzes + $maxLessonQuizzes));
 
         $courseMembersProgress = [];
         foreach ($courseMembers as $member) {
@@ -923,8 +1034,10 @@ class CourseController extends Controller
             $attendanceRate = ($totalGroupAttendanceSessions > 0) ? round(($attendancePresent / $totalGroupAttendanceSessions) * 100) : 0;
 
             // Calculate totals and grade
-            $rawTotal = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
-            $percentage = ($computedMaxTotal > 0) ? ($rawTotal / $computedMaxTotal) * 100 : 0;
+            $achievedScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore;
+            $rawTotal = $achievedScore + (float)($member->external_score_points ?? 0) + (float)($member->bonus_points ?? 0);
+            
+            $percentage = ($totalScoreCap > 0) ? ($rawTotal / $totalScoreCap) * 100 : 0;
             $percentage = min(100, max(0, $percentage));
             $realtimeGrade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
             
@@ -951,7 +1064,8 @@ class CourseController extends Controller
                     'lesson_quizzes' => $lessonTestScore,
                     'course_assignments' => $courseAssignScore,
                     'course_quizzes' => $courseQuizScore,
-                    'bonus_points' => $member->bonus_points ?? 0,
+                    'external_score_points' => (float)($member->external_score_points ?? 0),
+                    'bonus_points' => (float)($member->bonus_points ?? 0),
                     'edited_grade' => $member->edited_grade,
                     'total_score' => $rawTotal,
                     'score_percentage' => round($percentage),
@@ -963,7 +1077,7 @@ class CourseController extends Controller
                     'max_lesson_quizzes' => $maxLessonQuizzes,
                     'max_course_assignments' => $maxCourseAssignments,
                     'max_course_quizzes' => $maxCourseQuizzes,
-                    'max_total' => $computedMaxTotal,
+                    'max_total' => $totalScoreCap,
                 ]
             ];
         }
@@ -1054,7 +1168,8 @@ class CourseController extends Controller
         $maxLessonAssign = $lessonAssignments->sum('points');
         $maxCourseQuiz = $courseQuizzes->sum('total_score');
         $maxLessonQuiz = $lessonQuestions->sum('points');
-        $computedMaxTotal = $maxCourseAssign + $maxLessonAssign + $maxCourseQuiz + $maxLessonQuiz;
+        
+        $totalScoreCap = (float)($course->total_score ?? ($maxCourseAssign + $maxLessonAssign + $maxCourseQuiz + $maxLessonQuiz));
 
         // Calculate scores for each member
         $membersWithScores = [];
@@ -1082,10 +1197,11 @@ class CourseController extends Controller
                 }
             }
 
-            $totalScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
+            $achievedScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore;
+            $totalScore = $achievedScore + (float)($member->external_score_points ?? 0) + (float)($member->bonus_points ?? 0);
             
             // Calculate grade
-            $percentage = ($computedMaxTotal > 0) ? ($totalScore / $computedMaxTotal) * 100 : 0;
+            $percentage = ($totalScoreCap > 0) ? ($totalScore / $totalScoreCap) * 100 : 0;
             $percentage = min(100, max(0, $percentage));
             $grade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
             $finalGrade = $member->edited_grade ?? $grade;
@@ -1101,7 +1217,9 @@ class CourseController extends Controller
                 'overall_progress' => round($percentage),
                 'scores' => [
                     'total_score' => $totalScore,
-                    'bonus_points' => $member->bonus_points ?? 0,
+                    'achieved_score' => $achievedScore,
+                    'external_score_points' => (float)($member->external_score_points ?? 0),
+                    'bonus_points' => (float)($member->bonus_points ?? 0),
                     'grade_progress' => $finalGrade,
                     'grade_name' => $gradeName,
                 ]
@@ -1152,7 +1270,7 @@ class CourseController extends Controller
      */
     public function indexV2(Request $request)
     {
-        $query = Course::with(['user', 'academy', 'courseSettings']);
+        $query = Course::with(['user', 'academy', 'courseSettings'])->withCount('courseLessons');
 
         // Apply filters
         if ($request->has('category') && $request->category) {
@@ -1161,6 +1279,10 @@ class CourseController extends Controller
 
         if ($request->has('level') && $request->level) {
             $query->where('level', $request->level);
+        }
+
+        if ($request->has('education_level') && $request->education_level) {
+            $query->where('education_level', $request->education_level);
         }
 
         if ($request->has('status') && $request->status) {
@@ -1195,7 +1317,7 @@ class CourseController extends Controller
      */
     public function showV2(Course $course, Request $request)
     {
-        $course->load([
+        $course->loadCount('courseLessons')->load([
             'user',
             'academy',
             'courseSettings',
@@ -1232,6 +1354,8 @@ class CourseController extends Controller
             'description' => 'nullable|string',
             'category' => 'nullable|string',
             'level' => 'nullable|string',
+            'education_level' => 'nullable|string|max:30',
+            'education_year' => 'nullable|integer|min:1|max:6',
             'credit_units' => 'nullable|numeric',
             'hours_per_week' => 'nullable|numeric',
             'start_date' => 'nullable|date',
@@ -1276,6 +1400,8 @@ class CourseController extends Controller
                 'code' => $course->code,
                 'category' => $course->category,
                 'level' => $course->level,
+                'education_level' => $course->education_level,
+                'education_year' => $course->education_year,
                 'status' => $course->status,
                 'enrolled_students' => $course->enrolled_students,
             ],

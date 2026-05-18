@@ -209,7 +209,7 @@ onMounted(() => {
           </div>
           
           <NuxtLink
-            :to="`/courses/${courseId}/instructor-dashboard`"
+            :to="`/Learn/Courses/${courseId}/instructor-dashboard`"
             class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
           >
             <Icon icon="tabler:arrow-left" />

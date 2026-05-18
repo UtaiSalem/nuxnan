@@ -44,6 +44,7 @@ class Course extends Model
         'code',
         'description',
         'category',
+        'level',
         'education_level',
         'education_year',
         'language',
@@ -138,6 +139,7 @@ class Course extends Model
         'certificate_free_download' => 'boolean',
         'is_for_marketplace' => 'boolean',
         'price_points' => 'integer',
+        'education_year' => 'integer',
         'total_sales' => 'integer',
         'source_course_id' => 'integer',
     ];
@@ -160,6 +162,11 @@ class Course extends Model
     public function clonedCourses(): HasMany
     {
         return $this->hasMany(Course::class, 'source_course_id');
+    }
+
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(CoursePurchase::class, 'source_course_id');
     }
 
     public function academy(): BelongsTo

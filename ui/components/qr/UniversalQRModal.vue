@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted, computed } from 'vue'
+import { ref, watch, onUnmounted, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { QR_TYPES, parseQRCode, type QRCodeType, type ParsedQRData, type QRActionResult } from '~/types/qr'
 
@@ -24,6 +24,11 @@ const {
 const toast = useToast()
 
 // State
+const isMounted = ref(false)
+onMounted(() => {
+  isMounted.value = true
+})
+
 const mode = ref<'scan' | 'input'>('input')
 const manualCode = ref('')
 const detectedType = ref<QRCodeType | null>(null)
@@ -173,7 +178,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport v-if="isMounted" to="body">
     <Transition name="modal">
       <div 
         v-if="modelValue" 

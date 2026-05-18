@@ -3,7 +3,9 @@ import { ref, computed, onBeforeUnmount, onMounted, watch, provide } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
+import { useGamificationStore } from '~/stores/gamification'
 import { useGamification } from '~/composables/useGamification'
+import { useResponsiveSidebar } from '~/composables/useResponsiveSidebar'
 import QrUniversalQRModal from '~/components/qr/UniversalQRModal.vue'
 import LayoutBottomNav from '~/components/layout/BottomNav.vue'
 
@@ -11,17 +13,13 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const uiStore = useUIStore()
-const { getPointsLeaderboard, isLoading: isGamificationLoading } = useGamification()
+const gamificationStore = useGamificationStore()
+const { isLoading: isGamificationLoading } = useGamification()
 
-// Leaderboard data
-const leaderboard = ref([])
+// Leaderboard data from store
+const leaderboard = computed(() => gamificationStore.leaderboard)
 const fetchLeaderboard = async () => {
-  try {
-    const data = await getPointsLeaderboard({ limit: 10 })
-    leaderboard.value = data.leaderboard
-  } catch (error) {
-    console.error('Failed to fetch leaderboard:', error)
-  }
+  await gamificationStore.fetchLeaderboard({ limit: 10 })
 }
 
 // สีนุ่มนวลสบายตาสำหรับอันดับต่างๆ (Muted/Pastel colors)
@@ -61,21 +59,26 @@ const getAvatarUrl = (user, index = 0) => {
 }
 
 // Drawer states
-const isLeftDrawerOpen = ref(false)
+const { 
+  isCollapsed: isLeftDrawerCollapsed, 
+  isMobileOpen: isMobileSidebarOpen,
+  isDesktop
+} = useResponsiveSidebar()
+
+const isLeftDrawerOpen = computed({
+  get: () => !isLeftDrawerCollapsed.value,
+  set: (val) => isLeftDrawerCollapsed.value = !val
+})
+
+const enableRightSidebar = ref(false)
 const isRightDrawerOpen = ref(false)
-const isMobileSidebarOpen = ref(false)
 const isSettingsOpen = ref(false)
 const isEarnMenuOpen = ref(false)
 
-// Set sidebar and Earn menu state based on screen size
-const updateSidebarState = () => {
-  if (typeof window !== 'undefined') {
-    // lg breakpoint = 1024px, expand on large screens
-    const isLargeScreen = window.innerWidth >= 1024
-    isLeftDrawerOpen.value = isLargeScreen
-    isEarnMenuOpen.value = isLargeScreen
-  }
-}
+// Set Earn menu state based on screen size
+watch(isDesktop, (val) => {
+  isEarnMenuOpen.value = val
+}, { immediate: true })
 
 // Toggle Earn submenu
 const toggleEarnMenu = () => {
@@ -85,7 +88,6 @@ const toggleEarnMenu = () => {
 // Earn submenu items
 const earnSubmenu = [
   { name: 'คะแนน', href: '/earn/points', icon: 'fluent:coin-stack-24-regular' },
-  { name: 'ตลาดลิขสิทธิ์', href: '/Learn/Courses?marketplace_only=1', icon: 'fluent:shopping-bag-24-regular' },
   { name: 'ประวัติการซื้อ', href: '/Earn/PurchaseHistory', icon: 'fluent:history-24-regular' },
   { name: 'รายได้ของฉัน', href: '/Earn/SalesAnalytics', icon: 'fluent:data-line-24-regular' },
   { name: 'กระเป๋าเงิน', href: '/earn/wallet', icon: 'fluent:wallet-24-regular' },
@@ -123,7 +125,7 @@ const authUser = computed(() => {
     username: user.username || user.name,
     email: user.email || '',
     avatar: avatarUrl,
-    pp: authStore.points, // ใช้ authStore.points (computed reactive)
+    pp: authStore.points,
     wallet: Number(user.wallet) || 0,
     level: user.level || 24,
     posts: user.posts || 930,
@@ -143,9 +145,7 @@ const navigation = [
 ]
 
 // Toggle functions
-const toggleLeftDrawer = () => {
-  isLeftDrawerOpen.value = !isLeftDrawerOpen.value
-}
+const { toggleSidebar: toggleLeftDrawer } = useResponsiveSidebar()
 
 const toggleRightDrawer = () => {
   isRightDrawerOpen.value = !isRightDrawerOpen.value
@@ -208,12 +208,6 @@ onMounted(async () => {
     document.documentElement.classList.add('light')
   }
 
-  // Set initial sidebar state based on screen size
-  updateSidebarState()
-  
-  // Add resize listener to auto expand/collapse sidebar
-  window.addEventListener('resize', updateSidebarState)
-
   if (authStore.isAuthenticated && !authStore.user) {
     try {
       await authStore.fetchUser()
@@ -231,11 +225,9 @@ onMounted(async () => {
   }
 })
 
-// Cleanup resize listener
+// Cleanup
 onBeforeUnmount(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', updateSidebarState)
-  }
+  // Logic handled by useResponsiveSidebar
 })
 
 // Provide theme to child components
@@ -578,6 +570,7 @@ const onQRActionComplete = (result) => {
 
           <!-- Right Drawer Toggle (Desktop) -->
           <button
+            v-if="enableRightSidebar"
             @click="toggleRightDrawer"
             class="hidden lg:flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300 relative overflow-hidden group"
             :class="
@@ -1026,13 +1019,18 @@ const onQRActionComplete = (result) => {
         :class="[
           'flex-1 min-h-screen transition-all duration-300',
           isLeftDrawerOpen ? 'lg:pl-80' : 'lg:pl-20',
-          isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20',
+          enableRightSidebar ? (isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20') : '',
         ]"
       >
-        <div class="max-w-6xl mx-auto px-1.5 sm:px-3 md:px-4 py-4 sm:py-6 pb-24 lg:pb-6">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 w-full max-w-[1440px] 2xl:max-w-[1600px]">
           <!-- Hero Banner Slot (Full Width) -->
           <div v-if="$slots.hero" class="w-full mb-6">
             <slot name="hero" />
+          </div>
+
+          <!-- Tabs/Navigation Slot (Full Width) -->
+          <div v-if="$slots.tabs" class="w-full mb-6">
+            <slot name="tabs" />
           </div>
 
           <!-- 12 Column Grid Layout -->
@@ -1068,6 +1066,7 @@ const onQRActionComplete = (result) => {
                  RIGHT DRAWER (Chat + Activity)
       ======================================== -->
       <aside
+        v-if="enableRightSidebar"
         :class="[
           'fixed right-0 top-16 h-[calc(100vh-4rem)] overflow-y-auto transition-all duration-300 z-40',
           'hidden lg:block',

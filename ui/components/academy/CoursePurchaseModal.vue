@@ -38,7 +38,7 @@
                     <p class="text-xs text-slate-500 mt-1">เจ้าของลิขสิทธิ์: {{ course.user?.name }}</p>
                     <div class="flex gap-2 mt-2">
                       <span class="text-[10px] bg-primary-100 dark:bg-primary-900/30 text-primary-600 px-2 py-0.5 rounded font-bold">
-                        คัดลอก {{ course.course_lessons_count || course.lessons_count }} บทเรียน
+                        คัดลอก {{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บทเรียน
                       </span>
                     </div>
                   </div>

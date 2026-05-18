@@ -41,7 +41,7 @@
             <div class="flex items-center justify-between text-xs text-slate-500">
               <span class="flex items-center gap-1">
                 <Icon icon="mdi:book-open-variant" class="w-4 h-4" />
-                {{ course.lessons_count || 0 }} บทเรียน
+                {{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บทเรียน
               </span>
               <span class="flex items-center gap-1">
                 <Icon icon="mdi:calendar" class="w-4 h-4" />

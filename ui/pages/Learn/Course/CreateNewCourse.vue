@@ -63,6 +63,7 @@ const defaultFormValue = ref({
   name: '',
   description: '',
   category: '',
+  level: '',
   education_level: '',
   education_year: null,
   credit_units: '',
@@ -88,6 +89,7 @@ const form = ref({
   name: '',
   description: '', //
   category: '',
+  level: '',
   education_level: '',
   education_year: null,
   credit_units: 1,
@@ -118,16 +120,20 @@ const courseCategories = ref([
     { name: 'ภาษาต่างประเทศ' },
 ]);
 const educationLevelOptions = [
-    { value: 'ประถมศึกษา', label: 'ประถมศึกษา', maxYear: 6 },
-    { value: 'มัธยมศึกษา', label: 'มัธยมศึกษา', maxYear: 6 },
-    { value: 'ปวช.',        label: 'ปวช.',        maxYear: 3 },
-    { value: 'ปวส.',        label: 'ปวส.',        maxYear: 2 },
-    { value: 'อุดมศึกษา',  label: 'อุดมศึกษา',  maxYear: 4 },
-    { value: 'อื่นๆ',      label: 'อื่นๆ',      maxYear: 0 },
+    { value: 'ประถมศึกษา', label: 'ประถมศึกษา', hasYear: true, maxYear: 6 },
+    { value: 'มัธยมศึกษา', label: 'มัธยมศึกษา', hasYear: true, maxYear: 6 },
+    { value: 'ปวช.',        label: 'ปวช.',        hasYear: true, maxYear: 3 },
+    { value: 'ปวส.',        label: 'ปวส.',        hasYear: true, maxYear: 2 },
+    { value: 'อุดมศึกษา',  label: 'อุดมศึกษา',  hasYear: false, maxYear: 4 },
+    { value: 'อื่นๆ',      label: 'อื่นๆ',      hasYear: false, maxYear: 0 },
 ]
 
 const selectedLevelConfig = computed(() =>
     educationLevelOptions.find(l => l.value === form.value.education_level) ?? null
+)
+
+const selectedEducationLevelOption = computed(() =>
+    educationLevelOptions.find(opt => opt.value === form.value.education_level)
 )
 
 const educationYearOptions = computed(() => {
@@ -138,7 +144,6 @@ const educationYearOptions = computed(() => {
 const academicYearOptions = computed(() => {
     const current = new Date().getFullYear() + 543
     return Array.from({ length: 5 }, (_, i) => current - 1 + i)
-    // Example: 2568, 2569, 2570, 2571, 2572
 })
 
 const browseCover = () => { coverInput.value.click() };
@@ -160,6 +165,13 @@ function handleSelectLevel(level) {
 function handleSelectYear(year) {
     form.value.education_year = year
     isOpenYearOptions.value = false
+}
+function handleSelectEducationLevel(option) {
+  form.value.education_level = option.value;
+  if (!option.hasYear) {
+    form.value.education_year = null;
+  }
+  isOpenLevelOptions.value = false;
 }
 // function handleDateSelect(modelData){
 //   courseRange.value = modelData;
@@ -205,6 +217,7 @@ async function handleSubmitForm(){
     courseFormData.append('name', form.value.name);
     courseFormData.append('description', form.value.description);
     courseFormData.append('category', form.value.category);
+    courseFormData.append('level', form.value.level);
     if (form.value.education_level) courseFormData.append('education_level', form.value.education_level)
     if (form.value.education_year)  courseFormData.append('education_year',  form.value.education_year)
     courseFormData.append('credit_units', form.value.credit_units);

@@ -19,6 +19,8 @@ const form = ref({
     description: '',
     category: '',
     level: '',
+    education_level: '',
+    education_year: null,
     credit_units: 0,
     hours_per_week: 0,
     start_date: null,
@@ -46,14 +48,17 @@ const courseCategories = ref([
     { name: 'ศิลปะ' }, { name: 'การงานอาชีพและเทคโนโลยี' }, { name: 'ภาษาต่างประเทศ' },
 ]);
 
-const courseLevelOptions = ref([
-    { level: 'ชั้นประถมศึกษาปีที่ 1' }, { level: 'ชั้นประถมศึกษาปีที่ 2' },
-    { level: 'ชั้นประถมศึกษาปีที่ 3' }, { level: 'ชั้นประถมศึกษาปีที่ 4' },
-    { level: 'ชั้นประถมศึกษาปีที่ 5' }, { level: 'ชั้นประถมศึกษาปีที่ 6' },
-    { level: 'ชั้นมัธยมศึกษาปีที่ 1' }, { level: 'ชั้นมัธยมศึกษาปีที่ 2' },
-    { level: 'ชั้นมัธยมศึกษาปีที่ 3' }, { level: 'ชั้นมัธยมศึกษาปีที่ 4' },
-    { level: 'ชั้นมัธยมศึกษาปีที่ 5' }, { level: 'ชั้นมัธยมศึกษาปีที่ 6' },
+const educationLevelOptions = ref([
+    { value: 'ประถมศึกษา', label: 'ประถมศึกษา', hasYear: true, maxYear: 6 },
+    { value: 'มัธยมศึกษา', label: 'มัธยมศึกษา', hasYear: true, maxYear: 6 },
+    { value: 'ปวช.', label: 'ปวช.', hasYear: true, maxYear: 3 },
+    { value: 'ปวส.', label: 'ปวส.', hasYear: true, maxYear: 2 },
+    { value: 'อุดมศึกษา', label: 'อุดมศึกษา', hasYear: false },
+    { value: 'อื่นๆ', label: 'อื่นๆ', hasYear: false },
 ]);
+const selectedEducationLevelOption = computed(() =>
+    educationLevelOptions.value.find(opt => opt.value === form.value.education_level)
+);
 
 const myAcademies = ref([]);
 
@@ -77,6 +82,8 @@ function initializeForm() {
         description: c.description || '',
         category: c.category || '',
         level: c.level || '',
+        education_level: c.education_level || '',
+        education_year: c.education_year || null,
         credit_units: c.credit_units || 0,
         hours_per_week: c.hours_per_week || 0,
         auto_accept_members: c.course_settings?.auto_accept_members == 1,
@@ -235,12 +242,21 @@ const netPrice = computed(() => {
                   </select>
               </div>
 
-               <!-- Level -->
+               <!-- Education Level -->
                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ระดับชั้น</label>
-                  <select v-model="form.level" class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
-                      <option value="">เลือกระดับชั้น</option>
-                      <option v-for="lvl in courseLevelOptions" :key="lvl.level" :value="lvl.level">{{ lvl.level }}</option>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ระดับการศึกษา</label>
+                  <select v-model="form.education_level" @change="!selectedEducationLevelOption?.hasYear && (form.education_year = null)" class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+                      <option value="">เลือกระดับการศึกษา</option>
+                      <option v-for="opt in educationLevelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  </select>
+              </div>
+
+              <!-- Education Year -->
+              <div v-if="selectedEducationLevelOption?.hasYear">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ปีที่</label>
+                  <select v-model="form.education_year" class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+                      <option :value="null">เลือกปีที่</option>
+                      <option v-for="y in selectedEducationLevelOption.maxYear" :key="y" :value="y">ปีที่ {{ y }}</option>
                   </select>
               </div>
 

@@ -10,6 +10,9 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        xs: '480px',
+      },
       colors: {
         // Vikinger-inspired Sci-Fi/Gamification Colors
         primary: {

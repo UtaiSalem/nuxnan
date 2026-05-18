@@ -150,7 +150,7 @@ const duplicateQuiz = async (quiz: any) => {
         emit('created', res.quiz)
         emit('close')
         // Navigate to edit the duplicated quiz
-        navigateTo(`/courses/${props.courseId}/quizzes/${res.quiz.id}/edit`)
+        navigateTo(`/Learn/Courses/${props.courseId}/quizzes/${res.quiz.id}/edit`)
       }
     } catch (err: any) {
       console.error('Error duplicating quiz:', err)
@@ -206,7 +206,7 @@ const handleSubmit = async () => {
       emit('close')
       // Navigate to edit the new quiz to add questions
       if (res.quiz?.id) {
-        navigateTo(`/courses/${props.courseId}/quizzes/${res.quiz.id}/edit`)
+        navigateTo(`/Learn/Courses/${props.courseId}/quizzes/${res.quiz.id}/edit`)
       }
     }
   } catch (err: any) {

@@ -34,7 +34,9 @@ const getImageUrl = (image: any): string => {
 // Handle image load error
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
-  img.src = '/images/placeholder-image.png'
+  if (img.dataset.fallbackApplied) return
+  img.dataset.fallbackApplied = 'true'
+  img.src = '/images/default-avatar.png'
 }
 
 // Form state
@@ -346,7 +348,7 @@ const handleCancel = () => {
               ลากไฟล์มาวางที่นี่ หรือ
               <span class="text-blue-600 dark:text-blue-400">คลิกเพื่อเลือก</span>
             </p>
-            <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">PNG, JPG, GIF สูงสุด 4MB</p>
+            <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">PNG, JPG, GIF สูงสุด 10MB</p>
           </div>
         </div>
       </div>
