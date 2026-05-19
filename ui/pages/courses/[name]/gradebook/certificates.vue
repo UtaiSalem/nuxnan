@@ -277,6 +277,7 @@ const selectAll = () => {
 
 <template>
   <NuxtLayout name="course">
+    <div>
     <GradebookSubNav :course-name="courseName" />
 
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -719,6 +720,7 @@ const selectAll = () => {
           </div>
         </div>
       </Teleport>
+    </div>
     </div>
   </NuxtLayout>
 </template>

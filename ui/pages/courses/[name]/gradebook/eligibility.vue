@@ -175,6 +175,7 @@ const unlockMember = async () => {
 
 <template>
   <NuxtLayout name="course">
+    <div>
     <GradebookSubNav :course-name="courseName" />
 
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -580,6 +581,7 @@ const unlockMember = async () => {
           </div>
         </div>
       </Teleport>
+    </div>
     </div>
   </NuxtLayout>
 </template>
