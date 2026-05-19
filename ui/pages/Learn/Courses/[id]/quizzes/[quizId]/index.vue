@@ -61,7 +61,7 @@ const filteredStudentResults = computed(() => {
 
 const startQuiz = async () => {
   if (!canTakeExam.value && eligibility.value) {
-    const cost = eligibility.value.options?.find((o: any) => o.method === 'points')?.cost || 0
+    const cost = eligibility.value.unlock_options?.find((o: any) => o.method === 'points')?.cost || 0
     if (cost > 0) {
       const result = await Swal.fire({
         title: 'ปลดล็อคสิทธิ์สอบ',
@@ -250,7 +250,7 @@ const getStatusBadge = computed(() => {
           <div class="p-4 sm:p-6 text-center">
             <div class="text-sm text-gray-500 mb-1">จำนวนข้อ</div>
             <div class="text-2xl font-bold text-gray-900 dark:text-white">
-              {{ quiz.questions?.length || 0 }}
+              {{ quiz.questions_count ?? quiz.questions?.length ?? 0 }}
             </div>
           </div>
           <div class="p-4 sm:p-6 text-center">
