@@ -17,14 +17,8 @@ const tabs = [
   { name: 'ใบประกาศ', icon: 'heroicons:document-check', path: 'gradebook/certificates' },
 ]
 
-const isActive = (tab: typeof tabs[0]) => {
-  const current = route.path
-  const href = `/courses/${props.courseName}/${tab.path}`
-  if (tab.exact) {
-    return current === href || current === href + '/'
-  }
-  return current.startsWith(href)
-}
+const activeClass = 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+const inactiveClass = 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
 </script>
 
 <template>
@@ -35,10 +29,11 @@ const isActive = (tab: typeof tabs[0]) => {
           v-for="tab in tabs"
           :key="tab.path"
           :to="`/courses/${courseName}/${tab.path}`"
+          :exact="tab.exact"
           class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
-          :class="isActive(tab)
-            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+          :class="inactiveClass"
+          :active-class="activeClass"
+          :exact-active-class="tab.exact ? activeClass : undefined"
         >
           <Icon :icon="tab.icon" class="w-4 h-4" />
           {{ tab.name }}
