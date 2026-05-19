@@ -43,7 +43,13 @@ const TABLE_ROUTES = [
   'learn-Courses-id-attendances',
   'learn-Courses-id-progress',
   'learn-Courses-id-members',
-  'learn-Courses-id-external-scores'
+  'learn-Courses-id-external-scores',
+  'learn-Courses-id-gradebook',
+  'learn-Courses-id-gradebook-eligibility',
+  'learn-Courses-id-gradebook-completion',
+  'learn-Courses-id-gradebook-appeals',
+  'learn-Courses-id-gradebook-remediation',
+  'learn-Courses-id-gradebook-certificates'
 ]
 
 const isTableLayout = computed(() => {

@@ -46,9 +46,10 @@ const handleRedirect = () => {
   if (isBaseUrl && courseMemberOfAuth.value) {
     const lastTab = courseMemberOfAuth.value.last_accessed_tab || 11
     const tabRoutes: Record<number, string> = { 
-      1: 'lessons', 2: 'assignments', 3: 'quizzes', 4: 'members', 
-      5: 'groups', 7: 'attendances', 8: 'settings', 9: 'my-progress', 
-      10: 'progress', 11: 'feeds', 12: '', 13: 'admin', 14: 'external-scores' 
+      1: 'lessons', 2: 'assignments', 3: 'quizzes', 4: 'members',
+      5: 'groups', 7: 'attendances', 8: 'settings', 9: 'my-progress',
+      10: 'progress', 11: 'feeds', 12: '', 13: 'admin', 14: 'external-scores',
+      15: 'gradebook'
     }
     const targetRoute = tabRoutes[lastTab]
     const adminOnlyTabs = [8, 10, 13, 14]
