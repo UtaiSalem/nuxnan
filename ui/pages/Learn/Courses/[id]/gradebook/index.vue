@@ -37,20 +37,19 @@ const assessmentForm = ref({
   is_included_in_grade: true,
 })
 
-// Watch for course availability and load data
-watch(() => course.value, async (newCourse) => {
-  if (newCourse?.id) {
-    await fetchData()
-    isLoading.value = false
-  }
-}, { immediate: true })
-
 const fetchData = async () => {
   await Promise.all([
     fetchGradebook(),
     fetchCategories(),
   ])
 }
+
+onMounted(async () => {
+  if (courseId.value) {
+    await fetchData()
+    isLoading.value = false
+  }
+})
 
 const fetchGradebook = async () => {
   try {
@@ -202,6 +201,7 @@ const getGradeColor = (score: any, maxScore: number) => {
 </script>
 
 <template>
+  <div>
   <div v-if="isLoading" class="flex items-center justify-center py-20">
     <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>
   </div>
@@ -599,4 +599,5 @@ const getGradeColor = (score: any, maxScore: number) => {
       </div>
     </div>
   </Teleport>
+  </div>
 </template>
