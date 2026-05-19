@@ -95,6 +95,36 @@ const courseOwnerPath = computed(() => {
   if (!owner) return null
   return `/profile/${owner.reference_code || owner.id}`
 })
+
+const semesterLabel = computed(() => {
+  const s = props.course?.semester
+  if (!s) return null
+  const map: Record<string, string> = {
+    '1': 'ภาคเรียนที่ 1',
+    '2': 'ภาคเรียนที่ 2',
+    '3': 'ภาคเรียนที่ 3',
+    'summer': 'ภาคฤดูร้อน',
+    'weekend': 'ภาคสุดสัปดาห์',
+  }
+  return map[s] ?? null
+})
+
+const academicYearLabel = computed(() => {
+  const y = props.course?.academic_year
+  if (!y) return null
+  return `ปีการศึกษา ${y}`
+})
+
+const educationLevelLabel = computed(() => {
+  const level = props.course?.education_level
+  const year = props.course?.education_year
+  if (level && year) return `${level} ปีที่ ${year}`
+  if (level) return level
+  if (props.course?.level) return props.course.level
+  return null
+})
+
+const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.value || educationLevelLabel.value))
 </script>
 
 <template>
@@ -185,6 +215,22 @@ const courseOwnerPath = computed(() => {
               <Icon icon="mdi:school" class="w-3.5 h-3.5" />
               {{ academy.name }}
             </NuxtLink>
+          </div>
+
+          <!-- Semester / Academic year / Education level badges -->
+          <div v-if="hasMetadata" class="flex flex-wrap items-center gap-2 mb-4">
+            <span v-if="semesterLabel" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/25 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 text-xs font-bold">
+              <Icon icon="fluent:calendar-ltr-24-filled" class="w-3 h-3" />
+              {{ semesterLabel }}
+            </span>
+            <span v-if="academicYearLabel" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/25 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800 text-xs font-bold">
+              <Icon icon="fluent:hat-graduation-24-filled" class="w-3 h-3" />
+              {{ academicYearLabel }}
+            </span>
+            <span v-if="educationLevelLabel" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/25 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800 text-xs font-bold">
+              <Icon icon="fluent:people-community-24-filled" class="w-3 h-3" />
+              {{ educationLevelLabel }}
+            </span>
           </div>
 
           <!-- Stats + Action (desktop inline) -->
