@@ -4,6 +4,7 @@
  * หน้าสมุดคะแนนสำหรับครู
  */
 import { Icon } from '@iconify/vue'
+import GradebookSubNav from '~/components/learn/course/gradebook/GradebookSubNav.vue'
 
 definePageMeta({
   layout: false
@@ -217,7 +218,7 @@ const getGradeColor = (score: any, maxScore: number) => {
 
 <template>
   <NuxtLayout name="course">
-    <LearnCourseGradebookGradebookSubNav :course-name="courseName" />
+    <GradebookSubNav :course-name="courseName" />
 
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>

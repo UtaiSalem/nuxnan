@@ -4,6 +4,7 @@
  * หน้าจัดการคำร้องอุทธรณ์เกรด
  */
 import { Icon } from '@iconify/vue'
+import GradebookSubNav from '~/components/learn/course/gradebook/GradebookSubNav.vue'
 
 definePageMeta({
   layout: false
@@ -190,7 +191,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
 
 <template>
   <NuxtLayout name="course">
-    <LearnCourseGradebookGradebookSubNav :course-name="courseName" />
+    <GradebookSubNav :course-name="courseName" />
 
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Header -->
