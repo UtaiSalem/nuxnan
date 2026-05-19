@@ -90,10 +90,11 @@ onUnmounted(() => {
     </Teleport>
 
     <Teleport to="#tabs-slot">
-      <CourseTabBar 
-        :course-id="courseId" 
-        :is-course-admin="isCourseAdmin" 
-        :course-member-of-auth="courseMemberOfAuth" 
+      <CourseTabBar
+        :course-id="courseId"
+        :course-name="props.course?.name || ''"
+        :is-course-admin="isCourseAdmin"
+        :course-member-of-auth="courseMemberOfAuth"
       />
     </Teleport>
 
