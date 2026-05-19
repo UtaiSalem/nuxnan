@@ -174,6 +174,8 @@ const unlockMember = async () => {
 
 <template>
   <NuxtLayout name="course">
+    <LearnCourseGradebookGradebookSubNav :course-name="courseName" />
+
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Header -->
       <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -188,21 +190,13 @@ const unlockMember = async () => {
               </p>
             </div>
             <div class="flex items-center gap-2 sm:gap-3">
-              <NuxtLink
-                :to="`/courses/${courseName}/gradebook`"
-                class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
-              >
-                <Icon icon="heroicons:arrow-left" class="w-4 h-4 mr-2" />
-                <span class="hidden sm:inline">กลับสมุดคะแนน</span>
-                <span class="sm:hidden">กลับ</span>
-              </NuxtLink>
               <button
                 @click="refreshEligibility"
                 :disabled="isRefreshing"
                 class="inline-flex items-center px-3 sm:px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
-                <Icon 
-                  :icon="isRefreshing ? 'heroicons:arrow-path' : 'heroicons:arrow-path'" 
+                <Icon
+                  :icon="isRefreshing ? 'heroicons:arrow-path' : 'heroicons:arrow-path'"
                   class="w-4 h-4 mr-2"
                   :class="{ 'animate-spin': isRefreshing }"
                 />
