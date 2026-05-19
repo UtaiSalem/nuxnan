@@ -21,6 +21,9 @@ class ExamEligibilityOverride extends Model
         'reading_proof',
         'approved_by',
         'admin_reason',
+        'appeal_reason',
+        'appeal_evidence',
+        'remediation_session_id',
         'status',
         'approved_at',
         'expires_at',
@@ -32,6 +35,7 @@ class ExamEligibilityOverride extends Model
 
     protected $casts = [
         'reading_proof' => 'array',
+        'appeal_evidence' => 'array',
         'approved_at' => 'datetime',
         'expires_at' => 'datetime',
         'absence_percent_at_unlock' => 'decimal:2',

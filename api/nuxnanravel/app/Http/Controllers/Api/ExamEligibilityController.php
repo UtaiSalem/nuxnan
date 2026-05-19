@@ -10,6 +10,7 @@ use App\Services\AttendanceEligibilityService;
 use App\Services\PointsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class ExamEligibilityController extends Controller
 {
@@ -22,14 +23,11 @@ class ExamEligibilityController extends Controller
         $this->pointsService = $pointsService;
     }
 
-    /**
-     * Get eligibility status for a course member
-     */
     public function getStatus(Request $request, Course $course): JsonResponse
     {
         $user = $request->user();
-        
-        $member = $course->members()
+
+        $member = $course->courseMembers()
             ->where('user_id', $user->id)
             ->first();
 
@@ -48,9 +46,6 @@ class ExamEligibilityController extends Controller
         ]);
     }
 
-    /**
-     * Get eligibility summary for all students in a course (Admin)
-     */
     public function getCourseSummary(Request $request, Course $course): JsonResponse
     {
         $this->authorize('manage', $course);
@@ -63,9 +58,6 @@ class ExamEligibilityController extends Controller
         ]);
     }
 
-    /**
-     * Update eligibility for all students in a course
-     */
     public function refreshCourseEligibility(Request $request, Course $course): JsonResponse
     {
         $this->authorize('manage', $course);
@@ -79,14 +71,13 @@ class ExamEligibilityController extends Controller
         ]);
     }
 
-    /**
-     * Request unlock by points
-     */
+    // ─── Points unlock ───
+
     public function requestPointsUnlock(Request $request, Course $course): JsonResponse
     {
         $user = $request->user();
-        
-        $member = $course->members()
+
+        $member = $course->courseMembers()
             ->where('user_id', $user->id)
             ->first();
 
@@ -104,46 +95,50 @@ class ExamEligibilityController extends Controller
             ], 400);
         }
 
-        try {
-            $override = $this->eligibilityService->requestUnlockByPoints($member);
+        $pointsCost = $course->unlock_points_cost ?? 0;
 
-            // Deduct points from user's points
-            $pointsCost = $course->unlock_points_cost ?? 0;
-            if ($pointsCost > 0) {
-                // Check if user has enough points
-                $balance = $this->pointsService->getBalance($user);
-                if ($balance['total_points'] < $pointsCost) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'คะแนนสะสมไม่เพียงพอสำหรับการปลดล็อค',
-                    ], 400);
-                }
-
-                $transaction = $this->pointsService->spend(
-                    $user,
-                    $pointsCost,
-                    'course_exam_unlock',
-                    $course->id,
-                    "ปลดล็อคสิทธิ์สอบวิชา {$course->name}"
-                );
-
-                if (!$transaction) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'ไม่สามารถตัดคะแนนสะสมได้',
-                    ], 400);
-                }
-                
-                $override = $this->eligibilityService->processPointsUnlock($override, $transaction->id);
-            } else {
-                $override = $this->eligibilityService->processPointsUnlock($override, 0);
+        if ($pointsCost > 0) {
+            $balance = $this->pointsService->getBalance($user);
+            if ($balance['total_points'] < $pointsCost) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คะแนนสะสมไม่เพียงพอสำหรับการปลดล็อค',
+                    'data' => [
+                        'required' => $pointsCost,
+                        'current_balance' => $balance['total_points'],
+                    ],
+                ], 400);
             }
+        }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'ปลดล็อคสิทธิ์สอบสำเร็จ',
-                'data' => $override,
-            ]);
+        try {
+            return DB::transaction(function () use ($member, $course, $user, $pointsCost) {
+                $override = $this->eligibilityService->requestUnlockByPoints($member);
+
+                if ($pointsCost > 0) {
+                    $transaction = $this->pointsService->spend(
+                        $user,
+                        $pointsCost,
+                        'course_exam_unlock',
+                        $course->id,
+                        "ปลดล็อคสิทธิ์สอบวิชา {$course->name}"
+                    );
+
+                    if (!$transaction) {
+                        throw new \Exception('ไม่สามารถตัดคะแนนสะสมได้');
+                    }
+
+                    $override = $this->eligibilityService->processPointsUnlock($override, $transaction->id);
+                } else {
+                    $override = $this->eligibilityService->processPointsUnlock($override, 0);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'ปลดล็อคสิทธิ์สอบสำเร็จ',
+                    'data' => $override,
+                ]);
+            });
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -152,14 +147,13 @@ class ExamEligibilityController extends Controller
         }
     }
 
-    /**
-     * Request unlock by reading
-     */
+    // ─── Reading unlock ───
+
     public function requestReadingUnlock(Request $request, Course $course): JsonResponse
     {
         $user = $request->user();
-        
-        $member = $course->members()
+
+        $member = $course->courseMembers()
             ->where('user_id', $user->id)
             ->first();
 
@@ -190,13 +184,10 @@ class ExamEligibilityController extends Controller
         }
     }
 
-    /**
-     * Update reading progress
-     */
     public function updateReadingProgress(Request $request, ExamEligibilityOverride $override): JsonResponse
     {
         $request->validate([
-            'minutes' => 'required|integer|min:1',
+            'minutes' => 'required|integer|min:1|max:60',
             'content_type' => 'required|string',
             'content_id' => 'required',
         ]);
@@ -206,6 +197,13 @@ class ExamEligibilityController extends Controller
                 'success' => false,
                 'message' => 'ไม่มีสิทธิ์',
             ], 403);
+        }
+
+        if ($override->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'คำขอนี้ไม่อยู่ในสถานะรอดำเนินการ',
+            ], 400);
         }
 
         $proof = [
@@ -235,16 +233,97 @@ class ExamEligibilityController extends Controller
         ]);
     }
 
-    /**
-     * Admin: Get pending unlock requests
-     */
+    // ─── Appeal unlock ───
+
+    public function requestAppealUnlock(Request $request, Course $course): JsonResponse
+    {
+        $request->validate([
+            'reason' => 'required|string|max:1000',
+            'evidence' => 'nullable|array',
+            'evidence.*.type' => 'required_with:evidence|string',
+            'evidence.*.description' => 'required_with:evidence|string',
+            'evidence.*.url' => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+
+        $member = $course->courseMembers()
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$member) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบข้อมูลการลงทะเบียน',
+            ], 404);
+        }
+
+        if ($member->eligibility_status === 'unlocked' || $member->exam_eligible) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณมีสิทธิ์สอบอยู่แล้ว',
+            ], 400);
+        }
+
+        try {
+            $override = $this->eligibilityService->requestUnlockByAppeal(
+                $member,
+                $request->reason,
+                $request->evidence
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ส่งคำขออุทธรณ์สิทธิ์สอบเรียบร้อย กรุณารอผู้สอนพิจารณา',
+                'data' => $override,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    public function addAppealEvidence(Request $request, ExamEligibilityOverride $override): JsonResponse
+    {
+        $request->validate([
+            'type' => 'required|string',
+            'description' => 'required|string|max:500',
+            'url' => 'nullable|string',
+        ]);
+
+        if ($override->student_id !== $request->user()->id) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์'], 403);
+        }
+
+        if ($override->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'คำขอนี้ไม่อยู่ในสถานะรอดำเนินการ'], 400);
+        }
+
+        $override = $this->eligibilityService->addAppealEvidence($override, [
+            'type' => $request->type,
+            'description' => $request->description,
+            'url' => $request->url,
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'เพิ่มหลักฐานเรียบร้อย',
+            'data' => $override,
+        ]);
+    }
+
+    // ─── Admin: Pending requests ───
+
     public function getPendingRequests(Request $request, Course $course): JsonResponse
     {
         $this->authorize('manage', $course);
 
         $requests = ExamEligibilityOverride::where('course_id', $course->id)
             ->where('status', 'pending')
-            ->with(['student:id,name,avatar,email', 'courseMember'])
+            ->with(['student:id,name,profile_photo_path,email', 'courseMember'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -254,9 +333,8 @@ class ExamEligibilityController extends Controller
         ]);
     }
 
-    /**
-     * Admin: Approve unlock request
-     */
+    // ─── Admin: Approve / Reject ───
+
     public function approveRequest(Request $request, ExamEligibilityOverride $override): JsonResponse
     {
         $course = $override->course;
@@ -279,9 +357,6 @@ class ExamEligibilityController extends Controller
         ]);
     }
 
-    /**
-     * Admin: Reject unlock request
-     */
     public function rejectRequest(Request $request, ExamEligibilityOverride $override): JsonResponse
     {
         $course = $override->course;
@@ -304,9 +379,8 @@ class ExamEligibilityController extends Controller
         ]);
     }
 
-    /**
-     * Admin: Direct unlock for a student
-     */
+    // ─── Admin: Direct unlock ───
+
     public function adminUnlock(Request $request, Course $course, CourseMember $member): JsonResponse
     {
         $this->authorize('manage', $course);
@@ -315,7 +389,6 @@ class ExamEligibilityController extends Controller
             'reason' => 'required|string|max:500',
         ]);
 
-        // Create and auto-approve override
         $stats = $this->eligibilityService->calculateAttendanceStats($member);
 
         $override = ExamEligibilityOverride::create([
@@ -332,6 +405,15 @@ class ExamEligibilityController extends Controller
             'absent_sessions_at_unlock' => $stats['absent'],
         ]);
 
+        \App\Models\EligibilityAuditLog::log(
+            $member,
+            'unlocked',
+            \App\Models\EligibilityAuditLog::TYPE_ADMIN_UNLOCK,
+            $request->user()->id,
+            $request->reason,
+            ['override_id' => $override->id]
+        );
+
         $member->update([
             'exam_eligible' => true,
             'eligibility_status' => 'unlocked',
@@ -343,6 +425,73 @@ class ExamEligibilityController extends Controller
             'success' => true,
             'message' => 'ปลดล็อคสิทธิ์สอบสำเร็จ',
             'data' => $override,
+        ]);
+    }
+
+    // ─── Bulk operations ───
+
+    public function bulkUnlock(Request $request, Course $course): JsonResponse
+    {
+        $this->authorize('manage', $course);
+
+        $request->validate([
+            'member_ids' => 'required|array|min:1',
+            'member_ids.*' => 'integer|exists:course_members,id',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $results = $this->eligibilityService->bulkUnlock(
+            $course,
+            $request->member_ids,
+            $request->user(),
+            $request->reason
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => sprintf('ปลดล็อคสำเร็จ %d คน, ข้าม %d คน', $results['success'], $results['skipped']),
+            'data' => $results,
+        ]);
+    }
+
+    public function bulkRevoke(Request $request, Course $course): JsonResponse
+    {
+        $this->authorize('manage', $course);
+
+        $request->validate([
+            'member_ids' => 'required|array|min:1',
+            'member_ids.*' => 'integer|exists:course_members,id',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $results = $this->eligibilityService->bulkRevoke(
+            $course,
+            $request->member_ids,
+            $request->user(),
+            $request->reason
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => sprintf('เพิกถอนสิทธิ์สำเร็จ %d คน, ข้าม %d คน', $results['success'], $results['skipped']),
+            'data' => $results,
+        ]);
+    }
+
+    // ─── Audit log ───
+
+    public function getAuditLog(Request $request, Course $course): JsonResponse
+    {
+        $this->authorize('manage', $course);
+
+        $memberId = $request->query('member_id');
+        $limit = min((int) ($request->query('limit', 50)), 200);
+
+        $logs = $this->eligibilityService->getAuditLog($course, $memberId, $limit);
+
+        return response()->json([
+            'success' => true,
+            'data' => $logs,
         ]);
     }
 }

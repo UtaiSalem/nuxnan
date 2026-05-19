@@ -162,7 +162,9 @@ class CourseQuizController extends Controller
             $quizArray = $quizResource->toArray(request());
             unset($quizArray['questions']);
             $quizResource = $quizArray;
-            $questionsHiddenReason = $eligibilityInfo['message'] ?? 'คุณยังไม่มีสิทธิ์ทำข้อสอบนี้';
+            $questionsHiddenReason = !empty($eligibilityInfo['reasons'])
+                ? implode(', ', $eligibilityInfo['reasons'])
+                : 'คุณยังไม่มีสิทธิ์ทำข้อสอบนี้';
         }
 
         return response()->json([
