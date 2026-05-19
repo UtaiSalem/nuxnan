@@ -53,7 +53,7 @@ const tabs = computed(() => {
     { id: 2, name: 'ภาระงาน', icon: 'material-symbols:assignment-add-outline', href: `/Learn/Courses/${props.courseId}/assignments`, show: true },
     { id: 3, name: 'ทดสอบ', icon: 'healthicons:i-exam-qualification-outline', href: `/Learn/Courses/${props.courseId}/quizzes`, show: props.courseMemberOfAuth || props.isCourseAdmin },
     { id: 14, name: 'บันทึกคะแนน', icon: 'mdi:clipboard-text-outline', href: `/Learn/Courses/${props.courseId}/external-scores`, show: props.isCourseAdmin },
-    { id: 15, name: 'สมุดเกรด', icon: 'fluent:text-grammar-checkmark-24-filled', href: `/courses/${props.courseName || props.courseId}/gradebook`, show: props.isCourseAdmin && !!(props.courseName || props.courseId) },
+    { id: 15, name: 'สมุดเกรด', icon: 'fluent:text-grammar-checkmark-24-filled', href: `/Learn/Courses/${props.courseId}/gradebook`, show: props.isCourseAdmin },
     { id: 5, name: 'กลุ่ม', icon: 'heroicons-outline:user-group', href: `/Learn/Courses/${props.courseId}/groups`, show: true },
     { id: 4, name: 'สมาชิก', icon: 'ph:users-four', href: `/Learn/Courses/${props.courseId}/members`, show: props.courseMemberOfAuth !== null },
     { id: 8, name: 'ตั้งค่า', icon: 'mdi-light:settings', href: `/Learn/Courses/${props.courseId}/settings`, show: props.isCourseAdmin },

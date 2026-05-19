@@ -2,7 +2,7 @@
 import { Icon } from '@iconify/vue'
 
 interface Props {
-  courseName: string
+  courseId: string | number
 }
 
 const props = defineProps<Props>()
@@ -22,13 +22,13 @@ const inactiveClass = 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark
 </script>
 
 <template>
-  <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-hidden">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-hidden rounded-t-xl">
+    <div class="px-4 sm:px-6">
       <div class="flex overflow-x-auto gap-1 py-2 scrollbar-hide">
         <NuxtLink
           v-for="tab in tabs"
           :key="tab.path"
-          :to="`/courses/${courseName}/${tab.path}`"
+          :to="`/Learn/Courses/${courseId}/${tab.path}`"
           :exact="tab.exact"
           class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
           :class="inactiveClass"
