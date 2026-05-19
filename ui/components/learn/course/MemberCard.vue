@@ -31,13 +31,19 @@ const props = defineProps({
       type: Number,
       default: null
     },
+    isPendingView: {
+      type: Boolean,
+      default: false
+    },
 });
 
 const emit = defineEmits([
     'request-unmember-course',
     'view-member',
     'edit-member',
-    'assign-group'
+    'assign-group',
+    'approve-request',
+    'reject-request'
 ]);
 
 // ✅ ใช้ composable สำหรับ progress calculation
@@ -101,6 +107,14 @@ const handleEditMember = () => {
   emit('edit-member', props.member);
 };
 
+const handleApprove = () => {
+  emit('approve-request', props.member);
+};
+
+const handleReject = () => {
+  emit('reject-request', props.member);
+};
+
 </script>
 
 <template>
@@ -111,7 +125,7 @@ const handleEditMember = () => {
         role="article">
         
         <!-- Admin Controls - Hover Action Buttons -->
-        <div class="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" v-if="isCourseAdmin">
+        <div class="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" v-if="isCourseAdmin && !isPendingView">
             <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-1">
                 <button
                     @click="handleViewMember"
@@ -138,7 +152,7 @@ const handleEditMember = () => {
         </div>
         
         <!-- Flex Layout สำหรับจัดวาง Member Info และ Progress Bar -->
-        <div class="flex flex-col lg:flex-row gap-4 items-start" :class="{'pr-10': isCourseAdmin}">
+        <div class="flex flex-col lg:flex-row gap-4 items-start" :class="{'pr-10': isCourseAdmin && !isPendingView}">
             <!-- Member Info -->
             <div class="flex items-center w-full lg:w-72 lg:flex-shrink-0">
                 <!-- Avatar with ring -->
@@ -152,6 +166,7 @@ const handleEditMember = () => {
                     />
                     <!-- Status Badge -->
                     <div 
+                        v-if="!isPendingView"
                         class="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-lg"
                         :class="progressColor.bg">
                         {{ percentage }}%
@@ -167,8 +182,8 @@ const handleEditMember = () => {
                     
                     <!-- Status Message -->
                     <div class="flex items-center mt-1 mb-2" :class="progressColor.text">
-                        <Icon :icon="statusIcon" class="w-4 h-4 mr-1.5" />
-                        <span class="text-xs font-semibold">{{ statusMessage }}</span>
+                        <Icon :icon="isPendingView ? 'heroicons:clock' : statusIcon" class="w-4 h-4 mr-1.5" />
+                        <span class="text-xs font-semibold">{{ isPendingView ? 'รอการอนุมัติ' : statusMessage }}</span>
                     </div>
                     
                     <!-- Meta Info -->
@@ -181,7 +196,7 @@ const handleEditMember = () => {
                         </span>
                         
                         <!-- Group -->
-                        <template v-if="!member.group && showGroupAssign && isCourseAdmin">
+                        <template v-if="!isPendingView && !member.group && showGroupAssign && isCourseAdmin">
                             <div class="flex items-center gap-1">
                                 <Icon icon="heroicons:user-group-solid" class="w-5 h-5 text-gray-400" />
                                 <select
@@ -203,8 +218,26 @@ const handleEditMember = () => {
                 </div>
             </div>
             
+            <!-- Pending Approval Actions -->
+            <div v-if="isPendingView && isCourseAdmin" class="flex flex-1 items-center gap-2 w-full lg:justify-end">
+                <button
+                    @click="handleApprove"
+                    class="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors shadow-md shadow-emerald-500/20 active:scale-95"
+                >
+                    <Icon icon="heroicons:check-circle" class="w-5 h-5" />
+                    <span>อนุมัติ</span>
+                </button>
+                <button
+                    @click="handleReject"
+                    class="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800 font-bold rounded-lg transition-colors active:scale-95"
+                >
+                    <Icon icon="heroicons:x-circle" class="w-5 h-5" />
+                    <span>ปฏิเสธ</span>
+                </button>
+            </div>
+
             <!-- Progress Bar -->
-            <div class="flex flex-col items-start lg:items-end w-full flex-1">
+            <div v-if="!isPendingView" class="flex flex-col items-start lg:items-end w-full flex-1">
                 <div class="flex items-center justify-between mb-2 w-full">
                     <div class="flex items-center">
                         <Icon icon="heroicons:academic-cap-solid" class="w-5 h-5 text-indigo-500 dark:text-indigo-400 mr-2" />

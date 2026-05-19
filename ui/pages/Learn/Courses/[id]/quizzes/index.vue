@@ -59,7 +59,7 @@ const handleQuizCreated = (newQuiz: any) => {
 }
 
 const handleEdit = (quiz: any) => {
-  navigateTo(`/courses/${course?.value?.id}/quizzes/${quiz.id}/edit`)
+  navigateTo(`/Learn/Courses/${course?.value?.id}/quizzes/${quiz.id}/edit`)
 }
 
 const handleDelete = async (quizId: number) => {
@@ -75,11 +75,11 @@ const handleDelete = async (quizId: number) => {
 }
 
 const handleStart = (quiz: any) => {
-  navigateTo(`/courses/${course?.value?.id}/quizzes/${quiz.id}/attempt`)
+  navigateTo(`/Learn/Courses/${course?.value?.id}/quizzes/${quiz.id}/attempt`)
 }
 
 const handleView = (quiz: any) => {
-  navigateTo(`/courses/${course?.value?.id}/quizzes/${quiz.id}`)
+  navigateTo(`/Learn/Courses/${course?.value?.id}/quizzes/${quiz.id}`)
 }
 
 // Handle Duplicate

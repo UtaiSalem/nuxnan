@@ -15,18 +15,14 @@ class CourseQuizResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $member_achieved_score  = $this->userResults()->where('user_id', auth()->id())->where('course_id', $this->course_id)->first();
-        // $course_members_score was actually intended to be the single user score according to user?
-        // But the variable name 'course_members_score' implies plural or sum?
-        // User said: "course_members_score is the score of that student... not array"
-        
-        $course_members_score = $member_achieved_score ? $member_achieved_score->score : 0;
-        
-        // For Admin view, we need the list
-        $student_results   = $this->userResults()->where('course_id', $this->course_id)->with('user')->get();
-        
-        $questions              = $this->shuffle_questions === 1 ? $this->questions->shuffle() : $this->questions;
-        return [
+        $current_result = $this->relationLoaded('userResults')
+            ? $this->userResults->where('user_id', auth()->id())->first()
+            : null;
+
+        // Use whenLoaded for questions if it exists in the model
+        $questions_count = $this->questions_count ?? ($this->relationLoaded('questions') ? $this->questions->count() : $this->questions()->count());
+
+        $data = [
             'id'                => $this->id,
             'title'             => $this->title,
             'description'       => $this->description,
@@ -40,14 +36,34 @@ class CourseQuizResource extends JsonResource
             'is_active'         => $this->is_active,
             'created_at'        => $this->created_at,
             'updated_at'        => $this->updated_at,
-            'questions_count'   => $this->questions->count(),
-            'questions'         => QuestionResource::collection($questions),
-            'member_achieved_score' => $member_achieved_score ? $member_achieved_score->score : 0,
-            'course_members_score' => $course_members_score, // Now a single value/score
-            'student_results'   => $student_results, // For Admin View (New Key)
-            'current_result'    => $member_achieved_score,
-            // 'start_date'        => $this->start_date->format('Y-m-d H:i:s'), // Format start_date
-            // 'end_date'          => $this->end_date->format('Y-m-d H:i:s'), // Format end_date
+            'questions_count'   => $questions_count,
+            'member_achieved_score' => $current_result ? $current_result->score : 0,
+            'course_members_score' => $current_result ? $current_result->score : 0,
+            'current_result'    => $current_result,
         ];
+
+        // student_results and questions -> send only for show() not index()
+        $isCourseAdmin = $this->resource->course ? $this->resource->course->isAdmin(auth()->user()) : false;
+
+        return array_merge($data, [
+            'student_results' => $this->when(
+                $request->routeIs('*.show') && $this->relationLoaded('userResults') && $isCourseAdmin,
+                fn() => $this->userResults
+            ),
+            'questions' => $this->when(
+                $request->routeIs('*.show') && $this->relationLoaded('questions'),
+                function () {
+                    if ($this->shuffle_questions === 1) {
+                        // Seed shuffle to be deterministic per user + quiz
+                        // This ensures the student sees the same order if they refresh
+                        $seed = auth()->id() + $this->id;
+                        $questions = $this->questions->shuffle($seed);
+                    } else {
+                        $questions = $this->questions;
+                    }
+                    return QuestionResource::collection($questions)->resolve();
+                }
+            ),
+        ]);
     }
 }

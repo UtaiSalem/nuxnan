@@ -51,6 +51,7 @@ class CourseGroupController extends Controller
                     'bonus_points'   => $member->bonus_points ?? 0,
                     'role'           => $member->role,
                     'status'         => $member->status,
+                    'course_member_status' => $member->course_member_status,
                     'enrollment_date'   => $member->enrollment_date,
                     'last_activity_at'  => $member->last_accessed_at,
                     'lessons_completed' => $member->lessons_completed ?? 0,

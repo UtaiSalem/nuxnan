@@ -15,7 +15,14 @@ const quiz = ref<any>(null)
 const quizResult = ref<any>(null)
 const isLoading = ref(true)
 const isSubmitting = ref(false)
-const questions = ref<any[]>([])
+const eligibility = ref<any>(null)
+const questionsHiddenReason = ref<string | null>(null)
+
+// Normalize questions to handle both array and {data: []} formats
+const normalizedQuestions = computed(() => {
+  if (!quiz.value?.questions) return []
+  return Array.isArray(quiz.value.questions) ? quiz.value.questions : (quiz.value.questions.data || [])
+})
 
 // Timer (Count Up)
 const timeElapsed = ref(0)
@@ -33,11 +40,44 @@ const formattedTime = computed(() => {
       try {
         const res = await api.get(`/api/courses/${courseId}/quizzes/${quizId}`)
         quiz.value = res.quiz
-        questions.value = quiz.value.questions || []
+        eligibility.value = res.eligibility
+        questionsHiddenReason.value = res.questions_hidden_reason
         
+        // Guard: Not eligible to take exam
+        if (res.canTakeExam === false) {
+           await Swal.fire({
+             icon: 'error',
+             title: 'ไม่มีสิทธิ์เข้าสอบ',
+             text: res.questions_hidden_reason || 'คุณยังไม่มีสิทธิ์ทำข้อสอบนี้ หรือคะแนนสะสมไม่เพียงพอ',
+             confirmButtonText: 'กลับไปหน้ารายละเอียด'
+           })
+           router.replace(`/courses/${courseId}/quizzes/${quizId}`)
+           return
+        }
+
         // Handle existing result
         if (quiz.value.current_result) {
-            quizResult.value = quiz.value.current_result;
+            // Check if already completed
+            if (quiz.value.current_result.completed_at) {
+                const retry = await Swal.fire({
+                    title: 'คุณทำข้อสอบไปแล้ว',
+                    text: 'ต้องการเริ่มทำใหม่หรือไม่?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'เริ่มใหม่',
+                    cancelButtonText: 'ยกเลิก'
+                })
+                
+                if (retry.isConfirmed) {
+                    const resultRes = await api.post(`/api/courses/${courseId}/quizzes/${quizId}/results`, {})
+                    quizResult.value = resultRes.quizResult
+                } else {
+                    router.replace(`/courses/${courseId}/quizzes/${quizId}`)
+                    return
+                }
+            } else {
+                quizResult.value = quiz.value.current_result;
+            }
         } else {
             // Start new attempt
             const resultRes = await api.post(`/api/courses/${courseId}/quizzes/${quizId}/results`, {})
@@ -54,7 +94,7 @@ const formattedTime = computed(() => {
         
         startTimer()
     
-      } catch (err) {
+      } catch (err: any) {
         console.error(err)
         Swal.fire('Error', 'Failed to load quiz: ' + (err.message || err), 'error')
       } finally {
@@ -165,7 +205,7 @@ const finishAttempt = async () => {
         // Call endpoint to finalize result (Heartbeat/Duration update)
         // We set completed_at to mark it as done
         await api.put(`/api/courses/${courseId}/quizzes/${quizId}/results/${quizResult.value.id}`, {
-             completed_at: new Date().toISOString(),
+             finalize: true,
              duration: timeElapsed.value
         })
         
@@ -229,10 +269,10 @@ const finishAttempt = async () => {
           <!-- Main Question Runner -->
           <!-- We pass quizResult.started_at to resume correct timer -->
           <!-- Main Question List (Legacy) -->
-          <div v-if="quiz.questions && quiz.questions.length > 0">
+          <div v-if="normalizedQuestions.length > 0">
              <QuestionsListViewer 
                 v-model="quizResult"
-                :questions="quiz.questions"
+                :questions="normalizedQuestions"
                 :quizId="parseInt(quizId as string)"
                 :courseId="parseInt(courseId as string)"
                 :quiz="quiz"

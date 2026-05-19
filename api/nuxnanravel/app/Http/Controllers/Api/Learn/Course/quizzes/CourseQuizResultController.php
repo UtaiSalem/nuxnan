@@ -62,9 +62,11 @@ class CourseQuizResultController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        $data = [
-            'completed_at' => now(),
-        ];
+        $data = [];
+
+        if ($request->has('finalize') && $request->finalize == true) {
+            $data['completed_at'] = now();
+        }
 
         if ($request->has('duration')) {
             $data['duration'] = $request->duration;

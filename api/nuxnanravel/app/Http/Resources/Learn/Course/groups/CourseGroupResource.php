@@ -64,6 +64,8 @@ class CourseGroupResource extends JsonResource
                     'achieved_score' => $member->achieved_score ?? 0,
                     'bonus_points'  => $member->bonus_points ?? 0,
                     'role'          => $member->role,
+                    'status'        => $member->status,
+                    'course_member_status' => $member->course_member_status,
                     'user'          => $user ? [
                         'id'        => $user->id,
                         'name'      => $user->name,

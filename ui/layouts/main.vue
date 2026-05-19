@@ -261,26 +261,29 @@ const handleTestChangePoints = () => {
 
 // Layout widget signals (set by pages that use Teleport to fill widget columns)
 const layoutWidgets = useLayoutWidgets()
+const slots = useSlots()
+
+// Detect both Teleport-based flags and traditional NuxtLayout slots
+const hasLeft = computed(() => layoutWidgets.value.hasLeftWidgets || !!slots.leftWidgets)
+const hasRight = computed(() => layoutWidgets.value.hasRightWidgets || !!slots.rightWidgets)
 
 // Dynamic grid classes for center content
 const centerGridClass = computed(() => {
-  const { hasLeftWidgets, hasRightWidgets } = layoutWidgets.value
-
   // Case: Both exist
-  if (hasLeftWidgets && hasRightWidgets) {
+  if (hasLeft.value && hasRight.value) {
     // lg: left(3) + center(9). Right is slide-out.
     // xl: left(3) + center(6) + right(3).
     return 'lg:col-span-9 xl:col-span-6'
   }
 
   // Case: Only Left exists
-  if (hasLeftWidgets) {
+  if (hasLeft.value) {
     // lg+: left(3) + center(9).
     return 'lg:col-span-9'
   }
 
   // Case: Only Right exists
-  if (hasRightWidgets) {
+  if (hasRight.value) {
     // lg: center(12). Right is slide-out.
     // xl: center(9) + right(3).
     return 'lg:col-span-12 xl:col-span-9'
@@ -1051,7 +1054,7 @@ const onQRActionComplete = (result) => {
         :class="[
           'flex-1 min-w-0 min-h-screen transition-all duration-300 overflow-x-hidden',
           isLeftDrawerOpen ? 'lg:pl-80' : 'lg:pl-20',
-          layoutWidgets.hasRightWidgets ? 'lg:pr-14 xl:pr-0' : '',
+          hasRight ? 'lg:pr-14 xl:pr-0' : '',
           enableRightSidebar && isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20',
         ]"
       >
@@ -1070,7 +1073,7 @@ const onQRActionComplete = (result) => {
           <div class="grid min-w-0 grid-cols-1 lg:grid-cols-12 xl:grid-cols-12 gap-6">
             <!-- Left Widgets (3/12) - visible lg+, slide-out on mobile -->
             <div
-              v-show="layoutWidgets.hasLeftWidgets"
+              v-show="hasLeft"
               :class="[
                 'min-w-0 lg:col-span-3 transition-all duration-300',
                 'fixed top-16 bottom-0 left-0 w-80 max-w-[85vw] z-40 p-6 bg-white dark:bg-vikinger-dark-100 shadow-xl overflow-y-auto transform',
@@ -1100,7 +1103,7 @@ const onQRActionComplete = (result) => {
 
             <!-- Right Widgets (3/12) - visible xl+, slide-out on tablet/mobile -->
             <div
-              v-show="layoutWidgets.hasRightWidgets"
+              v-show="hasRight"
               :class="[
                 'min-w-0 xl:col-span-3 transition-all duration-300',
                 'fixed top-16 bottom-0 right-0 w-80 max-w-[85vw] z-40 p-6 bg-white dark:bg-vikinger-dark-100 shadow-xl overflow-y-auto transform',
@@ -1465,7 +1468,7 @@ const onQRActionComplete = (result) => {
     <!-- Left Panel Toggle (visible < lg when left widgets exist) -->
     <div
       class="fixed left-0 top-1/2 -translate-y-1/2 z-30 transition-all duration-300"
-      :class="layoutWidgets.hasLeftWidgets && !layoutWidgets.isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full'"
+      :class="hasLeft && !layoutWidgets.isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full'"
     >
       <button
         @click="layoutWidgets.isLeftPanelOpen = true"
@@ -1479,7 +1482,7 @@ const onQRActionComplete = (result) => {
     <!-- Right Panel Toggle (visible < xl when right widgets exist) -->
     <div
       class="fixed right-0 top-1/2 -translate-y-1/2 z-30 transition-all duration-300"
-      :class="layoutWidgets.hasRightWidgets && !layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'"
+      :class="hasRight && !layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'"
     >
       <button
         @click="layoutWidgets.isRightPanelOpen = true"

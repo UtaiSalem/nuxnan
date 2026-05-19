@@ -39,9 +39,16 @@ class CourseQuizController extends Controller
     public function index(Course $course) 
     {
         $isCourseAdmin = $course->isAdmin(auth()->user());
+
+        $quizzes = $course->courseQuizzes()
+            ->with(['questions', 'userResults' => fn($q) => $q->where('user_id', auth()->id())])
+            ->withCount('questions')
+            ->when(!$isCourseAdmin, fn($q) => $q->where('is_active', 1))
+            ->get();
+
         return response()->json([
             'course'                => new CourseResource($course),
-            'quizzes'               => $isCourseAdmin ? CourseQuizResource::collection($course->courseQuizzes) : CourseQuizResource::collection($course->courseQuizzes->where('is_active', 1)),
+            'quizzes'               => CourseQuizResource::collection($quizzes),
             // 'groups'             => CourseGroupResource::collection($course->courseGroups),
             'isCourseAdmin'         => $isCourseAdmin,
             'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),
@@ -98,7 +105,22 @@ class CourseQuizController extends Controller
 
     public function show(Course $course, CourseQuiz $quiz)
     {
+        // Ownership Check
+        abort_if($quiz->course_id !== $course->id, 404);
+
         $isCourseAdmin = $course->isAdmin(auth()->user());
+
+        $quiz->load([
+            'questions' => function ($q) {
+                $q->with(['options.images', 'images']);
+            },
+            'userResults' => function ($q) use ($quiz, $isCourseAdmin) {
+                if (!$isCourseAdmin) {
+                    $q->where('user_id', auth()->id());
+                }
+                $q->with('user');
+            }
+        ]);
 
         // Check Exam Eligibility for Student
         $eligibilityInfo = null;
@@ -132,12 +154,15 @@ class CourseQuizController extends Controller
 
         // If student is not eligible and hasn't unlocked it, do not return questions in the resource
         $quizResource = new CourseQuizResource($quiz);
+        $questionsHiddenReason = null;
+
         if (!$canTakeExam && !$isCourseAdmin) {
             // Strip questions to prevent cheating before paying/unlocking
             // We can do this by using a different resource or stripping it out
             $quizArray = $quizResource->toArray(request());
             unset($quizArray['questions']);
             $quizResource = $quizArray;
+            $questionsHiddenReason = $eligibilityInfo['message'] ?? 'คุณยังไม่มีสิทธิ์ทำข้อสอบนี้';
         }
 
         return response()->json([
@@ -145,6 +170,7 @@ class CourseQuizController extends Controller
             'groups' => $groups,
             'eligibility' => $eligibilityInfo,
             'canTakeExam' => $canTakeExam,
+            'questions_hidden_reason' => $questionsHiddenReason,
         ]);
     }
 

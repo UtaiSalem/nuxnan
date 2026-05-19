@@ -255,6 +255,10 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/members')
     Route::patch('/{member}/edited-grade', [CourseMemberGradeProgressController::class, 'updateEditedGrade'])->name('course.member.edited-grade.update');
     Route::get('/{member}/member-grade-progress', [CourseMemberGradeProgressController::class, 'memberGradeProgress'])->name('course.member.grade-progress.show');
 
+    Route::post('/{member}/approve',          [CourseMemberController::class, 'approveRequest'])->name('course.member.approve');
+    Route::post('/{member}/reject',           [CourseMemberController::class, 'rejectRequest'])->name('course.member.reject');
+    Route::post('/{member}/complete-payment', [CourseMemberController::class, 'completePayment'])->name('course.member.complete-payment');
+
 });
 
 Route::middleware(['auth:api', 'verified'])->group(function () {

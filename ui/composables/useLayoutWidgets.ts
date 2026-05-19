@@ -4,5 +4,6 @@ export function useLayoutWidgets() {
     hasRightWidgets: false,
     isLeftPanelOpen: false,
     isRightPanelOpen: false,
+    isTableLayout: false,
   }))
 }

@@ -59,7 +59,7 @@ class AcademyCourseController extends Controller
                 // 'academy_id'        => 'nullable',
                 // 'code'              => 'nullable|string|max:255',
                 'name'              => 'required|string|max:255',
-                // 'description'       => 'nullable|string',
+                'description'       => 'nullable|string|max:500000',
                 // 'category'          => 'nullable|string|max:255',
                 // 'level'             => 'nullable|string|max:255',
                 // 'credit_units'      => 'nullable|string',

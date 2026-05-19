@@ -141,15 +141,27 @@ const members = computed(() => {
         list = allMembers.filter(m => {
             const duplicate = seen.has(m.id)
             seen.add(m.id)
-            return !duplicate
+            return !duplicate && m.course_member_status === 1 // Only approved
         })
     } else if (activeGroupTab.value === -1) {
         // "ไม่มีกลุ่ม" tab - ungrouped members (exclude admins role=4)
-        list = (courseGroupStore.ungroupedMembers || []).filter(m => m.role !== 4)
+        list = (courseGroupStore.ungroupedMembers || []).filter(m => m.role !== 4 && m.course_member_status === 1)
+    } else if (activeGroupTab.value === -2) {
+        // "รออนุมัติ" tab - all members with course_member_status === 0
+        const allMembers = [
+            ...courseGroupStore.groups.flatMap(g => g.members || []),
+            ...(courseGroupStore.ungroupedMembers || [])
+        ]
+        const seen = new Set()
+        list = allMembers.filter(m => {
+            const duplicate = seen.has(m.id)
+            seen.add(m.id)
+            return !duplicate && m.course_member_status === 0
+        })
     } else {
         // Specific group tab
         const group = courseGroupStore.groups[activeGroupTab.value - 1]
-        list = group?.members || []
+        list = (group?.members || []).filter(m => m.course_member_status === 1)
     }
 
     // Restrict for students
@@ -243,6 +255,68 @@ const handleRequestUnmember = async ({ memberId, memberName }: { memberId: numbe
     }
 }
 
+// Handler for approving request
+const handleApproveRequest = async (member: any) => {
+    const result = await Swal.fire({
+        title: 'อนุมัติการสมัคร?',
+        text: `คุณต้องการอนุมัติ "${member.name || member.member_name}" เข้าสู่รายวิชาใช่หรือไม่?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'อนุมัติ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#10b981'
+    })
+
+    if (result.isConfirmed) {
+        try {
+            await api.post(`/api/courses/${course.value.id}/members/${member.id}/approve`)
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'อนุมัติเรียบร้อยแล้ว',
+                showConfirmButton: false,
+                timer: 2000
+            })
+            await courseGroupStore.fetchGroups(course.value.id, true)
+        } catch (error) {
+            console.error('Failed to approve request:', error)
+            Swal.fire('ผิดพลาด', 'ไม่สามารถอนุมัติได้', 'error')
+        }
+    }
+}
+
+// Handler for rejecting request
+const handleRejectRequest = async (member: any) => {
+    const result = await Swal.fire({
+        title: 'ปฏิเสธการสมัคร?',
+        text: `คุณต้องการปฏิเสธ "${member.name || member.member_name}" หรือไม่?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'ปฏิเสธ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#ef4444'
+    })
+
+    if (result.isConfirmed) {
+        try {
+            await api.post(`/api/courses/${course.value.id}/members/${member.id}/reject`)
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'ปฏิเสธเรียบร้อยแล้ว',
+                showConfirmButton: false,
+                timer: 2000
+            })
+            await courseGroupStore.fetchGroups(course.value.id, true)
+        } catch (error) {
+            console.error('Failed to reject request:', error)
+            Swal.fire('ผิดพลาด', 'ไม่สามารถปฏิเสธได้', 'error')
+        }
+    }
+}
+
 // Handler for viewing member details
 const handleViewMember = (member: any) => {
     // Navigate to member profile or show modal
@@ -257,14 +331,35 @@ const handleEditMember = (member: any) => {
 
 // Total members count including ungrouped (exclude admins from ungrouped count)
 const totalAllMembers = computed(() => {
-    const grouped = courseGroupStore.groups.reduce((sum: number, g: any) => sum + (g.members?.length || 0), 0)
-    const ungrouped = (courseGroupStore.ungroupedMembers || []).filter((m: any) => m.role !== 4).length
-    return grouped + ungrouped
+    const allMembers = [
+        ...courseGroupStore.groups.flatMap(g => g.members || []),
+        ...(courseGroupStore.ungroupedMembers || [])
+    ]
+    const seen = new Set()
+    return allMembers.filter(m => {
+        const duplicate = seen.has(m.id)
+        seen.add(m.id)
+        return !duplicate && m.course_member_status === 1 && m.role !== 4
+    }).length
 })
 
 // Ungrouped non-admin count for tab display
 const ungroupedCount = computed(() => {
-    return (courseGroupStore.ungroupedMembers || []).filter((m: any) => m.role !== 4).length
+    return (courseGroupStore.ungroupedMembers || []).filter((m: any) => m.role !== 4 && m.course_member_status === 1).length
+})
+
+// Pending count for tab display
+const pendingCount = computed(() => {
+    const allMembers = [
+        ...courseGroupStore.groups.flatMap(g => g.members || []),
+        ...(courseGroupStore.ungroupedMembers || [])
+    ]
+    const seen = new Set()
+    return allMembers.filter(m => {
+        const duplicate = seen.has(m.id)
+        seen.add(m.id)
+        return !duplicate && m.course_member_status === 0
+    }).length
 })
 
 // Assign group to ungrouped member
@@ -319,11 +414,11 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                     <Icon icon="ph:users-three-duotone" class="w-8 h-8 text-blue-500" />
                     สมาชิกในรายวิชา
                     <span v-if="!isLoading" class="text-sm font-normal text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
-                        {{ totalmembers }} คน
+                        {{ activeGroupTab === -2 ? pendingCount : totalmembers }} คน
                     </span>
                 </h1>
                 <p class="mt-1 text-gray-500 dark:text-gray-400 text-sm">
-                    รายชื่อนักเรียนและผู้สอนทั้งหมดในรายวิชานี้
+                    {{ activeGroupTab === -2 ? 'รายการผู้ที่ต้องการเข้าร่วมรายวิชา' : 'รายชื่อนักเรียนและผู้สอนทั้งหมดในรายวิชานี้' }}
                 </p>
             </div>
 
@@ -358,7 +453,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                 </div>
 
                 <!-- Sort Tabs -->
-                <div class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                <div v-if="activeGroupTab !== -2" class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                     <button 
                         @click="sortBy = 'number'"
                         class="px-3 py-1.5 text-sm font-medium rounded-md transition-all"
@@ -392,14 +487,14 @@ async function assignGroupToMember(memberId: number, groupId: number) {
         <!-- Layout: Top Performers followed by Member List -->
         <div class="space-y-8">
             <!-- Top Performers Section (Full Width) -->
-            <div v-if="members.length > 0">
+            <div v-if="members.length > 0 && activeGroupTab !== -2">
                 <TopPerformers :members="members" />
             </div>
 
             <!-- Main Content: Member List -->
             <div class="space-y-6">
                 <!-- Group Tabs (Moved here for better flow) -->
-                <div v-if="isCourseAdmin && courseGroupStore.groups.length > 0">
+                <div v-if="isCourseAdmin">
                     <div class="flex flex-wrap items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                         <button 
                             @click="setActiveGroupTab(0)"
@@ -421,7 +516,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                                 ? 'bg-blue-500 text-white shadow-md'
                                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
                         >
-                            {{ group.name }} ({{ group.members?.length || 0 }})
+                            {{ group.name }} ({{ (group.members || []).filter(m => m.course_member_status === 1).length }})
                         </button>
 
                         <!-- ไม่มีกลุ่ม tab -->
@@ -436,6 +531,20 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                         >
                             <Icon icon="heroicons:user-minus" class="w-4 h-4 mr-2" />
                             ไม่มีกลุ่ม ({{ ungroupedCount }})
+                        </button>
+
+                        <!-- รออนุมัติ tab -->
+                        <button 
+                            @click="setActiveGroupTab(-2)"
+                            class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ml-auto"
+                            :class="activeGroupTab === -2
+                                ? 'bg-emerald-600 text-white shadow-md'
+                                : (pendingCount > 0
+                                    ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800'
+                                    : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800')"
+                        >
+                            <Icon icon="heroicons:clock" class="w-4 h-4 mr-2" />
+                            รออนุมัติ ({{ pendingCount }})
                         </button>
                     </div>
                 </div>
@@ -470,6 +579,16 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                         </div>
                     </div>
 
+                    <!-- Pending Tab: Info banner -->
+                    <div v-if="activeGroupTab === -2 && isCourseAdmin" class="mb-4">
+                        <div class="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                            <Icon icon="heroicons:check-badge" class="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                            <span class="text-sm text-emerald-700 dark:text-emerald-300">
+                                รายการผู้สมัครที่รอการอนุมัติเข้าร่วมรายวิชา คุณสามารถตรวจสอบข้อมูลและอนุมัติหรือปฏิเสธได้ทันที
+                            </span>
+                        </div>
+                    </div>
+
                     <!-- Card/Table View using new component (used for ALL tabs including ungrouped) -->
                     <MemberListView
                         v-if="effectiveViewMode === 'card' || effectiveViewMode === 'table'"
@@ -479,10 +598,13 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                         :is-course-admin="isCourseAdmin"
                         :available-groups="activeGroupTab === -1 ? courseGroupStore.groups : []"
                         :assigning-member-id="assigningGroupForMember"
+                        :is-pending-view="activeGroupTab === -2"
                         @request-unmember="handleRequestUnmember"
                         @view-member="handleViewMember"
                         @edit-member="handleEditMember"
                         @assign-group="({ memberId, groupId }) => assignGroupToMember(memberId, groupId)"
+                        @approve-request="handleApproveRequest"
+                        @reject-request="handleRejectRequest"
                     />
 
                     <!-- List View (original MemberCard) -->
@@ -496,10 +618,13 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                             :course-total-score="course?.total_score || 100"
                             :available-groups="activeGroupTab === -1 ? courseGroupStore.groups : []"
                             :assigning-member-id="assigningGroupForMember"
+                            :is-pending-view="activeGroupTab === -2"
                             @request-unmember-course="handleRequestUnmember"
                             @view-member="handleViewMember"
                             @edit-member="handleEditMember"
                             @assign-group="({ memberId, groupId }) => assignGroupToMember(memberId, groupId)"
+                            @approve-request="handleApproveRequest"
+                            @reject-request="handleRejectRequest"
                         />
                     </ul>
                 </div>
@@ -507,10 +632,14 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                 <!-- Empty State -->
                 <div v-else class="text-center py-20 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
                     <div class="inline-flex p-4 rounded-full bg-gray-50 dark:bg-gray-900 mb-4">
-                        <Icon icon="ph:users-three-duotone" class="w-12 h-12 text-gray-400" />
+                        <Icon :icon="activeGroupTab === -2 ? 'heroicons:clock' : 'ph:users-three-duotone'" class="w-12 h-12 text-gray-400" />
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">ไม่พบสมาชิก</h3>
-                    <p class="text-gray-500">ลองเปลี่ยนคำค้นหา หรือตัวกรองกลุ่มเรียน</p>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                        {{ activeGroupTab === -2 ? 'ไม่มีคำขอรออนุมัติ' : 'ไม่พบสมาชิก' }}
+                    </h3>
+                    <p class="text-gray-500">
+                        {{ activeGroupTab === -2 ? 'เมื่อมีคนขอเข้าร่วมรายวิชา รายชื่อจะปรากฏที่นี่' : 'ลองเปลี่ยนคำค้นหา หรือตัวกรองกลุ่มเรียน' }}
+                    </p>
                 </div>
             </div>
         </div>

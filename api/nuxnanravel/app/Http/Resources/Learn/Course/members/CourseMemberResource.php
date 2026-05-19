@@ -38,7 +38,7 @@ class CourseMemberResource extends JsonResource
             'order_number'          =>  $this->order_number,
             'member_code'           =>  $this->member_code,
             'role'                  =>  $this->role,
-            'status'                =>  $this->course_member_status,
+            'status'                =>  $this->status,
             'course_member_status'  =>  $this->course_member_status,
             'group_member_status'   =>  $this->group_member_status,
 			'last_accessed_tab'     =>  $this->last_accessed_tab ?? 0,

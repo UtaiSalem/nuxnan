@@ -39,6 +39,10 @@ class CourseMemberController extends Controller
             $query->where('role', $request->role);
         }
 
+        if ($request->has('course_member_status') && $request->course_member_status !== null) {
+            $query->where('course_member_status', $request->course_member_status);
+        }
+
         if ($request->has('group_id') && $request->group_id) {
             $query->where('group_id', $request->group_id);
         }
@@ -217,8 +221,11 @@ class CourseMemberController extends Controller
             $price = $price - ($price * $course->discount / 100);
         }
         
-        // For paid courses, process wallet payment
-        if ($price > 0) {
+        $courseAutoAcceptMembers = ($course->courseSettings->auto_accept_members ?? 1) === 0 ? 0 : 1;
+        $requiresApproval = $courseAutoAcceptMembers === 0;
+
+        // For paid courses, only charge immediately if auto-approved (no approval required)
+        if ($price > 0 && !$requiresApproval) {
             // Check wallet balance
             if ($user->wallet < $price) {
                 return response()->json([
@@ -229,7 +236,7 @@ class CourseMemberController extends Controller
                     'need_topup' => true,
                 ], 400);
             }
-            
+
             // Process payment via WalletService
             try {
                 $walletService = app(\App\Services\WalletService::class);
@@ -246,8 +253,6 @@ class CourseMemberController extends Controller
 
         if (!$course_member) {
 
-            $courseAutoAcceptMembers = $course->courseSettings->auto_accept_members === 0 ? 0 : 1;
-
             $new_course_member = new CourseMember();
             $new_course_member->user_id     = auth()->id();
             $new_course_member->course_id   = $course->id;
@@ -257,23 +262,29 @@ class CourseMemberController extends Controller
             $new_course_member->enrollment_date = now();
             $new_course_member->save();
 
-            $newCourseGroupMember = new CourseGroupMember();
-            $newCourseGroupMember->user_id      = auth()->id();
-            $newCourseGroupMember->course_id    = $new_course_member->course_id;
-            $newCourseGroupMember->group_id     = $new_course_member->group_id;
-            $newCourseGroupMember->status       = $courseAutoAcceptMembers;
-            $newCourseGroupMember->save();
+            if ($new_course_member->group_id) {
+                $newCourseGroupMember = new CourseGroupMember();
+                $newCourseGroupMember->user_id      = auth()->id();
+                $newCourseGroupMember->course_id    = $new_course_member->course_id;
+                $newCourseGroupMember->group_id     = $new_course_member->group_id;
+                $newCourseGroupMember->status       = $courseAutoAcceptMembers;
+                $newCourseGroupMember->save();
+            }
             
         }else{
 
-            $course_member->group_id = $request->group_id;
-            $course_member->save();
+            if ($request->group_id) {
+                $course_member->group_id = $request->group_id;
+                $course_member->save();
+            }
             $new_course_member = $course_member;
 
-            $courseGroupMember = CourseGroupMember::where('course_id', $course->id)->where('user_id', auth()->id())->first();
-            if ($courseGroupMember) {
-                $courseGroupMember->group_id = $request->group_id;
-                $courseGroupMember->save();
+            if ($request->group_id) {
+                $courseGroupMember = CourseGroupMember::where('course_id', $course->id)->where('user_id', auth()->id())->first();
+                if ($courseGroupMember) {
+                    $courseGroupMember->group_id = $request->group_id;
+                    $courseGroupMember->save();
+                }
             }
         }
 
@@ -362,6 +373,7 @@ class CourseMemberController extends Controller
 
         if ($request->has('course_member_status')) {
             $data['course_member_status'] = (int) $request->course_member_status;
+            $data['status'] = (int) $request->course_member_status; // keep status in sync
         }
 
         $member->update($data);
@@ -504,7 +516,7 @@ class CourseMemberController extends Controller
 
     public function getMembersRequesters(Course $course)
     {
-        $members = $course->courseMembers()->where('course_member_status', 0)->latest()->paginate();
+        $members = $course->courseMembers()->with('user', 'group')->where('course_member_status', 0)->latest()->paginate();
 
         return response()->json([
             'course' => new CourseResource($course),
@@ -512,6 +524,121 @@ class CourseMemberController extends Controller
             'members' => CourseMemberResource::collection($members),
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
+        ]);
+    }
+
+    public function approveRequest(Course $course, CourseMember $member)
+    {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        if ($member->course_id !== $course->id || $member->course_member_status !== 0) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบคำขอหรือสถานะไม่ถูกต้อง'], 422);
+        }
+
+        $price = $course->tuition_fees ?? $course->price ?? 0;
+        $isPaidCourse = $price > 0;
+
+        $member->update([
+            'course_member_status' => 1,
+            'status'               => $isPaidCourse ? 0 : 1,
+        ]);
+
+        if ($member->group_id) {
+            CourseGroupMember::where('course_id', $course->id)
+                ->where('user_id', $member->user_id)
+                ->where('group_id', $member->group_id)
+                ->update(['status' => 1, 'request_status' => 'approved']);
+        }
+
+        $content = $isPaidCourse
+            ? 'คำขอเข้าเรียนได้รับการอนุมัติ กรุณาชำระเงินเพื่อเริ่มเรียน'
+            : 'คำขอเข้าเรียนได้รับการอนุมัติแล้ว';
+
+        \App\Models\Notification::create([
+            'user_id'    => $member->user_id,
+            'sender_id'  => auth()->id(),
+            'type'       => $isPaidCourse ? 'course_approved_payment_required' : 'course_approved',
+            'content'    => $content,
+            'action_url' => "/learn/courses/{$course->id}",
+            'related_id' => $course->id,
+            'read_status' => false,
+        ]);
+
+        return new CourseMemberResource($member->load('user', 'group'));
+    }
+
+    public function rejectRequest(Course $course, CourseMember $member)
+    {
+        if (!$course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        if ($member->course_id !== $course->id) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบคำขอ'], 404);
+        }
+
+        CourseGroupMember::where('course_id', $course->id)
+            ->where('user_id', $member->user_id)
+            ->delete();
+
+        $userId = $member->user_id;
+        $member->delete();
+
+        \App\Models\Notification::create([
+            'user_id'    => $userId,
+            'sender_id'  => auth()->id(),
+            'type'       => 'course_rejected',
+            'content'    => 'ขออภัย คำขอเข้าเรียนไม่ผ่านการพิจารณา',
+            'related_id' => $course->id,
+            'read_status' => false,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'ปฏิเสธคำขอเรียบร้อยแล้ว']);
+    }
+
+    public function completePayment(Course $course, CourseMember $member)
+    {
+        if ($member->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        if ($member->course_id !== $course->id) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบข้อมูล'], 404);
+        }
+        if ($member->course_member_status !== 1 || $member->status !== 0) {
+            return response()->json(['success' => false, 'message' => 'ไม่อยู่ในสถานะรอชำระเงิน'], 422);
+        }
+
+        $price = $course->tuition_fees ?? $course->price ?? 0;
+        if ($price <= 0) {
+            // self-heal: คอร์สฟรีที่ค้างอยู่ -> activate เลย
+            $member->update(['status' => 1]);
+            return response()->json(['success' => true, 'message' => 'เปิดใช้งานแล้ว']);
+        }
+
+        $user = auth()->user();
+        if ($user->wallet < $price) {
+            return response()->json([
+                'success'         => false,
+                'msg'             => 'ยอดเงินในกระเป๋าไม่เพียงพอ กรุณาเติมเงินก่อน',
+                'required'        => $price,
+                'current_balance' => $user->wallet,
+                'need_topup'      => true,
+            ], 400);
+        }
+
+        try {
+            $walletService = app(\App\Services\WalletService::class);
+            $transaction = $walletService->purchaseCourse($user, $course);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'msg' => 'การชำระเงินล้มเหลว: ' . $e->getMessage()], 400);
+        }
+
+        $member->update(['status' => 1]);
+
+        return response()->json([
+            'success'        => true,
+            'message'        => 'ชำระเงินสำเร็จ เริ่มเรียนได้เลย',
+            'transaction_id' => $transaction->id,
         ]);
     }
 
@@ -1035,6 +1162,10 @@ class CourseMemberController extends Controller
 
         if ($request->has('role') && $request->role) {
             $query->where('role', $request->role);
+        }
+
+        if ($request->has('course_member_status') && $request->course_member_status !== null) {
+            $query->where('course_member_status', $request->course_member_status);
         }
 
         if ($request->has('group_id') && $request->group_id) {

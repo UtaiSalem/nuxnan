@@ -14,6 +14,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
+use App\Http\Resources\Learn\Course\members\CourseMemberResource;
 
 class CourseActivityController extends Controller implements HasMiddleware
 {
@@ -72,7 +73,7 @@ class CourseActivityController extends Controller implements HasMiddleware
                 'academy'               => $course->academy ? new AcademyResource($course->academy) : null,
                 'course'                => $coursesResource,
                 'isCourseAdmin'         => $isCourseAdmin,
-                'courseMemberOfAuth'    => $cma,
+                'courseMemberOfAuth'    => $cma ? new CourseMemberResource($cma) : null,
                 'courseGroups'          => CourseGroupResource::collection($courseGroups),
                 'ungroupedMembers'      => $ungroupedMembers->map(function ($member) {
                     $user = $member->user;

@@ -23,6 +23,7 @@ class QuestionResource extends JsonResource
              $authAnswerQuestion = \App\Models\LessonAnswerQuestion::where('question_id', $this->id)->where('user_id', auth()->id())->first();
              if ($authAnswerQuestion) {
                  $user_answer = [
+                    'id' => $authAnswerQuestion->id,
                     'answer_id' => $authAnswerQuestion->answer_id,
                     'is_correct' => $authAnswerQuestion->is_correct,
                     'points' => $authAnswerQuestion->points
@@ -32,6 +33,7 @@ class QuestionResource extends JsonResource
              $authAnswerQuestion = $this->userAnswers()->where('user_id', auth()->id())->where('quiz_id', $this->questionable_id)->first();
              if ($authAnswerQuestion) {
                  $user_answer = [
+                    'id' => $authAnswerQuestion->id,
                     'answer_id' => $authAnswerQuestion->answer_id,
                     'is_correct' => false, // UserAnswerQuestion doesn't store is_correct directly on the model usually, it stores points. But let's check.
                     // Actually, let's just pass what we have. Points > 0 implies correct?

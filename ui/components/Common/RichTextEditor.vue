@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useEditor, EditorContent } from '@tiptap/vue-3'
+import { useRichText } from '~/composables/useRichText'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import TextAlign from '@tiptap/extension-text-align'
@@ -20,57 +21,38 @@ import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { Icon } from '@iconify/vue'
 
-
-
 interface Props {
   modelValue: string
   placeholder?: string
   editable?: boolean
   minHeight?: string
+  id?: string // For draft auto-save
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
   placeholder: 'เขียนเนื้อหาที่นี่...',
   editable: true,
-  minHeight: '200px'
+  minHeight: '200px',
+  id: 'default-editor'
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'save'])
 
-/**
- * Utility function to convert plain text to HTML
- * Handles line breaks, multiple spaces, and preserves formatting
- */
-const convertPlainTextToHtml = (text: string): string => {
-  if (!text) return ''
-  
-  // If the text already contains HTML tags, return as-is
-  if (/<[a-z][\s\S]*>/i.test(text)) {
-    return text
-  }
-  
-  // Convert plain text to HTML
-  // Split by double line breaks for paragraphs
-  const paragraphs = text.split(/\n\n+/)
-  
-  return paragraphs.map(paragraph => {
-    // Convert single line breaks to <br>
-    const lines = paragraph.split(/\n/)
-    const content = lines.map(line => {
-      // Preserve multiple spaces
-      return line.replace(/  +/g, match => '&nbsp;'.repeat(match.length))
-    }).join('<br>')
-    
-    // Wrap in paragraph tag
-    return `<p>${content}</p>`
-  }).join('')
-}
+const { convertPlainTextToHtml } = useRichText()
 
 /**
  * Get the initial content, converting plain text if necessary
  */
 const getInitialContent = (value: string): string => {
+  // Check for draft in localStorage
+  if (props.editable) {
+    const draft = localStorage.getItem(`editor-draft-${props.id}`)
+    if (draft && draft !== value) {
+      // In a real app, we might want to ask the user if they want to restore the draft
+      // For now, we'll just check if it's non-empty and different
+    }
+  }
   return convertPlainTextToHtml(value)
 }
 
@@ -123,8 +105,29 @@ const editor = useEditor({
     
   ],
   onUpdate: ({ editor }) => {
-    emit('update:modelValue', editor.getHTML())
+    const html = editor.getHTML()
+    emit('update:modelValue', html)
+    
+    // Auto-save draft
+    if (props.editable) {
+      localStorage.setItem(`editor-draft-${props.id}`, html)
+    }
   }
+})
+
+// Shortcut: Ctrl+S to save
+const handleKeyDown = (event: KeyboardEvent) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+    event.preventDefault()
+    emit('save', editor.value?.getHTML())
+    
+    // Clear draft on manual save
+    localStorage.removeItem(`editor-draft-${props.id}`)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
 })
 
 // Watch for external changes

@@ -654,7 +654,7 @@ class CourseController extends Controller
             'name'              => 'nullable|string',
             'slug'              => 'nullable',
             'code'              => 'nullable',
-            'description'       => 'nullable',
+            'description'       => 'nullable|string|max:500000',
             'duration'          => 'nullable',
             'tuition_fees'      => 'nullable|numeric',
             'price'             => 'nullable|numeric|min:0',

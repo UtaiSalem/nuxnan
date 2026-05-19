@@ -38,13 +38,29 @@ const route = useRoute()
 const courseId = computed(() => route.params.id as string)
 
 const layoutWidgets = useLayoutWidgets()
-onMounted(() => {
-  layoutWidgets.value.hasLeftWidgets = true
-  layoutWidgets.value.hasRightWidgets = true
+
+const TABLE_ROUTES = [
+  'learn-Courses-id-attendances',
+  'learn-Courses-id-progress',
+  'learn-Courses-id-members',
+  'learn-Courses-id-external-scores'
+]
+
+const isTableLayout = computed(() => {
+  const name = route.name?.toString() || ''
+  return TABLE_ROUTES.some(r => name.toLowerCase() === r.toLowerCase())
 })
+
+watchEffect(() => {
+  layoutWidgets.value.hasLeftWidgets = true
+  layoutWidgets.value.hasRightWidgets = !isTableLayout.value
+  layoutWidgets.value.isTableLayout = isTableLayout.value
+})
+
 onUnmounted(() => {
   layoutWidgets.value.hasLeftWidgets = false
   layoutWidgets.value.hasRightWidgets = false
+  layoutWidgets.value.isTableLayout = false
 })
 
 </script>
@@ -83,13 +99,32 @@ onUnmounted(() => {
 
     <Teleport to="#left-widgets-slot">
       <CourseInstructorWidget v-if="course" :course="course" :owner="course.user" />
-      <RecentlyViewedCoursesWidget />
-      <FavoriteCoursesWidget />
+      
+      <!-- Teleport CourseInfoWidget to left in table mode -->
+      <CourseInfoWidget
+        v-if="course && isTableLayout"
+        :course="course"
+        :course-member-of-auth="courseMemberOfAuth"
+        :is-course-admin="isCourseAdmin"
+        :course-groups="courseGroups"
+        :is-enrolling="isEnrolling"
+        :is-toggling-favorite="isTogglingFavorite"
+        :is-wishlisted="isWishlisted"
+        @enroll="$emit('request-member')"
+        @toggle-favorite="$emit('toggle-favorite')"
+        @purchase="$emit('purchase-course')"
+        @update:selected-group-id="$emit('update:selected-group-id', $event)"
+      />
+
+      <template v-if="!isTableLayout">
+        <RecentlyViewedCoursesWidget />
+        <FavoriteCoursesWidget />
+      </template>
     </Teleport>
 
     <Teleport to="#right-widgets-slot">
       <CourseInfoWidget
-        v-if="course"
+        v-if="course && !isTableLayout"
         :course="course"
         :course-member-of-auth="courseMemberOfAuth"
         :is-course-admin="isCourseAdmin"
@@ -106,6 +141,7 @@ onUnmounted(() => {
       <CourseProgressWidget v-if="courseMemberOfAuth" :member="courseMemberOfAuth" :course-id="courseId" />
       
       <CourseSidebar 
+        v-if="!isTableLayout"
         :course="course" 
         :is-admin="isCourseAdmin" 
         :course-member-of-auth="courseMemberOfAuth" 

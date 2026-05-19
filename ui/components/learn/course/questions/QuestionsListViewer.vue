@@ -7,8 +7,10 @@
                   <!-- Header: Text & Badges -->
                   <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4 mb-3 sm:mb-4">
                       <!-- Question Text -->
-                      <div class="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100 flex-grow" v-html="q.text"></div>
-  
+                      <div class="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100 flex-grow">
+                        <CommonRichTextViewer :content="q.text" :can-expand="false" />
+                      </div>
+
                       <!-- Badges (Flex Item) -->
                       <div class="flex items-center gap-2 flex-shrink-0">
                            <!-- Question Value -->
@@ -55,7 +57,9 @@
                               />
                           </div>
                           <div class="ml-3 text-sm flex-grow">
-                              <span class="font-medium text-gray-900 dark:text-gray-100" v-html="opt.text"></span>
+                              <span class="font-medium text-gray-900 dark:text-gray-100">
+                                <CommonRichTextViewer :content="opt.text" :can-expand="false" />
+                              </span>
                                <!-- Option Images -->
                                <div v-if="opt.images && opt.images.length > 0" class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <div v-for="optImg in opt.images" :key="optImg.id" class="rounded overflow-hidden border border-gray-200 dark:border-gray-700">

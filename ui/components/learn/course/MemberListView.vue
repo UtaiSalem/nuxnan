@@ -52,6 +52,7 @@ interface Props {
   selectedIds?: number[]
   availableGroups?: Group[]
   assigningMemberId?: number | null
+  isPendingView?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -61,7 +62,8 @@ const props = withDefaults(defineProps<Props>(), {
   showCheckbox: false,
   selectedIds: () => [],
   availableGroups: () => [],
-  assigningMemberId: null
+  assigningMemberId: null,
+  isPendingView: false
 })
 
 const emit = defineEmits<{
@@ -70,6 +72,8 @@ const emit = defineEmits<{
   'edit-member': [member: Member]
   'update:selectedIds': [ids: number[]]
   'assign-group': [{ memberId: number; groupId: number }]
+  'approve-request': [member: Member]
+  'reject-request': [member: Member]
 }>()
 
 const showGroupAssign = computed(() => props.availableGroups.length > 0)
@@ -260,7 +264,7 @@ watch(() => props.viewMode, (val) => {
         </div>
 
         <!-- Progress Bar at Top -->
-        <div class="h-1.5 w-full bg-gray-100 dark:bg-gray-700">
+        <div v-if="!isPendingView" class="h-1.5 w-full bg-gray-100 dark:bg-gray-700">
           <div 
             class="h-full transition-all duration-500"
             :class="getMemberProgress(member).progressBg"
@@ -281,7 +285,7 @@ watch(() => props.viewMode, (val) => {
               />
               <!-- Order Number Badge -->
               <div 
-                v-if="getMemberOrderNumber(member) !== '-'"
+                v-if="!isPendingView && getMemberOrderNumber(member) !== '-'"
                 class="absolute -bottom-1 -right-1 w-6 h-6 flex items-center justify-center rounded-full bg-primary-500 text-white text-xs font-bold shadow-lg"
               >
                 {{ getMemberOrderNumber(member) }}
@@ -309,11 +313,11 @@ watch(() => props.viewMode, (val) => {
               <!-- Group -->
               <div class="flex items-center gap-1.5 mt-2 text-sm text-gray-600 dark:text-gray-400">
                 <Icon icon="fluent:people-team-24-regular" class="w-4 h-4" />
-                <template v-if="!member.group && showGroupAssign">
+                <template v-if="!isPendingView && !member.group && showGroupAssign">
                   <select
                     :disabled="assigningMemberId === member.id"
                     class="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none disabled:opacity-50"
-                    @change="(e) => { const val = e.target.value; if (val) { emit('assign-group', { memberId: member.id, groupId: Number(val) }); e.target.value = '' } }"
+                    @change="(e) => { const val = (e.target as HTMLSelectElement).value; if (val) { emit('assign-group', { memberId: member.id, groupId: Number(val) }); (e.target as HTMLSelectElement).value = '' } }"
                   >
                     <option value="">เลือกกลุ่ม...</option>
                     <option v-for="g in availableGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
@@ -325,8 +329,26 @@ watch(() => props.viewMode, (val) => {
             </div>
           </div>
 
+          <!-- Pending Actions -->
+          <div v-if="isPendingView && isCourseAdmin" class="flex items-center gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <button
+              @click="emit('approve-request', member)"
+              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors text-sm shadow-md shadow-emerald-500/20 active:scale-95"
+            >
+              <Icon icon="heroicons:check-circle" class="w-4 h-4" />
+              <span>อนุมัติ</span>
+            </button>
+            <button
+              @click="emit('reject-request', member)"
+              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800 font-bold rounded-lg transition-colors text-sm active:scale-95"
+            >
+              <Icon icon="heroicons:x-circle" class="w-4 h-4" />
+              <span>ปฏิเสธ</span>
+            </button>
+          </div>
+
           <!-- Stats Grid -->
-          <div class="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <div v-if="!isPendingView" class="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
             <!-- Score -->
             <div class="text-center">
               <p class="text-2xl font-bold" :class="getMemberProgress(member).colorClass">
@@ -351,7 +373,7 @@ watch(() => props.viewMode, (val) => {
           </div>
 
           <!-- Progress Status -->
-          <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <div v-if="!isPendingView" class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
             <div class="flex items-center gap-2">
               <div class="w-2.5 h-2.5 rounded-full" :class="getMemberProgress(member).progressBg" />
               <span class="text-sm font-medium" :class="getMemberProgress(member).colorClass">
@@ -366,12 +388,12 @@ watch(() => props.viewMode, (val) => {
           <!-- Last Activity -->
           <div class="flex items-center gap-1.5 mt-3 text-xs text-gray-400">
             <Icon icon="fluent:clock-24-regular" class="w-3.5 h-3.5" />
-            <span>ใช้งานล่าสุด: {{ formatLastActivity(member.last_activity_at) }}</span>
+            <span>{{ isPendingView ? 'ส่งคำขอเมื่อ: ' + formatDate(member.enrollment_date) : 'ใช้งานล่าสุด: ' + formatLastActivity(member.last_activity_at) }}</span>
           </div>
         </div>
 
         <!-- Actions on Hover -->
-        <div v-if="isCourseAdmin" class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div v-if="isCourseAdmin && !isPendingView" class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
           <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-1">
             <button
               @click="emit('view-member', member)"
@@ -409,7 +431,7 @@ watch(() => props.viewMode, (val) => {
         <table ref="tableRef" class="w-full text-left min-w-[900px]">
           <thead class="sticky top-0 z-10">
             <tr class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-              <th v-if="showCheckbox" class="w-12 px-4 py-3">
+              <th v-if="showCheckbox" class="w-12 px-4 py-3 sticky left-0 z-20 bg-gray-50 dark:bg-gray-900">
                 <input
                   type="checkbox"
                   :checked="isAllSelected"
@@ -417,10 +439,10 @@ watch(() => props.viewMode, (val) => {
                   class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-16">
-                เลขที่
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-16 sticky left-12 z-20 bg-gray-50 dark:bg-gray-900">
+                {{ isPendingView ? 'ลำดับ' : 'เลขที่' }}
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[200px]">
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[200px] sticky left-[112px] z-20 bg-gray-50 dark:bg-gray-900">
                 สมาชิก
               </th>
               <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[100px]">
@@ -432,20 +454,20 @@ watch(() => props.viewMode, (val) => {
               <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[90px]">
                 บทบาท
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[160px]">
+              <th v-if="!isPendingView" class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[160px]">
                 ความคืบหน้า
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center whitespace-nowrap min-w-[80px]">
+              <th v-if="!isPendingView" class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center whitespace-nowrap min-w-[80px]">
                 คะแนน
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[70px]">
+              <th v-if="!isPendingView" class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[70px]">
                 บทเรียน
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[70px]">
+              <th v-if="!isPendingView" class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[70px]">
                 เข้าเรียน
               </th>
               <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[110px]">
-                ใช้งานล่าสุด
+                {{ isPendingView ? 'ส่งคำขอเมื่อ' : 'ใช้งานล่าสุด' }}
               </th>
               <th v-if="isCourseAdmin" class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right whitespace-nowrap min-w-[120px]">
                 การดำเนินการ
@@ -454,12 +476,12 @@ watch(() => props.viewMode, (val) => {
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
             <tr 
-              v-for="member in members" 
+              v-for="(member, index) in members" 
               :key="member.id"
               class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
               <!-- Checkbox -->
-              <td v-if="showCheckbox" class="px-4 py-3">
+              <td v-if="showCheckbox" class="px-4 py-3 sticky left-0 z-10 bg-white dark:bg-gray-800">
                 <input
                   type="checkbox"
                   :checked="isSelected(member.id)"
@@ -469,14 +491,14 @@ watch(() => props.viewMode, (val) => {
               </td>
 
               <!-- Order Number -->
-              <td class="px-4 py-3">
+              <td class="px-4 py-3 sticky left-12 z-10 bg-white dark:bg-gray-800">
                 <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300">
-                  {{ getMemberOrderNumber(member) }}
+                  {{ isPendingView ? index + 1 : getMemberOrderNumber(member) }}
                 </span>
               </td>
 
               <!-- Member -->
-              <td class="px-4 py-3">
+              <td class="px-4 py-3 sticky left-[112px] z-10 bg-white dark:bg-gray-800">
                 <div class="flex items-center gap-3">
                   <img
                     :src="getMemberAvatar(member)"
@@ -503,12 +525,12 @@ watch(() => props.viewMode, (val) => {
 
               <!-- Group -->
               <td class="px-4 py-3">
-                <template v-if="!member.group && showGroupAssign">
+                <template v-if="!isPendingView && !member.group && showGroupAssign">
                   <div class="flex items-center gap-2">
                     <select
                       :disabled="assigningMemberId === member.id"
                       class="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none disabled:opacity-50"
-                      @change="(e) => { const val = e.target.value; if (val) { emit('assign-group', { memberId: member.id, groupId: Number(val) }); e.target.value = '' } }"
+                      @change="(e) => { const val = (e.target as HTMLSelectElement).value; if (val) { emit('assign-group', { memberId: member.id, groupId: Number(val) }); (e.target as HTMLSelectElement).value = '' } }"
                     >
                       <option value="">เลือกกลุ่ม...</option>
                       <option v-for="g in availableGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
@@ -531,7 +553,7 @@ watch(() => props.viewMode, (val) => {
               </td>
 
               <!-- Progress -->
-              <td class="px-4 py-3 min-w-[140px]">
+              <td v-if="!isPendingView" class="px-4 py-3 min-w-[140px]">
                 <div class="flex items-center gap-2">
                   <div class="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div 
@@ -547,7 +569,7 @@ watch(() => props.viewMode, (val) => {
               </td>
 
               <!-- Score -->
-              <td class="px-4 py-3 text-center">
+              <td v-if="!isPendingView" class="px-4 py-3 text-center">
                 <span class="text-sm font-semibold text-gray-900 dark:text-white">
                   {{ getMemberProgress(member).score }}
                 </span>
@@ -555,29 +577,45 @@ watch(() => props.viewMode, (val) => {
               </td>
 
               <!-- Lessons -->
-              <td class="px-4 py-3">
+              <td v-if="!isPendingView" class="px-4 py-3">
                 <span class="text-sm text-gray-700 dark:text-gray-300">
                   {{ member.lessons_completed || 0 }} บท
                 </span>
               </td>
 
               <!-- Attendance -->
-              <td class="px-4 py-3">
+              <td v-if="!isPendingView" class="px-4 py-3">
                 <span class="text-sm text-gray-700 dark:text-gray-300">
                   {{ member.attendance_rate || 0 }}%
                 </span>
               </td>
 
-              <!-- Last Activity -->
+              <!-- Last Activity / Enrollment Date -->
               <td class="px-4 py-3">
                 <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {{ formatLastActivity(member.last_activity_at) }}
+                  {{ isPendingView ? formatDate(member.enrollment_date) : formatLastActivity(member.last_activity_at) }}
                 </span>
               </td>
 
               <!-- Actions -->
               <td v-if="isCourseAdmin" class="px-4 py-3">
-                <div class="flex items-center justify-end gap-1">
+                <div v-if="isPendingView" class="flex items-center justify-end gap-2">
+                  <button
+                    @click="emit('approve-request', member)"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors active:scale-95"
+                  >
+                    <Icon icon="heroicons:check-circle" class="w-4 h-4" />
+                    อนุมัติ
+                  </button>
+                  <button
+                    @click="emit('reject-request', member)"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800 text-xs font-bold rounded-lg transition-colors active:scale-95"
+                  >
+                    <Icon icon="heroicons:x-circle" class="w-4 h-4" />
+                    ปฏิเสธ
+                  </button>
+                </div>
+                <div v-else class="flex items-center justify-end gap-1">
                   <button
                     @click="emit('view-member', member)"
                     class="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"

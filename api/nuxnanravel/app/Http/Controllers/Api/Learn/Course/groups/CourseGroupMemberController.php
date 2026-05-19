@@ -84,6 +84,8 @@ class CourseGroupMemberController extends Controller
         // Sync with CourseMember (Legacy support? Or main truth?)
         // Ideally CourseMember just tracks "current active group" or similar.
         // For now, let's keep logic similar to before but safe.
+        $courseAutoAcceptMembers = ($course->courseSettings->auto_accept_members ?? 1) === 0 ? 0 : 1;
+
         $courseMember = CourseMember::where('course_id', $course->id)->where('user_id', $user->id)->first();
         if ($courseMember) {
             // Only switch focus if approved
@@ -98,7 +100,8 @@ class CourseGroupMemberController extends Controller
              $courseMember = new CourseMember();
              $courseMember->user_id = $user->id;
              $courseMember->course_id = $course->id;
-             $courseMember->course_member_status = 1; // Assume enrolled
+             $courseMember->course_member_status = $courseAutoAcceptMembers; // Respect course setting
+             $courseMember->status = $courseAutoAcceptMembers; // Also sync main status
              $courseMember->group_id = ($requestStatus === 'approved') ? $group->id : null;
              $courseMember->group_member_status = ($requestStatus === 'approved') ? 1 : 0;
              $courseMember->save();
@@ -143,8 +146,11 @@ class CourseGroupMemberController extends Controller
         // Update CourseMember
         $courseMember = CourseMember::where('course_id', $course->id)->where('user_id', $groupMember->user_id)->first();
         if ($courseMember) {
+            $price = $course->tuition_fees ?? $course->price ?? 0;
             $courseMember->group_id = $group->id;
             $courseMember->group_member_status = 1;
+            $courseMember->course_member_status = 1;
+            $courseMember->status = ($price <= 0) ? 1 : 0;
             $courseMember->save();
         }
 

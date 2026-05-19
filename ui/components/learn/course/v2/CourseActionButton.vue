@@ -15,7 +15,12 @@ const api = useApi()
 const isProcessing = ref(false)
 const showPendingMenu = ref(false)
 
-const memberStatus = computed(() => props.courseMemberOfAuth?.status)
+const approvalStatus = computed(() => props.courseMemberOfAuth?.course_member_status)
+const accessStatus = computed(() => props.courseMemberOfAuth?.status)
+const isApprovedAwaitingPayment = computed(() =>
+  approvalStatus.value === 1 && accessStatus.value === 0 && courseJoinPrice.value > 0
+)
+const isPendingApproval = computed(() => approvalStatus.value === 0)
 const courseJoinPrice = computed(() => Number(props.course?.tuition_fees ?? 0))
 const canPurchaseCopy = computed(() => Boolean(props.course?.is_for_marketplace))
 
@@ -56,7 +61,7 @@ async function handleAction() {
   }
 
   // Case: Active Member -> Leave course
-  if (memberStatus.value === 1 || memberStatus.value === 'active') {
+  if (accessStatus.value === 1 || accessStatus.value === 'active') {
     const result = await Swal.fire({
       title: 'คุณต้องการออกจากรายวิชา?',
       text: 'คุณจะไม่สามารถเข้าถึงเนื้อหาได้จนกว่าจะสมัครใหม่',
@@ -99,13 +104,32 @@ async function cancelRequest() {
     isProcessing.value = false
   }
 }
+
+async function completePayment() {
+  if (isProcessing.value) return
+  isProcessing.value = true
+  try {
+    await api.post(`/api/courses/${props.course.id}/members/${props.courseMemberOfAuth.id}/complete-payment`)
+    Swal.fire({ title: 'ชำระเงินสำเร็จ', text: 'เริ่มเรียนได้เลย', icon: 'success', timer: 2000, showConfirmButton: false })
+    emit('refresh')
+  } catch (error: any) {
+    const data = error?.response?.data ?? {}
+    if (data.need_topup) {
+      Swal.fire({ title: 'ยอดเงินไม่เพียงพอ', text: `ต้องการ ${data.required} บาท (มี ${data.current_balance} บาท)`, icon: 'warning' })
+    } else {
+      Swal.fire({ title: 'ผิดพลาด', text: data.message ?? data.msg ?? 'ไม่สามารถชำระเงินได้', icon: 'error' })
+    }
+  } finally {
+    isProcessing.value = false
+  }
+}
 </script>
 
 <template>
   <div class="w-full" :class="variant === 'standalone' ? 'space-y-3' : 'flex items-center gap-2'">
     <!-- Active Member Button -->
     <button
-      v-if="courseMemberOfAuth && (memberStatus === 1 || memberStatus === 'active')"
+      v-if="courseMemberOfAuth && (accessStatus === 1 || accessStatus === 'active')"
       @click="handleAction"
       :disabled="isProcessing"
       class="group flex items-center justify-center gap-2 rounded-xl bg-emerald-500 text-white font-black shadow-lg shadow-emerald-500/20 hover:bg-red-500 transition-all active:scale-95 disabled:opacity-50"
@@ -120,8 +144,23 @@ async function cancelRequest() {
       </template>
     </button>
 
+    <!-- Approved, awaiting payment -->
+    <button
+      v-else-if="courseMemberOfAuth && isApprovedAwaitingPayment"
+      @click="completePayment"
+      :disabled="isProcessing"
+      class="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 text-white font-black shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
+      :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+    >
+      <Icon v-if="isProcessing" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+      <template v-else>
+        <Icon icon="heroicons:credit-card" class="w-5 h-5" />
+        <span>ชำระเงินเพื่อเริ่มเรียน</span>
+      </template>
+    </button>
+
     <!-- Pending Status Button -->
-    <div v-else-if="courseMemberOfAuth && (memberStatus === 0 || memberStatus === 'pending')" class="relative" :class="variant === 'standalone' ? 'w-full' : ''">
+    <div v-else-if="courseMemberOfAuth && isPendingApproval" class="relative" :class="variant === 'standalone' ? 'w-full' : ''">
       <button
         @click="showPendingMenu = !showPendingMenu"
         class="flex items-center justify-center gap-2 rounded-xl bg-amber-500 text-white font-black shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all active:scale-95"

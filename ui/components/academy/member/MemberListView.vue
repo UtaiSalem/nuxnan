@@ -359,7 +359,7 @@ const isAllSelected = computed(() =>
     <div v-else class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left" style="min-width: 800px">
-          <thead>
+          <thead class="sticky top-0 z-10">
             <tr class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
               <th v-if="showCheckbox" class="w-12 px-4 py-3">
                 <input
@@ -369,11 +369,11 @@ const isAllSelected = computed(() =>
                   class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                สมาชิก
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-16">
+                เลขที่
               </th>
-              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                รหัส
+              <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap min-w-[200px]">
+                สมาชิก
               </th>
               <th class="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                 บทบาท

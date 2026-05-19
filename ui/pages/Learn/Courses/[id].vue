@@ -10,7 +10,7 @@ import CourseGroupSelectorModal from '~/components/learn/course/v2/CourseGroupSe
 import AcademyCoursePurchaseModal from '~/components/academy/CoursePurchaseModal.vue'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
   middleware: 'auth'
 })
 
@@ -194,78 +194,76 @@ watch(courseId, (newId) => {
 </script>
 
 <template>
-  <NuxtLayout name="main">
-    <div class="relative min-h-[600px]">
-      <!-- Scoped Loading State -->
-      <PageTransitionLoader 
-        :show="isLoading && !course" 
-        text="กำลังโหลดข้อมูลรายวิชา..." 
+  <div class="relative min-h-[600px]">
+    <!-- Scoped Loading State -->
+    <PageTransitionLoader 
+      :show="isLoading && !course" 
+      text="กำลังโหลดข้อมูลรายวิชา..." 
+    />
+
+    <!-- Error State -->
+    <div v-if="error && !course" class="p-8 text-center bg-white dark:bg-gray-800 rounded-2xl shadow-xl m-4">
+      <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 text-red-500 mx-auto mb-4" />
+      <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">เกิดข้อผิดพลาด</h3>
+      <p class="text-gray-500 dark:text-gray-400 mb-6">{{ error }}</p>
+      <button @click="fetchCourse(true)" class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20">
+        ลองใหม่อีกครั้ง
+      </button>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <template v-else-if="course">
+      <CoursePageShell
+        :course="course"
+        :academy="academy"
+        :is-course-admin="isCourseAdmin"
+        :course-member-of-auth="courseMemberOfAuth"
+        :course-groups="courseGroups"
+        :is-enrolling="isEnrolling"
+        :is-toggling-favorite="isTogglingFavorite"
+        :is-wishlisted="isWishlisted"
+        @refresh="fetchCourse(true)"
+        @edit-name="showEditModal = true"
+        @request-member="handleRequestMember"
+        @purchase-course="showCopyPurchaseModal = true"
+        @toggle-favorite="toggleWishlist"
+        @update:selected-group-id="selectedGroupId = $event"
+      >
+        <!-- Invitation Banner (Admin/TA) -->
+        <CourseInvitationBanner
+          v-if="courseMemberOfAuth && courseMemberOfAuth.status === 2"
+          :course-id="courseId"
+          :course-member-of-auth="courseMemberOfAuth"
+          @refresh="fetchCourse(true)"
+        />
+
+        <!-- Actual Content (NuxtPage) -->
+        <NuxtPage />
+      </CoursePageShell>
+
+      <!-- Modals -->
+      <CourseEditModal
+        :show="showEditModal"
+        :course="course"
+        @close="showEditModal = false"
+        @refresh="fetchCourse(true)"
       />
 
-      <!-- Error State -->
-      <div v-if="error && !course" class="p-8 text-center bg-white dark:bg-gray-800 rounded-2xl shadow-xl m-4">
-        <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 text-red-500 mx-auto mb-4" />
-        <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">เกิดข้อผิดพลาด</h3>
-        <p class="text-gray-500 dark:text-gray-400 mb-6">{{ error }}</p>
-        <button @click="fetchCourse(true)" class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20">
-          ลองใหม่อีกครั้ง
-        </button>
-      </div>
+      <CourseGroupSelectorModal
+        :show="showGroupSelector"
+        :groups="courseGroups"
+        :is-processing="isEnrolling"
+        @close="showGroupSelector = false"
+        @confirm="confirmAndEnroll"
+      />
 
-      <!-- MAIN CONTENT -->
-      <template v-else-if="course">
-        <CoursePageShell
-          :course="course"
-          :academy="academy"
-          :is-course-admin="isCourseAdmin"
-          :course-member-of-auth="courseMemberOfAuth"
-          :course-groups="courseGroups"
-          :is-enrolling="isEnrolling"
-          :is-toggling-favorite="isTogglingFavorite"
-          :is-wishlisted="isWishlisted"
-          @refresh="fetchCourse(true)"
-          @edit-name="showEditModal = true"
-          @request-member="handleRequestMember"
-          @purchase-course="showCopyPurchaseModal = true"
-          @toggle-favorite="toggleWishlist"
-          @update:selected-group-id="selectedGroupId = $event"
-        >
-          <!-- Invitation Banner (Admin/TA) -->
-          <CourseInvitationBanner
-            v-if="courseMemberOfAuth && courseMemberOfAuth.status === 2"
-            :course-id="courseId"
-            :course-member-of-auth="courseMemberOfAuth"
-            @refresh="fetchCourse(true)"
-          />
-
-          <!-- Actual Content (NuxtPage) -->
-          <NuxtPage />
-        </CoursePageShell>
-
-        <!-- Modals -->
-        <CourseEditModal
-          :show="showEditModal"
-          :course="course"
-          @close="showEditModal = false"
-          @refresh="fetchCourse(true)"
-        />
-
-        <CourseGroupSelectorModal
-          :show="showGroupSelector"
-          :groups="courseGroups"
-          :is-processing="isEnrolling"
-          @close="showGroupSelector = false"
-          @confirm="confirmAndEnroll"
-        />
-
-        <AcademyCoursePurchaseModal
-          v-if="course"
-          :course="course"
-          :visible="showCopyPurchaseModal"
-          @close="showCopyPurchaseModal = false"
-          @success="fetchCourse(true)"
-        />
-      </template>
-    </div>
-  </NuxtLayout>
+      <AcademyCoursePurchaseModal
+        v-if="course"
+        :course="course"
+        :visible="showCopyPurchaseModal"
+        @close="showCopyPurchaseModal = false"
+        @success="fetchCourse(true)"
+      />
+    </template>
+  </div>
 </template>

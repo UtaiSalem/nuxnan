@@ -233,7 +233,9 @@ const deleteTopic = async (topic) => {
                             <div class="text-md font-bold">คำอธิบายบทเรียน</div>
                             <div class="my-4 text-sm font-semibold text-gray-600">{{ lesson.data.description }}</div>
                             <div class="text-sm font-semibold">เนื้อหา</div>
-                            <div class="my-2 text-sm font-normal" v-html="lesson.data.content"></div>
+                            <div class="my-2 text-sm font-normal">
+                                <CommonRichTextViewer :content="lesson.data.content" :can-expand="false" />
+                            </div>
                             <LessonImagesViewer 
                                 :model_id="props.lesson.data.id"
                                 :images="props.lesson.data.images"
@@ -305,7 +307,9 @@ const deleteTopic = async (topic) => {
                                                 </vue-plyr>
                                             </div>
 
-                                            <div v-if="topic.content" class="prose max-w-none text-gray-700 text-sm mb-4" v-html="topic.content"></div>
+                                            <div v-if="topic.content" class="mb-4">
+                                                <CommonRichTextViewer :content="topic.content" :can-expand="false" />
+                                            </div>
 
                                             <!-- Images -->
                                             <div v-if="topic.images && topic.images.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-2">
