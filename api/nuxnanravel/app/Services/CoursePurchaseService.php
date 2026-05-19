@@ -38,11 +38,16 @@ class CoursePurchaseService
                 throw new Exception('You cannot purchase your own course.');
             }
 
+            // Reload buyer with a row-level lock to prevent concurrent balance reads
+            $buyer = \App\Models\User::where('id', $buyer->id)->lockForUpdate()->firstOrFail();
+
+            // Pessimistic lock on any in-progress purchase record to prevent duplicates
             $alreadyPurchased = \App\Models\CoursePurchase::where('buyer_id', $buyer->id)
                 ->where('source_course_id', $course->id)
                 ->whereIn('status', ['completed', 'pending_clone', 'paid'])
+                ->lockForUpdate()
                 ->exists();
-            
+
             if (!$alreadyPurchased) {
                 // Fallback check for legacy data
                 $alreadyPurchased = Course::where('user_id', $buyer->id)

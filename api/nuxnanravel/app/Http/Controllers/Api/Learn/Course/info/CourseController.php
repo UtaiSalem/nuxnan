@@ -547,7 +547,7 @@ class CourseController extends Controller
                 'end_date'          => 'nullable|date',
                 'auto_accept_members'=> 'nullable|boolean',
                 'saleable'          => 'nullable|boolean',
-                'price'             => 'nullable|numeric',
+                'price'             => 'nullable|numeric|min:0',
                 'status'            => 'nullable|string',
                 'cover'             => 'nullable|image|mimes:jpg,jpeg,png,gif,svg|max:4096',
             ]);
@@ -657,7 +657,7 @@ class CourseController extends Controller
             'description'       => 'nullable',
             'duration'          => 'nullable',
             'tuition_fees'      => 'nullable|numeric',
-            'price'             => 'nullable|numeric',
+            'price'             => 'nullable|numeric|min:0',
             'credit_units'      => 'nullable|numeric',
             'hours_per_week'    => 'nullable|numeric',
             'semester'          => ['nullable', \Illuminate\Validation\Rule::in(['1', '2', '3', 'summer', 'weekend'])],
