@@ -13,7 +13,7 @@ return new class extends Migration
             $table->json('appeal_evidence')->nullable()->after('appeal_reason');
             $table->foreignId('remediation_session_id')->nullable()
                 ->after('appeal_evidence')
-                ->constrained('remediation_sessions')->nullOnDelete();
+                ->constrained('course_remediation_sessions')->nullOnDelete();
         });
     }
 

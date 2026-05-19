@@ -108,6 +108,7 @@ const authUser = computed(() => {
       name: 'Guest',
       username: 'guest',
       email: '',
+      personalCode: '',
       avatar: '/images/default-avatar.png',
       pp: 0,
       wallet: 0,
@@ -125,6 +126,7 @@ const authUser = computed(() => {
     name: user.username || user.name || 'User',
     username: user.username || user.name,
     email: user.email || '',
+    personalCode: user.personal_code || '',
     avatar: avatarUrl,
     pp: authStore.points,
     wallet: Number(user.wallet) || 0,
@@ -135,6 +137,18 @@ const authUser = computed(() => {
     is_plearnd_admin: user.is_plearnd_admin || false,
   }
 })
+
+const copyPersonalCode = async () => {
+  if (authUser.value.personalCode) {
+    try {
+      await navigator.clipboard.writeText(authUser.value.personalCode)
+      // We could use a toast here if available, but for now visual feedback is enough
+      // The user suggested adding click-to-copy with a tooltip or similar
+    } catch (err) {
+      console.error('Failed to copy personal code:', err)
+    }
+  }
+}
 
 // Navigation
 const navigation = [
@@ -670,6 +684,14 @@ const onQRActionComplete = (result) => {
             <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
               {{ authUser.email }}
             </p>
+            <p v-if="authUser.personalCode" 
+               class="text-xs mt-1 flex items-center justify-center gap-1 cursor-pointer hover:text-vikinger-purple transition-colors"
+               :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+               @click="copyPersonalCode"
+               :title="'คลิกเพื่อคัดลอก'">
+              <Icon icon="fluent:id-card-24-regular" class="w-3.5 h-3.5" />
+              {{ authUser.personalCode }}
+            </p>
           </div>
 
           <!-- Badge Icons -->
@@ -892,7 +914,8 @@ const onQRActionComplete = (result) => {
         <!-- Collapsed Content -->
         <div v-else class="p-3 space-y-2 flex flex-col items-center">
           <!-- Profile Avatar (Collapsed) -->
-          <NuxtLink to="/profile" class="mb-2 flex flex-col items-center">
+          <NuxtLink to="/profile" class="mb-2 flex flex-col items-center"
+            :title="`${authUser.name}${authUser.personalCode ? ' • ' + authUser.personalCode : ''}`">
             <img
               :src="authUser.avatar"
               class="w-12 h-12 rounded-full border-2 border-vikinger-purple shadow-lg"
@@ -1286,6 +1309,14 @@ const onQRActionComplete = (result) => {
             </h3>
             <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
               {{ authUser.email }}
+            </p>
+            <p v-if="authUser.personalCode" 
+               class="text-xs mt-1 flex items-center justify-center gap-1 cursor-pointer hover:text-vikinger-purple transition-colors"
+               :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+               @click="copyPersonalCode"
+               :title="'คลิกเพื่อคัดลอก'">
+              <Icon icon="fluent:id-card-24-regular" class="w-3.5 h-3.5" />
+              {{ authUser.personalCode }}
             </p>
           </div>
 
