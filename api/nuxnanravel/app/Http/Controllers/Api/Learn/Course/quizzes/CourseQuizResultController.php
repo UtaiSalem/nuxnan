@@ -9,16 +9,40 @@ use Illuminate\Http\Request;
 use App\Models\CourseQuizResult;
 use App\Models\UserAnswerQuestion;
 use App\Constants\QuizConstants;
+use App\Services\AttendanceEligibilityService;
 use Illuminate\Support\Facades\DB;
 
 class CourseQuizResultController extends Controller
 {
+    protected AttendanceEligibilityService $eligibilityService;
+
+    public function __construct(AttendanceEligibilityService $eligibilityService)
+    {
+        $this->eligibilityService = $eligibilityService;
+    }
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(Course $course, CourseQuiz $quiz, Request $request)
     {
+        $isCourseAdmin = $course->isAdmin(auth()->user());
+
+        if (!$isCourseAdmin) {
+            $member = $course->courseMembers()->where('user_id', auth()->id())->first();
+            if ($member) {
+                $eligibilityInfo = $this->eligibilityService->canTakeExam($member);
+                if (!$eligibilityInfo['can_take_exam'] && $eligibilityInfo['eligibility_status'] !== 'unlocked') {
+                    return response()->json([
+                        'status' => false,
+                        'message' => !empty($eligibilityInfo['reasons'])
+                            ? implode(', ', $eligibilityInfo['reasons'])
+                            : 'คุณยังไม่มีสิทธิ์ทำข้อสอบนี้',
+                        'eligibility' => $eligibilityInfo,
+                    ], 403);
+                }
+            }
+        }
 
         $quizResult = $course->courseQuizResults()
             ->where('quiz_id', $quiz->id)

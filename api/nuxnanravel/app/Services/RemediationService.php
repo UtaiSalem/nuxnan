@@ -13,10 +13,12 @@ use Illuminate\Support\Facades\DB;
 class RemediationService
 {
     protected CourseGradingService $gradingService;
+    protected AttendanceEligibilityService $eligibilityService;
 
-    public function __construct(CourseGradingService $gradingService)
+    public function __construct(CourseGradingService $gradingService, AttendanceEligibilityService $eligibilityService)
     {
         $this->gradingService = $gradingService;
+        $this->eligibilityService = $eligibilityService;
     }
 
     /**
@@ -213,8 +215,7 @@ class RemediationService
 
         // Update the course member if passed
         if ($enrollment->status === CourseRemediationEnrollment::STATUS_PASSED) {
-            return DB::transaction(function () use ($member, $score, $gradeResult, $grader, $enrollment) {
-                // Log the grade change
+            return DB::transaction(function () use ($member, $score, $gradeResult, $grader, $enrollment, $session) {
                 GradeEditLog::log(
                     $member,
                     $grader,
@@ -231,7 +232,6 @@ class RemediationService
                     $enrollment->id
                 );
 
-                // Update member's grade
                 $member->update([
                     'final_total_score' => $score,
                     'final_grade' => $gradeResult['grade'],
@@ -240,6 +240,10 @@ class RemediationService
                     'completed_at' => now(),
                     'remediation_attempts' => $member->remediation_attempts + 1,
                 ]);
+
+                if ($member->eligibility_status === 'ineligible') {
+                    $this->eligibilityService->unlockByRemediation($member, $session->id, $grader);
+                }
 
                 return $enrollment->fresh();
             });

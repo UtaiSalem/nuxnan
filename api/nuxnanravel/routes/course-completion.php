@@ -18,7 +18,7 @@ use App\Http\Controllers\Api\CourseReportController;
 |
 */
 
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     
     // ===========================================
     // Exam Eligibility (สิทธิ์สอบ)
@@ -31,17 +31,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Student: Request unlock
         Route::post('eligibility/unlock/points', [ExamEligibilityController::class, 'requestPointsUnlock']);
         Route::post('eligibility/unlock/reading', [ExamEligibilityController::class, 'requestReadingUnlock']);
-        
+        Route::post('eligibility/unlock/appeal', [ExamEligibilityController::class, 'requestAppealUnlock']);
+
         // Admin: Eligibility management
         Route::get('eligibility/summary', [ExamEligibilityController::class, 'getCourseSummary']);
         Route::post('eligibility/refresh', [ExamEligibilityController::class, 'refreshCourseEligibility']);
         Route::get('eligibility/pending-requests', [ExamEligibilityController::class, 'getPendingRequests']);
+        Route::get('eligibility/audit-log', [ExamEligibilityController::class, 'getAuditLog']);
         Route::post('eligibility/members/{member}/unlock', [ExamEligibilityController::class, 'adminUnlock']);
+        Route::post('eligibility/bulk-unlock', [ExamEligibilityController::class, 'bulkUnlock']);
+        Route::post('eligibility/bulk-revoke', [ExamEligibilityController::class, 'bulkRevoke']);
     });
-    
+
     // Update reading progress
     Route::patch('eligibility-overrides/{override}/reading-progress', [ExamEligibilityController::class, 'updateReadingProgress']);
-    
+
+    // Appeal: Add evidence
+    Route::patch('eligibility-overrides/{override}/appeal-evidence', [ExamEligibilityController::class, 'addAppealEvidence']);
+
     // Admin: Approve/Reject requests
     Route::post('eligibility-overrides/{override}/approve', [ExamEligibilityController::class, 'approveRequest']);
     Route::post('eligibility-overrides/{override}/reject', [ExamEligibilityController::class, 'rejectRequest']);
