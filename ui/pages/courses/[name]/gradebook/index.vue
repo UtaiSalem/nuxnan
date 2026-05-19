@@ -7,7 +7,8 @@ import { Icon } from '@iconify/vue'
 import GradebookSubNav from '~/components/learn/course/gradebook/GradebookSubNav.vue'
 
 definePageMeta({
-  layout: false
+  layout: false,
+  pageTransition: false
 })
 
 const route = useRoute()
