@@ -67,7 +67,7 @@ const sectionFields: Record<string, string[]> = {
   academic: ['semester', 'academic_year', 'credit_units', 'hours_per_week', 'start_date', 'end_date'],
   publishing: ['status', 'auto_accept_members'],
   management: ['saleable', 'tuition_fees', 'discount', 'discount_type'],
-  marketplace: ['is_for_marketplace', 'price']
+  marketplace: ['is_for_marketplace', 'price', 'price_points']
 }
 
 const sectionLabels: Record<string, string> = {
@@ -252,12 +252,13 @@ const saveSettingsSection = async (section: string, fields: string[]) => {
       payload[field] = (form.value as any)[field]
     })
 
-    // Additional logic for specific sections
+    let response
     if (section === 'marketplace') {
       payload.price_type = form.value.is_for_marketplace && form.value.price > 0 ? 'wallet' : 'free'
+      response = await api.patch(`/api/courses/${course.value.id}/marketplace`, payload)
+    } else {
+      response = await api.put(`/api/courses/${course.value.id}`, payload)
     }
-
-    const response = await api.put(`/api/courses/${course.value.id}`, payload)
     if (response) {
       useToast().success(`บันทึก${sectionLabels[section]}เรียบร้อยแล้ว`)
       markSectionClean(section)

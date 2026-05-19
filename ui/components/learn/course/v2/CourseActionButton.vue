@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
@@ -18,6 +18,26 @@ const showPendingMenu = ref(false)
 const memberStatus = computed(() => props.courseMemberOfAuth?.status)
 const courseJoinPrice = computed(() => Number(props.course?.tuition_fees ?? 0))
 const canPurchaseCopy = computed(() => Boolean(props.course?.is_for_marketplace))
+
+// Purchase eligibility state (lazy-loaded only for marketplace courses)
+const purchaseCheck = ref<{ has_purchased: boolean; is_self: boolean } | null>(null)
+const isCheckingPurchase = ref(false)
+
+onMounted(async () => {
+  if (!canPurchaseCopy.value) return
+  isCheckingPurchase.value = true
+  try {
+    const res = await api.get(`/api/courses/${props.course.id}/purchase/check`)
+    purchaseCheck.value = { has_purchased: res.has_purchased, is_self: res.is_self }
+  } catch {
+    // fail silently — button stays visible and lets the modal handle validation
+  } finally {
+    isCheckingPurchase.value = false
+  }
+})
+
+const alreadyPurchased = computed(() => purchaseCheck.value?.has_purchased ?? false)
+const isCourseSelf = computed(() => purchaseCheck.value?.is_self ?? false)
 
 const buttonClasses = computed(() => {
   if (props.variant === 'hero') {
@@ -132,7 +152,7 @@ async function cancelRequest() {
       class="grid" 
       :class="[
         variant === 'standalone' ? 'w-full grid-cols-1 gap-3' : 'flex items-center gap-2',
-        variant === 'standalone' && canPurchaseCopy ? 'sm:grid-cols-2' : ''
+        variant === 'standalone' && canPurchaseCopy && !isCourseSelf ? 'sm:grid-cols-2' : ''
       ]"
     >
       <button
@@ -146,15 +166,29 @@ async function cancelRequest() {
         <span>สมัครเรียน</span>
       </button>
 
-      <button
-        v-if="canPurchaseCopy"
-        @click="emit('purchase-course')"
-        class="flex items-center justify-center gap-2 rounded-xl bg-cyan-500 text-white font-black shadow-lg shadow-cyan-500/20 hover:bg-cyan-600 transition-all active:scale-95"
-        :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
-      >
-        <Icon icon="fluent:cart-24-filled" class="w-5 h-5" />
-        <span>ซื้อรายวิชา</span>
-      </button>
+      <!-- Purchase button: hidden for self/owner, disabled if already purchased -->
+      <template v-if="canPurchaseCopy && !isCourseSelf">
+        <button
+          v-if="alreadyPurchased"
+          disabled
+          class="flex items-center justify-center gap-2 rounded-xl bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 font-black cursor-not-allowed"
+          :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+        >
+          <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
+          <span>ซื้อแล้ว</span>
+        </button>
+        <button
+          v-else
+          @click="emit('purchase-course')"
+          :disabled="isCheckingPurchase"
+          class="flex items-center justify-center gap-2 rounded-xl bg-cyan-500 text-white font-black shadow-lg shadow-cyan-500/20 hover:bg-cyan-600 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait"
+          :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+        >
+          <Icon v-if="isCheckingPurchase" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+          <Icon v-else icon="fluent:cart-24-filled" class="w-5 h-5" />
+          <span>ซื้อรายวิชา</span>
+        </button>
+      </template>
     </div>
   </div>
 </template>
