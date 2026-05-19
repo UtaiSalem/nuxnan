@@ -231,6 +231,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
 
 <template>
   <NuxtLayout name="course">
+    <div>
     <GradebookSubNav :course-name="courseName" />
 
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -671,6 +672,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
           </div>
         </div>
       </Teleport>
+    </div>
     </div>
   </NuxtLayout>
 </template>

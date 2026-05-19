@@ -218,6 +218,7 @@ const getGradeColor = (score: any, maxScore: number) => {
 
 <template>
   <NuxtLayout name="course">
+    <div>
     <GradebookSubNav :course-name="courseName" />
 
     <div v-if="isLoading" class="flex items-center justify-center py-20">
@@ -617,5 +618,6 @@ const getGradeColor = (score: any, maxScore: number) => {
         </div>
       </div>
     </Teleport>
+    </div>
   </NuxtLayout>
 </template>
