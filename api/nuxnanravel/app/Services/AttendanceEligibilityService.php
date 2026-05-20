@@ -597,8 +597,12 @@ class AttendanceEligibilityService
             'members' => [],
         ];
 
+        if ($members->isEmpty()) {
+            return $summary;
+        }
+
         $userIds = $members->pluck('user_id')->unique();
-        $users = \App\Models\User::whereIn('id', $userIds)
+        $users = User::whereIn('id', $userIds)
             ->select('id', 'name', 'profile_photo_path')
             ->get()
             ->keyBy('id');
@@ -608,8 +612,32 @@ class AttendanceEligibilityService
             ->get()
             ->keyBy('course_member_id');
 
+        $sessionCountsByGroup = CourseAttendance::where('course_id', $course->id)
+            ->selectRaw('COALESCE(group_id, 0) as grp, COUNT(*) as cnt')
+            ->groupByRaw('COALESCE(group_id, 0)')
+            ->pluck('cnt', 'grp');
+
+        $totalSessionsAll = CourseAttendance::where('course_id', $course->id)->count();
+
+        $memberIds = $members->pluck('id');
+        $allDetails = AttendanceDetail::where('course_id', $course->id)
+            ->whereIn('course_member_id', $memberIds)
+            ->get()
+            ->groupBy('course_member_id');
+
+        $minSessions = $course->min_sessions_for_eligibility_check ?? 3;
+        $maxAbsencePercent = $course->max_absence_percent ?? 20;
+
         foreach ($members as $member) {
-            $stats = $this->calculateAttendanceStats($member);
+            $totalSessions = $member->group_id
+                ? ($sessionCountsByGroup->get($member->group_id, 0))
+                : $totalSessionsAll;
+
+            $stats = $this->calculateAttendanceStatsBatch(
+                $member, $course, $totalSessions, $minSessions, $maxAbsencePercent,
+                $allDetails->get($member->id, collect())
+            );
+
             $status = $stats['eligibility_status'];
             if (isset($summary[$status])) {
                 $summary[$status]++;
@@ -636,6 +664,75 @@ class AttendanceEligibilityService
         }
 
         return $summary;
+    }
+
+    protected function calculateAttendanceStatsBatch(
+        CourseMember $courseMember,
+        Course $course,
+        int $totalSessions,
+        int $minSessions,
+        float $maxAbsencePercent,
+        \Illuminate\Support\Collection $attendanceDetails
+    ): array {
+        if ($totalSessions === 0 || $totalSessions < $minSessions) {
+            return [
+                'total_sessions' => $totalSessions,
+                'attended' => 0,
+                'absent' => 0,
+                'late' => 0,
+                'leave' => 0,
+                'attendance_rate' => 100,
+                'absence_rate' => 0,
+                'is_eligible' => true,
+                'eligibility_status' => 'eligible',
+                'skip_reason' => $totalSessions === 0
+                    ? 'no_sessions'
+                    : 'below_minimum_sessions',
+            ];
+        }
+
+        if ($courseMember->group_id) {
+            $attendanceDetails = $attendanceDetails->where('group_id', $courseMember->group_id);
+        }
+
+        $stats = ['present' => 0, 'absent' => 0, 'late' => 0, 'leave' => 0, 'excused' => 0];
+        $statusMap = [1 => 'present', 2 => 'late', 3 => 'leave'];
+
+        foreach ($attendanceDetails as $detail) {
+            $statusKey = $statusMap[$detail->status] ?? 'absent';
+            if (isset($stats[$statusKey])) {
+                $stats[$statusKey]++;
+            }
+        }
+
+        $recordedSessions = $attendanceDetails->count();
+        $unrecordedSessions = max(0, $totalSessions - $recordedSessions);
+        $stats['absent'] += $unrecordedSessions;
+
+        $attendedCount = $stats['present'] + $stats['late'];
+        $absenceCount = $stats['absent'];
+        $attendanceRate = ($attendedCount / $totalSessions) * 100;
+        $absenceRate = ($absenceCount / $totalSessions) * 100;
+
+        $isEligible = $absenceRate <= $maxAbsencePercent;
+        $eligibilityStatus = $this->determineEligibilityStatus($absenceRate, $maxAbsencePercent, $courseMember);
+
+        return [
+            'total_sessions' => $totalSessions,
+            'attended' => $attendedCount,
+            'present' => $stats['present'],
+            'absent' => $stats['absent'],
+            'late' => $stats['late'],
+            'leave' => $stats['leave'],
+            'excused' => $stats['excused'],
+            'recorded_sessions' => $recordedSessions,
+            'unrecorded_sessions' => $unrecordedSessions,
+            'attendance_rate' => round($attendanceRate, 2),
+            'absence_rate' => round($absenceRate, 2),
+            'max_absence_percent' => $maxAbsencePercent,
+            'is_eligible' => $isEligible,
+            'eligibility_status' => $eligibilityStatus,
+        ];
     }
 
     // ─── Audit log retrieval ───

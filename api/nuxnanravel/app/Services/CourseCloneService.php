@@ -56,9 +56,9 @@ class CourseCloneService
                 // Clone Lesson Images
                 foreach ($lesson->images as $image) {
                     $newFilename = $this->mediaService->copyLessonImage($image->filename);
-                    $newLesson->images()->create([
-                        'filename' => $newFilename, // Strict Isolation: null if copy fails
-                    ]);
+                    if ($newFilename) {
+                        $newLesson->images()->create(['filename' => $newFilename]);
+                    }
                 }
 
                 // Step 3: Clone Topics for each Lesson
@@ -69,9 +69,9 @@ class CourseCloneService
                     // Clone Topic Images
                     foreach ($topic->images as $image) {
                         $newFilename = $this->mediaService->copyTopicImage($image->filename);
-                        $newTopic->images()->create([
-                            'filename' => $newFilename, // Strict Isolation
-                        ]);
+                        if ($newFilename) {
+                            $newTopic->images()->create(['filename' => $newFilename]);
+                        }
                     }
 
                     // Clone Topic-level Assignments
@@ -288,8 +288,8 @@ class CourseCloneService
 
         foreach ($questions as $question) {
             $allowlist = [
-                'content', 'question_type', 'points', 'difficulty', 'explanation',
-                'order', 'status', 'is_active', 'media_url'
+                'text', 'type', 'correct_answers', 'explanation', 'difficulty_level',
+                'time_limit', 'points', 'pp_fine', 'position', 'tags'
             ];
 
             $data = array_intersect_key($question->getAttributes(), array_flip($allowlist));
@@ -301,6 +301,7 @@ class CourseCloneService
             
             // Temporary null for correct_option_id, will update after cloning options
             $data['correct_option_id'] = null;
+            $data['correct_answers'] = null;
 
             $newQuestion = Question::create($data);
 
@@ -324,7 +325,7 @@ class CourseCloneService
 
             foreach ($options as $option) {
                 $allowlistOption = [
-                    'content', 'is_correct', 'order', 'points'
+                    'text', 'is_correct', 'explanation', 'position', 'status'
                 ];
 
                 $optionData = array_intersect_key($option->getAttributes(), array_flip($allowlistOption));
@@ -350,7 +351,10 @@ class CourseCloneService
             }
 
             if ($newCorrectOptionId) {
-                $newQuestion->update(['correct_option_id' => $newCorrectOptionId]);
+                $newQuestion->update([
+                    'correct_option_id' => $newCorrectOptionId,
+                    'correct_answers' => $newCorrectOptionId,
+                ]);
             }
         }
     }

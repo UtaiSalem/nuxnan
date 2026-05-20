@@ -47,9 +47,19 @@ class CourseController extends Controller
                 'course' => $newCourse,
             ], 201);
         } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
+                'error' => config('app.debug')
+                    ? [
+                        'exception' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => collect($e->getTrace())->take(5)->map(fn ($t) => ($t['file'] ?? '') . ':' . ($t['line'] ?? ''))->all(),
+                    ]
+                    : null,
             ], 500);
         }
     }

@@ -97,12 +97,30 @@ class ExamEligibilityController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        $summary = $this->eligibilityService->getCourseEligibilitySummary($course);
+        try {
+            $summary = $this->eligibilityService->getCourseEligibilitySummary($course);
 
-        return response()->json([
-            'success' => true,
-            'data' => $summary,
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $summary,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug')
+                    ? $e->getMessage()
+                    : 'ไม่สามารถโหลดข้อมูลสรุปสิทธิ์สอบได้',
+                'error' => config('app.debug')
+                    ? [
+                        'exception' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]
+                    : null,
+            ], 500);
+        }
     }
 
     public function refreshCourseEligibility(Request $request, Course $course): JsonResponse
