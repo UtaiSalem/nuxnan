@@ -5,11 +5,14 @@ import Swal from 'sweetalert2'
 import QuestionsListViewer from '@/components/learn/course/questions/QuestionsListViewer.vue'
 import ContentLoader from '@/components/accessories/ContentLoader.vue'
 
+import { useQuestionAnswersStore } from '@/stores/questionAnswers'
+
 const route = useRoute()
 const courseId = route.params.id
 const quizId = route.params.quizId
 const api = useApi()
 const router = useRouter()
+const answersStore = useQuestionAnswersStore()
 
 const quiz = ref<any>(null)
 const quizResult = ref<any>(null)
@@ -17,11 +20,17 @@ const isLoading = ref(true)
 const isSubmitting = ref(false)
 const eligibility = ref<any>(null)
 const questionsHiddenReason = ref<string | null>(null)
+const isLeavingConfirmed = ref(false)
 
 // Normalize questions to handle both array and {data: []} formats
 const normalizedQuestions = computed(() => {
   if (!quiz.value?.questions) return []
   return Array.isArray(quiz.value.questions) ? quiz.value.questions : (quiz.value.questions.data || [])
+})
+
+// Progress Tracking
+const answeredCount = computed(() => {
+  return answersStore.answeredQuestionsCount(quizId as string)
 })
 
 // Timer (Count Up)
@@ -51,6 +60,7 @@ const formattedTime = computed(() => {
              text: res.questions_hidden_reason || 'คุณยังไม่มีสิทธิ์ทำข้อสอบนี้ หรือคะแนนสะสมไม่เพียงพอ',
              confirmButtonText: 'กลับไปหน้ารายละเอียด'
            })
+           isLeavingConfirmed.value = true
            router.replace(`/courses/${courseId}/quizzes/${quizId}`)
            return
         }
@@ -67,11 +77,12 @@ const formattedTime = computed(() => {
                     confirmButtonText: 'เริ่มใหม่',
                     cancelButtonText: 'ยกเลิก'
                 })
-                
+
                 if (retry.isConfirmed) {
                     const resultRes = await api.post(`/api/courses/${courseId}/quizzes/${quizId}/results`, {})
                     quizResult.value = resultRes.quizResult
                 } else {
+                    isLeavingConfirmed.value = true
                     router.replace(`/courses/${courseId}/quizzes/${quizId}`)
                     return
                 }
@@ -140,7 +151,7 @@ const updateDuration = async () => {
     // Auto save duration every 10 seconds
 // Native Browser Guard (For Refresh/Close)
 const confirmLeave = (e: BeforeUnloadEvent) => {
-    if (!isSubmitting.value) {
+    if (!isSubmitting.value && !isLeavingConfirmed.value) {
         e.preventDefault()
         e.returnValue = ''
     }
@@ -164,7 +175,7 @@ onUnmounted(() => {
 
 // Modern Route Guard
 onBeforeRouteLeave((to, from, next) => {
-    if (isSubmitting.value) {
+    if (isSubmitting.value || isLeavingConfirmed.value) {
         next();
         return;
     }
@@ -180,6 +191,7 @@ onBeforeRouteLeave((to, from, next) => {
         cancelButtonText: 'ทำต่อ'
     }).then((result) => {
         if (result.isConfirmed) {
+            isLeavingConfirmed.value = true
             next();
         } else {
             next(false);
@@ -238,30 +250,45 @@ const finishAttempt = async () => {
 
       <div v-else-if="quiz" class="relative">
           <!-- Sticky Header with Timer & Actions -->
-          <div class="sticky top-2 sm:top-4 z-20 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-blue-100 dark:border-gray-700 p-3 sm:p-4 mb-4 sm:mb-6 flex items-center justify-between transition-all duration-300">
-              <div class="flex items-center gap-2 sm:gap-4">
-                  <h1 class="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate max-w-[100px] sm:max-w-md block">
-                      {{ quiz.title }}
-                  </h1>
+          <div class="sticky top-2 sm:top-4 z-20 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-xl border border-blue-100 dark:border-gray-700 p-2 sm:p-4 mb-4 sm:mb-6 flex flex-col sm:flex-row items-center justify-between transition-all duration-300 gap-2 sm:gap-4">
+              <div class="flex items-center justify-between w-full sm:w-auto px-1 sm:px-0">
+                  <div class="flex items-center gap-2 overflow-hidden">
+                      <div class="w-1.5 h-6 bg-blue-600 rounded-full hidden sm:block"></div>
+                      <h1 class="text-sm sm:text-lg font-bold text-gray-800 dark:text-white truncate max-w-[180px] sm:max-w-md">
+                          {{ quiz.title }}
+                      </h1>
+                  </div>
+                  <!-- Mobile Answered Count -->
+                  <div class="sm:hidden flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full border border-blue-100 dark:border-blue-800">
+                      <Icon icon="fluent:checkbox-checked-24-filled" class="w-3 h-3" />
+                      <span>{{ answeredCount }}/{{ normalizedQuestions.length }}</span>
+                  </div>
               </div>
 
-              <div class="flex items-center gap-2 sm:gap-4">
-                   <!-- Timer -->
-                   <div class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg font-mono font-bold text-base sm:text-lg">
-                       <Icon icon="fluent:timer-24-filled" class="w-5 h-5 sm:w-6 sm:h-6" />
-                       {{ formattedTime }}
+              <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-4 border-t sm:border-t-0 border-gray-100 dark:border-gray-700 pt-2 sm:pt-0">
+                   <!-- Answered Count (Desktop) -->
+                   <div class="hidden sm:flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-gray-600">
+                       <Icon icon="fluent:checkbox-checked-24-filled" class="w-5 h-5 text-green-500" />
+                       <span class="whitespace-nowrap">ตอบแล้ว <span class="font-bold text-gray-900 dark:text-white">{{ answeredCount }}</span> / {{ normalizedQuestions.length }} ข้อ</span>
                    </div>
 
-                   <!-- Finish Button (Header) -->
-                   <button 
-                      @click="finishAttempt"
-                      :disabled="isSubmitting"
-                      class="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-md transition-colors flex items-center gap-2"
-                   >
-                       <span class="hidden sm:inline">สิ้นสุดการสอบ (หยุดเวลา)</span>
-                       <Icon icon="fluent:stop-24-filled" class="w-5 h-5 sm:hidden" />
-                   </button>
+                   <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <!-- Timer Card -->
+                        <div class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-5 py-1.5 sm:py-2.5 bg-gradient-to-r from-blue-700 to-blue-500 text-white rounded-xl font-mono font-bold text-lg sm:text-xl shadow-lg shadow-blue-200 dark:shadow-none ring-2 ring-blue-100 dark:ring-blue-900/50">
+                            <Icon icon="fluent:timer-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+                            {{ formattedTime }}
+                        </div>
 
+                        <!-- Finish Button (Header) -->
+                        <button 
+                           @click="finishAttempt"
+                           :disabled="isSubmitting"
+                           class="px-3 sm:px-6 py-1.5 sm:py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-bold shadow-lg shadow-red-200 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2 border-b-4 border-red-800 hover:border-b-2 hover:translate-y-[2px]"
+                        >
+                            <span class="text-sm sm:text-base hidden xs:inline">สิ้นสุดการสอบ</span>
+                            <Icon icon="fluent:stop-24-filled" class="w-5 h-5" />
+                        </button>
+                   </div>
               </div>
           </div>
 
@@ -315,4 +342,3 @@ const finishAttempt = async () => {
         </transition>
   </div>
 </template>
-```
