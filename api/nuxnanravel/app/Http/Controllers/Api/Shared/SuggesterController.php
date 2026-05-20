@@ -28,7 +28,7 @@ class SuggesterController extends \App\Http\Controllers\Controller
 
     public function checkSuggesterExist(User $user)
     {
-        if (($user->id === 1)||($user->no_of_ref < 5)) {
+        if ($user->canAcceptReferral()) {
             return response()->json([
                 'isSuggesterActive' => true,
                 'suggester' => new UserResource($user),

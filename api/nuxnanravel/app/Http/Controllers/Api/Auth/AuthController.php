@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Http\Resources\UserResource;
@@ -93,37 +94,47 @@ class AuthController extends Controller
                 'reference_code' => 'required|string',
             ]);
 
-            // Validate reference code: must be '11111111' (admin) or existing personal_code
-            if ($request->reference_code !== '11111111') {
-                $referrerExists = User::where('personal_code', $request->reference_code)->exists();
-                if (!$referrerExists) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Invalid referral code. Please check and try again.'
-                    ], 422);
+            $user = DB::transaction(function () use ($request) {
+                $referrer = null;
+                $suggesterCode = $request->reference_code;
+
+                // Validate suggester code: admin fallback is unlimited, normal suggesters are capped.
+                if ($suggesterCode !== User::ADMIN_SUGGESTER_CODE) {
+                    $referrer = User::where('personal_code', $suggesterCode)->lockForUpdate()->first();
+
+                    if (!$referrer) {
+                        throw ValidationException::withMessages([
+                            'reference_code' => ['Invalid referral code. Please check and try again.'],
+                        ]);
+                    }
+
+                    if (!$referrer->canAcceptReferral()) {
+                        throw ValidationException::withMessages([
+                            'reference_code' => ['Suggester has reached the maximum number of referrals.'],
+                        ]);
+                    }
                 }
-            }
 
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'phone_number' => $request->phone_number,
-                'personal_code' => User::generateReferralCode(),
-                'reference_code' => $request->reference_code,
-                'no_of_ref' => 0,
-                'pp' => 0,
-                'wallet' => 0,
-                'verified' => false,
-            ]);
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                    'phone_number' => $request->phone_number,
+                    'personal_code' => User::generateReferralCode(),
+                    'reference_code' => User::generateReferenceCode(),
+                    'suggester_code' => $suggesterCode,
+                    'no_of_ref' => 0,
+                    'pp' => 0,
+                    'wallet' => 0,
+                    'verified' => false,
+                ]);
 
-            // Update referrer's reference count (skip for admin code '11111111')
-            if ($request->reference_code !== '11111111') {
-                $referrer = User::where('personal_code', $request->reference_code)->first();
                 if ($referrer) {
                     $referrer->increment('no_of_ref');
                 }
-            }
+
+                return $user;
+            });
 
             // Assign STUDENT role if it exists
             // $studentRole = \App\Models\Role::where('name', 'STUDENT')->first();
@@ -134,6 +145,8 @@ class AuthController extends Controller
             $token = auth('api')->login($user);
 
             return $this->respondWithToken($token);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             \Log::error('Registration error: ' . $e->getMessage());
             \Log::error('Stack trace: ' . $e->getTraceAsString());
@@ -200,8 +213,8 @@ class AuthController extends Controller
 
         $referenceCode = $request->reference_code;
 
-        // Admin codes are always valid (both '18' and '11111111')
-        if ($referenceCode === '11111111') {
+        // Admin fallback code is always valid and is not capped.
+        if ($referenceCode === User::ADMIN_SUGGESTER_CODE) {
             return response()->json([
                 'success' => true,
                 'message' => 'Admin referral code verified',
@@ -213,6 +226,13 @@ class AuthController extends Controller
         $referrer = User::where('personal_code', $referenceCode)->first();
 
         if ($referrer) {
+            if (!$referrer->canAcceptReferral()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Suggester has reached the maximum number of referrals.',
+                ], 422);
+            }
+
             // Generate avatar URL
             $avatarUrl = $referrer->profile_photo_path 
                 ? (filter_var($referrer->profile_photo_path, FILTER_VALIDATE_URL) 

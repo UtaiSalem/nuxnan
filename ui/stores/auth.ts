@@ -113,13 +113,17 @@ export const useAuthStore = defineStore('auth', () => {
         body: userData,
       })
 
-      // Backend returns: { success: true, data: { user, accessToken, tokenType, expiresIn } }
-      if (response.success && response.data) {
-        const { accessToken, user: responseUser } = response.data
+      // Backend may return direct JWT fields or a nested data payload.
+      if (response.success) {
+        const accessToken = response.access_token || response.data?.accessToken
+        const responseUser = response.user || response.data?.user
         
         if (accessToken) {
           token.value = accessToken
           user.value = responseUser
+          if (response.expires_in) {
+            tokenExpiresIn.value = response.expires_in
+          }
         } else {
           throw new Error('Invalid response from server')
         }

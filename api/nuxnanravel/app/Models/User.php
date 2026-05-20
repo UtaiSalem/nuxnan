@@ -48,6 +48,9 @@ use Illuminate\Support\Str;
 
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 {
+    public const ADMIN_SUGGESTER_CODE = '11111111';
+    public const MAX_REFERRALS_PER_SUGGESTER = 5;
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
     // use HasApiTokens;
@@ -69,6 +72,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'twitter_id',
         'linkedin_id',
         'github_id',
+        'suggester_code',
         'reference_code',
         'personal_code',
         'no_of_ref',
@@ -323,6 +327,21 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             return self::generateReferralCode();
         }
         return (string) $personal_code;
+    }
+
+    // Generate unique profile/reference code
+    public static function generateReferenceCode(): string
+    {
+        do {
+            $referenceCode = (string) Str::uuid();
+        } while (User::where('reference_code', $referenceCode)->exists());
+
+        return $referenceCode;
+    }
+
+    public function canAcceptReferral(): bool
+    {
+        return $this->no_of_ref < self::MAX_REFERRALS_PER_SUGGESTER;
     }
 
     //get referal link
