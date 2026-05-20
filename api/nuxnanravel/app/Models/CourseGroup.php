@@ -2,13 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Course;
-use App\Models\CourseAttendance;
-use App\Models\CourseGroupMember;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CourseGroup extends Model
 {
@@ -23,7 +20,14 @@ class CourseGroup extends Model
         'status',
         'auto_accept_member',
         'privacy',
+        'color',
+        'max_members',
         'cover',
+    ];
+
+    protected $casts = [
+        'auto_accept_member' => 'boolean',
+        'max_members' => 'integer',
     ];
 
     public function course(): BelongsTo

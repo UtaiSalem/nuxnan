@@ -128,7 +128,7 @@ export const useCourseGroupStore = defineStore('courseGroup', () => {
       const api = useApi()
       const response = await api.post(`/api/courses/${courseId}/groups`, data)
       
-      const group = (response as any).group || (response as any).data || response
+      const group = (response as any).group || (response as any).newGroup || (response as any).data || response
       if (group) {
         addGroup(group)
       }
