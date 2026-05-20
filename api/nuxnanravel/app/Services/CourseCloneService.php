@@ -254,9 +254,11 @@ class CourseCloneService
             // Clone Assignment Images
             foreach ($assignment->images as $image) {
                 $newFilename = $this->mediaService->copyAssignmentImage($image->image_url);
-                $newAssignment->images()->create([
-                    'image_url' => $newFilename, // Strict Isolation
-                ]);
+                if ($newFilename) {
+                    $newAssignment->images()->create([
+                        'image_url' => $newFilename,
+                    ]);
+                }
             }
         }
     }
@@ -311,9 +313,11 @@ class CourseCloneService
                 $filename = $image->filename ?? $image->image_url;
                 $newFilename = $this->mediaService->copyQuestionImage($filename);
                 
-                $newQuestion->images()->create([
-                    'filename' => $newFilename, // Strict Isolation
-                ]);
+                if ($newFilename) {
+                    $newQuestion->images()->create([
+                        'filename' => $newFilename,
+                    ]);
+                }
             }
 
             // Clone Question Options
@@ -340,9 +344,11 @@ class CourseCloneService
                     $filename = $image->filename ?? $image->image_url;
                     $newFilename = $this->mediaService->copyOptionImage($filename);
                     
-                    $newOption->images()->create([
-                        'filename' => $newFilename, // Strict Isolation
-                    ]);
+                    if ($newFilename) {
+                        $newOption->images()->create([
+                            'filename' => $newFilename,
+                        ]);
+                    }
                 }
 
                 if ($option->id == $question->correct_option_id) {
