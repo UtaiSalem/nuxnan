@@ -43,7 +43,8 @@ const emit = defineEmits([
     'edit-member',
     'assign-group',
     'approve-request',
-    'reject-request'
+    'reject-request',
+    'unlock-member',
 ]);
 
 // ✅ ใช้ composable สำหรับ progress calculation
@@ -110,6 +111,28 @@ const handleEditMember = () => {
 const handleApprove = () => {
   emit('approve-request', props.member);
 };
+
+// Eligibility badge
+const eligibilityStatus = computed(() => props.member?.eligibility_status || null)
+
+const eligibilityBadge = computed(() => {
+  switch (eligibilityStatus.value) {
+    case 'ineligible':
+      return { label: 'หมดสิทธิ์สอบ', classes: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-700', clickable: true }
+    case 'at_risk':
+      return { label: 'กลุ่มเสี่ยง', classes: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-700', clickable: false }
+    case 'unlocked':
+      return { label: 'ปลดล็อคแล้ว', classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-700', clickable: false }
+    default:
+      return null
+  }
+})
+
+const handleEligibilityBadgeClick = () => {
+  if (eligibilityStatus.value === 'ineligible' && props.isCourseAdmin) {
+    emit('unlock-member', props.member)
+  }
+}
 
 const handleReject = () => {
   emit('reject-request', props.member);
@@ -179,7 +202,23 @@ const handleReject = () => {
                        class="text-gray-900 dark:text-white font-bold tracking-wide text-base leading-snug break-words line-clamp-2">
                         {{ memberDisplayName }}
                     </p>
-                    
+
+                    <!-- Eligibility Badge -->
+                    <span
+                        v-if="eligibilityBadge && !isPendingView"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold mt-1 select-none"
+                        :class="[eligibilityBadge.classes, eligibilityBadge.clickable && isCourseAdmin ? 'cursor-pointer hover:opacity-80 active:scale-95 transition-all' : '']"
+                        :title="eligibilityBadge.clickable && isCourseAdmin ? 'คลิกเพื่อปลดล็อค' : undefined"
+                        @click="eligibilityBadge.clickable ? handleEligibilityBadgeClick() : undefined"
+                    >
+                        <Icon
+                            :icon="eligibilityStatus === 'ineligible' ? 'heroicons:x-circle' : eligibilityStatus === 'at_risk' ? 'heroicons:exclamation-triangle' : 'heroicons:lock-open'"
+                            class="w-3 h-3"
+                        />
+                        {{ eligibilityBadge.label }}
+                        <Icon v-if="eligibilityBadge.clickable && isCourseAdmin" icon="heroicons:lock-open" class="w-3 h-3 ml-0.5" />
+                    </span>
+
                     <!-- Status Message -->
                     <div class="flex items-center mt-1 mb-2" :class="progressColor.text">
                         <Icon :icon="isPendingView ? 'heroicons:clock' : statusIcon" class="w-4 h-4 mr-1.5" />

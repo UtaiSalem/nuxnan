@@ -255,6 +255,68 @@ const getTabCount = (tabId) => {
         default: return { completed: 0, total: 0 };
     }
 };
+
+// ── Eligibility Status ────────────────────────────────────────────────
+const eligibilityStatus = ref(null);
+const isLoadingEligibility = ref(false);
+const appealReason = ref('');
+const isSubmittingAppeal = ref(false);
+
+const fetchEligibilityStatus = async () => {
+    isLoadingEligibility.value = true;
+    try {
+        const res = await api.get(`/api/courses/${props.courseId}/eligibility/my-status`);
+        // handle both { data: {...} } and direct response shapes
+        eligibilityStatus.value = res?.data || res || null;
+    } catch (e) {
+        console.error('Failed to fetch eligibility status:', e);
+    } finally {
+        isLoadingEligibility.value = false;
+    }
+};
+
+const handleUnlockOption = async (option) => {
+    if (option.method === 'appeal') return; // handled inline via form
+
+    const endpointMap = {
+        self: `/api/courses/${props.courseId}/eligibility/unlock/self`,
+        points: `/api/courses/${props.courseId}/eligibility/unlock/points`,
+        reading: `/api/courses/${props.courseId}/eligibility/unlock/reading`,
+    };
+    const endpoint = endpointMap[option.method];
+    if (!endpoint) return;
+
+    try {
+        await api.post(endpoint, { method: option.method });
+        swal.toast('ส่งคำร้องแล้ว รอการพิจารณา', 'success');
+        await fetchEligibilityStatus();
+    } catch (e) {
+        console.error('Failed to request unlock:', e);
+        swal.toast('ไม่สามารถส่งคำร้องได้', 'error');
+    }
+};
+
+const submitAppeal = async () => {
+    if (!appealReason.value.trim()) return;
+    isSubmittingAppeal.value = true;
+    try {
+        await api.post(`/api/courses/${props.courseId}/eligibility/unlock/appeal`, { reason: appealReason.value });
+        swal.toast('ส่งคำอุทธรณ์แล้ว รอการพิจารณา', 'success');
+        appealReason.value = '';
+        await fetchEligibilityStatus();
+    } catch (e) {
+        console.error('Failed to submit appeal:', e);
+        swal.toast('ไม่สามารถส่งคำอุทธรณ์ได้', 'error');
+    } finally {
+        isSubmittingAppeal.value = false;
+    }
+};
+
+// Fetch eligibility on mount alongside the main data
+onMounted(() => {
+    fetchEligibilityStatus();
+});
+// ─────────────────────────────────────────────────────────────────────
 </script>
 
 <template>
@@ -374,6 +436,105 @@ const getTabCount = (tabId) => {
                      </RadialProgress>
                 </div>
              </div>
+
+             <!-- Eligibility Status Section -->
+             <div v-if="!isLoadingEligibility && eligibilityStatus" class="mb-6">
+                 <!-- Eligible -->
+                 <div
+                     v-if="eligibilityStatus.can_take_exam || eligibilityStatus.status === 'eligible'"
+                     class="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
+                 >
+                     <Icon icon="heroicons:check-circle" class="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                     <div>
+                         <p class="font-semibold text-green-800 dark:text-green-200">มีสิทธิ์สอบ</p>
+                         <p class="text-xs text-green-600 dark:text-green-400">คุณมีสิทธิ์เข้าสอบในรายวิชานี้</p>
+                     </div>
+                 </div>
+
+                 <!-- At Risk -->
+                 <div
+                     v-else-if="eligibilityStatus.status === 'at_risk'"
+                     class="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl"
+                 >
+                     <Icon icon="heroicons:exclamation-triangle" class="w-6 h-6 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                     <div>
+                         <p class="font-semibold text-orange-800 dark:text-orange-200">กลุ่มเสี่ยง</p>
+                         <p class="text-xs text-orange-600 dark:text-orange-400">
+                             อัตราขาดเรียน {{ eligibilityStatus.absence_percent ?? '-' }}% — ระวังอาจหมดสิทธิ์สอบ
+                         </p>
+                     </div>
+                 </div>
+
+                 <!-- Unlocked -->
+                 <div
+                     v-else-if="eligibilityStatus.status === 'unlocked'"
+                     class="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl"
+                 >
+                     <Icon icon="heroicons:lock-open" class="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                     <div>
+                         <p class="font-semibold text-blue-800 dark:text-blue-200">ปลดล็อคแล้ว</p>
+                         <p class="text-xs text-blue-600 dark:text-blue-400">สิทธิ์สอบของคุณถูกปลดล็อคโดยผู้สอน</p>
+                     </div>
+                 </div>
+
+                 <!-- Ineligible -->
+                 <div
+                     v-else-if="!eligibilityStatus.can_take_exam && eligibilityStatus.status === 'ineligible'"
+                     class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl overflow-hidden"
+                 >
+                     <div class="flex items-center gap-3 p-4">
+                         <Icon icon="heroicons:x-circle" class="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" />
+                         <div>
+                             <p class="font-semibold text-red-800 dark:text-red-200">หมดสิทธิ์สอบ</p>
+                             <p class="text-xs text-red-600 dark:text-red-400">
+                                 อัตราขาดเรียน {{ eligibilityStatus.absence_percent ?? '-' }}% — เกินเกณฑ์ที่กำหนด
+                             </p>
+                         </div>
+                     </div>
+
+                     <!-- Unlock Options -->
+                     <div v-if="eligibilityStatus.unlock_options && eligibilityStatus.unlock_options.length > 0" class="px-4 pb-4">
+                         <p class="text-xs font-semibold text-red-700 dark:text-red-300 mb-3">ตัวเลือกในการขอคืนสิทธิ์สอบ:</p>
+                         <div class="space-y-2">
+                             <template v-for="option in eligibilityStatus.unlock_options" :key="option.method">
+                                 <!-- Appeal: inline form -->
+                                 <div v-if="option.method === 'appeal'" class="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700 rounded-lg p-3">
+                                     <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{{ option.label }}</p>
+                                     <textarea
+                                         v-model="appealReason"
+                                         rows="2"
+                                         placeholder="ระบุเหตุผลในการอุทธรณ์..."
+                                         class="w-full text-xs px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-400 resize-none"
+                                     ></textarea>
+                                     <button
+                                         @click="submitAppeal"
+                                         :disabled="!appealReason.trim() || isSubmittingAppeal"
+                                         class="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                     >
+                                         <Icon v-if="isSubmittingAppeal" icon="heroicons:arrow-path" class="w-3.5 h-3.5 animate-spin" />
+                                         ส่งคำอุทธรณ์
+                                     </button>
+                                 </div>
+
+                                 <!-- Other options: button -->
+                                 <button
+                                     v-else
+                                     @click="handleUnlockOption(option)"
+                                     class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
+                                 >
+                                     <div>
+                                         <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ option.label }}</p>
+                                         <p v-if="option.cost" class="text-xs text-gray-500 dark:text-gray-400">ใช้ {{ option.cost }} แต้ม</p>
+                                         <p v-if="option.minutes" class="text-xs text-gray-500 dark:text-gray-400">ใช้เวลา {{ option.minutes }} นาที</p>
+                                     </div>
+                                     <Icon icon="heroicons:arrow-right" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                 </button>
+                             </template>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+             <!-- /Eligibility Status Section -->
 
              <!-- Tabs Navigation -->
              <div class="bg-gray-100 dark:bg-gray-800/80 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 mb-4 sm:mb-6 flex gap-1 overflow-x-auto">

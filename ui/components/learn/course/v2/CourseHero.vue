@@ -9,6 +9,7 @@ const props = defineProps({
   isAdmin: { type: Boolean, default: false },
   academy: { type: Object, default: null },
   courseMemberOfAuth: { type: Object, default: null },
+  hideCover: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['edit-name', 'refresh', 'request-member', 'purchase-course'])
@@ -130,7 +131,7 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
 <template>
   <div class="relative w-full bg-white dark:bg-vikinger-dark-200 rounded-2xl overflow-hidden border border-gray-100 dark:border-vikinger-dark-100 shadow-sm">
     <!-- ── Cover Image ── -->
-    <div class="relative h-40 xs:h-52 sm:h-60 md:h-72 lg:h-80 w-full overflow-hidden">
+    <div v-if="!hideCover" class="relative h-40 xs:h-52 sm:h-60 md:h-72 lg:h-80 w-full overflow-hidden">
       <img :src="coverUrl" alt="Course Cover" class="h-full w-full object-cover" />
       <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent pointer-events-none" />
 
@@ -158,11 +159,17 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
     </div>
 
     <!-- ── Info section: matches grid container padding exactly ── -->
-    <div class="mx-auto w-full max-w-[1440px] 2xl:max-w-[1600px] px-4 sm:px-6 lg:px-8 pb-5">
+    <div 
+      class="mx-auto w-full max-w-[1440px] 2xl:max-w-[1600px] px-4 sm:px-6 lg:px-8 pb-5"
+      :class="hideCover ? 'pt-6' : ''"
+    >
       <div class="flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
 
         <!-- Logo with overlap -->
-        <div class="relative shrink-0 self-start -mt-10 sm:-mt-14 md:-mt-18 lg:-mt-20 group">
+        <div 
+          class="relative shrink-0 self-start group"
+          :class="!hideCover ? '-mt-10 sm:-mt-14 md:-mt-18 lg:-mt-20' : ''"
+        >
           <div class="h-20 w-20 sm:h-28 sm:w-28 md:h-36 md:w-36 lg:h-44 lg:w-44 overflow-hidden rounded-2xl border-4 border-white dark:border-vikinger-dark-200 bg-gray-100 dark:bg-gray-800 shadow-xl">
             <img :src="logoUrl" alt="Course Logo" class="h-full w-full object-cover" />
           </div>

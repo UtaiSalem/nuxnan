@@ -190,6 +190,49 @@ class AttendanceEligibilityService
         }
     }
 
+    // ─── Self unlock ───
+
+    public function requestUnlockBySelf(CourseMember $courseMember): ExamEligibilityOverride
+    {
+        $course = $courseMember->course;
+
+        if (!$course->allow_self_unlock) {
+            throw new \Exception('วิชานี้ไม่อนุญาตให้ปลดล็อคด้วยตนเอง');
+        }
+
+        $stats = $this->calculateAttendanceStats($courseMember);
+
+        $override = ExamEligibilityOverride::create([
+            'course_member_id' => $courseMember->id,
+            'course_id' => $course->id,
+            'student_id' => $courseMember->user_id,
+            'unlock_method' => 'self',
+            'status' => 'approved',
+            'approved_at' => now(),
+            'absence_percent_at_unlock' => $stats['absence_rate'],
+            'total_sessions_at_unlock' => $stats['total_sessions'],
+            'absent_sessions_at_unlock' => $stats['absent'],
+        ]);
+
+        EligibilityAuditLog::log(
+            $courseMember,
+            'unlocked',
+            EligibilityAuditLog::TYPE_SELF_UNLOCK,
+            $courseMember->user_id,
+            "ปลดล็อคด้วยตนเอง",
+            ['override_id' => $override->id]
+        );
+
+        $courseMember->update([
+            'exam_eligible' => true,
+            'eligibility_status' => 'unlocked',
+            'eligibility_unlocked_at' => now(),
+            'eligibility_unlock_method' => 'self',
+        ]);
+
+        return $override->fresh();
+    }
+
     // ─── Points unlock ───
 
     public function requestUnlockByPoints(CourseMember $courseMember): ExamEligibilityOverride

@@ -33,6 +33,17 @@ const selectedMember = ref<any>(null)
 const unlockReason = ref('')
 const isUnlocking = ref(false)
 
+// Bulk unlock
+const isBulkUnlocking = ref(false)
+
+const ineligibleCount = computed(() =>
+  members.value.filter((m: any) => m.stats?.eligibility_status === 'ineligible').length
+)
+
+const showBulkBar = computed(() =>
+  statusFilter.value === 'ineligible'
+)
+
 onMounted(() => {
   if (courseId.value) {
     fetchEligibility()
@@ -134,6 +145,25 @@ const openUnlockModal = (member: any) => {
   selectedMember.value = member
   unlockReason.value = ''
   showUnlockModal.value = true
+}
+
+const bulkUnlockIneligible = async () => {
+  isBulkUnlocking.value = true
+  try {
+    const res: any = await api.post(
+      `/api/courses/${courseId.value}/eligibility/bulk-unlock`,
+      { only_ineligible: true, reason: 'admin bulk unlock' }
+    )
+    if (res.success) {
+      useToast().success(`ปลดล็อคสิทธิ์สอบ ${ineligibleCount.value} คนแล้ว`)
+      await fetchEligibility()
+    }
+  } catch (err) {
+    console.error('Failed to bulk unlock:', err)
+    useToast().error('ไม่สามารถปลดล็อคแบบกลุ่มได้')
+  } finally {
+    isBulkUnlocking.value = false
+  }
 }
 
 const unlockMember = async () => {
@@ -273,6 +303,63 @@ const unlockMember = async () => {
           </div>
         </div>
 
+        <!-- Filter Button Bar -->
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+          <button
+            v-for="f in [
+              { value: 'all', label: 'ทั้งหมด', color: 'gray' },
+              { value: 'ineligible', label: 'หมดสิทธิ์', color: 'red' },
+              { value: 'at_risk', label: 'กลุ่มเสี่ยง', color: 'yellow' },
+              { value: 'eligible', label: 'มีสิทธิ์', color: 'green' },
+              { value: 'unlocked', label: 'ปลดล็อคแล้ว', color: 'blue' },
+            ]"
+            :key="f.value"
+            @click="statusFilter = f.value; currentPage = 1"
+            class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
+            :class="statusFilter === f.value
+              ? {
+                  gray: 'bg-gray-700 text-white border-gray-700 dark:bg-gray-200 dark:text-gray-900 dark:border-gray-200',
+                  red: 'bg-red-600 text-white border-red-600',
+                  yellow: 'bg-yellow-500 text-white border-yellow-500',
+                  green: 'bg-green-600 text-white border-green-600',
+                  blue: 'bg-blue-600 text-white border-blue-600',
+                }[f.color]
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'"
+          >
+            {{ f.label }}
+            <span
+              v-if="f.value !== 'all'"
+              class="ml-2 text-xs font-bold px-1.5 py-0.5 rounded-full"
+              :class="statusFilter === f.value ? 'bg-white/30 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'"
+            >
+              {{ members.filter((m: any) => m.stats?.eligibility_status === f.value).length }}
+            </span>
+          </button>
+        </div>
+
+        <!-- Bulk Action Bar (visible when filtering ineligible) -->
+        <div
+          v-if="showBulkBar && isCourseAdmin && ineligibleCount > 0"
+          class="flex items-center justify-between bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 mb-4"
+        >
+          <div class="flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+            <Icon icon="heroicons:x-circle" class="w-5 h-5" />
+            <span>พบนักเรียนหมดสิทธิ์สอบ <strong>{{ ineligibleCount }}</strong> คน</span>
+          </div>
+          <button
+            @click="bulkUnlockIneligible"
+            :disabled="isBulkUnlocking"
+            class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+          >
+            <Icon
+              :icon="isBulkUnlocking ? 'heroicons:arrow-path' : 'heroicons:lock-open'"
+              class="w-4 h-4 mr-2"
+              :class="{ 'animate-spin': isBulkUnlocking }"
+            />
+            ปลดล็อคทั้งหมดที่หมดสิทธิ์ ({{ ineligibleCount }} คน)
+          </button>
+        </div>
+
         <!-- Filters -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
           <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -287,20 +374,6 @@ const unlockMember = async () => {
                   class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
-            </div>
-
-            <!-- Status Filter -->
-            <div class="flex-shrink-0">
-              <select
-                v-model="statusFilter"
-                class="w-full sm:w-auto px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="all">ทุกสถานะ</option>
-                <option value="eligible">มีสิทธิ์สอบ</option>
-                <option value="at_risk">เสี่ยง</option>
-                <option value="ineligible">หมดสิทธิ์</option>
-                <option value="unlocked">ปลดล็อคแล้ว</option>
-              </select>
             </div>
           </div>
         </div>

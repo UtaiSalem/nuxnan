@@ -2,22 +2,13 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Lesson;
-use App\Models\Academy;
-use App\Models\Question;
-use App\Models\Assignment;
-use App\Models\CourseQuiz;
-use App\Models\CourseSetting;
-use App\Models\CourseReview;
-use App\Models\CourseAttendance;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Course extends Model
 {
@@ -104,6 +95,9 @@ class Course extends Model
         'unlock_points_cost',
         'allow_unlock_by_reading',
         'unlock_reading_minutes',
+        'min_sessions_for_eligibility_check',
+        'allow_unlock_by_appeal',
+        'allow_self_unlock',
 
         // Finalization
         'finalization_status',
@@ -142,6 +136,14 @@ class Course extends Model
         'education_year' => 'integer',
         'total_sales' => 'integer',
         'source_course_id' => 'integer',
+        'max_absence_percent' => 'integer',
+        'min_sessions_for_eligibility_check' => 'integer',
+        'allow_unlock_by_appeal' => 'boolean',
+        'allow_unlock_by_points' => 'boolean',
+        'unlock_points_cost' => 'integer',
+        'allow_unlock_by_reading' => 'boolean',
+        'unlock_reading_minutes' => 'integer',
+        'allow_self_unlock' => 'boolean',
     ];
 
     public function courseSettings(): HasOne
@@ -196,8 +198,6 @@ class Course extends Model
 
     /**
      * Get all of the courseLessons for the Course
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function courseLessons(): HasMany
     {
@@ -221,9 +221,10 @@ class Course extends Model
 
     public function getIsFavoritedAttribute()
     {
-        if (!auth('api')->check()) {
+        if (! auth('api')->check()) {
             return false;
         }
+
         return $this->favorites()->where('user_id', auth('api')->id())->exists();
     }
 
@@ -239,15 +240,17 @@ class Course extends Model
 
     public function isMember(?User $user)
     {
-        if (!$user) {
+        if (! $user) {
             return false;
         }
+
         return $this->members->contains($user);
     }
 
     public function member_status($id)
     {
         $userId = auth()->guard('api')->id() ?? auth()->id();
+
         return CourseMember::where('user_id', $userId)->where('course_id', $id)->pluck('course_member_status')->first();
     }
 
@@ -255,6 +258,7 @@ class Course extends Model
     {
         return $this->morphMany(Assignment::class, 'assignmentable');
     }
+
     public function courseAssignments(): MorphMany
     {
         return $this->morphMany(Assignment::class, 'assignmentable');
@@ -272,18 +276,14 @@ class Course extends Model
 
     /**
      * Get all of the courseQuizzez for the Course
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function courseQuizzes(): HasMany
     {
         return $this->hasMany(CourseQuiz::class);
     }
-    
+
     /**
      * Get all of the courseQuizResult for the CourseQuiz
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function courseQuizResults(): HasMany
     {
@@ -297,24 +297,26 @@ class Course extends Model
 
     public function getCoverUrlAttribute()
     {
-        if (!$this->cover) {
+        if (! $this->cover) {
             return null;
         }
         if (filter_var($this->cover, FILTER_VALIDATE_URL)) {
             return $this->cover;
         }
-        return asset('storage/images/courses/covers/' . $this->cover);
+
+        return asset('storage/images/courses/covers/'.$this->cover);
     }
 
     public function getLogoUrlAttribute()
     {
-        if (!$this->logo) {
+        if (! $this->logo) {
             return null;
         }
         if (filter_var($this->logo, FILTER_VALIDATE_URL)) {
             return $this->logo;
         }
-        return asset('storage/images/courses/logos/' . $this->logo);
+
+        return asset('storage/images/courses/logos/'.$this->logo);
     }
 
     /**
@@ -339,6 +341,7 @@ class Course extends Model
     public function getAverageRatingAttribute(): ?float
     {
         $avg = $this->reviews()->where('is_approved', true)->avg('rating');
+
         return $avg ? round($avg, 1) : null;
     }
 
@@ -348,8 +351,13 @@ class Course extends Model
      */
     public function isAdmin($user)
     {
-        if (!$user) {
+        if (! $user) {
             return false;
+        }
+
+        // Super Admin has full control
+        if ($user->isSuperAdmin()) {
+            return true;
         }
 
         if ($this->user_id === $user->id) {
@@ -370,7 +378,7 @@ class Course extends Model
      */
     public function hasPermission($user, string $permission): bool
     {
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
@@ -385,7 +393,7 @@ class Course extends Model
             ->where('status', 1)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return false;
         }
 
@@ -397,7 +405,7 @@ class Course extends Model
      */
     public function getMember($user)
     {
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 

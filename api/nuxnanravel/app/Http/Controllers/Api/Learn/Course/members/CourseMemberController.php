@@ -3,28 +3,31 @@
 namespace App\Http\Controllers\Api\Learn\Course\members;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\Course;
-use App\Models\CourseGroup;
-use App\Models\CourseMember;
-use Illuminate\Http\Request;
-use App\Models\CourseQuizResult;
-use App\Models\CourseGroupMember;
-use App\Models\UserAnswerQuestion;
+use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
+use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
+use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
-use App\Http\Resources\Learn\Course\quizzes\CourseQuizResource;
-use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\members\CourseMemberResource;
-use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
-use App\Http\Resources\Learn\Course\groups\CourseGroupResourceV2;
 use App\Http\Resources\Learn\Course\members\CourseMemberResourceV2;
+use App\Http\Resources\Learn\Course\quizzes\CourseQuizResource;
+use App\Models\Course;
+use App\Models\CourseGroupMember;
+use App\Models\CourseMember;
+use App\Models\CourseQuizResult;
+use App\Models\UserAnswerQuestion;
+use App\Services\AttendanceEligibilityService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CourseMemberController extends Controller
 {
+    protected AttendanceEligibilityService $eligibilityService;
 
+    public function __construct(AttendanceEligibilityService $eligibilityService)
+    {
+        $this->eligibilityService = $eligibilityService;
+    }
 
     public function index(Course $course, Request $request)
     {
@@ -49,14 +52,20 @@ class CourseMemberController extends Controller
 
         // Search by name or email
         if ($request->has('search') && $request->search) {
-            $searchTerm = '%' . $request->search . '%';
+            $searchTerm = '%'.$request->search.'%';
             $query->whereHas('user', function ($q) use ($searchTerm) {
                 $q->where('name', 'like', $searchTerm)
-                  ->orWhere('email', 'like', $searchTerm);
+                    ->orWhere('email', 'like', $searchTerm);
             });
         }
 
         $members = $query->orderBy('order_number')->paginate($request->get('per_page', 20));
+
+        // Batch-compute eligibility to avoid N+1 — attach data to each model before
+        // passing to the resource so CourseMemberResource reads from $member->eligibility_data
+        foreach ($members as $member) {
+            $member->eligibility_data = $this->eligibilityService->canTakeExam($member);
+        }
 
         // Check if this is API V2 request
         if ($request->header('X-API-Version') === 'v2' || $request->get('api_version') === 'v2') {
@@ -73,11 +82,11 @@ class CourseMemberController extends Controller
         }
 
         return response()->json([
-            'course'                => new CourseResource($course),
-            'members'               => CourseMemberResource::collection($members),
-            'groups'                => CourseGroupResource::collection($course->courseGroups),
-            'isCourseAdmin'         => $course->isAdmin(auth()->user()),
-            'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),
+            'course' => new CourseResource($course),
+            'members' => CourseMemberResource::collection($members),
+            'groups' => CourseGroupResource::collection($course->courseGroups),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
+            'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
             'filters' => $request->only(['status', 'role', 'group_id', 'search']),
         ]);
     }
@@ -86,117 +95,145 @@ class CourseMemberController extends Controller
     {
         $member->load(['user', 'group', 'course']);
         $userId = $member->user_id;
-        
+
         // Get all lessons with completion status
         $lessons = $course->courseLessons()->get()->map(function ($lesson) use ($userId) {
             $progress = \App\Models\LessonProgress::where('lesson_id', $lesson->id)
                 ->where('user_id', $userId)
                 ->first();
-            
+
+            $completed = $progress && $progress->status === 'completed';
+
             return [
                 'id' => $lesson->id,
                 'title' => $lesson->title,
-                'completed' => $progress && $progress->status === 'completed',
+                'completed' => $completed,
+                'progress_percentage' => $completed ? 100 : 0,
+                'status_label' => $completed ? 'เสร็จสิ้น' : 'ยังไม่เริ่ม',
             ];
         });
-        
+
         // Get all assignments (course + lesson) with submission status and scores
         $courseAssignments = $course->courseAssignments;
         $lessonAssignments = $course->courseLessons()->with('assignments')->get()->flatMap->assignments;
         $allAssignments = $courseAssignments->merge($lessonAssignments);
-        
-        // Filter assignments based on status and group
-        $assignments = $allAssignments->filter(function($assignment) use ($member) {
-            // Must be published
-            if ($assignment->status !== 1) return false;
-            
-            // Check group restriction
-            if (!empty($assignment->target_groups)) {
-                // If member has no group, but assignment targets specific groups -> Exclude?
-                // Assuming restriction means "Only these groups". So No Group = Excluded.
-                if (!$member->group_id) return false;
 
-                if (!in_array($member->group_id, $assignment->target_groups)) {
+        // Filter assignments based on status and group
+        $assignments = $allAssignments->filter(function ($assignment) use ($member) {
+            // Must be published
+            if ($assignment->status !== 1) {
+                return false;
+            }
+
+            // Check group restriction
+            if (! empty($assignment->target_groups)) {
+                if (! $member->group_id) {
+                    return false;
+                }
+                if (! in_array($member->group_id, $assignment->target_groups)) {
                     return false;
                 }
             }
+
             return true;
         })->map(function ($assignment) use ($userId) {
             $answer = \App\Models\AssignmentAnswer::where('assignment_id', $assignment->id)
                 ->where('user_id', $userId)
                 ->first();
-            
-            // Determine actual status - if has points, it's graded regardless of stored status
+
             $actualStatus = 'not_submitted';
+            $statusLabel = 'ยังไม่ส่ง';
+            $progressPercentage = 0;
+
             if ($answer) {
                 if ($answer->status === 'graded' || $answer->points !== null) {
                     $actualStatus = 'graded';
+                    $statusLabel = 'ตรวจแล้ว';
+                    $progressPercentage = 100;
                 } elseif ($answer->status === 'in_review') {
                     $actualStatus = 'in_review';
+                    $statusLabel = 'รอกาตรวจ';
+                    $progressPercentage = 50;
                 } else {
                     $actualStatus = 'submitted';
+                    $statusLabel = 'ส่งแล้ว';
+                    $progressPercentage = 50;
                 }
             }
-            
+
             return [
                 'id' => $assignment->id,
-                'title' => $assignment->title ?? $assignment->name ?? 'งานที่ ' . $assignment->id,
+                'title' => $assignment->title ?? $assignment->name ?? 'งานที่ '.$assignment->id,
                 'max_score' => $assignment->points ?? $assignment->max_score ?? 100,
                 'score' => $answer ? $answer->points : null,
                 'submitted' => $answer !== null,
                 'status' => $actualStatus,
+                'status_label' => $statusLabel,
+                'progress_percentage' => $progressPercentage,
                 'submitted_at' => $answer ? $answer->created_at : null,
                 'graded' => $actualStatus === 'graded',
             ];
         })->values();
-        
-        // Get all quizzes with completion status and scores (eager load questions for max_score calculation)
+
+        // Get all quizzes with completion status and scores
         $courseQuizzes = $course->courseQuizzes()->with('questions')->get();
-        
-        $quizzes = $courseQuizzes->filter(function($quiz) {
+
+        $quizzes = $courseQuizzes->filter(function ($quiz) {
             return $quiz->is_active;
         })->map(function ($quiz) use ($userId, $course) {
             $result = \App\Models\CourseQuizResult::where('quiz_id', $quiz->id)
                 ->where('user_id', $userId)
                 ->where('course_id', $course->id)
-                ->orderBy('score', 'desc') // Get best score
+                ->orderBy('score', 'desc')
                 ->first();
-            
-            // Count attempts
+
             $attemptCount = \App\Models\CourseQuizResult::where('quiz_id', $quiz->id)
                 ->where('user_id', $userId)
                 ->where('course_id', $course->id)
                 ->count();
-            
-            // Calculate max_score - prioritize total_score from quiz (synced when adding questions)
-            // Then try eager loaded questions sum, then question count
+
             $maxScore = $quiz->total_score;
-            if (!$maxScore || $maxScore == 0) {
+            if (! $maxScore || $maxScore == 0) {
                 $maxScore = $quiz->questions->sum('points');
             }
-            if (!$maxScore || $maxScore == 0) {
+            if (! $maxScore || $maxScore == 0) {
                 $maxScore = $quiz->questions->count() ?: 10;
             }
-            
-            // Calculate percentage for pass/fail comparison
-            // passing_score is stored as percentage (e.g., 50 means 50%)
-            $percentage = $result && $maxScore > 0 
-                ? ($result->score / $maxScore) * 100 
+
+            $percentage = $result && $maxScore > 0
+                ? ($result->score / $maxScore) * 100
                 : 0;
-            
+
+            $passed = $result !== null
+                ? ($quiz->passing_score ? round($percentage, 2) >= $quiz->passing_score : true)
+                : null;
+
+            $statusLabel = 'ยังไม่ทำ';
+            if ($result) {
+                $statusLabel = $passed ? 'ผ่าน' : 'ไม่ผ่าน';
+            }
+
             return [
                 'id' => $quiz->id,
-                'title' => $quiz->title ?? $quiz->name ?? 'แบบทดสอบที่ ' . $quiz->id,
+                'title' => $quiz->title ?? $quiz->name ?? 'แบบทดสอบที่ '.$quiz->id,
                 'max_score' => $maxScore,
                 'score' => $result ? $result->score : null,
                 'completed' => $result !== null,
                 'attempt_count' => $attemptCount,
                 'completed_at' => $result ? $result->created_at : null,
-                'passed' => $result !== null 
-                    ? ($quiz->passing_score ? round($percentage, 2) >= $quiz->passing_score : true) 
-                    : null,
+                'passed' => $passed,
+                'progress_percentage' => $result ? ($passed ? 100 : 50) : 0,
+                'status_label' => $statusLabel,
             ];
         })->values();
+
+        // Calculate overall progress
+        $totalItems = count($lessons) + count($assignments) + count($quizzes);
+        $completedItems = collect($lessons)->where('completed', true)->count() +
+                          collect($assignments)->where('status', 'graded')->count() +
+                          collect($quizzes)->where('passed', true)->count();
+
+        $overallPercentage = $totalItems > 0 ? round(($completedItems / $totalItems) * 100) : 0;
 
         return response()->json([
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
@@ -206,26 +243,30 @@ class CourseMemberController extends Controller
             'lessons' => $lessons,
             'assignments' => $assignments,
             'quizzes' => $quizzes,
+            'overall_progress' => [
+                'progress_percentage' => $overallPercentage,
+                'status_label' => $overallPercentage >= 100 ? 'เสร็จสมบูรณ์' : ($overallPercentage > 0 ? 'กำลังดำเนินการ' : 'ยังไม่ได้เริ่ม'),
+            ],
         ]);
     }
 
     public function storemember(Course $course, Request $request)
     {
         $user = auth()->user();
-        
+
         // Calculate course price
         $price = $course->tuition_fees ?? $course->price ?? 0;
-        
+
         // Apply discount if exists
         if ($price > 0 && $course->discount > 0) {
             $price = $price - ($price * $course->discount / 100);
         }
-        
+
         $courseAutoAcceptMembers = ($course->courseSettings->auto_accept_members ?? 1) === 0 ? 0 : 1;
         $requiresApproval = $courseAutoAcceptMembers === 0;
 
         // For paid courses, only charge immediately if auto-approved (no approval required)
-        if ($price > 0 && !$requiresApproval) {
+        if ($price > 0 && ! $requiresApproval) {
             // Check wallet balance
             if ($user->wallet < $price) {
                 return response()->json([
@@ -244,34 +285,34 @@ class CourseMemberController extends Controller
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
-                    'msg' => 'การชำระเงินล้มเหลว: ' . $e->getMessage(),
+                    'msg' => 'การชำระเงินล้มเหลว: '.$e->getMessage(),
                 ], 400);
             }
         }
 
         $course_member = CourseMember::where('course_id', $course->id)->where('user_id', auth()->id())->first();
 
-        if (!$course_member) {
+        if (! $course_member) {
 
-            $new_course_member = new CourseMember();
-            $new_course_member->user_id     = auth()->id();
-            $new_course_member->course_id   = $course->id;
-            $new_course_member->group_id    = $request->group_id ?? null;
-            $new_course_member->status      = $courseAutoAcceptMembers;
-            $new_course_member->course_member_status      = $courseAutoAcceptMembers;
+            $new_course_member = new CourseMember;
+            $new_course_member->user_id = auth()->id();
+            $new_course_member->course_id = $course->id;
+            $new_course_member->group_id = $request->group_id ?? null;
+            $new_course_member->status = $courseAutoAcceptMembers;
+            $new_course_member->course_member_status = $courseAutoAcceptMembers;
             $new_course_member->enrollment_date = now();
             $new_course_member->save();
 
             if ($new_course_member->group_id) {
-                $newCourseGroupMember = new CourseGroupMember();
-                $newCourseGroupMember->user_id      = auth()->id();
-                $newCourseGroupMember->course_id    = $new_course_member->course_id;
-                $newCourseGroupMember->group_id     = $new_course_member->group_id;
-                $newCourseGroupMember->status       = $courseAutoAcceptMembers;
+                $newCourseGroupMember = new CourseGroupMember;
+                $newCourseGroupMember->user_id = auth()->id();
+                $newCourseGroupMember->course_id = $new_course_member->course_id;
+                $newCourseGroupMember->group_id = $new_course_member->group_id;
+                $newCourseGroupMember->status = $courseAutoAcceptMembers;
                 $newCourseGroupMember->save();
             }
-            
-        }else{
+
+        } else {
 
             if ($request->group_id) {
                 $course_member->group_id = $request->group_id;
@@ -298,10 +339,9 @@ class CourseMemberController extends Controller
         ], 200);
     }
 
-
     public function destroy(Course $course, CourseMember $member)
     {
-        if (!$course->hasPermission(auth()->user(), 'remove_members')) {
+        if (! $course->hasPermission(auth()->user(), 'remove_members')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -313,7 +353,7 @@ class CourseMemberController extends Controller
             }
 
             $member->delete();
-            
+
             return response()->json([
                 'success' => true,
             ], 200);
@@ -326,13 +366,14 @@ class CourseMemberController extends Controller
     public function setActiveTab(Course $course, CourseMember $member, Request $request)
     {
         $member->update([
-            'last_accessed_tab' => $request->tab
+            'last_accessed_tab' => $request->tab,
         ]);
     }
+
     public function setActiveGroupTab(Course $course, CourseMember $member, Request $request)
     {
         $member->update([
-            'last_accessed_group_tab' => $request->group_tab
+            'last_accessed_group_tab' => $request->group_tab,
         ]);
 
         return response()->json([
@@ -340,18 +381,18 @@ class CourseMemberController extends Controller
         ], 200);
     }
 
-    //function update
+    // function update
     public function update(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->hasPermission(auth()->user(), 'edit_member_details')) {
+        if (! $course->hasPermission(auth()->user(), 'edit_member_details')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $request->validate([
-            'member_name'   => 'nullable|string|max:255',
-            'order_number'  => 'nullable|numeric',
-            'member_code'   => 'nullable|string|max:50',
-            'group_id'      => 'nullable|exists:course_groups,id',
+            'member_name' => 'nullable|string|max:255',
+            'order_number' => 'nullable|numeric',
+            'member_code' => 'nullable|string|max:50',
+            'group_id' => 'nullable|exists:course_groups,id',
             'course_member_status' => 'nullable|in:0,1',
         ]);
 
@@ -380,25 +421,25 @@ class CourseMemberController extends Controller
 
         return response()->json([
             'success' => true,
-            'notes_comments' => $member->notes_comments
+            'notes_comments' => $member->notes_comments,
         ], 200);
     }
 
     // function delete course's member
     public function deleteCourseMember(Course $course, CourseMember $member)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         try {
             $member_group = CourseGroupMember::where('course_id', $course->id)
-                                                ->where('group_id', $member->group_id ?? null)
-                                                ->where('user_id', $member->user_id)
-                                                ->first();
-            
+                ->where('group_id', $member->group_id ?? null)
+                ->where('user_id', $member->user_id)
+                ->first();
+
             // if ($member_group) $member_group->delete();
-            
+
             // if ($member->status == 1) {
             //     if($course->enrolled_students > 0) $course->decrement('enrolled_students');
             // }
@@ -420,26 +461,28 @@ class CourseMemberController extends Controller
             $assignments = $course->assignments()->get();
             if ($assignments->count() > 0) {
                 foreach ($assignments as $assignment) {
-                    $user_assignment_answers =  AssignmentAnswerResource::collection($assignment->answers()->where('user_id', $member->user_id)->get());
+                    $user_assignment_answers = AssignmentAnswerResource::collection($assignment->answers()->where('user_id', $member->user_id)->get());
                     foreach ($user_assignment_answers as $user_assignment_answer) {
-                        if($user_assignment_answer->images->count() > 0) {
+                        if ($user_assignment_answer->images->count() > 0) {
                             foreach ($user_assignment_answer->images as $image) {
-                                Storage::disk('public')->delete('images/courses/assignments/answers/'. $image->filename);
+                                Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
                             }
                             $user_assignment_answer->images()->delete();
                         }
                         $user_assignment_answer->delete();
-                    }            
+                    }
                 }
             }
 
             $user_answer_questions = UserAnswerQuestion::where('course_id', $course->id)->where('user_id', $member->user_id)->delete();
             $course_quiz_results = CourseQuizResult::where('course_id', $course->id)->where('user_id', $member->user_id)->delete();
 
-            if ($member_group) $member_group->delete();
+            if ($member_group) {
+                $member_group->delete();
+            }
 
             $member->delete();
-            
+
             return response()->json([
                 'success' => true,
             ], 200);
@@ -449,10 +492,10 @@ class CourseMemberController extends Controller
         }
     }
 
-    //function update member bonus points
+    // function update member bonus points
     public function updateBonusPoints(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->hasPermission(auth()->user(), 'add_bonus_points')) {
+        if (! $course->hasPermission(auth()->user(), 'add_bonus_points')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -474,7 +517,7 @@ class CourseMemberController extends Controller
         ]);
 
         $member->refresh();
-        
+
         return response()->json([
             'success' => true,
             'bonus_points' => $member->bonus_points,
@@ -485,7 +528,7 @@ class CourseMemberController extends Controller
 
     public function updateGradeProgress(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->hasPermission(auth()->user(), 'edit_grades')) {
+        if (! $course->hasPermission(auth()->user(), 'edit_grades')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -500,7 +543,7 @@ class CourseMemberController extends Controller
 
     public function updateNotesComments(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -510,7 +553,7 @@ class CourseMemberController extends Controller
 
         return response()->json([
             'success' => true,
-            'notes_comments' => $member->notes_comments
+            'notes_comments' => $member->notes_comments,
         ]);
     }
 
@@ -529,7 +572,7 @@ class CourseMemberController extends Controller
 
     public function approveRequest(Course $course, CourseMember $member)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
         if ($member->course_id !== $course->id || $member->course_member_status !== 0) {
@@ -541,7 +584,7 @@ class CourseMemberController extends Controller
 
         $member->update([
             'course_member_status' => 1,
-            'status'               => $isPaidCourse ? 0 : 1,
+            'status' => $isPaidCourse ? 0 : 1,
         ]);
 
         if ($member->group_id) {
@@ -556,10 +599,10 @@ class CourseMemberController extends Controller
             : 'คำขอเข้าเรียนได้รับการอนุมัติแล้ว';
 
         \App\Models\Notification::create([
-            'user_id'    => $member->user_id,
-            'sender_id'  => auth()->id(),
-            'type'       => $isPaidCourse ? 'course_approved_payment_required' : 'course_approved',
-            'content'    => $content,
+            'user_id' => $member->user_id,
+            'sender_id' => auth()->id(),
+            'type' => $isPaidCourse ? 'course_approved_payment_required' : 'course_approved',
+            'content' => $content,
             'action_url' => "/learn/courses/{$course->id}",
             'related_id' => $course->id,
             'read_status' => false,
@@ -570,7 +613,7 @@ class CourseMemberController extends Controller
 
     public function rejectRequest(Course $course, CourseMember $member)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
         if ($member->course_id !== $course->id) {
@@ -585,10 +628,10 @@ class CourseMemberController extends Controller
         $member->delete();
 
         \App\Models\Notification::create([
-            'user_id'    => $userId,
-            'sender_id'  => auth()->id(),
-            'type'       => 'course_rejected',
-            'content'    => 'ขออภัย คำขอเข้าเรียนไม่ผ่านการพิจารณา',
+            'user_id' => $userId,
+            'sender_id' => auth()->id(),
+            'type' => 'course_rejected',
+            'content' => 'ขออภัย คำขอเข้าเรียนไม่ผ่านการพิจารณา',
             'related_id' => $course->id,
             'read_status' => false,
         ]);
@@ -612,17 +655,18 @@ class CourseMemberController extends Controller
         if ($price <= 0) {
             // self-heal: คอร์สฟรีที่ค้างอยู่ -> activate เลย
             $member->update(['status' => 1]);
+
             return response()->json(['success' => true, 'message' => 'เปิดใช้งานแล้ว']);
         }
 
         $user = auth()->user();
         if ($user->wallet < $price) {
             return response()->json([
-                'success'         => false,
-                'msg'             => 'ยอดเงินในกระเป๋าไม่เพียงพอ กรุณาเติมเงินก่อน',
-                'required'        => $price,
+                'success' => false,
+                'msg' => 'ยอดเงินในกระเป๋าไม่เพียงพอ กรุณาเติมเงินก่อน',
+                'required' => $price,
                 'current_balance' => $user->wallet,
-                'need_topup'      => true,
+                'need_topup' => true,
             ], 400);
         }
 
@@ -630,14 +674,14 @@ class CourseMemberController extends Controller
             $walletService = app(\App\Services\WalletService::class);
             $transaction = $walletService->purchaseCourse($user, $course);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'msg' => 'การชำระเงินล้มเหลว: ' . $e->getMessage()], 400);
+            return response()->json(['success' => false, 'msg' => 'การชำระเงินล้มเหลว: '.$e->getMessage()], 400);
         }
 
         $member->update(['status' => 1]);
 
         return response()->json([
-            'success'        => true,
-            'message'        => 'ชำระเงินสำเร็จ เริ่มเรียนได้เลย',
+            'success' => true,
+            'message' => 'ชำระเงินสำเร็จ เริ่มเรียนได้เลย',
             'transaction_id' => $transaction->id,
         ]);
     }
@@ -650,12 +694,12 @@ class CourseMemberController extends Controller
 
         return response()->json([
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
-            'course'        => new CourseResource($course),
-            'lessons'       => LessonResource::collection($course->courseLessons),
-            'groups'        => CourseGroupResource::collection($course->courseGroups),
-            'member'        => new CourseMemberResource($course_member),
-            'assignments'       => AssignmentResource::collection($course->courseAssignments), 
-            'quizzes'           => CourseQuizResource::collection($course->courseQuizzes),
+            'course' => new CourseResource($course),
+            'lessons' => LessonResource::collection($course->courseLessons),
+            'groups' => CourseGroupResource::collection($course->courseGroups),
+            'member' => new CourseMemberResource($course_member),
+            'assignments' => AssignmentResource::collection($course->courseAssignments),
+            'quizzes' => CourseQuizResource::collection($course->courseQuizzes),
             'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
         ]);
     }
@@ -664,11 +708,86 @@ class CourseMemberController extends Controller
     {
         $course_member->load('course');
         $userId = $course_member->user_id;
-        
-        // Get quiz data for THE SELECTED member (not auth user)
+
+        // Get all lessons with completion status
+        $lessons = $course->courseLessons()->get()->map(function ($lesson) use ($userId) {
+            $progress = \App\Models\LessonProgress::where('lesson_id', $lesson->id)
+                ->where('user_id', $userId)
+                ->first();
+
+            $completed = $progress && $progress->status === 'completed';
+
+            return [
+                'id' => $lesson->id,
+                'title' => $lesson->title,
+                'completed' => $completed,
+                'progress_percentage' => $completed ? 100 : 0,
+                'status_label' => $completed ? 'เสร็จสิ้น' : 'ยังไม่เริ่ม',
+            ];
+        });
+
+        // Get all assignments with submission status and scores
+        $courseAssignments = $course->courseAssignments;
+        $lessonAssignments = $course->courseLessons()->with('assignments')->get()->flatMap->assignments;
+        $allAssignments = $courseAssignments->merge($lessonAssignments);
+
+        $assignments = $allAssignments->filter(function ($assignment) use ($course_member) {
+            if ($assignment->status !== 1) {
+                return false;
+            }
+            if (! empty($assignment->target_groups)) {
+                if (! $course_member->group_id) {
+                    return false;
+                }
+                if (! in_array($course_member->group_id, $assignment->target_groups)) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->map(function ($assignment) use ($userId) {
+            $answer = \App\Models\AssignmentAnswer::where('assignment_id', $assignment->id)
+                ->where('user_id', $userId)
+                ->first();
+
+            $actualStatus = 'not_submitted';
+            $statusLabel = 'ยังไม่ส่ง';
+            $progressPercentage = 0;
+
+            if ($answer) {
+                if ($answer->status === 'graded' || $answer->points !== null) {
+                    $actualStatus = 'graded';
+                    $statusLabel = 'ตรวจแล้ว';
+                    $progressPercentage = 100;
+                } elseif ($answer->status === 'in_review') {
+                    $actualStatus = 'in_review';
+                    $statusLabel = 'รอกาตรวจ';
+                    $progressPercentage = 50;
+                } else {
+                    $actualStatus = 'submitted';
+                    $statusLabel = 'ส่งแล้ว';
+                    $progressPercentage = 50;
+                }
+            }
+
+            return [
+                'id' => $assignment->id,
+                'title' => $assignment->title ?? $assignment->name ?? 'งานที่ '.$assignment->id,
+                'max_score' => $assignment->points ?? $assignment->max_score ?? 100,
+                'score' => $answer ? $answer->points : null,
+                'submitted' => $answer !== null,
+                'status' => $actualStatus,
+                'status_label' => $statusLabel,
+                'progress_percentage' => $progressPercentage,
+                'submitted_at' => $answer ? $answer->created_at : null,
+                'graded' => $actualStatus === 'graded',
+            ];
+        })->values();
+
+        // Get quiz data for THE SELECTED member
         $courseQuizzes = $course->courseQuizzes()->with('questions')->get();
-        
-        $quizzes = $courseQuizzes->filter(function($quiz) {
+
+        $quizzes = $courseQuizzes->filter(function ($quiz) {
             return $quiz->is_active;
         })->map(function ($quiz) use ($userId, $course) {
             $result = \App\Models\CourseQuizResult::where('quiz_id', $quiz->id)
@@ -676,56 +795,74 @@ class CourseMemberController extends Controller
                 ->where('course_id', $course->id)
                 ->orderBy('score', 'desc')
                 ->first();
-            
+
             $attemptCount = \App\Models\CourseQuizResult::where('quiz_id', $quiz->id)
                 ->where('user_id', $userId)
                 ->where('course_id', $course->id)
                 ->count();
-            
-            // Calculate max_score - prioritize total_score from quiz
+
             $maxScore = $quiz->total_score;
-            if (!$maxScore || $maxScore == 0) {
+            if (! $maxScore || $maxScore == 0) {
                 $maxScore = $quiz->questions->sum('points');
             }
-            if (!$maxScore || $maxScore == 0) {
+            if (! $maxScore || $maxScore == 0) {
                 $maxScore = $quiz->questions->count() ?: 10;
             }
-            
-            // Calculate percentage for pass/fail comparison
-            // passing_score is stored as percentage (e.g., 50 means 50%)
-            $percentage = $result && $maxScore > 0 
-                ? ($result->score / $maxScore) * 100 
+
+            $percentage = $result && $maxScore > 0
+                ? ($result->score / $maxScore) * 100
                 : 0;
-            
+
+            $passed = $result !== null
+                ? ($quiz->passing_score ? round($percentage, 2) >= $quiz->passing_score : true)
+                : null;
+
+            $statusLabel = 'ยังไม่ทำ';
+            if ($result) {
+                $statusLabel = $passed ? 'ผ่าน' : 'ไม่ผ่าน';
+            }
+
             return [
                 'id' => $quiz->id,
-                'title' => $quiz->title ?? 'แบบทดสอบที่ ' . $quiz->id,
+                'title' => $quiz->title ?? 'แบบทดสอบที่ '.$quiz->id,
                 'max_score' => $maxScore,
                 'score' => $result ? $result->score : null,
                 'completed' => $result !== null,
                 'attempt_count' => $attemptCount,
                 'completed_at' => $result ? $result->created_at : null,
-                'passed' => $result !== null 
-                    ? ($quiz->passing_score ? round($percentage, 2) >= $quiz->passing_score : true) 
-                    : null,
+                'passed' => $passed,
+                'progress_percentage' => $result ? ($passed ? 100 : 50) : 0,
+                'status_label' => $statusLabel,
             ];
         })->values();
-        
+
+        // Calculate overall progress
+        $totalItems = count($lessons) + count($assignments) + count($quizzes);
+        $completedItems = collect($lessons)->where('completed', true)->count() +
+                          collect($assignments)->where('status', 'graded')->count() +
+                          collect($quizzes)->where('passed', true)->count();
+
+        $overallPercentage = $totalItems > 0 ? round(($completedItems / $totalItems) * 100) : 0;
+
         return response()->json([
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
-            'course'        => new CourseResource($course),
-            'lessons'       => LessonResource::collection($course->courseLessons),
-            'groups'        => CourseGroupResource::collection($course->courseGroups),
-            'member'        => new CourseMemberResource($course_member),
-            'assignments'   => AssignmentResource::collection($course->courseAssignments), 
-            'quizzes'       => $quizzes,
+            'course' => new CourseResource($course),
+            'lessons' => $lessons,
+            'groups' => CourseGroupResource::collection($course->courseGroups),
+            'member' => new CourseMemberResource($course_member),
+            'assignments' => $assignments,
+            'quizzes' => $quizzes,
             'courseMemberOfAuth' => $course_member,
+            'overall_progress' => [
+                'progress_percentage' => $overallPercentage,
+                'status_label' => $overallPercentage >= 100 ? 'เสร็จสมบูรณ์' : ($overallPercentage > 0 ? 'กำลังดำเนินการ' : 'ยังไม่ได้เริ่ม'),
+            ],
         ]);
     }
 
     public function updateOrderNumber(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -740,7 +877,7 @@ class CourseMemberController extends Controller
 
     public function updateMemberCode(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -767,7 +904,7 @@ class CourseMemberController extends Controller
             'group',
             'quizResults',
             'assignmentAnswers',
-            'attendanceRecords'
+            'attendanceRecords',
         ]);
 
         // Calculate member statistics
@@ -857,7 +994,7 @@ class CourseMemberController extends Controller
         ]);
 
         $existingNotes = $member->notes_comments ? json_decode($member->notes_comments, true) : [];
-        
+
         $newNote = [
             'id' => uniqid(),
             'content' => $request->note,
@@ -867,7 +1004,7 @@ class CourseMemberController extends Controller
         ];
 
         $existingNotes[] = $newNote;
-        
+
         $member->update(['notes_comments' => json_encode($existingNotes)]);
 
         return response()->json([
@@ -881,7 +1018,7 @@ class CourseMemberController extends Controller
      */
     public function bulkUpdateV2(Course $course, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -965,21 +1102,23 @@ class CourseMemberController extends Controller
         $totalItems = $course->courseLessons()->count() +
                      $course->courseAssignments()->count() +
                      $course->courseQuizzes()->count();
-        
-        if ($totalItems === 0) return 0;
+
+        if ($totalItems === 0) {
+            return 0;
+        }
 
         $completedItems = 0;
-        
+
         // Count completed lessons
         if ($member->lessons_completed) {
             $completedItems += count(json_decode($member->lessons_completed, true) ?? []);
         }
-        
+
         // Count completed assignments
         if ($member->assignments_completed) {
             $completedItems += count(json_decode($member->assignments_completed, true) ?? []);
         }
-        
+
         // Count completed quizzes
         if ($member->quizzes_completed) {
             $completedItems += count(json_decode($member->quizzes_completed, true) ?? []);
@@ -991,7 +1130,9 @@ class CourseMemberController extends Controller
     private function calculateAverageScore(Course $course, CourseMember $member): float
     {
         $quizResults = $member->quizResults;
-        if ($quizResults->isEmpty()) return 0;
+        if ($quizResults->isEmpty()) {
+            return 0;
+        }
 
         $totalScore = $quizResults->sum('score');
         $totalMaxScore = $quizResults->sum('max_score');
@@ -1044,7 +1185,7 @@ class CourseMemberController extends Controller
     private function moveMemberToGroup(CourseMember $member, int $groupId)
     {
         $member->update(['group_id' => $groupId]);
-        
+
         // Update group member relationship
         // course_group_members.status is ENUM('0','1'), must pass string values
         CourseGroupMember::updateOrCreate(
@@ -1062,7 +1203,7 @@ class CourseMemberController extends Controller
     private function addPointsToMember(CourseMember $member, int $points, ?string $reason)
     {
         $member->increment('bonus_points', $points);
-        
+
         // Add to points history
         $history = $member->points_history ? json_decode($member->points_history, true) : [];
         $history[] = [
@@ -1078,7 +1219,7 @@ class CourseMemberController extends Controller
     {
         // Clean up member data
         $this->cleanupMemberData($member);
-        
+
         // Observer will handle enrolled_students decrement
         $member->delete();
     }
@@ -1091,11 +1232,11 @@ class CourseMemberController extends Controller
             $userAssignmentAnswers = AssignmentAnswer::where('assignment_id', $assignment->id)
                 ->where('user_id', $member->user_id)
                 ->get();
-            
+
             foreach ($userAssignmentAnswers as $answer) {
                 if ($answer->images->count() > 0) {
                     foreach ($answer->images as $image) {
-                        Storage::disk('public')->delete('images/courses/assignments/answers/' . $image->filename);
+                        Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
                     }
                     $answer->images()->delete();
                 }
@@ -1107,7 +1248,7 @@ class CourseMemberController extends Controller
         CourseQuizResult::where('course_id', $member->course_id)
             ->where('user_id', $member->user_id)
             ->delete();
-            
+
         UserAnswerQuestion::where('course_id', $member->course_id)
             ->where('user_id', $member->user_id)
             ->delete();
@@ -1174,10 +1315,10 @@ class CourseMemberController extends Controller
 
         // Search by name or email
         if ($request->has('search') && $request->search) {
-            $searchTerm = '%' . $request->search . '%';
+            $searchTerm = '%'.$request->search.'%';
             $query->whereHas('user', function ($q) use ($searchTerm) {
                 $q->where('name', 'like', $searchTerm)
-                  ->orWhere('email', 'like', $searchTerm);
+                    ->orWhere('email', 'like', $searchTerm);
             });
         }
 
@@ -1207,7 +1348,7 @@ class CourseMemberController extends Controller
     {
         try {
             $member = CourseMember::findOrFail($memberId);
-            
+
             $validated = $request->validate([
                 'member_name' => 'nullable|string|max:255',
                 'order_number' => 'nullable|numeric|min:0',
@@ -1253,22 +1394,21 @@ class CourseMemberController extends Controller
         }
 
         $request->validate([
-            'member_name'   => 'nullable|string|max:255',
-            'order_number'  => 'nullable|numeric',
-            'member_code'   => 'nullable|string|max:50',
+            'member_name' => 'nullable|string|max:255',
+            'order_number' => 'nullable|numeric',
+            'member_code' => 'nullable|string|max:50',
         ]);
 
         $member->update([
-            'member_name'   => $request->member_name,
-            'order_number'  => $request->filled('order_number') ? (int) $request->order_number : null,
-            'member_code'   => $request->member_code,
+            'member_name' => $request->member_name,
+            'order_number' => $request->filled('order_number') ? (int) $request->order_number : null,
+            'member_code' => $request->member_code,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
-            'data' => $member->fresh()
+            'data' => $member->fresh(),
         ], 200);
     }
-
 }

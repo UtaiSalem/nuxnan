@@ -2,6 +2,10 @@
 import { Icon } from '@iconify/vue'
 import RichTextEditor from '~/components/Common/RichTextEditor.vue'
 import ResponsiveCard from '~/components/Common/ResponsiveCard.vue'
+import CourseDangerAction from '~/components/learn/course/settings/CourseDangerAction.vue'
+import CourseStatusOption from '~/components/learn/course/settings/CourseStatusOption.vue'
+import CourseToggleSetting from '~/components/learn/course/settings/CourseToggleSetting.vue'
+import CourseSettingField from '~/components/learn/course/settings/CourseSettingField.vue'
 
 import Swal from 'sweetalert2'
 
@@ -61,13 +65,32 @@ const savingSection = ref<string | null>(null)
 const isDuplicating = ref(false)
 const api = useApi()
 
+// Eligibility state
+const eligibilitySummary = ref<any>(null)
+const eligibilityMembers = ref<any[]>([])
+const isLoadingEligibility = ref(false)
+const isRefreshingEligibility = ref(false)
+const eligibilityStatusFilter = ref('all')
+const eligibilitySearch = ref('')
+const showUnlockModal = ref(false)
+const selectedMemberForUnlock = ref<any>(null)
+const unlockReason = ref('')
+const isUnlocking = ref(false)
+const eligibilityPanelOpen = ref(true)
+
+type CourseStatus = 'published' | 'draft' | 'archived'
+
 // Section fields definition
 const sectionFields: Record<string, string[]> = {
   general: ['name', 'code', 'description', 'category', 'education_level', 'education_year'],
   academic: ['semester', 'academic_year', 'credit_units', 'hours_per_week', 'start_date', 'end_date'],
   publishing: ['status', 'auto_accept_members'],
   management: ['saleable', 'tuition_fees', 'discount', 'discount_type'],
-  marketplace: ['is_for_marketplace', 'price', 'price_points']
+  marketplace: ['is_for_marketplace', 'price', 'price_points'],
+  eligibility: [
+    'max_absence_percent', 'min_sessions_for_eligibility_check', 'allow_unlock_by_appeal', 'allow_self_unlock',
+    'allow_unlock_by_points', 'unlock_points_cost', 'allow_unlock_by_reading', 'unlock_reading_minutes',
+  ],
 }
 
 const sectionLabels: Record<string, string> = {
@@ -75,7 +98,8 @@ const sectionLabels: Record<string, string> = {
   academic: 'ข้อมูลเชิงวิชาการ',
   publishing: 'การเผยแพร่',
   management: 'การจัดการ',
-  marketplace: 'ตลาด Master Copy'
+  marketplace: 'ตลาด Master Copy',
+  eligibility: 'สิทธิ์สอบ / สอบแก้',
 }
 
 const isSavingSection = (section: string) => savingSection.value === section
@@ -104,7 +128,15 @@ const form = ref({
   status: 'draft',
   is_for_marketplace: false,
   price_points: 0,
-  price_type: 'free'
+  price_type: 'free',
+  max_absence_percent: 20,
+  min_sessions_for_eligibility_check: 3,
+  allow_unlock_by_appeal: true,
+  allow_self_unlock: false,
+  allow_unlock_by_points: false,
+  unlock_points_cost: null as number | null,
+  allow_unlock_by_reading: false,
+  unlock_reading_minutes: null as number | null,
 })
 
 // Snapshot for dirty checking
@@ -167,6 +199,12 @@ const selectedEducationLevelOption = computed(() =>
 // Initialize form with course data
 watch(() => course?.value, (newCourse) => {
   if (newCourse) {
+    // Map numeric status to string for UI
+    let statusStr: CourseStatus = 'draft'
+    if (newCourse.status === 1 || newCourse.status === 'published') statusStr = 'published'
+    else if (newCourse.status === 2 || newCourse.status === 'archived') statusStr = 'archived'
+    else statusStr = 'draft'
+
     const data = {
       code: newCourse.code || '',
       name: newCourse.name || '',
@@ -187,10 +225,18 @@ watch(() => course?.value, (newCourse) => {
       discount_type: newCourse.discount_type || 'fixed',
       semester: newCourse.semester || '',
       academic_year: newCourse.academic_year || '',
-      status: newCourse.status || 'draft',
+      status: statusStr,
       is_for_marketplace: Boolean(newCourse.is_for_marketplace),
       price_points: newCourse.price_points || 0,
-      price_type: newCourse.price_type || 'free'
+      price_type: newCourse.price_type || 'free',
+      max_absence_percent: newCourse.max_absence_percent ?? 20,
+      min_sessions_for_eligibility_check: newCourse.min_sessions_for_eligibility_check ?? 3,
+      allow_unlock_by_appeal: newCourse.allow_unlock_by_appeal ?? true,
+      allow_self_unlock: Boolean(newCourse.allow_self_unlock),
+      allow_unlock_by_points: Boolean(newCourse.allow_unlock_by_points),
+      unlock_points_cost: newCourse.unlock_points_cost ?? null,
+      allow_unlock_by_reading: Boolean(newCourse.allow_unlock_by_reading),
+      unlock_reading_minutes: newCourse.unlock_reading_minutes ?? null,
     }
     form.value = { ...data }
     initialForm.value = JSON.parse(JSON.stringify(data))
@@ -346,6 +392,91 @@ const deleteCourse = async () => {
     Swal.fire('ผิดพลาด', err.data?.msg || 'ไม่สามารถลบรายวิชาได้', 'error')
   }
 }
+
+const fetchEligibilitySummary = async () => {
+  if (!course?.value) return
+  isLoadingEligibility.value = true
+  try {
+    const res: any = await api.get(`/api/courses/${course.value.id}/eligibility/summary`)
+    if (res.success) {
+      eligibilitySummary.value = res.data
+      eligibilityMembers.value = res.data.members || []
+    }
+  } finally { isLoadingEligibility.value = false }
+}
+
+const refreshEligibilityStatus = async () => {
+  isRefreshingEligibility.value = true
+  try {
+    const res: any = await api.post(`/api/courses/${course.value.id}/eligibility/refresh`)
+    if (res.success) { 
+      await fetchEligibilitySummary()
+      useToast().success('อัพเดทสถานะสิทธิ์สอบแล้ว') 
+    }
+  } catch { useToast().error('ไม่สามารถอัพเดทสถานะได้') }
+  finally { isRefreshingEligibility.value = false }
+}
+
+const filteredEligibilityMembers = computed(() => {
+  let r = [...eligibilityMembers.value]
+  if (eligibilitySearch.value) {
+    const q = eligibilitySearch.value.toLowerCase()
+    r = r.filter(m => m.user?.name?.toLowerCase().includes(q) || m.member_code?.toLowerCase().includes(q))
+  }
+  if (eligibilityStatusFilter.value !== 'all')
+    r = r.filter(m => m.stats?.eligibility_status === eligibilityStatusFilter.value)
+  return r
+})
+
+const openUnlockModal = (member: any) => {
+  selectedMemberForUnlock.value = member
+  unlockReason.value = ''
+  showUnlockModal.value = true
+}
+
+const confirmUnlock = async () => {
+  if (!selectedMemberForUnlock.value || !unlockReason.value.trim()) return
+  isUnlocking.value = true
+  try {
+    const res: any = await api.post(
+      `/api/courses/${course.value.id}/eligibility/members/${selectedMemberForUnlock.value.id}/unlock`,
+      { reason: unlockReason.value }
+    )
+    if (res.success) { 
+      useToast().success('ปลดล็อคสิทธิ์สอบสำเร็จ')
+      showUnlockModal.value = false
+      await fetchEligibilitySummary() 
+    }
+  } catch { useToast().error('ไม่สามารถปลดล็อคได้') }
+  finally { isUnlocking.value = false }
+}
+
+const getEligibilityStatusColor = (status: string) => {
+  const colors: Record<string, string> = {
+    eligible: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    at_risk:  'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    ineligible:'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    unlocked: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  }
+  return colors[status] ?? 'bg-gray-100 text-gray-800'
+}
+
+const getEligibilityStatusLabel = (status: string) => {
+  const labels: Record<string, string> = { 
+    eligible: 'มีสิทธิ์สอบ', 
+    at_risk: 'เสี่ยง', 
+    ineligible: 'หมดสิทธิ์', 
+    unlocked: 'ปลดล็อคแล้ว' 
+  }
+  return labels[status] ?? status
+}
+
+// Auto-null conditional fields when toggle is off
+watch(() => form.value.allow_unlock_by_points, v => { if (!v) form.value.unlock_points_cost = null })
+watch(() => form.value.allow_unlock_by_reading, v => { if (!v) form.value.unlock_reading_minutes = null })
+
+// Load eligibility summary on mount (admin only)
+watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchEligibilitySummary() }, { immediate: true })
 </script>
 
 <template>
@@ -388,51 +519,37 @@ const deleteCourse = async () => {
       <ResponsiveCard title="ข้อมูลทั่วไป" icon="heroicons:information-circle" icon-color="text-cyan-500">
         <div class="space-y-5 sm:space-y-6">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-             <div class="space-y-2">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">รหัสวิชา</label>
-              <div class="relative group">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-cyan-500 transition-colors">
-                  <Icon icon="fluent:number-symbol-square-24-regular" class="w-5 h-5" />
-                </span>
-                <input
-                  v-model="form.code"
-                  type="text"
-                  placeholder="เช่น CS101"
-                  class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all dark:text-white text-base"
-                />
-              </div>
-            </div>
-            
-            <div class="space-y-2">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ชื่อรายวิชา <span class="text-red-500">*</span></label>
-              <div class="relative group">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-cyan-500 transition-colors">
-                  <Icon icon="heroicons:book-open" class="w-5 h-5" />
-                </span>
-                <input
-                  v-model="form.name"
-                  type="text"
-                  required
-                  placeholder="ชื่อรายวิชา"
-                  class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all dark:text-white text-base"
-                />
-              </div>
-            </div>
+            <CourseSettingField label="รหัสวิชา" icon="fluent:number-symbol-square-24-regular">
+              <input
+                v-model="form.code"
+                type="text"
+                placeholder="เช่น CS101"
+                class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all dark:text-white text-base"
+              />
+            </CourseSettingField>
+
+            <CourseSettingField label="ชื่อรายวิชา" icon="heroicons:book-open" required>
+              <input
+                v-model="form.name"
+                type="text"
+                required
+                placeholder="ชื่อรายวิชา"
+                class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all dark:text-white text-base"
+              />
+            </CourseSettingField>
           </div>
 
-          <div class="space-y-2">
-            <label class="text-sm font-bold text-gray-700 dark:text-gray-300">คำอธิบายรายวิชา</label>
+          <CourseSettingField label="คำอธิบายรายวิชา" icon="heroicons:document-text">
             <RichTextEditor
               v-model="form.description"
               placeholder="รายละเอียดเกี่ยวกับรายวิชา..."
               class="w-full"
               min-height="200px"
             />
-          </div>
+          </CourseSettingField>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-            <div class="space-y-2">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">หมวดหมู่</label>
+            <CourseSettingField label="หมวดหมู่" icon="heroicons:tag">
               <div class="relative">
                 <select
                   v-model="form.category"
@@ -441,15 +558,14 @@ const deleteCourse = async () => {
                   <option value="">เลือกหมวดหมู่</option>
                   <option v-for="cat in courseCategories" :key="cat" :value="cat">{{ cat }}</option>
                 </select>
-                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                   <Icon icon="heroicons:chevron-down" class="w-5 h-5" />
                 </span>
               </div>
-            </div>
-            
-             <div class="space-y-2">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ระดับการศึกษา</label>
-               <div class="relative">
+            </CourseSettingField>
+
+            <CourseSettingField label="ระดับการศึกษา" icon="heroicons:academic-cap">
+              <div class="relative">
                 <select
                   v-model="form.education_level"
                   @change="!selectedEducationLevelOption?.hasYear && (form.education_year = null)"
@@ -462,10 +578,9 @@ const deleteCourse = async () => {
                   <Icon icon="heroicons:chevron-down" class="w-5 h-5" />
                 </span>
               </div>
-            </div>
+            </CourseSettingField>
 
-            <div v-if="selectedEducationLevelOption?.hasYear" class="space-y-2">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ปีที่</label>
+            <CourseSettingField v-if="selectedEducationLevelOption?.hasYear" label="ปีที่" icon="heroicons:hashtag">
               <div class="relative">
                 <select
                   v-model="form.education_year"
@@ -478,7 +593,7 @@ const deleteCourse = async () => {
                   <Icon icon="heroicons:chevron-down" class="w-5 h-5" />
                 </span>
               </div>
-            </div>
+            </CourseSettingField>
           </div>
         </div>
         <template #footer v-if="isSectionDirty('general')">
@@ -497,13 +612,147 @@ const deleteCourse = async () => {
         </template>
       </ResponsiveCard>
 
-      <!-- Academic Details Card -->
-      <ResponsiveCard title="ข้อมูลเชิงวิชาการ" icon="heroicons:academic-cap" icon-color="text-purple-500">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-           <div class="space-y-2">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ภาคเรียนที่</label>
+      <!-- Mobile Save Button (Sticky Bottom) -->
+      <div v-if="isAnySectionDirty"
+           class="fixed bottom-16 left-0 right-0 px-4 pt-3 pb-3 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 md:hidden z-40"
+           style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
+        <button
+          type="submit"
+          :disabled="isSaving"
+          class="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white font-black rounded-xl shadow-xl active:scale-95 transition-all disabled:opacity-50 min-h-[48px] text-base"
+        >
+          <Icon v-if="isSaving" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+          <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />
+          บันทึกการเปลี่ยนแปลงทั้งหมด
+        </button>
+      </div>
+
+    </form>
+
+    <!-- Left Sidebar: การเผยแพร่ + การจัดการ -->
+    <Teleport to="#left-widgets-slot">
+      <div class="space-y-4" style="order: -1">
+        <!-- Status & Visibility -->
+        <ResponsiveCard title="การเผยแพร่" icon="heroicons:globe-alt" icon-color="text-green-500">
+          <div class="grid grid-cols-1 gap-3">
+            <CourseStatusOption
+              v-model="form.status"
+              value="published"
+              label="เผยแพร่"
+              description="ทุกคนสามารถค้นหาและเห็นรายวิชานี้"
+              icon="heroicons:globe-alt"
+              color="green"
+            />
+            <CourseStatusOption
+              v-model="form.status"
+              value="draft"
+              label="ฉบับร่าง"
+              description="เฉพาะผู้ดูแลรายวิชาเท่านั้นที่เห็น"
+              icon="heroicons:document-text"
+              color="gray"
+            />
+            <CourseStatusOption
+              v-model="form.status"
+              value="archived"
+              label="เก็บถาวร"
+              description="ปิดรับสมาชิกและซ่อนจากการค้นหา"
+              icon="heroicons:archive-box"
+              color="orange"
+            />
+          </div>
+          <template #footer v-if="isSectionDirty('publishing')">
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="saveSettingsSection('publishing', sectionFields.publishing)"
+                :disabled="isSavingSection('publishing')"
+                class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Icon v-if="isSavingSection('publishing')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกการเผยแพร่
+              </button>
+            </div>
+          </template>
+        </ResponsiveCard>
+
+        <!-- Configuration -->
+        <ResponsiveCard title="การจัดการ" icon="heroicons:cog-6-tooth" icon-color="text-orange-500">
+          <div class="space-y-4">
+            <div class="space-y-3">
+              <CourseToggleSetting
+                v-model="form.auto_accept_members"
+                label="อนุมัติสมาชิกอัตโนมัติ"
+                description="ไม่ต้องกดยืนยันคำขอ"
+                variant="orange"
+              />
+              <CourseToggleSetting
+                v-model="form.saleable"
+                label="เปิดรับสมัครเรียน (แบบเก็บค่าธรรมเนียม)"
+                description="เก็บค่าธรรมเนียมสำหรับผู้ที่ต้องการเข้าเรียน"
+                variant="orange"
+              />
+            </div>
+            <div v-if="form.saleable" class="space-y-3 pt-1 animate-fade-in-down">
+              <CourseSettingField label="ค่าธรรมเนียมสมัครเรียน (บาท)" icon="heroicons:currency-dollar">
+                <input
+                  v-model.number="form.tuition_fees"
+                  type="number"
+                  min="0"
+                  placeholder="0.00"
+                  class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all dark:text-white text-base"
+                />
+              </CourseSettingField>
+              <CourseSettingField
+                label="ส่วนลดค่าสมัคร"
+                :icon="form.discount_type === 'fixed' ? 'heroicons:currency-dollar' : 'heroicons:receipt-percent'"
+              >
+                <div class="flex gap-2">
+                  <input
+                    v-model.number="form.discount"
+                    type="number"
+                    min="0"
+                    :max="form.discount_type === 'percent' ? 100 : form.tuition_fees"
+                    placeholder="0"
+                    class="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all dark:text-white text-base"
+                  />
+                  <select
+                    v-model="form.discount_type"
+                    class="flex-shrink-0 w-20 sm:w-24 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-3 focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 text-sm font-bold dark:text-white appearance-none cursor-pointer text-center"
+                  >
+                    <option value="fixed">บาท</option>
+                    <option value="percent">%</option>
+                  </select>
+                </div>
+              </CourseSettingField>
+              <div class="flex justify-between items-center text-lg font-black bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
+                <span class="text-gray-700 dark:text-gray-300 text-sm">ค่าสมัครสุทธิ:</span>
+                <span class="text-emerald-600 dark:text-emerald-400">{{ netPrice.toLocaleString() }} บาท</span>
+              </div>
+            </div>
+          </div>
+          <template #footer v-if="isSectionDirty('management')">
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="saveSettingsSection('management', sectionFields.management)"
+                :disabled="isSavingSection('management')"
+                class="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white font-bold rounded-xl shadow-lg hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Icon v-if="isSavingSection('management')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกค่าเรียน
+              </button>
+            </div>
+          </template>
+        </ResponsiveCard>
+
+        <!-- Academic Details -->
+        <ResponsiveCard title="ข้อมูลเชิงวิชาการ" icon="heroicons:academic-cap" icon-color="text-purple-500">
+          <div class="space-y-3">
+            <CourseSettingField label="ภาคเรียนที่" icon="heroicons:bookmark">
               <div class="relative">
-                 <select
+                <select
                   v-model="form.semester"
                   class="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all dark:text-white text-base appearance-none cursor-pointer"
                 >
@@ -513,368 +762,113 @@ const deleteCourse = async () => {
                   <option value="3">3</option>
                   <option value="summer">ฤดูร้อน</option>
                 </select>
-                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                   <Icon icon="heroicons:chevron-down" class="w-5 h-5" />
                 </span>
               </div>
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ปีการศึกษา</label>
-               <div class="relative group">
-                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors">
-                  <Icon icon="heroicons:calendar" class="w-5 h-5" />
-                </span>
-                <input
-                  v-model="form.academic_year"
-                  type="text"
-                  placeholder="เช่น 2567"
-                  class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all dark:text-white text-base"
-                />
-              </div>
-            </div>
-
-           <div class="space-y-2">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">หน่วยกิต</label>
-              <div class="relative group">
-                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors">
-                  <Icon icon="heroicons:star" class="w-5 h-5" />
-                </span>
-                <input
-                  v-model.number="form.credit_units"
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all dark:text-white text-base"
-                />
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ชั่วโมง/สัปดาห์</label>
-               <div class="relative group">
-                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors">
-                  <Icon icon="heroicons:clock" class="w-5 h-5" />
-                </span>
-                <input
-                  v-model.number="form.hours_per_week"
-                  type="number"
-                  min="0"
-                  class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all dark:text-white text-base"
-                />
-              </div>
-            </div>
-            <div class="space-y-2 min-w-0">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">วันเริ่มต้น</label>
+            </CourseSettingField>
+            <CourseSettingField label="ปีการศึกษา" icon="heroicons:calendar">
+              <input v-model="form.academic_year" type="text" placeholder="เช่น 2567" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all dark:text-white text-base" />
+            </CourseSettingField>
+            <CourseSettingField label="หน่วยกิต" icon="heroicons:star">
+              <input v-model.number="form.credit_units" type="number" min="0" step="0.5" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all dark:text-white text-base" />
+            </CourseSettingField>
+            <CourseSettingField label="ชั่วโมง/สัปดาห์" icon="heroicons:clock">
+              <input v-model.number="form.hours_per_week" type="number" min="0" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all dark:text-white text-base" />
+            </CourseSettingField>
+            <CourseSettingField label="วันเริ่มต้น" icon="heroicons:calendar-days">
               <ClientOnly>
-                <VueDatePicker
-                  v-model="form.start_date"
-                  model-type="yyyy-MM-dd"
-                  :format="formatThaiDate"
-                  auto-apply
-                  :enable-time-picker="false"
-                  teleport="body"
-                  placeholder="เลือกวันเริ่มต้น"
-                  input-class-name="!bg-gray-50 dark:!bg-gray-900 !border-gray-200 dark:!border-gray-700 !rounded-xl dark:!text-white !py-3 !w-full !text-base"
-                />
+                <VueDatePicker v-model="form.start_date" model-type="yyyy-MM-dd" :format="formatThaiDate" auto-apply :enable-time-picker="false" teleport="body" placeholder="เลือกวันเริ่มต้น" input-class-name="!bg-gray-50 dark:!bg-gray-900 !border-gray-200 dark:!border-gray-700 !rounded-xl dark:!text-white !py-3 !w-full !text-base" />
               </ClientOnly>
-            </div>
-            <div class="space-y-2 min-w-0">
-              <label class="text-sm font-bold text-gray-700 dark:text-gray-300">วันสิ้นสุด</label>
+            </CourseSettingField>
+            <CourseSettingField label="วันสิ้นสุด" icon="heroicons:calendar-days">
               <ClientOnly>
-                <VueDatePicker
-                  v-model="form.end_date"
-                  model-type="yyyy-MM-dd"
-                  :format="formatThaiDate"
-                  auto-apply
-                  :enable-time-picker="false"
-                  teleport="body"
-                  placeholder="เลือกวันสิ้นสุด"
-                  input-class-name="!bg-gray-50 dark:!bg-gray-900 !border-gray-200 dark:!border-gray-700 !rounded-xl dark:!text-white !py-3 !w-full !text-base"
-                />
+                <VueDatePicker v-model="form.end_date" model-type="yyyy-MM-dd" :format="formatThaiDate" auto-apply :enable-time-picker="false" teleport="body" placeholder="เลือกวันสิ้นสุด" input-class-name="!bg-gray-50 dark:!bg-gray-900 !border-gray-200 dark:!border-gray-700 !rounded-xl dark:!text-white !py-3 !w-full !text-base" />
               </ClientOnly>
+            </CourseSettingField>
+          </div>
+          <template #footer v-if="isSectionDirty('academic')">
+            <div class="flex justify-end">
+              <button type="button" @click="saveSettingsSection('academic', sectionFields.academic)" :disabled="isSavingSection('academic')" class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-bold rounded-xl shadow-lg hover:bg-purple-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                <Icon v-if="isSavingSection('academic')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกข้อมูลเชิงวิชาการ
+              </button>
             </div>
-        </div>
-        <template #footer v-if="isSectionDirty('academic')">
-          <div class="flex justify-end">
-            <button
-              type="button"
-              @click="saveSettingsSection('academic', sectionFields.academic)"
-              :disabled="isSavingSection('academic')"
-              class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-bold rounded-xl shadow-lg hover:bg-purple-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              <Icon v-if="isSavingSection('academic')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-              <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
-              บันทึกข้อมูลเชิงวิชาการ
-            </button>
-          </div>
-        </template>
-      </ResponsiveCard>
+          </template>
+        </ResponsiveCard>
+      </div>
+    </Teleport>
 
-      <!-- Status & Visibility -->
-      <ResponsiveCard title="การเผยแพร่" icon="heroicons:globe-alt" icon-color="text-green-500">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-           <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-100 dark:border-gray-800 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 min-h-[72px]" :class="{'border-green-500 bg-green-50/30 dark:bg-green-900/10': form.status === 'published'}">
-              <div class="flex items-center justify-center w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600">
-                <div class="w-3.5 h-3.5 rounded-full bg-green-500" v-if="form.status === 'published'"></div>
-              </div>
-              <input type="radio" v-model="form.status" value="published" class="hidden">
-               <div class="flex-1">
-                 <div class="font-bold text-gray-900 dark:text-white text-base">เผยแพร่</div>
-                 <div class="text-[11px] text-gray-500 dark:text-gray-400">ทุกคนสามารถค้นหาและเห็นรายวิชานี้</div>
-               </div>
-            </label>
-
-             <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-100 dark:border-gray-800 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 min-h-[72px]" :class="{'border-gray-400 bg-gray-50 dark:bg-gray-700/30': form.status === 'draft'}">
-              <div class="flex items-center justify-center w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600">
-                <div class="w-3.5 h-3.5 rounded-full bg-gray-400" v-if="form.status === 'draft'"></div>
-              </div>
-              <input type="radio" v-model="form.status" value="draft" class="hidden">
-              <div class="flex-1">
-                 <div class="font-bold text-gray-900 dark:text-white text-base">ฉบับร่าง</div>
-                 <div class="text-[11px] text-gray-500 dark:text-gray-400">เฉพาะผู้ดูแลรายวิชาเท่านั้นที่เห็น</div>
-               </div>
-            </label>
-
-            <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-100 dark:border-gray-800 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 min-h-[72px]" :class="{'border-orange-500 bg-orange-50/30 dark:bg-orange-900/10': form.status === 'archived'}">
-              <div class="flex items-center justify-center w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600">
-                <div class="w-3.5 h-3.5 rounded-full bg-orange-500" v-if="form.status === 'archived'"></div>
-              </div>
-              <input type="radio" v-model="form.status" value="archived" class="hidden">
-              <div class="flex-1">
-                 <div class="font-bold text-gray-900 dark:text-white text-base">เก็บถาวร</div>
-                 <div class="text-[11px] text-gray-500 dark:text-gray-400">ปิดรับสมาชิกและซ่อนจากการค้นหา</div>
-               </div>
-            </label>
-        </div>
-        <template #footer v-if="isSectionDirty('publishing')">
-          <div class="flex justify-end">
-            <button
-              type="button"
-              @click="saveSettingsSection('publishing', sectionFields.publishing)"
-              :disabled="isSavingSection('publishing')"
-              class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              <Icon v-if="isSavingSection('publishing')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-              <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
-              บันทึกการเผยแพร่
-            </button>
-          </div>
-        </template>
-      </ResponsiveCard>
-
-      <!-- Configuration -->
-      <ResponsiveCard title="การจัดการ" icon="heroicons:cog-6-tooth" icon-color="text-orange-500">
-        <div class="space-y-6">
-           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Auto Accept -->
-              <label class="flex items-center justify-between cursor-pointer min-h-[64px] gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800">
-                <div class="min-w-0">
-                  <div class="font-bold text-gray-900 dark:text-white text-base">อนุมัติสมาชิกอัตโนมัติ</div>
-                  <div class="text-[11px] text-gray-500 dark:text-gray-400">ไม่ต้องกดยืนยันคำขอ</div>
-                </div>
-                <div class="relative inline-flex items-center flex-shrink-0">
-                  <input v-model="form.auto_accept_members" type="checkbox" class="sr-only peer">
-                  <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
-                </div>
-              </label>
-              
-              <!-- Saleable (Enrollment Fee) -->
-              <label class="flex items-center justify-between cursor-pointer min-h-[64px] gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800">
-                <div class="min-w-0">
-                  <div class="font-bold text-gray-900 dark:text-white text-base">เปิดรับสมัครเรียน (แบบเก็บค่าธรรมเนียม)</div>
-                  <div class="text-[11px] text-gray-500 dark:text-gray-400">เก็บค่าธรรมเนียมสำหรับผู้ที่ต้องการเข้าเรียน</div>
-                </div>
-                <div class="relative inline-flex items-center flex-shrink-0">
-                  <input v-model="form.saleable" type="checkbox" class="sr-only peer">
-                  <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
-                </div>
-              </label>
-           </div>
-
-          <!-- Price Input -->
-          <div v-if="form.saleable" class="pt-2 animate-fade-in-down grid grid-cols-1 md:grid-cols-3 gap-5">
-             <div class="space-y-2">
-                <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ค่าธรรมเนียมสมัครเรียน (บาท)</label>
-                <div class="relative group">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors">
-                      <Icon icon="heroicons:currency-dollar" class="w-5 h-5" />
-                    </span>
-                    <input
-                      v-model.number="form.tuition_fees"
-                      type="number"
-                      min="0"
-                      placeholder="0.00"
-                      class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all dark:text-white text-base"
-                    />
-                </div>
-             </div>
-
-             <div class="space-y-2">
-                <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ส่วนลดค่าสมัคร</label>
-                <div class="flex gap-2">
-                  <div class="relative flex-1 group">
-                      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors">
-                         <Icon v-if="form.discount_type === 'fixed'" icon="heroicons:currency-dollar" class="w-5 h-5" />
-                         <Icon v-else icon="heroicons:receipt-percent" class="w-5 h-5" />
-                      </span>
-                      <input
-                        v-model.number="form.discount"
-                        type="number"
-                        min="0"
-                        :max="form.discount_type === 'percent' ? 100 : form.tuition_fees"
-                        placeholder="0"
-                        class="w-full pl-12 pr-3 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all dark:text-white text-base"
-                      />
-                  </div>
-                  <select
-                    v-model="form.discount_type"
-                    class="flex-shrink-0 w-20 sm:w-24 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-3 focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 text-sm font-bold dark:text-white appearance-none cursor-pointer text-center"
-                  >
-                    <option value="fixed">บาท</option>
-                    <option value="percent">%</option>
-                  </select>
-                </div>
-             </div>
-
-             <div class="flex flex-col justify-end pb-1">
-               <div class="flex justify-between items-center text-lg font-black bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
-                 <span class="text-gray-700 dark:text-gray-300 text-sm">ค่าสมัครสุทธิ:</span>
-                 <span class="text-emerald-600 dark:text-emerald-400">
-                   {{ netPrice.toLocaleString() }} บาท
-                 </span>
-               </div>
-             </div>
-          </div>
-        </div>
-        <template #footer v-if="isSectionDirty('management')">
-          <div class="flex justify-end">
-            <button
-              type="button"
-              @click="saveSettingsSection('management', sectionFields.management)"
-              :disabled="isSavingSection('management')"
-              class="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white font-bold rounded-xl shadow-lg hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              <Icon v-if="isSavingSection('management')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-              <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
-              บันทึกค่าเรียน
-            </button>
-          </div>
-        </template>
-      </ResponsiveCard>
-
-      <!-- Marketplace Settings -->
-      <ResponsiveCard title="ตลาด Master Copy" icon="mdi:content-copy" icon-color="text-amber-500">
-        <div class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- What is Master Copy -->
-            <div class="flex gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+    <!-- Right Sidebar: ตลาด Master Copy + Duplicate & Danger Zone -->
+    <Teleport to="#right-widgets-slot">
+      <div class="space-y-4" style="order: -1">
+        <!-- Marketplace Settings -->
+        <ResponsiveCard title="ตลาด Master Copy" icon="mdi:content-copy" icon-color="text-amber-500">
+          <div class="space-y-4">
+            <div class="flex gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
               <Icon icon="mdi:information-outline" class="w-5 h-5 flex-shrink-0 mt-0.5" />
               <span>
                 <strong>Master Copy</strong> คือต้นฉบับรายวิชาที่ครูหรือสถาบันอื่นสามารถซื้อไปเป็นฐานสำหรับการสอนของตัวเอง
-                — ต่างจากการสมัครเรียน ซึ่งนักเรียนจ่ายเงินเพื่อเข้าเรียนในรายวิชานี้โดยตรง
               </span>
             </div>
-
-            <div class="space-y-4">
-              <label class="flex items-center justify-between cursor-pointer min-h-[64px] gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800">
-                <div class="min-w-0">
-                  <div class="font-bold text-gray-900 dark:text-white text-base">เปิดขาย Master Copy</div>
-                  <div class="text-[11px] text-gray-500 dark:text-gray-400">ครู/สถาบันอื่นสามารถซื้อต้นฉบับไปใช้สอนได้</div>
+            <CourseToggleSetting
+              v-model="form.is_for_marketplace"
+              label="เปิดขาย Master Copy"
+              description="ครู/สถาบันอื่นสามารถซื้อต้นฉบับไปใช้สอนได้"
+              variant="amber"
+            />
+            <div v-if="form.is_for_marketplace" class="space-y-3 animate-fade-in-down">
+              <CourseSettingField label="ราคา Master Copy (บาท)" icon="heroicons:currency-dollar">
+                <input
+                  v-model.number="form.price"
+                  type="number"
+                  min="0"
+                  placeholder="0.00"
+                  class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all dark:text-white text-base"
+                />
+              </CourseSettingField>
+              <div class="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 flex gap-3">
+                <Icon icon="mdi:information-outline" class="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  ชำระด้วย <strong>Wallet</strong> หรือ <strong>แต้ม</strong> ได้
+                  <br/>1 บาท = 1,200 แต้ม
                 </div>
-                <div class="relative inline-flex items-center flex-shrink-0">
-                  <input v-model="form.is_for_marketplace" type="checkbox" class="sr-only peer">
-                  <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 dark:peer-focus:ring-amber-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-amber-500"></div>
-                </div>
-              </label>
-
-              <div v-if="form.is_for_marketplace" class="space-y-4">
-                <div class="space-y-2">
-                  <label class="text-sm font-bold text-gray-700 dark:text-gray-300">ราคา Master Copy (บาท)</label>
-                  <div class="relative group">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black group-focus-within:text-amber-500">฿</span>
-                    <input
-                      v-model.number="form.price"
-                      type="number"
-                      min="0"
-                      placeholder="0.00"
-                      class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all dark:text-white text-base"
-                    />
+              </div>
+              <div v-if="course?.total_sales > 0" class="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800">
+                <div class="text-[10px] font-black text-amber-600 uppercase mb-2 tracking-wider text-center">สถิติการขาย</div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="text-center">
+                    <div class="text-lg font-black text-slate-800 dark:text-white">{{ course?.total_sales || 0 }}</div>
+                    <div class="text-[10px] text-slate-500 font-bold">ครั้งที่ขายได้</div>
+                  </div>
+                  <div class="text-center border-l border-amber-200 dark:border-amber-800">
+                    <div class="text-lg font-black text-slate-800 dark:text-white truncate">
+                      ฿{{ (form.price * (course?.total_sales || 0)).toLocaleString() }}
+                    </div>
+                    <div class="text-[10px] text-slate-500 font-bold">รายได้รวม</div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          <div v-if="form.is_for_marketplace" class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-            <!-- Payment info -->
-            <div class="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 flex gap-3">
-              <Icon icon="mdi:information-outline" class="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <div>
-                ผู้ซื้อสามารถชำระด้วย <strong>เงิน Wallet</strong> หรือ <strong>แต้มสะสม</strong> หรือทั้งสองอย่างผสมกันได้
-                <br/>อัตราแลกเปลี่ยน: <strong>1 บาท = 1,200 แต้ม</strong> (กำหนดโดยระบบ)
-              </div>
+          <template #footer v-if="isSectionDirty('marketplace')">
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="saveSettingsSection('marketplace', sectionFields.marketplace)"
+                :disabled="isSavingSection('marketplace')"
+                class="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white font-bold rounded-xl shadow-lg hover:bg-amber-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Icon v-if="isSavingSection('marketplace')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกตลาด Master Copy
+              </button>
             </div>
+          </template>
+        </ResponsiveCard>
 
-            <!-- Preview -->
-            <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
-              <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-2 flex items-center gap-1">
-                <Icon icon="mdi:eye-outline" class="w-3.5 h-3.5" />
-                ตัวอย่างปุ่มในหน้ารายวิชา:
-              </div>
-              <div class="flex items-center gap-3 flex-wrap">
-                <span class="px-3 py-2 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 rounded-lg text-xs font-bold flex items-center gap-2">
-                  <Icon icon="mdi:cart-plus" class="w-4 h-4" />
-                  {{ form.price > 0 ? 'ซื้อ Master Copy' : 'รับ Master Copy ฟรี' }}
-                </span>
-                <div v-if="form.price > 0" class="flex items-center gap-2 text-xs font-bold">
-                  <span class="text-violet-600">฿{{ form.price.toLocaleString() }}</span>
-                  <span class="text-slate-400">หรือ</span>
-                  <span class="text-amber-600 flex items-center gap-1">
-                    <Icon icon="mdi:database" class="w-3.5 h-3.5" />
-                    {{ (form.price * 1200).toLocaleString() }} P
-                  </span>
-                </div>
-                <span v-else class="text-xs text-green-600 font-bold">ฟรี</span>
-              </div>
-            </div>
-
-            <!-- Sales Stats -->
-            <div v-if="course?.total_sales > 0"
-              class="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800">
-              <div class="text-[10px] font-black text-amber-600 uppercase mb-3 tracking-wider text-center">สถิติการขาย Master Copy</div>
-              <div class="grid grid-cols-2 gap-4">
-                <div class="text-center min-w-0">
-                  <div class="text-xl font-black text-slate-800 dark:text-white">{{ course?.total_sales || 0 }}</div>
-                  <div class="text-[10px] text-slate-500 font-bold">ครั้งที่ขายได้</div>
-                </div>
-                <div class="text-center min-w-0 border-l border-amber-200 dark:border-amber-800">
-                  <div class="text-xl font-black text-slate-800 dark:text-white truncate">
-                    {{ form.price_type === 'points' ? (form.price_points * course?.total_sales).toLocaleString() + ' P' : '฿' + (form.price * (course?.total_sales || 0)).toLocaleString() }}
-                  </div>
-                  <div class="text-[10px] text-slate-500 font-bold">รายได้รวม</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <template #footer v-if="isSectionDirty('marketplace')">
-          <div class="flex justify-end">
-            <button
-              type="button"
-              @click="saveSettingsSection('marketplace', sectionFields.marketplace)"
-              :disabled="isSavingSection('marketplace')"
-              class="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white font-bold rounded-xl shadow-lg hover:bg-amber-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              <Icon v-if="isSavingSection('marketplace')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-              <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
-              บันทึกตลาด Master Copy
-            </button>
-          </div>
-        </template>
-      </ResponsiveCard>
-
-      <!-- Duplicate & Danger Zone Group -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Duplicate Course -->
+        <!-- Duplicate & Danger Zone -->
         <ResponsiveCard title="คัดลอกรายวิชา" icon="heroicons:document-duplicate" icon-color="text-blue-500">
           <div class="space-y-4">
             <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -893,42 +887,65 @@ const deleteCourse = async () => {
           </div>
         </ResponsiveCard>
 
-        <!-- Danger Zone -->
-        <ResponsiveCard title="โซนอันตราย" icon="heroicons:exclamation-triangle" icon-color="text-red-500" variant="danger">
-          <div class="text-center py-2">
-            <p class="text-xs text-red-600/80 dark:text-red-400/80 mb-5 leading-relaxed">
-              การลบรายวิชาจะไม่สามารถกู้คืนได้ ข้อมูลทั้งหมดจะหายไปถาวร กรุณาตรวจสอบให้แน่ใจ
-            </p>
-             <button
-              type="button"
-              @click="deleteCourse"
-              class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-500/20 active:scale-95"
-            >
-              <Icon icon="fluent:delete-24-filled" class="w-5 h-5" />
-              ลบรายวิชาถาวร
-            </button>
+        <!-- Eligibility Settings -->
+        <ResponsiveCard title="สิทธิ์สอบ / สอบแก้" icon="heroicons:academic-cap-solid" icon-color="text-indigo-500">
+          <div class="space-y-4">
+            <div class="space-y-3">
+              <CourseSettingField label="ขาดเรียนได้ไม่เกิน (%)" icon="heroicons:user-minus" hint="หากขาดเกินเกณฑ์นี้ จะถูกระงับสิทธิ์สอบอัตโนมัติ">
+                <div class="relative">
+                  <input v-model.number="form.max_absence_percent" type="number" min="0" max="100" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all dark:text-white text-base" />
+                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                </div>
+              </CourseSettingField>
+              <CourseSettingField label="จำนวนคาบขั้นต่ำที่เริ่มตรวจ" icon="heroicons:list-bullet" hint="ระบบจะเริ่มคำนวณสิทธิ์สอบเมื่อมีการเช็คชื่อครบตามจำนวนคาบนี้">
+                <input v-model.number="form.min_sessions_for_eligibility_check" type="number" min="1" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all dark:text-white text-base" />
+              </CourseSettingField>
+            </div>
+            <div class="space-y-3">
+              <CourseToggleSetting v-model="form.allow_unlock_by_appeal" label="อนุญาตให้ยื่นคำร้อง" description="นักเรียนสามารถส่งเหตุผลขอปลดล็อคได้" variant="neutral" />
+              <CourseToggleSetting v-model="form.allow_self_unlock" label="ปลดล็อคอัตโนมัติ (Self Unlock)" description="นักเรียนสามารถกดปลดล็อคตัวเองได้ทันทีโดยไม่ต้องรออนุมัติ" variant="neutral" />
+              <CourseToggleSetting v-model="form.allow_unlock_by_points" label="ปลดล็อคด้วยแต้มสะสม" description="ใช้แต้มแลกสิทธิ์สอบแก้" variant="neutral" />
+              <div v-if="form.allow_unlock_by_points" class="pl-4 animate-fade-in-down">
+                <CourseSettingField label="จำนวนแต้มที่ใช้">
+                  <div class="relative">
+                    <input v-model.number="form.unlock_points_cost" type="number" min="0" placeholder="เช่น 500" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500/30 transition-all dark:text-white text-sm" />
+                    <Icon icon="mdi:database" class="absolute right-3 top-1/2 -translate-y-1/2 text-amber-500 w-4 h-4" />
+                  </div>
+                </CourseSettingField>
+              </div>
+              <CourseToggleSetting v-model="form.allow_unlock_by_reading" label="ปลดล็อคด้วยการอ่าน" description="อ่านเนื้อหาให้ครบเวลาที่กำหนด" variant="neutral" />
+              <div v-if="form.allow_unlock_by_reading" class="pl-4 animate-fade-in-down">
+                <CourseSettingField label="เวลาที่ต้องอ่าน (นาที)">
+                  <div class="relative">
+                    <input v-model.number="form.unlock_reading_minutes" type="number" min="1" placeholder="เช่น 60" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500/30 transition-all dark:text-white text-sm" />
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">นาที</span>
+                  </div>
+                </CourseSettingField>
+              </div>
+            </div>
           </div>
+          <template #footer v-if="isSectionDirty('eligibility')">
+            <div class="flex justify-end">
+              <button type="button" @click="saveSettingsSection('eligibility', sectionFields.eligibility)" :disabled="isSavingSection('eligibility')" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                <Icon v-if="isSavingSection('eligibility')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                บันทึกเกณฑ์สิทธิ์สอบ
+              </button>
+            </div>
+          </template>
         </ResponsiveCard>
+
+        <CourseDangerAction
+          label="โซนอันตราย"
+          icon="heroicons:exclamation-triangle"
+          description="การลบรายวิชาจะไม่สามารถกู้คืนได้ ข้อมูลทั้งหมดจะหายไปถาวร กรุณาตรวจสอบให้แน่ใจ"
+          buttonLabel="ลบรายวิชาถาวร"
+          variant="danger"
+          :loading="false"
+          @action="deleteCourse"
+        />
       </div>
-
-
-
-      <!-- Mobile Save Button (Sticky Bottom) -->
-      <div v-if="isAnySectionDirty"
-           class="fixed bottom-16 left-0 right-0 px-4 pt-3 pb-3 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 md:hidden z-40"
-           style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
-        <button
-          type="submit"
-          :disabled="isSaving"
-          class="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white font-black rounded-xl shadow-xl active:scale-95 transition-all disabled:opacity-50 min-h-[48px] text-base"
-        >
-          <Icon v-if="isSaving" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-          <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />
-          บันทึกการเปลี่ยนแปลงทั้งหมด
-        </button>
-      </div>
-
-    </form>
+    </Teleport>
   </div>
 </template>
 

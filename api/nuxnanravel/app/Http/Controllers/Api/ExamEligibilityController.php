@@ -8,13 +8,17 @@ use App\Models\CourseMember;
 use App\Models\ExamEligibilityOverride;
 use App\Services\AttendanceEligibilityService;
 use App\Services\PointsService;
-use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ExamEligibilityController extends Controller
 {
+    use AuthorizesRequests;
+
     protected AttendanceEligibilityService $eligibilityService;
+
     protected PointsService $pointsService;
 
     public function __construct(AttendanceEligibilityService $eligibilityService, PointsService $pointsService)
@@ -31,7 +35,7 @@ class ExamEligibilityController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลการลงทะเบียน',
@@ -46,9 +50,52 @@ class ExamEligibilityController extends Controller
         ]);
     }
 
+    public function getMyStatus(Request $request, Course $course): JsonResponse
+    {
+        $user = $request->user();
+
+        $member = $course->courseMembers()
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $member) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบข้อมูลการลงทะเบียน',
+            ], 403);
+        }
+
+        // Sync status with DB to keep cached values accurate
+        $this->eligibilityService->updateEligibilityStatus($member);
+        $member->refresh();
+
+        $result = $this->eligibilityService->canTakeExam($member);
+
+        // If the course allows self-unlock, inject that option when ineligible
+        if (! $result['can_take_exam'] && $course->allow_self_unlock) {
+            $result['unlock_options'][] = [
+                'method' => 'self',
+                'label' => 'ปลดล็อคทันที',
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'can_take_exam' => $result['can_take_exam'],
+                'status' => $result['eligibility_status'],
+                'reason' => implode(', ', $result['reasons']),
+                'absence_percent' => $result['attendance_stats']['absence_rate'] ?? null,
+                'unlock_options' => $result['unlock_options'],
+            ],
+        ]);
+    }
+
     public function getCourseSummary(Request $request, Course $course): JsonResponse
     {
-        $this->authorize('manage', $course);
+        if (! $course->isAdmin($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         $summary = $this->eligibilityService->getCourseEligibilitySummary($course);
 
@@ -60,7 +107,9 @@ class ExamEligibilityController extends Controller
 
     public function refreshCourseEligibility(Request $request, Course $course): JsonResponse
     {
-        $this->authorize('manage', $course);
+        if (! $course->isAdmin($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         $results = $this->eligibilityService->updateCourseEligibility($course);
 
@@ -69,6 +118,50 @@ class ExamEligibilityController extends Controller
             'message' => 'อัพเดทสถานะสิทธิ์สอบเรียบร้อย',
             'data' => $results,
         ]);
+    }
+
+    // ─── Self unlock ───
+
+    public function requestSelfUnlock(Request $request, Course $course): JsonResponse
+    {
+        $user = $request->user();
+
+        $member = $course->courseMembers()
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $member) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบข้อมูลการลงทะเบียน',
+            ], 404);
+        }
+
+        // Sync status with DB before checking to avoid stale eligibility state
+        $this->eligibilityService->updateEligibilityStatus($member);
+        $member->refresh();
+
+        if ($member->eligibility_status === 'unlocked' || $member->exam_eligible) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณมีสิทธิ์สอบอยู่แล้ว',
+            ], 400);
+        }
+
+        try {
+            $override = $this->eligibilityService->requestUnlockBySelf($member);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ปลดล็อคสิทธิ์สอบสำเร็จ',
+                'data' => $override,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
     }
 
     // ─── Points unlock ───
@@ -81,12 +174,16 @@ class ExamEligibilityController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลการลงทะเบียน',
             ], 404);
         }
+
+        // Sync status with DB before checking to avoid stale eligibility state
+        $this->eligibilityService->updateEligibilityStatus($member);
+        $member->refresh();
 
         if ($member->eligibility_status === 'unlocked' || $member->exam_eligible) {
             return response()->json([
@@ -124,7 +221,7 @@ class ExamEligibilityController extends Controller
                         "ปลดล็อคสิทธิ์สอบวิชา {$course->name}"
                     );
 
-                    if (!$transaction) {
+                    if (! $transaction) {
                         throw new \Exception('ไม่สามารถตัดคะแนนสะสมได้');
                     }
 
@@ -157,7 +254,7 @@ class ExamEligibilityController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลการลงทะเบียน',
@@ -251,12 +348,16 @@ class ExamEligibilityController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลการลงทะเบียน',
             ], 404);
         }
+
+        // Sync status with DB before checking to avoid stale eligibility state
+        $this->eligibilityService->updateEligibilityStatus($member);
+        $member->refresh();
 
         if ($member->eligibility_status === 'unlocked' || $member->exam_eligible) {
             return response()->json([
@@ -319,7 +420,9 @@ class ExamEligibilityController extends Controller
 
     public function getPendingRequests(Request $request, Course $course): JsonResponse
     {
-        $this->authorize('manage', $course);
+        if (! $course->isAdmin($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         $requests = ExamEligibilityOverride::where('course_id', $course->id)
             ->where('status', 'pending')
@@ -338,7 +441,9 @@ class ExamEligibilityController extends Controller
     public function approveRequest(Request $request, ExamEligibilityOverride $override): JsonResponse
     {
         $course = $override->course;
-        $this->authorize('manage', $course);
+        if (! $course->isAdmin($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         $request->validate([
             'reason' => 'required|string|max:500',
@@ -360,7 +465,9 @@ class ExamEligibilityController extends Controller
     public function rejectRequest(Request $request, ExamEligibilityOverride $override): JsonResponse
     {
         $course = $override->course;
-        $this->authorize('manage', $course);
+        if (! $course->isAdmin($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         $request->validate([
             'reason' => 'required|string|max:500',
@@ -383,7 +490,11 @@ class ExamEligibilityController extends Controller
 
     public function adminUnlock(Request $request, Course $course, CourseMember $member): JsonResponse
     {
-        $this->authorize('manage', $course);
+        if (! $course->isAdmin($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        abort_if($member->course_id !== $course->id, 403, 'นักเรียนคนนี้ไม่ได้อยู่ในรายวิชานี้');
 
         $request->validate([
             'reason' => 'required|string|max:500',
@@ -432,17 +543,63 @@ class ExamEligibilityController extends Controller
 
     public function bulkUnlock(Request $request, Course $course): JsonResponse
     {
-        $this->authorize('manage', $course);
+        if (! $course->isAdmin($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         $request->validate([
-            'member_ids' => 'required|array|min:1',
+            'member_ids' => 'nullable|array',
             'member_ids.*' => 'integer|exists:course_members,id',
+            'group_id' => 'nullable|integer|exists:course_groups,id',
+            'only_ineligible' => 'nullable|boolean',
             'reason' => 'required|string|max:500',
         ]);
 
+        // Resolve member IDs from group_id when provided
+        if ($request->filled('group_id')) {
+            $memberIds = CourseMember::where('course_id', $course->id)
+                ->where('group_id', $request->group_id)
+                ->pluck('id')
+                ->toArray();
+        } else {
+            $memberIds = $request->member_ids ?? [];
+        }
+
+        if (empty($memberIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบสมาชิกที่ต้องการปลดล็อค',
+            ], 422);
+        }
+
+        // Filter to only ineligible members when requested
+        if ($request->boolean('only_ineligible')) {
+            $memberIds = CourseMember::whereIn('id', $memberIds)
+                ->where('course_id', $course->id)
+                ->where(function ($query) {
+                    // Not yet unlocked: exam_eligible is false/null, or status is explicitly ineligible
+                    $query->where('exam_eligible', false)
+                        ->orWhereNull('exam_eligible');
+                })
+                ->where(function ($query) {
+                    $query->where('eligibility_status', 'ineligible')
+                        ->orWhereNull('eligibility_status');
+                })
+                ->pluck('id')
+                ->toArray();
+
+            if (empty($memberIds)) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'ไม่มีสมาชิกที่ไม่มีสิทธิ์สอบในกลุ่มนี้',
+                    'data' => ['success' => 0, 'skipped' => 0],
+                ]);
+            }
+        }
+
         $results = $this->eligibilityService->bulkUnlock(
             $course,
-            $request->member_ids,
+            $memberIds,
             $request->user(),
             $request->reason
         );
@@ -456,7 +613,9 @@ class ExamEligibilityController extends Controller
 
     public function bulkRevoke(Request $request, Course $course): JsonResponse
     {
-        $this->authorize('manage', $course);
+        if (! $course->isAdmin($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         $request->validate([
             'member_ids' => 'required|array|min:1',
@@ -482,7 +641,9 @@ class ExamEligibilityController extends Controller
 
     public function getAuditLog(Request $request, Course $course): JsonResponse
     {
-        $this->authorize('manage', $course);
+        if (! $course->isAdmin($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         $memberId = $request->query('member_id');
         $limit = min((int) ($request->query('limit', 50)), 200);

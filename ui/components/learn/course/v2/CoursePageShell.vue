@@ -6,6 +6,9 @@ import CourseTabBar from '~/components/learn/course/v2/CourseTabBar.vue'
 import CourseSidebar from '~/components/learn/course/v2/CourseSidebar.vue'
 import CourseInstructorWidget from '~/components/learn/course/CourseInstructorWidget.vue'
 import CourseProgressWidget from '~/components/learn/course/CourseProgressWidget.vue'
+import CourseLessonProgressWidget from '~/components/learn/course/CourseLessonProgressWidget.vue'
+import CourseAssignmentProgressWidget from '~/components/learn/course/CourseAssignmentProgressWidget.vue'
+import CourseQuizProgressWidget from '~/components/learn/course/CourseQuizProgressWidget.vue'
 import CourseInfoWidget from '~/components/learn/course/CourseInfoWidget.vue'
 
 // Widgets
@@ -37,6 +40,16 @@ const emit = defineEmits<{
 const route = useRoute()
 const courseId = computed(() => route.params.id as string)
 
+// Single Source of Truth for Progress
+const { 
+  lessons, 
+  assignments, 
+  quizzes, 
+  overallProgress, 
+  isLoading: isProgressLoading, 
+  error: progressError 
+} = useCourseLearningProgress(courseId.value, props.courseMemberOfAuth?.id)
+
 const layoutWidgets = useLayoutWidgets()
 
 const TABLE_ROUTES = [
@@ -55,6 +68,13 @@ const TABLE_ROUTES = [
 const isTableLayout = computed(() => {
   const name = route.name?.toString() || ''
   return TABLE_ROUTES.some(r => name.toLowerCase() === r.toLowerCase())
+})
+
+// Determine if we are on the main course info page
+const isCourseInfoRoute = computed(() => {
+  const path = route.path
+  const basePath = `/Learn/Courses/${courseId.value}`
+  return path === basePath || path === `${basePath}/`
 })
 
 watchEffect(() => {
@@ -79,6 +99,7 @@ onUnmounted(() => {
         :is-admin="isCourseAdmin" 
         :academy="academy"
         :course-member-of-auth="courseMemberOfAuth"
+        :hide-cover="!isCourseInfoRoute"
         @edit-name="$emit('edit-name')"
         @refresh="$emit('refresh')"
         @request-member="$emit('request-member')"
@@ -107,9 +128,9 @@ onUnmounted(() => {
     <Teleport to="#left-widgets-slot">
       <CourseInstructorWidget v-if="course" :course="course" :owner="course.user" />
       
-      <!-- Teleport CourseInfoWidget to left in table mode -->
+      <!-- Teleport CourseInfoWidget to left in table mode (ONLY on info route) -->
       <CourseInfoWidget
-        v-if="course && isTableLayout"
+        v-if="course && isTableLayout && isCourseInfoRoute"
         :course="course"
         :course-member-of-auth="courseMemberOfAuth"
         :is-course-admin="isCourseAdmin"
@@ -130,8 +151,9 @@ onUnmounted(() => {
     </Teleport>
 
     <Teleport to="#right-widgets-slot">
+      <!-- Course Info Widget (ONLY on info route) -->
       <CourseInfoWidget
-        v-if="course && !isTableLayout"
+        v-if="course && !isTableLayout && isCourseInfoRoute"
         :course="course"
         :course-member-of-auth="courseMemberOfAuth"
         :is-course-admin="isCourseAdmin"
@@ -145,7 +167,34 @@ onUnmounted(() => {
         @update:selected-group-id="$emit('update:selected-group-id', $event)"
       />
 
-      <CourseProgressWidget v-if="courseMemberOfAuth" :member="courseMemberOfAuth" :course-id="courseId" />
+      <!-- Learning Mode Progress Widgets (Sidebar) -->
+      <template v-if="courseMemberOfAuth && !isCourseInfoRoute">
+        <CourseProgressWidget 
+          :progress="overallProgress" 
+          :course-id="courseId" 
+          :is-loading="isProgressLoading"
+        />
+        
+        <CourseLessonProgressWidget 
+          :lessons="lessons" 
+          :is-loading="isProgressLoading"
+          :error="progressError"
+        />
+        
+        <CourseAssignmentProgressWidget 
+          v-if="assignments.length > 0 || isProgressLoading"
+          :assignments="assignments" 
+          :is-loading="isProgressLoading"
+          :error="progressError"
+        />
+        
+        <CourseQuizProgressWidget 
+          v-if="quizzes.length > 0 || isProgressLoading"
+          :quizzes="quizzes" 
+          :is-loading="isProgressLoading"
+          :error="progressError"
+        />
+      </template>
       
       <CourseSidebar 
         v-if="!isTableLayout"
@@ -162,4 +211,5 @@ onUnmounted(() => {
     <slot />
   </div>
 </template>
+
 

@@ -12,6 +12,7 @@ interface Member {
   member_code?: string
   order_number?: number | string
   achieved_score?: number
+  bonus_points?: number
   role?: number
   status?: number
   avatar?: string
@@ -20,6 +21,9 @@ interface Member {
   lessons_completed?: number
   assignments_submitted?: number
   attendance_rate?: number
+  eligibility_status?: 'eligible' | 'at_risk' | 'ineligible' | 'unlocked'
+  can_take_exam?: boolean
+  absence_percent?: number
   group?: {
     id: number
     name: string
@@ -74,6 +78,7 @@ const emit = defineEmits<{
   'assign-group': [{ memberId: number; groupId: number }]
   'approve-request': [member: Member]
   'reject-request': [member: Member]
+  'unlock-member': [member: Member]
 }>()
 
 const showGroupAssign = computed(() => props.availableGroups.length > 0)
@@ -137,6 +142,20 @@ const getStatusBadge = (status?: number) => {
     3: { label: 'ถูกระงับ', color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
   }
   return statuses[status || 1] || statuses[1]
+}
+
+// Eligibility badge helper
+const getEligibilityBadge = (member: Member) => {
+  switch (member.eligibility_status) {
+    case 'ineligible':
+      return { label: 'หมดสิทธิ์สอบ', classes: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-700', icon: 'heroicons:x-circle', clickable: true }
+    case 'at_risk':
+      return { label: 'กลุ่มเสี่ยง', classes: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-700', icon: 'heroicons:exclamation-triangle', clickable: false }
+    case 'unlocked':
+      return { label: 'ปลดล็อคแล้ว', classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-700', icon: 'heroicons:lock-open', clickable: false }
+    default:
+      return null
+  }
 }
 
 // Progress calculation for each member
@@ -308,6 +327,19 @@ watch(() => props.viewMode, (val) => {
                     {{ getRoleBadge(member.role).label }}
                   </span>
                 </div>
+              </div>
+
+              <!-- Eligibility Badge (Card View) -->
+              <div v-if="getEligibilityBadge(member) && !isPendingView" class="mt-2">
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                  :class="[getEligibilityBadge(member)!.classes, getEligibilityBadge(member)!.clickable && isCourseAdmin ? 'cursor-pointer hover:opacity-80 transition-opacity' : '']"
+                  :title="getEligibilityBadge(member)!.clickable && isCourseAdmin ? 'คลิกเพื่อปลดล็อค' : undefined"
+                  @click="getEligibilityBadge(member)!.clickable && isCourseAdmin ? emit('unlock-member', member) : undefined"
+                >
+                  <Icon :icon="getEligibilityBadge(member)!.icon" class="w-3 h-3" />
+                  {{ getEligibilityBadge(member)!.label }}
+                </span>
               </div>
 
               <!-- Group -->
@@ -616,6 +648,17 @@ watch(() => props.viewMode, (val) => {
                   </button>
                 </div>
                 <div v-else class="flex items-center justify-end gap-1">
+                  <!-- Eligibility Badge (Table) -->
+                  <span
+                    v-if="getEligibilityBadge(member)"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold mr-1"
+                    :class="[getEligibilityBadge(member)!.classes, getEligibilityBadge(member)!.clickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : '']"
+                    :title="getEligibilityBadge(member)!.clickable ? 'คลิกเพื่อปลดล็อค' : undefined"
+                    @click="getEligibilityBadge(member)!.clickable ? emit('unlock-member', member) : undefined"
+                  >
+                    <Icon :icon="getEligibilityBadge(member)!.icon" class="w-3 h-3" />
+                    {{ getEligibilityBadge(member)!.label }}
+                  </span>
                   <button
                     @click="emit('view-member', member)"
                     class="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"

@@ -222,6 +222,78 @@ watch(() => course?.value?.id, async (newId) => {
 
 import Swal from 'sweetalert2'
 
+// ── Eligibility Unlock ───────────────────────────────────────────────
+const toast = useToast()
+const showUnlockModal = ref(false)
+const unlockTargetMember = ref<any>(null)
+const unlockReason = ref('')
+const isUnlocking = ref(false)
+const isBulkUnlocking = ref(false)
+
+const handleUnlockMember = (member: any) => {
+  unlockTargetMember.value = member
+  unlockReason.value = ''
+  showUnlockModal.value = true
+}
+
+const submitUnlock = async () => {
+  if (!unlockTargetMember.value || !unlockReason.value.trim()) return
+  isUnlocking.value = true
+  try {
+    const res: any = await api.post(
+      `/api/courses/${course?.value?.id}/eligibility/members/${unlockTargetMember.value.id}/unlock`,
+      { reason: unlockReason.value }
+    )
+    if (res.success !== false) {
+      toast.success('ปลดล็อคสิทธิ์สอบแล้ว')
+      showUnlockModal.value = false
+      await courseGroupStore.fetchGroups(course!.value.id, true)
+    }
+  } catch (err) {
+    console.error('Failed to unlock member:', err)
+    toast.error('ไม่สามารถปลดล็อคได้')
+  } finally {
+    isUnlocking.value = false
+  }
+}
+
+// ── Group Bulk Unlock ────────────────────────────────────────────────
+const showBulkUnlockConfirm = ref(false)
+const bulkUnlockGroupReason = ref('')
+const bulkUnlockGroupId = computed<number | null>(() => {
+  if (activeGroupTab.value > 0) {
+    return courseGroupStore.groups[activeGroupTab.value - 1]?.id ?? null
+  }
+  return null
+})
+
+const handleBulkUnlockGroup = () => {
+  bulkUnlockGroupReason.value = ''
+  showBulkUnlockConfirm.value = true
+}
+
+const submitBulkUnlockGroup = async () => {
+  if (!bulkUnlockGroupId.value || !bulkUnlockGroupReason.value.trim()) return
+  isBulkUnlocking.value = true
+  try {
+    const res: any = await api.post(
+      `/api/courses/${course?.value?.id}/eligibility/bulk-unlock`,
+      { group_id: bulkUnlockGroupId.value, only_ineligible: true, reason: bulkUnlockGroupReason.value }
+    )
+    if (res.success !== false) {
+      toast.success('ปลดล็อคสิทธิ์สอบสำหรับกลุ่มนี้แล้ว')
+      showBulkUnlockConfirm.value = false
+      await courseGroupStore.fetchGroups(course!.value.id, true)
+    }
+  } catch (err) {
+    console.error('Failed to bulk unlock group:', err)
+    toast.error('ไม่สามารถปลดล็อคแบบกลุ่มได้')
+  } finally {
+    isBulkUnlocking.value = false
+  }
+}
+// ─────────────────────────────────────────────────────────────────────
+
 const handleRequestUnmember = async ({ memberId, memberName }: { memberId: number, memberName: string }) => {
     const result = await Swal.fire({
         title: 'ยืนยันการลบสมาชิก?',
@@ -589,6 +661,17 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                         </div>
                     </div>
 
+                    <!-- Group Bulk Unlock button (admin + specific group tab) -->
+                    <div v-if="isCourseAdmin && activeGroupTab > 0" class="flex justify-end mb-3">
+                        <button
+                            @click="handleBulkUnlockGroup"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                        >
+                            <Icon icon="heroicons:lock-open" class="w-4 h-4" />
+                            ปลดล็อคทั้งกลุ่ม (เฉพาะหมดสิทธิ์)
+                        </button>
+                    </div>
+
                     <!-- Card/Table View using new component (used for ALL tabs including ungrouped) -->
                     <MemberListView
                         v-if="effectiveViewMode === 'card' || effectiveViewMode === 'table'"
@@ -605,12 +688,13 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                         @assign-group="({ memberId, groupId }) => assignGroupToMember(memberId, groupId)"
                         @approve-request="handleApproveRequest"
                         @reject-request="handleRejectRequest"
+                        @unlock-member="handleUnlockMember"
                     />
 
                     <!-- List View (original MemberCard) -->
                     <ul v-else class="flex flex-col gap-3">
-                        <MemberCard 
-                            v-for="(member, index) in members" 
+                        <MemberCard
+                            v-for="(member, index) in members"
                             :key="member.id"
                             :member="member"
                             :data-index="index"
@@ -625,6 +709,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                             @assign-group="({ memberId, groupId }) => assignGroupToMember(memberId, groupId)"
                             @approve-request="handleApproveRequest"
                             @reject-request="handleRejectRequest"
+                            @unlock-member="handleUnlockMember"
                         />
                     </ul>
                 </div>
@@ -643,5 +728,111 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                 </div>
             </div>
         </div>
+    <!-- Single Unlock Modal -->
+    <Teleport to="body">
+        <div v-if="showUnlockModal" class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-screen items-center justify-center p-4">
+                <div class="fixed inset-0 bg-black/50" @click="showUnlockModal = false"></div>
+                <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <Icon icon="heroicons:lock-open" class="w-5 h-5 text-blue-500" />
+                        ปลดล็อคสิทธิ์สอบ
+                    </h3>
+
+                    <div class="mb-4 flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <img
+                            :src="unlockTargetMember?.user?.avatar || unlockTargetMember?.avatar || '/images/default-avatar.png'"
+                            class="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white text-sm">
+                                {{ unlockTargetMember?.member_name || unlockTargetMember?.user?.name || '-' }}
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ unlockTargetMember?.member_code || unlockTargetMember?.user?.email || '' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            เหตุผลในการปลดล็อค <span class="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            v-model="unlockReason"
+                            rows="3"
+                            placeholder="ระบุเหตุผล..."
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 text-sm"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button
+                            @click="showUnlockModal = false"
+                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            @click="submitUnlock"
+                            :disabled="!unlockReason.trim() || isUnlocking"
+                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            <Icon v-if="isUnlocking" icon="heroicons:arrow-path" class="w-4 h-4 mr-2 animate-spin inline" />
+                            ปลดล็อค
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Group Bulk Unlock Confirm Modal -->
+    <Teleport to="body">
+        <div v-if="showBulkUnlockConfirm" class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex min-h-screen items-center justify-center p-4">
+                <div class="fixed inset-0 bg-black/50" @click="showBulkUnlockConfirm = false"></div>
+                <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                        <Icon icon="heroicons:lock-open" class="w-5 h-5 text-blue-500" />
+                        ปลดล็อคทั้งกลุ่ม
+                    </h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        ปลดล็อคสิทธิ์สอบสำหรับสมาชิกที่หมดสิทธิ์ทั้งหมดในกลุ่ม
+                        <strong class="text-gray-700 dark:text-gray-200">{{ courseGroupStore.groups[activeGroupTab - 1]?.name }}</strong>
+                    </p>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            เหตุผล <span class="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            v-model="bulkUnlockGroupReason"
+                            rows="3"
+                            placeholder="ระบุเหตุผลในการปลดล็อคกลุ่ม..."
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 text-sm"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button
+                            @click="showBulkUnlockConfirm = false"
+                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            @click="submitBulkUnlockGroup"
+                            :disabled="!bulkUnlockGroupReason.trim() || isBulkUnlocking"
+                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            <Icon v-if="isBulkUnlocking" icon="heroicons:arrow-path" class="w-4 h-4 mr-2 animate-spin inline" />
+                            ยืนยันปลดล็อค
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Teleport>
     </div>
 </template>
