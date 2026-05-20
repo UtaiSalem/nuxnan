@@ -17,6 +17,10 @@ import FavoriteCoursesWidget from '~/components/widgets/FavoriteCoursesWidget.vu
 import MemberedCoursesWidget from '~/components/widgets/MemberedCoursesWidget.vue'
 import MyCoursesWidget from '~/components/widgets/MyCoursesWidget.vue'
 
+// Feed-specific sidebars
+import CourseFeedLeftSidebar from '~/components/learn/course/v2/CourseFeedLeftSidebar.vue'
+import CourseFeedRightSidebar from '~/components/learn/course/v2/CourseFeedRightSidebar.vue'
+
 const props = defineProps<{
   course: any
   academy: any
@@ -77,6 +81,14 @@ const isCourseInfoRoute = computed(() => {
   return path === basePath || path === `${basePath}/`
 })
 
+const isCourseBoardRoute = computed(() => {
+  const path = route.path
+  const basePath = `/Learn/Courses/${courseId.value}`
+  return path === `${basePath}/feeds` || path === `${basePath}/feeds/`
+})
+
+const shouldShowCourseInfoWidget = computed(() => isCourseInfoRoute.value || isCourseBoardRoute.value)
+
 watchEffect(() => {
   layoutWidgets.value.hasLeftWidgets = true
   layoutWidgets.value.hasRightWidgets = !isTableLayout.value
@@ -126,85 +138,101 @@ onUnmounted(() => {
     </Teleport>
 
     <Teleport to="#left-widgets-slot">
-      <CourseInstructorWidget v-if="course" :course="course" :owner="course.user" />
-      
-      <!-- Teleport CourseInfoWidget to left in table mode (ONLY on info route) -->
-      <CourseInfoWidget
-        v-if="course && isTableLayout && isCourseInfoRoute"
+      <!-- Feed-specific left sidebar -->
+      <CourseFeedLeftSidebar
+        v-if="isCourseBoardRoute && course"
         :course="course"
-        :course-member-of-auth="courseMemberOfAuth"
         :is-course-admin="isCourseAdmin"
-        :course-groups="courseGroups"
-        :is-enrolling="isEnrolling"
-        :is-toggling-favorite="isTogglingFavorite"
-        :is-wishlisted="isWishlisted"
-        @enroll="$emit('request-member')"
-        @toggle-favorite="$emit('toggle-favorite')"
-        @purchase="$emit('purchase-course')"
-        @update:selected-group-id="$emit('update:selected-group-id', $event)"
       />
 
-      <template v-if="!isTableLayout">
-        <RecentlyViewedCoursesWidget />
-        <FavoriteCoursesWidget />
+      <!-- Default left widgets (non-feed pages) -->
+      <template v-if="!isCourseBoardRoute">
+        <CourseInstructorWidget v-if="course" :course="course" :owner="course.user" />
+
+        <CourseInfoWidget
+          v-if="course && isTableLayout && shouldShowCourseInfoWidget"
+          :course="course"
+          :course-member-of-auth="courseMemberOfAuth"
+          :is-course-admin="isCourseAdmin"
+          :course-groups="courseGroups"
+          :is-enrolling="isEnrolling"
+          :is-toggling-favorite="isTogglingFavorite"
+          :is-wishlisted="isWishlisted"
+          @enroll="$emit('request-member')"
+          @toggle-favorite="$emit('toggle-favorite')"
+          @purchase="$emit('purchase-course')"
+          @update:selected-group-id="$emit('update:selected-group-id', $event)"
+        />
+
+        <template v-if="!isTableLayout">
+          <RecentlyViewedCoursesWidget />
+          <FavoriteCoursesWidget />
+        </template>
       </template>
     </Teleport>
 
     <Teleport to="#right-widgets-slot">
-      <!-- Course Info Widget (ONLY on info route) -->
-      <CourseInfoWidget
-        v-if="course && !isTableLayout && isCourseInfoRoute"
+      <!-- Feed-specific right sidebar -->
+      <CourseFeedRightSidebar
+        v-if="isCourseBoardRoute && course"
         :course="course"
-        :course-member-of-auth="courseMemberOfAuth"
-        :is-course-admin="isCourseAdmin"
-        :course-groups="courseGroups"
-        :is-enrolling="isEnrolling"
-        :is-toggling-favorite="isTogglingFavorite"
-        :is-wishlisted="isWishlisted"
-        @enroll="$emit('request-member')"
-        @toggle-favorite="$emit('toggle-favorite')"
-        @purchase="$emit('purchase-course')"
-        @update:selected-group-id="$emit('update:selected-group-id', $event)"
       />
 
-      <!-- Learning Mode Progress Widgets (Sidebar) -->
-      <template v-if="courseMemberOfAuth && !isCourseInfoRoute">
-        <CourseProgressWidget 
-          :progress="overallProgress" 
-          :course-id="courseId" 
-          :is-loading="isProgressLoading"
+      <!-- Default right widgets (non-feed pages) -->
+      <template v-if="!isCourseBoardRoute">
+        <CourseInfoWidget
+          v-if="course && !isTableLayout && shouldShowCourseInfoWidget"
+          :course="course"
+          :course-member-of-auth="courseMemberOfAuth"
+          :is-course-admin="isCourseAdmin"
+          :course-groups="courseGroups"
+          :is-enrolling="isEnrolling"
+          :is-toggling-favorite="isTogglingFavorite"
+          :is-wishlisted="isWishlisted"
+          @enroll="$emit('request-member')"
+          @toggle-favorite="$emit('toggle-favorite')"
+          @purchase="$emit('purchase-course')"
+          @update:selected-group-id="$emit('update:selected-group-id', $event)"
         />
-        
-        <CourseLessonProgressWidget 
-          :lessons="lessons" 
-          :is-loading="isProgressLoading"
-          :error="progressError"
+
+        <template v-if="courseMemberOfAuth && !isCourseInfoRoute">
+          <CourseProgressWidget
+            :progress="overallProgress"
+            :course-id="courseId"
+            :is-loading="isProgressLoading"
+          />
+
+          <CourseLessonProgressWidget
+            :lessons="lessons"
+            :is-loading="isProgressLoading"
+            :error="progressError"
+          />
+
+          <CourseAssignmentProgressWidget
+            v-if="assignments.length > 0 || isProgressLoading"
+            :assignments="assignments"
+            :is-loading="isProgressLoading"
+            :error="progressError"
+          />
+
+          <CourseQuizProgressWidget
+            v-if="quizzes.length > 0 || isProgressLoading"
+            :quizzes="quizzes"
+            :is-loading="isProgressLoading"
+            :error="progressError"
+          />
+        </template>
+
+        <CourseSidebar
+          v-if="!isTableLayout"
+          :course="course"
+          :is-admin="isCourseAdmin"
+          :course-member-of-auth="courseMemberOfAuth"
         />
-        
-        <CourseAssignmentProgressWidget 
-          v-if="assignments.length > 0 || isProgressLoading"
-          :assignments="assignments" 
-          :is-loading="isProgressLoading"
-          :error="progressError"
-        />
-        
-        <CourseQuizProgressWidget 
-          v-if="quizzes.length > 0 || isProgressLoading"
-          :quizzes="quizzes" 
-          :is-loading="isProgressLoading"
-          :error="progressError"
-        />
+
+        <MemberedCoursesWidget />
+        <MyCoursesWidget />
       </template>
-      
-      <CourseSidebar 
-        v-if="!isTableLayout"
-        :course="course" 
-        :is-admin="isCourseAdmin" 
-        :course-member-of-auth="courseMemberOfAuth" 
-      />
-
-      <MemberedCoursesWidget />
-      <MyCoursesWidget />
     </Teleport>
 
     <!-- Main Content Area -->

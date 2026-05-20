@@ -65,18 +65,18 @@ const tabs = computed(() => {
   const list = [
     { id: 12, name: 'ข้อมูล', icon: 'heroicons:information-circle', href: `/Learn/Courses/${props.courseId}`, show: true },
     { id: 11, name: 'กระดาน', icon: 'codicon:feedback', href: `/Learn/Courses/${props.courseId}/feeds`, show: true },
-    { id: 7, name: 'เข้าเรียน', icon: 'tabler:calendar-user', href: `/Learn/Courses/${props.courseId}/attendances`, show: props.isCourseAdmin || props.courseMemberOfAuth },
+    { id: 4, name: 'สมาชิก', icon: 'ph:users-four-bold', href: `/Learn/Courses/${props.courseId}/members`, show: props.isCourseAdmin || !!props.courseMemberOfAuth },
     { id: 1, name: 'บทเรียน', icon: 'icon-park-outline:view-grid-detail', href: `/Learn/Courses/${props.courseId}/lessons`, show: true },
+    { id: 7, name: 'เข้าเรียน', icon: 'tabler:calendar-user', href: `/Learn/Courses/${props.courseId}/attendances`, show: props.isCourseAdmin || !!props.courseMemberOfAuth },
     { id: 2, name: 'ภาระงาน', icon: 'material-symbols:assignment-add-outline', href: `/Learn/Courses/${props.courseId}/assignments`, show: true },
-    { id: 3, name: 'ทดสอบ', icon: 'healthicons:i-exam-qualification-outline', href: `/Learn/Courses/${props.courseId}/quizzes`, show: props.courseMemberOfAuth || props.isCourseAdmin },
+    { id: 3, name: 'ทดสอบ', icon: 'healthicons:i-exam-qualification-outline', href: `/Learn/Courses/${props.courseId}/quizzes`, show: !!props.courseMemberOfAuth || props.isCourseAdmin },
     { id: 14, name: 'บันทึกคะแนน', icon: 'mdi:clipboard-text-outline', href: `/Learn/Courses/${props.courseId}/external-scores`, show: props.isCourseAdmin },
     { id: 15, name: 'สมุดเกรด', icon: 'fluent:text-grammar-checkmark-24-filled', href: `/Learn/Courses/${props.courseId}/gradebook`, show: props.isCourseAdmin },
     { id: 5, name: 'กลุ่ม', icon: 'heroicons-outline:user-group', href: `/Learn/Courses/${props.courseId}/groups`, show: true },
-    { id: 4, name: 'สมาชิก', icon: 'ph:users-four', href: `/Learn/Courses/${props.courseId}/members`, show: props.courseMemberOfAuth !== null },
     { id: 8, name: 'ตั้งค่า', icon: 'mdi-light:settings', href: `/Learn/Courses/${props.courseId}/settings`, show: props.isCourseAdmin },
-    { id: 9, name: 'ผลเรียน', icon: 'mdi:graph-box-plus-outline', href: `/Learn/Courses/${props.courseId}/my-progress`, show: !props.isCourseAdmin && props.courseMemberOfAuth },
-    { id: 10, name: 'ผลเรียน', icon: 'mdi:graph-box-plus-outline', href: `/Learn/Courses/${props.courseId}/progress`, show: props.isCourseAdmin },
     { id: 13, name: 'ผู้ดูแล', icon: 'eos-icons:admin-outlined', href: `/Learn/Courses/${props.courseId}/admin`, show: props.isCourseAdmin },
+    { id: 9, name: 'ผลเรียน', icon: 'mdi:graph-box-plus-outline', href: `/Learn/Courses/${props.courseId}/my-progress`, show: !props.isCourseAdmin && !!props.courseMemberOfAuth },
+    { id: 10, name: 'ผลเรียน', icon: 'mdi:graph-box-plus-outline', href: `/Learn/Courses/${props.courseId}/progress`, show: props.isCourseAdmin },
   ]
   return list.filter(t => t.show)
 })

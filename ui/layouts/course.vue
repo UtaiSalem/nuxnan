@@ -179,31 +179,30 @@ const logout = async () => {
     <!-- CONTENT AREA -->
     <main class="pt-16 min-h-screen">
       <!-- Full Width Hero Slot -->
-      <section class="w-full">
+      <section id="hero-slot" class="w-full">
         <slot name="hero" />
       </section>
 
       <!-- Sticky TabBar Slot -->
-      <nav class="sticky top-16 z-30 shadow-md" :class="isDarkMode ? 'bg-vikinger-dark-100 border-b border-vikinger-dark-50/30' : 'bg-white border-b border-gray-200'">
+      <nav id="tabs-slot" class="sticky top-16 z-30 shadow-md" :class="isDarkMode ? 'bg-vikinger-dark-100 border-b border-vikinger-dark-50/30' : 'bg-white border-b border-gray-200'">
         <div class="max-w-screen-2xl mx-auto">
           <slot name="tabs" />
         </div>
       </nav>
 
-      <!-- 2-Column Body -->
+      <!-- 3-Column Body -->
       <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
-        <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
-          <!-- Sidebar (Left) -->
-          <aside class="lg:w-[280px] xl:w-[320px] flex-shrink-0">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          <!-- Left Sidebar (3/12) -->
+          <aside class="lg:col-span-3">
             <!-- Mobile Drawer Backdrop -->
             <div v-if="isMobileSidebarOpen" class="fixed inset-0 bg-black/50 z-40 lg:hidden" @click="toggleMobileSidebar"></div>
-            
-            <!-- Sidebar Content -->
-            <div 
+
+            <div
               class="lg:block lg:sticky lg:top-36"
               :class="[
-                isMobileSidebarOpen 
-                  ? 'fixed left-0 top-0 h-screen w-72 z-50 p-6 overflow-y-auto transform translate-x-0 transition-transform duration-300' 
+                isMobileSidebarOpen
+                  ? 'fixed left-0 top-0 h-screen w-72 z-50 p-6 overflow-y-auto transform translate-x-0 transition-transform duration-300'
                   : 'fixed left-0 top-0 h-screen w-72 z-50 p-6 transform -translate-x-full transition-transform duration-300 lg:relative lg:h-auto lg:w-full lg:p-0 lg:transform-none'
               , isDarkMode ? 'bg-vikinger-dark-100' : 'bg-white lg:bg-transparent']"
             >
@@ -211,14 +210,26 @@ const logout = async () => {
                 <span class="font-bold text-lg" :class="isDarkMode ? 'text-white' : 'text-gray-900'">เมนูรายวิชา</span>
                 <button @click="toggleMobileSidebar"><Icon icon="fluent:dismiss-24-regular" class="w-6 h-6" /></button>
               </div>
-              <slot name="sidebar" />
+
+              <div id="left-widgets-slot" class="flex flex-col gap-6">
+                <slot name="sidebar" />
+              </div>
             </div>
           </aside>
 
-          <!-- Main Content (Right) -->
-          <div class="flex-1 min-w-0">
+          <!-- Center Content (6/12) -->
+          <div class="lg:col-span-6 min-w-0">
             <slot />
           </div>
+
+          <!-- Right Sidebar (3/12) -->
+          <aside class="hidden lg:block lg:col-span-3">
+            <div class="lg:sticky lg:top-36">
+              <div id="right-widgets-slot" class="flex flex-col gap-6">
+                <slot name="rightSidebar" />
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </main>
