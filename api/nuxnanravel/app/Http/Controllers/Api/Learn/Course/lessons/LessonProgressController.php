@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Learn\Course\lessons;
 
 use App\Models\Lesson;
 use App\Models\LessonProgress;
+use App\Models\CourseMember;
+use App\Services\AttendanceEligibilityService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
@@ -67,6 +69,16 @@ class LessonProgressController extends Controller
 
         $progress->markAsCompleted();
 
+        // Auto-unlock if there is a pending reading override and requirements are met
+        $member = CourseMember::where('user_id', $user->id)
+            ->where('course_id', $lesson->course_id)
+            ->first();
+
+        if ($member) {
+            $service = app(AttendanceEligibilityService::class);
+            $service->processReadingLessonUnlockIfCompleted($member);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'ยินดีด้วย! คุณเรียนบทเรียนนี้จบแล้ว',
@@ -106,6 +118,16 @@ class LessonProgressController extends Controller
                 $progress->update(['started_at' => now()]);
             }
             $progress->markAsCompleted();
+
+            // Auto-unlock if there is a pending reading override and requirements are met
+            $member = CourseMember::where('user_id', $user->id)
+                ->where('course_id', $lesson->course_id)
+                ->first();
+
+            if ($member) {
+                $service = app(AttendanceEligibilityService::class);
+                $service->processReadingLessonUnlockIfCompleted($member);
+            }
 
             return response()->json([
                 'success' => true,

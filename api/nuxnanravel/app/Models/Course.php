@@ -95,6 +95,9 @@ class Course extends Model
         'unlock_points_cost',
         'allow_unlock_by_reading',
         'unlock_reading_minutes',
+        'unlock_reading_mode',
+        'unlock_reading_lesson_count',
+        'unlock_reading_lesson_ids',
         'min_sessions_for_eligibility_check',
         'allow_unlock_by_appeal',
         'allow_self_unlock',
@@ -143,6 +146,9 @@ class Course extends Model
         'unlock_points_cost' => 'integer',
         'allow_unlock_by_reading' => 'boolean',
         'unlock_reading_minutes' => 'integer',
+        'unlock_reading_mode' => 'string',
+        'unlock_reading_lesson_count' => 'integer',
+        'unlock_reading_lesson_ids' => 'array',
         'allow_self_unlock' => 'boolean',
     ];
 

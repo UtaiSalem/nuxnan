@@ -39,19 +39,24 @@ const timerInterval = ref<any>(null)
 const durationInterval = ref<any>(null)
 
 const formattedTime = computed(() => {
-  const minutes = Math.floor(timeElapsed.value / 60)
+  const hours = Math.floor(timeElapsed.value / 3600)
+  const minutes = Math.floor((timeElapsed.value % 3600) / 60)
   const seconds = timeElapsed.value % 60
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+
+  return [
+    hours.toString().padStart(2, '0'),
+    minutes.toString().padStart(2, '0'),
+    seconds.toString().padStart(2, '0'),
+  ].join(':')
 })
 
-    // Fetch Data
-    const initQuiz = async () => {
+// Fetch Data
+const initQuiz = async () => {
       try {
         const res = await api.get(`/api/courses/${courseId}/quizzes/${quizId}`)
-        quiz.value = res.quiz
         eligibility.value = res.eligibility
         questionsHiddenReason.value = res.questions_hidden_reason
-        
+
         // Guard: Not eligible to take exam
         if (res.canTakeExam === false) {
            await Swal.fire({
@@ -64,6 +69,8 @@ const formattedTime = computed(() => {
            router.replace(`/courses/${courseId}/quizzes/${quizId}`)
            return
         }
+
+        quiz.value = res.quiz
 
         // Handle existing result
         if (quiz.value.current_result) {
@@ -200,14 +207,17 @@ onBeforeRouteLeave((to, from, next) => {
 });
 
 const finishAttempt = async () => {
-    // 1. Confirm intention to stop (optional, or just single click as requested)
-    // User requested "No validation/sending answer anymore" and just "Stop Timer".
-    // I will add a simple confirmation just in case they misclicked "Finish", but NOT "Are you sure you want to submit?".
-    // Actually, user said "When done... NO need to press Send Answer again... Just press Pause Time".
-    // So let's make it a "Finish / Stop Timer" button.
-    
-    // Set submitting flag to bypass route guard
     isSubmitting.value = true
+    
+    // หยุด timer ทันทีก่อน finalize — ป้องกัน race condition และ timer เดินระหว่าง Swal
+    if (timerInterval.value) {
+        clearInterval(timerInterval.value)
+        timerInterval.value = null
+    }
+    if (durationInterval.value) {
+        clearInterval(durationInterval.value)
+        durationInterval.value = null
+    }
     
     try {
         if (!quizResult.value || !quizResult.value.id) {
@@ -251,7 +261,7 @@ const finishAttempt = async () => {
       <div v-else-if="quiz" class="relative">
           <!-- Sticky Header with Timer & Actions -->
           <div class="sticky top-2 sm:top-4 z-20 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-xl border border-blue-100 dark:border-gray-700 p-2 sm:p-4 mb-4 sm:mb-6 flex flex-col sm:flex-row items-center justify-between transition-all duration-300 gap-2 sm:gap-4">
-              <div class="flex items-center justify-between w-full sm:w-auto px-1 sm:px-0">
+              <div class="flex items-center justify-between w-full sm:flex-1 sm:min-w-0 px-1 sm:px-0">
                   <div class="flex items-center gap-2 overflow-hidden">
                       <div class="w-1.5 h-6 bg-blue-600 rounded-full hidden sm:block"></div>
                       <h1 class="text-sm sm:text-lg font-bold text-gray-800 dark:text-white truncate max-w-[180px] sm:max-w-md">
@@ -265,17 +275,22 @@ const finishAttempt = async () => {
                   </div>
               </div>
 
-              <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2 sm:gap-4 border-t sm:border-t-0 border-gray-100 dark:border-gray-700 pt-2 sm:pt-0">
+              <div class="flex items-center justify-between sm:justify-end w-full sm:shrink-0 gap-2 sm:gap-4 border-t sm:border-t-0 border-gray-100 dark:border-gray-700 pt-2 sm:pt-0">
                    <!-- Answered Count (Desktop) -->
                    <div class="hidden sm:flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-gray-600">
                        <Icon icon="fluent:checkbox-checked-24-filled" class="w-5 h-5 text-green-500" />
                        <span class="whitespace-nowrap">ตอบแล้ว <span class="font-bold text-gray-900 dark:text-white">{{ answeredCount }}</span> / {{ normalizedQuestions.length }} ข้อ</span>
                    </div>
 
-                   <div class="flex items-center gap-2 w-full sm:w-auto">
+                   <div class="flex items-center justify-between xs:justify-end gap-2 w-full sm:w-auto min-w-0">
                         <!-- Timer Card -->
-                        <div class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-5 py-1.5 sm:py-2.5 bg-gradient-to-r from-blue-700 to-blue-500 text-white rounded-xl font-mono font-bold text-lg sm:text-xl shadow-lg shadow-blue-200 dark:shadow-none ring-2 ring-blue-100 dark:ring-blue-900/50">
-                            <Icon icon="fluent:timer-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+                        <div :class="[
+                            'shrink-0 inline-flex h-10 sm:h-12 w-[136px] sm:w-[156px] items-center justify-center gap-1.5 px-3 rounded-xl font-mono font-bold text-base sm:text-xl tabular-nums whitespace-nowrap text-white shadow-lg ring-2 transition-all duration-300',
+                            isSubmitting 
+                                ? 'bg-gray-500 ring-gray-200 dark:ring-gray-700 opacity-75' 
+                                : 'bg-gradient-to-r from-blue-700 to-blue-500 shadow-blue-200 dark:shadow-none ring-blue-100 dark:ring-blue-900/50'
+                        ]">
+                            <Icon icon="fluent:timer-24-filled" :class="['w-5 h-5 sm:w-6 sm:h-6', !isSubmitting && 'animate-pulse']" />
                             {{ formattedTime }}
                         </div>
 
@@ -283,9 +298,9 @@ const finishAttempt = async () => {
                         <button 
                            @click="finishAttempt"
                            :disabled="isSubmitting"
-                           class="px-3 sm:px-6 py-1.5 sm:py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-bold shadow-lg shadow-red-200 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2 border-b-4 border-red-800 hover:border-b-2 hover:translate-y-[2px]"
+                           class="shrink-0 px-3 sm:px-6 py-1.5 sm:py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-bold shadow-lg shadow-red-200 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2 border-b-4 border-red-800 hover:border-b-2 hover:translate-y-[2px]"
                         >
-                            <span class="text-sm sm:text-base hidden xs:inline">สิ้นสุดการสอบ</span>
+                            <span class="text-sm sm:text-base hidden sm:inline">สิ้นสุดการสอบ</span>
                             <Icon icon="fluent:stop-24-filled" class="w-5 h-5" />
                         </button>
                    </div>
@@ -308,7 +323,14 @@ const finishAttempt = async () => {
             />
             
             <div class="mt-8 flex justify-center pb-10">
-                 <button @click="finishAttempt" class="px-8 py-3 bg-red-600 text-white rounded-full font-bold shadow-lg hover:bg-red-700 transition flex items-center gap-2">
+                 <button 
+                    @click="finishAttempt" 
+                    :disabled="isSubmitting"
+                    :class="[
+                        'px-8 py-3 text-white rounded-full font-bold shadow-lg transition flex items-center gap-2',
+                        isSubmitting ? 'bg-gray-500 opacity-75 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+                    ]"
+                 >
                     <Icon icon="fluent:stop-24-filled" class="w-5 h-5" />
                     สิ้นสุดการทำข้อสอบ (หยุดเวลา)
                  </button>

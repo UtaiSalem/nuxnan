@@ -665,6 +665,7 @@ class CourseController extends Controller
             'max_absence_percent' => 'nullable|integer|min:0|max:100',
             'min_sessions_for_eligibility_check' => 'nullable|integer|min:1',
             'allow_unlock_by_appeal' => 'nullable|boolean',
+            'allow_self_unlock' => 'nullable|boolean',
             'allow_unlock_by_points' => 'nullable|boolean',
             'unlock_points_cost' => 'nullable|integer|min:0',
             'allow_unlock_by_reading' => 'nullable|boolean',
@@ -679,7 +680,7 @@ class CourseController extends Controller
         $validated['status'] = $request->status ?? $course->status;
         $validated['saleable'] = $request->saleable;
 
-        foreach (['max_absence_percent', 'min_sessions_for_eligibility_check', 'allow_unlock_by_appeal',
+        foreach (['max_absence_percent', 'min_sessions_for_eligibility_check', 'allow_unlock_by_appeal', 'allow_self_unlock',
             'allow_unlock_by_points', 'unlock_points_cost', 'allow_unlock_by_reading', 'unlock_reading_minutes'] as $f) {
             if ($request->has($f)) {
                 $validated[$f] = $request->input($f);

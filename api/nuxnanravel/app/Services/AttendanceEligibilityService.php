@@ -8,6 +8,8 @@ use App\Models\CourseAttendance;
 use App\Models\AttendanceDetail;
 use App\Models\ExamEligibilityOverride;
 use App\Models\EligibilityAuditLog;
+use App\Models\Lesson;
+use App\Models\LessonProgress;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -184,6 +186,7 @@ class AttendanceEligibilityService
                 'points' => 'Points',
                 'reading' => 'การอ่าน',
                 'appeal' => 'อุทธรณ์',
+                'self' => 'การปลดล็อคด้วยตนเอง',
                 default => $method,
             };
             throw new \Exception("มีคำขอปลดล็อคด้วย{$label}ค้างอยู่แล้ว");
@@ -199,6 +202,8 @@ class AttendanceEligibilityService
         if (!$course->allow_self_unlock) {
             throw new \Exception('วิชานี้ไม่อนุญาตให้ปลดล็อคด้วยตนเอง');
         }
+
+        $this->checkExistingOverride($courseMember, 'self');
 
         $stats = $this->calculateAttendanceStats($courseMember);
 
@@ -290,9 +295,108 @@ class AttendanceEligibilityService
         return $override->fresh();
     }
 
+    public function getReadingLessonRequirement(CourseMember $member): array
+    {
+        $course = $member->course;
+        $mode = $course->unlock_reading_mode ?? 'minutes';
+
+        $baseQuery = Lesson::where('course_id', $course->id)->where('status', 1)->orderBy('order');
+
+        return match($mode) {
+            'all_lessons' => $baseQuery->get()->toArray(),
+            'count'       => $baseQuery->take($course->unlock_reading_lesson_count ?? 0)->get()->toArray(),
+            'specific'    => Lesson::whereIn('id', $course->unlock_reading_lesson_ids ?? [])->where('status', 1)->get()->toArray(),
+            default       => [], // minutes mode ไม่ใช้ lesson list
+        };
+    }
+
+    public function getReadingLessonProgress(CourseMember $member): array
+    {
+        $required = $this->getReadingLessonRequirement($member);
+        if (empty($required)) {
+            return [
+                'mode' => $member->course->unlock_reading_mode ?? 'minutes',
+                'required' => 0,
+                'completed' => 0,
+                'percentage' => 0,
+                'lessons' => [],
+                'can_unlock_now' => false
+            ];
+        }
+
+        $requiredIds = collect($required)->pluck('id');
+        $progresses = LessonProgress::where('user_id', $member->user_id)
+            ->whereIn('lesson_id', $requiredIds)
+            ->where('status', 'completed')
+            ->pluck('lesson_id')
+            ->toArray();
+
+        $total = $requiredIds->count();
+        $completed = count($progresses);
+
+        return [
+            'mode'           => $member->course->unlock_reading_mode ?? 'minutes',
+            'required'       => $total,
+            'completed'      => $completed,
+            'percentage'     => $total > 0 ? round(($completed / $total) * 100) : 0,
+            'lessons'        => collect($required)->map(fn($l) => [
+                'id'        => $l['id'],
+                'title'     => $l['title'],
+                'completed' => in_array($l['id'], $progresses),
+            ])->toArray(),
+            'can_unlock_now' => $completed >= $total && $total > 0,
+        ];
+    }
+
+    public function processReadingLessonUnlockIfCompleted(CourseMember $member): ?ExamEligibilityOverride
+    {
+        // ตรวจว่ามี pending reading override
+        $override = ExamEligibilityOverride::where('course_member_id', $member->id)
+            ->where('unlock_method', 'reading')
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$override) return null;
+
+        $progress = $this->getReadingLessonProgress($member);
+        if (!$progress['can_unlock_now']) return null;
+
+        $requiredIds = collect($progress['lessons'])->pluck('id')->toArray();
+        $completedIds = collect($progress['lessons'])->where('completed', true)->pluck('id')->toArray();
+
+        $override->update([
+            'status'                      => 'approved',
+            'approved_at'                 => now(),
+            'reading_completed_lesson_ids' => $completedIds,
+            'reading_required_lesson_ids'  => $requiredIds,
+        ]);
+
+        EligibilityAuditLog::log(
+            $member,
+            'unlocked',
+            EligibilityAuditLog::TYPE_READING_UNLOCK,
+            $member->user_id,
+            "อ่านครบ {$progress['completed']}/{$progress['required']} บทเรียน",
+            [
+                'override_id'       => $override->id,
+                'completed_lessons' => $completedIds,
+                'required_lessons'  => $requiredIds,
+            ]
+        );
+
+        $member->update([
+            'exam_eligible'            => true,
+            'eligibility_status'       => 'unlocked',
+            'eligibility_unlocked_at'  => now(),
+            'eligibility_unlock_method' => 'reading',
+        ]);
+
+        return $override->fresh();
+    }
+
     // ─── Reading unlock ───
 
-    public function requestUnlockByReading(CourseMember $courseMember): ExamEligibilityOverride
+    public function requestUnlockByReading(CourseMember $courseMember): array
     {
         $course = $courseMember->course;
 
@@ -300,21 +404,88 @@ class AttendanceEligibilityService
             throw new \Exception('วิชานี้ไม่อนุญาตให้ใช้การอ่านปลดล็อค');
         }
 
+        $mode = $course->unlock_reading_mode ?? 'minutes';
+
+        // mode=minutes ใช้ logic เดิม
+        if ($mode === 'minutes') {
+            $this->checkExistingOverride($courseMember, 'reading');
+            $stats = $this->calculateAttendanceStats($courseMember);
+            $override = ExamEligibilityOverride::create([
+                'course_member_id'          => $courseMember->id,
+                'course_id'                 => $course->id,
+                'student_id'                => $courseMember->user_id,
+                'unlock_method'             => 'reading',
+                'status'                    => 'pending',
+                'reading_minutes_completed' => 0,
+                'absence_percent_at_unlock' => $stats['absence_rate'],
+                'total_sessions_at_unlock'  => $stats['total_sessions'],
+                'absent_sessions_at_unlock' => $stats['absent'],
+            ]);
+            return ['mode' => 'minutes', 'override' => $override];
+        }
+
+        // mode=lesson-based
+        $progress = $this->getReadingLessonProgress($courseMember);
+
+        if ($progress['required'] === 0) {
+            throw new \Exception('ยังไม่มีบทเรียนที่กำหนดในรายวิชานี้');
+        }
+
+        // ถ้าครบแล้ว ปลดล็อคทันที
+        if ($progress['can_unlock_now']) {
+            // ไม่ต้อง checkExistingOverride เพราะจะ approve ทันที
+            $existing = ExamEligibilityOverride::where('course_member_id', $courseMember->id)
+                ->where('unlock_method', 'reading')
+                ->whereIn('status', ['pending', 'approved'])
+                ->first();
+            if ($existing) throw new \Exception('ปลดล็อคด้วยการอ่านไปแล้ว');
+
+            $stats = $this->calculateAttendanceStats($courseMember);
+            $requiredIds = collect($progress['lessons'])->pluck('id')->toArray();
+            $completedIds = collect($progress['lessons'])->where('completed', true)->pluck('id')->toArray();
+
+            $override = ExamEligibilityOverride::create([
+                'course_member_id'             => $courseMember->id,
+                'course_id'                    => $course->id,
+                'student_id'                   => $courseMember->user_id,
+                'unlock_method'                => 'reading',
+                'status'                       => 'approved',
+                'approved_at'                  => now(),
+                'reading_completed_lesson_ids' => $completedIds,
+                'reading_required_lesson_ids'  => $requiredIds,
+                'absence_percent_at_unlock'    => $stats['absence_rate'],
+                'total_sessions_at_unlock'     => $stats['total_sessions'],
+                'absent_sessions_at_unlock'    => $stats['absent'],
+            ]);
+
+            EligibilityAuditLog::log($courseMember, 'unlocked', EligibilityAuditLog::TYPE_READING_UNLOCK, $courseMember->user_id,
+                "อ่านครบ {$progress['completed']}/{$progress['required']} บทเรียน",
+                ['override_id' => $override->id, 'completed_lessons' => $completedIds]
+            );
+
+            $courseMember->update([
+                'exam_eligible' => true, 'eligibility_status' => 'unlocked',
+                'eligibility_unlocked_at' => now(), 'eligibility_unlock_method' => 'reading',
+            ]);
+
+            return ['mode' => 'lessons', 'unlocked' => true, 'override' => $override->fresh(), 'progress' => $progress];
+        }
+
+        // ยังไม่ครบ → สร้าง pending และส่ง progress กลับ
         $this->checkExistingOverride($courseMember, 'reading');
-
         $stats = $this->calculateAttendanceStats($courseMember);
-
-        return ExamEligibilityOverride::create([
-            'course_member_id' => $courseMember->id,
-            'course_id' => $course->id,
-            'student_id' => $courseMember->user_id,
-            'unlock_method' => 'reading',
-            'status' => 'pending',
-            'reading_minutes_completed' => 0,
+        $override = ExamEligibilityOverride::create([
+            'course_member_id'          => $courseMember->id,
+            'course_id'                 => $course->id,
+            'student_id'                => $courseMember->user_id,
+            'unlock_method'             => 'reading',
+            'status'                    => 'pending',
             'absence_percent_at_unlock' => $stats['absence_rate'],
-            'total_sessions_at_unlock' => $stats['total_sessions'],
+            'total_sessions_at_unlock'  => $stats['total_sessions'],
             'absent_sessions_at_unlock' => $stats['absent'],
         ]);
+
+        return ['mode' => 'lessons', 'unlocked' => false, 'override' => $override, 'progress' => $progress];
     }
 
     public function updateReadingProgress(ExamEligibilityOverride $override, int $minutes, array $proof): ExamEligibilityOverride
@@ -797,6 +968,13 @@ class AttendanceEligibilityService
                 ->pluck('unlock_method')
                 ->toArray();
 
+            if ($course->allow_self_unlock && !in_array('self', $existingOverrides)) {
+                $unlockOptions[] = [
+                    'method' => 'self',
+                    'label' => 'ปลดล็อคทันที (ด้วยตนเอง)',
+                ];
+            }
+
             if ($course->allow_unlock_by_points && $course->unlock_points_cost && !in_array('points', $existingOverrides)) {
                 $unlockOptions[] = [
                     'method' => 'points',
@@ -805,12 +983,21 @@ class AttendanceEligibilityService
                 ];
             }
 
-            if ($course->allow_unlock_by_reading && $course->unlock_reading_minutes && !in_array('reading', $existingOverrides)) {
-                $unlockOptions[] = [
-                    'method' => 'reading',
-                    'minutes' => $course->unlock_reading_minutes,
-                    'label' => sprintf('อ่านเพิ่ม %d นาที', $course->unlock_reading_minutes),
-                ];
+            if ($course->allow_unlock_by_reading && !in_array('reading', $existingOverrides)) {
+                $mode = $course->unlock_reading_mode ?? 'minutes';
+                $readingOption = ['method' => 'reading'];
+
+                if ($mode === 'minutes') {
+                    $readingOption['minutes'] = $course->unlock_reading_minutes;
+                    $readingOption['label'] = sprintf('อ่านเพิ่ม %d นาที', $course->unlock_reading_minutes);
+                } else {
+                    $progress = $this->getReadingLessonProgress($courseMember);
+                    $readingOption['lesson_mode'] = $mode;
+                    $readingOption['required']    = $progress['required'];
+                    $readingOption['completed']   = $progress['completed'];
+                    $readingOption['label']       = "อ่านบทเรียนเพื่อคืนสิทธิ์สอบ ({$progress['completed']}/{$progress['required']})";
+                }
+                $unlockOptions[] = $readingOption;
             }
 
             if (($course->allow_unlock_by_appeal ?? true) && !in_array('appeal', $existingOverrides)) {

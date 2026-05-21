@@ -71,14 +71,6 @@ class ExamEligibilityController extends Controller
 
         $result = $this->eligibilityService->canTakeExam($member);
 
-        // If the course allows self-unlock, inject that option when ineligible
-        if (! $result['can_take_exam'] && $course->allow_self_unlock) {
-            $result['unlock_options'][] = [
-                'method' => 'self',
-                'label' => 'ปลดล็อคทันที',
-            ];
-        }
-
         return response()->json([
             'success' => true,
             'data' => [
@@ -88,6 +80,29 @@ class ExamEligibilityController extends Controller
                 'absence_percent' => $result['attendance_stats']['absence_rate'] ?? null,
                 'unlock_options' => $result['unlock_options'],
             ],
+        ]);
+    }
+
+    public function readingProgress(Request $request, Course $course): JsonResponse
+    {
+        $user = $request->user();
+
+        $member = $course->courseMembers()
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $member) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบข้อมูลการลงทะเบียน',
+            ], 403);
+        }
+
+        $progress = $this->eligibilityService->getReadingLessonProgress($member);
+
+        return response()->json([
+            'success' => true,
+            'data' => $progress,
         ]);
     }
 
@@ -515,10 +530,11 @@ class ExamEligibilityController extends Controller
         abort_if($member->course_id !== $course->id, 403, 'นักเรียนคนนี้ไม่ได้อยู่ในรายวิชานี้');
 
         $request->validate([
-            'reason' => 'required|string|max:500',
+            'reason' => 'nullable|string|max:500',
         ]);
 
         $stats = $this->eligibilityService->calculateAttendanceStats($member);
+        $reason = $request->reason ?? 'ปลดล็อคโดยผู้สอน';
 
         $override = ExamEligibilityOverride::create([
             'course_member_id' => $member->id,
@@ -528,7 +544,7 @@ class ExamEligibilityController extends Controller
             'status' => 'approved',
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
-            'admin_reason' => $request->reason,
+            'admin_reason' => $reason,
             'absence_percent_at_unlock' => $stats['absence_rate'],
             'total_sessions_at_unlock' => $stats['total_sessions'],
             'absent_sessions_at_unlock' => $stats['absent'],
@@ -539,7 +555,7 @@ class ExamEligibilityController extends Controller
             'unlocked',
             \App\Models\EligibilityAuditLog::TYPE_ADMIN_UNLOCK,
             $request->user()->id,
-            $request->reason,
+            $reason,
             ['override_id' => $override->id]
         );
 
@@ -570,7 +586,7 @@ class ExamEligibilityController extends Controller
             'member_ids.*' => 'integer|exists:course_members,id',
             'group_id' => 'nullable|integer|exists:course_groups,id',
             'only_ineligible' => 'nullable|boolean',
-            'reason' => 'required|string|max:500',
+            'reason' => 'nullable|string|max:500',
         ]);
 
         // Resolve member IDs from group_id when provided
@@ -615,11 +631,13 @@ class ExamEligibilityController extends Controller
             }
         }
 
+        $reason = $request->reason ?? 'ปลดล็อคโดยผู้สอน (รายกลุ่ม)';
+
         $results = $this->eligibilityService->bulkUnlock(
             $course,
             $memberIds,
             $request->user(),
-            $request->reason
+            $reason
         );
 
         return response()->json([
@@ -638,14 +656,16 @@ class ExamEligibilityController extends Controller
         $request->validate([
             'member_ids' => 'required|array|min:1',
             'member_ids.*' => 'integer|exists:course_members,id',
-            'reason' => 'required|string|max:500',
+            'reason' => 'nullable|string|max:500',
         ]);
+
+        $reason = $request->reason ?? 'ยกเลิกการปลดล็อคโดยผู้สอน';
 
         $results = $this->eligibilityService->bulkRevoke(
             $course,
             $request->member_ids,
             $request->user(),
-            $request->reason
+            $reason
         );
 
         return response()->json([

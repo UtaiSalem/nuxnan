@@ -167,7 +167,7 @@ const bulkUnlockIneligible = async () => {
 }
 
 const unlockMember = async () => {
-  if (!selectedMember.value || !unlockReason.value.trim()) return
+  if (!selectedMember.value) return
 
   isUnlocking.value = true
   try {
@@ -606,12 +606,12 @@ const unlockMember = async () => {
 
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                เหตุผลในการปลดล็อค <span class="text-red-500">*</span>
+                เหตุผลในการปลดล็อค (ถ้ามี)
               </label>
               <textarea
                 v-model="unlockReason"
                 rows="3"
-                placeholder="ระบุเหตุผล..."
+                placeholder="ระบุเหตุผล (เว้นว่างได้)..."
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
               ></textarea>
             </div>
@@ -625,7 +625,7 @@ const unlockMember = async () => {
               </button>
               <button
                 @click="unlockMember"
-                :disabled="!unlockReason.trim() || isUnlocking"
+                :disabled="isUnlocking"
                 class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 <Icon v-if="isUnlocking" icon="heroicons:arrow-path" class="w-4 h-4 mr-2 animate-spin inline" />

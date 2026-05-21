@@ -61,6 +61,24 @@ const filteredStudentResults = computed(() => {
 
 const startQuiz = async () => {
   if (!canTakeExam.value && eligibility.value) {
+    // 1. Check for Reading unlock (Lesson-based)
+    const readingOption = eligibility.value.unlock_options?.find((o: any) => o.method === 'reading')
+    if (readingOption?.lesson_mode) {
+      const res = await Swal.fire({
+        title: 'หมดสิทธิ์สอบ',
+        text: 'คุณต้องอ่านบทเรียนที่กำหนดให้ครบเพื่อคืนสิทธิ์สอบก่อนทำแบบทดสอบนี้',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'ไปดูบทเรียน',
+        cancelButtonText: 'ปิด'
+      })
+      if (res.isConfirmed) {
+        await navigateTo(`/courses/${courseId}/members/me?tab=lessons`)
+      }
+      return
+    }
+
+    // 2. Check for Points unlock
     const cost = eligibility.value.unlock_options?.find((o: any) => o.method === 'points')?.cost || 0
     if (cost > 0) {
       const result = await Swal.fire({

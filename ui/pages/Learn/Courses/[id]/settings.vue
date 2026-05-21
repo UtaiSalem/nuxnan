@@ -89,7 +89,8 @@ const sectionFields: Record<string, string[]> = {
   marketplace: ['is_for_marketplace', 'price', 'price_points'],
   eligibility: [
     'max_absence_percent', 'min_sessions_for_eligibility_check', 'allow_unlock_by_appeal', 'allow_self_unlock',
-    'allow_unlock_by_points', 'unlock_points_cost', 'allow_unlock_by_reading', 'unlock_reading_minutes',
+    'allow_unlock_by_points', 'unlock_points_cost', 'allow_unlock_by_reading', 
+    'unlock_reading_minutes', 'unlock_reading_mode', 'unlock_reading_lesson_count', 'unlock_reading_lesson_ids',
   ],
 }
 
@@ -137,6 +138,9 @@ const form = ref({
   unlock_points_cost: null as number | null,
   allow_unlock_by_reading: false,
   unlock_reading_minutes: null as number | null,
+  unlock_reading_mode: 'minutes' as string,
+  unlock_reading_lesson_count: null as number | null,
+  unlock_reading_lesson_ids: [] as number[],
 })
 
 // Snapshot for dirty checking
@@ -237,6 +241,9 @@ watch(() => course?.value, (newCourse) => {
       unlock_points_cost: newCourse.unlock_points_cost ?? null,
       allow_unlock_by_reading: Boolean(newCourse.allow_unlock_by_reading),
       unlock_reading_minutes: newCourse.unlock_reading_minutes ?? null,
+      unlock_reading_mode: newCourse.unlock_reading_mode || 'minutes',
+      unlock_reading_lesson_count: newCourse.unlock_reading_lesson_count ?? null,
+      unlock_reading_lesson_ids: newCourse.unlock_reading_lesson_ids || [],
     }
     form.value = { ...data }
     initialForm.value = JSON.parse(JSON.stringify(data))
@@ -473,7 +480,20 @@ const getEligibilityStatusLabel = (status: string) => {
 
 // Auto-null conditional fields when toggle is off
 watch(() => form.value.allow_unlock_by_points, v => { if (!v) form.value.unlock_points_cost = null })
-watch(() => form.value.allow_unlock_by_reading, v => { if (!v) form.value.unlock_reading_minutes = null })
+watch(() => form.value.allow_unlock_by_reading, v => { 
+  if (!v) {
+    form.value.unlock_reading_minutes = null
+    form.value.unlock_reading_mode = 'minutes'
+    form.value.unlock_reading_lesson_count = null
+    form.value.unlock_reading_lesson_ids = []
+  }
+})
+
+watch(() => form.value.unlock_reading_mode, v => {
+  if (v !== 'minutes') form.value.unlock_reading_minutes = null
+  if (v !== 'count') form.value.unlock_reading_lesson_count = null
+  if (v !== 'specific') form.value.unlock_reading_lesson_ids = []
+})
 
 // Load eligibility summary on mount (admin only)
 watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchEligibilitySummary() }, { immediate: true })
@@ -913,14 +933,59 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
                   </div>
                 </CourseSettingField>
               </div>
-              <CourseToggleSetting v-model="form.allow_unlock_by_reading" label="ปลดล็อคด้วยการอ่าน" description="อ่านเนื้อหาให้ครบเวลาที่กำหนด" variant="neutral" />
-              <div v-if="form.allow_unlock_by_reading" class="pl-4 animate-fade-in-down">
-                <CourseSettingField label="เวลาที่ต้องอ่าน (นาที)">
+              <CourseToggleSetting v-model="form.allow_unlock_by_reading" label="ปลดล็อคด้วยการอ่าน" description="ปลดล็อคโดยการอ่านบทเรียนหรือสะสมเวลา" variant="neutral" />
+              <div v-if="form.allow_unlock_by_reading" class="pl-4 space-y-3 animate-fade-in-down border-l-2 border-indigo-100 dark:border-indigo-900 ml-3">
+                <CourseSettingField label="รูปแบบการวัดผลการอ่าน" icon="heroicons:presentation-chart-line">
                   <div class="relative">
-                    <input v-model.number="form.unlock_reading_minutes" type="number" min="1" placeholder="เช่น 60" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500/30 transition-all dark:text-white text-sm" />
-                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">นาที</span>
+                    <select v-model="form.unlock_reading_mode" class="w-full pl-4 pr-10 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500/30 transition-all dark:text-white text-sm appearance-none cursor-pointer">
+                      <option value="minutes">สะสมเวลาการอ่าน (นาที)</option>
+                      <option value="all_lessons">อ่านจบทุกบทเรียน (ที่มีอยู่)</option>
+                      <option value="count">อ่านจบตามจำนวนบทเรียน</option>
+                      <option value="specific">อ่านบทเรียนที่กำหนด</option>
+                    </select>
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <Icon icon="heroicons:chevron-down" class="w-4 h-4" />
+                    </span>
                   </div>
                 </CourseSettingField>
+
+                <!-- Mode: Minutes -->
+                <div v-if="form.unlock_reading_mode === 'minutes'">
+                  <CourseSettingField label="เวลาที่ต้องอ่าน (นาที)">
+                    <div class="relative">
+                      <input v-model.number="form.unlock_reading_minutes" type="number" min="1" placeholder="เช่น 60" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500/30 transition-all dark:text-white text-sm" />
+                      <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">นาที</span>
+                    </div>
+                  </CourseSettingField>
+                </div>
+
+                <!-- Mode: Count -->
+                <div v-if="form.unlock_reading_mode === 'count'">
+                  <CourseSettingField label="จำนวนบทเรียนที่ต้องอ่านจบ">
+                    <div class="relative">
+                      <input v-model.number="form.unlock_reading_lesson_count" type="number" min="1" placeholder="เช่น 5" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500/30 transition-all dark:text-white text-sm" />
+                      <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">บทเรียน</span>
+                    </div>
+                  </CourseSettingField>
+                </div>
+
+                <!-- Mode: Specific -->
+                <div v-if="form.unlock_reading_mode === 'specific'">
+                   <p class="text-[10px] text-gray-500 mb-2">เลือกบทเรียนที่ต้องการให้นักเรียนอ่านจบเพื่อปลดล็อค:</p>
+                   <div class="max-h-40 overflow-y-auto space-y-1 p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div v-if="!course?.course_lessons?.length" class="text-center py-4 text-xs text-gray-400 italic">ไม่มีบทเรียนในรายวิชานี้</div>
+                      <label v-for="lesson in course?.course_lessons" :key="lesson.id" class="flex items-center gap-2 p-1.5 hover:bg-white dark:hover:bg-gray-800 rounded transition-colors cursor-pointer group">
+                        <input 
+                          type="checkbox" 
+                          :value="lesson.id" 
+                          v-model="form.unlock_reading_lesson_ids"
+                          class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" 
+                        />
+                        <span class="text-xs text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 transition-colors truncate">{{ lesson.title }}</span>
+                      </label>
+                   </div>
+                   <div class="mt-1 text-[10px] text-indigo-500">เลือกแล้ว {{ form.unlock_reading_lesson_ids.length }} บทเรียน</div>
+                </div>
               </div>
             </div>
           </div>

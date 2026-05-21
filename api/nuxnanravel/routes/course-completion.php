@@ -28,6 +28,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
         // Student: Check my eligibility
         Route::get('eligibility', [ExamEligibilityController::class, 'getStatus']);
         Route::get('eligibility/my-status', [ExamEligibilityController::class, 'getMyStatus']);
+        Route::get('eligibility/reading-progress', [ExamEligibilityController::class, 'readingProgress']);
 
         // Student: Request unlock
         Route::post('eligibility/unlock/self', [ExamEligibilityController::class, 'requestSelfUnlock']);

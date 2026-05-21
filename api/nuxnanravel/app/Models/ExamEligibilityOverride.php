@@ -23,6 +23,8 @@ class ExamEligibilityOverride extends Model
         'admin_reason',
         'appeal_reason',
         'appeal_evidence',
+        'reading_completed_lesson_ids',
+        'reading_required_lesson_ids',
         'remediation_session_id',
         'status',
         'approved_at',
@@ -36,6 +38,8 @@ class ExamEligibilityOverride extends Model
     protected $casts = [
         'reading_proof' => 'array',
         'appeal_evidence' => 'array',
+        'reading_completed_lesson_ids' => 'array',
+        'reading_required_lesson_ids' => 'array',
         'approved_at' => 'datetime',
         'expires_at' => 'datetime',
         'absence_percent_at_unlock' => 'decimal:2',
@@ -46,6 +50,7 @@ class ExamEligibilityOverride extends Model
     const METHOD_READING = 'reading';
     const METHOD_ADMIN = 'admin';
     const METHOD_APPEAL = 'appeal';
+    const METHOD_SELF = 'self';
 
     // Status
     const STATUS_PENDING = 'pending';
@@ -139,6 +144,7 @@ class ExamEligibilityOverride extends Model
             self::METHOD_READING => 'อ่านเพิ่มเติม',
             self::METHOD_ADMIN => 'Admin อนุมัติ',
             self::METHOD_APPEAL => 'อุทธรณ์',
+            self::METHOD_SELF => 'ปลดล็อคด้วยตนเอง',
             default => $this->unlock_method,
         };
     }

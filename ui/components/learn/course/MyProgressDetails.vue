@@ -5,6 +5,7 @@ import { Icon } from '@iconify/vue';
 import RadialProgress from "vue3-radial-progress";
 import AssignmentSubmissionForm from '~/components/learn/course/AssignmentSubmissionForm.vue';
 import ImageGalleryModal from '~/components/ImageGalleryModal.vue';
+import ReadingUnlockPanel from '~/components/learn/course/ReadingUnlockPanel.vue';
 import { inject } from 'vue';
 import { stripHtml } from '~/utils/textUtils';
 
@@ -261,6 +262,9 @@ const eligibilityStatus = ref(null);
 const isLoadingEligibility = ref(false);
 const appealReason = ref('');
 const isSubmittingAppeal = ref(false);
+const showAppealForm = ref(false);
+const showReadingPanel = ref(false);
+const readingProgress = ref(null);
 
 const fetchEligibilityStatus = async () => {
     isLoadingEligibility.value = true;
@@ -275,8 +279,26 @@ const fetchEligibilityStatus = async () => {
     }
 };
 
+const fetchReadingProgress = async () => {
+    try {
+        const res = await api.get(`/api/courses/${props.courseId}/eligibility/reading-progress`);
+        readingProgress.value = res?.data || res || null;
+    } catch (e) {
+        console.error('Failed to fetch reading progress:', e);
+    }
+};
+
 const handleUnlockOption = async (option) => {
     if (option.method === 'appeal') return; // handled inline via form
+
+    // lesson-based reading → toggle panel with progress
+    if (option.method === 'reading' && option.lesson_mode) {
+        if (!showReadingPanel.value) {
+            await fetchReadingProgress();
+        }
+        showReadingPanel.value = !showReadingPanel.value;
+        return;
+    }
 
     const endpointMap = {
         self: `/api/courses/${props.courseId}/eligibility/unlock/self`,
@@ -288,11 +310,33 @@ const handleUnlockOption = async (option) => {
 
     try {
         await api.post(endpoint, { method: option.method });
-        swal.toast('ส่งคำร้องแล้ว รอการพิจารณา', 'success');
+
+        const immediateUnlock = ['self', 'points'];
+        const msg = immediateUnlock.includes(option.method)
+            ? 'ปลดล็อคสิทธิ์สอบสำเร็จ!'
+            : 'ส่งคำร้องแล้ว รอการพิจารณา';
+        swal.toast(msg, 'success');
+
         await fetchEligibilityStatus();
     } catch (e) {
         console.error('Failed to request unlock:', e);
         swal.toast('ไม่สามารถส่งคำร้องได้', 'error');
+    }
+};
+
+const handleReadingUnlock = async () => {
+    try {
+        const res: any = await api.post(`/api/courses/${props.courseId}/eligibility/unlock/reading`);
+        if (res?.unlocked || res?.data?.unlocked) {
+            swal.toast('ปลดล็อคสิทธิ์สอบสำเร็จ!', 'success');
+            showReadingPanel.value = false;
+            await fetchEligibilityStatus();
+        } else {
+            swal.toast('บทเรียนยังไม่ครบ ไม่สามารถปลดล็อคได้', 'error');
+        }
+    } catch (e) {
+        console.error('Failed to unlock by reading:', e);
+        swal.toast('ไม่สามารถปลดล็อคได้', 'error');
     }
 };
 
@@ -493,45 +537,70 @@ onMounted(() => {
                      </div>
 
                      <!-- Unlock Options -->
-                     <div v-if="eligibilityStatus.unlock_options && eligibilityStatus.unlock_options.length > 0" class="px-4 pb-4">
-                         <p class="text-xs font-semibold text-red-700 dark:text-red-300 mb-3">ตัวเลือกในการขอคืนสิทธิ์สอบ:</p>
                          <div class="space-y-2">
                              <template v-for="option in eligibilityStatus.unlock_options" :key="option.method">
-                                 <!-- Appeal: inline form -->
-                                 <div v-if="option.method === 'appeal'" class="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700 rounded-lg p-3">
-                                     <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{{ option.label }}</p>
-                                     <textarea
-                                         v-model="appealReason"
-                                         rows="2"
-                                         placeholder="ระบุเหตุผลในการอุทธรณ์..."
-                                         class="w-full text-xs px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-400 resize-none"
-                                     ></textarea>
-                                     <button
-                                         @click="submitAppeal"
-                                         :disabled="!appealReason.trim() || isSubmittingAppeal"
-                                         class="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                 <!-- Appeal: inline form (Secondary/Hidden) -->
+                                 <div v-if="option.method === 'appeal'" class="mt-4">
+                                     <button 
+                                        @click="showAppealForm = !showAppealForm"
+                                        class="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                      >
-                                         <Icon v-if="isSubmittingAppeal" icon="heroicons:arrow-path" class="w-3.5 h-3.5 animate-spin" />
-                                         ส่งคำอุทธรณ์
+                                         <Icon :icon="showAppealForm ? 'heroicons:chevron-up' : 'heroicons:chevron-down'" class="w-4 h-4" />
+                                         อุทธรณ์สิทธิ์สอบ (สำหรับกรณีจำเป็น)
                                      </button>
+
+                                     <div v-if="showAppealForm" class="mt-2 p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg shadow-sm animate-fade-in">
+                                         <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">ระบุเหตุผลในการอุทธรณ์:</p>
+                                         <textarea
+                                             v-model="appealReason"
+                                             rows="3"
+                                             placeholder="เช่น มีใบรับรองแพทย์, ติดภารกิจทางบ้าน ฯลฯ"
+                                             class="w-full text-xs px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 resize-none"
+                                         ></textarea>
+                                         <button
+                                             @click="submitAppeal"
+                                             :disabled="!appealReason.trim() || isSubmittingAppeal"
+                                             class="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
+                                         >
+                                             <Icon v-if="isSubmittingAppeal" icon="heroicons:arrow-path" class="w-3.5 h-3.5 animate-spin" />
+                                             ส่งคำอุทธรณ์
+                                         </button>
+                                     </div>
                                  </div>
 
                                  <!-- Other options: button -->
                                  <button
                                      v-else
                                      @click="handleUnlockOption(option)"
-                                     class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
+                                     class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all text-left shadow-sm group"
                                  >
-                                     <div>
-                                         <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ option.label }}</p>
-                                         <p v-if="option.cost" class="text-xs text-gray-500 dark:text-gray-400">ใช้ {{ option.cost }} แต้ม</p>
-                                         <p v-if="option.minutes" class="text-xs text-gray-500 dark:text-gray-400">ใช้เวลา {{ option.minutes }} นาที</p>
+                                     <div class="flex items-center gap-3">
+                                         <div class="w-8 h-8 rounded-full flex items-center justify-center bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
+                                             <Icon :icon="option.method === 'points' ? 'fluent:star-24-filled' : (option.method === 'reading' ? 'fluent:book-open-24-filled' : 'fluent:flash-24-filled')" class="w-5 h-5" />
+                                         </div>
+                                         <div>
+                                             <div class="flex items-center gap-2">
+                                                <p class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ option.label }}</p>
+                                             </div>
+                                             <p v-if="option.cost" class="text-[10px] text-gray-500 dark:text-gray-400">หักคะแนนสะสมทันที</p>
+                                             <p v-if="option.method === 'self'" class="text-[10px] text-gray-500 dark:text-gray-400">ใช้สิทธิ์ปลดล็อคด้วยตนเอง</p>
+                                             <p v-if="option.minutes" class="text-[10px] text-gray-500 dark:text-gray-400">ต้องสะสมเวลาการอ่านให้ครบ</p>
+                                             <p v-if="option.lesson_mode" class="text-[10px] text-gray-500 dark:text-gray-400">ต้องอ่านบทเรียนที่กำหนดให้ครบ</p>
+                                         </div>
                                      </div>
-                                     <Icon icon="heroicons:arrow-right" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                     <Icon :icon="showReadingPanel && option.method === 'reading' ? 'heroicons:chevron-up' : 'heroicons:arrow-right'" class="w-4 h-4 text-gray-300 group-hover:text-red-500 transition-colors" />
                                  </button>
+
+                                 <!-- Reading Progress Panel (Lesson-based) -->
+                                 <ReadingUnlockPanel 
+                                     v-if="showReadingPanel && readingProgress && option.method === 'reading'"
+                                     :progress="readingProgress"
+                                     :courseId="courseId"
+                                     @unlock="handleReadingUnlock"
+                                     class="mt-2 animate-fade-in"
+                                 />
                              </template>
                          </div>
-                     </div>
                  </div>
              </div>
              <!-- /Eligibility Status Section -->
