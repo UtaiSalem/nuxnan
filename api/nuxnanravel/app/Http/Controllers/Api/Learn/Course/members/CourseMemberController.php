@@ -881,6 +881,11 @@ class CourseMemberController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
+        // Coerce member_code to string before validation
+        if ($request->has('member_code') && $request->member_code !== null) {
+            $request->merge(['member_code' => (string) $request->member_code]);
+        }
+
         $request->validate([
             'member_code' => 'required|string|max:50',
         ]);
@@ -1182,8 +1187,14 @@ class CourseMemberController extends Controller
         // Observer will handle enrolled_students decrement
     }
 
-    private function moveMemberToGroup(CourseMember $member, int $groupId)
+    private function moveMemberToGroup(CourseMember $member, ?int $groupId)
     {
+        if (! $groupId) {
+            $this->removeMemberFromGroup($member);
+
+            return;
+        }
+
         $member->update(['group_id' => $groupId]);
 
         // Update group member relationship
@@ -1198,6 +1209,15 @@ class CourseMemberController extends Controller
                 'status' => $member->status > 0 ? '1' : '0',
             ]
         );
+    }
+
+    private function removeMemberFromGroup(CourseMember $member)
+    {
+        $member->update(['group_id' => null]);
+
+        CourseGroupMember::where('user_id', $member->user_id)
+            ->where('course_id', $member->course_id)
+            ->delete();
     }
 
     private function addPointsToMember(CourseMember $member, int $points, ?string $reason)
@@ -1349,6 +1369,11 @@ class CourseMemberController extends Controller
         try {
             $member = CourseMember::findOrFail($memberId);
 
+            // Coerce member_code to string before validation
+            if ($request->has('member_code') && $request->member_code !== null) {
+                $request->merge(['member_code' => (string) $request->member_code]);
+            }
+
             $validated = $request->validate([
                 'member_name' => 'nullable|string|max:255',
                 'order_number' => 'nullable|numeric|min:0',
@@ -1361,12 +1386,28 @@ class CourseMemberController extends Controller
                 'notes_comments' => 'nullable|string|max:1000',
             ]);
 
+            // Handle group_id change
+            if (array_key_exists('group_id', $validated)) {
+                $newGroupId = $validated['group_id'];
+                unset($validated['group_id']);
+
+                if ($newGroupId != $member->group_id) {
+                    if ($newGroupId) {
+                        $this->moveMemberToGroup($member, $newGroupId);
+                    } else {
+                        $this->removeMemberFromGroup($member);
+                    }
+                }
+            }
+
             $member->update($validated);
 
             // If bonus points are being updated, recalculate grade progress
             if ($request->has('bonus_points')) {
                 $course = $member->course;
-                $newGradeProgress = $this->calculateGrade((($member->achieved_score + $member->bonus_points) / $course->total_score) * 100);
+                $newGradeProgress = CourseMember::calculateGradeFromPercentage(
+                    (($member->achieved_score + $member->bonus_points) / ($course->total_score ?: 1)) * 100
+                );
                 $member->update(['grade_progress' => $newGradeProgress]);
             }
 
@@ -1393,11 +1434,26 @@ class CourseMemberController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
+        // Coerce member_code to string before validation
+        if ($request->has('member_code') && $request->member_code !== null) {
+            $request->merge(['member_code' => (string) $request->member_code]);
+        }
+
         $request->validate([
             'member_name' => 'nullable|string|max:255',
             'order_number' => 'nullable|numeric',
             'member_code' => 'nullable|string|max:50',
+            'group_id' => 'nullable|exists:course_groups,id',
         ]);
+
+        // Handle group_id change
+        if ($request->has('group_id') && $request->group_id != $member->group_id) {
+            if ($request->group_id) {
+                $this->moveMemberToGroup($member, $request->group_id);
+            } else {
+                $this->removeMemberFromGroup($member);
+            }
+        }
 
         $member->update([
             'member_name' => $request->member_name,

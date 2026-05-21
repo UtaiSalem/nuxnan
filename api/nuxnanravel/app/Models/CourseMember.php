@@ -30,7 +30,7 @@ class CourseMember extends Model
             'efficiency' => 'integer',
             'grade_progress' => 'float',
             'order_number' => 'integer',
-            'member_code' => 'integer',
+            'member_code' => 'string',
             'enrollment_date' => 'datetime',
             'completion_date' => 'datetime',
             'access_expiry_date' => 'datetime',

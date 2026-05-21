@@ -115,9 +115,9 @@ const fetchData = async () => {
         if (data.value.member) {
             form.value = {
                 member_name: data.value.member.member_name || data.value.member.user?.name || '',
-                member_code: data.value.member.member_code || '',
-                order_number: data.value.member.order_number || '',
-                group_id: data.value.member.group_id || null,
+                member_code: data.value.member.member_code != null ? String(data.value.member.member_code) : '',
+                order_number: data.value.member.order_number != null ? data.value.member.order_number : '',
+                group_id: data.value.member.group_id ?? null,
             };
         }
     } catch (e) {
@@ -170,15 +170,25 @@ const saveProfile = async () => {
     isSaving.value = true;
     saveSuccess.value = false;
     try {
-        await api.patch(`/api/courses/${props.courseId}/members/${props.memberId}/update-own-profile`, form.value);
+        const payload = {
+            member_name: form.value.member_name || null,
+            member_code: form.value.member_code != null ? String(form.value.member_code) : null,
+            order_number: form.value.order_number !== '' ? Number(form.value.order_number) : null,
+            group_id: form.value.group_id ?? null,
+        };
+        await api.patch(`/api/courses/${props.courseId}/members/${props.memberId}/update-own-profile`, payload);
         
         // Update local data without refresh
         if (data.value && data.value.member) {
-            Object.assign(data.value.member, form.value);
+            Object.assign(data.value.member, payload);
             // Update group details if needed
-            if (form.value.group_id && data.value.groups) {
-                const group = data.value.groups.find(g => g.id === form.value.group_id);
-                if (group) data.value.member.group = group;
+            if (data.value.groups) {
+                if (payload.group_id) {
+                    const group = data.value.groups.find(g => g.id === payload.group_id);
+                    if (group) data.value.member.group = group;
+                } else {
+                    data.value.member.group = null;
+                }
             }
         }
 
