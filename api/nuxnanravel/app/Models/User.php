@@ -333,7 +333,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public static function generateReferenceCode(): string
     {
         do {
-            $referenceCode = (string) Str::uuid();
+            $referenceCode = Str::random(10);
         } while (User::where('reference_code', $referenceCode)->exists());
 
         return $referenceCode;

@@ -19,14 +19,29 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(credentials: any) {
     isLoading.value = true
     try {
-      const response = await $fetch<any>(`${apiBase}/api/login`, {
+      const res = await fetch(`${apiBase}/api/login`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         credentials: 'include',
-        body: {
+        body: JSON.stringify({
           login: credentials.email || credentials.login,
           password: credentials.password,
-        },
+        }),
       })
+
+      const response = await res.json()
+
+      if (!res.ok) {
+        throw {
+          data: response,
+          status: res.status,
+          statusMessage: res.statusText,
+          message: response?.message || `Login failed (${res.status})`,
+        }
+      }
 
       // Backend returns: { success: true, access_token, token_type, expires_in, user }
       // OR nested format: { success: true, data: { accessToken, user } }
@@ -107,11 +122,26 @@ export const useAuthStore = defineStore('auth', () => {
   async function register(userData: any) {
     isLoading.value = true
     try {
-      const response = await $fetch<any>(`${apiBase}/api/register`, {
+      const res = await fetch(`${apiBase}/api/register`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         credentials: 'include',
-        body: userData,
+        body: JSON.stringify(userData),
       })
+
+      const response = await res.json()
+
+      if (!res.ok) {
+        throw {
+          data: response,
+          status: res.status,
+          statusMessage: res.statusText,
+          message: response?.message || `Registration failed (${res.status})`,
+        }
+      }
 
       // Backend may return direct JWT fields or a nested data payload.
       if (response.success) {

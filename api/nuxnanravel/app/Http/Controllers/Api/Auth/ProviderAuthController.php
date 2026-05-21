@@ -92,6 +92,11 @@ class ProviderAuthController extends Controller
                     'provider' => $provider,
                     'provider_id' => $socialUser->getId(),
                     'email_verified_at' => now(),
+                    'personal_code' => User::generateReferralCode(),
+                    'reference_code' => User::generateReferenceCode(),
+                    'suggester_code' => session('oauth_reference_code'),
+                    'no_of_ref' => 0,
+                    'verified' => true,
                 ]);
             }
 
