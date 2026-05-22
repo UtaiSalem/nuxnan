@@ -13,9 +13,9 @@ class PointsService
     /**
      * Earn points for a user
      */
-    public function earn(User $user, float $amount, string $sourceType, ?int $sourceId = null, ?string $description = null, ?array $metadata = null): PointsTransaction
+    public function earn(User $user, float $amount, string $sourceType, ?int $sourceId = null, ?string $description = null, ?array $metadata = null, int $xpAmount = 0): PointsTransaction
     {
-        return DB::transaction(function () use ($user, $amount, $sourceType, $sourceId, $description, $metadata) {
+        return DB::transaction(function () use ($user, $amount, $sourceType, $sourceId, $description, $metadata, $xpAmount) {
             $balanceBefore = $user->pp;
             $balanceAfter = $balanceBefore + $amount;
 
@@ -24,6 +24,12 @@ class PointsService
                 'pp' => $balanceAfter,
                 'total_points_earned' => $user->total_points_earned + $amount,
             ]);
+
+            // Add XP if provided
+            if ($xpAmount > 0) {
+                $user->increment('xp', $xpAmount);
+                $user->refresh(); // Ensure we have the latest XP for level calculation
+            }
 
             // Create transaction record
             $transaction = PointsTransaction::create([
@@ -48,10 +54,23 @@ class PointsService
             Log::info('Points earned', [
                 'user_id' => $user->id,
                 'amount' => $amount,
+                'xp_amount' => $xpAmount,
                 'source_type' => $sourceType,
             ]);
 
             return $transaction;
+        });
+    }
+
+    /**
+     * Add XP to a user and update their level
+     */
+    public function addXp(User $user, int $amount): void
+    {
+        DB::transaction(function () use ($user, $amount) {
+            $user->increment('xp', $amount);
+            $user->refresh();
+            $this->updateUserLevel($user);
         });
     }
 
@@ -283,25 +302,28 @@ class PointsService
      */
     protected function updateUserLevel(User $user): void
     {
-        $totalPoints = $user->pp;
+        $xp = $user->xp;
 
-        // Calculate level: Level = floor((Points / 100) ^ (2/3))
-        $level = floor(pow($totalPoints / 100, 2/3));
+        // Find the highest level where xp_required <= current xp
+        $levelDef = \App\Models\LevelDefinition::where('xp_required', '<=', $xp)
+            ->orderByDesc('level')
+            ->first();
 
-        // Calculate XP for next level: XP for Next Level = 100 × (Level + 1)^1.5
-        $xpForNextLevel = 100 * pow($level + 1, 1.5);
-
-        // Calculate current XP: Current XP = Points - Total XP for Current Level
-        $totalXpForCurrentLevel = 0;
-        for ($i = 1; $i < $level; $i++) {
-            $totalXpForCurrentLevel += 100 * pow($i, 1.5);
-        }
-        $currentXp = $totalPoints - $totalXpForCurrentLevel;
+        $level = $levelDef ? $levelDef->level : 1;
+        
+        // Find next level for XP info
+        $nextLevelDef = \App\Models\LevelDefinition::where('level', $level + 1)->first();
+        $xpForNextLevel = $nextLevelDef ? $nextLevelDef->xp_required : $xp;
+        
+        $currentLevelXp = $levelDef ? $levelDef->xp_required : 0;
+        $progressXp = $xp - $currentLevelXp;
+        $neededXpForNext = $nextLevelDef ? ($nextLevelDef->xp_required - $currentLevelXp) : 0;
 
         $user->update([
             'level' => $level,
-            'xp_for_next_level' => $xpForNextLevel,
-            'current_xp' => $currentXp,
+            'xp_level' => $level,
+            'xp_for_next_level' => $neededXpForNext,
+            'current_xp' => $progressXp,
         ]);
     }
 

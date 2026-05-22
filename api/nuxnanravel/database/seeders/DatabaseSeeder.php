@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RoleSeeder::class);
         $this->call(SuperAdminSeeder::class);
+        $this->call(GamificationSeeder::class);
 
         // User::factory(10)->create();
 

@@ -91,6 +91,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'total_points_earned',
         'total_points_spent',
         'level',
+        'xp',
+        'xp_level',
         'xp_for_next_level',
         'current_xp',
     ];
@@ -125,6 +127,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'total_points_earned' => 'integer',
             'total_points_spent' => 'integer',
             'level' => 'integer',
+            'xp' => 'integer',
+            'xp_level' => 'integer',
             'xp_for_next_level' => 'integer',
             'current_xp' => 'integer',
             'no_of_ref' => 'integer',
