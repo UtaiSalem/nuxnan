@@ -59,7 +59,7 @@
           </div>
 
           <div>
-            <label class="block text-white font-semibold mb-2 text-base">เลือกเวลา / Time Limit</label>
+            <label class="block text-white font-semibold mb-2 text-base">เป้าหมายเวลา / Target Time</label>
             <div class="grid grid-cols-2 gap-3">
               <button
                 v-for="option in timeOptions"
@@ -133,16 +133,16 @@
           <div
             class="h-full transition-all duration-1000 ease-linear rounded-full relative overflow-hidden"
             :class="[
-              timeLeft > timeLimit / 3 ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' :
-              timeLeft > timeLimit / 6 ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' :
-              'bg-gradient-to-r from-red-600 to-red-400 animate-pulse'
+              elapsedTime < selectedTime / 2 ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' :
+              elapsedTime < selectedTime ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' :
+              'bg-gradient-to-r from-red-600 to-red-400'
             ]"
-            :style="{ width: `${(timeLeft / timeLimit) * 100}%` }"
+            :style="{ width: `${Math.min(100, (elapsedTime / selectedTime) * 100)}%` }"
           >
             <div class="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>
           </div>
         </div>
-        <p class="text-center text-white/60 font-semibold mt-1 text-xs tracking-widest">{{ timeLeft }}s</p>
+        <p class="text-center text-white/60 font-semibold mt-1 text-xs tracking-widest">⏱ {{ elapsedTime }}s</p>
       </div>
 
       <!-- Owl + Message -->
@@ -154,29 +154,32 @@
       </div>
 
       <!-- Game Board -->
-      <div class="relative">
-        <!-- Outer amber frame shadow -->
-        <div class="absolute -inset-5 bg-gradient-to-b from-amber-700 via-amber-600 to-amber-900 rounded-3xl shadow-2xl translate-y-1.5 blur-[1px]"></div>
-        <!-- Inner amber border -->
-        <div class="absolute -inset-4 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 rounded-2xl shadow-lg"></div>
-
-        <!-- Green chalkboard surface -->
-        <div class="relative bg-gradient-to-br from-emerald-800 via-emerald-750 to-emerald-900 p-4 rounded-2xl border-4 border-emerald-700/80 shadow-inner">
-          <!-- Subtle inner highlight -->
-          <div class="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
-            <div class="absolute inset-0 bg-gradient-to-br from-white/8 via-transparent to-black/20"></div>
-          </div>
-
-          <!-- Math Grid -->
+      <div class="w-full max-w-[95vw] overflow-x-auto px-5 py-5">
           <div
-            class="relative grid gap-1.5 z-10"
-            :style="{
-              gridTemplateColumns: `repeat(${cellCount}, minmax(0, 1fr))`,
-              width: `${cellCount * 48}px`,
-              maxWidth: '92vw'
-            }"
+            class="relative mx-auto"
+            :style="{ width: boardSurfaceWidth }"
           >
-            <template v-for="cell in gridCells" :key="cell.id">
+          <!-- Outer amber frame shadow -->
+          <div class="absolute -inset-5 bg-gradient-to-b from-amber-700 via-amber-600 to-amber-900 rounded-3xl shadow-2xl translate-y-1.5 blur-[1px]"></div>
+          <!-- Inner amber border -->
+          <div class="absolute -inset-4 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 rounded-2xl shadow-lg"></div>
+
+          <!-- Green chalkboard surface -->
+          <div class="relative bg-gradient-to-br from-emerald-800 via-emerald-750 to-emerald-900 p-4 rounded-2xl border-4 border-emerald-700/80 shadow-inner">
+            <!-- Subtle inner highlight -->
+            <div class="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+              <div class="absolute inset-0 bg-gradient-to-br from-white/8 via-transparent to-black/20"></div>
+            </div>
+
+            <!-- Math Grid -->
+            <div
+              class="relative grid gap-1.5 z-10 mx-auto"
+              :style="{
+                gridTemplateColumns: boardGridColumns,
+                width: boardGridWidth
+              }"
+            >
+              <template v-for="cell in gridCells" :key="cell.id">
 
               <!-- Blank number cell (user input) -->
               <div
@@ -266,7 +269,8 @@
               <!-- Corner / empty spacer -->
               <div v-else class="aspect-square"></div>
 
-            </template>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -336,8 +340,12 @@
             <span>คะแนนด่าน:</span>
             <span class="font-bold text-yellow-400">{{ levelScore }}</span>
           </div>
+          <div class="flex justify-between text-white mb-2">
+            <span>เวลาที่ใช้:</span>
+            <span class="font-bold text-sky-400">{{ elapsedTime }}s</span>
+          </div>
           <div v-if="timeBonus > 0" class="flex justify-between text-white mb-2">
-            <span>โบนัสเวลา:</span>
+            <span>โบนัสเร็ว:</span>
             <span class="font-bold text-emerald-400">+{{ timeBonus }}</span>
           </div>
           <div class="flex justify-between text-white border-t border-slate-600 pt-2 mt-2">
@@ -378,15 +386,14 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 
-const { t } = useI18n();
 const authStore = useAuthStore();
 
 const gameState = ref('login');
-const playerName = ref(authStore.user?.name || '');
+const playerName = ref(authStore.user?.name || 'ผู้เล่น');
 const selectedTime = ref(60);
 const currentLevel = ref(1);
 const score = ref(0);
-const timeLeft = ref(60);
+const elapsedTime = ref(0);
 const activeCellId = ref(null);
 const cellRefs = ref({});
 const gridCells = ref([]);
@@ -406,6 +413,14 @@ function getGridSizeForStage(stage) {
 const gridSize = computed(() => getGridSizeForStage(currentLevel.value));
 
 const cellCount = computed(() => gridSize.value * 2 + 1);
+const boardCellSize = computed(() => {
+  if (gridSize.value >= 8) return 40;
+  if (gridSize.value >= 5) return 44;
+  return 48;
+});
+const boardGridColumns = computed(() => `repeat(${cellCount.value}, minmax(0, 1fr))`);
+const boardGridWidth = computed(() => `${cellCount.value * boardCellSize.value}px`);
+const boardSurfaceWidth = computed(() => `${cellCount.value * boardCellSize.value + 40}px`);
 
 function displayOp(op) {
   if (op === '*') return '×';
@@ -463,14 +478,13 @@ function goToStage(stageNum) {
   const s = stages.value[stageNum - 1];
   if (s.status === 'locked') return;
   currentLevel.value = stageNum;
-  timeLeft.value = selectedTime.value;
+  elapsedTime.value = 0;
   gameState.value = 'playing';
   generatePuzzle(stageNum);
   startTimer();
   showStages.value = false;
 }
 
-const timeLimit = computed(() => selectedTime.value);
 
 function evaluateExpression(numbers, operators) {
   if (!numbers || numbers.length === 0) return null;
@@ -494,6 +508,39 @@ function evaluateExpression(numbers, operators) {
   return result;
 }
 
+function applyOperation(current, next, op) {
+  switch (op) {
+    case '+': return current + next;
+    case '-': return current - next;
+    case '*': return current * next;
+    case '/':
+      if (next === 0 || current % next !== 0) return null;
+      return current / next;
+    default:
+      return null;
+  }
+}
+
+function createLineOperators(numbers, allowedOps, maxResult = 99) {
+  const ops = [];
+  let result = numbers[0];
+
+  for (let i = 1; i < numbers.length; i++) {
+    const next = numbers[i];
+    const candidates = allowedOps
+      .map(op => ({ op, result: applyOperation(result, next, op) }))
+      .filter(candidate => candidate.result !== null && candidate.result >= 1 && candidate.result <= maxResult);
+
+    if (candidates.length === 0) return null;
+
+    const selected = candidates[Math.floor(Math.random() * candidates.length)];
+    ops.push(selected.op);
+    result = selected.result;
+  }
+
+  return { ops, result };
+}
+
 function generatePuzzle(stage) {
   const size = getGridSizeForStage(stage);
   const lastIdx = size * 2;
@@ -505,17 +552,13 @@ function generatePuzzle(stage) {
   if (stage >= 40) allowedOps = ['+', '-', '*'];
   if (stage >= 60) allowedOps = ['+', '-', '*', '/'];
 
-  // Control maximum numbers to keep puzzles suitable for lower-secondary students
-  let maxNum = 9;
-  if (stage >= 40 && stage <= 59) maxNum = 8;
-  else if (stage >= 60 && stage <= 79) maxNum = 9;
-  else if (stage >= 80 && stage <= 99) maxNum = 10;
-  else if (stage === 100) maxNum = 12;
+  // Keep hidden answers one-digit because the in-game numpad supports 1-9.
+  const maxNum = 9;
 
   let numbers = {}, hOps = {}, vOps = {}, hResults = {}, vResults = {};
   let attempts = 0;
 
-  while (attempts < 300) {
+  while (attempts < 50) {
     attempts++;
     numbers = {}; hOps = {}; vOps = {}; hResults = {}; vResults = {};
 
@@ -523,36 +566,32 @@ function generatePuzzle(stage) {
       for (let c = 0; c < lastIdx; c += 2)
         numbers[`${r},${c}`] = Math.floor(Math.random() * maxNum) + 1;
 
-    for (let r = 0; r < lastIdx; r += 2)
-      for (let c = 1; c < lastIdx - 1; c += 2)
-        hOps[`${r},${c}`] = allowedOps[Math.floor(Math.random() * allowedOps.length)];
-
-    for (let r = 1; r < lastIdx - 1; r += 2)
-      for (let c = 0; c < lastIdx; c += 2)
-        vOps[`${r},${c}`] = allowedOps[Math.floor(Math.random() * allowedOps.length)];
-
     let valid = true;
     for (let r = 0; r < lastIdx && valid; r += 2) {
-      const nums = [], ops = [];
+      const nums = [];
       for (let c = 0; c < lastIdx; c += 2) {
         nums.push(numbers[`${r},${c}`]);
-        if (c + 2 < lastIdx) ops.push(hOps[`${r},${c + 1}`]);
       }
-      const res = evaluateExpression(nums, ops);
-      if (res === null || res > 99) { valid = false; break; }
-      hResults[r] = res;
+      const line = createLineOperators(nums, allowedOps);
+      if (!line) { valid = false; break; }
+      line.ops.forEach((op, index) => {
+        hOps[`${r},${index * 2 + 1}`] = op;
+      });
+      hResults[r] = line.result;
     }
     if (!valid) continue;
 
     for (let c = 0; c < lastIdx && valid; c += 2) {
-      const nums = [], ops = [];
+      const nums = [];
       for (let r = 0; r < lastIdx; r += 2) {
         nums.push(numbers[`${r},${c}`]);
-        if (r + 2 < lastIdx) ops.push(vOps[`${r + 1},${c}`]);
       }
-      const res = evaluateExpression(nums, ops);
-      if (res === null || res > 99) { valid = false; break; }
-      vResults[c] = res;
+      const line = createLineOperators(nums, allowedOps);
+      if (!line) { valid = false; break; }
+      line.ops.forEach((op, index) => {
+        vOps[`${index * 2 + 1},${c}`] = op;
+      });
+      vResults[c] = line.result;
     }
     if (valid) break;
   }
@@ -592,7 +631,8 @@ function generatePuzzle(stage) {
   }
 
   const numCells = cells.filter(c => c.type === 'number');
-  const hideRatio = level <= 3 ? 0.45 : level <= 7 ? 0.55 : 0.65;
+  const stageBand = Math.ceil(stage / 10);
+  const hideRatio = stageBand <= 3 ? 0.45 : stageBand <= 7 ? 0.55 : 0.65;
   const numToBlank = Math.max(2, Math.ceil(numCells.length * hideRatio));
   const shuffled = [...numCells].sort(() => Math.random() - 0.5);
   for (let i = 0; i < numToBlank; i++) {
@@ -650,6 +690,10 @@ function checkAllLines() {
   const lastIdx = size * 2;
   let correctH = 0, correctV = 0;
 
+  gridCells.value
+    .filter(c => c.type === 'number' && c.blank)
+    .forEach(c => { c.status = null; });
+
   for (let r = 0; r < lastIdx; r += 2) {
     const hRes = gridCells.value.find(c => c.type === 'h_result' && c.row === r);
     if (!hRes) continue;
@@ -696,12 +740,12 @@ function moveToNextCell() {
 
 function startGame() {
   if (!playerName.value.trim()) return;
-  
+
   gameState.value = 'playing';
   currentLevel.value = 1;
   score.value = 0;
-  timeLeft.value = selectedTime.value;
-  
+  elapsedTime.value = 0;
+
   generatePuzzle(currentLevel.value);
   startTimer();
   
@@ -710,14 +754,9 @@ function startGame() {
 
 function startTimer() {
   if (timerInterval) clearInterval(timerInterval);
-  
+
   timerInterval = setInterval(() => {
-    timeLeft.value--;
-    
-    if (timeLeft.value <= 0) {
-      clearInterval(timerInterval);
-      gameOver();
-    }
+    elapsedTime.value++;
   }, 1000);
 }
 
@@ -726,7 +765,7 @@ function levelComplete() {
 
   const baseScore = gridSize.value * gridSize.value * 10;
   levelScore.value = baseScore;
-  timeBonus.value = Math.floor(timeLeft.value * 2);
+  timeBonus.value = Math.max(0, Math.floor((selectedTime.value - elapsedTime.value) * 2));
   score.value += baseScore + timeBonus.value;
 
   owlMessage.value = owlMessages.levelComplete;
@@ -746,8 +785,8 @@ function levelComplete() {
 
 function nextLevel() {
   currentLevel.value++;
-  timeLeft.value = selectedTime.value;
-  
+  elapsedTime.value = 0;
+
   gameState.value = 'playing';
   generatePuzzle(currentLevel.value);
   startTimer();
@@ -763,10 +802,10 @@ function gameOver() {
 
 function restartGame() {
   gameState.value = 'login';
-  playerName.value = authStore.user?.name || '';
+  playerName.value = authStore.user?.name || 'ผู้เล่น';
   currentLevel.value = 1;
   score.value = 0;
-  timeLeft.value = selectedTime.value;
+  elapsedTime.value = 0;
   activeCellId.value = null;
   gridCells.value = [];
 }
