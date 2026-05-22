@@ -69,6 +69,9 @@ class LessonProgressController extends Controller
 
         $progress->markAsCompleted();
 
+        // Fire gamification event
+        \App\Services\UsageEventService::fire($user, 'lesson_complete', 'lesson', $lesson->id);
+
         // Auto-unlock if there is a pending reading override and requirements are met
         $member = CourseMember::where('user_id', $user->id)
             ->where('course_id', $lesson->course_id)
@@ -118,6 +121,9 @@ class LessonProgressController extends Controller
                 $progress->update(['started_at' => now()]);
             }
             $progress->markAsCompleted();
+
+            // Fire gamification event
+            \App\Services\UsageEventService::fire($user, 'lesson_complete', 'lesson', $lesson->id);
 
             // Auto-unlock if there is a pending reading override and requirements are met
             $member = CourseMember::where('user_id', $user->id)

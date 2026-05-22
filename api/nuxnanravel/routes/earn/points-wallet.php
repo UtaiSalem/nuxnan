@@ -67,12 +67,20 @@ Route::middleware('auth:api')->group(function () {
 
     // Gamification Routes (require auth)
     Route::prefix('gamification')->group(function () {
+        Route::get('/progress', [GamificationController::class, 'progress']);
+        Route::get('/dashboard', [GamificationController::class, 'dashboard']);
+        Route::get('/quests', [GamificationController::class, 'quests']);
+        Route::post('/quests/{id}/claim', [GamificationController::class, 'claimQuestReward']);
+
         Route::post('/login', [GamificationController::class, 'recordLogin']);
         Route::get('/streak', [GamificationController::class, 'getStreakInfo']);
         Route::get('/achievements', [GamificationController::class, 'getAchievements']);
         Route::get('/achievements/available', [GamificationController::class, 'getAvailableAchievements']);
         Route::get('/achievements/stats', [GamificationController::class, 'getAchievementStats']);
     });
+
+    // Usage Event Routes
+    Route::post('/usage-events', [\App\Http\Controllers\Api\UserUsageEventController::class, 'store']);
 
     // Follower Routes
     Route::prefix('follow')->group(function () {

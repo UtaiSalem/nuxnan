@@ -336,7 +336,7 @@ const handleUnlockOption = async (option) => {
 
 const handleReadingUnlock = async () => {
     try {
-        const res: any = await api.post(`/api/courses/${props.courseId}/eligibility/unlock/reading`);
+        const res = await api.post(`/api/courses/${props.courseId}/eligibility/unlock/reading`);
         if (res?.unlocked || res?.data?.unlocked) {
             swal.toast('ปลดล็อคสิทธิ์สอบสำเร็จ!', 'success');
             showReadingPanel.value = false;

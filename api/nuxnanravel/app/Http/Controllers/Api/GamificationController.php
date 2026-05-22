@@ -127,6 +127,64 @@ class GamificationController extends Controller
     }
 
     /**
+     * Get unified user progress summary.
+     */
+    public function progress(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $summary = $this->gamificationService->getUserProgressSummary($user);
+
+        return response()->json([
+            'success' => true,
+            'data' => $summary,
+        ]);
+    }
+
+    /**
+     * Get gamification dashboard summary.
+     */
+    public function dashboard(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $summary = $this->gamificationService->getDashboardSummary($user);
+
+        return response()->json([
+            'success' => true,
+            'data' => $summary,
+        ]);
+    }
+
+    /**
+     * Get user quests.
+     */
+    public function quests(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $quests = $this->gamificationService->getUserQuests($user);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'quests' => $quests,
+            ],
+        ]);
+    }
+
+    /**
+     * Claim quest reward.
+     */
+    public function claimQuestReward(Request $request, int $id): JsonResponse
+    {
+        $user = Auth::user();
+        $result = $this->gamificationService->claimQuestReward($user, $id);
+
+        return response()->json([
+            'success' => $result['success'],
+            'message' => $result['message'],
+        ]);
+    }
+
+    /**
      * Record user activity.
      */
     public function recordActivity(Request $request): JsonResponse

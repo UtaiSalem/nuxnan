@@ -100,6 +100,33 @@ const earnSubmenu = [
 // Theme state
 const isDarkMode = ref(false)
 
+const toNumber = (value, fallback = 0) => {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : fallback
+}
+
+const firstNumber = (...values) => {
+  for (const value of values) {
+    if (value === null || value === undefined || value === '') continue
+    const number = Number(value)
+    if (Number.isFinite(number)) return number
+  }
+  return 0
+}
+
+const formatCompactCount = (value) => {
+  const number = Math.max(0, firstNumber(value))
+
+  if (number >= 1000) {
+    return new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    }).format(number)
+  }
+
+  return new Intl.NumberFormat('en-US').format(number)
+}
+
 // User data
 const authUser = computed(() => {
   const user = authStore.user
@@ -113,14 +140,18 @@ const authUser = computed(() => {
       pp: 0,
       wallet: 0,
       level: 1,
-      posts: 0,
-      friends: 0,
-      visits: 0,
+      posts: '0',
+      friends: '0',
+      visits: '0',
     }
   }
 
   // Use avatar first (always set by backend with fallback to UI Avatars)
   const avatarUrl = user.avatar || user.profile_photo_url || '/images/default-avatar.png'
+  const level = firstNumber(user.xp_level, user.level) || 1
+  const postsCount = firstNumber(user.posts_count, user.posts)
+  const friendsCount = firstNumber(user.friends_count, user.friends)
+  const visitsCount = firstNumber(user.visits_count, user.visits)
 
   return {
     name: user.username || user.name || 'User',
@@ -129,11 +160,15 @@ const authUser = computed(() => {
     personalCode: user.personal_code || '',
     avatar: avatarUrl,
     pp: authStore.points,
-    wallet: Number(user.wallet) || 0,
-    level: user.level || 24,
-    posts: user.posts || 930,
-    friends: user.friends || 82,
-    visits: user.visits || '5.7K',
+    wallet: toNumber(user.wallet),
+    level,
+    xp: firstNumber(user.xp),
+    currentXp: firstNumber(user.current_xp),
+    xpForNextLevel: firstNumber(user.xp_for_next_level),
+    levelProgress: firstNumber(user.level_progress),
+    posts: formatCompactCount(postsCount),
+    friends: formatCompactCount(friendsCount),
+    visits: formatCompactCount(visitsCount),
     is_plearnd_admin: user.is_plearnd_admin || false,
   }
 })

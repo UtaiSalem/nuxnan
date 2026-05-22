@@ -8,6 +8,9 @@ export const useGamificationStore = defineStore('gamification', () => {
   const apiBase = config.public.apiBase as string
 
   // State
+  const progress = ref<any>(null)
+  const dashboard = ref<any>(null)
+  const quests = ref<any[]>([])
   const leaderboard = ref<any[]>([])
   const leaderboardSummary = ref<any>(null)
   const streakInfo = ref<any>(null)
@@ -26,30 +29,119 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   // Actions
-  async function fetchLeaderboard(params: { limit?: number; force?: boolean } = {}) {
-    if (!params.force && !shouldFetch('leaderboard')) return
-    if (inFlight.value['leaderboard']) return inFlight.value['leaderboard']
+  async function fetchProgress(force = false) {
+    if (!force && !shouldFetch('progress')) return
+    if (inFlight.value['progress']) return inFlight.value['progress']
+
+    inFlight.value['progress'] = (async () => {
+      try {
+        const response = await $fetch<any>(`${apiBase}/api/gamification/progress`, {
+          headers: { Authorization: `Bearer ${authStore.token}` }
+        })
+        if (response.success) {
+          progress.value = response.data
+          lastFetched.value['progress'] = Date.now()
+        }
+      } catch (error) {
+        console.error('Failed to fetch progress:', error)
+      } finally {
+        inFlight.value['progress'] = null
+      }
+    })()
+
+    return inFlight.value['progress']
+  }
+
+  async function fetchDashboard(force = false) {
+    if (!force && !shouldFetch('dashboard')) return
+    if (inFlight.value['dashboard']) return inFlight.value['dashboard']
+
+    inFlight.value['dashboard'] = (async () => {
+      try {
+        const response = await $fetch<any>(`${apiBase}/api/gamification/dashboard`, {
+          headers: { Authorization: `Bearer ${authStore.token}` }
+        })
+        if (response.success) {
+          dashboard.value = response.data
+          lastFetched.value['dashboard'] = Date.now()
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard:', error)
+      } finally {
+        inFlight.value['dashboard'] = null
+      }
+    })()
+
+    return inFlight.value['dashboard']
+  }
+
+  async function fetchQuests(force = false) {
+    if (!force && !shouldFetch('quests')) return
+    if (inFlight.value['quests']) return inFlight.value['quests']
+
+    inFlight.value['quests'] = (async () => {
+      try {
+        const response = await $fetch<any>(`${apiBase}/api/gamification/quests`, {
+          headers: { Authorization: `Bearer ${authStore.token}` }
+        })
+        if (response.success) {
+          quests.value = response.data.quests || []
+          lastFetched.value['quests'] = Date.now()
+        }
+      } catch (error) {
+        console.error('Failed to fetch quests:', error)
+      } finally {
+        inFlight.value['quests'] = null
+      }
+    })()
+
+    return inFlight.value['quests']
+  }
+
+  async function claimQuestReward(questId: number) {
+    try {
+      const response = await $fetch<any>(`${apiBase}/api/gamification/quests/${questId}/claim`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authStore.token}` }
+      })
+      if (response.success) {
+        // Refresh data
+        await Promise.all([fetchProgress(true), fetchQuests(true), fetchDashboard(true)])
+        return response
+      }
+      return response
+    } catch (error) {
+      console.error('Failed to claim quest reward:', error)
+      throw error
+    }
+  }
+
+  async function fetchLeaderboard(params: { limit?: number; force?: boolean; type?: string } = {}) {
+    const type = params.type || 'points'
+    const key = `leaderboard_${type}`
+    if (!params.force && !shouldFetch(key)) return
+    if (inFlight.value[key]) return inFlight.value[key]
     
     isLoading.value = true
-    inFlight.value['leaderboard'] = (async () => {
+    inFlight.value[key] = (async () => {
       try {
         const limit = params.limit || 10
-        const response = await $fetch<any>(`${apiBase}/api/gamification/leaderboard/points?limit=${limit}`, {
+        const response = await $fetch<any>(`${apiBase}/api/gamification/leaderboard/${type}?limit=${limit}`, {
           headers: { Authorization: `Bearer ${authStore.token}` }
         })
         if (response.success) {
           leaderboard.value = response.data.leaderboard || response.data.users || []
-          lastFetched.value['leaderboard'] = Date.now()
+          lastFetched.value[key] = Date.now()
         }
       } catch (error) {
-        console.error('Failed to fetch leaderboard:', error)
+        console.error(`Failed to fetch ${type} leaderboard:`, error)
       } finally {
         isLoading.value = false
-        inFlight.value['leaderboard'] = null
+        inFlight.value[key] = null
       }
     })()
 
-    return inFlight.value['leaderboard']
+    return inFlight.value[key]
   }
 
   async function fetchLeaderboardSummary(force = false) {
@@ -122,11 +214,18 @@ export const useGamificationStore = defineStore('gamification', () => {
   }
 
   return {
+    progress,
+    dashboard,
+    quests,
     leaderboard,
     leaderboardSummary,
     streakInfo,
     achievements,
     isLoading,
+    fetchProgress,
+    fetchDashboard,
+    fetchQuests,
+    claimQuestReward,
     fetchLeaderboard,
     fetchLeaderboardSummary,
     fetchStreakInfo,

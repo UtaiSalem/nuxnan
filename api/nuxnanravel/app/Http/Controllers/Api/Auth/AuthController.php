@@ -75,6 +75,9 @@ class AuthController extends Controller
             ], 500);
         }
 
+        // Fire gamification event
+        \App\Services\UsageEventService::fire($user, 'login');
+
         return $this->respondWithToken($token);
     }
 
@@ -168,6 +171,7 @@ class AuthController extends Controller
     {
         $user = auth('api')->user();
         $user->load('roles'); // Load relationships for resource
+        $user->loadCount(['posts', 'followers', 'following', 'userAchievements']);
         
         return response()->json([
             'success' => true,
@@ -269,6 +273,7 @@ class AuthController extends Controller
     {
         $user = auth('api')->user();
         $user->load('roles'); // Load relationships for resource
+        $user->loadCount(['posts', 'followers', 'following', 'userAchievements']);
         
         return response()->json([
             'success' => true,
