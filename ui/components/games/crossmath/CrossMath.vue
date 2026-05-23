@@ -10,7 +10,7 @@
       <div class="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-amber-900/40 to-transparent"></div>
       
       <!-- Floating Clock -->
-      <div class="absolute top-8 right-8 text-6xl animate-pulse-slow filter drop-shadow-lg">
+      <div class="absolute top-20 right-8 text-6xl animate-pulse-slow filter drop-shadow-lg">
         ⏰
       </div>
       
@@ -92,18 +92,33 @@
     <div v-else-if="gameState === 'playing'" class="relative z-10 min-h-screen flex flex-col items-center px-3 pt-4 pb-6 gap-3">
 
       <!-- Header -->
-      <div class="w-full max-w-sm flex items-center gap-2">
-        <div class="flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-amber-500/60 shadow-lg text-center">
+      <div class="w-full max-w-2xl grid grid-cols-3 gap-2 sm:flex sm:items-center">
+        <div class="min-w-0 sm:flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-amber-500/60 shadow-lg text-center">
           <p class="text-amber-400 font-bold text-sm truncate">{{ playerName }}</p>
         </div>
-        <div class="flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-emerald-500/60 shadow-lg text-center">
-          <p class="text-emerald-400 font-bold text-sm">ระดับ {{ Math.ceil(currentLevel/10) }} / ด่าน {{ currentLevel }}</p>
+        <div class="min-w-0 sm:flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-emerald-500/60 shadow-lg text-center">
+          <p class="text-emerald-400 font-bold text-sm truncate">ระดับ {{ Math.ceil(currentLevel/10) }} / ด่าน {{ currentLevel }}</p>
         </div>
-        <div class="flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-yellow-500/60 shadow-lg text-center">
-          <p class="text-yellow-400 font-bold text-sm">{{ score }} <span class="text-yellow-500/80 text-xs">แต้ม</span></p>
+        <div class="min-w-0 sm:flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-yellow-500/60 shadow-lg text-center">
+          <p class="text-yellow-400 font-bold text-sm truncate">{{ score }} <span class="text-yellow-500/80 text-xs">แต้ม</span></p>
         </div>
-        <div class="shrink-0">
-          <button @click="openStageList" class="py-2 px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow">รายการด่าน</button>
+        <div class="col-span-3 grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:shrink-0 sm:gap-1">
+          <button @click="openStageList" class="min-w-0 py-2 px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow text-sm font-semibold whitespace-nowrap">รายการด่าน</button>
+          <button @click="showQuitConfirm = true" class="min-w-0 py-2 px-3 bg-red-700/80 text-white rounded-xl border border-red-600 shadow text-sm font-semibold whitespace-nowrap">✕ ออก</button>
+        </div>
+      </div>
+
+      <!-- Quit Confirm Modal -->
+      <div v-if="showQuitConfirm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/70" @click="showQuitConfirm = false"></div>
+        <div class="relative bg-slate-800 p-6 rounded-2xl shadow-2xl border-2 border-red-500 max-w-xs w-full text-center">
+          <p class="text-4xl mb-3">🚪</p>
+          <h3 class="text-white font-bold text-lg mb-1">ยกเลิกการเล่น?</h3>
+          <p class="text-slate-400 text-sm mb-5">ความคืบหน้าในด่านนี้จะหายไป</p>
+          <div class="flex gap-3">
+            <button @click="showQuitConfirm = false" class="flex-1 py-2 bg-slate-600 text-white rounded-xl font-semibold hover:bg-slate-500 transition-all">เล่นต่อ</button>
+            <button @click="quitGame" class="flex-1 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-500 transition-all">ออกเกม</button>
+          </div>
         </div>
       </div>
 
@@ -391,6 +406,7 @@ const authStore = useAuthStore();
 const gameState = ref('login');
 const playerName = ref(authStore.user?.name || 'ผู้เล่น');
 const selectedTime = ref(60);
+const showQuitConfirm = ref(false);
 const currentLevel = ref(1);
 const score = ref(0);
 const elapsedTime = ref(0);
@@ -798,6 +814,17 @@ function gameOver() {
   clearInterval(timerInterval);
   gameState.value = 'gameOver';
   owlMessage.value = owlMessages.gameOver;
+}
+
+function quitGame() {
+  clearInterval(timerInterval);
+  showQuitConfirm.value = false;
+  gameState.value = 'login';
+  playerName.value = authStore.user?.name || 'ผู้เล่น';
+  currentLevel.value = 1;
+  score.value = 0;
+  elapsedTime.value = 0;
+  activeCellId.value = null;
 }
 
 function restartGame() {

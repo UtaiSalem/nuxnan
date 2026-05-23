@@ -39,6 +39,15 @@ class AcademyPostController extends Controller
      */
     public function store(Academy $academy, Request $request)
     {
+        // Check points - require 180 PP to create academy post
+        $pointsRequired = 180;
+        if (auth()->user()->pp < $pointsRequired) {
+            return response()->json([
+                'success' => false,
+                'message' => "คุณมีแต้มสะสมไม่พอสำหรับการสร้างโพสต์ (ต้องการ {$pointsRequired} แต้ม)",
+            ], 403);
+        }
+
         $validatedData = $request->validate([
             'content'   => 'nullable|string|max:1000',
             'images'    => 'array|max:4',
@@ -78,6 +87,9 @@ class AcademyPostController extends Controller
         $activity->activity_type = ActivityType::CREATE_POST->value;
         $activity->activityable()->associate($post);
         $activity->save();
+
+        // Deduct points after successful save
+        auth()->user()->decrement('pp', $pointsRequired);
 
         // Load the activity with all necessary relationships for FeedPost component
         $activity->load(['user', 'activityable.user', 'activityable.academy', 'activityable.images']);

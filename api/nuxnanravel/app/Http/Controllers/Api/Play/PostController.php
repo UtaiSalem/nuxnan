@@ -136,8 +136,9 @@ class PostController extends \App\Http\Controllers\Controller
         ]);
 
         try {
-            // Check points
-            $pollPointsPool = (int)$request->input('poll_points_pool', 0);
+            // Check points — use validated data to prevent negative poll_points_pool bypass
+            $validatedData = $request->validated();
+            $pollPointsPool = max(0, (int) ($validatedData['poll_points_pool'] ?? 0));
             $totalPointsNeeded = 180 + $pollPointsPool;
 
             if (auth()->user()->pp < $totalPointsNeeded) {
@@ -147,8 +148,6 @@ class PostController extends \App\Http\Controllers\Controller
                 ], 403);
             }
 
-            $validatedData = $request->validated();
-            
             // Handle background template if background_id is provided
             if (!empty($validatedData['background_id'])) {
                 $background = PostBackground::find($validatedData['background_id']);

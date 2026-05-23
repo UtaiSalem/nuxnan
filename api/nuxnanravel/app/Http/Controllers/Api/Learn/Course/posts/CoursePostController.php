@@ -91,7 +91,20 @@ class CoursePostController extends Controller
                 'content' => 'nullable|string|max:5000',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',
                 'group_id' => 'nullable|exists:course_groups,id',
+                'poll_points_pool' => 'nullable|integer|min:0',
             ]);
+
+            // Calculate total points needed BEFORE any creation logic
+            $pollPointsPool = max(0, (int) ($validatedData['poll_points_pool'] ?? 0));
+            $totalPointsNeeded = 180 + $pollPointsPool;
+
+            // Check if user has enough points (applies to ALL course posts)
+            if (auth()->user()->pp < $totalPointsNeeded) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "คุณมีแต้มสะสมไม่พอสำหรับการสร้างโพสต์ (ต้องการ {$totalPointsNeeded} แต้ม)",
+                ], 403);
+            }
 
             $content = $validatedData['content'] ?? '';
             $hashtags = $this->extractHashtags($content);
@@ -111,18 +124,8 @@ class CoursePostController extends Controller
                 $pollTitle = $request->poll_question;
                 $pollOptions = $request->poll_options;
                 $pollDuration = $request->poll_duration ?? 24; // Hours
-                $pollPointsPool = (int) $request->input('poll_points_pool', 0);
 
                 if (!empty($pollTitle) && is_array($pollOptions) && count($pollOptions) >= 2) {
-                    // Check if user has enough points for poll with reward pool
-                    $totalPointsNeeded = 180 + $pollPointsPool;
-                    if (auth()->user()->pp < $totalPointsNeeded) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => "คุณมีแต้มสะสมไม่พอสำหรับการสร้างโพล (ต้องการ {$totalPointsNeeded} แต้ม)",
-                        ], 403);
-                    }
-
                     // Calculate points per vote
                     $maxVotes = (int) $request->input('poll_max_votes', 100);
                     $pointsPerVote = $pollPointsPool > 0 ? floor($pollPointsPool / $maxVotes) : 0;
@@ -151,11 +154,6 @@ class CoursePostController extends Controller
 
                     $post->poll_id = $poll->id;
                     $post->post_type = 'poll';
-
-                    // Deduct poll points pool from user (base cost is deducted separately)
-                    if ($pollPointsPool > 0) {
-                        auth()->user()->decrement('pp', $pollPointsPool);
-                    }
                 }
             }
 
@@ -179,7 +177,8 @@ class CoursePostController extends Controller
             $activity->activityable()->associate($post);
             $activity->save();
 
-            auth()->user()->decrement('pp', 180);
+            // Deduct total points (base 180 + poll pool) in one operation
+            auth()->user()->decrement('pp', $totalPointsNeeded);
 
             // Reload the post with all necessary relationships including poll
             $post = $post->fresh(['user', 'post_images', 'post_comments.user', 'course', 'academy', 'poll.options', 'poll.user', 'poll.comments.user']);

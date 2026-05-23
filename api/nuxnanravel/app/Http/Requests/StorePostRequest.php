@@ -81,6 +81,8 @@ class StorePostRequest extends FormRequest
             'poll_options'          => 'required_if:is_poll,true|nullable|array|min:2|max:10',
             'poll_options.*'        => 'required_if:is_poll,true|string|max:255',
             'poll_duration'         => 'nullable|integer|in:1,6,12,24,72,168',
+            'poll_points_pool'      => 'nullable|integer|min:0',
+            'poll_max_votes'        => 'nullable|integer|min:1',
             
             // Points (for sponsored posts)
             'point'                 => 'nullable|integer|min:1',

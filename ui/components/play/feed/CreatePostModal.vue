@@ -259,8 +259,8 @@ const createPost = async () => {
   if (activeTab.value === 'status' && !postText.value.trim() && selectedImages.value.length === 0) return
   if (isSubmitting.value) return
   
-  // Skip point check for academy/course posts (handled differently)
-  if (props.context === 'newsfeed' && authStore.user && authStore.user.pp < 180) {
+  // Check points for all contexts (backend requires 180 PP for all post types)
+  if (authStore.user && (authStore.user?.pp ?? 0) < 180) {
     swal.warning('คุณมีแต้มสะสมไม่พอสำหรับการโพสต์ กรุณาสะสมแต้มสะสมอย่างน้อย 180 แต้ม', 'แต้มไม่พอ')
     return
   }
