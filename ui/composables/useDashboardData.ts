@@ -24,6 +24,11 @@ export const useDashboardData = () => {
   const leaderboardSummary = computed(() => gamificationStore.leaderboardSummary)
   const topUsers = computed(() => gamificationStore.leaderboard)
   
+  const xpToday = computed(() => gamificationStore.xpToday)
+  const xpThisWeek = computed(() => gamificationStore.xpThisWeek)
+  const levelProgress = computed(() => gamificationStore.levelProgress)
+  const recentXpLogs = computed(() => gamificationStore.recentXpLogs)
+
   const recentTransactions = computed(() => dashboardStore.recentTransactions)
   const featuredRewards = computed(() => dashboardStore.featuredRewards)
   
@@ -80,6 +85,9 @@ export const useDashboardData = () => {
     topUsers,
     featuredRewards,
     loadingMap,
+    xpToday,
+    xpThisWeek,
+    recentXpLogs,
     
     // Level Helpers
     levelProgress: computed(() => getLevelProgress()),

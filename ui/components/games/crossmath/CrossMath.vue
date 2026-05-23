@@ -374,6 +374,7 @@
           <button 
             v-if="gameState === 'levelComplete'"
             @click="nextLevel"
+            aria-keyshortcuts="Enter"
             class="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
           >
             ด่านถัดไป →
@@ -838,6 +839,12 @@ function restartGame() {
 }
 
 function handleKeydown(event) {
+  if (event.key === 'Enter' && gameState.value === 'levelComplete') {
+    if (event.repeat) return;
+    event.preventDefault();
+    nextLevel();
+    return;
+  }
   if (gameState.value !== 'playing') return;
 
   const blankCells = gridCells.value.filter(c => c.type === 'number' && c.blank);

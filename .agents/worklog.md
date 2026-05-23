@@ -16,8 +16,6 @@
 
 ## งานที่กำลังทำ (In Progress)
 
-<!-- บอกว่ากำลังทำอะไรอยู่ ไฟล์ไหน feature อะไร -->
-
 - (ยังไม่มี)
 
 ---
@@ -34,20 +32,16 @@
 
 <!-- สรุปสิ่งที่ทำสำเร็จแล้วในวันนี้ -->
 
-- (ยังไม่มี)
+- **XP & Usage Tracking Improvement** (2026-05-23)
+  - Implemented full-stack XP/points system with event taxonomy and idempotency.
+  - Fixed SQLite migration issues for tests.
+  - Fixed logic bugs in `ActivitySummaryService` and `GamificationRuleEngine`.
+  - Verified with 6 feature tests (all passing).
+  - Integrated into Dashboard UI with level progress and activity summaries.
+  - Added recent XP feed to Dashboard activity feed from gamification rule logs.
+  - Verified `php artisan test tests/Feature/GamificationTest.php`, `./vendor/bin/pint --dirty`, and `npm.cmd run build`.
+- **Cross Math Enter key** (2026-05-23)
+  - Added Enter key support for next level in Cross Math game.
+  - Added `aria-keyshortcuts="Enter"` to the next-level button.
 
 ---
-
-## Context สำคัญที่ต้องรู้
-
-<!-- ข้อมูลที่ Claude ควรรู้ก่อนเริ่มงาน เช่น bug ที่พบ, decision ที่ตัดสินใจ, API ที่เปลี่ยน -->
-
-- (ยังไม่มี)
-
----
-
-## ประวัติการส่งต่องาน
-
-| วันที่ | จากที่ | ไปที่ | สรุป |
-|--------|--------|-------|------|
-| 2026-05-23 | — | บ้าน | เริ่มใช้ worklog system |

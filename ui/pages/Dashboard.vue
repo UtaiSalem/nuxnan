@@ -40,6 +40,9 @@ const {
   featuredRewards,
   loadingMap,
   levelProgress,
+  xpToday,
+  xpThisWeek,
+  recentXpLogs,
   loadAllData
 } = useDashboardData()
 
@@ -150,6 +153,24 @@ onMounted(() => {
           />
 
           <DashboardStatsCard
+            type="points"
+            :value="formatPoints(xpToday)"
+            subtitle="XP วันนี้"
+            link="/Earn/Gamification"
+            color="text-vikinger-cyan"
+            :isLoading="loadingMap.leaderboard"
+          />
+
+          <DashboardStatsCard
+            type="points"
+            :value="formatPoints(xpThisWeek)"
+            subtitle="XP สัปดาห์นี้"
+            link="/Earn/Gamification"
+            color="text-vikinger-purple"
+            :isLoading="loadingMap.leaderboard"
+          />
+
+          <DashboardStatsCard
             type="leaderboard"
             :value="`#${leaderboardSummary?.points_rank || '-'}`"
             subtitle="อันดับของคุณ"
@@ -162,6 +183,7 @@ onMounted(() => {
         <!-- Recent Transactions/Activity Feed -->
         <DashboardActivityFeed 
           :transactions="recentTransactions"
+          :xpLogs="recentXpLogs"
           :isLoading="loadingMap.transactions"
         />
       </div>

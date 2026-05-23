@@ -85,6 +85,9 @@ class PostCommentController extends \App\Http\Controllers\Controller
 
         $post->increment('comments', 1);
 
+        // Fire gamification event
+        \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::COMMENT_CREATE->value, 'post', $post->id);
+
         return response()->json([
             'success' => true,
             'comment' => new PostCommentResource(PostComment::find($newComment->id)),
@@ -215,6 +218,9 @@ class PostCommentController extends \App\Http\Controllers\Controller
 
         // Increment reply count on parent comment
         $comment->increment('replies');
+
+        // Fire gamification event
+        \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::COMMENT_CREATE->value, 'post', $comment->post_id);
 
         // Load the reply with user relationship
         $reply->load('user');

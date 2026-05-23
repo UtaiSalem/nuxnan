@@ -51,7 +51,7 @@ class ActivitySummaryService
         UserActivitySummary::updateOrCreate(
             [
                 'user_id' => $user->id,
-                'summary_date' => $date,
+                'summary_date' => \Illuminate\Support\Carbon::parse($date)->toDateString(),
                 'period_type' => 'daily',
             ],
             [
@@ -63,5 +63,53 @@ class ActivitySummaryService
                 'streak_day' => $streak,
             ]
         );
+    }
+
+    /**
+     * Get summary between two dates.
+     */
+    public function getSummaryBetween(User $user, string $start, string $end): array
+    {
+        $summaries = UserActivitySummary::where('user_id', $user->id)
+            ->whereBetween('summary_date', [$start, $end])
+            ->where('period_type', 'daily')
+            ->get();
+
+        $eventCounts = [];
+        foreach ($summaries as $summary) {
+            $counts = $summary->event_counts ?? [];
+            foreach ($counts as $type => $count) {
+                $eventCounts[$type] = ($eventCounts[$type] ?? 0) + $count;
+            }
+        }
+
+        return [
+            'points_earned' => (float) $summaries->sum('points_earned'),
+            'xp_earned' => (int) $summaries->sum('xp_earned'),
+            'lessons_completed' => (int) $summaries->sum('lessons_completed'),
+            'quizzes_completed' => (int) $summaries->sum('quizzes_completed'),
+            'event_counts' => $eventCounts,
+            'days_active' => $summaries->count(),
+        ];
+    }
+
+    /**
+     * Get weekly summary for a user.
+     */
+    public function getWeeklySummary(User $user): array
+    {
+        $start = now()->startOfWeek()->toDateString();
+        $end = now()->endOfWeek()->toDateString();
+        return $this->getSummaryBetween($user, $start, $end);
+    }
+
+    /**
+     * Get monthly summary for a user.
+     */
+    public function getMonthlySummary(User $user): array
+    {
+        $start = now()->startOfMonth()->toDateString();
+        $end = now()->endOfMonth()->toDateString();
+        return $this->getSummaryBetween($user, $start, $end);
     }
 }

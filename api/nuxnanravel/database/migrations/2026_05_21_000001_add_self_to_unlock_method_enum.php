@@ -13,7 +13,9 @@ return new class extends Migration
     public function up(): void
     {
         // Add 'self' to unlock_method enum
-        DB::statement("ALTER TABLE exam_eligibility_overrides MODIFY COLUMN unlock_method ENUM('points', 'reading', 'admin', 'appeal', 'self') NOT NULL COMMENT 'วิธีที่ใช้ปลดล็อค'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE exam_eligibility_overrides MODIFY COLUMN unlock_method ENUM('points', 'reading', 'admin', 'appeal', 'self') NOT NULL COMMENT 'วิธีที่ใช้ปลดล็อค'");
+        }
     }
 
     /**
@@ -22,6 +24,8 @@ return new class extends Migration
     public function down(): void
     {
         // Remove 'self' from unlock_method enum
-        DB::statement("ALTER TABLE exam_eligibility_overrides MODIFY COLUMN unlock_method ENUM('points', 'reading', 'admin', 'appeal') NOT NULL COMMENT 'วิธีที่ใช้ปลดล็อค'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE exam_eligibility_overrides MODIFY COLUMN unlock_method ENUM('points', 'reading', 'admin', 'appeal') NOT NULL COMMENT 'วิธีที่ใช้ปลดล็อค'");
+        }
     }
 };

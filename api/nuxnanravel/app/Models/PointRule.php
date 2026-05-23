@@ -17,6 +17,7 @@ class PointRule extends Model
         'source_type',
         'base_amount',
         'multiplier',
+        'xp_amount',
         'max_daily_earnings',
         'max_monthly_earnings',
         'cooldown_minutes',
@@ -28,6 +29,7 @@ class PointRule extends Model
     protected $casts = [
         'base_amount' => 'decimal:2',
         'multiplier' => 'decimal:2',
+        'xp_amount' => 'integer',
         'effective_date' => 'date',
         'expiry_date' => 'date',
         'is_active' => 'boolean',

@@ -76,7 +76,7 @@ class AuthController extends Controller
         }
 
         // Fire gamification event
-        \App\Services\UsageEventService::fire($user, 'login');
+        \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::LOGIN->value);
 
         return $this->respondWithToken($token);
     }

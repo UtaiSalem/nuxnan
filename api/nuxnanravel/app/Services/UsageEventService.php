@@ -43,13 +43,21 @@ class UsageEventService
     }
 
     /**
-     * Generate a unique idempotency key for an event.
-     * For daily limited events, we include the date.
+     * Generate a unique idempotency key for an event based on its strategy.
      */
     protected function generateIdempotencyKey(int $userId, string $eventType, ?int $sourceId): string
     {
-        $date = now()->toDateString();
+        $strategy = \App\Enums\UsageEventType::IDEMPOTENCY_STRATEGIES[$eventType] ?? 'daily';
         $sourceIdStr = $sourceId ?? 'none';
-        return hash('sha256', "{$userId}_{$eventType}_{$sourceIdStr}_{$date}");
+
+        $keyParts = match($strategy) {
+            'daily' => [$userId, $eventType, now()->toDateString()],
+            'once_per_source' => [$userId, $eventType, $sourceIdStr],
+            'daily_per_source' => [$userId, $eventType, $sourceIdStr, now()->toDateString()],
+            'always' => [$userId, $eventType, $sourceIdStr, now()->format('Y-m-d H:i:s.u'), mt_rand()],
+            default => [$userId, $eventType, now()->toDateString()],
+        };
+
+        return hash('sha256', implode('_', $keyParts));
     }
 }

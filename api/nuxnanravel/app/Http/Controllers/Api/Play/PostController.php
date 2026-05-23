@@ -172,6 +172,9 @@ class PostController extends \App\Http\Controllers\Controller
             // Create post using service
             $post = $this->postService->createPost($validatedData, auth()->id());
 
+            // Fire gamification event
+            \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::POST_CREATE->value, 'post', $post->id);
+
             // Get the activity for response with all necessary relationships
             $activity = $post->activity;
             $activity->load([

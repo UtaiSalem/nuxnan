@@ -18,6 +18,10 @@ class GamificationRuleEngine
      */
     public function evaluate(UserUsageEvent $event): void
     {
+        if ($event->processed_at) {
+            return;
+        }
+
         $user = $event->user;
 
         // 1. Process Points Rules
@@ -62,8 +66,8 @@ class GamificationRuleEngine
 
         $amount = $rule->base_amount * $rule->multiplier;
         
-        // Award XP (using a default formula for now: 10 XP per 1 point)
-        $xpAmount = (int) ($amount * 10);
+        // Award XP (using rule amount or default formula: 10 XP per 1 point)
+        $xpAmount = $rule->xp_amount ?? (int) ($amount * 10);
 
         // Award points and XP together
         $pointsService->earn(

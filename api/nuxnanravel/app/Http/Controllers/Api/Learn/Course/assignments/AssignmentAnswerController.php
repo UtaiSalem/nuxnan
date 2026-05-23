@@ -75,6 +75,8 @@ class AssignmentAnswerController extends Controller
                 'points' => null
             ]);
 
+            // Fire gamification event
+            \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::ASSIGNMENT_SUBMIT->value, 'assignment', $assignment->id);
         }
 
         if($request->hasFile('images')) {
@@ -172,6 +174,11 @@ class AssignmentAnswerController extends Controller
             'feedback' => $request->feedback,
             'status' => 'graded', // Set status to graded when points are assigned
         ]);
+
+        // Fire gamification event
+        if ($answer->points > 0) {
+            \App\Services\UsageEventService::fire($answer->user, \App\Enums\UsageEventType::ASSIGNMENT_GRADED->value, 'assignment', $assignment->id, ['points' => $answer->points]);
+        }
 
         return response()->json([
             'success' => true,

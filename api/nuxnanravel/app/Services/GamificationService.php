@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\GamificationRuleLog;
 use App\Models\PointStreak;
 use App\Models\User;
 use App\Services\PointsService;
@@ -129,6 +130,24 @@ class GamificationService
             ->selectRaw('SUM(points_earned) as points, SUM(xp_earned) as xp')
             ->first();
 
+        $recentXp = GamificationRuleLog::with('usageEvent')
+            ->where('user_id', $user->id)
+            ->where('result', 'awarded')
+            ->where('xp_awarded', '>', 0)
+            ->latest('evaluated_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (GamificationRuleLog $log) => [
+                'id' => $log->id,
+                'rule_key' => $log->rule_key,
+                'event_type' => $log->usageEvent?->event_type,
+                'xp_awarded' => (int) $log->xp_awarded,
+                'points_awarded' => (float) $log->points_awarded,
+                'reason' => $log->reason,
+                'evaluated_at' => $log->evaluated_at,
+            ])
+            ->values();
+
         return [
             'today' => [
                 'points' => (float) ($todaySummary->points_earned ?? 0),
@@ -145,6 +164,7 @@ class GamificationService
                 'points' => $this->getUserRank($user, 'points'),
                 'weekly' => $this->getUserRank($user, 'weekly'),
             ],
+            'recent_xp' => $recentXp,
         ];
     }
 

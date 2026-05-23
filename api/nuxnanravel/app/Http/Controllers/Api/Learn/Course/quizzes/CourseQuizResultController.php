@@ -116,14 +116,14 @@ class CourseQuizResultController extends Controller
 
         // Fire gamification events if finalized
         if ($request->has('finalize') && $request->finalize == true) {
-            \App\Services\UsageEventService::fire(auth()->user(), 'quiz_submit', 'quiz', $quiz->id, [
+            \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::QUIZ_SUBMIT->value, 'quiz', $quiz->id, [
                 'score' => $data['score'],
                 'percentage' => $data['percentage'],
                 'status' => $data['status']
             ]);
 
             if ($data['status'] === QuizConstants::STATUS_PASSED) {
-                \App\Services\UsageEventService::fire(auth()->user(), 'quiz_pass', 'quiz', $quiz->id);
+                \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::QUIZ_PASS->value, 'quiz', $quiz->id);
             }
         }
 

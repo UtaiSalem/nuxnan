@@ -303,6 +303,9 @@ class CourseMemberController extends Controller
             $new_course_member->enrollment_date = now();
             $new_course_member->save();
 
+            // Fire gamification event
+            \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::COURSE_JOIN->value, 'course', $course->id);
+
             if ($new_course_member->group_id) {
                 $newCourseGroupMember = new CourseGroupMember;
                 $newCourseGroupMember->user_id = auth()->id();

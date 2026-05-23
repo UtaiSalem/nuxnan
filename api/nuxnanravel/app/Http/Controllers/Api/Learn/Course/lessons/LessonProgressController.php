@@ -42,6 +42,9 @@ class LessonProgressController extends Controller
 
         if ($progress->status === LessonProgress::STATUS_NOT_STARTED) {
             $progress->markAsStarted();
+
+            // Fire gamification event
+            \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::LESSON_START->value, 'lesson', $lesson->id);
         }
 
         return response()->json([
@@ -70,7 +73,7 @@ class LessonProgressController extends Controller
         $progress->markAsCompleted();
 
         // Fire gamification event
-        \App\Services\UsageEventService::fire($user, 'lesson_complete', 'lesson', $lesson->id);
+        \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::LESSON_COMPLETE->value, 'lesson', $lesson->id);
 
         // Auto-unlock if there is a pending reading override and requirements are met
         $member = CourseMember::where('user_id', $user->id)
@@ -123,7 +126,7 @@ class LessonProgressController extends Controller
             $progress->markAsCompleted();
 
             // Fire gamification event
-            \App\Services\UsageEventService::fire($user, 'lesson_complete', 'lesson', $lesson->id);
+            \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::LESSON_COMPLETE->value, 'lesson', $lesson->id);
 
             // Auto-unlock if there is a pending reading override and requirements are met
             $member = CourseMember::where('user_id', $user->id)

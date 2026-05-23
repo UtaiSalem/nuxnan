@@ -18,9 +18,10 @@ Use this skill to move carefully from user request to verified implementation.
    - API route
    - Controller/request/resource/model
    - Migration or relationship, if needed
-5. Make the smallest coherent change.
-6. Verify with focused checks.
-7. Summarize changed files and verification.
+5. After meaningful analysis or planning is completed, including plan-only tasks, append a concise note to `.agents/latest-analysis.md` with findings, intended files, decisions, risks, and verification plan.
+6. Make the smallest coherent change.
+7. Verify with focused checks.
+8. Summarize changed files and verification.
 
 ## Cross-Stack Contract Checklist
 

@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\AdminPointsController;
 use App\Http\Controllers\Api\AdminWalletController;
 use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\Admin\GamificationRuleLogController;
+use App\Http\Controllers\Api\Admin\PointRuleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -509,5 +511,14 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::delete('/cleanup', [AuditLogController::class, 'cleanup'])
             ->middleware('admin:SUPER_ADMIN')
             ->name('admin.audit-logs.cleanup');
+    });
+
+    // =====================================================
+    // Gamification & XP
+    // =====================================================
+    Route::prefix('gamification')->group(function () {
+        Route::get('/logs', [GamificationRuleLogController::class, 'index'])->name('admin.gamification.logs');
+        Route::apiResource('point-rules', PointRuleController::class);
+        Route::patch('point-rules/{pointRule}/toggle', [PointRuleController::class, 'toggle'])->name('admin.point-rules.toggle');
     });
 });

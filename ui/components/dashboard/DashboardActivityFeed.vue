@@ -9,13 +9,25 @@ interface Transaction {
   created_at: string
 }
 
+interface XpLog {
+  id: number
+  rule_key: string
+  event_type?: string | null
+  xp_awarded: number
+  points_awarded?: number
+  reason?: string | null
+  evaluated_at: string
+}
+
 interface Props {
   transactions: Transaction[]
+  xpLogs?: XpLog[]
   showViewAll?: boolean
   isLoading?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  xpLogs: () => [],
   showViewAll: true,
   isLoading: false
 })
@@ -65,6 +77,10 @@ const getTypeLabel = (type: string): string => {
 const formatPoints = (value: number): string => {
   return new Intl.NumberFormat('th-TH').format(value)
 }
+
+const formatXpLabel = (log: XpLog): string => {
+  return log.reason || log.event_type || log.rule_key
+}
 </script>
 
 <template>
@@ -90,7 +106,30 @@ const formatPoints = (value: number): string => {
       </div>
     </div>
 
-    <div v-else-if="transactions.length > 0" class="space-y-1">
+    <div v-else-if="xpLogs.length > 0 || transactions.length > 0" class="space-y-1">
+      <div
+        v-for="log in xpLogs"
+        :key="`xp-${log.id}`"
+        class="flex items-center gap-3 p-2 md:p-3 rounded-xl hover:bg-cyan-50 dark:hover:bg-cyan-900/10 transition-colors group border border-transparent"
+      >
+        <div
+          class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-500 transition-all group-hover:scale-110"
+        >
+          <Icon icon="mdi:lightning-bolt-circle" class="w-4 h-4 md:w-5 md:h-5" />
+        </div>
+        <div class="min-w-0 flex-1 px-1">
+          <p class="font-bold text-gray-900 dark:text-white text-xs md:text-sm truncate">
+            {{ formatXpLabel(log) }}
+          </p>
+          <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-0.5">
+            {{ formatDate(log.evaluated_at) }}
+          </p>
+        </div>
+        <div class="text-xs md:text-sm font-black shrink-0 text-cyan-500">
+          +{{ formatPoints(log.xp_awarded) }} XP
+        </div>
+      </div>
+
       <div 
         v-for="transaction in transactions" 
         :key="transaction.id"

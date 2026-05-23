@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\GamificationService;
 use App\Services\AchievementService;
+use App\Services\ActivitySummaryService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -13,13 +14,16 @@ class GamificationController extends Controller
 {
     protected GamificationService $gamificationService;
     protected AchievementService $achievementService;
+    protected ActivitySummaryService $summaryService;
 
     public function __construct(
         GamificationService $gamificationService,
-        AchievementService $achievementService
+        AchievementService $achievementService,
+        ActivitySummaryService $summaryService
     ) {
         $this->gamificationService = $gamificationService;
         $this->achievementService = $achievementService;
+        $this->summaryService = $summaryService;
     }
 
     /**
@@ -147,6 +151,10 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
         $summary = $this->gamificationService->getDashboardSummary($user);
+
+        // Add weekly and monthly summaries
+        $summary['weekly'] = $this->summaryService->getWeeklySummary($user);
+        $summary['monthly'] = $this->summaryService->getMonthlySummary($user);
 
         return response()->json([
             'success' => true,

@@ -17,6 +17,14 @@ export const useGamificationStore = defineStore('gamification', () => {
   const achievements = ref<any[]>([])
   const isLoading = ref(false)
   
+  // Computed
+  const weeklySummary = computed(() => dashboard.value?.weekly || null)
+  const monthlySummary = computed(() => dashboard.value?.monthly || null)
+  const xpToday = computed(() => dashboard.value?.today?.xp || 0)
+  const xpThisWeek = computed(() => weeklySummary.value?.xp_earned || 0)
+  const levelProgress = computed(() => progress.value?.progress_percentage || 0)
+  const recentXpLogs = computed(() => dashboard.value?.recent_xp || [])
+
   // TTL / Caching logic
   const lastFetched = ref<Record<string, number>>({})
   const inFlight = ref<Record<string, Promise<any> | null>>({})
@@ -222,6 +230,12 @@ export const useGamificationStore = defineStore('gamification', () => {
     streakInfo,
     achievements,
     isLoading,
+    weeklySummary,
+    monthlySummary,
+    xpToday,
+    xpThisWeek,
+    levelProgress,
+    recentXpLogs,
     fetchProgress,
     fetchDashboard,
     fetchQuests,

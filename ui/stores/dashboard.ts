@@ -76,6 +76,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     isLoading.value = true
     try {
       await Promise.allSettled([
+        gamificationStore.fetchProgress(force),
+        gamificationStore.fetchDashboard(force),
         gamificationStore.fetchStreakInfo(force),
         gamificationStore.fetchAchievements(force),
         gamificationStore.fetchLeaderboardSummary(force),
