@@ -8,6 +8,16 @@
 ไฟล์นี้บันทึกงานที่ค้างอยู่และ context สำคัญที่ส่งต่อระหว่างที่บ้านและที่ทำงาน
 ก่อนออกจากแต่ละที่ → อัพเดท worklog แล้ว `git push` เสมอ
 
+## Keyword Workflows
+
+### "อ่านบทวิเคราะห์"
+เมื่อผู้ใช้พูดว่า "อ่านบทวิเคราะห์" ให้ทำตามขั้นตอนนี้:
+1. อ่าน [`.agents/latest-analysis.md`](.agents/latest-analysis.md) section **User Analysis Input**
+2. วิเคราะห์และตรวจสอบความถูกต้อง ความครบถ้วน ความเป็นไปได้
+3. ปรับปรุงและเพิ่มเติมในสิ่งที่ขาดหายหรือคลุมเครือ
+4. วางแผนขั้นตอนการทำงานที่ชัดเจนและเป็น action items
+5. บันทึกแผนลงใน section **Work Plan** ของไฟล์เดิม
+
 ## สรุปโปรเจค
 
 **nuxnan** เป็น LMS (Learning Management System) แบบ full-stack ที่ผู้ใช้สามารถสร้าง/เข้าร่วม Academy, Course, ทำ Quiz/Assignment, ติดตาม Lesson, มีระบบ social feed, points/gamification, wallet, marketplace และ chat แบบ realtime
