@@ -1,0 +1,164 @@
+# CLAUDE.md — nuxnan project
+
+ไฟล์นี้คือคู่มือให้ Claude (และ subagents) เข้าใจโปรเจคนี้ก่อนเริ่มทำงาน อ่านไฟล์นี้ก่อนเสมอ
+
+## Work Log (Context ข้ามที่ทำงาน)
+
+**อ่านก่อนเริ่มทุกครั้ง:** [`.agents/worklog.md`](.agents/worklog.md)
+ไฟล์นี้บันทึกงานที่ค้างอยู่และ context สำคัญที่ส่งต่อระหว่างที่บ้านและที่ทำงาน
+ก่อนออกจากแต่ละที่ → อัพเดท worklog แล้ว `git push` เสมอ
+
+## สรุปโปรเจค
+
+**nuxnan** เป็น LMS (Learning Management System) แบบ full-stack ที่ผู้ใช้สามารถสร้าง/เข้าร่วม Academy, Course, ทำ Quiz/Assignment, ติดตาม Lesson, มีระบบ social feed, points/gamification, wallet, marketplace และ chat แบบ realtime
+
+## Tech Stack
+
+### Frontend (`ui/`)
+- **Framework**: Nuxt 3/4 + Vue 3 (Composition API) + TypeScript
+- **State**: Pinia (`ui/stores/`)
+- **Styling**: Tailwind CSS + PrimeVue (`@primeuix/themes`)
+- **i18n**: `@nuxtjs/i18n`
+- **Rich text**: TipTap
+- **Icons**: Iconify (`@iconify/vue`)
+- **Node**: `>=22.0.0`
+
+### Backend (`api/nuxnanravel/`)
+- **Framework**: Laravel 12 + PHP 8.4
+- **Auth**: JWT (`php-open-source-saver/jwt-auth`)
+- **Realtime**: Laravel Reverb (websockets)
+- **Excel/Export**: `maatwebsite/excel`
+- **Image**: `intervention/image`
+- **DB**: MySQL (`nuxnan` database)
+- **Datatables**: `yajra/laravel-datatables-oracle`
+- **Tests**: PHPUnit
+- **Code style**: Laravel Pint
+
+## โครงสร้างโฟลเดอร์สำคัญ
+
+```
+nuxnan/
+├── ui/                          # Nuxt frontend
+│   ├── pages/                   # File-based routes (ระวัง dynamic [id])
+│   │   ├── Learn/Courses/[id]/  # หน้า course หลัก
+│   │   ├── academies/
+│   │   ├── Earn/Marketplace.vue
+│   │   └── Dashboard.vue
+│   ├── components/              # ใช้ PascalCase, จัดเป็น domain folder
+│   │   ├── learn/, academy/, share/, school/, wallet/, ...
+│   │   └── Common/, atoms/, molecules/, organisms/  # design system
+│   ├── composables/             # use*.ts (useApi, useAuth, useFiles, ...)
+│   ├── stores/                  # Pinia stores (auth, course, feed, ...)
+│   ├── services/                # API client wrappers
+│   ├── server/                  # Nuxt server routes/middleware
+│   ├── middleware/              # Route middleware
+│   ├── plugins/                 # Nuxt plugins
+│   ├── i18n/                    # Translations
+│   └── nuxt.config.ts
+│
+└── api/nuxnanravel/             # Laravel API
+    ├── app/
+    │   ├── Http/Controllers/Api/   # API controllers (จัดเป็น domain เช่น Learn/, Play/, Earn/)
+    │   ├── Models/                 # Eloquent models (200+ models)
+    │   └── ...
+    ├── routes/
+    │   ├── api.php              # Main API routes
+    │   ├── learn/, earn/, play/, admin/, debug/, ...
+    │   └── web.php
+    ├── database/
+    │   ├── migrations/
+    │   ├── seeders/
+    │   └── factories/
+    ├── tests/
+    ├── config/
+    └── .env
+```
+
+## คำสั่งที่ใช้บ่อย
+
+### Frontend (รันใน `ui/`)
+```bash
+npm run dev           # dev server (Nuxt) - มักรันที่ port 3000
+npm run build         # production build
+npm run generate      # static generate
+npm run preview       # preview build
+```
+
+### Backend (รันใน `api/nuxnanravel/`)
+```bash
+php artisan serve                    # dev server ที่ port 8000
+php artisan migrate                  # รัน migrations
+php artisan migrate:fresh --seed     # reset DB + seed
+php artisan make:model Foo -mcr      # สร้าง model + migration + controller + resource
+php artisan make:controller Api/Foo/BarController
+php artisan tinker                   # REPL
+php artisan route:list               # ดู routes ทั้งหมด
+php artisan test                     # PHPUnit tests
+./vendor/bin/pint                    # format โค้ด
+php artisan reverb:start             # websocket server
+```
+
+### Local environment
+- ใช้ **WAMP** ที่ `C:\wamp64\` (Apache + MySQL บน Windows)
+- DB name: `nuxnan` (mysql, port 3306)
+- Frontend: `npm run dev` ที่ `ui/`
+- Backend: `php artisan serve` ที่ `api/nuxnanravel/`
+
+## Conventions ของโปรเจคนี้
+
+### Frontend
+- ใช้ `<script setup lang="ts">` เป็น default
+- ตั้งชื่อ component แบบ **PascalCase** (เช่น `CourseProfileCover.vue`)
+- จัด component เป็น **domain folder** (เช่น `components/learn/`, `components/academy/`) + design system folders (`atoms/`, `molecules/`, `organisms/`)
+- Composables เริ่มด้วย `use` และเป็น TypeScript (`useApi.ts`)
+- Pinia stores จัดเป็นไฟล์ละ store (เช่น `stores/auth.ts`)
+- ใช้ Tailwind utility classes; PrimeVue components สำหรับ UI ที่ซับซ้อน
+- หน้าที่มี dynamic param ใช้ `[param].vue` ตาม Nuxt convention
+- เรียก API ผ่าน composable `useApi` หรือ services ที่ห่อไว้แล้ว ไม่ใช้ `$fetch` ตรงๆ
+
+### Backend
+- Controllers อยู่ใน `app/Http/Controllers/Api/<Domain>/` (เช่น `Api/Learn/Course/`, `Api/Play/`, `Api/Earn/`)
+- Models อยู่ใน `app/Models/` ทั้งหมด (flat) — มีจำนวนมาก ดูชื่อก่อน duplicate
+- Routes แยกไฟล์ตาม domain ใน `routes/learn/`, `routes/earn/`, ฯลฯ
+- ใช้ JWT สำหรับ auth — middleware `auth:api`
+- Validation ใช้ FormRequest หรือ `$request->validate()`
+- Code style: Laravel Pint (รัน `./vendor/bin/pint` ก่อน commit)
+
+### Git
+- Branch หลัก: ตรวจด้วย `git branch --show-current`
+- ก่อน commit ให้ตรวจ `git status` และ `git diff` เสมอ
+- เขียน commit message สั้นและชัด (อังกฤษหรือไทยก็ได้)
+
+## ไฟล์ที่ห้ามแตะ (โดยไม่ได้รับอนุญาต)
+- `api/nuxnanravel/vendor/` — composer dependencies
+- `ui/node_modules/` — npm dependencies
+- `api/nuxnanravel/.env` — secrets (ใช้ `.env.example` เป็น reference)
+- `api/nuxnanravel/storage/` (ยกเว้นกรณี debug logs)
+
+## ลำดับงานที่แนะนำเมื่อแก้ feature
+
+1. **อ่าน** ไฟล์ที่เกี่ยวข้อง (ทั้ง frontend + backend) ก่อนเขียน
+2. ถ้าแก้ DB → เขียน migration (ห้ามแก้ schema ตรง phpMyAdmin)
+3. ถ้าแก้ API → อัพเดท controller, route, validation, และ response shape
+4. ถ้าแก้ frontend → อัพเดท composable/service, Pinia store, แล้วค่อย component/page
+5. รัน lint/test ที่เกี่ยวข้อง: `./vendor/bin/pint` (backend), build check (frontend)
+6. ตรวจ `git diff` แล้ว commit เป็นชุดที่เล็กพอจะ revert ได้
+
+## Subagents ที่มีในโปรเจคนี้
+
+ดู `.claude/agents/` มี:
+- **frontend-vue** — งาน Nuxt/Vue (pages, components, composables, stores)
+- **backend-laravel** — งาน Laravel (controllers, models, routes, validation)
+- **database-migration** — schema, migrations, seeders, query optimization
+- **code-reviewer** — review โค้ด, หา bug, security check
+
+ใช้ผ่าน Task tool (`subagent_type: "frontend-vue"` ฯลฯ) หรือเรียกจาก slash menu
+
+## หมายเหตุสำคัญสำหรับ autonomous mode
+
+- **ก่อนแก้ไฟล์เสมอ**: อ่านไฟล์ก่อนด้วย Read tool
+- **commit เป็นชุดเล็กๆ**: ไม่ commit ทุกอย่างใน commit เดียว
+- **ห้าม `git push --force`** หรือ `git reset --hard` โดยไม่ confirm
+- **ห้ามรัน `php artisan migrate:fresh`** บน DB ที่มี data จริง — ต้องถามก่อน
+- **ห้ามแตะ `.env`** ที่มี secret จริง
+- **อย่าลบไฟล์** ที่ไม่ได้สร้างใน session นี้โดยไม่ confirm

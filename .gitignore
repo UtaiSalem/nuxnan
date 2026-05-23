@@ -13,6 +13,7 @@
 # WHITELIST - Only these folders are tracked
 # ===========================================
 !.gitignore
+!/CLAUDE.md
 !/.agents/
 !/.agents/**
 !/api/
