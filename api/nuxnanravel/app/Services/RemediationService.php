@@ -105,22 +105,22 @@ class RemediationService
     /**
      * Enroll student in remediation
      */
-    public function enrollStudent(CourseRemediationSession $session, CourseMember $member): CourseRemediationEnrollment
+    public function enrollStudent(CourseRemediationSession $session, CourseMember $member, bool $force = false): CourseRemediationEnrollment
     {
         // Validate eligibility
         $course = $session->course;
         $grade = $member->final_grade ?? $member->draft_grade;
 
-        if (!$session->isGradeEligible($grade)) {
+        if (!$force && !$session->isGradeEligible($grade)) {
             throw new \Exception("เกรด {$grade} ไม่มีสิทธิ์แก้ตัวในรอบนี้");
         }
 
-        if (!$session->isRegistrationOpen()) {
+        if (!$force && !$session->isRegistrationOpen()) {
             throw new \Exception('การลงทะเบียนแก้ตัวปิดแล้ว');
         }
 
         $maxAttempts = $course->max_remediation_attempts ?? 2;
-        if ($member->remediation_attempts >= $maxAttempts) {
+        if (!$force && $member->remediation_attempts >= $maxAttempts) {
             throw new \Exception("ใช้สิทธิ์แก้ตัวครบ {$maxAttempts} ครั้งแล้ว");
         }
 

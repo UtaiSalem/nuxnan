@@ -131,6 +131,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/lessons')
     Route::get('/', [CourseLessonController::class, 'index'])->name('course.lessons.index');
     Route::post('/', [CourseLessonController::class, 'store'])->name('course.lessons.store');
     Route::get('/create', [CourseLessonController::class, 'create'])->name('course.lessons.create');
+    Route::patch('/reorder', [CourseLessonController::class, 'reorder'])->name('course.lessons.reorder');
     Route::get('/{lesson}', [CourseLessonController::class, 'show'])->name('course.lessons.show');
     Route::get('/{lesson}/edit', [CourseLessonController::class, 'edit'])->name('course.lessons.edit');
     Route::put('/{lesson}', [CourseLessonController::class, 'update'])->name('course.lessons.update');

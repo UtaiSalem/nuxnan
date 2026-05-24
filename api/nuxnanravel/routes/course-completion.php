@@ -115,16 +115,17 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::prefix('courses/{course}/remediation')->group(function () {
         Route::get('/', [RemediationController::class, 'index']);
         Route::post('/', [RemediationController::class, 'store']);
-    });
 
-    Route::prefix('remediation-sessions/{session}')->group(function () {
-        Route::get('/', [RemediationController::class, 'show']);
-        Route::patch('/', [RemediationController::class, 'update']);
-        Route::post('open', [RemediationController::class, 'open']);
-        Route::post('start', [RemediationController::class, 'start']);
-        Route::post('complete', [RemediationController::class, 'complete']);
-        Route::post('enroll', [RemediationController::class, 'enroll']);
-        Route::post('bulk-grade', [RemediationController::class, 'bulkGrade']);
+        Route::prefix('{session}')->group(function () {
+            Route::get('/', [RemediationController::class, 'show']);
+            Route::patch('/', [RemediationController::class, 'update']);
+            Route::post('open', [RemediationController::class, 'open']);
+            Route::post('start', [RemediationController::class, 'start']);
+            Route::post('complete', [RemediationController::class, 'complete']);
+            Route::post('enroll', [RemediationController::class, 'enroll']);
+            Route::post('bulk-enroll', [RemediationController::class, 'bulkEnroll']);
+            Route::post('bulk-grade', [RemediationController::class, 'bulkGrade']);
+        });
     });
 
     Route::prefix('remediation-enrollments/{enrollment}')->group(function () {

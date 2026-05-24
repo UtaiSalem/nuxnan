@@ -235,6 +235,50 @@ class RemediationController extends Controller
     }
 
     /**
+     * Bulk enroll students in a remediation session (Admin only)
+     */
+    public function bulkEnroll(Request $request, CourseRemediationSession $session): JsonResponse
+    {
+        $this->authorize('manage', $session->course);
+
+        $request->validate([
+            'member_ids' => 'required|array',
+            'member_ids.*' => 'required|exists:course_members,id',
+        ]);
+
+        $results = [
+            'success' => 0,
+            'failed' => 0,
+            'errors' => [],
+        ];
+
+        foreach ($request->member_ids as $memberId) {
+            $member = CourseMember::find($memberId);
+
+            if (!$member || $member->course_id !== $session->course_id) {
+                $results['failed']++;
+                $results['errors'][] = "Member ID {$memberId} does not belong to this course.";
+                continue;
+            }
+
+            try {
+                // Admin bulk enroll forces the enrollment (bypasses deadline/status checks)
+                $this->remediationService->enrollStudent($session, $member, true);
+                $results['success']++;
+            } catch (\Exception $e) {
+                $results['failed']++;
+                $results['errors'][] = "Member ID {$memberId}: " . $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "ลงทะเบียนสำเร็จ {$results['success']} รายการ, ล้มเหลว {$results['failed']} รายการ",
+            'data' => $results,
+        ]);
+    }
+
+    /**
      * Get my enrollments
      */
     public function myEnrollments(Request $request): JsonResponse

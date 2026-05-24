@@ -59,7 +59,13 @@ class CourseLessonController extends \App\Http\Controllers\Controller
         try {
             return response()->json([
                 'course' => new CourseResource($course),
-                'lessons' => LessonResource::collection($course->courseLessons()->orderBy('order')->paginate()),
+                'lessons' => LessonResource::collection(
+                    $course->courseLessons()
+                        ->orderByRaw('`order` IS NULL')
+                        ->orderBy('order')
+                        ->orderBy('created_at')
+                        ->paginate()
+                ),
                 'isCourseAdmin' => $course->isAdmin(auth()->user()),
                 'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
                 'groups' => $course->courseGroups()->get(['id', 'name']),
@@ -71,6 +77,64 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการโหลดบทเรียน',
                 'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Reorder lessons in a course
+     */
+    public function reorder(Request $request, Course $course)
+    {
+        try {
+            // Check permission
+            if (!$this->checkCoursePermission($course)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คุณไม่มีสิทธิ์จัดลำดับบทเรียนในรายวิชานี้'
+                ], 403);
+            }
+
+            // Validate request
+            $validated = $request->validate([
+                'lessons'         => 'required|array|min:1',
+                'lessons.*.id'    => 'required|integer|exists:lessons,id',
+                'lessons.*.order' => 'required|integer|min:0',
+            ]);
+
+            // Verify lesson IDs belong to this course
+            $courseLessonIds = $course->courseLessons()->pluck('id')->toArray();
+            $incomingIds = collect($validated['lessons'])->pluck('id')->toArray();
+            
+            if (array_diff($incomingIds, $courseLessonIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'รหัสบทเรียนบางรายการไม่ถูกต้องหรือไม่ได้อยู่ในรายวิชานี้'
+                ], 422);
+            }
+
+            \DB::transaction(function () use ($validated) {
+                foreach ($validated['lessons'] as $item) {
+                    \App\Models\Lesson::where('id', $item['id'])->update(['order' => $item['order']]);
+                }
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'บันทึกลำดับบทเรียนสำเร็จ'
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลไม่ถูกต้อง',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error reordering lessons: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาดในการจัดลำดับบทเรียน'
             ], 500);
         }
     }

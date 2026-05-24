@@ -416,6 +416,7 @@ class PointsService
     public function getBalance(User $user): array
     {
         return [
+            'total_points' => $user->pp,
             'current_points' => $user->pp,
             'total_earned' => $user->total_points_earned,
             'total_spent' => $user->total_points_spent,

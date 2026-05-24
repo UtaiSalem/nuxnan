@@ -229,13 +229,13 @@ class ExamEligibilityController extends Controller
 
         if ($pointsCost > 0) {
             $balance = $this->pointsService->getBalance($user);
-            if ($balance['total_points'] < $pointsCost) {
+            if ($balance['current_points'] < $pointsCost) {
                 return response()->json([
                     'success' => false,
                     'message' => 'คะแนนสะสมไม่เพียงพอสำหรับการปลดล็อค',
                     'data' => [
                         'required' => $pointsCost,
-                        'current_balance' => $balance['total_points'],
+                        'current_balance' => $balance['current_points'],
                     ],
                 ], 400);
             }

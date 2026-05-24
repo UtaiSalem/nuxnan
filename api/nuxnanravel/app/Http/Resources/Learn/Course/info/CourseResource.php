@@ -43,7 +43,21 @@ class CourseResource extends JsonResource
             'capacity' => $this->capacity,
             'enrolled_students' => $this->course_members_count ?? $this->enrolled_students,
             'lessons' => $this->whenLoaded('courseLessons', function () {
-                return $this->courseLessons;
+                return $this->courseLessons->map(fn ($l) => [
+                    'id' => $l->id,
+                    'title' => $l->title,
+                    'order' => $l->order,
+                    'status' => $l->status,
+                    'min_read' => $l->min_read,
+                    'topics_count' => $l->topics_count ?? 0,
+                    'topics' => $l->relationLoaded('topics')
+                        ? $l->topics->map(fn ($t) => [
+                            'id' => $t->id,
+                            'title' => $t->title,
+                        ])->all()
+                        : [],
+                    'progress' => $l->relationLoaded('progress') ? $l->progress : [],
+                ])->all();
             }, $this->course_lessons_count ?? $this->lessons),
             'assignments' => $this->whenLoaded('courseAssignments', function () {
                 return AssignmentResource::collection($this->courseAssignments);
