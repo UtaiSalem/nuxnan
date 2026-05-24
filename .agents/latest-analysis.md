@@ -73,7 +73,24 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ### Feature: Exam Retake Flow — Quiz-Level Link & Frontend UX
 
-**สถานะ:** 🔄 IN PLANNING (2026-05-24)
+**สถานะ:** 🔄 IN PROGRESS (Phase 1 COMPLETED) (2026-05-24)
+
+---
+
+#### ผลลัพธ์ที่ได้ (Phase 1):
+
+1.  **DB Schema:** เพิ่ม `quiz_id` ใน `course_remediation_sessions` เพื่อผูกรอบแก้ตัวเข้ากับข้อสอบที่ต้องการให้ retake
+2.  **Model & Controller:** อัพเดท validation และ relationship ให้รองรับการผูก Quiz
+3.  **Student UX:** หน้า Quiz แสดง `remediation_status` card อัตโนมัติเมื่อมีรอบแก้ตัวที่เกี่ยวข้อง ทำให้นักเรียนรู้ว่าควรทำอะไรต่อ (ลงทะเบียน/รอผล/สอบใหม่ได้)
+4.  **Admin UX:** หน้า Remediation Gradebook เพิ่ม dropdown ให้เลือกผูก Quiz ตอนสร้างรอบใหม่
+
+---
+
+#### แผนถัดไป (Phase 2 — Authorization Logic & Retake Implementation):
+
+1.  **RemediationService:** เมื่อครูให้เกรด `passed` → เรียก logic เพื่อ `unlockQuizRetake` (เพิ่ม attempt หรือ reset counter)
+2.  **ExamEligibilityService:** เพิ่มการตรวจสอบสิทธิ์ retake จากสถานะการผ่าน remediation
+3.  **Frontend Retake Button:** ปรับปรุงปุ่ม "เริ่มทำแบบทดสอบ" ให้รองรับกรณีที่ได้สิทธิ์ใหม่จากการแก้ตัว
 
 ---
 

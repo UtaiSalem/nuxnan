@@ -66,6 +66,7 @@ class RemediationController extends Controller
             'end_at' => 'required|date|after:start_at',
             'registration_deadline' => 'nullable|date|before:start_at',
             'type' => 'required|in:exam_retake,assignment,project,attendance_makeup,mixed',
+            'quiz_id' => 'nullable|exists:course_quizzes,id',
             'eligible_grades' => 'nullable|array',
             'eligible_grades.*' => 'string|in:A,B+,B,C+,C,D+,D,F',
             'max_grade_achievable' => 'nullable|string|in:A,B+,B,C+,C,D+,D',
@@ -130,6 +131,7 @@ class RemediationController extends Controller
         $request->validate([
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
+            'quiz_id' => 'nullable|exists:course_quizzes,id',
             'start_at' => 'sometimes|date',
             'end_at' => 'sometimes|date|after:start_at',
             'registration_deadline' => 'nullable|date',

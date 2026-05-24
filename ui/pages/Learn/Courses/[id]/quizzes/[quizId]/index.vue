@@ -31,6 +31,7 @@ const groups = ref<any[]>([])
 const selectedGroupId = ref<number | null>(null)
 const canTakeExam = ref(true)
 const eligibility = ref<any>(null)
+const remediationStatus = ref<any>(null)
 
 // Fetch quiz details
 const { data: quiz, refresh, pending } = await useAsyncData(
@@ -43,6 +44,11 @@ const { data: quiz, refresh, pending } = await useAsyncData(
     if (res.canTakeExam !== undefined) {
       canTakeExam.value = res.canTakeExam
       eligibility.value = res.eligibility
+    }
+    if (res.remediation_status) {
+      remediationStatus.value = res.remediation_status
+    } else {
+      remediationStatus.value = null
     }
     return res.quiz
   }
@@ -274,6 +280,59 @@ const getStatusBadge = computed(() => {
                   :eligibility="eligibility"
                   @unlocked="refresh"
                />
+             </div>
+
+             <!-- Remediation Status Card -->
+             <div v-if="remediationStatus" class="mb-6 p-4 rounded-xl border-2 transition-all"
+                  :class="[
+                    remediationStatus.enrollment?.status === 'passed' ? 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800' :
+                    remediationStatus.enrollment?.status === 'failed' ? 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800' :
+                    'bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800'
+                  ]">
+               <div class="flex items-start gap-3">
+                 <div class="p-2 rounded-lg"
+                      :class="[
+                        remediationStatus.enrollment?.status === 'passed' ? 'bg-green-100 text-green-600' :
+                        remediationStatus.enrollment?.status === 'failed' ? 'bg-red-100 text-red-600' :
+                        'bg-blue-100 text-blue-600'
+                      ]">
+                   <Icon :icon="remediationStatus.enrollment?.status === 'passed' ? 'fluent:checkmark-circle-24-filled' : 
+                               remediationStatus.enrollment?.status === 'failed' ? 'fluent:dismiss-circle-24-filled' : 
+                               'fluent:info-24-filled'" class="w-6 h-6" />
+                 </div>
+                 <div class="flex-1 text-left">
+                   <h4 class="font-bold text-gray-900 dark:text-white mb-1">
+                     รอบแก้ตัว: {{ remediationStatus.session_title }}
+                   </h4>
+                   
+                   <!-- Case 1: Not enrolled -->
+                   <template v-if="!remediationStatus.enrollment">
+                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">คุณมีสิทธิ์ลงทะเบียนสอบแก้ตัวสำหรับวิชานี้</p>
+                     <NuxtLink :to="`/Learn/Courses/${courseId}/gradebook/remediation`" 
+                               class="inline-flex items-center gap-1 text-sm font-bold text-blue-600 hover:underline">
+                       ดูรายละเอียดและลงทะเบียน <Icon icon="fluent:arrow-right-24-regular" />
+                     </NuxtLink>
+                   </template>
+
+                   <!-- Case 2: Enrolled/Confirmed -->
+                   <template v-else-if="['enrolled', 'confirmed'].includes(remediationStatus.enrollment.status)">
+                     <p class="text-sm text-gray-600 dark:text-gray-400">คุณลงทะเบียนรอบแก้ตัวไว้แล้ว กรุณารอผลการพิจารณาหรือเข้าสอบตามกำหนดการ</p>
+                   </template>
+
+                   <!-- Case 3: Passed -->
+                   <template v-else-if="remediationStatus.enrollment.status === 'passed'">
+                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">คุณผ่านการแก้ตัวแล้ว! คุณสามารถสอบใหม่เพื่อปรับปรุงคะแนนได้</p>
+                     <p v-if="remediationStatus.enrollment.remediation_score" class="text-xs font-bold text-green-600">
+                       คะแนนแก้ตัวที่ได้รับ: {{ remediationStatus.enrollment.remediation_score }}
+                     </p>
+                   </template>
+
+                   <!-- Case 4: Failed -->
+                   <template v-else-if="remediationStatus.enrollment.status === 'failed'">
+                     <p class="text-sm text-gray-600 dark:text-gray-400">คุณไม่ผ่านการแก้ตัวในรอบนี้</p>
+                   </template>
+                 </div>
+               </div>
              </div>
 
              <div v-if="quiz.current_result && quiz.current_result.completed_at" class="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4 sm:p-6 mb-6">

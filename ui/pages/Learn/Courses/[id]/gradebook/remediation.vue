@@ -30,10 +30,13 @@ const showScoreModal = ref(false)
 // Forms
 const createForm = ref({
   name: '',
-  type: 'resit',
+  type: 'exam_retake',
+  quiz_id: null as number | null,
   scheduled_at: '',
   notes: ''
 })
+
+const availableQuizzes = ref<any[]>([])
 
 const selectedStudents = ref<number[]>([])
 const selectedStudent = ref<any>(null)
@@ -45,12 +48,24 @@ const scoreForm = ref({
 onMounted(async () => {
   try {
     await fetchData()
+    await fetchQuizzes()
   } catch (err) {
     console.error('Failed to load remediation data:', err)
   } finally {
     isLoading.value = false
   }
 })
+
+const fetchQuizzes = async () => {
+  try {
+    const res: any = await api.get(`/api/courses/${courseId.value}/quizzes`)
+    if (res.quizzes) {
+      availableQuizzes.value = res.quizzes
+    }
+  } catch (err) {
+    console.error('Failed to fetch quizzes:', err)
+  }
+}
 
 const fetchData = async () => {
   await Promise.all([
@@ -114,6 +129,7 @@ const createSession = async () => {
     const payload = {
       title: createForm.value.name,
       type: createForm.value.type,
+      quiz_id: createForm.value.quiz_id,
       start_at: createForm.value.scheduled_at,
       end_at: new Date(new Date(createForm.value.scheduled_at).getTime() + 2 * 60 * 60 * 1000).toISOString(), // +2 hours
       description: createForm.value.notes
@@ -473,6 +489,14 @@ const typeOptions = [
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ประเภท</label>
                 <select v-model="createForm.type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg">
                   <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+
+              <div v-if="createForm.type === 'exam_retake'">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ผูกกับแบบทดสอบ (ไม่บังคับ)</label>
+                <select v-model="createForm.quiz_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg">
+                  <option :value="null">-- ไม่ระบุ --</option>
+                  <option v-for="q in availableQuizzes" :key="q.id" :value="q.id">{{ q.title }}</option>
                 </select>
               </div>
 

@@ -13,6 +13,7 @@ class CourseRemediationSession extends Model
 
     protected $fillable = [
         'course_id',
+        'quiz_id',
         'created_by',
         'title',
         'description',
@@ -65,6 +66,14 @@ class CourseRemediationSession extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    /**
+     * Quiz ที่ผูกกับรอบแก้ตัวนี้ (สำหรับ type = exam_retake)
+     */
+    public function quiz(): BelongsTo
+    {
+        return $this->belongsTo(CourseQuiz::class);
     }
 
     /**

@@ -9,6 +9,13 @@
 ## สถานะปัจจุบัน (2026-05-24)
 
 - **Done Today:**
+  - **Exam Retake Flow (Phase 1)**
+    - Migration: Added `quiz_id` to `course_remediation_sessions` table (with index for MyISAM compatibility).
+    - Model: Updated `CourseRemediationSession` with `quiz_id` fillable and `quiz()` relationship.
+    - Controller: Updated `RemediationController` to validate `quiz_id` in store/update.
+    - Quiz Detail: Enhanced `CourseQuizController@show` to return student's remediation status for the specific quiz.
+    - Frontend: Added `remediation_status` card to Quiz Page for students.
+    - Frontend: Added Quiz selection dropdown to Remediation Session creation form for admins.
   - **Hotfix: Course Feeds 500 Error**
     - Fixed `Unknown column 'order'` in `topics` query within `CourseActivityController`.
     - Removed stale `order` field mapping in `CourseResource` for topics.

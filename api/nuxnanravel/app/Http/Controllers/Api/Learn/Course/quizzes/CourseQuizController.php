@@ -15,6 +15,8 @@ use App\Models\QuestionOption;
 use Illuminate\Support\Carbon;
 use App\Models\CourseQuizResult;
 use App\Models\UserAnswerQuestion;
+use App\Models\CourseRemediationSession;
+use App\Models\CourseRemediationEnrollment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use App\Exceptions\ImageCopyException;
@@ -167,12 +169,43 @@ class CourseQuizController extends Controller
                 : 'คุณยังไม่มีสิทธิ์ทำข้อสอบนี้';
         }
 
+        // ── Remediation status สำหรับ student ──
+        $remediationStatus = null;
+
+        if (!$isCourseAdmin) {
+            // ดึง session ที่ผูกกับ quiz นี้
+            $session = CourseRemediationSession::where('course_id', $course->id)
+                ->where('quiz_id', $quiz->id)
+                ->whereIn('status', ['open', 'in_progress', 'completed'])
+                ->latest()
+                ->first();
+
+            if ($session) {
+                $enrollment = CourseRemediationEnrollment::where('remediation_session_id', $session->id)
+                    ->where('student_id', auth()->id())
+                    ->first();
+
+                $remediationStatus = [
+                    'session_id'    => $session->id,
+                    'session_title' => $session->title,
+                    'session_status'=> $session->status,
+                    'enrollment'    => $enrollment ? [
+                        'id'                => $enrollment->id,
+                        'status'            => $enrollment->status,
+                        'remediation_score' => $enrollment->remediation_score,
+                        'remediation_grade' => $enrollment->remediation_grade,
+                    ] : null,
+                ];
+            }
+        }
+
         return response()->json([
             'quiz'   => $quizResource,
             'groups' => $groups,
             'eligibility' => $eligibilityInfo,
             'canTakeExam' => $canTakeExam,
             'questions_hidden_reason' => $questionsHiddenReason,
+            'remediation_status'      => $remediationStatus,
         ]);
     }
 
