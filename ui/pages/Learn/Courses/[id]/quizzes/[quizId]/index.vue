@@ -3,6 +3,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import RadialProgress from '~/components/Common/RadialProgress.vue';
 import QuizDuplicateModal from '~/components/learn/course/quiz/QuizDuplicateModal.vue';
+import ExamEligibilityPanel from '~/components/learn/course/ExamEligibilityPanel.vue';
 
 const route = useRoute()
 const courseId = route.params.id
@@ -61,55 +62,8 @@ const filteredStudentResults = computed(() => {
 
 const startQuiz = async () => {
   if (!canTakeExam.value && eligibility.value) {
-    // 1. Check for Reading unlock (Lesson-based)
-    const readingOption = eligibility.value.unlock_options?.find((o: any) => o.method === 'reading')
-    if (readingOption?.lesson_mode) {
-      const res = await Swal.fire({
-        title: 'หมดสิทธิ์สอบ',
-        text: 'คุณต้องอ่านบทเรียนที่กำหนดให้ครบเพื่อคืนสิทธิ์สอบก่อนทำแบบทดสอบนี้',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'ไปดูบทเรียน',
-        cancelButtonText: 'ปิด'
-      })
-      if (res.isConfirmed) {
-        await navigateTo(`/courses/${courseId}/members/me?tab=lessons`)
-      }
-      return
-    }
-
-    // 2. Check for Points unlock
-    const cost = eligibility.value.unlock_options?.find((o: any) => o.method === 'points')?.cost || 0
-    if (cost > 0) {
-      const result = await Swal.fire({
-        title: 'ปลดล็อคสิทธิ์สอบ',
-        text: `คุณต้องใช้คะแนนสะสม ${cost} แต้ม เพื่อปลดล็อคสิทธิ์สอบวิชานี้`,
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: 'ยืนยันใช้แต้ม',
-        cancelButtonText: 'ยกเลิก'
-      })
-      if (result.isConfirmed) {
-        try {
-          // Call the unlock endpoint which will deduct the points
-          const res: any = await api.post(`/api/courses/${courseId}/eligibility/unlock/points`)
-          if (res.success) {
-            Swal.fire('สำเร็จ', 'ปลดล็อคสิทธิ์สอบเรียบร้อยแล้ว', 'success')
-            canTakeExam.value = true
-            await refresh()
-          } else {
-             throw new Error(res.message || 'ไม่สามารถปลดล็อคได้')
-          }
-        } catch (err: any) {
-           const msg = err.data?.message || err.response?._data?.message || err.message || 'แต้มไม่เพียงพอ หรือเกิดข้อผิดพลาด'
-           Swal.fire('ผิดพลาด', msg, 'error')
-        }
-      }
-      return
-    } else {
-       Swal.fire('หมดสิทธิ์สอบ', 'คุณไม่มีสิทธิ์ทำแบบทดสอบนี้ กรุณาติดต่อผู้สอน', 'error')
-       return
-    }
+    Swal.fire('ไม่มีสิทธิ์สอบ', 'กรุณาดำเนินการคืนสิทธิ์สอบก่อนเริ่มทำแบบทดสอบ', 'warning')
+    return
   }
 
   navigateTo(`/courses/${courseId}/quizzes/${quizId}/attempt`)
@@ -312,6 +266,16 @@ const getStatusBadge = computed(() => {
         <!-- Action Area -->
         <div class="p-8 text-center">
           <div v-if="!isCourseAdmin">
+             <!-- Eligibility Panel -->
+             <div v-if="!canTakeExam && eligibility" class="mb-8 text-left">
+               <ExamEligibilityPanel 
+                  :course-id="courseId" 
+                  :can-take-exam="canTakeExam" 
+                  :eligibility="eligibility"
+                  @unlocked="refresh"
+               />
+             </div>
+
              <div v-if="quiz.current_result && quiz.current_result.completed_at" class="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4 sm:p-6 mb-6">
                 <h3 class="text-lg font-semibold mb-4 text-center">ผลการทดสอบของคุณ</h3>
                 <div class="flex justify-center gap-12 text-center py-4">

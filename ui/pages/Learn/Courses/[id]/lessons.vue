@@ -7,6 +7,7 @@ import { useApi } from '~/composables/useApi'
 import { useSweetAlert } from '~/composables/useSweetAlert'
 import ContentLoader from '~/components/accessories/ContentLoader.vue'
 import LessonPost from '~/components/learn/course/lesson/LessonPost.vue'
+import LessonOrderWidget from '~/components/learn/course/lesson/LessonOrderWidget.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,15 +28,15 @@ const isRoot = computed(() => {
   return /\/lessons\/?$/.test(route.path)
 })
 
-const fetchLessons = async () => {
-    if (!course.value?.id) return
-    isLoading.value = true
+const fetchLessons = async (silent = false) => {
+    if (!course?.value?.id) return
+    if (!silent) isLoading.value = true
     error.value = null
     try {
         await courseStore.fetchLessons(course.value.id, true)
     } catch (err: any) {
         console.error('Error fetching lessons:', err)
-        error.value = err.message || 'ไม่สามารถโหลดบทเรียนได้'
+        if (!silent) error.value = err.message || 'ไม่สามารถโหลดบทเรียนได้'
     } finally {
         isLoading.value = false
     }
@@ -210,6 +211,15 @@ watch(isRoot, async (newVal) => {
               <span>เพิ่มบทเรียน</span>
             </button>
           </div>
+
+          <!-- Lesson Order Widget (Admin only) -->
+          <div v-if="lessons.length > 1" class="mt-6">
+            <LessonOrderWidget
+              :lessons="lessons"
+              :course-id="course.id"
+              @saved="() => fetchLessons(true)"
+            />
+          </div>
         </div>
 
         <!-- Empty State -->
@@ -229,22 +239,24 @@ watch(isRoot, async (newVal) => {
           </p>
         </div>
 
-        <!-- Lessons Feed (แสดงทีละบทแบบโพสต์) -->
-        <div v-for="lesson in lessons" :key="lesson.id">
-          <LessonPost
-            :lesson="lesson"
-            :is-admin="isCourseAdmin"
-            @edit="handleEditLesson"
-            @delete="handleDeleteLesson"
-            @like="handleLikeLesson"
-            @dislike="handleDislikeLesson"
-            @bookmark="handleBookmarkLesson"
-            @share="handleShareLesson"
-            @comment="handleCommentLesson"
-            @topic-created="(topic) => handleTopicCreated(lesson.id, topic)"
-            @topic-updated="(topic) => handleTopicUpdated(lesson.id, topic)"
-            @topic-deleted="(topicId) => handleTopicDeleted(lesson.id, topicId)"
-          />
+        <!-- Lessons Feed (แสดงทีละบทแบบโพสต์ - Static list) -->
+        <div class="space-y-4">
+          <div v-for="lesson in lessons" :key="lesson.id">
+            <LessonPost
+              :lesson="lesson"
+              :is-admin="isCourseAdmin"
+              @edit="handleEditLesson"
+              @delete="handleDeleteLesson"
+              @like="handleLikeLesson"
+              @dislike="handleDislikeLesson"
+              @bookmark="handleBookmarkLesson"
+              @share="handleShareLesson"
+              @comment="handleCommentLesson"
+              @topic-created="(topic) => handleTopicCreated(lesson.id, topic)"
+              @topic-updated="(topic) => handleTopicUpdated(lesson.id, topic)"
+              @topic-deleted="(topicId) => handleTopicDeleted(lesson.id, topicId)"
+            />
+          </div>
         </div>
       </template>
     </template>

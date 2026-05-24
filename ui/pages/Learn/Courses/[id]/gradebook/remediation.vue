@@ -61,13 +61,15 @@ const fetchData = async () => {
 
 const fetchSessions = async () => {
   try {
-    const res: any = await api.get(`/api/courses/${courseId.value}/remediation/sessions`)
+    const res: any = await api.get(`/api/courses/${courseId.value}/remediation`)
     if (res.success && res.data) {
-      sessions.value = res.data.sessions || res.data || []
+      sessions.value = res.data.data || res.data || []
       // Set active session
-      activeSession.value = sessions.value.find((s: any) => s.status === 'open') || sessions.value[0]
+      if (!activeSession.value && sessions.value.length > 0) {
+        activeSession.value = sessions.value.find((s: any) => s.status === 'open') || sessions.value[0]
+      }
       if (activeSession.value) {
-        await fetchEnrolledStudents()
+        await fetchSessionDetails()
       }
     }
   } catch (err) {
@@ -75,27 +77,31 @@ const fetchSessions = async () => {
   }
 }
 
-const fetchEnrolledStudents = async () => {
+const fetchSessionDetails = async () => {
   if (!activeSession.value) return
   try {
-    const res: any = await api.get(`/api/courses/${courseId.value}/remediation/sessions/${activeSession.value.id}/enrollments`)
+    const res: any = await api.get(`/api/courses/${courseId.value}/remediation/${activeSession.value.id}`)
     if (res.success && res.data) {
-      enrolledStudents.value = res.data.enrollments || res.data || []
+      // res.data contains { session, statistics, eligible_students }
+      const sessionData = res.data.session
+      enrolledStudents.value = sessionData.enrollments || []
+      eligibleStudents.value = res.data.eligible_students || []
+      
+      // Update the session in the list to keep it fresh
+      const idx = sessions.value.findIndex(s => s.id === sessionData.id)
+      if (idx !== -1) {
+        sessions.value[idx] = { ...sessions.value[idx], ...sessionData }
+      }
     }
   } catch (err) {
-    console.error('Failed to fetch enrollments:', err)
+    console.error('Failed to fetch session details:', err)
   }
 }
 
 const fetchEligibleStudents = async () => {
-  try {
-    const res: any = await api.get(`/api/courses/${courseId.value}/remediation/eligible-students`)
-    if (res.success && res.data) {
-      eligibleStudents.value = res.data.students || res.data || []
-    }
-  } catch (err) {
-    console.error('Failed to fetch eligible students:', err)
-  }
+  // If no active session, we can't fetch eligible students for it
+  if (!activeSession.value) return
+  await fetchSessionDetails()
 }
 
 // Create session
@@ -104,11 +110,20 @@ const createSession = async () => {
 
   isProcessing.value = true
   try {
-    const res: any = await api.post(`/api/courses/${courseId.value}/remediation/sessions`, createForm.value)
+    // Map frontend form to backend expectations
+    const payload = {
+      title: createForm.value.name,
+      type: createForm.value.type,
+      start_at: createForm.value.scheduled_at,
+      end_at: new Date(new Date(createForm.value.scheduled_at).getTime() + 2 * 60 * 60 * 1000).toISOString(), // +2 hours
+      description: createForm.value.notes
+    }
+
+    const res: any = await api.post(`/api/courses/${courseId.value}/remediation`, payload)
     if (res.success) {
       useToast().success('สร้างรอบซ่อมเสริมสำเร็จ')
       showCreateModal.value = false
-      createForm.value = { name: '', type: 'resit', scheduled_at: '', notes: '' }
+      createForm.value = { name: '', type: 'exam_retake', scheduled_at: '', notes: '' }
       await fetchSessions()
     }
   } catch (err) {
@@ -125,18 +140,18 @@ const enrollStudents = async () => {
 
   isProcessing.value = true
   try {
-    const res: any = await api.post(`/api/courses/${courseId.value}/remediation/sessions/${activeSession.value.id}/enroll`, {
+    const res: any = await api.post(`/api/courses/${courseId.value}/remediation/${activeSession.value.id}/bulk-enroll`, {
       member_ids: selectedStudents.value
     })
     if (res.success) {
-      useToast().success('ลงทะเบียนสำเร็จ')
+      useToast().success(res.message || 'ลงทะเบียนสำเร็จ')
       showEnrollModal.value = false
       selectedStudents.value = []
-      await fetchData()
+      await fetchSessionDetails()
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to enroll students:', err)
-    useToast().error('ไม่สามารถลงทะเบียน')
+    useToast().error(err.data?.message || 'ไม่สามารถลงทะเบียน')
   } finally {
     isProcessing.value = false
   }
@@ -148,11 +163,11 @@ const submitScore = async () => {
 
   isProcessing.value = true
   try {
-    const res: any = await api.post(`/api/courses/${courseId.value}/remediation/enrollments/${selectedStudent.value.id}/score`, scoreForm.value)
+    const res: any = await api.post(`/api/remediation-enrollments/${selectedStudent.value.id}/grade`, scoreForm.value)
     if (res.success) {
       useToast().success('บันทึกคะแนนสำเร็จ')
       showScoreModal.value = false
-      await fetchEnrolledStudents()
+      await fetchSessionDetails()
     }
   } catch (err) {
     console.error('Failed to submit score:', err)
@@ -166,7 +181,7 @@ const submitScore = async () => {
 const openScoreModal = (student: any) => {
   selectedStudent.value = student
   scoreForm.value = {
-    score: student.score || '',
+    score: student.remediation_score || '',
     notes: student.notes || ''
   }
   showScoreModal.value = true
@@ -175,7 +190,7 @@ const openScoreModal = (student: any) => {
 // Select session
 const selectSession = async (session: any) => {
   activeSession.value = session
-  await fetchEnrolledStudents()
+  await fetchSessionDetails()
 }
 
 // Status helpers
@@ -227,9 +242,10 @@ const formatDate = (date: string) => {
 }
 
 const typeOptions = [
-  { value: 'resit', label: 'สอบซ่อม' },
-  { value: 'makeup', label: 'เรียนเพิ่มเติม' },
-  { value: 'extra_work', label: 'ทำงานชดเชย' }
+  { value: 'exam_retake', label: 'สอบซ่อม' },
+  { value: 'assignment', label: 'ส่งงานชดเชย' },
+  { value: 'attendance_makeup', label: 'เรียนเสริม' },
+  { value: 'mixed', label: 'อื่นๆ/ผสม' }
 ]
 </script>
 
@@ -283,8 +299,8 @@ const typeOptions = [
                 >
                   <div class="flex items-start justify-between">
                     <div>
-                      <p class="font-medium text-gray-900 dark:text-white">{{ session.name }}</p>
-                      <p class="text-xs text-gray-500 mt-1">{{ formatDate(session.scheduled_at) }}</p>
+                      <p class="font-medium text-gray-900 dark:text-white">{{ session.title }}</p>
+                      <p class="text-xs text-gray-500 mt-1">{{ formatDate(session.start_at) }}</p>
                     </div>
                     <span
                       :class="getSessionStatusColor(session.status)"
@@ -314,10 +330,10 @@ const typeOptions = [
             <div v-if="activeSession" class="space-y-4">
               <!-- Session Info -->
               <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ activeSession.name }}</h3>
-                    <p class="text-sm text-gray-500">{{ formatDate(activeSession.scheduled_at) }}</p>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ activeSession.title }}</h3>
+                    <p class="text-sm text-gray-500">{{ formatDate(activeSession.start_at) }}</p>
                   </div>
                   <button
                     v-if="activeSession.status === 'open'"
@@ -353,9 +369,9 @@ const typeOptions = [
                       <tr v-for="student in enrolledStudents" :key="student.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td class="px-6 py-4 whitespace-nowrap">
                           <div class="flex items-center">
-                            <img :src="student.member?.user?.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
+                            <img :src="student.student?.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
                             <div class="ml-4">
-                              <div class="text-sm font-medium text-gray-900 dark:text-white">{{ student.member?.user?.name }}</div>
+                              <div class="text-sm font-medium text-gray-900 dark:text-white">{{ student.student?.name }}</div>
                             </div>
                           </div>
                         </td>
@@ -363,7 +379,7 @@ const typeOptions = [
                           <span class="font-medium text-red-600">{{ student.original_grade || 'F' }}</span>
                         </td>
                         <td class="px-6 py-4 text-center">
-                          <span class="font-medium text-gray-900 dark:text-white">{{ student.score ?? '-' }}</span>
+                          <span class="font-medium text-gray-900 dark:text-white">{{ student.remediation_score ?? '-' }}</span>
                         </td>
                         <td class="px-6 py-4 text-center">
                           <span
@@ -391,9 +407,9 @@ const typeOptions = [
                   <div v-for="student in enrolledStudents" :key="student.id" class="p-4">
                     <div class="flex items-center justify-between">
                       <div class="flex items-center">
-                        <img :src="student.member?.user?.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
+                        <img :src="student.student?.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
                         <div class="ml-3">
-                          <p class="font-medium text-gray-900 dark:text-white">{{ student.member?.user?.name }}</p>
+                          <p class="font-medium text-gray-900 dark:text-white">{{ student.student?.name }}</p>
                           <span
                             :class="getEnrollmentStatusColor(student.status)"
                             class="px-2 py-0.5 text-xs font-medium rounded-full"
@@ -406,7 +422,7 @@ const typeOptions = [
                     <div class="mt-3 flex items-center justify-between">
                       <div class="flex gap-4 text-sm">
                         <span class="text-gray-500">เดิม: <span class="font-medium text-red-600">{{ student.original_grade || 'F' }}</span></span>
-                        <span class="text-gray-500">คะแนน: <span class="font-medium">{{ student.score ?? '-' }}</span></span>
+                        <span class="text-gray-500">คะแนน: <span class="font-medium">{{ student.remediation_score ?? '-' }}</span></span>
                       </div>
                       <button
                         @click="openScoreModal(student)"
@@ -503,19 +519,19 @@ const typeOptions = [
             <div v-if="eligibleStudents.length > 0" class="space-y-2 max-h-96 overflow-y-auto">
               <label
                 v-for="student in eligibleStudents"
-                :key="student.id"
+                :key="student.member_id"
                 class="flex items-center p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
               >
                 <input
                   type="checkbox"
                   v-model="selectedStudents"
-                  :value="student.id"
+                  :value="student.member_id"
                   class="mr-3"
                 />
                 <img :src="student.user?.avatar || '/images/default-avatar.png'" class="w-8 h-8 rounded-full" />
                 <div class="ml-3">
                   <p class="text-sm font-medium text-gray-900 dark:text-white">{{ student.user?.name }}</p>
-                  <p class="text-xs text-gray-500">เกรด: {{ student.final_grade || 'F' }}</p>
+                  <p class="text-xs text-gray-500">เกรด: {{ student.grade || 'F' }}</p>
                 </div>
               </label>
             </div>
@@ -545,9 +561,9 @@ const typeOptions = [
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">บันทึกคะแนนซ่อม</h3>
 
             <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg flex items-center">
-              <img :src="selectedStudent.member?.user?.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
+              <img :src="selectedStudent.student?.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
               <div class="ml-3">
-                <p class="font-medium text-gray-900 dark:text-white">{{ selectedStudent.member?.user?.name }}</p>
+                <p class="font-medium text-gray-900 dark:text-white">{{ selectedStudent.student?.name }}</p>
                 <p class="text-sm text-gray-500">เกรดเดิม: {{ selectedStudent.original_grade || 'F' }}</p>
               </div>
             </div>

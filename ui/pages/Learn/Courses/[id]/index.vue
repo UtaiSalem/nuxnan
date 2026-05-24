@@ -138,14 +138,14 @@ const curriculum = computed(() => {
   }
   return course.value.lessons.map((lesson: any, index: number) => ({
     id: lesson.id,
-    title: `${index + 1}. ${lesson.name}`,
+    title: `${index + 1}. ${lesson.title || 'ไม่มีชื่อบทเรียน'}`,
     videos: lesson.topics_count || 0,
-    items: lesson.topics?.map((topic: any) => ({
+    items: (lesson.topics || []).map((topic: any) => ({
       id: topic.id,
-      title: topic.name,
-      duration: topic.duration || '15min',
+      title: topic.title || 'ไม่มีชื่อหัวข้อ',
+      duration: topic.min_read ? `${topic.min_read} นาที` : '—',
       type: topic.is_preview ? 'video' : 'locked'
-    })) || []
+    }))
   }))
 })
 
@@ -410,35 +410,43 @@ const respondToInvitation = async (accept: boolean) => {
     </div>
 
     <!-- Curriculum Card -->
-    <div v-if="curriculum.length > 0" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
         <Icon icon="fluent:book-24-regular" class="w-5 h-5 text-blue-500" />
         เนื้อหาบทเรียน
       </h3>
       
       <!-- Curriculum Accordion -->
-      <div class="flex flex-col gap-2">
+      <div v-if="curriculum.length > 0" class="flex flex-col gap-2">
         <div 
           v-for="(section, index) in curriculum" 
           :key="section.id" 
           class="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden"
         >
           <!-- Section Header -->
-          <button
-            @click="toggleSection(index)"
-            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          <div
+            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between transition-colors"
           >
-            <span class="font-medium text-gray-900 dark:text-white">
+            <NuxtLink 
+              :to="`/Learn/Courses/${course.id}/lessons/${section.id}`"
+              class="font-medium text-gray-900 dark:text-white hover:text-blue-500 transition-colors"
+            >
               {{ section.title }}
-            </span>
+            </NuxtLink>
             <div class="flex items-center gap-3 text-gray-500 text-sm">
-              <span>{{ section.videos }} หัวข้อ</span>
-              <Icon 
-                :icon="expandedSections.includes(index) ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
-                class="w-5 h-5" 
-              />
+              <span v-if="section.videos > 0">{{ section.videos }} หัวข้อ</span>
+              <span v-else class="opacity-50 italic">ยังไม่มีหัวข้อ</span>
+              <button 
+                @click="toggleSection(index)"
+                class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
+              >
+                <Icon 
+                  :icon="expandedSections.includes(index) ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
+                  class="w-5 h-5" 
+                />
+              </button>
             </div>
-          </button>
+          </div>
 
           <!-- Section Content -->
           <div v-if="expandedSections.includes(index) && section.items.length > 0" class="divide-y divide-gray-200 dark:divide-gray-600">
@@ -462,6 +470,30 @@ const respondToInvitation = async (accept: boolean) => {
               <span class="text-gray-500 text-sm">{{ item.duration }}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else class="text-center py-10 px-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+        <Icon icon="fluent:document-question-mark-24-regular" class="w-16 h-16 text-gray-400 mx-auto mb-3" />
+        <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีบทเรียนในรายวิชานี้</h4>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mb-6 max-w-xs mx-auto">
+          อาจารย์ยังไม่ได้เพิ่มเนื้อหาบทเรียน กรุณากลับมาตรวจสอบใหม่อีกครั้งในภายหลัง
+        </p>
+        <div class="flex items-center justify-center gap-3">
+          <NuxtLink 
+            :to="`/Learn/Courses/${course.id}/lessons`"
+            class="px-5 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            ไปหน้าบทเรียน
+          </NuxtLink>
+          <NuxtLink 
+            v-if="isCourseAdmin"
+            :to="`/Learn/Courses/${course.id}/lessons/create`"
+            class="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 shadow-md transition-all"
+          >
+            เพิ่มบทเรียน
+          </NuxtLink>
         </div>
       </div>
     </div>

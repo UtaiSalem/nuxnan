@@ -111,6 +111,19 @@ export const useCourseStore = defineStore('course', () => {
     }
   }
 
+  const reorderLessons = async (courseId: number, lessonsPayload: { id: number; order: number }[]) => {
+    try {
+      const api = useApi()
+      const response = await api.patch(`/api/courses/${courseId}/lessons/reorder`, {
+        lessons: lessonsPayload
+      })
+      return response
+    } catch (err: any) {
+      console.error('Error reordering lessons in store:', err)
+      throw err
+    }
+  }
+
   return {
     // State
     currentCourse,
@@ -131,6 +144,7 @@ export const useCourseStore = defineStore('course', () => {
     updateCourse,
     clearCourse,
     fetchCourse,
-    fetchLessons
+    fetchLessons,
+    reorderLessons
   }
 })
