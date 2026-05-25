@@ -1,6 +1,12 @@
 export default defineNuxtRouteMiddleware(async (to, from) => {
   const authStore = useAuthStore()
 
+  // Games should not hard-redirect to /auth while user is mid-game.
+  // We only need a token for points-earning calls; fetchUser failures can be handled per-feature.
+  if (to.path.startsWith('/play/games')) {
+    return
+  }
+
   // Check if user is authenticated (has token)
   if (!authStore.isAuthenticated) {
     // Redirect to login page

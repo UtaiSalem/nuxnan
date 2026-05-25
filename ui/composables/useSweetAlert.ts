@@ -97,7 +97,7 @@ export const useSweetAlert = () => {
 
     const result = await Swal.fire({
       title,
-      text: message,
+      html: message,
       icon,
       showCancelButton: true,
       confirmButtonText: confirmText,

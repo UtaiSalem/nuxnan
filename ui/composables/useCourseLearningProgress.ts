@@ -1,6 +1,10 @@
 import { ref, computed } from 'vue'
 
-export function useCourseLearningProgress(courseId: string | number, memberId: string | number | null) {
+export function useCourseLearningProgress(
+  courseId: string | number,
+  memberId: string | number | null,
+  isCourseAdmin: boolean = false
+) {
   const api = useApi()
   
   const lessons = ref<any[]>([])
@@ -11,11 +15,14 @@ export function useCourseLearningProgress(courseId: string | number, memberId: s
   const error = ref<string | null>(null)
 
   const fetchProgress = async () => {
-    if (!memberId) {
+    // Admin doesn't need personal progress
+    if (isCourseAdmin || !memberId) {
       lessons.value = []
       assignments.value = []
       quizzes.value = []
-      overallProgress.value = { progress_percentage: 0, status_label: 'ยังไม่ได้สมัครเรียน' }
+      overallProgress.value = memberId 
+        ? null // Admin with membership but no progress fetch
+        : { progress_percentage: 0, status_label: 'ยังไม่ได้สมัครเรียน' }
       return
     }
 

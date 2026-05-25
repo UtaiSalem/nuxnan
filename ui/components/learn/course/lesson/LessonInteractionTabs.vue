@@ -295,7 +295,7 @@ const toggleProgress = async () => {
       } else {
         swal.toast('ยกเลิกเครื่องหมายอ่านแล้ว', 'info')
       }
-      emit('complete', props.lesson.id)
+      emit('complete', response)
     }
   } catch (error: any) {
     console.error('Failed to toggle progress:', error)

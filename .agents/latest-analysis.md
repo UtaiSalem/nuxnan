@@ -30,6 +30,87 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Work Plan (แผนการทำงาน)
 
+### Feature: Typing Game Settings — Responsive Fix
+
+**สถานะ:** 📋 READY TO IMPLEMENT (2026-05-25)
+
+**ไฟล์เดียว:** `ui/pages/Play/Games/typing/index.vue`
+
+---
+
+#### ปัญหาที่วิเคราะห์ได้:
+
+| ปัญหา | Line | สาเหตุ |
+|---|---|---|
+| Difficulty 5 cols ใน sidebar 304px | 144 | `sm:grid-cols-5` fire ที่ 640px แต่ไม่มี override ที่ `lg` ที่ layout เปลี่ยนเป็น sidebar |
+| Card padding แน่น mobile | 114 | `p-8` คงที่ ไม่ responsive |
+| Language buttons บีบ | 127-138 | `flex-1` ใน flex container แคบ |
+| CTA ใหญ่เกิน mobile | 162 | `py-5 text-xl` คงที่ |
+| Outer gap บีบ sidebar | 75 | `gap-12` (48px × 2 = 96px หาย) |
+
+#### ขั้นตอน implement:
+
+**ขั้นที่ 1** — Outer grid gap ลด (line 75)
+```diff
+- <div class="grid lg:grid-cols-3 gap-12">
++ <div class="grid lg:grid-cols-3 gap-6 lg:gap-8">
+```
+
+**ขั้นที่ 2** — Settings column spacing (line 111)
+```diff
+- <div class="space-y-8">
++ <div class="space-y-4 lg:space-y-6">
+```
+
+**ขั้นที่ 3** — Card padding + inner spacing (line 114)
+```diff
+- <div class="... p-8 ... space-y-8">
++ <div class="... p-5 sm:p-6 lg:p-7 ... space-y-6 lg:space-y-7">
+```
+
+**ขั้นที่ 4** — Language: flex → grid (lines 127-138)
+```diff
+- <div class="flex gap-2">
++ <div class="grid grid-cols-3 gap-2">
+  <button
+-   class="flex-1 py-3 px-4 rounded-xl ..."
++   class="py-3 px-2 rounded-xl ... min-w-0 whitespace-nowrap overflow-hidden"
+  >
+    {{ lang.flag }} {{ lang.name }}
+```
+
+**ขั้นที่ 5** — Difficulty: เพิ่ม lg override **(สำคัญที่สุด)** (line 144)
+```diff
+- <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
++ <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-2 xl:grid-cols-5 gap-2">
+  <button
+-   class="py-3 px-2 rounded-xl ... text-sm ..."
++   class="py-2.5 px-1.5 rounded-xl ... min-h-[58px] ..."
+  >
+-   <span>{{ diff.name }}</span>
+-   <span class="text-[10px] opacity-60 font-medium leading-tight mt-1">{{ diff.desc }}</span>
++   <span class="whitespace-nowrap text-xs sm:text-sm">{{ diff.name }}</span>
++   <span class="text-[9px] sm:text-[10px] opacity-60 font-medium leading-tight mt-1 break-words">{{ diff.desc }}</span>
+```
+
+**ขั้นที่ 6** — CTA button (line 162-163)
+```diff
+- class="w-full py-5 ... font-black text-xl rounded-2xl ..."
++ class="w-full py-4 sm:py-5 ... font-black text-base sm:text-xl rounded-2xl ..."
+```
+
+#### Verification Plan:
+
+| Viewport | เช็คอะไร |
+|---|---|
+| 360px | 2-col difficulty, 3-col language (1 row), card ไม่แน่น, CTA ไม่ใหญ่เกิน |
+| 640px (sm) | 5-col difficulty กว้างพอ (full width card), language ยังอยู่ 1 row |
+| 1024px (lg) | difficulty **กลับมา 2 cols** ใน sidebar ≈304px, language 3 cols ≈101px/col ok |
+| 1280px (xl) | difficulty **expand เป็น 5 cols** ใน sidebar ≈389px ≈ 71px/col ok |
+| 1440px+ | comfortable, ไม่มีอะไรล้น |
+
+---
+
 ### Feature: Remediation & Unified Eligibility
 
 **สถานะ:** ✅ COMPLETED (2026-05-24)
@@ -199,18 +280,19 @@ php artisan make:migration add_quiz_id_to_course_remediation_sessions_table
 
 ## Current Snapshot
 
-- Date: 2026-05-24
+- Date: 2026-05-25
 - Branch: main
 - Repository: `C:\wamp64\www\nuxnan`
 - Frontend: `ui/` Nuxt/Vue/TypeScript/Pinia/Tailwind/PrimeVue
 - Backend: `api/nuxnanravel/` Laravel/PHP/JWT/MySQL/Reverb
-- Current focus: Exam Retake Flow — Quiz-level link + Frontend retake UX
-- Pending commit: งานสะสมวันนี้ (Lesson Widget, Curriculum Fixes, Remediation, Eligibility Panel)
+- Current focus: Typing Game Settings — Responsive layout fix
+- Pending commit: งานสะสม (Lesson Widget, Curriculum Fixes, Remediation, Eligibility Panel)
 
 ## Active Work
 
 | Scope | Owner | Status | Files | Notes |
 | --- | --- | --- | --- | --- |
+| Typing Game Settings responsive fix | — | 📋 Ready to implement | `ui/pages/Play/Games/typing/index.vue` | Critical breakpoint conflict lg:grid-cols-2 xl:grid-cols-5 |
 | Exam retake flow — Phase 1 (DB + Backend) | — | 📋 Ready to implement | migration, RemediationController, quiz controller | เพิ่ม quiz_id link + retake authorization |
 | Exam retake flow — Phase 2 (Frontend) | — | 📋 Planned | remediation.vue, [quizId]/index.vue | แสดง remediation status ใน quiz page |
 
@@ -233,6 +315,23 @@ php artisan make:migration add_quiz_id_to_course_remediation_sessions_table
 3. **Pending commit**: ควร commit งานที่สะสมไว้ก่อนเริ่ม Phase 1 เพื่อ isolate changes
 
 ## Analysis Timeline
+
+### 2026-05-24 - Lesson order gap / drag-and-drop analysis
+- User reported a course with only 3 lessons showing a lesson badge as "บทที่ 4"; follow-up concern was whether drag-and-drop reorder or access/draft conditions could make frontend index/display inaccurate.
+- Read-only DB check for `course_id = 21` found exactly 3 lesson rows with orders `1, 2, 4`; the first row is `publication_status = draft`, and the visible published lesson with id 44 has `order = 4`.
+- Code inspection found `LessonOrderWidget.vue` maps the current draggable list to `order: index + 1`, so a successful save with all course lessons would normalize the 3 rows to `1, 2, 3`.
+- Backend `CourseLessonController::reorder()` only verifies incoming IDs belong to the course; it does not require the incoming payload to contain every lesson in the course, nor does it renumber untouched lessons. `index()` also returns paginated lessons, so reorder can be unsafe for courses beyond the current page.
+- Existing `CourseLessonReorderTest.php` covers a complete 3-lesson reorder and authorization, but not incomplete payloads, pagination, draft/published mixes, or gap repair after delete/create.
+- Likely root cause for the current course: stale/gapped `lessons.order` from a previous delete/create or unsaved/failed reorder, not the points access type itself. Draft filtering can make the displayed sequence diverge further for students.
+- Recommended fix direction: backend-owned order normalization for full course lessons, explicit full-list reorder endpoint/input, `max(order)+1` default for new lessons, and separate `display_order` from raw `order` for student-visible numbering.
+
+### 2026-05-24 - Lesson card admin badge overlap planning
+- User reported the lesson publication status badge on `/Learn/Courses/21/lessons` is visually hidden behind the edit/delete admin buttons.
+- Read-only inspection found the likely source in `ui/components/learn/course/lesson/LessonPost.vue`: left badge stack uses `absolute top-4 left-4 flex flex-wrap`, access badge uses `absolute top-4 right-4`, and admin actions also use `absolute top-4 right-4`, so header overlays can collide on narrow card widths or with multiple badges.
+- Intended fix scope: frontend-only, mainly `LessonPost.vue`; optionally add a tiny helper computed for admin/action reserved spacing if the template becomes hard to read.
+- Planned UX direction: restructure the cover overlay into a responsive top row with a left badge group and a right action group, reserve horizontal space for actions, move access badge into the same badge group or a second non-overlapping row, and keep mobile wrapping below the action buttons.
+- Verification plan: run a focused frontend check/build if practical, then browser-smoke `/Learn/Courses/21/lessons` as course admin at desktop and mobile widths to confirm badges and edit/delete buttons no longer overlap.
+- Risk: there are existing uncommitted lesson access changes in the same `LessonPost.vue`, so implementation must preserve those changes and avoid broad card redesign.
 
 ### 2026-05-24 - Plan review and improvement (Exam Retake Flow)
 - อ่านโค้ดจริงใน `RemediationService.php` และ `RemediationController.php` พบว่า grade update flow สมบูรณ์แล้ว (`gradeEnrollment` อัพเดท `final_grade`, `completion_status`, เรียก `unlockByRemediation`)
@@ -276,3 +375,49 @@ php artisan make:migration add_quiz_id_to_course_remediation_sessions_table
 - Main UX risk: too many separate choices for students; recommended simplification is a single "restore exam access" card with one recommended next action, with teacher one-click/bulk unlock as the fallback.
 - Technical risk found: gradebook remediation page appears to call legacy/non-matching endpoints and field names (`/remediation/sessions`, `name`, `scheduled_at`, `resit`) while backend routes use `/api/courses/{course}/remediation`, `title`, `start_at`, `exam_retake`.
 - Verification so far: read-only inspection only; no tests run and no functional code changed.
+
+### 2026-05-24 - Admin progress widget and paid lesson unlock planning
+- User asked to plan improvements: hide student learning progress widgets for admins, and make paid lessons show title/status first while content remains locked until the student confirms payment and the system successfully deducts points or wallet money.
+- Read-only inspection found `CoursePageShell.vue` shows `CourseProgressWidget`, `CourseLessonProgressWidget`, `CourseAssignmentProgressWidget`, and `CourseQuizProgressWidget` whenever `courseMemberOfAuth` exists, so an admin who is also a course member can see student-style progress cards.
+- Existing lesson access work is partially implemented: `CourseLessonController::unlock()`, `LessonAccessService`, `LessonResource`, `LessonPost.vue`, and `lesson_accesses` already support locked payloads and an explicit unlock endpoint. Remaining UX/contract work is to present metadata safely, improve confirm/insufficient-balance messaging, refresh balances/access after success, and ensure locked list/detail views never expose content/topics/assignments/questions before unlock.
+- Intended files for implementation: `ui/components/learn/course/v2/CoursePageShell.vue`, `ui/components/learn/course/lesson/LessonPost.vue`, `ui/pages/Learn/Courses/[id]/lessons.vue`, `ui/pages/Learn/Courses/[id]/lessons/[lessonId].vue`, `ui/stores/course.ts`, `api/nuxnanravel/app/Http/Resources/Learn/Course/lessons/LessonResource.php`, `api/nuxnanravel/app/Http/Controllers/Api/Learn/Course/lessons/CourseLessonController.php`, `api/nuxnanravel/app/Services/LessonAccessService.php`, and focused Laravel/Nuxt tests.
+- Verification plan: frontend build, backend focused tests for locked resource/unlock success/insufficient points or wallet/idempotency/admin bypass, and browser smoke for admin course pages plus student paid-lesson unlock flow.
+- Clarified product rule: point-priced lessons must not reveal lesson content before purchase. Student may see safe metadata (title, description/summary if allowed, status, price, locked state), then must click read/unlock, see a confirmation warning about point deduction, and only after a successful points deduction should full lesson content be returned/displayed.
+- New revenue rule from user: points deducted from paid lesson reads should be credited into a course accumulated-points balance. Course owner/admin can later use that course balance either by transferring points into their own user account or creating student claim/distribution campaigns.
+- Current points system is user-centric (`users.pp`, `points_transactions`, `PointsService::spend/earn/transfer`) and does not have a course-level points wallet/ledger. Recommended design is a separate course ledger (`course_point_accounts` + `course_point_transactions`) linked to lesson unlocks, not direct immediate credit to owner `users.pp`, to keep course revenue auditable and prevent double spending.
+
+### 2026-05-24 - Lesson completion reward coupon/quota planning
+- User asked to analyze a motivation system where teachers/admins set reward points per lesson completion, funded from the course accumulated-points balance, with first-come quota/coupon behavior so late readers receive no reward after the quota is depleted.
+- Read-only inspection found lesson completion currently runs through `LessonProgressController::complete()` and `toggleComplete()`, with a unique `lesson_progress(user_id, lesson_id)` record. The UI toggle in `LessonInteractionTabs.vue` can mark complete immediately, so reward logic must be backend-controlled and idempotent.
+- Existing course point account/campaign scaffolding is present (`CoursePointAccountService`, `CoursePointAccount`, `CoursePointCampaign`, `CoursePointCampaignClaim`, `CoursePointTransaction`, routes under `/courses/{course}/points`). However the migration filenames are dated `2026_05_25_*` while current project date is 2026-05-24, so migration ordering/status should be checked before implementation.
+- Current campaign creation checks balance when `max_claims` is set but does not reserve/deduct the budget at creation time. This can over-promise available course points across multiple active campaigns. Recommended fix: add reserved balance or explicit campaign budget reservation before exposing lesson rewards.
+- Product decision direction: lesson reward campaigns should be tied to a lesson, require enrollment + access to lesson + first completed status + not previously claimed, optionally require minimum read time (`min_read`) before claim, and should award only while active quota and reserved budget remain.
+- Intended files/modules: `LessonProgressController`, `LessonResource`, `LessonForm.vue`, `LessonPost.vue`, `LessonInteractionTabs.vue`, `CoursePointAccountService`, course point campaign models/migrations/controllers, and focused backend tests for reward budget, quota, duplicate claim, race conditions, and insufficient course points.
+- Verification plan: feature tests for first N completed students receiving rewards, N+1 no reward, repeated toggle no duplicate reward, concurrent claims do not exceed quota/budget, paid locked lesson cannot claim reward before unlock, and frontend build/browser smoke for reward badges and admin setup.
+
+### 2026-05-24 - Frontend plan for lesson reward quotas
+- User requested a frontend-only planning pass for the new course accumulated-points and lesson-completion reward feature.
+- Existing frontend touchpoints: `LessonForm.vue` already owns lesson access/price fields, `LessonPost.vue` owns locked lesson display and unlock CTA, `LessonInteractionTabs.vue` owns lesson progress completion, course `settings.vue` owns admin settings, and `stores/course.ts` handles course/lesson state.
+- Add a focused course-points frontend API layer/composable for account, transactions, campaigns, create/update/pause/end campaign, and claim/refresh flows. Expected payloads should include course balance, reserved/available balance, campaign quota/remaining count, auth-user claim status, and `reward_result` from lesson progress completion.
+- Admin/course-admin UX plan: add a course settings section for accumulated course points, available/reserved balance, recent transactions, withdrawal action, and active reward campaigns; add lesson reward controls in `LessonForm.vue` with enable toggle, points per claim, quota, schedule, budget preview, and validation against available course balance.
+- Student UX plan: show reward teaser badges on lesson list/detail with points and remaining quota; keep paid locked lesson content hidden while still showing safe metadata/reward teaser; after unlock allow reading; after completion show awarded/depleted/already-claimed states and refresh user points plus lesson reward status.
+- Guardrails: frontend validation is advisory only; backend remains authoritative for balance reservation, duplicate claims, access/enrollment checks, minimum read time, and depleted quotas. Frontend should map backend errors such as insufficient course balance, quota depleted, already claimed, locked lesson, and not enrolled into clear Thai messages.
+- Candidate components: `CoursePointBalanceCard`, `CoursePointTransactionList`, `LessonRewardSettings`, `LessonRewardBadge`, `LessonRewardCompletionNotice`, and optionally `CoursePointCampaignList`, reusing existing course settings/card patterns without adding nested card-heavy layouts.
+- Frontend verification plan: run `npm run build`; smoke-test admin settings balance, lesson reward config budget preview, paid locked lesson reveal flow, completion award before quota exhaustion, completion after quota exhaustion, duplicate completion no-award, and mobile layouts for lesson cards/detail.
+
+### 2026-05-25 - Typing Game Settings responsive planning
+- User shared a narrow mobile screenshot where `Game Settings` option buttons wrap individual words/letters vertically and the settings card feels cramped.
+- Read-only inspection found the source in `ui/pages/Play/Games/typing/index.vue`: settings live in the right column of a `lg:grid-cols-3` layout; language buttons use `flex gap-2` with `flex-1`, while difficulty buttons use `grid grid-cols-2 sm:grid-cols-5`, which becomes five tiny columns at small widths once the settings card sits in a narrow sidebar.
+- Recommended scope is frontend-only: refactor the settings controls in `typing/index.vue` with responsive grid tracks, stable min widths, non-breaking labels, and smaller card padding on mobile; no backend or store contract changes needed.
+- UX direction: on mobile make the settings card full width below mode selection, use language grid `grid-cols-1 xs:grid-cols-3` or `auto-fit minmax`, difficulty `grid-cols-2` until enough width for 3/5 columns, keep labels readable with `whitespace-nowrap`/`break-words` decisions, and make the CTA sticky only if later testing shows long scrolling.
+- Verification plan: run frontend build/check, then browser smoke `/Play/Games/typing` at about 360px, 390px, 768px, and desktop widths to confirm no clipped text, no letter-by-letter wrapping, and mode selection/settings column order remains natural.
+- Risk: current worktree has many existing modified/untracked game and typing files; implementation should be limited to `ui/pages/Play/Games/typing/index.vue` unless a shared layout issue is discovered.
+
+### 2026-05-25 - Typing Game Settings responsive plan review & correction (อ่านบทวิเคราะห์)
+- อ่าน code จริงใน `ui/pages/Play/Games/typing/index.vue` ยืนยัน: outer layout `grid lg:grid-cols-3 gap-12` (line 75), card `p-8 space-y-8` (line 114), language `flex gap-2 flex-1 py-3 px-4` (lines 127-138), difficulty `grid grid-cols-2 sm:grid-cols-5` (line 144), CTA `py-5 text-xl` (lines 162-163).
+- **Critical breakpoint conflict (จุดบอดของแผนเดิม):** `sm:grid-cols-5` เปิดที่ 640px และไม่มี override กลับเมื่อ layout เปลี่ยนเป็น sidebar ที่ `lg` (1024px). ที่ lg: outer gap-12 × 2 = 96px, settings column = (1024 - 16px padding - 96px gaps) / 3 ≈ 304px. กับ 5 cols + gap-2: per-col = (304 - 32px) / 5 = 54px — "Beginner" ล้นแน่นอน. แก้ด้วย `lg:grid-cols-2 xl:grid-cols-5`.
+- **Additional gap issue (จุดบอดที่ 2):** `gap-12` (48px) ระหว่าง col บีบ settings sidebar ที่ lg. เพิ่ม `lg:gap-8` ได้ ~21px เพิ่ม เพียงพอช่วย. แผนเดิมไม่ได้กล่าวถึงเลย.
+- **Language fix revision:** แผนเดิมแนะนำ `xs:grid-cols-3` แต่ `xs` ไม่ใช่ default Tailwind breakpoint. ใช้ `grid grid-cols-3` เลยดีกว่า (3 cols ทุก viewport — ที่ mobile เต็มความกว้างก็ใช้ได้, ที่ sidebar ≈ 304px / 3 = 101px ต่อ col ก็พอ).
+- **Revised implementation (5 ขั้น):** (1) outer gap: `gap-6 lg:gap-8` (2) card: `p-5 sm:p-6 lg:p-7`, inner `space-y-6 lg:space-y-7` (3) language: `grid grid-cols-3 gap-2` + `whitespace-nowrap overflow-hidden` บน label (4) difficulty: `grid-cols-2 sm:grid-cols-5 lg:grid-cols-2 xl:grid-cols-5` + `min-h-[60px]`, name `whitespace-nowrap text-xs sm:text-sm`, desc `text-[9px] sm:text-[10px] break-words` (5) CTA: `py-4 sm:py-5 text-base sm:text-xl`.
+- Verification breakpoints: 360px (2-col diff, 3-col lang, full-width), 640px (5-col diff ok), 1024px/lg (back to 2-col diff in sidebar, 3-col lang), 1280px/xl (5-col diff expands again), 1440px+ desktop (comfortable).
+- Scope confirmed: `ui/pages/Play/Games/typing/index.vue` only. No store/backend changes needed.

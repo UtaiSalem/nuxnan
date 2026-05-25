@@ -34,6 +34,18 @@ const isLoadingParent = inject<Ref<boolean>>('isLoading')
 const route = useRoute()
 const courseId = route.params.id
 
+// Course points logic
+const coursePoints = useCoursePoints(computed(() => courseId))
+const showWithdrawModal = ref(false)
+const withdrawAmount = ref(0)
+const swal = useSweetAlert()
+
+onMounted(() => {
+  if (isCourseAdmin?.value) {
+    coursePoints.fetchAccount()
+  }
+})
+
 // Thai Date Formatter
 const formatThaiDate = (date: any) => {
   if (!date) return ''
@@ -888,6 +900,64 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
           </template>
         </ResponsiveCard>
 
+        <!-- Course Points Account -->
+        <ResponsiveCard v-if="isCourseAdmin" title="แต้มสะสมรายวิชา" icon="mdi:wallet" icon-color="text-amber-500">
+          <!-- Skeleton -->
+          <div v-if="coursePoints.isLoadingAccount.value" class="space-y-3 animate-pulse">
+            <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+              <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+            </div>
+          </div>
+
+          <!-- Stat Cards -->
+          <div v-else class="space-y-3">
+            <!-- Available -->
+            <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg p-4 text-white">
+              <p class="text-xs font-bold uppercase tracking-wider opacity-80">ใช้ได้จริง (Available)</p>
+              <p class="text-3xl font-black mt-1">
+                {{ (coursePoints.account.value?.available_balance ?? 0).toLocaleString() }}
+              </p>
+              <p class="text-xs opacity-70">แต้ม</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Reserved -->
+              <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm">
+                <p class="text-[10px] font-bold text-gray-500 uppercase">กันไว้ (Reserved)</p>
+                <p class="text-xl font-black text-orange-500 mt-0.5">
+                  {{ (coursePoints.account.value?.reserved_balance ?? 0).toLocaleString() }}
+                </p>
+              </div>
+
+              <!-- Total Earned -->
+              <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm">
+                <p class="text-[10px] font-bold text-gray-500 uppercase">รับรวม (Total)</p>
+                <p class="text-xl font-black text-green-600 dark:text-green-400 mt-0.5">
+                  {{ (coursePoints.account.value?.total_earned ?? 0).toLocaleString() }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Withdraw Button -->
+            <div class="pt-2">
+              <button
+                v-if="(coursePoints.account.value?.available_balance ?? 0) >= 24000"
+                type="button"
+                @click="showWithdrawModal = true"
+                class="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-800 text-amber-600 border border-amber-200 dark:border-amber-700 text-sm font-bold py-3 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all shadow-sm active:scale-95"
+              >
+                <Icon icon="mdi:bank-transfer" class="w-5 h-5" />
+                ถอนแต้มเข้าบัญชีส่วนตัว
+              </button>
+              <div v-else class="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 text-[10px] text-gray-500 text-center">
+                ต้องมีขั้นต่ำ 24,000 แต้มเพื่อถอน
+              </div>
+            </div>
+          </div>
+        </ResponsiveCard>
+
         <!-- Duplicate & Danger Zone -->
         <ResponsiveCard title="คัดลอกรายวิชา" icon="heroicons:document-duplicate" icon-color="text-blue-500">
           <div class="space-y-4">
@@ -1011,6 +1081,65 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
         />
       </div>
     </Teleport>
+    <!-- Withdraw Modal -->
+    <div v-if="showWithdrawModal"
+         class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-gray-200 dark:border-gray-700 animate-in zoom-in duration-200">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+            <Icon icon="mdi:bank-transfer" class="w-6 h-6 text-amber-600" />
+          </div>
+          <h4 class="text-lg font-bold text-gray-800 dark:text-white">
+            ถอนแต้มเข้าบัญชีส่วนตัว
+          </h4>
+        </div>
+        
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          ถอนได้เฉพาะ <strong>Available balance</strong> เท่านั้น
+          <br/>ยอดที่ถอนได้: <span class="font-bold text-amber-600">{{ coursePoints.account.value?.available_balance?.toLocaleString() }} แต้ม</span>
+        </p>
+
+        <div class="space-y-2 mb-6">
+          <label class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+            จำนวนแต้มที่ต้องการถอน
+          </label>
+          <div class="relative">
+            <input
+              v-model.number="withdrawAmount"
+              type="number" :min="24000" step="1000"
+              class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 transition-all dark:text-white text-lg font-black"
+            />
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">แต้ม</span>
+          </div>
+          <p class="text-[10px] text-gray-400 italic">* ขั้นต่ำ 24,000 แต้ม (≈ 20 บาท)</p>
+        </div>
+
+        <div class="flex gap-3">
+          <button
+            @click="showWithdrawModal = false"
+            class="flex-1 py-3 rounded-xl text-sm font-bold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            ยกเลิก
+          </button>
+          <button
+            @click="async () => {
+              if (withdrawAmount < 24000) return
+              const res = await coursePoints.withdraw(withdrawAmount) as any
+              if (res.success) {
+                showWithdrawModal = false
+                swal.toast(res.message || 'ถอนแต้มสำเร็จ', 'success')
+              } else {
+                swal.error(res.message || 'ไม่สามารถถอนแต้มได้')
+              }
+            }"
+            :disabled="coursePoints.isWithdrawing.value || withdrawAmount < 24000 || withdrawAmount > (coursePoints.account.value?.available_balance ?? 0)"
+            class="flex-1 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/20 hover:shadow-xl transition-all active:scale-95 disabled:opacity-50"
+          >
+            {{ coursePoints.isWithdrawing.value ? 'กำลังถอน...' : 'ยืนยันการถอน' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 

@@ -24,6 +24,16 @@ class Lesson extends Model
 {
     use HasFactory;
 
+    // Publication status
+    const STATUS_DRAFT     = 'draft';
+    const STATUS_PUBLISHED = 'published';
+    const STATUS_ARCHIVED  = 'archived';
+
+    // Access type
+    const ACCESS_FREE   = 'free';
+    const ACCESS_POINTS = 'points';
+    const ACCESS_MONEY  = 'money';
+
     protected $guarded = [];
 
     protected $appends = [
@@ -137,6 +147,43 @@ class Lesson extends Model
     {
         $progress = $this->userProgress($user);
         return $progress && $progress->isCompleted();
+    }
+
+    public function accesses(): HasMany
+    {
+        return $this->hasMany(LessonAccess::class);
+    }
+
+    /**
+     * ตรวจว่า user คนนี้มีสิทธิ์อ่านบทเรียนนี้หรือไม่
+     */
+    public function isAccessibleByUser(User $user, bool $isCourseAdmin = false): bool
+    {
+        // admin เห็นทุกอย่างเสมอ
+        if ($isCourseAdmin) return true;
+
+        // draft/archived — ไม่อนุญาต
+        if ($this->publication_status !== self::STATUS_PUBLISHED) return false;
+
+        // free lesson — อนุญาตทันที
+        if ($this->access_type === self::ACCESS_FREE) return true;
+
+        // points/money — ตรวจ access record
+        return $this->accesses()
+            ->where('user_id', $user->id)
+            ->where('status', LessonAccess::STATUS_ACTIVE)
+            ->exists();
+    }
+
+    /**
+     * ตรวจว่า user ปลดล็อกแล้วหรือยัง
+     */
+    public function hasActiveAccessFor(User $user): bool
+    {
+        return $this->accesses()
+            ->where('user_id', $user->id)
+            ->where('status', LessonAccess::STATUS_ACTIVE)
+            ->exists();
     }
 }
 

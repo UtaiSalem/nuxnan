@@ -52,7 +52,7 @@ const {
   overallProgress, 
   isLoading: isProgressLoading, 
   error: progressError 
-} = useCourseLearningProgress(courseId.value, props.courseMemberOfAuth?.id)
+} = useCourseLearningProgress(courseId.value, props.courseMemberOfAuth?.id, props.isCourseAdmin)
 
 const layoutWidgets = useLayoutWidgets()
 
@@ -195,7 +195,7 @@ onUnmounted(() => {
           @update:selected-group-id="$emit('update:selected-group-id', $event)"
         />
 
-        <template v-if="courseMemberOfAuth && !isCourseInfoRoute">
+        <template v-if="courseMemberOfAuth && !isCourseInfoRoute && !isCourseAdmin">
           <CourseProgressWidget
             :progress="overallProgress"
             :course-id="courseId"

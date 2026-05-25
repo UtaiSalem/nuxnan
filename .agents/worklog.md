@@ -9,66 +9,70 @@
 ## สถานะปัจจุบัน (2026-05-24)
 
 - **Done Today:**
+  - **Lesson Access System (Full Feature)**
+    - Migration: เพิ่ม `publication_status`, `access_type`, `money_tuition_fee` ใน `lessons` table (migrate ข้อมูลเดิมด้วย)
+    - Migration: สร้าง `lesson_accesses` table สำหรับ persistent unlock records
+    - Model: `LessonAccess.php` — TYPE/STATUS constants, relations
+    - Service: `LessonAccessService.php` — getAccessStatus, unlockWithPoints, unlockWithMoney, grantFreeAccess
+    - Controller: `CourseLessonController` — unlock endpoint, publication_status filtering, LessonAccessService injection
+    - Resource: `LessonResource` — access status fields, locked/unlocked data separation, display_order
+    - Route: `POST /{lesson}/unlock` ลงทะเบียนแล้ว
+  - **Lesson Order Gap Fix**
+    - `store()`: default order → `max(order)+1` (ไม่มี gap ตั้งแต่ต้น)
+    - `reorder()`: payload ใหม่ `{lessons: [id1,id2,...]}` — backend กำหนด 1..N เอง (ไม่มี gap)
+    - `index()`: admin → `get()` ทุก lesson (ไม่ paginate); student → `paginate()`
+  - **Lesson display_order**
+    - Backend คำนวณ `display_order` (rank ใน published lessons เท่านั้น, 1-indexed, ไม่มี gap) ใน `index()` และ `show()`
+    - `LessonResource` ส่ง `display_order` ทุก response
+    - `LessonPost.vue`: student ใช้ `lesson.display_order` จาก backend; admin ใช้ `lesson.order`
+  - **LessonPost.vue — Badge Overlap Fix**
+    - จัดโครงสร้าง overlay ใหม่: left group (publication/order/time badges) + right group (access badge + admin actions)
+    - ไม่มี overlap อีกต่อไป ทุก viewport
+  - **LessonOrderWidget.vue — Bug Fixes**
+    - แก้ status badge: `lesson.status` → `lesson.publication_status`
+    - reorder payload: `[id1,id2,...]` (ordered IDs only)
+  - **store/course.ts**: `reorderLessons(courseId, lessonIds: number[])`
   - **Exam Retake Flow (Phase 1)**
-    - Migration: Added `quiz_id` to `course_remediation_sessions` table (with index for MyISAM compatibility).
-    - Model: Updated `CourseRemediationSession` with `quiz_id` fillable and `quiz()` relationship.
-    - Controller: Updated `RemediationController` to validate `quiz_id` in store/update.
-    - Quiz Detail: Enhanced `CourseQuizController@show` to return student's remediation status for the specific quiz.
-    - Frontend: Added `remediation_status` card to Quiz Page for students.
-    - Frontend: Added Quiz selection dropdown to Remediation Session creation form for admins.
-  - **Hotfix: Course Feeds 500 Error**
-    - Fixed `Unknown column 'order'` in `topics` query within `CourseActivityController`.
-    - Removed stale `order` field mapping in `CourseResource` for topics.
-  - **Course Info Accordion Bug Fix**
-    - Fixed `.name` vs `.title` in `index.vue`.
-    - Added `withCount('topics')` and `with('topics')` in `CourseActivityController`.
-    - Implemented lightweight inline mapping in `CourseResource` to avoid N+1 queries.
-    - Updated accordion template with direct lesson links and empty state.
-  - **Remediation Route Alignment & Unified Eligibility**
-    - Aligned `remediation.vue` with backend routes and fields.
-    - Added `bulkEnroll` to `RemediationController` for admins.
-    - Created and integrated `ExamEligibilityPanel.vue` for unified student access restoration.
-  - **Lesson Order Widget Polish**
-    - Fixed UX flash by adding `silent` mode to `fetchLessons` in `lessons.vue`.
-    - Hidden reorder widget when lessons count <= 1.
-    - Made `LessonOrderWidget.vue` collapsible (default closed).
+    - Migration: Added `quiz_id` to `course_remediation_sessions`
+    - Model/Controller: Updated `CourseRemediationSession` + `RemediationController`
+    - Quiz Detail: Returns student's remediation status for the specific quiz
+    - Frontend: remediation_status card in Quiz Page + Quiz dropdown in Remediation admin form
+  - **Other fixes**: Course feeds 500 error, Course info accordion, Remediation route alignment, Unified eligibility panel, Lesson order widget polish
+
 - **In Progress:**
   - —
+
 - **TODO:**
-  - **Exam Retake Flow** (แผนละเอียดใน `latest-analysis.md`)
-    - **Phase 1 — Backend** (ทำก่อน):
-      1. Migration: เพิ่ม `quiz_id` (nullable FK) ใน `course_remediation_sessions`
-      2. `RemediationController::store()/update()`: รับ `quiz_id` ใน validation
-      3. `RemediationService::gradeEnrollment()`: เมื่อ passed + มี `quiz_id` → unlock quiz retake
-      4. Quiz Controller: return `can_retake: true` ถ้า student ผ่าน remediation ที่เชื่อมกับ quiz นี้
-    - **Phase 2 — Frontend** (หลัง Phase 1):
-      5. `[quizId]/index.vue`: แสดง remediation status card (pending/passed)
-      6. `remediation.vue`: dropdown เลือก quiz ที่ต้องการ retake ตอนสร้าง session
-    - **หมายเหตุ**: grade update (`final_grade`, `completion_status`) มีอยู่แล้วใน `RemediationService.php` — ไม่ต้องแตะ
+  - **Exam Retake Flow Phase 2 — Remaining Logic** (แผนละเอียดใน `latest-analysis.md`)
+    - `RemediationService::gradeEnrollment()`: เมื่อ passed + มี `quiz_id` → unlock quiz retake attempt
+    - Quiz Controller: return `can_retake: true` ถ้า student ผ่าน remediation ที่ผูกกับ quiz นี้
+  - **Commit งานสะสม** — มี modified/untracked files จำนวนมาก ควร commit ก่อนเริ่มงานใหม่
+
 - **Pending Commit:**
-  - accumulation of changes from today (Lesson Widget, Curriculum Fixes, Remediation, Eligibility).
+  - Lesson Access System (migrations, model, service, controller, resource)
+  - Lesson Order Gap Fix + display_order
+  - LessonPost.vue badge overlap fix
+  - LessonOrderWidget.vue bug fixes
+  - Exam Retake Flow Phase 1
+  - All previous fixes from today
 
 ---
 
 ## ประวัติการทำงาน (Timeline)
 
+- **Lesson Access System + Order Gap + display_order** (2026-05-24)
+  - Full access type system (free/points/money) with persistent unlock records
+  - Order gap fixed: new lessons auto-append, reorder normalizes 1..N
+  - display_order: backend-computed sequential number for published lessons (no gap for students)
+  - Build verified: `npm run build` ✅, `php artisan migrate` ✅
+- **Exam Retake Flow Phase 1** (2026-05-24)
+  - quiz_id link in remediation sessions, remediation status in quiz page
 - **Remediation & Unified Eligibility** (2026-05-24)
-  - Fixed route mismatch in `remediation.vue` (Backend uses `/api/courses/{course}/remediation`).
-  - Implemented `bulkEnroll` in `RemediationController` for admins.
-  - Created `ExamEligibilityPanel.vue` to unify unlock channels.
-  - Integrated panel into quiz detail page.
+  - Fixed route mismatch, bulkEnroll, ExamEligibilityPanel.vue
 - **Lesson Order Widget Polish** (2026-05-24)
-  - Fixed UX flash by adding `silent` mode to `fetchLessons` in `lessons.vue`.
-  - Hidden reorder widget when lessons count <= 1.
-  - Made `LessonOrderWidget.vue` collapsible (default closed).
-  - Verified with `npm run build` (warnings expected, no core errors).
+  - Silent mode, hide when ≤1 lessons, collapsible widget
 - **Lesson Drag-and-Drop Reordering** (2026-05-24)
-  - Implemented compact admin-only ordering widget for lessons.
-  - Added bulk reorder endpoint `PATCH /api/courses/{course}/lessons/reorder`.
-  - Improved lesson ordering logic to handle nulls and provide fallback.
-  - Verified with backend feature tests (`CourseLessonReorderTest.php`).
+  - Compact admin widget, bulk reorder endpoint, feature tests
 - **Cross Math Enter key** (2026-05-23)
-  - Added Enter key support for next level in Cross Math game.
-  - Added `aria-keyshortcuts="Enter"` to the next-level button.
 
 ---

@@ -78,7 +78,7 @@
         class="hexagon-fallback"
         :style="fallbackStyle"
       >
-        <Icon :name="fallbackIcon" :style="{ fontSize: fallbackIconSize }" aria-hidden="true" />
+        <Icon :icon="fallbackIcon" :style="{ fontSize: fallbackIconSize }" aria-hidden="true" />
       </div>
     </div>
 
@@ -121,6 +121,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Icon } from '@iconify/vue'
 import { DEFAULT_AVATAR } from '~/utils/avatarConstants'
 
 // Types

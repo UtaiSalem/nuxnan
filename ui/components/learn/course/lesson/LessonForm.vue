@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useObjectUrl } from '@vueuse/core'
 import RichTextEditor from '~/components/Common/RichTextEditor.vue'
+import LessonRewardForm from '~/components/learn/course/points/LessonRewardForm.vue'
 
 interface Props {
   lesson?: any
@@ -22,6 +23,17 @@ const emit = defineEmits<{
 const api = useApi()
 const swal = useSweetAlert()
 const config = useRuntimeConfig()
+
+// Course points logic for rewards
+const coursePoints = useCoursePoints(computed(() => props.courseId))
+
+onMounted(() => {
+  if (props.isEdit) {
+    coursePoints.fetchAccount()
+  }
+})
+
+const availableBalance = computed(() => coursePoints.account.value?.available_balance ?? 0)
 
 // Helper function to get image URL
 const getImageUrl = (image: any): string => {
@@ -47,8 +59,11 @@ const form = ref({
   youtube_url: '',
   min_read: 0,
   point_tuition_fee: 0,
+  money_tuition_fee: 0,
   order: 0,
   status: 1,
+  publication_status: 'published',
+  access_type: 'free',
 })
 
 // Temp images for upload
@@ -70,8 +85,11 @@ watch(
         youtube_url: lesson.youtube_url || '',
         min_read: lesson.min_read || 0,
         point_tuition_fee: lesson.point_tuition_fee || 0,
+        money_tuition_fee: lesson.money_tuition_fee || 0,
         order: lesson.order || 0,
         status: lesson.status ?? 1,
+        publication_status: lesson.publication_status ?? 'published',
+        access_type: lesson.access_type ?? 'free',
       }
       existingImages.value = lesson.images || []
     }
@@ -157,8 +175,11 @@ const handleSubmit = async () => {
     formData.append('youtube_url', form.value.youtube_url)
     formData.append('min_read', String(form.value.min_read))
     formData.append('point_tuition_fee', String(form.value.point_tuition_fee))
+    formData.append('money_tuition_fee', String(form.value.money_tuition_fee))
     formData.append('order', String(form.value.order))
     formData.append('status', String(form.value.status))
+    formData.append('publication_status', form.value.publication_status)
+    formData.append('access_type', form.value.access_type)
 
     // Add images
     tempImages.value.forEach((img, index) => {
@@ -373,16 +394,60 @@ const handleCancel = () => {
       </div>
 
       <!-- Settings Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Point Fee -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Publication Status -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            แต้มค่าธรรมเนียม
+            สถานะเผยแพร่
+          </label>
+          <select
+            v-model="form.publication_status"
+            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
+          >
+            <option value="draft">📝 ฉบับร่าง (นักเรียนไม่เห็น)</option>
+            <option value="published">✅ เผยแพร่แล้ว</option>
+            <option value="archived">📦 เก็บถาวร</option>
+          </select>
+        </div>
+
+        <!-- Access Type -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            รูปแบบการเข้าถึง
+          </label>
+          <select
+            v-model="form.access_type"
+            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
+          >
+            <option value="free">🔓 ฟรี</option>
+            <option value="points">⭐ ใช้แต้ม</option>
+            <option value="money">💰 ชำระเงิน</option>
+          </select>
+        </div>
+
+        <!-- Point Fee (แสดงเมื่อ access_type = points) -->
+        <div v-if="form.access_type === 'points'">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            ราคา (แต้ม)
           </label>
           <input
             v-model.number="form.point_tuition_fee"
             type="number"
             min="0"
+            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
+          />
+        </div>
+
+        <!-- Money Fee (แสดงเมื่อ access_type = money) -->
+        <div v-if="form.access_type === 'money'">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            ราคา (บาท)
+          </label>
+          <input
+            v-model.number="form.money_tuition_fee"
+            type="number"
+            min="0"
+            step="0.01"
             class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
           />
         </div>
@@ -412,21 +477,19 @@ const handleCancel = () => {
             class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
           />
         </div>
-
-        <!-- Status -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            สถานะ
-          </label>
-          <select
-            v-model.number="form.status"
-            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
-          >
-            <option :value="1">เผยแพร่</option>
-            <option :value="0">แบบร่าง</option>
-          </select>
-        </div>
       </div>
+
+      <!-- Lesson Reward (edit mode only — ต้องมี lessonId ก่อน) -->
+      <template v-if="isEdit && props.lesson?.id">
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+          <LessonRewardForm
+            :course-id="courseId"
+            :lesson-id="props.lesson.id"
+            :available-balance="availableBalance"
+            @updated="coursePoints.fetchAccount()"
+          />
+        </div>
+      </template>
 
       <!-- Action Buttons -->
       <div

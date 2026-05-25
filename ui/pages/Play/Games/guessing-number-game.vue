@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import confetti from 'canvas-confetti'
 
 definePageMeta({
-  layout: 'game-layout'
+  layout: false,
 })
 
 const secretNumber = ref(generateRandomNumber())
@@ -74,6 +74,7 @@ watch(isGameOver, (newValue) => {
 })
 </script>
 <template>
+  <NuxtLayout name="main">
     <div class="w-full h-full flex items-center justify-center min-h-[50vh]">
         <div class="bg-white dark:bg-vikinger-dark-100 rounded-2xl shadow-xl max-w-md w-full border border-gray-100 dark:border-vikinger-dark-50 overflow-hidden">
             <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-center">
@@ -128,6 +129,7 @@ watch(isGameOver, (newValue) => {
             </div>
         </div>
     </div>
+  </NuxtLayout>
 </template>
 
 <style scoped>

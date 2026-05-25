@@ -48,7 +48,7 @@ export const usePoints = () => {
   }
   
   /**
-   * Earn points
+   * Earn points (PP)
    */
   const earn = async (data: {
     source_type: string
@@ -96,6 +96,51 @@ export const usePoints = () => {
         authStore.rollback(data.amount)
       }
       
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Earn XP (do not modify PP/points)
+   */
+  const earnXp = async (data: {
+    source_type: string
+    source_id?: number
+    amount: number
+    description?: string
+    metadata?: Record<string, any>
+  }) => {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const response = await $fetch(`${apiBase.value}/api/points/xp/earn`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+        },
+        body: data,
+      }) as any
+
+      if (response.success) {
+        // Refresh user level/xp fields from backend response
+        // (auth store updates are handled by fetchUser; we keep it lightweight here)
+        if (response.data && authStore.user) {
+          authStore.user.xp = response.data.new_xp ?? authStore.user.xp
+          authStore.user.level = response.data.level ?? authStore.user.level
+          authStore.user.current_xp = response.data.current_xp ?? authStore.user.current_xp
+          authStore.user.xp_for_next_level = response.data.xp_for_next_level ?? authStore.user.xp_for_next_level
+        }
+
+        return response.data
+      }
+
+      throw new Error(response.message || 'Failed to earn XP')
+    } catch (err: any) {
+      error.value = err.message || 'Failed to earn XP'
+      console.error('Earn XP error:', err)
       throw err
     } finally {
       isLoading.value = false
@@ -381,6 +426,7 @@ export const usePoints = () => {
     // Methods
     getBalance,
     earn,
+    earnXp,
     spend,
     transfer,
     convertToWallet,

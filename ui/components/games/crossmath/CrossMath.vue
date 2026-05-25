@@ -84,6 +84,10 @@
           >
             🎮 เริ่มเกม / Start
           </button>
+
+          <p v-if="!authStore.user" class="text-amber-200/70 text-center text-xs font-medium">
+            💡 เข้าสู่ระบบเพื่อบันทึกคะแนนสะสมของคุณ
+          </p>
         </div>
       </div>
     </div>
@@ -103,8 +107,82 @@
           <p class="text-yellow-400 font-bold text-sm truncate">{{ score }} <span class="text-yellow-500/80 text-xs">แต้ม</span></p>
         </div>
         <div class="col-span-3 grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:shrink-0 sm:gap-1">
+          <button @click="fetchLeaderboard" class="min-w-0 py-2 px-3 bg-indigo-700/80 text-white rounded-xl border border-indigo-600 shadow text-sm font-semibold whitespace-nowrap">🏆 อันดับ</button>
           <button @click="openStageList" class="min-w-0 py-2 px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow text-sm font-semibold whitespace-nowrap">รายการด่าน</button>
           <button @click="showQuitConfirm = true" class="min-w-0 py-2 px-3 bg-red-700/80 text-white rounded-xl border border-red-600 shadow text-sm font-semibold whitespace-nowrap">✕ ออก</button>
+        </div>
+      </div>
+
+      <!-- Leaderboard Modal -->
+      <div v-if="showLeaderboard" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="showLeaderboard = false"></div>
+        <div class="relative bg-slate-900 border-2 border-indigo-500 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh]">
+          <div class="p-5 bg-gradient-to-r from-indigo-600 to-purple-600 flex justify-between items-center shrink-0">
+            <h3 class="text-xl font-black text-white flex items-center gap-2">
+              <span class="text-2xl">🏆</span> กระดานผู้นำ / Leaderboard
+            </h3>
+            <button @click="showLeaderboard = false" class="w-8 h-8 flex items-center justify-center rounded-full bg-black/20 text-white hover:bg-black/40 transition-all">✕</button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            <div v-if="loadingLeaderboard" class="flex flex-col items-center justify-center py-12 space-y-4">
+              <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+              <p class="text-indigo-300 font-bold animate-pulse">กำลังโหลดข้อมูล...</p>
+            </div>
+
+            <div v-else-if="leaderboardData.length === 0" class="text-center py-12">
+              <p class="text-slate-500 italic">ยังไม่มีข้อมูลคะแนน</p>
+            </div>
+
+            <template v-else>
+              <div v-for="(entry, index) in leaderboardData" :key="entry.id" 
+                class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-2xl border border-slate-700/50 hover:bg-slate-800 transition-all"
+                :class="{ 'ring-2 ring-amber-400 bg-indigo-900/30 border-indigo-400/50': entry.user_id === authStore.user?.id }"
+              >
+                <div class="w-8 font-black text-lg text-center" :class="[
+                  index === 0 ? 'text-yellow-400 text-2xl' : index === 1 ? 'text-slate-300 text-xl' : index === 2 ? 'text-amber-600 text-lg' : 'text-slate-500'
+                ]">
+                  {{ index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1 }}
+                </div>
+                
+                <img v-if="entry.user?.profile_photo_url || entry.user?.avatar" 
+                  :src="entry.user?.profile_photo_url || entry.user?.avatar" 
+                  class="w-10 h-10 rounded-full border-2 border-slate-700 shadow-sm object-cover"
+                />
+                <div v-else class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-bold">
+                  {{ (entry.player_name || 'G').charAt(0).toUpperCase() }}
+                </div>
+
+                <div class="flex-1 min-w-0">
+                  <p class="text-white font-bold truncate">{{ entry.player_name }}</p>
+                  <p class="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">LEVEL {{ entry.level }}</p>
+                </div>
+
+                <div class="text-right">
+                  <p class="text-amber-400 font-black text-lg leading-none">{{ entry.score.toLocaleString() }}</p>
+                  <p class="text-[9px] text-slate-500 font-bold">แต้ม / PTS</p>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Current User Rank Sticky Footer -->
+          <div v-if="userRankInfo && authStore.user" class="p-4 bg-slate-800 border-t border-slate-700 shrink-0">
+            <div class="flex items-center gap-3 bg-indigo-900/40 p-3 rounded-2xl border border-indigo-500/30">
+              <div class="w-8 text-center font-black text-indigo-300">#{{ userRankInfo.rank }}</div>
+              <div class="flex-1">
+                <p class="text-white font-bold text-sm">อันดับของคุณ</p>
+                <p class="text-xs text-indigo-300">ความภูมิใจของวันนี้!</p>
+              </div>
+              <div class="text-right">
+                <p class="text-amber-400 font-black text-lg leading-none">{{ userRankInfo.best_score.toLocaleString() }}</p>
+                <p class="text-[9px] text-slate-400 font-bold uppercase">Best Score</p>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="!authStore.user" class="p-4 bg-slate-800 border-t border-slate-700 text-center shrink-0">
+             <p class="text-amber-400 text-xs font-bold">💡 เข้าสู่ระบบเพื่อบันทึกและดูอันดับของคุณ!</p>
+          </div>
         </div>
       </div>
 
@@ -158,6 +236,22 @@
           </div>
         </div>
         <p class="text-center text-white/60 font-semibold mt-1 text-xs tracking-widest">⏱ {{ elapsedTime }}s</p>
+      </div>
+
+      <!-- Level Progress Bar -->
+      <div class="w-full max-w-sm mb-1">
+        <div class="flex justify-between items-end mb-1 px-1">
+          <span class="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">{{ levelProgress.label }}</span>
+          <span class="text-[10px] font-black text-pink-400">{{ Math.round(levelProgress.percentage) }}%</span>
+        </div>
+        <div class="h-2.5 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700/50 p-[1px]">
+          <div
+            class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(192,38,211,0.5)]"
+            :style="{ width: `${levelProgress.percentage}%` }"
+          >
+            <div class="w-full h-full bg-[length:20px_20px] bg-[linear-gradient(45deg,rgba(255,255,255,0.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.15)_50%,rgba(255,255,255,0.15)_75%,transparent_75%,transparent)] animate-stripes"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Owl + Message -->
@@ -266,19 +360,27 @@
               <!-- Horizontal result (pre-computed answer for each row) -->
               <div
                 v-else-if="cell.type === 'h_result'"
-                class="aspect-square rounded-xl flex items-center justify-center font-extrabold text-xl select-none
-                       bg-gradient-to-br from-teal-600 to-teal-800 text-teal-100 border-2 border-teal-500 shadow-lg"
+                :class="[
+                  'aspect-square rounded-xl flex items-center justify-center font-extrabold text-xl select-none border-2 shadow-lg transition-all duration-300',
+                  lineCorrect[`h-${cell.row}`]
+                    ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white border-emerald-300 ring-2 ring-emerald-300/50 scale-105'
+                    : 'bg-gradient-to-br from-teal-600 to-teal-800 text-teal-100 border-teal-500'
+                ]"
               >
-                {{ cell.value }}
+                {{ lineCorrect[`h-${cell.row}`] ? '✓' : cell.value }}
               </div>
 
               <!-- Vertical result (pre-computed answer for each column) -->
               <div
                 v-else-if="cell.type === 'v_result'"
-                class="aspect-square rounded-xl flex items-center justify-center font-extrabold text-xl select-none
-                       bg-gradient-to-br from-teal-600 to-teal-800 text-teal-100 border-2 border-teal-500 shadow-lg"
+                :class="[
+                  'aspect-square rounded-xl flex items-center justify-center font-extrabold text-xl select-none border-2 shadow-lg transition-all duration-300',
+                  lineCorrect[`v-${cell.col}`]
+                    ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white border-emerald-300 ring-2 ring-emerald-300/50 scale-105'
+                    : 'bg-gradient-to-br from-teal-600 to-teal-800 text-teal-100 border-teal-500'
+                ]"
               >
-                {{ cell.value }}
+                {{ lineCorrect[`v-${cell.col}`] ? '✓' : cell.value }}
               </div>
 
               <!-- Corner / empty spacer -->
@@ -307,8 +409,21 @@
             {{ digit }}
           </button>
           <button
+            @click="useHint"
+            :disabled="hintsRemaining <= 0"
+            :class="[
+              'numpad-btn col-span-1 py-3.5 rounded-2xl text-lg font-bold select-none transition-all border',
+              hintsRemaining > 0
+                ? 'bg-gradient-to-b from-amber-400 to-amber-600 text-white shadow-[0_5px_0_rgba(120,80,0,0.4)] border-amber-300/60 hover:from-amber-300 hover:to-amber-500 active:shadow-[0_1px_0_rgba(120,80,0,0.3)] active:translate-y-1'
+                : 'bg-gradient-to-b from-slate-500 to-slate-700 text-slate-400 border-slate-600 cursor-not-allowed opacity-60'
+            ]"
+            aria-label="ปุ่มใบ้"
+          >
+            💡 {{ hintsRemaining }}
+          </button>
+          <button
             @click="handleDelete"
-            class="numpad-btn col-span-3 py-3.5 rounded-2xl text-xl font-bold select-none transition-all
+            class="numpad-btn col-span-2 py-3.5 rounded-2xl text-xl font-bold select-none transition-all
                    bg-gradient-to-b from-red-500 to-red-700 text-white
                    shadow-[0_5px_0_rgba(127,0,0,0.4)] border border-red-400/60
                    hover:from-red-400 hover:to-red-600
@@ -403,6 +518,8 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 
 const authStore = useAuthStore();
+const { api } = useApi();
+const config = useRuntimeConfig();
 
 const gameState = ref('login');
 const playerName = ref(authStore.user?.name || 'ผู้เล่น');
@@ -411,18 +528,120 @@ const showQuitConfirm = ref(false);
 const currentLevel = ref(1);
 const score = ref(0);
 const elapsedTime = ref(0);
+const totalTimeSpent = ref(0);
 const activeCellId = ref(null);
 const cellRefs = ref({});
 const gridCells = ref([]);
+const hintsRemaining = ref(0);
+const lineCorrect = ref({});
+
+// Session tracking
+const gameSessionId = ref('');
+
+// Leaderboard state
+const showLeaderboard = ref(false);
+const loadingLeaderboard = ref(false);
+const leaderboardData = ref([]);
+const userRankInfo = ref(null);
+
+const levelProgress = computed(() => {
+  const stage = currentLevel.value;
+  let start = 1, end = 10, size = 2, nextSize = 3;
+  
+  if (stage >= 1 && stage <= 10) { start = 1; end = 10; size = 2; nextSize = 3; }
+  else if (stage >= 11 && stage <= 35) { start = 11; end = 35; size = 3; nextSize = 4; }
+  else if (stage >= 36 && stage <= 55) { start = 36; end = 55; size = 4; nextSize = 5; }
+  else if (stage >= 56 && stage <= 75) { start = 56; end = 75; size = 5; nextSize = 6; }
+  else if (stage >= 76 && stage <= 88) { start = 76; end = 88; size = 6; nextSize = 7; }
+  else if (stage >= 89 && stage <= 95) { start = 89; end = 95; size = 7; nextSize = 8; }
+  else if (stage >= 96 && stage <= 98) { start = 96; end = 98; size = 8; nextSize = 9; }
+  else if (stage === 99) { start = 99; end = 99; size = 9; nextSize = 10; }
+  else if (stage === 100) { start = 100; end = 100; size = 10; nextSize = 'WIN'; }
+
+  const currentInRange = stage - start + 1;
+  const totalInRange = end - start + 1;
+  const percentage = (currentInRange / totalInRange) * 100;
+
+  return {
+    size,
+    nextSize,
+    currentInRange,
+    totalInRange,
+    percentage,
+    label: `📐 ${size}×${size} — ด่าน ${currentInRange}/${totalInRange} → ${nextSize}${typeof nextSize === 'number' ? '×' + nextSize : ''}`
+  };
+});
+
+async function fetchLeaderboard() {
+  showLeaderboard.value = true;
+  loadingLeaderboard.value = true;
+  try {
+    const apiBase = config.public.apiBase;
+    const url = `${apiBase}/api/game/scores?game_type=crossmath`;
+    const headers = { 'Accept': 'application/json' };
+    if (authStore.token) {
+      headers['Authorization'] = `Bearer ${authStore.token}`;
+    }
+    
+    const response = await $fetch(url, { headers });
+    leaderboardData.value = response.leaderboard;
+    if (response.user_rank) {
+      userRankInfo.value = {
+        rank: response.user_rank,
+        best_score: response.user_best_score?.score || 0
+      };
+    }
+  } catch (error) {
+    console.error('Failed to fetch leaderboard:', error);
+  } finally {
+    loadingLeaderboard.value = false;
+  }
+}
+
+async function saveScore() {
+  if (score.value <= 0) return;
+  
+  try {
+    const apiBase = config.public.apiBase;
+    const url = `${apiBase}/api/game/scores`;
+    const headers = { 
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    };
+    if (authStore.token) {
+      headers['Authorization'] = `Bearer ${authStore.token}`;
+    }
+
+    await $fetch(url, {
+      method: 'POST',
+      headers,
+      body: {
+        game_type: 'crossmath',
+        session_id: gameSessionId.value,
+        score: score.value,
+        level: currentLevel.value,
+        time_spent: totalTimeSpent.value,
+        player_name: playerName.value,
+        metadata: {
+          max_grid_size: gridSize.value
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Failed to save score:', error);
+  }
+}
+
+// ===== Stage pacing — 2×2 reduced to 10, more practice for mid grids =====
 function getGridSizeForStage(stage) {
-  if (stage >= 1 && stage <= 20) return 2;
-  if (stage >= 21 && stage <= 39) return 3;
-  if (stage >= 40 && stage <= 49) return 4;
-  if (stage >= 50 && stage <= 59) return 5;
-  if (stage >= 60 && stage <= 69) return 6;
-  if (stage >= 70 && stage <= 79) return 7;
-  if (stage >= 80 && stage <= 89) return 8;
-  if (stage >= 90 && stage <= 99) return 9;
+  if (stage >= 1 && stage <= 10) return 2;
+  if (stage >= 11 && stage <= 35) return 3;
+  if (stage >= 36 && stage <= 55) return 4;
+  if (stage >= 56 && stage <= 75) return 5;
+  if (stage >= 76 && stage <= 88) return 6;
+  if (stage >= 89 && stage <= 95) return 7;
+  if (stage >= 96 && stage <= 98) return 8;
+  if (stage === 99) return 9;
   if (stage === 100) return 10;
   return 2;
 }
@@ -558,19 +777,45 @@ function createLineOperators(numbers, allowedOps, maxResult = 99) {
   return { ops, result };
 }
 
+// ===== Smaller numbers for first stages of each grid band =====
+function getMaxNumForStage(stage) {
+  const gridBandStarts = [1, 11, 36, 56, 76, 89, 96, 99, 100];
+  let posInBand = 0;
+  for (const start of gridBandStarts) {
+    if (stage >= start) posInBand = stage - start;
+  }
+  // First 3 stages of new grid → max 5, next 3 → max 7, then full 9
+  if (posInBand <= 2) return 5;
+  if (posInBand <= 5) return 7;
+  return 9;
+}
+
+// ===== CHANGE 4: Hint system helpers =====
+function getInitialHints(size) {
+  if (size >= 5) return 3;
+  if (size >= 3) return 2;
+  return 0;
+}
+
 function generatePuzzle(stage) {
   const size = getGridSizeForStage(stage);
   const lastIdx = size * 2;
   const count = lastIdx + 1;
 
-  // Gradually increase available operators by stage ranges (keeps difficulty middle-school friendly)
+  // Gradually unlock operators — warm-up 3 stages per new grid size
   let allowedOps = ['+'];
-  if (stage >= 21) allowedOps = ['+', '-'];
-  if (stage >= 40) allowedOps = ['+', '-', '*'];
-  if (stage >= 60) allowedOps = ['+', '-', '*', '/'];
+  if (stage >= 11) {
+    allowedOps = stage <= 13 ? ['+'] : ['+', '-'];
+  }
+  if (stage >= 36) {
+    allowedOps = stage <= 38 ? ['+', '-'] : ['+', '-', '*'];
+  }
+  if (stage >= 56) {
+    allowedOps = stage <= 58 ? ['+', '-', '*'] : ['+', '-', '*', '/'];
+  }
 
-  // Keep hidden answers one-digit because the in-game numpad supports 1-9.
-  const maxNum = 9;
+  // Smaller numbers for first stages of each grid band, gradually increasing to 9
+  const maxNum = getMaxNumForStage(stage);
 
   let numbers = {}, hOps = {}, vOps = {}, hResults = {}, vResults = {};
   let attempts = 0;
@@ -648,16 +893,58 @@ function generatePuzzle(stage) {
   }
 
   const numCells = cells.filter(c => c.type === 'number');
+
+  // ===== CHANGE 1: Reduced hide ratio with grid penalty =====
   const stageBand = Math.ceil(stage / 10);
-  const hideRatio = stageBand <= 3 ? 0.45 : stageBand <= 7 ? 0.55 : 0.65;
+  const baseHide = stageBand <= 2 ? 0.40
+                 : stageBand <= 4 ? 0.45
+                 : stageBand <= 7 ? 0.50
+                 : 0.55;
+  // Larger grids get fewer hidden cells to avoid overwhelming the player
+  const gridPenalty = Math.max(0, (size - 3) * 0.04);
+  const hideRatio = Math.max(0.25, baseHide - gridPenalty);
   const numToBlank = Math.max(2, Math.ceil(numCells.length * hideRatio));
+
   const shuffled = [...numCells].sort(() => Math.random() - 0.5);
   for (let i = 0; i < numToBlank; i++) {
     shuffled[i].value = null;
     shuffled[i].blank = true;
   }
 
+  // ===== 3×3 constraint: center cell always given + max 2 blanks per row/col =====
+  if (size === 3) {
+    // 1) Force center cell (2,2) to be filled
+    const centerCell = cells.find(c => c.type === 'number' && c.row === 2 && c.col === 2);
+    if (centerCell && centerCell.blank) {
+      centerCell.blank = false;
+      centerCell.value = centerCell.answer;
+    }
+    // 2) Ensure no row or column has all 3 cells blank (max 2 blanks per line)
+    for (let r = 0; r < lastIdx; r += 2) {
+      const rowCells = cells.filter(c => c.type === 'number' && c.row === r);
+      const blankInRow = rowCells.filter(c => c.blank);
+      if (blankInRow.length >= 3) {
+        // Restore one random blank cell in this row
+        const restore = blankInRow[Math.floor(Math.random() * blankInRow.length)];
+        restore.blank = false;
+        restore.value = restore.answer;
+      }
+    }
+    for (let c = 0; c < lastIdx; c += 2) {
+      const colCells = cells.filter(cl => cl.type === 'number' && cl.col === c);
+      const blankInCol = colCells.filter(cl => cl.blank);
+      if (blankInCol.length >= 3) {
+        // Restore one random blank cell in this column
+        const restore = blankInCol[Math.floor(Math.random() * blankInCol.length)];
+        restore.blank = false;
+        restore.value = restore.answer;
+      }
+    }
+  }
+
   gridCells.value = cells;
+  hintsRemaining.value = getInitialHints(size);
+  lineCorrect.value = {};
 
   setTimeout(() => {
     const firstBlank = cells.find(c => c.type === 'number' && c.blank);
@@ -698,14 +985,33 @@ function handleDelete() {
   if (cell && cell.type === 'number' && cell.blank) {
     cell.value = null;
     cell.status = null;
+    lineCorrect.value = {};
     gridCells.value.filter(c => c.type === 'number').forEach(c => { c.status = null; });
   }
 }
 
+// ===== CHANGE 4: Hint system =====
+function useHint() {
+  if (hintsRemaining.value <= 0) return;
+  const emptyCells = gridCells.value.filter(c => c.type === 'number' && c.blank && c.value === null);
+  if (emptyCells.length === 0) return;
+  const cell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+  cell.value = cell.answer;
+  cell.status = 'correct';
+  hintsRemaining.value--;
+  owlMessage.value = 'ช่วยเติมให้ 1 ช่อง! 💡';
+  checkAllLines();
+  const nextEmpty = gridCells.value.find(c => c.type === 'number' && c.blank && c.value === null);
+  if (nextEmpty) selectCell(nextEmpty.id);
+}
+
+// ===== CHANGE 5: Visual feedback — track correct rows/columns =====
 function checkAllLines() {
   const size = gridSize.value;
   const lastIdx = size * 2;
   let correctH = 0, correctV = 0;
+
+  lineCorrect.value = {};
 
   gridCells.value
     .filter(c => c.type === 'number' && c.blank)
@@ -720,6 +1026,7 @@ function checkAllLines() {
     const computed = evaluateExpression(rowNums.map(c => c.value), rowHops.map(c => c.value));
     if (computed !== null && computed === hRes.value) {
       correctH++;
+      lineCorrect.value[`h-${r}`] = true;
       rowNums.forEach(c => { c.status = 'correct'; });
     } else {
       rowNums.forEach(c => { if (c.blank) c.status = 'incorrect'; });
@@ -735,6 +1042,7 @@ function checkAllLines() {
     const computed = evaluateExpression(colNums.map(c => c.value), colVops.map(c => c.value));
     if (computed !== null && computed === vRes.value) {
       correctV++;
+      lineCorrect.value[`v-${col}`] = true;
       colNums.forEach(c => { c.status = 'correct'; });
     } else {
       colNums.forEach(c => { if (c.blank) c.status = 'incorrect'; });
@@ -758,10 +1066,14 @@ function moveToNextCell() {
 function startGame() {
   if (!playerName.value.trim()) return;
 
+  // Generate unique session ID for this game session
+  gameSessionId.value = crypto.randomUUID();
+
   gameState.value = 'playing';
   currentLevel.value = 1;
   score.value = 0;
   elapsedTime.value = 0;
+  totalTimeSpent.value = 0;
 
   generatePuzzle(currentLevel.value);
   startTimer();
@@ -774,13 +1086,17 @@ function startTimer() {
 
   timerInterval = setInterval(() => {
     elapsedTime.value++;
+    totalTimeSpent.value++;
   }, 1000);
 }
 
 function levelComplete() {
   clearInterval(timerInterval);
 
-  const baseScore = gridSize.value * gridSize.value * 10;
+  // ===== CHANGE 4: Hint score penalty (-10 per hint used) =====
+  const hintsUsed = getInitialHints(gridSize.value) - hintsRemaining.value;
+  const hintPenalty = hintsUsed * 10;
+  const baseScore = Math.max(0, gridSize.value * gridSize.value * 10 - hintPenalty);
   levelScore.value = baseScore;
   timeBonus.value = Math.max(0, Math.floor((selectedTime.value - elapsedTime.value) * 2));
   score.value += baseScore + timeBonus.value;
@@ -791,6 +1107,8 @@ function levelComplete() {
   const idx = currentLevel.value - 1;
   if (stages.value[idx]) stages.value[idx].status = 'completed';
   unlockNextStage(currentLevel.value);
+
+  saveScore(); // Save score after every completed level
 
   if (currentLevel.value >= 100) {
     gameState.value = 'gameWin';
@@ -815,16 +1133,19 @@ function gameOver() {
   clearInterval(timerInterval);
   gameState.value = 'gameOver';
   owlMessage.value = owlMessages.gameOver;
+  saveScore(); // Save score on game over (time up)
 }
 
 function quitGame() {
   clearInterval(timerInterval);
+  saveScore(); // Save score on quit
   showQuitConfirm.value = false;
   gameState.value = 'login';
   playerName.value = authStore.user?.name || 'ผู้เล่น';
   currentLevel.value = 1;
   score.value = 0;
   elapsedTime.value = 0;
+  totalTimeSpent.value = 0;
   activeCellId.value = null;
 }
 
@@ -897,6 +1218,15 @@ watch(activeCellId, (newVal) => {
 </script>
 
 <style scoped>
+@keyframes stripes {
+  from { background-position: 0 0; }
+  to { background-position: 40px 0; }
+}
+
+.animate-stripes {
+  animation: stripes 1s linear infinite;
+}
+
 @keyframes bounce-in {
   0% {
     transform: scale(0) translateY(-50%);

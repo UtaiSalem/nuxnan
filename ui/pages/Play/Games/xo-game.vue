@@ -1,9 +1,10 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
+import { Icon } from '@iconify/vue'
 import confetti from 'canvas-confetti'
 
 definePageMeta({
-  layout: 'game-layout'
+  layout: false,
 })
 
 const board = ref(Array(9).fill(''));
@@ -96,6 +97,7 @@ watch(gameMode, () => {
 });
 </script>
 <template>
+  <NuxtLayout name="main">
     <div class="min-h-[calc(100vh-100px)] py-6 flex flex-col justify-center sm:py-12">
         <div class="relative py-3 sm:max-w-xl sm:mx-auto w-full px-4">
             <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 to-light-blue-500 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl opacity-75">
@@ -151,12 +153,13 @@ watch(gameMode, () => {
 
                 <button @click="resetGame"
                     class="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200 flex items-center justify-center space-x-2">
-                    <Icon name="fluent:arrow-counterclockwise-24-filled" class="w-5 h-5" />
+                    <Icon icon="fluent:arrow-counterclockwise-24-filled" class="w-5 h-5" />
                     <span>เริ่มเกมใหม่</span>
                 </button>
             </div>
         </div>
     </div>
+  </NuxtLayout>
 </template>
 
 

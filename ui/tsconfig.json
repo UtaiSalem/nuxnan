@@ -4,5 +4,9 @@
     "forceConsistentCasingInFileNames": true,
     "strict": false,
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "public/js/**/*",
+    "public/js/**"
+  ]
 }

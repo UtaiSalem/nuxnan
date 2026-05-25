@@ -46,10 +46,33 @@ use App\Http\Controllers\Api\Learn\Course\reviews\CourseReviewController;
 use App\Http\Controllers\Api\Learn\Course\CourseMarketplaceController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseSettingController;
 
+use App\Http\Controllers\Api\Learn\Course\points\CoursePointAccountController;
+use App\Http\Controllers\Api\Learn\Course\points\CoursePointCampaignController;
+use App\Http\Controllers\Api\Learn\Course\points\LessonRewardCampaignController;
+
 // Public marketplace listing
 Route::get('/courses/marketplace', [CourseMarketplaceController::class, 'index'])->name('courses.marketplace');
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
+    // Course Point Account & Campaigns (owner/admin)
+    Route::prefix('/courses/{course}/points')->group(function () {
+        Route::get('/account',           [CoursePointAccountController::class, 'show'])->name('course.points.account.show');
+        Route::get('/transactions',      [CoursePointAccountController::class, 'transactions'])->name('course.points.transactions');
+        Route::post('/withdraw',         [CoursePointAccountController::class, 'withdraw'])->name('course.points.withdraw');
+        Route::get('/campaigns',         [CoursePointCampaignController::class, 'index'])->name('course.points.campaigns.index');
+        Route::post('/campaigns',        [CoursePointCampaignController::class, 'store'])->name('course.points.campaigns.store');
+        Route::patch('/campaigns/{campaign}/pause', [CoursePointCampaignController::class, 'pause'])->name('course.points.campaigns.pause');
+        Route::patch('/campaigns/{campaign}/end',   [CoursePointCampaignController::class, 'end'])->name('course.points.campaigns.end');
+        Route::post('/campaigns/{campaign}/claim', [CoursePointCampaignController::class, 'claim'])->name('course.points.campaigns.claim');
+    });
+
+    // Lesson Reward Campaign
+    Route::prefix('/courses/{course}/lessons/{lesson}/reward')->group(function () {
+        Route::get('/',    [LessonRewardCampaignController::class, 'show'])->name('course.lessons.reward.show');
+        Route::post('/',   [LessonRewardCampaignController::class, 'store'])->name('course.lessons.reward.store');
+        Route::delete('/', [LessonRewardCampaignController::class, 'destroy'])->name('course.lessons.reward.destroy');
+    });
+
     Route::post('/courses/{course}/purchase', [CourseMarketplaceController::class, 'purchase'])->name('courses.purchase');
     Route::get('/courses/{course}/marketplace/stats', [CourseMarketplaceController::class, 'stats'])->name('courses.marketplace.stats');
     Route::patch('/courses/{course}/marketplace', [CourseSettingController::class, 'updateMarketplace'])->name('course.marketplace.update');
@@ -137,6 +160,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/lessons')
     Route::put('/{lesson}', [CourseLessonController::class, 'update'])->name('course.lessons.update');
     Route::patch('/{lesson}', [CourseLessonController::class, 'update'])->name('course.lessons.part.update');
     Route::delete('/{lesson}', [CourseLessonController::class, 'destroy'])->name('course.lessons.destroy');
+    Route::post('/{lesson}/unlock', [CourseLessonController::class, 'unlock'])->name('course.lessons.unlock');
 
 
     // Lesson reactions - both singular and plural routes for compatibility

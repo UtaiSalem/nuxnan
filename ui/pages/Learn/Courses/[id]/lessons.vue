@@ -241,10 +241,12 @@ watch(isRoot, async (newVal) => {
 
         <!-- Lessons Feed (แสดงทีละบทแบบโพสต์ - Static list) -->
         <div class="space-y-4">
-          <div v-for="lesson in lessons" :key="lesson.id">
+          <div v-for="(lesson, index) in lessons" :key="lesson.id">
             <LessonPost
               :lesson="lesson"
               :is-admin="isCourseAdmin"
+              :current-index="index"
+              :total-lessons="lessons.length"
               @edit="handleEditLesson"
               @delete="handleDeleteLesson"
               @like="handleLikeLesson"

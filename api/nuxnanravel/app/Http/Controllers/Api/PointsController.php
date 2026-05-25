@@ -99,6 +99,59 @@ class PointsController extends Controller
     }
 
     /**
+     * Earn XP only (do not modify PP/points).
+     */
+    public function earnXp(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'source_type' => 'required|string|max:50',
+            'source_id' => 'nullable|integer',
+            'amount' => 'required|numeric|min:1',
+            'description' => 'nullable|string|max:255',
+            'metadata' => 'nullable|array',
+        ]);
+
+        try {
+            $xpAmount = (int) round((float) $validated['amount']);
+
+            $this->pointsService->addXp($user, $xpAmount);
+
+            $user->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'XP earned successfully',
+                'data' => [
+                    'xp_earned' => $xpAmount,
+                    'new_xp' => $user->xp,
+                    'level' => $user->level,
+                    'current_xp' => $user->current_xp,
+                    'xp_for_next_level' => $user->xp_for_next_level,
+                    'progress_percentage' => $user->xp_for_next_level > 0
+                        ? round(($user->current_xp / $user->xp_for_next_level) * 100, 2)
+                        : 100,
+                    'source_type' => $validated['source_type'],
+                    'source_id' => $validated['source_id'] ?? null,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
      * Spend points.
      */
     public function spend(Request $request): JsonResponse

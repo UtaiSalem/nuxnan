@@ -2,31 +2,31 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons;
 
-
-use App\Models\Course;
-use App\Models\Lesson;
-use Illuminate\Http\Request;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
+use App\Models\Course;
+use App\Models\Lesson;
+use App\Services\LessonAccessService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
-
 
 class CourseLessonController extends \App\Http\Controllers\Controller
 {
+    public function __construct(protected LessonAccessService $accessService) {}
+
     /**
      * Helper method to upload lesson images
      */
     private function uploadLessonImages(Request $request, Lesson $lesson): void
     {
-        if (!$request->hasFile('images')) {
+        if (! $request->hasFile('images')) {
             return;
         }
 
         $images = $request->file('images');
-        
+
         foreach ($images as $image) {
-            $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+            $fileName = uniqid().'.'.$image->getClientOriginalExtension();
             Storage::disk('public')->putFileAs('images/courses/lessons', $image, $fileName);
 
             $lesson->images()->create([
@@ -57,26 +57,70 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     public function index(Course $course)
     {
         try {
+            $isCourseAdmin = $course->isAdmin(auth()->user());
+
+            $lessonsQuery = $course->courseLessons()
+                ->orderByRaw('`order` IS NULL')
+                ->orderBy('order')
+                ->orderBy('created_at');
+
+            // นักเรียนเห็นเฉพาะ published
+            if (! $isCourseAdmin) {
+                $lessonsQuery->where('publication_status', Lesson::STATUS_PUBLISHED);
+            }
+
+            // คำนวณ display_order จาก published lessons เท่านั้น (1-indexed, ไม่มี gap)
+            $publishedIds = $course->courseLessons()
+                ->where('publication_status', Lesson::STATUS_PUBLISHED)
+                ->orderByRaw('`order` IS NULL')
+                ->orderBy('order')
+                ->orderBy('created_at')
+                ->pluck('id');
+
+            $displayOrderMap = $publishedIds->values()->flip()->map(fn ($i) => $i + 1);
+
+            if ($isCourseAdmin) {
+                // Admin: ดึงทุก lesson ไม่มี pagination
+                $lessonCollection = $lessonsQuery->get();
+                $lessonCollection->each(function ($lesson) use ($displayOrderMap) {
+                    $lesson->display_order = $displayOrderMap->get($lesson->id);
+                });
+
+                return response()->json([
+                    'course' => new CourseResource($course),
+                    'lessons' => LessonResource::collection($lessonCollection)
+                        ->additional(['access_service' => $this->accessService]),
+                    'isCourseAdmin' => $isCourseAdmin,
+                    'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
+                    'groups' => $course->courseGroups()->get(['id', 'name']),
+                ], 200);
+            }
+
+            // Student: paginate + ใส่ display_order ใน collection
+            $paginated = $lessonsQuery->paginate();
+            $items = $paginated->getCollection();
+            $items->each(function ($lesson) use ($displayOrderMap) {
+                $lesson->display_order = $displayOrderMap->get($lesson->id);
+            });
+            $paginated->setCollection($items);
+
             return response()->json([
                 'course' => new CourseResource($course),
-                'lessons' => LessonResource::collection(
-                    $course->courseLessons()
-                        ->orderByRaw('`order` IS NULL')
-                        ->orderBy('order')
-                        ->orderBy('created_at')
-                        ->paginate()
-                ),
-                'isCourseAdmin' => $course->isAdmin(auth()->user()),
+                'lessons' => LessonResource::collection($paginated)
+                    ->additional(['access_service' => $this->accessService]),
+                'isCourseAdmin' => $isCourseAdmin,
                 'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
                 'groups' => $course->courseGroups()->get(['id', 'name']),
             ], 200);
+
         } catch (\Exception $e) {
-            \Log::error('Error fetching lessons: ' . $e->getMessage());
+            \Log::error('Error fetching lessons: '.$e->getMessage());
             \Log::error($e->getTraceAsString());
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการโหลดบทเรียน',
-                'error' => config('app.debug') ? $e->getMessage() : null
+                'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
@@ -88,53 +132,54 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     {
         try {
             // Check permission
-            if (!$this->checkCoursePermission($course)) {
+            if (! $this->checkCoursePermission($course)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์จัดลำดับบทเรียนในรายวิชานี้'
+                    'message' => 'คุณไม่มีสิทธิ์จัดลำดับบทเรียนในรายวิชานี้',
                 ], 403);
             }
 
-            // Validate request
+            // Validate request — รับ ordered array of IDs เท่านั้น
             $validated = $request->validate([
-                'lessons'         => 'required|array|min:1',
-                'lessons.*.id'    => 'required|integer|exists:lessons,id',
-                'lessons.*.order' => 'required|integer|min:0',
+                'lessons' => 'required|array|min:1',
+                'lessons.*' => 'required|integer|exists:lessons,id',
             ]);
 
             // Verify lesson IDs belong to this course
             $courseLessonIds = $course->courseLessons()->pluck('id')->toArray();
-            $incomingIds = collect($validated['lessons'])->pluck('id')->toArray();
-            
+            $incomingIds = $validated['lessons'];
+
             if (array_diff($incomingIds, $courseLessonIds)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'รหัสบทเรียนบางรายการไม่ถูกต้องหรือไม่ได้อยู่ในรายวิชานี้'
+                    'message' => 'รหัสบทเรียนบางรายการไม่ถูกต้องหรือไม่ได้อยู่ในรายวิชานี้',
                 ], 422);
             }
 
+            // Backend กำหนด order = 1, 2, 3, ... (1-indexed) — ไม่มี gap
             \DB::transaction(function () use ($validated) {
-                foreach ($validated['lessons'] as $item) {
-                    \App\Models\Lesson::where('id', $item['id'])->update(['order' => $item['order']]);
+                foreach ($validated['lessons'] as $index => $lessonId) {
+                    \App\Models\Lesson::where('id', $lessonId)->update(['order' => $index + 1]);
                 }
             });
 
             return response()->json([
                 'success' => true,
-                'message' => 'บันทึกลำดับบทเรียนสำเร็จ'
+                'message' => 'บันทึกลำดับบทเรียนสำเร็จ',
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'ข้อมูลไม่ถูกต้อง',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Error reordering lessons: ' . $e->getMessage());
+            \Log::error('Error reordering lessons: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการจัดลำดับบทเรียน'
+                'message' => 'เกิดข้อผิดพลาดในการจัดลำดับบทเรียน',
             ], 500);
         }
     }
@@ -147,64 +192,131 @@ class CourseLessonController extends \App\Http\Controllers\Controller
         try {
             $isCourseAdmin = $this->checkCoursePermission($course);
             $user = auth()->user();
-            
+
             // Verify lesson belongs to this course
             if ($lesson->course_id !== $course->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'บทเรียนนี้ไม่ได้อยู่ในรายวิชาที่ระบุ'
+                    'message' => 'บทเรียนนี้ไม่ได้อยู่ในรายวิชาที่ระบุ',
                 ], 404);
             }
 
-            // Check if user has enough points (only for non-admin users)
-            if (!$isCourseAdmin && $lesson->point_tuition_fee > 0) {
-                if (!$this->checkUserPoints($lesson->point_tuition_fee)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'คุณมีพอยต์ไม่เพียงพอ',
-                        'required_points' => $lesson->point_tuition_fee,
-                        'current_points' => $user->pp,
-                        'shortage' => $lesson->point_tuition_fee - $user->pp
-                    ], 403);
+            // draft — นักเรียนเห็นไม่ได้
+            if (! $isCourseAdmin && $lesson->publication_status !== Lesson::STATUS_PUBLISHED) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ไม่พบบทเรียนนี้',
+                ], 404);
+            }
+
+            // ตรวจสิทธิ์เข้าถึง
+            $accessStatus = $this->accessService->getAccessStatus($user, $lesson, $isCourseAdmin);
+
+            // Increment view count เฉพาะเมื่อมีสิทธิ์อ่าน
+            if (! $accessStatus['is_locked']) {
+                $lesson->increment('view_count');
+
+                // Update recently viewed course
+                if ($user && $user->id) {
+                    \App\Models\RecentlyViewedCourse::updateOrInsert(
+                        ['user_id' => $user->id, 'course_id' => $course->id],
+                        ['updated_at' => now()]
+                    );
                 }
-
-                // Deduct points from user
-                $user->decrement('pp', $lesson->point_tuition_fee);
-                $course->increment('points', $lesson->point_tuition_fee);
             }
 
-            // Increment view count
-            $lesson->increment('view_count');
-
-            // Update recently viewed course
-            if ($user && $user->id) {
-                \App\Models\RecentlyViewedCourse::updateOrInsert(
-                    ['user_id' => $user->id, 'course_id' => $course->id],
-                    ['updated_at' => now()]
-                );
+            // คำนวณ display_order สำหรับ lesson นี้
+            $displayOrder = null;
+            if ($lesson->publication_status === Lesson::STATUS_PUBLISHED) {
+                $publishedIds = $course->courseLessons()
+                    ->where('publication_status', Lesson::STATUS_PUBLISHED)
+                    ->orderByRaw('`order` IS NULL')
+                    ->orderBy('order')
+                    ->orderBy('created_at')
+                    ->pluck('id');
+                $pos = $publishedIds->search($lesson->id);
+                $displayOrder = $pos !== false ? $pos + 1 : null;
             }
+            $lesson->display_order = $displayOrder;
 
             return response()->json([
                 'success' => true,
                 'course' => new CourseResource($course),
-                'lesson' => new LessonResource($lesson),
+                'lesson' => (new LessonResource($lesson))->additional(['access_status' => $accessStatus]),
                 'isCourseAdmin' => $isCourseAdmin,
                 'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
                 'authUserPP' => $user->pp,
+                'authUserWallet' => $user->wallet,
+                'access' => $accessStatus,
             ], 200);
 
         } catch (\Exception $e) {
-            \Log::error('Error showing lesson: ' . $e->getMessage());
+            \Log::error('Error showing lesson: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการโหลดบทเรียน'
+                'message' => 'เกิดข้อผิดพลาดในการโหลดบทเรียน',
             ], 500);
         }
     }
 
-        /**
+    /**
      * Store a newly created resource in storage.
      */
+    /**
+     * ปลดล็อกบทเรียน — จ่ายแต้มหรือเงิน
+     */
+    public function unlock(Course $course, Lesson $lesson, Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $isCourseAdmin = $this->checkCoursePermission($course);
+
+            if ($lesson->course_id !== $course->id) {
+                return response()->json(['success' => false, 'message' => 'บทเรียนนี้ไม่ได้อยู่ในรายวิชาที่ระบุ'], 404);
+            }
+
+            if ($lesson->publication_status !== Lesson::STATUS_PUBLISHED) {
+                return response()->json(['success' => false, 'message' => 'ไม่สามารถปลดล็อกบทเรียนที่ยังไม่เผยแพร่'], 422);
+            }
+
+            if ($lesson->access_type === Lesson::ACCESS_FREE) {
+                $this->accessService->grantFreeAccess($user, $lesson);
+
+                return response()->json(['success' => true, 'message' => 'บทเรียนนี้เข้าถึงได้ฟรี']);
+            }
+
+            // ปลดล็อกด้วยแต้ม
+            if ($lesson->access_type === Lesson::ACCESS_POINTS) {
+                $result = $this->accessService->unlockWithPoints($user, $lesson);
+                $status = $result['success'] ? 200 : 422;
+                if (isset($result['shortage'])) {
+                    $status = 402;
+                } // Payment Required
+
+                return response()->json($result, $status);
+            }
+
+            // ปลดล็อกด้วยเงิน
+            if ($lesson->access_type === Lesson::ACCESS_MONEY) {
+                $result = $this->accessService->unlockWithMoney($user, $lesson);
+                $status = $result['success'] ? 200 : 422;
+                if (isset($result['shortage'])) {
+                    $status = 402;
+                }
+
+                return response()->json($result, $status);
+            }
+
+            return response()->json(['success' => false, 'message' => 'ประเภทการเข้าถึงไม่ถูกต้อง'], 422);
+
+        } catch (\Exception $e) {
+            \Log::error('Error unlocking lesson: '.$e->getMessage());
+
+            return response()->json(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการปลดล็อกบทเรียน'], 500);
+        }
+    }
+
     /**
      * Store a newly created lesson
      */
@@ -212,10 +324,10 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     {
         try {
             // Check permission
-            if (!$this->checkCoursePermission($course)) {
+            if (! $this->checkCoursePermission($course)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์สร้างบทเรียนในรายวิชานี้'
+                    'message' => 'คุณไม่มีสิทธิ์สร้างบทเรียนในรายวิชานี้',
                 ], 403);
             }
 
@@ -228,7 +340,10 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'order' => 'nullable|integer|min:0',
                 'min_read' => 'nullable|integer|min:0',
                 'point_tuition_fee' => 'nullable|numeric|min:0',
-                'status' => 'required', // Relaxed as it's an enum/in
+                'money_tuition_fee' => 'nullable|numeric|min:0',
+                'status' => 'required',
+                'publication_status' => 'nullable|in:draft,published,archived',
+                'access_type' => 'nullable|in:free,points,money',
                 'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240', // 10MB max
             ]);
 
@@ -236,13 +351,16 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             $lesson = $course->courseLessons()->create([
                 'user_id' => auth()->id(),
                 'title' => $validated['title'],
-                'description' => ($validated['description'] === "null" || $validated['description'] === "") ? null : $validated['description'],
-                'content' => ($validated['content'] === "null" || $validated['content'] === "") ? null : $validated['content'],
-                'youtube_url' => ($validated['youtube_url'] === "null" || $validated['youtube_url'] === "") ? null : $validated['youtube_url'],
-                'order' => $validated['order'] ?? 0,
+                'description' => ($validated['description'] === 'null' || $validated['description'] === '') ? null : $validated['description'],
+                'content' => ($validated['content'] === 'null' || $validated['content'] === '') ? null : $validated['content'],
+                'youtube_url' => ($validated['youtube_url'] === 'null' || $validated['youtube_url'] === '') ? null : $validated['youtube_url'],
+                'order' => $validated['order'] ?? ($course->courseLessons()->max('order') + 1),
                 'min_read' => $validated['min_read'] ?? 1,
                 'point_tuition_fee' => $validated['point_tuition_fee'] ?? 0,
+                'money_tuition_fee' => $validated['money_tuition_fee'] ?? null,
                 'status' => $validated['status'],
+                'publication_status' => $validated['publication_status'] ?? 'published',
+                'access_type' => $validated['access_type'] ?? 'free',
             ]);
 
             // Upload images using helper method
@@ -254,20 +372,21 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             return response()->json([
                 'success' => true,
                 'message' => 'สร้างบทเรียนสำเร็จ',
-                'newLesson' => new LessonResource($lesson)
+                'newLesson' => new LessonResource($lesson),
             ], 201);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'ข้อมูลไม่ถูกต้อง',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Error creating lesson: ' . $e->getMessage());
+            \Log::error('Error creating lesson: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการสร้างบทเรียน'
+                'message' => 'เกิดข้อผิดพลาดในการสร้างบทเรียน',
             ], 500);
         }
     }
@@ -279,10 +398,10 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     {
         try {
             // Check permission
-            if (!$this->checkCoursePermission($course)) {
+            if (! $this->checkCoursePermission($course)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์แก้ไขบทเรียนนี้'
+                    'message' => 'คุณไม่มีสิทธิ์แก้ไขบทเรียนนี้',
                 ], 403);
             }
 
@@ -290,7 +409,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             if ($lesson->course_id !== $course->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'บทเรียนนี้ไม่ได้อยู่ในรายวิชาที่ระบุ'
+                    'message' => 'บทเรียนนี้ไม่ได้อยู่ในรายวิชาที่ระบุ',
                 ], 404);
             }
 
@@ -303,10 +422,11 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             ], 200);
 
         } catch (\Exception $e) {
-            \Log::error('Error editing lesson: ' . $e->getMessage());
+            \Log::error('Error editing lesson: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการโหลดข้อมูลบทเรียน'
+                'message' => 'เกิดข้อผิดพลาดในการโหลดข้อมูลบทเรียน',
             ], 500);
         }
     }
@@ -318,10 +438,10 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     {
         try {
             // Check permission
-            if (!$this->checkCoursePermission($course)) {
+            if (! $this->checkCoursePermission($course)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์แก้ไขบทเรียนนี้'
+                    'message' => 'คุณไม่มีสิทธิ์แก้ไขบทเรียนนี้',
                 ], 403);
             }
 
@@ -329,8 +449,8 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             if ($lesson->course_id !== $course->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'บทเรียนนี้ไม่ได้อยู่ในรายวิชาที่ระบุ'
-               ], 404);
+                    'message' => 'บทเรียนนี้ไม่ได้อยู่ในรายวิชาที่ระบุ',
+                ], 404);
             }
 
             // Validate request
@@ -342,20 +462,26 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'min_read' => 'nullable|integer|min:0',
                 'order' => 'nullable|integer|min:0',
                 'point_tuition_fee' => 'nullable|numeric|min:0',
+                'money_tuition_fee' => 'nullable|numeric|min:0',
                 'status' => 'required',
+                'publication_status' => 'nullable|in:draft,published,archived',
+                'access_type' => 'nullable|in:free,points,money',
                 'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             ]);
 
             // Update lesson
             $lesson->update([
                 'title' => $validated['title'],
-                'description' => ($validated['description'] === "null" || $validated['description'] === "") ? null : $validated['description'],
-                'content' => ($validated['content'] === "null" || $validated['content'] === "") ? null : $validated['content'],
-                'youtube_url' => ($validated['youtube_url'] === "null" || $validated['youtube_url'] === "") ? null : $validated['youtube_url'],
+                'description' => ($validated['description'] === 'null' || $validated['description'] === '') ? null : $validated['description'],
+                'content' => ($validated['content'] === 'null' || $validated['content'] === '') ? null : $validated['content'],
+                'youtube_url' => ($validated['youtube_url'] === 'null' || $validated['youtube_url'] === '') ? null : $validated['youtube_url'],
                 'min_read' => $validated['min_read'] ?? $lesson->min_read,
                 'order' => $validated['order'] ?? $lesson->order,
                 'point_tuition_fee' => $validated['point_tuition_fee'] ?? $lesson->point_tuition_fee,
-                'status' => $validated['status']
+                'money_tuition_fee' => $validated['money_tuition_fee'] ?? $lesson->money_tuition_fee,
+                'status' => $validated['status'],
+                'publication_status' => $validated['publication_status'] ?? $lesson->publication_status,
+                'access_type' => $validated['access_type'] ?? $lesson->access_type,
             ]);
 
             // Upload new images if provided
@@ -371,17 +497,17 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             return response()->json([
                 'success' => false,
                 'message' => 'ข้อมูลไม่ถูกต้อง',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Error updating lesson: ' . $e->getMessage());
+            \Log::error('Error updating lesson: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการอัปเดตบทเรียน'
+                'message' => 'เกิดข้อผิดพลาดในการอัปเดตบทเรียน',
             ], 500);
         }
     }
-
 
     /**
      * Helper method to delete assignment and its related data
@@ -517,10 +643,10 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     {
         try {
             // Check permission
-            if (!$this->checkCoursePermission($course)) {
+            if (! $this->checkCoursePermission($course)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์ลบบทเรียนนี้'
+                    'message' => 'คุณไม่มีสิทธิ์ลบบทเรียนนี้',
                 ], 403);
             }
 
@@ -528,7 +654,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             if ($lesson->course_id !== $course->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'บทเรียนนี้ไม่ได้อยู่ในรายวิชาที่ระบุ'
+                    'message' => 'บทเรียนนี้ไม่ได้อยู่ในรายวิชาที่ระบุ',
                 ], 404);
             }
 
@@ -616,17 +742,18 @@ class CourseLessonController extends \App\Http\Controllers\Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'ลบบทเรียนสำเร็จ'
+                'message' => 'ลบบทเรียนสำเร็จ',
             ], 200);
 
         } catch (\Exception $e) {
             \DB::rollBack();
-            \Log::error('Error deleting lesson: ' . $e->getMessage());
+            \Log::error('Error deleting lesson: '.$e->getMessage());
             \Log::error($e->getTraceAsString());
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการลบบทเรียน',
-                'error' => config('app.debug') ? $e->getMessage() : null
+                'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
@@ -638,17 +765,19 @@ class CourseLessonController extends \App\Http\Controllers\Controller
 
         if ($bookmark) {
             $bookmark->delete();
+
             return response()->json([
                 'success' => true,
                 'bookmarked' => false,
-                'message' => 'ยกเลิกบุ๊กมาร์กบทเรียนแล้ว'
+                'message' => 'ยกเลิกบุ๊กมาร์กบทเรียนแล้ว',
             ]);
         } else {
             $lesson->bookmarks()->create(['user_id' => $user->id]);
+
             return response()->json([
                 'success' => true,
                 'bookmarked' => true,
-                'message' => 'บุ๊กมาร์กบทเรียนแล้ว'
+                'message' => 'บุ๊กมาร์กบทเรียนแล้ว',
             ]);
         }
     }
@@ -656,9 +785,10 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     public function shareLesson(Course $course, Lesson $lesson)
     {
         $lesson->increment('share_count');
+
         return response()->json([
             'success' => true,
-            'message' => 'แชร์บทเรียนสำเร็จ'
+            'message' => 'แชร์บทเรียนสำเร็จ',
         ]);
     }
 }

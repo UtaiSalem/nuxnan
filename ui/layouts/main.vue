@@ -75,15 +75,27 @@ const enableRightSidebar = ref(false)
 const isRightDrawerOpen = ref(false)
 const isSettingsOpen = ref(false)
 const isEarnMenuOpen = ref(false)
+const isGamesMenuOpen = ref(false)
 
-// Set Earn menu state based on screen size
+// Set menus state based on screen size
 watch(isDesktop, (val) => {
   isEarnMenuOpen.value = val
+  isGamesMenuOpen.value = val
+}, { immediate: true })
+
+// Auto-expand when in games section
+watch(() => route.path, (path) => {
+  if (path.startsWith('/play/games')) isGamesMenuOpen.value = true
 }, { immediate: true })
 
 // Toggle Earn submenu
 const toggleEarnMenu = () => {
   isEarnMenuOpen.value = !isEarnMenuOpen.value
+}
+
+// Toggle Games submenu
+const toggleGamesMenu = () => {
+  isGamesMenuOpen.value = !isGamesMenuOpen.value
 }
 
 // Earn submenu items
@@ -95,6 +107,18 @@ const earnSubmenu = [
   { name: 'คูปอง', href: '/earn/coupons', icon: 'fluent:ticket-diagonal-24-regular' },
   { name: 'รางวัล', href: '/earn/rewards', icon: 'fluent:gift-24-regular' },
   { name: 'ความสำเร็จ', href: '/earn/gamification', icon: 'fluent:trophy-24-regular' },
+]
+
+// Games submenu items
+const gamesSubmenu = [
+  { name: 'หน้าหลักเกม', href: '/play/games', icon: 'fluent:home-24-regular' },
+  { name: 'Cross Math', href: '/play/games/cross-math-game', icon: 'fluent:calculate-24-regular' },
+  { name: 'Vocab Match', href: '/play/games/english-vocab-game', icon: 'fluent:book-open-24-regular' },
+  { name: 'ทายตัวเลข', href: '/play/games/guessing-number-game', icon: 'fluent:number-symbol-24-regular' },
+  { name: 'XO', href: '/play/games/xo-game', icon: 'fluent:grid-24-regular' },
+  { name: 'งู', href: '/play/games/snake-game', icon: 'fluent:animal-turtle-24-regular' },
+  { name: 'จับคู่', href: '/play/games/mental-match', icon: 'fluent:brain-circuit-24-regular' },
+  { name: 'พิมพ์ดีด', href: '/play/games/typing', icon: 'fluent:keyboard-24-regular' },
 ]
 
 // Theme state
@@ -901,20 +925,50 @@ const onQRActionComplete = (result) => {
               <Icon icon="fluent:alert-24-regular" class="w-5 h-5" />
               <span class="font-semibold">การแจ้งเตือน</span>
             </NuxtLink>
-            <NuxtLink
-              to="/play/games"
-              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
-              :class="
-                route.path.startsWith('/play/games')
-                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                  : isDarkMode
-                  ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
-              "
-            >
-              <Icon icon="fluent:games-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">เกมส์</span>
-            </NuxtLink>
+            <!-- Games Menu with Submenu -->
+            <div>
+              <button
+                @click="toggleGamesMenu"
+                class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-all duration-300"
+                :class="
+                  route.path.startsWith('/play/games')
+                    ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                    : isDarkMode
+                    ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
+                "
+              >
+                <div class="flex items-center gap-3">
+                  <Icon icon="fluent:games-24-regular" class="w-5 h-5" />
+                  <span class="font-semibold">เกมส์</span>
+                </div>
+                <Icon 
+                  :icon="isGamesMenuOpen ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
+                  class="w-4 h-4 transition-transform duration-200"
+                />
+              </button>
+              <!-- Submenu -->
+              <transition name="expand">
+                <div v-if="isGamesMenuOpen" class="ml-4 mt-1 space-y-1 border-l-2 border-vikinger-purple/30 pl-3">
+                  <NuxtLink
+                    v-for="sub in gamesSubmenu"
+                    :key="sub.href"
+                    :to="sub.href"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm"
+                    :class="
+                      route.path === sub.href || (sub.href !== '/play/games' && route.path.startsWith(sub.href))
+                        ? 'bg-vikinger-purple/20 text-vikinger-purple dark:text-vikinger-cyan font-medium'
+                        : isDarkMode
+                        ? 'text-gray-400 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-vikinger-purple'
+                    "
+                  >
+                    <Icon :icon="sub.icon" class="w-4 h-4" />
+                    <span>{{ sub.name }}</span>
+                  </NuxtLink>
+                </div>
+              </transition>
+            </div>
             <NuxtLink
               :to="settingsUrl"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
@@ -1489,20 +1543,50 @@ const onQRActionComplete = (result) => {
               <Icon icon="fluent:alert-24-regular" class="w-5 h-5" />
               <span class="font-semibold">การแจ้งเตือน</span>
             </NuxtLink>
-            <NuxtLink
-              to="/play/games"
-              class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
-              :class="
-                route.path.startsWith('/play/games')
-                  ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                  : isDarkMode
-                  ? 'text-gray-300 hover:bg-vikinger-purple/10'
-                  : 'text-gray-700 hover:bg-gray-100'
-              "
-            >
-              <Icon icon="fluent:games-24-regular" class="w-5 h-5" />
-              <span class="font-semibold">เกมส์</span>
-            </NuxtLink>
+            <!-- Games Menu with Submenu (Mobile) -->
+            <div>
+              <button
+                @click="toggleGamesMenu"
+                class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors"
+                :class="
+                  route.path.startsWith('/play/games')
+                    ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                    : isDarkMode
+                    ? 'text-gray-300 hover:bg-vikinger-purple/10'
+                    : 'text-gray-700 hover:bg-gray-100'
+                "
+              >
+                <div class="flex items-center gap-3">
+                  <Icon icon="fluent:games-24-regular" class="w-5 h-5" />
+                  <span class="font-semibold">เกมส์</span>
+                </div>
+                <Icon 
+                  :icon="isGamesMenuOpen ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 
+                  class="w-4 h-4"
+                />
+              </button>
+              <!-- Submenu -->
+              <transition name="expand">
+                <div v-if="isGamesMenuOpen" class="ml-4 mt-1 space-y-1 border-l-2 border-vikinger-purple/30 pl-3">
+                  <NuxtLink
+                    v-for="sub in gamesSubmenu"
+                    :key="sub.href"
+                    :to="sub.href"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm"
+                    :class="
+                      route.path === sub.href || (sub.href !== '/play/games' && route.path.startsWith(sub.href))
+                        ? 'bg-vikinger-purple/20 text-vikinger-purple dark:text-vikinger-cyan font-medium'
+                        : isDarkMode
+                        ? 'text-gray-400 hover:bg-vikinger-purple/10'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    "
+                  >
+                    <Icon :icon="sub.icon" class="w-4 h-4" />
+                    <span>{{ sub.name }}</span>
+                  </NuxtLink>
+                </div>
+              </transition>
+            </div>
             <NuxtLink
               :to="settingsUrl"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"

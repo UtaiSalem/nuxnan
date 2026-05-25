@@ -40,8 +40,8 @@ const cancel = () => {
 const save = async () => {
   isSaving.value = true
   try {
-    const payload = localList.value.map((l, i) => ({ id: l.id, order: i + 1 }))
-    await courseStore.reorderLessons(props.courseId, payload)
+    const lessonIds = localList.value.map(l => l.id)
+    await courseStore.reorderLessons(props.courseId, lessonIds)
     isDirty.value = false
     swal.success('บันทึกลำดับสำเร็จ')
     emit('saved')
@@ -98,10 +98,10 @@ const save = async () => {
             <span class="flex-1 text-sm text-white/80 truncate">{{ lesson.title }}</span>
             <!-- status badge -->
             <span class="shrink-0 text-xs px-2 py-0.5 rounded-full"
-              :class="lesson.status === 'published'
+              :class="lesson.publication_status === 'published'
                 ? 'bg-green-500/20 text-green-300'
                 : 'bg-gray-500/20 text-gray-400'">
-              {{ lesson.status === 'published' ? 'เผยแพร่' : 'ฉบับร่าง' }}
+              {{ lesson.publication_status === 'published' ? 'เผยแพร่' : 'ฉบับร่าง' }}
             </span>
           </div>
         </template>

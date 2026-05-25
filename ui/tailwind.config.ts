@@ -1,11 +1,17 @@
 export default {
   content: [
     './components/**/*.{js,vue,ts}',
-
+    './composables/**/*.ts',
+    './stores/**/*.ts',
     './layouts/**/*.vue',
     './pages/**/*.vue',
     './plugins/**/*.{js,ts}',
     './app.vue',
+  ],
+  safelist: [
+    // VirtualKeyboard finger colors — generated dynamically from FINGER_STYLES
+    { pattern: /^(bg|border|text)-(red|orange|amber|green|teal|blue|violet|pink|slate)-(400|500)$/ },
+    { pattern: /^shadow-(red|orange|amber|green|teal|blue|violet|pink|slate)-(400|500)\/(50|60|70)$/ },
   ],
   darkMode: 'class',
   theme: {

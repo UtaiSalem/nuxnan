@@ -34,6 +34,7 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('points')->group(function () {
         Route::get('/balance', [PointsController::class, 'balance']);
         Route::post('/earn', [PointsController::class, 'earn']);
+        Route::post('/xp/earn', [PointsController::class, 'earnXp']);
         Route::post('/spend', [PointsController::class, 'spend']);
         Route::post('/refund', [PointsController::class, 'refund']);
         Route::post('/transfer', [PointsController::class, 'transfer']);

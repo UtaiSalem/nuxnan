@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch, reactive } from
 import { Icon } from '@iconify/vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
 import VideoModal from '~/components/media/VideoModal.vue'
+import LessonRewardBadge from '~/components/learn/course/points/LessonRewardBadge.vue'
 import TopicAccordion from './TopicAccordion.vue'
 import TopicFormModal from './TopicFormModal.vue'
 import LessonInteractionTabs from './LessonInteractionTabs.vue'
@@ -12,6 +13,9 @@ interface Props {
   lesson: any
   isAdmin?: boolean
   currentUser?: any
+  // Balance สำหรับ unlock modal
+  userPP?: number
+  userWallet?: number
   // Navigation props
   prevLesson?: any
   nextLesson?: any
@@ -24,6 +28,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   isAdmin: false,
   showNavigation: true,
+  userPP: 0,
+  userWallet: 0
 })
 
 const emit = defineEmits<{
@@ -43,6 +49,54 @@ const emit = defineEmits<{
 
 const api = useApi()
 const swal = useSweetAlert()
+const route = useRoute()
+
+// Locked state logic
+const isLocked = computed(() => props.lesson?.is_locked === true)
+const accessType = computed(() => props.lesson?.access_type ?? 'free')
+const priceLabel = computed(() => props.lesson?.price_label ?? '')
+const isUnlocking = ref(false)
+
+const handleUnlock = async () => {
+  // สร้างข้อความ confirm แสดงราคา + ยอดคงเหลือ
+  const isPoints = accessType.value === 'points'
+  const price = isPoints ? props.lesson.price_points : props.lesson.price_money
+  const balance = isPoints ? (props.userPP ?? null) : (props.userWallet ?? null)
+  const unit = isPoints ? 'แต้ม' : 'บาท'
+
+  let bodyText = `ราคา: <strong>${priceLabel.value}</strong>`
+  if (balance !== null) {
+    const after = balance - (price ?? 0)
+    bodyText += `<br>ยอดคงเหลือปัจจุบัน: <strong>${balance.toLocaleString()} ${unit}</strong>`
+    bodyText += `<br>ยอดหลังชำระ: <strong>${after.toLocaleString()} ${unit}</strong>`
+    if (after < 0) {
+      swal.error(`${isPoints ? 'แต้ม' : 'เงิน'}ไม่เพียงพอ ขาดอีก ${Math.abs(after).toLocaleString()} ${unit}`)
+      return
+    }
+  }
+
+  const confirmed = await swal.confirm(bodyText, 'ยืนยันการปลดล็อก')
+  if (!confirmed) return
+
+  isUnlocking.value = true
+  try {
+    const courseId = route.params.id
+    await api.post(`/api/courses/${courseId}/lessons/${props.lesson.id}/unlock`)
+    swal.toast('ปลดล็อกบทเรียนสำเร็จ!', 'success')
+    emit('refresh') // ให้ parent reload lesson
+  } catch (err: any) {
+    // ตรวจ 402 จาก backend = แต้ม/เงินไม่พอ
+    if (err?.status === 402 || err?.data?.shortage) {
+      const shortage = err.data?.shortage ?? ''
+      const unit = isPoints ? 'แต้ม' : 'บาท'
+      swal.error(`${isPoints ? 'แต้ม' : 'เงิน'}ไม่เพียงพอ ขาดอีก ${shortage} ${unit}`)
+    } else {
+      swal.error(err?.data?.message || 'เกิดข้อผิดพลาดในการปลดล็อก')
+    }
+  } finally {
+    isUnlocking.value = false
+  }
+}
 
 // State
 const showFullContent = ref(false)
@@ -257,10 +311,23 @@ const estimatedReadingTime = computed(() => {
 // Has navigation
 const hasNavigation = computed(() => props.showNavigation && (props.prevLesson || props.nextLesson))
 const lessonPosition = computed(() => {
-  if (props.currentIndex !== undefined && props.totalLessons) {
+  if (props.currentIndex !== undefined && props.currentIndex >= 0 && props.totalLessons) {
     return `${props.currentIndex + 1}/${props.totalLessons}`
   }
   return null
+})
+
+const displayOrder = computed(() => {
+  // List view: ใช้ index จาก parent (แม่นยำที่สุดสำหรับทั้ง admin และ student)
+  if (props.currentIndex !== undefined && props.currentIndex >= 0) {
+    return props.currentIndex + 1
+  }
+  // Single lesson view (student): ใช้ display_order จาก backend (เฉพาะ published, ไม่มี gap)
+  if (!props.isAdmin && props.lesson?.display_order) {
+    return props.lesson.display_order
+  }
+  // Admin single view: ใช้ canonical order จาก DB
+  return props.lesson?.order ?? 1
 })
 
 // Extract YouTube video ID from various URL formats
@@ -359,6 +426,49 @@ const handleTopicComplete = (topicId: number) => {
     completedTopics.value.push(topicId)
   }
 }
+
+// Reward Toast State
+const rewardResult = ref<any>(null)
+const showRewardToast = ref(false)
+
+const handleComplete = (response: any) => {
+  if (response.reward?.rewarded) {
+    rewardResult.value = response.reward
+    showRewardToast.value = true
+    setTimeout(() => {
+      showRewardToast.value = false
+    }, 4000)
+  }
+  emit('refresh')
+}
+
+// Publication Status Helpers
+const publicationStatusText = computed(() => {
+  switch (props.lesson.publication_status) {
+    case 'draft': return 'ฉบับร่าง'
+    case 'archived': return 'เก็บถาวร'
+    case 'published': return 'เผยแพร่แล้ว'
+    default: return 'ไม่ระบุ'
+  }
+})
+
+const publicationStatusIcon = computed(() => {
+  switch (props.lesson.publication_status) {
+    case 'draft': return 'fluent:draft-24-regular'
+    case 'archived': return 'fluent:archive-24-regular'
+    case 'published': return 'fluent:checkmark-circle-24-filled'
+    default: return 'fluent:question-24-regular'
+  }
+})
+
+const publicationStatusColor = computed(() => {
+  switch (props.lesson.publication_status) {
+    case 'draft': return 'bg-gray-500/90 text-white'
+    case 'archived': return 'bg-orange-500/90 text-white'
+    case 'published': return 'bg-green-500/90 text-white'
+    default: return 'bg-gray-400/90 text-white'
+  }
+})
 </script>
 
 <template>
@@ -388,78 +498,91 @@ const handleTopicComplete = (topicId: number) => {
         ></div>
       </div>
 
-      <!-- Badges with Glassmorphism -->
-      <div class="absolute top-4 left-4 flex flex-wrap gap-2">
-        <!-- Status Badge -->
-        <span
-          :class="statusColor"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold shadow-lg backdrop-blur-md bg-white/20 dark:bg-gray-900/30 ring-1 ring-white/20 transition-transform hover:scale-105"
-        >
-          <Icon
-            v-if="lesson.status === 1"
-            icon="fluent:checkmark-circle-24-filled"
-            class="w-4 h-4"
-          />
-          <Icon v-else icon="fluent:draft-24-regular" class="w-4 h-4" />
-          {{ statusText }}
-        </span>
+      <!-- Unified overlay bar: badges left, access + admin right — no overlap possible -->
+      <div class="absolute top-4 left-4 right-4 flex items-start justify-between gap-3">
 
-        <!-- Order Badge -->
-        <span
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
-        >
-          <Icon icon="fluent:number-symbol-24-filled" class="w-4 h-4" />
-          บทที่ {{ lesson.order }}
-        </span>
+        <!-- Left group: publication status, order, reading time, position -->
+        <div class="flex flex-wrap gap-2">
+          <!-- Publication Status Badge (admin only, or non-published) -->
+          <span
+            v-if="isAdmin || lesson.publication_status !== 'published'"
+            :class="publicationStatusColor"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold shadow-lg backdrop-blur-md ring-1 ring-white/20 transition-transform hover:scale-105"
+          >
+            <Icon :icon="publicationStatusIcon" class="w-4 h-4" />
+            {{ publicationStatusText }}
+          </span>
 
-        <!-- Reading Time Badge -->
-        <span
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
-        >
-          <Icon icon="fluent:clock-24-filled" class="w-4 h-4" />
-          {{ estimatedReadingTime }} นาที
-        </span>
+          <!-- Order Badge -->
+          <span
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+          >
+            <Icon icon="fluent:number-symbol-24-filled" class="w-4 h-4" />
+            บทที่ {{ displayOrder }}
+          </span>
 
-        <!-- Lesson Position Badge (if navigation enabled) -->
-        <span
-          v-if="lessonPosition"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
-        >
-          <Icon icon="fluent:list-24-filled" class="w-4 h-4" />
-          {{ lessonPosition }}
-        </span>
-      </div>
+          <!-- Reading Time Badge -->
+          <span
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+          >
+            <Icon icon="fluent:clock-24-filled" class="w-4 h-4" />
+            {{ lesson.min_read }} นาที
+          </span>
 
-      <!-- Points Badge -->
-      <div v-if="lesson.point_tuition_fee > 0" class="absolute top-4 right-4">
-        <span
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
-        >
-          <Icon icon="fluent:diamond-24-filled" class="w-4 h-4" />
-          {{ lesson.point_tuition_fee }} พอยต์
-        </span>
-      </div>
+          <!-- Lesson Position Badge (if navigation enabled) -->
+          <span
+            v-if="lessonPosition"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+          >
+            <Icon icon="fluent:list-24-filled" class="w-4 h-4" />
+            {{ lessonPosition }}
+          </span>
+        </div>
 
-      <!-- Admin Actions with better glassmorphism -->
-      <div
-        v-if="isAdmin"
-        class="absolute top-4 right-4 flex gap-2"
-        :class="{ 'top-16': lesson.point_tuition_fee > 0 }"
-      >
-        <button
-          @click="handleEdit"
-          class="p-3 bg-white/95 dark:bg-gray-800/95 rounded-xl hover:bg-white dark:hover:bg-gray-800 transition-all duration-200 backdrop-blur-md shadow-lg ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:scale-105"
-          title="แก้ไข"
-        >
-          <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-        </button>
-        <button
-          @click="handleDelete"
-          class="p-3 bg-white/95 dark:bg-gray-800/95 rounded-xl hover:bg-white dark:hover:bg-gray-800 transition-all duration-200 backdrop-blur-md shadow-lg ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:scale-105"
-          title="ลบ"
-        >
-          <Icon icon="fluent:delete-24-regular" class="w-5 h-5 text-red-600 dark:text-red-400" />
-        </button>
+        <!-- Right group: access badge + admin actions (stacked, never overlaps left) -->
+        <div class="flex flex-col items-end gap-2 shrink-0">
+          <!-- Access Badge -->
+          <span
+            v-if="lesson.access_type === 'points'"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+          >
+            <Icon icon="fluent:star-24-filled" class="w-4 h-4" />
+            {{ lesson.price_label || `${lesson.point_tuition_fee} พอยต์` }}
+          </span>
+          <span
+            v-else-if="lesson.access_type === 'money'"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+          >
+            <Icon icon="fluent:wallet-24-filled" class="w-4 h-4" />
+            {{ lesson.price_label || `฿${lesson.money_tuition_fee}` }}
+          </span>
+          <span
+            v-else
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+          >
+            <Icon icon="fluent:lock-open-24-filled" class="w-4 h-4" />
+            ฟรี
+          </span>
+
+          <!-- Admin Action Buttons (below access badge, right-aligned) -->
+          <div v-if="isAdmin" class="flex gap-2">
+            <button
+              @click="handleEdit"
+              class="p-3 bg-white/95 dark:bg-gray-800/95 rounded-xl hover:bg-white dark:hover:bg-gray-800 transition-all duration-200 backdrop-blur-md shadow-lg ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:scale-105"
+              title="แก้ไข"
+            >
+              <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </button>
+            <button
+              @click="handleDelete"
+              class="p-3 bg-white/95 dark:bg-gray-800/95 rounded-xl hover:bg-white dark:hover:bg-gray-800 transition-all duration-200 backdrop-blur-md shadow-lg ring-1 ring-gray-200/50 dark:ring-gray-700/50 hover:scale-105"
+              title="ลบ"
+            >
+              <Icon icon="fluent:delete-24-regular" class="w-5 h-5 text-red-600 dark:text-red-400" />
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -467,8 +590,13 @@ const handleTopicComplete = (topicId: number) => {
     <div class="p-6 space-y-6">
       <!-- Title & Meta -->
       <div>
-        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4 leading-tight flex items-center gap-3">
           {{ lesson.title }}
+          <LessonRewardBadge
+            v-if="!isAdmin"
+            :reward="lesson?.reward ?? null"
+            size="md"
+          />
         </h2>
 
         <!-- Creator & Stats -->
@@ -535,249 +663,253 @@ const handleTopicComplete = (topicId: number) => {
         </div>
       </div>
 
-      <!-- Main Content -->
-      <div class="relative">
-        <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          <Icon icon="fluent:document-text-24-filled" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-          เนื้อหาบทเรียน
-        </h3>
-        <div
-          ref="contentRef"
-          :class="[
-            'prose prose-blue dark:prose-invert max-w-none transition-all duration-300',
-            !showFullContent && isContentOverflowing && 'max-h-96 overflow-hidden',
-          ]"
-        >
-          <RichTextViewer :content="lesson.content" />
-        </div>
-
-        <!-- Read More Button - Only show when content overflows -->
-        <div
-          v-if="isContentOverflowing && !showFullContent"
-          class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-white dark:from-gray-800 to-transparent flex items-end justify-center pb-2"
-        >
-          <button
-            @click="toggleContent"
-            class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-lg"
-          >
-            อ่านต่อ
-            <Icon icon="fluent:chevron-down-24-regular" class="w-4 h-4 inline ml-1" />
-          </button>
-        </div>
-
-        <!-- Collapse Button - Only show when expanded and content was overflowing -->
+      <!-- Locked Overlay -->
+      <div v-if="isLocked"
+        class="my-6 rounded-2xl border-2 border-dashed border-yellow-400/50 bg-yellow-500/10 p-8 text-center transition-all animate-in fade-in zoom-in duration-300">
+        <Icon icon="fluent:lock-closed-24-filled" class="mx-auto mb-3 h-16 w-16 text-yellow-400" />
+        <h3 class="mb-1 text-2xl font-bold text-yellow-500">บทเรียนนี้ถูกล็อกอยู่</h3>
+        <p class="mb-6 text-gray-600 dark:text-gray-400">
+          <template v-if="accessType === 'points'">
+            ต้องใช้ <span class="font-bold text-yellow-600 dark:text-yellow-400 text-lg">{{ priceLabel }}</span> เพื่อปลดล็อกเนื้อหาทั้งหมด
+          </template>
+          <template v-else-if="accessType === 'money'">
+            ต้องชำระ <span class="font-bold text-green-600 dark:text-green-400 text-lg">{{ priceLabel }}</span> เพื่อเข้าชมบทเรียนนี้
+          </template>
+        </p>
         <button
-          v-if="isContentOverflowing && showFullContent"
-          @click="toggleContent"
-          class="mt-4 w-full px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+          @click="handleUnlock"
+          :disabled="isUnlocking"
+          class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 px-8 py-4 text-lg font-bold text-white shadow-lg hover:from-yellow-600 hover:to-orange-600 hover:shadow-xl transition-all disabled:opacity-50 transform hover:scale-105 active:scale-95"
         >
-          ย่อเนื้อหา
-          <Icon icon="fluent:chevron-up-24-regular" class="w-4 h-4 inline ml-1" />
+          <Icon v-if="isUnlocking" icon="fluent:spinner-ios-20-regular" class="h-6 w-6 animate-spin" />
+          <template v-else>
+            <Icon :icon="accessType === 'points' ? 'fluent:star-24-filled' : 'fluent:wallet-24-filled'" class="h-6 w-6" />
+            {{ accessType === 'points' ? `ปลดล็อกด้วย ${priceLabel}` : `ชำระเงิน ${priceLabel}` }}
+          </template>
         </button>
       </div>
 
-      <!-- Image Gallery Section -->
-      <div v-if="hasImages" class="mt-6">
-        <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          <Icon
-            icon="fluent:image-multiple-24-filled"
-            class="w-6 h-6 text-indigo-600 dark:text-indigo-400"
-          />
-          รูปภาพประกอบบทเรียน
-        </h3>
-        
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <!-- Sensitive Content Container -->
+      <template v-if="!isLocked">
+        <!-- Main Content -->
+        <div class="relative">
+          <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <Icon icon="fluent:document-text-24-filled" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            เนื้อหาบทเรียน
+          </h3>
           <div
-            v-for="(image, index) in lesson.images"
-            :key="image.id"
-            class="relative aspect-square rounded-xl overflow-hidden cursor-pointer group shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
-            @click="openImagePreview(index)"
+            ref="contentRef"
+            :class="[
+              'prose prose-blue dark:prose-invert max-w-none transition-all duration-300',
+              !showFullContent && isContentOverflowing && 'max-h-96 overflow-hidden',
+            ]"
           >
-            <img
-              :src="image.full_url || image.url"
-              :alt="`รูปที่ ${index + 1}`"
-              class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              @error="handleImageError($event, index)"
+            <RichTextViewer :content="lesson.content" />
+          </div>
+
+          <!-- Read More Button - Only show when content overflows -->
+          <div
+            v-if="isContentOverflowing && !showFullContent"
+            class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-white dark:from-gray-800 to-transparent flex items-end justify-center pb-2"
+          >
+            <button
+              @click="toggleContent"
+              class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-lg"
+            >
+              อ่านต่อ
+              <Icon icon="fluent:chevron-down-24-regular" class="w-4 h-4 inline ml-1" />
+            </button>
+          </div>
+
+          <!-- Collapse Button - Only show when expanded and content was overflowing -->
+          <button
+            v-if="isContentOverflowing && showFullContent"
+            @click="toggleContent"
+            class="mt-4 w-full px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+          >
+            ย่อเนื้อหา
+            <Icon icon="fluent:chevron-up-24-regular" class="w-4 h-4 inline ml-1" />
+          </button>
+        </div>
+
+        <!-- Image Gallery Section -->
+        <div v-if="hasImages" class="mt-6">
+          <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <Icon
+              icon="fluent:image-multiple-24-filled"
+              class="w-6 h-6 text-indigo-600 dark:text-indigo-400"
             />
-            <!-- Hover Overlay -->
-            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                <Icon icon="fluent:zoom-in-24-filled" class="w-6 h-6 text-gray-700" />
+            รูปภาพประกอบบทเรียน
+          </h3>
+          
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div
+              v-for="(image, index) in lesson.images"
+              :key="image.id"
+              class="relative aspect-square rounded-xl overflow-hidden cursor-pointer group shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
+              @click="openImagePreview(index)"
+            >
+              <img
+                :src="image.full_url || image.url"
+                :alt="`รูปที่ ${index + 1}`"
+                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                @error="handleImageError($event, index)"
+              />
+              <!-- Hover Overlay -->
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                  <Icon icon="fluent:zoom-in-24-filled" class="w-6 h-6 text-gray-700" />
+                </div>
+              </div>
+              <!-- Image Number Badge -->
+              <div class="absolute bottom-2 right-2 px-2 py-1 bg-black/60 rounded-md text-xs text-white font-medium">
+                {{ index + 1 }}/{{ lesson.images.length }}
               </div>
             </div>
-            <!-- Image Number Badge -->
-            <div class="absolute bottom-2 right-2 px-2 py-1 bg-black/60 rounded-md text-xs text-white font-medium">
-              {{ index + 1 }}/{{ lesson.images.length }}
-            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Image Preview Modal -->
-      <Teleport to="body">
-        <div 
-          v-if="showImagePreview" 
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
-          @click.self="closeImagePreview"
-        >
-          <!-- Close Button -->
-          <button
-            @click="closeImagePreview"
-            class="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10"
-          >
-            <Icon icon="fluent:dismiss-24-filled" class="w-8 h-8 text-white" />
-          </button>
-
-          <!-- Navigation Arrows -->
-          <button
-            v-if="previewIndex > 0"
-            @click.stop="previewIndex--"
-            class="absolute left-4 p-3 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10"
-          >
-            <Icon icon="fluent:chevron-left-24-filled" class="w-8 h-8 text-white" />
-          </button>
-          <button
-            v-if="previewIndex < lesson.images.length - 1"
-            @click.stop="previewIndex++"
-            class="absolute right-4 p-3 rounded-full bg-white/20 hover:bg-white/30 transition-colors z-10"
-          >
-            <Icon icon="fluent:chevron-right-24-filled" class="w-8 h-8 text-white" />
-          </button>
-
-          <!-- Image -->
-          <div class="max-w-[90vw] max-h-[85vh] relative">
-            <img
-              :src="lesson.images[previewIndex]?.full_url || lesson.images[previewIndex]?.url"
-              :alt="`รูปที่ ${previewIndex + 1}`"
-              class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-              @error="handleImageError($event, previewIndex)"
+        <!-- Video Section - Show YouTube video thumbnail below content -->
+        <div v-if="hasYoutubeVideo" class="mt-6">
+          <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <Icon
+              icon="fluent:video-24-filled"
+              class="w-6 h-6 text-red-600 dark:text-red-400"
             />
-            <!-- Image Counter -->
-            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 rounded-full text-white font-medium">
-              {{ previewIndex + 1 }} / {{ lesson.images.length }}
-            </div>
-          </div>
-        </div>
-      </Teleport>
-
-      <!-- Video Section - Show YouTube video thumbnail below content -->
-      <div v-if="hasYoutubeVideo" class="mt-6">
-        <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          <Icon
-            icon="fluent:video-24-filled"
-            class="w-6 h-6 text-red-600 dark:text-red-400"
-          />
-          วิดีโอประกอบบทเรียน
-        </h3>
-        
-        <div
-          class="relative rounded-2xl overflow-hidden cursor-pointer group shadow-lg border border-gray-200 dark:border-gray-700"
-          @click="openVideoModal"
-        >
-          <!-- YouTube Thumbnail -->
-          <div class="aspect-video">
-            <img
-              :src="youtubeThumbnailUrl"
-              :alt="lesson.title"
-              class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          </div>
+            วิดีโอประกอบบทเรียน
+          </h3>
           
-          <!-- Play Button Overlay -->
           <div
-            class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/70 group-hover:via-black/30 transition-all duration-300"
+            class="relative rounded-2xl overflow-hidden cursor-pointer group shadow-lg border border-gray-200 dark:border-gray-700"
+            @click="openVideoModal"
           >
-            <div
-              class="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center shadow-2xl transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-red-500/50"
-            >
-              <Icon icon="fluent:play-24-filled" class="w-10 h-10 text-white ml-1" />
+            <!-- YouTube Thumbnail -->
+            <div class="aspect-video">
+              <img
+                :src="youtubeThumbnailUrl"
+                :alt="lesson.title"
+                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
             </div>
+            
+            <!-- Play Button Overlay -->
+            <div
+              class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/70 group-hover:via-black/30 transition-all duration-300"
+            >
+              <div
+                class="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center shadow-2xl transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-red-500/50"
+              >
+                <Icon icon="fluent:play-24-filled" class="w-10 h-10 text-white ml-1" />
+              </div>
+            </div>
+            
+            <!-- Video Info Label -->
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+              <div class="flex items-center justify-between">
+                <span class="text-white font-medium truncate">{{ lesson.title }}</span>
+                <span
+                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 text-white text-sm font-medium"
+                >
+                  <Icon icon="logos:youtube-icon" class="w-4 h-4" />
+                  YouTube
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Topics Section -->
+        <div v-if="hasTopics || isAdmin" class="mt-8">
+          <div class="flex items-center justify-between mb-4">
+              <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+                  <Icon icon="fluent:book-open-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  หัวข้อย่อย
+                  <span v-if="hasTopics" class="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
+                      ({{ lesson.topics.length }} หัวข้อ)
+                  </span>
+              </h3>
+              
+               <button 
+                  v-if="isAdmin"
+                  @click="openCreateTopicModal"
+                  class="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 flex items-center gap-2 shadow-md transition-all hover:scale-105"
+              >
+                  <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
+                  เพิ่มหัวข้อ
+              </button>
+          </div>
+
+          <div v-if="hasTopics">
+               <button
+                @click="toggleTopics"
+                class="w-full flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+              >
+                 <span class="font-semibold text-gray-800 dark:text-gray-200">
+                    {{ showTopics ? 'ซ่อนหัวข้อ' : 'แสดงหัวข้อทั้งหมด' }}
+                 </span>
+                 <Icon
+                  :icon="showTopics ? 'fluent:chevron-up-24-filled' : 'fluent:chevron-down-24-filled'"
+                  class="w-5 h-5 text-gray-600 dark:text-gray-400"
+                />
+              </button>
+
+              <div v-show="showTopics" class="mt-4 space-y-2">
+                <TopicAccordion
+                  v-for="topic in lesson.topics"
+                  :key="topic.id"
+                  :topic="topic"
+                  :is-completed="completedTopics.includes(topic.id)"
+                  :isAdmin="isAdmin"
+                  @toggle-complete="handleTopicComplete"
+                  @edit="editTopic"
+                  @delete="deleteTopic"
+                />
+              </div>
           </div>
           
-          <!-- Video Info Label -->
-          <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-            <div class="flex items-center justify-between">
-              <span class="text-white font-medium truncate">{{ lesson.title }}</span>
-              <span
-                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 text-white text-sm font-medium"
-              >
-                <Icon icon="logos:youtube-icon" class="w-4 h-4" />
-                YouTube
-              </span>
-            </div>
+          <div v-else class="p-8 text-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+               <p class="text-gray-500 dark:text-gray-400 mb-2">ยังไม่มีหัวข้อย่อยในบทเรียนนี้</p>
+               <button v-if="isAdmin" @click="openCreateTopicModal" class="text-purple-600 hover:text-purple-700 font-medium hover:underline">เพิ่มหัวข้อแรกเลย</button>
           </div>
         </div>
-      </div>
 
-      <!-- Topics Section -->
-      <div v-if="hasTopics || isAdmin" class="mt-8">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-                <Icon icon="fluent:book-open-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                หัวข้อย่อย
-                <span v-if="hasTopics" class="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
-                    ({{ lesson.topics.length }} หัวข้อ)
-                </span>
-            </h3>
-            
-             <button 
-                v-if="isAdmin"
-                @click="openCreateTopicModal"
-                class="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 flex items-center gap-2 shadow-md transition-all hover:scale-105"
-            >
-                <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
-                เพิ่มหัวข้อ
-            </button>
+        <!-- Interaction Tabs (Reaction / Assignment / Quiz) -->
+        <LessonInteractionTabs
+          :lesson="lesson"
+          :isAdmin="isAdmin"
+          @like="$emit('like', lesson.id)"
+          @dislike="$emit('dislike', lesson.id)"
+          @bookmark="$emit('bookmark', lesson.id)"
+          @share="$emit('share', lesson)"
+          @complete="handleComplete"
+        />
+      </template>
+
+      <!-- Reward Toast Overlay -->
+      <Transition
+        enter-active-class="transition-all duration-500"
+        enter-from-class="opacity-0 translate-y-4"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition-all duration-300"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="showRewardToast && rewardResult"
+          class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50
+                 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-2xl
+                 shadow-2xl px-6 py-4 flex items-center gap-4
+                 min-w-[280px] border border-white/20 backdrop-blur-md"
+        >
+          <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
+            <Icon icon="mdi:star" class="w-7 h-7 text-amber-300 animate-bounce" />
+          </div>
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wider opacity-80">รางวัลการอ่าน</p>
+            <p class="text-xl font-black">+{{ rewardResult.points_received }} แต้ม!</p>
+          </div>
         </div>
-
-        <div v-if="hasTopics">
-            <!-- Collapsible Button was here, but maybe cleaner to just show list if we have separation? 
-                 Original design had a collapsible button. Let's keep it but slightly different or just list them.
-                 Actually, the original design wrapped everything in a button toggler. 
-                 Let's keep the toggler if topics exist. -->
-            
-             <button
-              @click="toggleTopics"
-              class="w-full flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-            >
-               <span class="font-semibold text-gray-800 dark:text-gray-200">
-                  {{ showTopics ? 'ซ่อนหัวข้อ' : 'แสดงหัวข้อทั้งหมด' }}
-               </span>
-               <Icon
-                :icon="showTopics ? 'fluent:chevron-up-24-filled' : 'fluent:chevron-down-24-filled'"
-                class="w-5 h-5 text-gray-600 dark:text-gray-400"
-              />
-            </button>
-
-            <div v-show="showTopics" class="mt-4 space-y-2">
-              <TopicAccordion
-                v-for="topic in lesson.topics"
-                :key="topic.id"
-                :topic="topic"
-                :is-completed="completedTopics.includes(topic.id)"
-                :isAdmin="isAdmin"
-                @toggle-complete="handleTopicComplete"
-                @edit="editTopic"
-                @delete="deleteTopic"
-              />
-            </div>
-        </div>
-        
-        <div v-else class="p-8 text-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-             <p class="text-gray-500 dark:text-gray-400 mb-2">ยังไม่มีหัวข้อย่อยในบทเรียนนี้</p>
-             <button v-if="isAdmin" @click="openCreateTopicModal" class="text-purple-600 hover:text-purple-700 font-medium hover:underline">เพิ่มหัวข้อแรกเลย</button>
-        </div>
-      </div>
-
-      <!-- Interaction Tabs (Reaction / Assignment / Quiz) -->
-      <LessonInteractionTabs
-        :lesson="lesson"
-        :isAdmin="isAdmin"
-        @like="$emit('like', lesson.id)"
-        @dislike="$emit('dislike', lesson.id)"
-        @bookmark="$emit('bookmark', lesson.id)"
-        @share="$emit('share', lesson)"
-      />
+      </Transition>
 
       <!-- Navigation Bar -->
       <div 

@@ -30,6 +30,10 @@ const allLessons = ref<any[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 
+// User balance (from lesson API response for unlock modal)
+const userPP = ref<number>(0)
+const userWallet = ref<number>(0)
+
 // Navigation computed properties
 const currentLessonIndex = computed(() => {
   if (!lesson.value || allLessons.value.length === 0) return -1
@@ -63,10 +67,18 @@ const ensureCourseLoaded = async () => {
 const fetchAllLessons = async () => {
   try {
     const response = await api.get(`/api/courses/${courseId.value}/lessons`) as any
-    if (response.lessons) {
-      // Sort by order
-      allLessons.value = response.lessons.sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-    }
+    const lessonPayload = response.lessons || response.data || response
+    const normalizedLessons = Array.isArray(lessonPayload)
+      ? lessonPayload
+      : lessonPayload?.data || []
+
+    allLessons.value = normalizedLessons.sort((a: any, b: any) => {
+      const orderA = a.order ?? Number.MAX_SAFE_INTEGER
+      const orderB = b.order ?? Number.MAX_SAFE_INTEGER
+
+      if (orderA !== orderB) return orderA - orderB
+      return (a.id ?? 0) - (b.id ?? 0)
+    })
   } catch (err) {
     console.error('Failed to fetch lessons list:', err)
   }
@@ -84,6 +96,9 @@ const fetchLesson = async () => {
 
     if (response.success !== false) {
       lesson.value = response.lesson || response.data || response
+      // Extract balance for unlock modal
+      if (response.authUserPP !== undefined) userPP.value = response.authUserPP
+      if (response.authUserWallet !== undefined) userWallet.value = response.authUserWallet
     } else {
       error.value = 'ไม่สามารถโหลดข้อมูลบทเรียนได้'
     }
@@ -251,6 +266,8 @@ watch(lesson, (newLesson) => {
         <LessonPost 
           :lesson="lesson" 
           :isAdmin="isCourseAdmin"
+          :user-p-p="userPP"
+          :user-wallet="userWallet"
           :prev-lesson="prevLesson"
           :next-lesson="nextLesson"
           :current-index="currentLessonIndex"

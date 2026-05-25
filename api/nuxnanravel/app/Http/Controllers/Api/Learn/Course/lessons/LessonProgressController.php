@@ -6,11 +6,22 @@ use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\CourseMember;
 use App\Services\AttendanceEligibilityService;
+use App\Services\CoursePointAccountService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
 class LessonProgressController extends Controller
 {
+    /**
+     * @var CoursePointAccountService
+     */
+    protected $coursePointService;
+
+    public function __construct(CoursePointAccountService $coursePointService)
+    {
+        $this->coursePointService = $coursePointService;
+    }
+
     /**
      * Get progress for a lesson
      */
@@ -65,6 +76,8 @@ class LessonProgressController extends Controller
         $user = $request->user();
         $progress = $lesson->getOrCreateProgress($user);
 
+        $wasAlreadyCompleted = $progress->isCompleted();
+
         // If not started yet, mark as started first
         if ($progress->status === LessonProgress::STATUS_NOT_STARTED) {
             $progress->update(['started_at' => now()]);
@@ -85,6 +98,12 @@ class LessonProgressController extends Controller
             $service->processReadingLessonUnlockIfCompleted($member);
         }
 
+        // ✅ Grant reward if first time completion
+        $reward = ['rewarded' => false];
+        if (!$wasAlreadyCompleted) {
+            $reward = $this->coursePointService->grantLessonCompletionReward($lesson, $user);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'ยินดีด้วย! คุณเรียนบทเรียนนี้จบแล้ว',
@@ -92,6 +111,7 @@ class LessonProgressController extends Controller
                 'status' => $progress->status,
                 'completed_at' => $progress->completed_at,
             ],
+            'reward' => $reward,
         ]);
     }
 
@@ -120,6 +140,8 @@ class LessonProgressController extends Controller
             ]);
         } else {
             // Complete
+            $wasAlreadyCompleted = $progress->isCompleted();
+
             if ($progress->status === LessonProgress::STATUS_NOT_STARTED) {
                 $progress->update(['started_at' => now()]);
             }
@@ -138,6 +160,9 @@ class LessonProgressController extends Controller
                 $service->processReadingLessonUnlockIfCompleted($member);
             }
 
+            // ✅ Grant reward
+            $reward = $this->coursePointService->grantLessonCompletionReward($lesson, $user);
+
             return response()->json([
                 'success' => true,
                 'completed' => true,
@@ -146,6 +171,7 @@ class LessonProgressController extends Controller
                     'status' => $progress->status,
                     'completed_at' => $progress->completed_at,
                 ],
+                'reward' => $reward,
             ]);
         }
     }

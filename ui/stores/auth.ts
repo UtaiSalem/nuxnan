@@ -5,11 +5,7 @@ export const useAuthStore = defineStore('auth', () => {
   const apiBase = config.public.apiBase as string
   
   const user = ref(null)
-  const token = useCookie('token', {
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-    secure: process.env.NODE_ENV === 'production', // Only secure in production (HTTPS)
-    sameSite: 'lax',
-  })
+  const token = useCookie('token')
   const isAuthenticated = computed(() => !!token.value)
   const isRefreshing = ref(false)
   const isLoggingOut = ref(false)
@@ -96,11 +92,7 @@ export const useAuthStore = defineStore('auth', () => {
           user.value = userData
           
           // Also store admin token in separate cookie
-          const adminToken = useCookie('admin_token', {
-            maxAge: 60 * 60 * 24, // 1 day for admin sessions
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-          })
+          const adminToken = useCookie('admin_token')
           adminToken.value = accessToken
         } else {
           throw new Error('Invalid response from server')
@@ -269,9 +261,10 @@ export const useAuthStore = defineStore('auth', () => {
 
       return false
     } catch (e: any) {
+      // Refresh failure should not hard-logout the user mid-game.
+      // We'll keep the existing token and let feature-level calls (like earn points)
+      // fail gracefully if the token is actually expired.
       console.error('Token refresh error:', e)
-      token.value = null
-      user.value = null
       return false
     } finally {
       isRefreshing.value = false
