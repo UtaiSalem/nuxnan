@@ -278,6 +278,238 @@ php artisan make:migration add_quiz_id_to_course_remediation_sessions_table
 
 ---
 
+---
+
+### Feature: Typing Classroom Race — Bug Fixes & Polish
+
+**สถานะ:** 📋 READY TO IMPLEMENT (2026-05-27)
+
+**ไฟล์ที่ต้องแก้:**
+
+| ลำดับ | ไฟล์ | จำนวนจุด |
+|---|---|---|
+| 1 | `ui/pages/Play/Games/typing/race.vue` | 3 จุด |
+| 2 | `ui/pages/Play/Games/typing/index.vue` | 1 จุด (layout) |
+| 3 | `ui/pages/Play/Games/typing/play.vue` | 1 จุด (layout) |
+| 4 | `ui/composables/useClassroomRace.ts` | 3 จุด |
+| 5 | `api/.../TypingRaceController.php` | 3 จุด |
+
+---
+
+#### Bug Fixes (ต้องแก้ก่อน)
+
+**🔴 Bug 1 — Countdown ไม่แสดง (race.vue:55-72 + template:140-204)**
+
+ปัญหา: template เช็ค `v-else-if="view === 'lobby'"` ก่อน `v-else-if="raceStatus === 'countdown'"` เมื่อ status เปลี่ยนเป็น countdown ค่า `view` ยังเป็น `'lobby'` อยู่ → countdown panel ไม่มีวันแสดง
+
+```diff
+// race.vue — watch raceStatus
+  if (s === 'countdown') {
++   view.value = 'countdown'
+    isLoadingContent.value = true
+    ...
+  }
+  if (s === 'racing') view.value = 'playing'
+
+// template: เพิ่ม branch ใหม่
+- <div v-else-if="raceStatus === 'countdown'" ...>
++ <div v-else-if="view === 'countdown'" ...>
+```
+
+---
+
+**🔴 Bug 2 — Echo API ผิด, leaveRoom ไม่ unsubscribe จริง (useClassroomRace.ts:184-192)**
+
+ปัญหา: `channel.leave(...)` ไม่ใช่ Echo API ที่ถูกต้อง — channel object ไม่มี method `.leave()` ต้องเรียกผ่าน Echo instance
+
+```diff
+// useClassroomRace.ts
+  function leaveRoom() {
+    if (channel) {
+-     channel.leave(`race.${room.value?.room_code}`)
++     ;($echo as any).leave(`race.${room.value?.room_code}`)
+      channel = null
+    }
++   if (progressThrottle) {
++     clearTimeout(progressThrottle)
++     progressThrottle = null
++   }
+    room.value = null
+    raceStatus.value = 'idle'
+    participants.value = []
+  }
+```
+
+---
+
+**🔴 Bug 3 — Backend finalize ค้างเมื่อมีคนออก (TypingRaceController.php:204-209)**
+
+ปัญหา: นับ participants ทั้งหมดรวม `left` แต่ finished นับแค่ `finished` → ไม่เท่ากันตลอดไป
+
+```diff
+// TypingRaceController.php::submitResult()
+- $totalParticipants = $room->participants()->count();
++ $totalParticipants = $room->participants()->where('status', '!=', 'left')->count();
+  $totalFinished     = $room->participants()->where('status', 'finished')->count();
+```
+
+---
+
+**🟡 Bug 4 — Race condition ใน rank (TypingRaceController.php:190-201)**
+
+ปัญหา: 2 users submit พร้อมกัน → อ่าน `$finishedCount` เดียวกัน → rank ซ้ำ
+
+```diff
+// TypingRaceController.php::submitResult()
++ DB::transaction(function () use ($room, $user, $session, $wpm, $accuracy, $scores) {
++   $participant = $room->participants()->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
+    $finishedCount = $room->participants()->where('status', 'finished')->count();
+    $participant->update([
+        'status'  => 'finished',
+        'rank'    => $finishedCount + 1,
+        ...
+    ]);
++ });
+```
+
+---
+
+#### Backend — เพิ่ม Leave Endpoint
+
+ปัญหา: presence `.leaving()` แค่ mark local state ไม่อัพ DB → participant ค้าง status `'racing'` ในDB
+
+**ขั้นที่ 5 — เพิ่ม route + method `leaveRoom()`**
+
+```php
+// TypingRaceController.php — เพิ่ม method ใหม่
+public function leaveRoom(string $roomCode): JsonResponse
+{
+    $room = TypingRaceRoom::where('room_code', strtoupper($roomCode))->firstOrFail();
+    $room->participants()
+        ->where('user_id', Auth::id())
+        ->whereNotIn('status', ['finished'])
+        ->update(['status' => 'left']);
+
+    // ตรวจว่าทุกคนที่เหลือ finish แล้วหรือยัง
+    $active    = $room->participants()->where('status', '!=', 'left')->count();
+    $finished  = $room->participants()->where('status', 'finished')->count();
+    if ($active > 0 && $finished >= $active) {
+        $this->finalizeRace($room);
+    }
+
+    return response()->json(['success' => true]);
+}
+```
+
+```php
+// routes/play/game.php — เพิ่ม route
+Route::delete('/typing/race/rooms/{roomCode}/leave', [TypingRaceController::class, 'leaveRoom']);
+```
+
+```diff
+// useClassroomRace.ts — เรียก leave endpoint ก่อน unsubscribe
+  async function leaveRoom() {
++   if (room.value?.room_code) {
++     try { await call('DELETE', `/typing/race/rooms/${room.value.room_code}/leave`) } catch {}
++   }
+    if (channel) {
+      ;($echo as any).leave(`race.${room.value?.room_code}`)
+      channel = null
+    }
+    ...
+  }
+```
+
+---
+
+#### Frontend Polish — race.vue
+
+**ขั้นที่ 6 — Loading state + Error UI**
+
+```diff
+// race.vue
++ const isCreating = ref(false)
++ const isJoining  = ref(false)
++ const errorMsg   = ref('')
+
+  async function handleCreate() {
++   isCreating.value = true
++   errorMsg.value = ''
+    try {
+      await createRoom(...)
+      view.value = 'lobby'
+    } catch (e: any) {
+-     console.error('Failed to create room', e)
++     errorMsg.value = e?.response?.data?.message ?? 'ไม่สามารถสร้างห้องได้ กรุณาลองใหม่'
++   } finally {
++     isCreating.value = false
+    }
+  }
+
+  async function handleJoin() {
+    if (!joinCode.value.trim()) return
++   isJoining.value = true
++   errorMsg.value = ''
+    try {
+      await joinRoom(joinCode.value.trim().toUpperCase())
++     joinCode.value = ''
+      view.value = 'lobby'
+    } catch (e: any) {
+-     console.error('Failed to join room', e)
++     errorMsg.value = e?.response?.data?.message ?? 'รหัสห้องไม่ถูกต้อง หรือห้องเต็มแล้ว'
++   } finally {
++     isJoining.value = false
+    }
+  }
+```
+
+เพิ่ม error banner และ `:disabled="isCreating"` / `:disabled="isJoining"` บนปุ่ม
+
+---
+
+#### Layout Fix — Vue `<Transition>` Warning
+
+**ขั้นที่ 7 — เปลี่ยน 3 หน้าพร้อมกัน**
+
+| หน้า | เปลี่ยน `definePageMeta` | เปลี่ยน template |
+|---|---|---|
+| `race.vue` | `layout: false` → `layout: 'main'` | ลบ `<NuxtLayout name="main">` ห่อด้วย `<div>` แทน |
+| `index.vue` | `layout: false` → `layout: 'main'` | ลบ `<NuxtLayout name="main">` |
+| `play.vue` | `layout: false` → `layout: 'main'` | ลบ `<NuxtLayout name="main">` |
+
+```diff
+// race.vue, index.vue, play.vue
+  definePageMeta({
+-   layout: false,
++   layout: 'main',
+  })
+
+// template: แทนที่ <NuxtLayout name="main"> ด้วย <div>
+- <NuxtLayout name="main">
++ <div>
+    ...
+- </NuxtLayout>
++ </div>
+```
+
+---
+
+#### Verification Plan
+
+| ขั้น | Test | ผ่านเมื่อ |
+|---|---|---|
+| 1 | `npm run build` | ไม่มี error |
+| 2 | นำทาง `/typing` → `/typing/race` | ไม่มี Vue Transition warning ใน console |
+| 3 | สร้างห้อง → กดปุ่ม | ปุ่ม disabled ระหว่าง loading, error แสดงเป็น UI |
+| 4 | Join ด้วยรหัสผิด | แสดง error message ในหน้า ไม่ใช่ console |
+| 5 | Join สำเร็จ → กลับไปหน้า home | joinCode ถูก reset |
+| 6 | Host start race | Countdown panel แสดง (ไม่ใช่ lobby) |
+| 7 | User A ออกระหว่าง race | User B submit → race จบได้ปกติ |
+| 8 | 2 users submit พร้อมกัน | rank ไม่ซ้ำกัน |
+| 9 | `php artisan route:list \| grep race` | มี DELETE leave route |
+
+---
+
 ## Current Snapshot
 
 - Date: 2026-05-25
@@ -292,9 +524,8 @@ php artisan make:migration add_quiz_id_to_course_remediation_sessions_table
 
 | Scope | Owner | Status | Files | Notes |
 | --- | --- | --- | --- | --- |
-| Typing Game Settings responsive fix | — | 📋 Ready to implement | `ui/pages/Play/Games/typing/index.vue` | Critical breakpoint conflict lg:grid-cols-2 xl:grid-cols-5 |
-| Exam retake flow — Phase 1 (DB + Backend) | — | 📋 Ready to implement | migration, RemediationController, quiz controller | เพิ่ม quiz_id link + retake authorization |
-| Exam retake flow — Phase 2 (Frontend) | — | 📋 Planned | remediation.vue, [quizId]/index.vue | แสดง remediation status ใน quiz page |
+| Typing Classroom Race — Bug fixes & polish | — | 📋 Ready to implement | race.vue, index.vue, play.vue, useClassroomRace.ts, TypingRaceController.php | 5 bugs confirmed, 7 ขั้นตอนพร้อม |
+| Exam retake flow — Phase 2 (Auth Logic) | — | 📋 Planned | RemediationService.php, quiz controller | unlock retake เมื่อ passed remediation |
 
 ## Coordination Board
 
@@ -422,7 +653,7 @@ php artisan make:migration add_quiz_id_to_course_remediation_sessions_table
 - Verification breakpoints: 360px (2-col diff, 3-col lang, full-width), 640px (5-col diff ok), 1024px/lg (back to 2-col diff in sidebar, 3-col lang), 1280px/xl (5-col diff expands again), 1440px+ desktop (comfortable).
 - Scope confirmed: `ui/pages/Play/Games/typing/index.vue` only. No store/backend changes needed.
 
-### 2026-05-27 - Typing Classroom Race improvement plan
+### 2026-05-27 - Typing Classroom Race improvement plan (initial, pre-code-read)
 - User asked to plan improvements for `http://localhost:3000/Play/Games/typing/race` and shared Vue warning: `Component inside <Transition> renders non-element root node that cannot be animated`.
 - Read-only inspection found the race page at `ui/pages/Play/Games/typing/race.vue`; it uses `definePageMeta({ layout: false })` and returns `<NuxtLayout name="main">` as the template root, matching the warning stack through Nuxt page transitions. Related typing pages (`typing/index.vue`, `typing/play.vue`) use the same pattern and may emit the same warning during navigation.
 - Browser smoke opened the race URL successfully and rendered `Classroom Race`; console capture did not reproduce the warning on direct load, so verification should include navigation from `/Play/Games/typing` to `/Play/Games/typing/race`.
@@ -431,3 +662,13 @@ php artisan make:migration add_quiz_id_to_course_remediation_sessions_table
 - Backend improvement candidates: add room leave/heartbeat or timeout handling, ensure submit/finalize ignores left participants, return normalized participant DTOs, add validation messages for full/not-found/started rooms, and consider host-only max player/config controls.
 - Intended files: `ui/pages/Play/Games/typing/race.vue`, `ui/pages/Play/Games/typing/index.vue`, `ui/pages/Play/Games/typing/play.vue`, `ui/composables/useClassroomRace.ts`, `ui/components/games/typing/ui/RaceTrack.vue`, `api/nuxnanravel/app/Http/Controllers/Api/Play/Typing/TypingRaceController.php`, `api/nuxnanravel/routes/channels.php`, `api/nuxnanravel/app/Events/TypingRaceStarted.php`, and `TypingRaceFinished.php`.
 - Verification plan: `npm run build`; browser smoke direct URL and navigation `/typing` -> `/typing/race`; create room and invalid join code; two-user/manual or mocked Echo test for lobby/start/progress/result; Laravel feature tests for create/join/start/submit/finalize/full room/leave or timeout behavior.
+
+### 2026-05-27 - Typing Classroom Race — deep code review & improved plan
+- อ่านโค้ดจริงทุกไฟล์: `race.vue`, `useClassroomRace.ts`, `TypingRaceController.php`, `channels.php`, `RaceTrack.vue` ยืนยันและพบ bug เพิ่มจากแผนเดิม
+- **Bug 1 (Critical — countdown ไม่แสดง):** `race.vue` template เช็ค `v-if="view === 'home'"` → `v-else-if="view === 'lobby'"` → `v-else-if="raceStatus === 'countdown'"` ตามลำดับ เมื่อ `raceStatus` เปลี่ยนเป็น `'countdown'` ค่า `view` ยังคงเป็น `'lobby'` อยู่ (watch ไม่ได้ set view ที่ countdown) ทำให้ branch `v-else-if="view === 'lobby'"` จับก่อนและ countdown panel ไม่มีวันแสดงขึ้นมา แก้: เพิ่ม `view.value = 'countdown'` ใน watch เมื่อ `s === 'countdown'`
+- **Bug 2 (Echo API ผิด):** `useClassroomRace.ts:186` เรียก `channel.leave(`race.${room.value?.room_code}`)` แต่ `channel` คือ channel object ที่ได้จาก `.join()` ซึ่งไม่มี method `.leave()` การ leave ที่ถูกต้องคือ `($echo as any).leave('race.CODE')` โดยเรียกผ่าน Echo instance ไม่ใช่ channel object ตอนนี้ leaveRoom() ไม่ได้ unsubscribe จริง
+- **Bug 3 (Memory leak):** `useClassroomRace.ts:39` มี `let progressThrottle` แต่ `leaveRoom()` ไม่ได้ `clearTimeout(progressThrottle)` ถ้า user ออกระหว่างที่ throttle ยังค้างอยู่ จะส่ง whisper ไปยัง channel ที่ถูก leave แล้ว
+- **Bug 4 (Backend finalize ค้าง — ยืนยันจากโค้ด):** `TypingRaceController.php:204` นับ `$totalParticipants = $room->participants()->count()` รวม status `'left'` ด้วย แต่ `$totalFinished` นับเฉพาะ `'finished'` ทำให้ถ้ามีคนออก finalize condition จะไม่ถึง 100% ห้องค้างถาวร แก้: เปลี่ยนเป็น `->where('status', '!=', 'left')->count()`
+- **Bug 5 (Race condition ใน rank):** `TypingRaceController.php:190` อ่าน `$finishedCount` ก่อน แล้วค่อย update status ที่ line 196 ถ้า 2 คน submit พร้อมกัน จะอ่าน count เดียวกันและได้ rank เดียวกัน แก้: ห่อด้วย `DB::transaction()` + `lockForUpdate()` บน participant row
+- **ยืนยันว่า OK:** realtime contract ใช้ field สอดคล้องกัน — `channels.php` return `{id, name, avatar}`, frontend ใช้ `user.id` → `upsertParticipant(user.id, ...)` ถูก; `RaceTrack.vue` filter `status !== 'left'` ถูกแล้ว; `finalizeRace()` ใช้ `profile_photo_url ?? avatar` ตรงกับ channels.php
+- **ยืนยันว่า missing:** ไม่มี backend leave endpoint → presence `.leaving()` callback แค่ mark local state ไม่ได้ update DB; participant ใน DB จะค้าง status `'racing'` ตลอดแม้ user จะออกไปแล้ว
