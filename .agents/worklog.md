@@ -6,72 +6,91 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-05-24)
+## สถานะปัจจุบัน (2026-05-27)
 
-- **Done Today:**
-  - **Lesson Access System (Full Feature)**
-    - Migration: เพิ่ม `publication_status`, `access_type`, `money_tuition_fee` ใน `lessons` table (migrate ข้อมูลเดิมด้วย)
-    - Migration: สร้าง `lesson_accesses` table สำหรับ persistent unlock records
-    - Model: `LessonAccess.php` — TYPE/STATUS constants, relations
-    - Service: `LessonAccessService.php` — getAccessStatus, unlockWithPoints, unlockWithMoney, grantFreeAccess
-    - Controller: `CourseLessonController` — unlock endpoint, publication_status filtering, LessonAccessService injection
-    - Resource: `LessonResource` — access status fields, locked/unlocked data separation, display_order
-    - Route: `POST /{lesson}/unlock` ลงทะเบียนแล้ว
-  - **Lesson Order Gap Fix**
-    - `store()`: default order → `max(order)+1` (ไม่มี gap ตั้งแต่ต้น)
-    - `reorder()`: payload ใหม่ `{lessons: [id1,id2,...]}` — backend กำหนด 1..N เอง (ไม่มี gap)
-    - `index()`: admin → `get()` ทุก lesson (ไม่ paginate); student → `paginate()`
-  - **Lesson display_order**
-    - Backend คำนวณ `display_order` (rank ใน published lessons เท่านั้น, 1-indexed, ไม่มี gap) ใน `index()` และ `show()`
-    - `LessonResource` ส่ง `display_order` ทุก response
-    - `LessonPost.vue`: student ใช้ `lesson.display_order` จาก backend; admin ใช้ `lesson.order`
-  - **LessonPost.vue — Badge Overlap Fix**
-    - จัดโครงสร้าง overlay ใหม่: left group (publication/order/time badges) + right group (access badge + admin actions)
-    - ไม่มี overlap อีกต่อไป ทุก viewport
-  - **LessonOrderWidget.vue — Bug Fixes**
-    - แก้ status badge: `lesson.status` → `lesson.publication_status`
-    - reorder payload: `[id1,id2,...]` (ordered IDs only)
-  - **store/course.ts**: `reorderLessons(courseId, lessonIds: number[])`
-  - **Exam Retake Flow (Phase 1)**
-    - Migration: Added `quiz_id` to `course_remediation_sessions`
-    - Model/Controller: Updated `CourseRemediationSession` + `RemediationController`
-    - Quiz Detail: Returns student's remediation status for the specific quiz
-    - Frontend: remediation_status card in Quiz Page + Quiz dropdown in Remediation admin form
-  - **Other fixes**: Course feeds 500 error, Course info accordion, Remediation route alignment, Unified eligibility panel, Lesson order widget polish
+- **งานที่เสร็จแล้วทั้งหมด (committed ใน main):**
+  - **Typing Game — Responsive Fix** (typing/index.vue)
+    - Outer gap: `gap-6 lg:gap-8`
+    - Card: `p-5 sm:p-6 lg:p-7`, inner `space-y-6 lg:space-y-7`
+    - Language: `grid grid-cols-3 gap-2` + `whitespace-nowrap overflow-hidden`
+    - Difficulty: `grid-cols-[repeat(auto-fill,minmax(80px,1fr))]` (auto-fill ดีกว่าแผนเดิม)
+    - CTA: `py-4 sm:py-5 text-base sm:text-xl`
+  - **Typing Game Expansion (Full System)**
+    - Race: `TypingRaceController`, `TypingRaceRoom`, `TypingRaceParticipant`, Events, `race.vue`, `RaceTrack.vue`, `useClassroomRace.ts`
+    - Tournament: `TypingTournamentController`, models, weekly command, `tournaments/`
+    - Daily Challenge: `TypingDailyChallengeController`, `daily.vue`
+    - Session/Score: `TypingSessionController`, `GameScoreController`, `TypingScoreService`
+    - Achievement: `TypingAchievementController`, seeder
+    - Leaderboard: `TypingLeaderboardController`
+    - Classroom: `TypingClassroomController`
+    - Words/Sentences/Admin: controllers + seeders
+    - Composables: `useTypingGame`, `useTypingApi`, `useWpmCalc`, `useComboSystem`, `useKeyTraining`
+    - Store: `stores/typing.ts`
+    - Components: 10+ (modes, ui components, VirtualKeyboard, etc.)
+    - Pages: `play.vue`, `result.vue`, `daily.vue`, `profile/[userId].vue`, `report/[academyId].vue`
+  - **Course Point System**
+    - Models: `CoursePointAccount`, `CoursePointCampaign`, `CoursePointCampaignClaim`, `CoursePointTransaction`
+    - Service: `CoursePointAccountService`
+    - Controllers: `CoursePointAccountController`, `CoursePointCampaignController`, `LessonRewardCampaignController`
+    - Migrations: course_point_accounts, transactions, campaigns, claims, reserved_balance, lesson_reward_fields
+    - Components: `LessonRewardBadge.vue`, `LessonRewardForm.vue`
+    - Composable: `useCoursePoints.ts`
+  - **Lesson Access System**
+    - Migration: `publication_status`, `access_type`, `money_tuition_fee` ใน `lessons`
+    - Migration: `lesson_accesses` table
+    - Model: `LessonAccess.php`, `Lesson.php` updated
+    - Service: `LessonAccessService.php`
+    - Controller: `CourseLessonController` — unlock endpoint, access filtering
+    - Resource: `LessonResource` — locked/unlocked data separation, `display_order`
+  - **Lesson Order Gap Fix + display_order**
+    - `store()`: default order → `max(order)+1`
+    - `reorder()`: backend normalize 1..N
+    - `index()`: admin → all lessons; student → paginate
+    - `display_order`: rank ใน published lessons เท่านั้น (1-indexed, no gap)
+  - **LessonPost.vue Badge Overlap Fix** — restructured overlay, no overlap at any viewport
+  - **LessonOrderWidget.vue** — fix status badge field, reorder payload format
+  - **Exam Retake Flow Phase 1**
+    - Migration: `quiz_id` ใน `course_remediation_sessions`
+    - Model/Controller: `CourseRemediationSession` + `RemediationController` updated
+    - Quiz Detail: returns student remediation status for specific quiz
+    - Frontend: `remediation_status` card ใน Quiz Page + Quiz dropdown ใน Remediation admin form
+  - **Other**: Course feeds 500 fix, Course info accordion, Remediation route alignment, `ExamEligibilityPanel.vue`, Lesson order widget polish
 
 - **In Progress:**
   - —
 
 - **TODO:**
-  - **Exam Retake Flow Phase 2 — Remaining Logic** (แผนละเอียดใน `latest-analysis.md`)
-    - `RemediationService::gradeEnrollment()`: เมื่อ passed + มี `quiz_id` → unlock quiz retake attempt
+  - **Exam Retake Flow Phase 2 — Authorization Logic**
+    - `RemediationService::gradeEnrollment()`: เมื่อ `passed` + มี `quiz_id` → unlock quiz retake attempt
     - Quiz Controller: return `can_retake: true` ถ้า student ผ่าน remediation ที่ผูกกับ quiz นี้
-  - **Commit งานสะสม** — มี modified/untracked files จำนวนมาก ควร commit ก่อนเริ่มงานใหม่
+    - Frontend quiz page: แสดง "✅ ผ่านแล้ว เริ่มสอบได้เลย" state
+  - **Typing Classroom Race — Polish & Bug Fixes**
+    - Fix Vue `<Transition>` warning: wrap page template in stable root หรือ switch to `definePageMeta({ layout: 'main' })`
+    - `useClassroomRace.ts`: surface API errors, reset join state, add leave endpoint
+    - Backend: room leave/heartbeat/timeout, normalize participant DTOs, finalize ข้ามคนที่ออก
 
 - **Pending Commit:**
-  - Lesson Access System (migrations, model, service, controller, resource)
-  - Lesson Order Gap Fix + display_order
-  - LessonPost.vue badge overlap fix
-  - LessonOrderWidget.vue bug fixes
-  - Exam Retake Flow Phase 1
-  - All previous fixes from today
+  - `.agents/latest-analysis.md` (2026-05-27 Typing Race analysis entry)
 
 ---
 
 ## ประวัติการทำงาน (Timeline)
 
-- **Lesson Access System + Order Gap + display_order** (2026-05-24)
-  - Full access type system (free/points/money) with persistent unlock records
-  - Order gap fixed: new lessons auto-append, reorder normalizes 1..N
-  - display_order: backend-computed sequential number for published lessons (no gap for students)
-  - Build verified: `npm run build` ✅, `php artisan migrate` ✅
-- **Exam Retake Flow Phase 1** (2026-05-24)
-  - quiz_id link in remediation sessions, remediation status in quiz page
-- **Remediation & Unified Eligibility** (2026-05-24)
+- **Typing Game Expansion + Course Point System** (committed 2026-05-25)
+  - Full typing game system: Race, Tournament, Daily Challenge, Session, Achievement, Leaderboard
+  - Course point system with lesson reward campaigns and quota/budget control
+  - Lesson Access System (free/points/money) with persistent unlock records
+  - Lesson Order Gap Fix + display_order
+  - All UI components, composables, pages for typing game
+  - Typing Game Settings — Responsive Fix (auto-fill minmax approach)
+  - Build: `npm run build` ✅, `php artisan migrate` ✅
+- **Exam Retake Flow Phase 1** (committed 2026-05-25)
+  - quiz_id link in remediation sessions, remediation status card in quiz page
+- **Lesson Order Widget Polish + Badge Overlap Fix** (committed 2026-05-25)
+  - Silent mode, hide when ≤1 lessons, collapsible widget, badge overlap restructured
+- **Remediation & Unified Eligibility** (committed 2026-05-24)
   - Fixed route mismatch, bulkEnroll, ExamEligibilityPanel.vue
-- **Lesson Order Widget Polish** (2026-05-24)
-  - Silent mode, hide when ≤1 lessons, collapsible widget
-- **Lesson Drag-and-Drop Reordering** (2026-05-24)
+- **Lesson Drag-and-Drop Reordering** (committed 2026-05-24)
   - Compact admin widget, bulk reorder endpoint, feature tests
 - **Cross Math Enter key** (2026-05-23)
 
