@@ -181,10 +181,17 @@ export function useClassroomRace() {
     }
   }
 
-  function leaveRoom() {
+  async function leaveRoom() {
+    if (room.value?.room_code) {
+      try { await call('DELETE', `/typing/race/rooms/${room.value.room_code}/leave`) } catch (e) { /* ignore */ }
+    }
     if (channel) {
-      channel.leave(`race.${room.value?.room_code}`)
+      ;($echo as any).leave(`race.${room.value?.room_code}`)
       channel = null
+    }
+    if (progressThrottle) {
+      clearTimeout(progressThrottle)
+      progressThrottle = null
     }
     room.value = null
     raceStatus.value = 'idle'

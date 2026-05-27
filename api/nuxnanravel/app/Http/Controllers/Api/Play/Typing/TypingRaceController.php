@@ -187,26 +187,32 @@ class TypingRaceController extends Controller
         $this->pointsService->addXp($user, $xp);
 
         // Update participant
-        $finishedCount = $room->participants()->where('status', 'finished')->count();
-        $participant = $room->participants()->where('user_id', $user->id)->firstOrFail();
-        $participant->update([
-            'session_id'  => $session->id,
-            'status'      => 'finished',
-            'progress'    => 100,
-            'wpm'         => $wpm,
-            'accuracy'    => $accuracy,
-            'score'       => $scores['score'],
-            'rank'        => $finishedCount + 1,
-            'finished_at' => now(),
-        ]);
+        DB::transaction(function () use ($room, $user, $session, $wpm, $accuracy, $scores) {
+            $participant = $room->participants()->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
+            
+            $finishedCount = $room->participants()->where('status', 'finished')->count();
+            
+            $participant->update([
+                'session_id'  => $session->id,
+                'status'      => 'finished',
+                'progress'    => 100,
+                'wpm'         => $wpm,
+                'accuracy'    => $accuracy,
+                'score'       => $scores['score'],
+                'rank'        => $finishedCount + 1,
+                'finished_at' => now(),
+            ]);
+        });
 
         // Check if all finished
-        $totalParticipants = $room->participants()->count();
-        $totalFinished     = $room->participants()->where('status', 'finished')->count();
+        $activeParticipants = $room->participants()->where('status', '!=', 'left')->count();
+        $totalFinished      = $room->participants()->where('status', 'finished')->count();
 
-        if ($totalFinished >= $totalParticipants) {
+        if ($activeParticipants > 0 && $totalFinished >= $activeParticipants) {
             $this->finalizeRace($room);
         }
+
+        $participant = $room->participants()->where('user_id', $user->id)->first();
 
         return response()->json([
             'success' => true,
@@ -216,6 +222,29 @@ class TypingRaceController extends Controller
             'xp_earned' => $xp,
             'rank' => $participant->rank
         ]);
+    }
+
+    /**
+     * Leave a race room.
+     */
+    public function leaveRoom(string $roomCode): JsonResponse
+    {
+        $room = TypingRaceRoom::where('room_code', strtoupper($roomCode))->firstOrFail();
+        
+        $room->participants()
+            ->where('user_id', Auth::id())
+            ->whereNotIn('status', ['finished'])
+            ->update(['status' => 'left']);
+
+        // Check if all remaining participants are finished
+        $activeParticipants = $room->participants()->where('status', '!=', 'left')->count();
+        $totalFinished      = $room->participants()->where('status', 'finished')->count();
+
+        if ($activeParticipants > 0 && $totalFinished >= $activeParticipants && $room->status === 'racing') {
+            $this->finalizeRace($room);
+        }
+
+        return response()->json(['success' => true]);
     }
 
     /**

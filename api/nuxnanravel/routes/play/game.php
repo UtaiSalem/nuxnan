@@ -49,6 +49,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/typing/race/rooms/{code}/join', [\App\Http\Controllers\Api\Play\Typing\TypingRaceController::class, 'joinRoom']);
     Route::post('/typing/race/rooms/{code}/start', [\App\Http\Controllers\Api\Play\Typing\TypingRaceController::class, 'startRace']);
     Route::post('/typing/race/rooms/{code}/submit', [\App\Http\Controllers\Api\Play\Typing\TypingRaceController::class, 'submitResult']);
+    Route::delete('/typing/race/rooms/{code}/leave', [\App\Http\Controllers\Api\Play\Typing\TypingRaceController::class, 'leaveRoom']);
     Route::get('/typing/race/rooms/{code}', [\App\Http\Controllers\Api\Play\Typing\TypingRaceController::class, 'roomStatus']);
 
     // Admin routes
