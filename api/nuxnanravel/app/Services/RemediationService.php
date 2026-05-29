@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\CourseRemediationSession;
 use App\Models\CourseRemediationEnrollment;
+use App\Models\CourseQuizResult;
 use App\Models\GradeEditLog;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -243,6 +244,24 @@ class RemediationService
 
                 if ($member->eligibility_status === 'ineligible') {
                     $this->eligibilityService->unlockByRemediation($member, $session->id, $grader);
+                }
+
+                // Grant retake if session is linked to a quiz
+                if ($session->quiz_id !== null) {
+                    $quizResult = CourseQuizResult::firstOrCreate(
+                        [
+                            'user_id' => $member->user_id,
+                            'course_id' => $member->course_id,
+                            'quiz_id' => $session->quiz_id,
+                        ],
+                        ['status' => 0]
+                    );
+
+                    $quizResult->update([
+                        'retake_unlocked_at' => now(),
+                        'retake_used_at' => null,
+                        'retake_granted_by_enrollment_id' => $enrollment->id,
+                    ]);
                 }
 
                 return $enrollment->fresh();

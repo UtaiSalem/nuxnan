@@ -6,7 +6,7 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-05-27, updated)
+## สถานะปัจจุบัน (2026-05-29, updated)
 
 - **งานที่เสร็จแล้วทั้งหมด (committed ใน main):**
   - **Typing Game — Responsive Fix** (typing/index.vue)
@@ -55,22 +55,27 @@
     - Quiz Detail: returns student remediation status for specific quiz
     - Frontend: `remediation_status` card ใน Quiz Page + Quiz dropdown ใน Remediation admin form
   - **Other**: Course feeds 500 fix, Course info accordion, Remediation route alignment, `ExamEligibilityPanel.vue`, Lesson order widget polish
+  - **Course Feed Edit Bug Fix** (2026-05-29)
+    - `CourseEditPostModal.vue`: `api.patch` → `api.post` + `_method=PATCH` ใน FormData (PHP PATCH+multipart bug)
+  - **Exam Retake Flow Phase 2 — Authorization Logic** (2026-05-29)
+    - Migration: `retake_unlocked_at`, `retake_used_at`, `retake_granted_by_enrollment_id` ใน `course_quiz_results`
+    - `RemediationService::gradeEnrollment()`: เมื่อ passed + `session->quiz_id` → set retake grant
+    - `CourseQuizResultController::store()`: mark `retake_used_at` เมื่อนักศึกษา start quiz ด้วย active grant
+    - `CourseQuizController::show()`: return `retake_status` ใน response
+    - `ExamEligibilityPanel.vue`: แสดง state "ผ่านการแก้ตัวแล้ว" + "ใช้สิทธิ์แล้ว"
+    - `quiz/[quizId]/index.vue`: รับ `retake_status` + แสดง panel เมื่อ `can_retake`
+    - Factory: `CourseQuizFactory.php`
+    - Migration conflict fix: typing_words + typing_sentences index rename
+    - Feature tests: `ExamRetakePhase2Test.php` (3 test cases)
 
 - **In Progress:**
   - —
 
 - **TODO:**
-  - **Exam Retake Flow Phase 2 — Authorization Logic** (`📋 Ready to implement`)
-    - Migration: เพิ่ม `retake_unlocked_at` + `retake_used_at` (nullable timestamp) ใน `quiz_enrollments`
-    - `RemediationService::gradeEnrollment()`: เมื่อ `passed` + `session->quiz_id` → set `retake_unlocked_at = now()`
-    - Quiz endpoint: ตรวจ `retake_unlocked_at` และ `retake_used_at` → return `can_retake: true/false`
-    - `QuizAttemptController::store()`: ถ้าเกิน `max_attempts` แต่ `can_retake` → อนุญาต + mark `retake_used_at` (ใช้ DB lock)
-    - Feature tests: `tests/Feature/ExamRetakePhase2Test.php` (ใหม่)
-    - Frontend: `ExamEligibilityPanel.vue` แสดง state "✅ ผ่าน remediation — กดเพื่อเริ่มสอบ"
-    - ดูแผนละเอียดใน `latest-analysis.md` → Work Plan
+  - ไม่มี — ทุกงานที่วางแผนไว้เสร็จแล้ว
 
 - **Pending Commit:**
-  - ไม่มี — ทุกอย่าง committed แล้ว
+  - ✅ พร้อม commit — ยังไม่ได้ stage
 
 ---
 

@@ -22,11 +22,13 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
 
-            $table->index(['language', 'difficulty'], 'idx_lang_diff');
+            $table->index(['language', 'difficulty'], 'idx_sentences_lang_diff');
         });
 
         // Add generated column separately as it might vary by DB engine
-        DB::statement('ALTER TABLE typing_sentences ADD char_count INT AS (CHAR_LENGTH(text)) STORED');
+        if (config('database.default') !== 'sqlite') {
+            DB::statement('ALTER TABLE typing_sentences ADD char_count INT AS (CHAR_LENGTH(text)) STORED');
+        }
     }
 
     /**

@@ -6,6 +6,12 @@ const props = defineProps<{
   courseId: string | number
   canTakeExam: boolean
   eligibility: any
+  retakeStatus?: {
+    unlocked: boolean
+    used: boolean
+    can_retake: boolean
+    unlocked_at?: string
+  }
 }>()
 
 const emit = defineEmits(['unlocked'])
@@ -150,127 +156,152 @@ const getMethodColor = (method: string) => {
 </script>
 
 <template>
-  <div class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl p-6 sm:p-8">
-    <div class="flex items-start gap-4 mb-6">
-      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
-        <Icon icon="fluent:warning-24-filled" class="w-7 h-7" />
+  <div>
+    <!-- Retake grant from remediation -->
+    <div v-if="retakeStatus?.can_retake"
+         class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 mb-4">
+      <div class="flex items-start gap-3">
+        <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />
+        <div class="text-left">
+          <p class="font-semibold text-emerald-700 dark:text-emerald-300">ผ่านการแก้ตัวแล้ว</p>
+          <p class="text-sm text-emerald-600 dark:text-emerald-400 mt-0.5">
+            คุณได้รับสิทธิ์สอบใหม่ 1 ครั้ง — สามารถกดปุ่มเริ่มสอบด้านล่างได้ทันที
+          </p>
+        </div>
       </div>
-      <div>
-        <h2 class="text-xl font-bold text-red-900 dark:text-red-400 mb-1">สิทธิ์สอบถูกระงับ</h2>
-        <p class="text-red-700 dark:text-red-300/80">
-          คุณไม่มีสิทธิ์ทำแบบทดสอบนี้เนื่องจาก:
-          <span class="font-bold underline">{{ eligibility?.reason || eligibility?.reasons?.join(', ') }}</span>
+    </div>
+
+    <!-- If retake was used but still ineligible -->
+    <div v-else-if="retakeStatus?.used && !canTakeExam"
+         class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 mb-4 text-left">
+      <div class="flex items-center gap-3">
+        <Icon icon="fluent:info-24-regular" class="w-5 h-5 text-gray-500" />
+        <p class="text-sm text-gray-600 dark:text-gray-400">คุณใช้สิทธิ์สอบแก้ตัวไปแล้ว</p>
+      </div>
+    </div>
+
+    <div v-if="!canTakeExam" class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl p-6 sm:p-8">
+      <div class="flex items-start gap-4 mb-6">
+        <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+          <Icon icon="fluent:warning-24-filled" class="w-7 h-7" />
+        </div>
+        <div class="text-left">
+          <h2 class="text-xl font-bold text-red-900 dark:text-red-400 mb-1">สิทธิ์สอบถูกระงับ</h2>
+          <p class="text-red-700 dark:text-red-300/80">
+            คุณไม่มีสิทธิ์ทำแบบทดสอบนี้เนื่องจาก:
+            <span class="font-bold underline">{{ eligibility?.reason || eligibility?.reasons?.join(', ') }}</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Pending Request Info -->
+      <div v-if="eligibility?.pending_override" class="mb-8 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/30 rounded-xl text-left">
+        <div class="flex items-center gap-3 text-orange-800 dark:text-orange-400 font-bold mb-2">
+          <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" />
+          อยู่ระหว่างรอดำเนินการ
+        </div>
+        <p class="text-sm text-orange-700 dark:text-orange-300/80">
+          คุณได้ส่งคำขอปลดล็อคด้วยวิธี <span class="font-bold">{{ eligibility.pending_override.method_label }}</span> 
+          เมื่อวันที่ {{ new Date(eligibility.pending_override.created_at).toLocaleDateString('th-TH') }}
+          กรุณารอการตรวจสอบหรือดำเนินการตามเงื่อนไขให้ครบถ้วน
         </p>
+        <button 
+          v-if="eligibility.pending_override.method === 'reading'"
+          @click="goToLessons"
+          class="mt-3 px-4 py-1.5 bg-orange-600 text-white text-sm font-bold rounded-lg hover:bg-orange-700 transition-colors"
+        >
+          ไปที่หน้าบทเรียน
+        </button>
       </div>
-    </div>
 
-    <!-- Pending Request Info -->
-    <div v-if="eligibility?.pending_override" class="mb-8 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/30 rounded-xl">
-      <div class="flex items-center gap-3 text-orange-800 dark:text-orange-400 font-bold mb-2">
-        <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" />
-        อยู่ระหว่างรอดำเนินการ
-      </div>
-      <p class="text-sm text-orange-700 dark:text-orange-300/80">
-        คุณได้ส่งคำขอปลดล็อคด้วยวิธี <span class="font-bold">{{ eligibility.pending_override.method_label }}</span> 
-        เมื่อวันที่ {{ new Date(eligibility.pending_override.created_at).toLocaleDateString('th-TH') }}
-        กรุณารอการตรวจสอบหรือดำเนินการตามเงื่อนไขให้ครบถ้วน
-      </p>
-      <button 
-        v-if="eligibility.pending_override.method === 'reading'"
-        @click="goToLessons"
-        class="mt-3 px-4 py-1.5 bg-orange-600 text-white text-sm font-bold rounded-lg hover:bg-orange-700 transition-colors"
-      >
-        ไปที่หน้าบทเรียน
-      </button>
-    </div>
-
-    <!-- Unlock Options -->
-    <div v-else>
-      <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">ช่องทางคืนสิทธิ์สอบ</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <template v-for="opt in eligibility?.unlock_options" :key="opt.method">
-          <!-- Self Unlock -->
-          <button 
-            v-if="opt.method === 'self'"
-            @click="requestSelfUnlock"
-            :disabled="isProcessing"
-            :class="getMethodColor('self')"
-            class="flex items-center gap-3 p-4 text-white rounded-xl font-bold transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50"
-          >
-            <Icon :icon="getMethodIcon('self')" class="w-6 h-6" />
-            <div class="text-left text-sm leading-tight">
-              <div>{{ opt.label }}</div>
-              <div class="text-xs opacity-80 font-normal">คืนสิทธิ์ได้ทันที 1 ครั้ง</div>
-            </div>
-          </button>
-
-          <!-- Points Unlock -->
-          <button 
-            v-if="opt.method === 'points'"
-            @click="requestPointsUnlock(opt.cost)"
-            :disabled="isProcessing"
-            :class="getMethodColor('points')"
-            class="flex items-center gap-3 p-4 text-white rounded-xl font-bold transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50"
-          >
-            <Icon :icon="getMethodIcon('points')" class="w-6 h-6" />
-            <div class="text-left text-sm leading-tight">
-              <div>{{ opt.label }}</div>
-              <div class="text-xs opacity-80 font-normal">แลกแต้มเพื่อคืนสิทธิ์</div>
-            </div>
-          </button>
-
-          <!-- Reading Unlock -->
-          <button 
-            v-if="opt.method === 'reading'"
-            @click="requestReadingUnlock"
-            :disabled="isProcessing"
-            :class="getMethodColor('reading')"
-            class="flex items-center gap-3 p-4 text-white rounded-xl font-bold transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50"
-          >
-            <Icon :icon="getMethodIcon('reading')" class="w-6 h-6" />
-            <div class="text-left text-sm leading-tight">
-              <div>{{ opt.label }}</div>
-              <div class="text-xs opacity-80 font-normal">อ่านบทเรียนครบเพื่อคืนสิทธิ์</div>
-            </div>
-          </button>
-
-          <!-- Appeal Unlock -->
-          <button 
-            v-if="opt.method === 'appeal'"
-            @click="requestAppealUnlock"
-            :disabled="isProcessing"
-            :class="getMethodColor('appeal')"
-            class="flex items-center gap-3 p-4 text-white rounded-xl font-bold transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50"
-          >
-            <Icon :icon="getMethodIcon('appeal')" class="w-6 h-6" />
-            <div class="text-left text-sm leading-tight">
-              <div>{{ opt.label }}</div>
-              <div class="text-xs opacity-80 font-normal">ส่งคำร้องให้ผู้สอนพิจารณา</div>
-            </div>
-          </button>
-
-          <!-- Admin Contact (Informational) -->
-          <div 
-            v-if="opt.method === 'admin'"
-            class="flex items-center gap-3 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold border border-gray-200 dark:border-gray-700"
-          >
-            <Icon :icon="getMethodIcon('admin')" class="w-6 h-6 text-gray-400" />
-            <div class="text-left text-sm leading-tight">
-              <div>ติดต่อผู้สอน</div>
-              <div class="text-xs opacity-80 font-normal">สอบถามรายละเอียดเพิ่มเติม</div>
-            </div>
-          </div>
-        </template>
-
-        <!-- Placeholder for Remediation (Future) -->
-        <div v-if="eligibility?.has_remediation" class="sm:col-span-2">
-            <NuxtLink 
-                :to="`/courses/${courseId}/remediation`"
-                class="mt-2 flex items-center justify-center gap-2 p-3 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-xl font-bold border border-orange-200 dark:border-orange-800 hover:bg-orange-200 transition-colors"
+      <!-- Unlock Options -->
+      <div v-else>
+        <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 text-left">ช่องทางคืนสิทธิ์สอบ</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <template v-for="opt in eligibility?.unlock_options" :key="opt.method">
+            <!-- Self Unlock -->
+            <button 
+              v-if="opt.method === 'self'"
+              @click="requestSelfUnlock"
+              :disabled="isProcessing"
+              :class="getMethodColor('self')"
+              class="flex items-center gap-3 p-4 text-white rounded-xl font-bold transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50"
             >
-                <Icon icon="fluent:arrow-sync-24-filled" class="w-5 h-5" />
-                ลงทะเบียนรอบสอบแก้ตัว (Remediation)
-            </NuxtLink>
+              <Icon :icon="getMethodIcon('self')" class="w-6 h-6" />
+              <div class="text-left text-sm leading-tight">
+                <div>{{ opt.label }}</div>
+                <div class="text-xs opacity-80 font-normal">คืนสิทธิ์ได้ทันที 1 ครั้ง</div>
+              </div>
+            </button>
+
+            <!-- Points Unlock -->
+            <button 
+              v-if="opt.method === 'points'"
+              @click="requestPointsUnlock(opt.cost)"
+              :disabled="isProcessing"
+              :class="getMethodColor('points')"
+              class="flex items-center gap-3 p-4 text-white rounded-xl font-bold transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50"
+            >
+              <Icon :icon="getMethodIcon('points')" class="w-6 h-6" />
+              <div class="text-left text-sm leading-tight">
+                <div>{{ opt.label }}</div>
+                <div class="text-xs opacity-80 font-normal">แลกแต้มเพื่อคืนสิทธิ์</div>
+              </div>
+            </button>
+
+            <!-- Reading Unlock -->
+            <button 
+              v-if="opt.method === 'reading'"
+              @click="requestReadingUnlock"
+              :disabled="isProcessing"
+              :class="getMethodColor('reading')"
+              class="flex items-center gap-3 p-4 text-white rounded-xl font-bold transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50"
+            >
+              <Icon :icon="getMethodIcon('reading')" class="w-6 h-6" />
+              <div class="text-left text-sm leading-tight">
+                <div>{{ opt.label }}</div>
+                <div class="text-xs opacity-80 font-normal">อ่านบทเรียนครบเพื่อคืนสิทธิ์</div>
+              </div>
+            </button>
+
+            <!-- Appeal Unlock -->
+            <button 
+              v-if="opt.method === 'appeal'"
+              @click="requestAppealUnlock"
+              :disabled="isProcessing"
+              :class="getMethodColor('appeal')"
+              class="flex items-center gap-3 p-4 text-white rounded-xl font-bold transition-all hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50"
+            >
+              <Icon :icon="getMethodIcon('appeal')" class="w-6 h-6" />
+              <div class="text-left text-sm leading-tight">
+                <div>{{ opt.label }}</div>
+                <div class="text-xs opacity-80 font-normal">ส่งคำร้องให้ผู้สอนพิจารณา</div>
+              </div>
+            </button>
+
+            <!-- Admin Contact (Informational) -->
+            <div 
+              v-if="opt.method === 'admin'"
+              class="flex items-center gap-3 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold border border-gray-200 dark:border-gray-700"
+            >
+              <Icon :icon="getMethodIcon('admin')" class="w-6 h-6 text-gray-400" />
+              <div class="text-left text-sm leading-tight">
+                <div>ติดต่อผู้สอน</div>
+                <div class="text-xs opacity-80 font-normal">สอบถามรายละเอียดเพิ่มเติม</div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Placeholder for Remediation (Future) -->
+          <div v-if="eligibility?.has_remediation" class="sm:col-span-2">
+              <NuxtLink 
+                  :to="`/courses/${courseId}/remediation`"
+                  class="mt-2 flex items-center justify-center gap-2 p-3 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-xl font-bold border border-orange-200 dark:border-orange-800 hover:bg-orange-200 transition-colors"
+              >
+                  <Icon icon="fluent:arrow-sync-24-filled" class="w-5 h-5" />
+                  ลงทะเบียนรอบสอบแก้ตัว (Remediation)
+              </NuxtLink>
+          </div>
         </div>
       </div>
     </div>

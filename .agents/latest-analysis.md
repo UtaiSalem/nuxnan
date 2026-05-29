@@ -46,7 +46,7 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ### Feature: Exam Retake Flow — Phase 2 (Authorization Logic)
 
-**สถานะ:** 📋 Ready to implement
+**สถานะ:** ✅ COMPLETED (2026-05-29)
 
 **เป้าหมาย:** เมื่อ student ผ่าน remediation session ที่ผูกกับ quiz → อนุญาตให้ retake quiz ได้อีก 1 ครั้ง
 
@@ -90,20 +90,21 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Current Snapshot
 
-- Date: 2026-05-27
+- Date: 2026-05-29
 - Branch: main
 - Repository: `C:\wamp64\www\nuxnan`
 - Frontend: `ui/` Nuxt/Vue/TypeScript/Pinia/Tailwind/PrimeVue
 - Backend: `api/nuxnanravel/` Laravel/PHP/JWT/MySQL/Reverb
-- Current focus: **Exam Retake Flow — Phase 2 (Authorization Logic)**
-- Pending commit: ไม่มี — งานล่าสุดทุกอย่าง committed ใน main
+- Current focus: ไม่มีงานค้าง — พร้อม commit และรับ feature ใหม่
+- Pending commit: ✅ พร้อม commit (Course Feed fix + Exam Retake Phase 2)
 
 ## Active Work
 
 | Scope | Owner | Status | Files | Notes |
 | --- | --- | --- | --- | --- |
 | Typing Classroom Race — Bug fixes & polish | — | ✅ Done (`f389406e`) | race.vue, useClassroomRace.ts, TypingRaceController.php | 5 bugs แก้แล้ว |
-| Exam retake flow — Phase 2 (Auth Logic) | — | 📋 Ready to implement | `RemediationService.php`, quiz controller, `quiz_enrollments` migration, `ExamEligibilityPanel.vue` | แผนละเอียดอยู่ใน Work Plan ด้านบน |
+| Course Feed Edit Bug Fix | — | ✅ Done (2026-05-29, pending commit) | `CourseEditPostModal.vue` | PHP PATCH+multipart bug → POST+_method spoofing |
+| Exam retake flow — Phase 2 (Auth Logic) | — | ✅ Done (2026-05-29, pending commit) | `RemediationService.php`, `CourseQuizResultController.php`, `CourseQuizController.php`, `CourseQuizResult.php`, migration, `ExamEligibilityPanel.vue`, `quiz/[quizId]/index.vue`, `ExamRetakePhase2Test.php` | retake grant ผ่าน `course_quiz_results` columns |
 
 ## Coordination Board
 

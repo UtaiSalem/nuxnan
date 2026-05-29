@@ -133,7 +133,17 @@ class CourseQuizController extends Controller
             if ($member) {
                 // If course has point deduction for exams, or requires attendance, check it
                 $eligibilityInfo = $this->eligibilityService->canTakeExam($member);
-                $canTakeExam = ($eligibilityInfo['can_take_exam'] ?? true) || ($eligibilityInfo['eligibility_status'] ?? '') === 'unlocked';
+                
+                // Check for retake grant from remediation
+                $quizResult = CourseQuizResult::where('user_id', auth()->id())
+                    ->where('quiz_id', $quiz->id)
+                    ->first();
+                
+                $hasRetakeGrant = $quizResult && $quizResult->hasActiveRetakeGrant();
+
+                $canTakeExam = ($eligibilityInfo['can_take_exam'] ?? true) || 
+                               ($eligibilityInfo['eligibility_status'] ?? '') === 'unlocked' ||
+                               $hasRetakeGrant;
             }
         }
 
@@ -171,6 +181,7 @@ class CourseQuizController extends Controller
 
         // ── Remediation status สำหรับ student ──
         $remediationStatus = null;
+        $retakeStatus = null;
 
         if (!$isCourseAdmin) {
             // ดึง session ที่ผูกกับ quiz นี้
@@ -197,6 +208,20 @@ class CourseQuizController extends Controller
                     ] : null,
                 ];
             }
+
+            // Check for retake grant from any remediation
+            $quizResult = CourseQuizResult::where('user_id', auth()->id())
+                ->where('quiz_id', $quiz->id)
+                ->first();
+
+            if ($quizResult) {
+                $retakeStatus = [
+                    'unlocked'    => $quizResult->retake_unlocked_at !== null,
+                    'used'        => $quizResult->retake_used_at !== null,
+                    'can_retake'  => $quizResult->hasActiveRetakeGrant(),
+                    'unlocked_at' => $quizResult->retake_unlocked_at?->toDateTimeString(),
+                ];
+            }
         }
 
         return response()->json([
@@ -206,6 +231,7 @@ class CourseQuizController extends Controller
             'canTakeExam' => $canTakeExam,
             'questions_hidden_reason' => $questionsHiddenReason,
             'remediation_status'      => $remediationStatus,
+            'retake_status'           => $retakeStatus,
         ]);
     }
 

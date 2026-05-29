@@ -50,12 +50,18 @@ class CourseQuizResultController extends Controller
             ->first();
 
         if ($quizResult) {
-            $quizResult->update([
+            $updates = [
                 'status'        => 0,
                 'started_at'    => date('Y-m-d H:i:s'),
-                // 'completed_at'  => $request->completed_at, // Reset completion on new start?
                 'completed_at'  => null,
-            ]);
+            ];
+
+            // Mark retake as used if student has an active grant
+            if ($quizResult->hasActiveRetakeGrant()) {
+                $updates['retake_used_at'] = now();
+            }
+
+            $quizResult->update($updates);
 
             return response()->json([
                 'status'        => true,

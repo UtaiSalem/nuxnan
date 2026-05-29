@@ -23,7 +23,7 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
 
-            $table->index(['language', 'difficulty'], 'idx_lang_diff');
+            $table->index(['language', 'difficulty'], 'idx_words_lang_diff');
             $table->index('category', 'idx_category');
             $table->index('is_active', 'idx_active');
         });

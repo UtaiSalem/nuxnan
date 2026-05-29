@@ -32,6 +32,7 @@ const selectedGroupId = ref<number | null>(null)
 const canTakeExam = ref(true)
 const eligibility = ref<any>(null)
 const remediationStatus = ref<any>(null)
+const retakeStatus = ref<any>(null)
 
 // Fetch quiz details
 const { data: quiz, refresh, pending } = await useAsyncData(
@@ -45,11 +46,10 @@ const { data: quiz, refresh, pending } = await useAsyncData(
       canTakeExam.value = res.canTakeExam
       eligibility.value = res.eligibility
     }
-    if (res.remediation_status) {
-      remediationStatus.value = res.remediation_status
-    } else {
-      remediationStatus.value = null
-    }
+    
+    remediationStatus.value = res.remediation_status || null
+    retakeStatus.value = res.retake_status || null
+    
     return res.quiz
   }
 )
@@ -272,12 +272,13 @@ const getStatusBadge = computed(() => {
         <!-- Action Area -->
         <div class="p-8 text-center">
           <div v-if="!isCourseAdmin">
-             <!-- Eligibility Panel -->
-             <div v-if="!canTakeExam && eligibility" class="mb-8 text-left">
+             <!-- Eligibility Panel / Retake Grant -->
+             <div v-if="(!canTakeExam && eligibility) || retakeStatus?.can_retake" class="mb-8 text-left">
                <ExamEligibilityPanel 
                   :course-id="courseId" 
                   :can-take-exam="canTakeExam" 
                   :eligibility="eligibility"
+                  :retake-status="retakeStatus"
                   @unlocked="refresh"
                />
              </div>

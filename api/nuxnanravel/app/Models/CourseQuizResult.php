@@ -29,12 +29,25 @@ class CourseQuizResult extends Model
         'passed',
         'status',
         'efficiency',
+        'retake_unlocked_at',
+        'retake_used_at',
+        'retake_granted_by_enrollment_id',
     ];
 
     protected $casts = [
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'retake_unlocked_at' => 'datetime',
+        'retake_used_at' => 'datetime',
     ];
+
+    /**
+     * Check if the student has an active retake grant (unlocked but not used).
+     */
+    public function hasActiveRetakeGrant(): bool
+    {
+        return $this->retake_unlocked_at !== null && $this->retake_used_at === null;
+    }
 
     // Define relationships
     public function user(): BelongsTo
