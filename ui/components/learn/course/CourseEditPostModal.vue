@@ -117,6 +117,7 @@ const updatePost = async () => {
   
   try {
     const formData = new FormData()
+    formData.append('_method', 'PATCH')
     formData.append('content', postContent.value)
     formData.append('privacy_settings', selectedPrivacy.value.toString())
     
@@ -130,7 +131,7 @@ const updatePost = async () => {
       formData.append(`remove_images[${index}]`, imageId.toString())
     })
     
-    const response = await api.patch(`/api/courses/${props.courseId}/posts/${props.post.id}`, formData)
+    const response = await api.post(`/api/courses/${props.courseId}/posts/${props.post.id}`, formData)
     
     if (response.success || response.data) {
       const updatedPost = response.data || response.post || {
