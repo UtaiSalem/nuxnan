@@ -149,6 +149,7 @@ const handlePostDeleted = (postId: number) => {
 
 // Open edit modal
 const openEditModal = (post: any) => {
+  if (!post?.id) return
   editingPost.value = { ...post }
   showEditModal.value = true
 }

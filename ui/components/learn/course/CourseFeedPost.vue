@@ -539,15 +539,18 @@ const handleReplyDislike = async (reply: any, commentId: number) => {
 }
 
 // Delete Post
+const isDeleting = ref(false)
 const deletePost = async () => {
+  if (isDeleting.value) return
   const confirmed = await swal.confirm('คุณต้องการลบโพสต์นี้หรือไม่?', 'ลบโพสต์')
   if (!confirmed) return
-  
+
+  isDeleting.value = true
   try {
     const response = await api.call(`/api/courses/${props.courseId}/posts/${props.post.id}`, {
       method: 'DELETE'
     })
-    
+
     if (response.success) {
       emit('delete', props.post.id)
       swal.toast('ลบโพสต์สำเร็จ', 'success')
@@ -557,6 +560,8 @@ const deletePost = async () => {
   } catch (error) {
     console.error('Failed to delete post:', error)
     swal.error('เกิดข้อผิดพลาดในการลบโพสต์')
+  } finally {
+    isDeleting.value = false
   }
 }
 
@@ -661,15 +666,16 @@ const handlePollDelete = () => {
           >
             <button
               v-if="isAuthor || isCourseAdmin"
-              @click="emit('edit', post); showMenu = false"
+              @click.stop="emit('edit', post); showMenu = false"
               class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 flex items-center gap-2"
             >
               <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
               แก้ไข
             </button>
             <button
-              @click="deletePost(); showMenu = false"
-              class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+              :disabled="isDeleting"
+              @click.stop="deletePost(); showMenu = false"
+              class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
               ลบ

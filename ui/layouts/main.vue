@@ -117,6 +117,7 @@ const gamesSubmenu = [
   { name: 'ทายตัวเลข', href: '/play/games/guessing-number-game', icon: 'fluent:number-symbol-24-regular' },
   { name: 'XO', href: '/play/games/xo-game', icon: 'fluent:grid-24-regular' },
   { name: 'งู', href: '/play/games/snake-game', icon: 'fluent:animal-turtle-24-regular' },
+  { name: 'Mental Math', href: '/play/games/mental-math-game', icon: 'fluent:brain-circuit-24-filled' },
   { name: 'จับคู่', href: '/play/games/mental-match', icon: 'fluent:brain-circuit-24-regular' },
   { name: 'พิมพ์ดีด', href: '/play/games/typing', icon: 'fluent:keyboard-24-regular' },
 ]

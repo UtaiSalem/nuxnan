@@ -38,44 +38,72 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ### Feature: Typing Classroom Race — Bug Fixes & Polish
 
-**สถานะ:** ✅ COMPLETED (2026-05-27)
+**สถานะ:** ✅ COMPLETED (2026-05-27) — commit `f389406e`
+
+5 bugs แก้แล้ว: countdown view switch, Echo leave API, memory leak throttle, finalize กับคนออก, race condition ใน rank
 
 ---
 
----
+### Feature: Exam Retake Flow — Phase 2 (Authorization Logic)
+
+**สถานะ:** 📋 Ready to implement
+
+**เป้าหมาย:** เมื่อ student ผ่าน remediation session ที่ผูกกับ quiz → อนุญาตให้ retake quiz ได้อีก 1 ครั้ง
+
+#### ขั้นตอน Backend
+
+| # | ไฟล์ | การเปลี่ยนแปลง | หมายเหตุ |
+|---|---|---|---|
+| 1 | `RemediationService.php` | `gradeEnrollment()`: เมื่อ `passed = true` และ `session->quiz_id ≠ null` → สร้าง/อัพเดท quiz retake grant record | ใช้ model ใหม่ `QuizRetakeGrant` หรือ field `quiz_retake_unlocked_at` ใน `quiz_enrollments` |
+| 2 | Migration | เพิ่ม column `retake_unlocked_at` (nullable timestamp) ใน `quiz_enrollments` หรือสร้าง `quiz_retake_grants` table | ใช้ `quiz_enrollments` approach ก่อน — simpler, 1 retake per quiz |
+| 3 | `QuizAttemptController` (หรือ quiz show endpoint) | ตรวจว่า `retake_unlocked_at` มีค่าและ attempt ยังไม่ถูกใช้ → return `can_retake: true` ใน response | ใช้ `retake_used_at` เป็น flag ป้องกัน double retake |
+| 4 | `QuizAttemptController::store()` | ถ้า student attempt เกิน max_attempts แต่ `can_retake = true` → อนุญาต และ mark `retake_used_at = now()` | ต้องใช้ DB lock เพื่อกัน race condition เหมือน race rank |
+| 5 | Feature test | ผ่าน remediation → can_retake true; ใช้ retake แล้ว can_retake false; ไม่ผ่าน remediation → ยังเข้าไม่ได้ | ไฟล์: `tests/Feature/ExamRetakePhase2Test.php` (ใหม่) |
+
+#### ขั้นตอน Frontend
+
+| # | ไฟล์ | การเปลี่ยนแปลง |
+|---|---|---|
+| 6 | Quiz detail page / `ExamEligibilityPanel.vue` | ถ้า `can_retake = true` → แสดง state "✅ คุณผ่าน remediation — กดเพื่อเริ่มสอบ" พร้อมปุ่มเปิดได้ |
+| 7 | Quiz attempt form | ส่ง request ตามปกติ — backend จัดการ unlock; หลัง submit ที่สำเร็จ refresh eligibility state |
+| 8 | Quiz detail (หลัง retake ใช้แล้ว) | ถ้า `can_retake = false` และ `retake_used = true` → แสดง "คุณใช้สิทธิ์ retake แล้ว" |
 
 #### Verification Plan
 
 | ขั้น | Test | ผ่านเมื่อ |
 |---|---|---|
-| 1 | `npm run build` | ไม่มี error |
-| 2 | นำทาง `/typing` → `/typing/race` | ไม่มี Vue Transition warning ใน console |
-| 3 | สร้างห้อง → กดปุ่ม | ปุ่ม disabled ระหว่าง loading, error แสดงเป็น UI |
-| 4 | Join ด้วยรหัสผิด | แสดง error message ในหน้า ไม่ใช่ console |
-| 5 | Join สำเร็จ → กลับไปหน้า home | joinCode ถูก reset |
-| 6 | Host start race | Countdown panel แสดง (ไม่ใช่ lobby) |
-| 7 | User A ออกระหว่าง race | User B submit → race จบได้ปกติ |
-| 8 | 2 users submit พร้อมกัน | rank ไม่ซ้ำกัน |
-| 9 | `php artisan route:list \| grep race` | มี DELETE leave route |
+| 1 | `php artisan migrate` | ไม่มี error |
+| 2 | Feature test — pass remediation | `can_retake: true` ใน quiz response |
+| 3 | Feature test — use retake | attempt สำเร็จ; `retake_used_at` ถูก set; attempt อีกครั้งถูก block |
+| 4 | Feature test — fail remediation | `can_retake` ยัง `false` |
+| 5 | Race condition test (2 requests พร้อมกัน) | ได้ attempt เดียว ไม่ duplicate |
+| 6 | Browser smoke — quiz detail | panel แสดง "ผ่าน remediation" state ถูกต้อง |
+| 7 | `npm run build` | ไม่มี error |
+
+#### ข้อสมมติที่ใช้ (Decisions)
+- 1 remediation session → 1 quiz retake attempt (granularity 1:1)
+- Retake limit: 1 ครั้ง (ใช้แล้วหมดสิทธิ์ ต้อง enroll remediation ใหม่ถ้าจะ retake อีก)
+- Implementation path: เพิ่ม columns ใน `quiz_enrollments` (simple) ไม่ใช้ table ใหม่ก่อน
+- `max_attempts` field ของ quiz ไม่เปลี่ยน — retake bypass ผ่าน separate flag เพื่อ auditability
 
 ---
 
 ## Current Snapshot
 
-- Date: 2026-05-25
+- Date: 2026-05-27
 - Branch: main
 - Repository: `C:\wamp64\www\nuxnan`
 - Frontend: `ui/` Nuxt/Vue/TypeScript/Pinia/Tailwind/PrimeVue
 - Backend: `api/nuxnanravel/` Laravel/PHP/JWT/MySQL/Reverb
-- Current focus: Typing Game Settings — Responsive layout fix
-- Pending commit: งานสะสม (Lesson Widget, Curriculum Fixes, Remediation, Eligibility Panel)
+- Current focus: **Exam Retake Flow — Phase 2 (Authorization Logic)**
+- Pending commit: ไม่มี — งานล่าสุดทุกอย่าง committed ใน main
 
 ## Active Work
 
 | Scope | Owner | Status | Files | Notes |
 | --- | --- | --- | --- | --- |
-| Typing Classroom Race — Bug fixes & polish | — | 📋 Ready to implement | race.vue, index.vue, play.vue, useClassroomRace.ts, TypingRaceController.php | 5 bugs confirmed, 7 ขั้นตอนพร้อม |
-| Exam retake flow — Phase 2 (Auth Logic) | — | 📋 Planned | RemediationService.php, quiz controller | unlock retake เมื่อ passed remediation |
+| Typing Classroom Race — Bug fixes & polish | — | ✅ Done (`f389406e`) | race.vue, useClassroomRace.ts, TypingRaceController.php | 5 bugs แก้แล้ว |
+| Exam retake flow — Phase 2 (Auth Logic) | — | 📋 Ready to implement | `RemediationService.php`, quiz controller, `quiz_enrollments` migration, `ExamEligibilityPanel.vue` | แผนละเอียดอยู่ใน Work Plan ด้านบน |
 
 ## Coordination Board
 
@@ -91,9 +119,10 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Open Questions
 
-1. **Quiz Attempt Limit**: ตอนนี้ quiz มี `max_attempts` field ไหม? ถ้ามีแล้ว — remediation ควร add 1 attempt หรือ reset counter เลย?
-2. **Remediation → Quiz link granularity**: 1 remediation session เชื่อมได้ 1 quiz หรือหลาย quiz? (สมมติ 1 ต่อ 1 ไปก่อน)
-3. **Pending commit**: ควร commit งานที่สะสมไว้ก่อนเริ่ม Phase 1 เพื่อ isolate changes
+1. **Quiz Attempt Limit**: ตอนนี้ quiz มี `max_attempts` field ไหม? ถ้ามีแล้ว — remediation ควร add 1 attempt หรือ reset counter เลย? → **ตัดสินใจ (Phase 2 plan):** ไม่แตะ `max_attempts`; ใช้ separate `retake_unlocked_at` / `retake_used_at` flag แทน เพื่อ auditability
+2. **Remediation → Quiz link granularity**: 1 remediation session เชื่อมได้ 1 quiz หรือหลาย quiz? → **ตัดสินใจ:** 1 ต่อ 1 (Phase 1 migration เพิ่ม `quiz_id` ใน sessions แล้ว)
+3. ~~**Pending commit**: ควร commit งานที่สะสมไว้ก่อนเริ่ม Phase 1 เพื่อ isolate changes~~ → **ปิด:** งานทั้งหมด committed แล้ว
+4. **`quiz_enrollments` vs ตาราง `quiz_retake_grants` ใหม่**: Phase 2 plan ใช้ `quiz_enrollments` เพิ่ม 2 columns — ถ้า scope retake ขยายในอนาคต (เช่น หลาย retake, tracking per-grant) ควรสร้าง `quiz_retake_grants` table แยก
 
 ## Analysis Timeline
 
@@ -217,6 +246,14 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 - Planned UI: Cartoon Brutalist style across buttons, input, question card, timer, result card, and leaderboard modal using thick black borders, hard black shadow, white/yellow/green/red surfaces, large black number type, and no heavy gradients.
 - Verification plan: `/play/games` -> Mental Math navigation smoke, Challenge level select -> timed result -> score save/leaderboard refresh, Training save/leaderboard, mobile input/button layout, interval cleanup on navigation, and frontend build from `ui/`.
 
+### 2026-05-29 - Course feed admin delete/copy plan review
+- User asked to review a proposed plan for `/Learn/Courses/24/feeds`, where admin deleting a member post appears to create a copy instead.
+- Read-only inspection confirmed backend routes are distinct: `POST /courses/{course}/posts` creates, `PATCH /courses/{course}/posts/{course_post}` updates, and `DELETE /courses/{course}/posts/{course_post}` deletes. `CoursePostController::destroy()` performs real deletion with owner/admin authorization.
+- Strongest likely bug is in `CourseEditPostModal.vue`: edit submit uses `api.post(...?_method=PATCH, formData)` with method override in the query string. The local FormData convention elsewhere in the repo appends `_method` to the body before posting to the resource URL.
+- Weaker hypothesis: dropdown click propagation from delete to edit is not strongly supported by the current DOM because the buttons are siblings, but adding `.stop`/explicit action handlers and an `isDeleting` guard in `CourseFeedPost.vue` is still useful hardening.
+- Recommended scope: frontend-only first. Change edit update to append `_method=PATCH` in FormData body, add delete in-flight guard and disabled state, use `api.delete`/`api.del` or keep `api.call` with explicit DELETE, stop propagation on menu actions, and refresh/remove the post only after delete success.
+- Verification plan: inspect browser Network for edit as POST with FormData `_method=PATCH` to `/posts/{id}` and delete as DELETE to `/posts/{id}`; manually test admin deleting a member post, editing a member post, and double-clicking delete; run focused frontend build/check if practical.
+
 ### 2026-05-27 - Typing Classroom Race improvement plan (initial, pre-code-read)
 - User asked to plan improvements for `http://localhost:3000/Play/Games/typing/race` and shared Vue warning: `Component inside <Transition> renders non-element root node that cannot be animated`.
 - Read-only inspection found the race page at `ui/pages/Play/Games/typing/race.vue`; it uses `definePageMeta({ layout: false })` and returns `<NuxtLayout name="main">` as the template root, matching the warning stack through Nuxt page transitions. Related typing pages (`typing/index.vue`, `typing/play.vue`) use the same pattern and may emit the same warning during navigation.
@@ -226,6 +263,14 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 - Backend improvement candidates: add room leave/heartbeat or timeout handling, ensure submit/finalize ignores left participants, return normalized participant DTOs, add validation messages for full/not-found/started rooms, and consider host-only max player/config controls.
 - Intended files: `ui/pages/Play/Games/typing/race.vue`, `ui/pages/Play/Games/typing/index.vue`, `ui/pages/Play/Games/typing/play.vue`, `ui/composables/useClassroomRace.ts`, `ui/components/games/typing/ui/RaceTrack.vue`, `api/nuxnanravel/app/Http/Controllers/Api/Play/Typing/TypingRaceController.php`, `api/nuxnanravel/routes/channels.php`, `api/nuxnanravel/app/Events/TypingRaceStarted.php`, and `TypingRaceFinished.php`.
 - Verification plan: `npm run build`; browser smoke direct URL and navigation `/typing` -> `/typing/race`; create room and invalid join code; two-user/manual or mocked Echo test for lobby/start/progress/result; Laravel feature tests for create/join/start/submit/finalize/full room/leave or timeout behavior.
+
+### 2026-05-27 - Plan sync & Phase 2 improvement (อ่านแผนและปรับปรุง)
+- ตรวจสอบ `latest-analysis.md` + `worklog.md` กับ `git log` พบ 4 จุด outdated: Current Snapshot date/focus, Active Work table, Work Plan Phase 2 ขาด action steps, Open Questions ยังไม่ปิด
+- อัพเดท Current Snapshot → 2026-05-27, focus = Exam Retake Phase 2, Pending commit = none
+- อัพเดท Active Work → Race เป็น ✅ Done (commit `f389406e`); Phase 2 = Ready to implement
+- เพิ่ม Work Plan Phase 2 ละเอียด: 5 backend steps + 3 frontend steps + verification table + decisions (1:1 granularity, retake flag แทนแตะ max_attempts, DB lock กัน race condition)
+- ปิด Open Questions Q2, Q3; เพิ่ม Q4 เรื่อง `quiz_retake_grants` table ใน future scope
+- อัพเดท worklog.md: ย้าย Race bugs → Done, ปิด Pending Commit, TODO เหลือแค่ Phase 2
 
 ### 2026-05-27 - Typing Classroom Race — deep code review & improved plan
 - อ่านโค้ดจริงทุกไฟล์: `race.vue`, `useClassroomRace.ts`, `TypingRaceController.php`, `channels.php`, `RaceTrack.vue` ยืนยันและพบ bug เพิ่มจากแผนเดิม

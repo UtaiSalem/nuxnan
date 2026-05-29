@@ -6,7 +6,7 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-05-27)
+## สถานะปัจจุบัน (2026-05-27, updated)
 
 - **งานที่เสร็จแล้วทั้งหมด (committed ใน main):**
   - **Typing Game — Responsive Fix** (typing/index.vue)
@@ -60,22 +60,30 @@
   - —
 
 - **TODO:**
-  - **Exam Retake Flow Phase 2 — Authorization Logic**
-    - `RemediationService::gradeEnrollment()`: เมื่อ `passed` + มี `quiz_id` → unlock quiz retake attempt
-    - Quiz Controller: return `can_retake: true` ถ้า student ผ่าน remediation ที่ผูกกับ quiz นี้
-    - Frontend quiz page: แสดง "✅ ผ่านแล้ว เริ่มสอบได้เลย" state
-  - **Typing Classroom Race — Polish & Bug Fixes**
-    - Fix Vue `<Transition>` warning: wrap page template in stable root หรือ switch to `definePageMeta({ layout: 'main' })`
-    - `useClassroomRace.ts`: surface API errors, reset join state, add leave endpoint
-    - Backend: room leave/heartbeat/timeout, normalize participant DTOs, finalize ข้ามคนที่ออก
+  - **Exam Retake Flow Phase 2 — Authorization Logic** (`📋 Ready to implement`)
+    - Migration: เพิ่ม `retake_unlocked_at` + `retake_used_at` (nullable timestamp) ใน `quiz_enrollments`
+    - `RemediationService::gradeEnrollment()`: เมื่อ `passed` + `session->quiz_id` → set `retake_unlocked_at = now()`
+    - Quiz endpoint: ตรวจ `retake_unlocked_at` และ `retake_used_at` → return `can_retake: true/false`
+    - `QuizAttemptController::store()`: ถ้าเกิน `max_attempts` แต่ `can_retake` → อนุญาต + mark `retake_used_at` (ใช้ DB lock)
+    - Feature tests: `tests/Feature/ExamRetakePhase2Test.php` (ใหม่)
+    - Frontend: `ExamEligibilityPanel.vue` แสดง state "✅ ผ่าน remediation — กดเพื่อเริ่มสอบ"
+    - ดูแผนละเอียดใน `latest-analysis.md` → Work Plan
 
 - **Pending Commit:**
-  - `.agents/latest-analysis.md` (2026-05-27 Typing Race analysis entry)
+  - ไม่มี — ทุกอย่าง committed แล้ว
 
 ---
 
 ## ประวัติการทำงาน (Timeline)
 
+- **Typing Classroom Race — Bug Fixes & UX Polish** (committed 2026-05-27, `f389406e`)
+  - Bug 1: countdown view ไม่แสดง → เพิ่ม `view.value = 'countdown'` ใน watch
+  - Bug 2: Echo leave API ผิด → ใช้ `$echo.leave()` แทน `channel.leave()`
+  - Bug 3: memory leak throttle → `clearTimeout(progressThrottle)` ใน leaveRoom()
+  - Bug 4: finalize ค้างเมื่อคนออก → `->where('status', '!=', 'left')->count()`
+  - Bug 5: rank ซ้ำ race condition → `DB::transaction()` + `lockForUpdate()`
+- **Typing Classroom Race — deep code review & improved plan** (2026-05-27)
+- **Typing Classroom Race — initial improvement plan** (2026-05-27)
 - **Typing Game Expansion + Course Point System** (committed 2026-05-25)
   - Full typing game system: Race, Tournament, Daily Challenge, Session, Achievement, Leaderboard
   - Course point system with lesson reward campaigns and quota/budget control

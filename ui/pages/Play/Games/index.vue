@@ -50,6 +50,13 @@ definePageMeta({
     color: 'from-pink-500 to-pink-600'
   },
   {
+    title: 'Mental Math',
+    description: 'ฝึกคำนวณเลขในหัว คิดเร็ว ตอบแม่น แข่งกับเวลา',
+    icon: 'fluent:brain-circuit-24-filled',
+    route: '/play/games/mental-math-game',
+    color: 'from-emerald-500 to-teal-600'
+  },
+  {
     title: 'เกมจับคู่',
     description: 'จับคู่ภาพและคำเพื่อฝึกความจำและการคิด',
     icon: 'fluent:brain-circuit-24-regular',
