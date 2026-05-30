@@ -74,14 +74,29 @@
 - **TODO:**
   - ไม่มี — ทุกงานที่วางแผนไว้เสร็จแล้ว
 
+- **Completed Recently:**
+  - **User Profile Fixes (All 6 Phases + Testing)** (2026-05-29)
+    - Phase 1: Immediate Bug Fixes
+    - Phase 2: Privacy Control (Backend Redaction & Locked UI)
+    - Phase 3: Dynamic Sidebars (Friends & Badges)
+    - Phase 4: Tab Component Refactoring
+    - Phase 5: Activity Feed Optimization
+    - Phase 6: UX Polish & Error States
+    - Phase 7: Automated Feature Tests (`UserProfilePrivacyTest.php`)
+
 - **Pending Commit:**
-  - ✅ พร้อม commit — ยังไม่ได้ stage
+  - ✅ ไม่มี — ทุกงาน committed แล้ว (2026-05-30)
 
 ---
 
 ## ประวัติการทำงาน (Timeline)
 
-- **Typing Classroom Race — Bug Fixes & UX Polish** (committed 2026-05-27, `f389406e`)
+- **User Profile Fixes (Full Implementation & Testing)** (2026-05-29)
+  - ✅ **Backend**: `UserProfileResource` ปลอดภัยขึ้นด้วย privacy redaction + เพิ่ม `level_progress`, `friends_preview`.
+  - ✅ **Frontend**: `[id].vue` มี "Private Profile" state + Sidebar เพื่อน/Badge ดึงข้อมูลจริงจาก API.
+  - ✅ **Refactoring**: `CertificatesList.vue` ใช้ `useApi` ตามมาตรฐานโครงการ.
+  - ✅ **Quality Assurance**: เพิ่ม `UserProfilePrivacyTest.php` ทดสอบ 5 scenarios (Owner, Friend, Stranger) ผ่าน 100%.
+- **Exam Retake Flow Phase 2 — Authorization Logic** (2026-05-29)
   - Bug 1: countdown view ไม่แสดง → เพิ่ม `view.value = 'countdown'` ใน watch
   - Bug 2: Echo leave API ผิด → ใช้ `$echo.leave()` แทน `channel.leave()`
   - Bug 3: memory leak throttle → `clearTimeout(progressThrottle)` ใน leaveRoom()

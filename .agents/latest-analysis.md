@@ -14,41 +14,41 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 - Mention exact files, commands, assumptions, and remaining risks.
 - Keep secrets out of this file. Never paste `.env` values, tokens, private keys, or user credentials.
 
-## User Analysis Input (อ่านบทวิเคราะห์)
+## User Analysis Input
 
-> **Trigger:** เมื่อผู้ใช้บอกว่า "อ่านบทวิเคราะห์" → Claude อ่าน section นี้แล้ว:
-> 1. วิเคราะห์และตรวจสอบความถูกต้อง
-> 2. ปรับปรุงและเพิ่มเติมสิ่งที่ขาด
-> 3. วางแผนขั้นตอนการทำงานที่ชัดเจน
-> 4. บันทึกแผนลงใน "Work Plan" ด้านล่าง
+> Trigger: when the user says "อ่านบทวิเคราะห์", read this section, verify it against the codebase, improve or correct it, make a clear work plan, and record that plan below.
 
-<!-- วางบทวิเคราะห์ / ความต้องการ / ปัญหา / เป้าหมายที่นี่ -->
-
-(ยังไม่มีบทวิเคราะห์ — วางข้อความที่นี่แล้วบอก "อ่านบทวิเคราะห์")
+(ว่าง - พร้อมรับบทวิเคราะห์หรืองานถัดไป)
 
 ---
 
-## Work Plan (แผนการทำงาน)
+## Work Plan
 
-(ว่าง — รองรับงานถัดไป)
+### 2026-05-30 — Commit pending changes (3 logical commits) — COMPLETED
+
+**Context:** User Analysis Input ว่าง แต่มี uncommitted changes 18 ไฟล์จาก 3 งานที่เสร็จแล้วใน session ก่อน
+
+- ✅ Commit 1 — User Profile Fixes (Phases 1–7)
+- ✅ Commit 2 — Dashboard Leaderboard NaN Fix
+- ✅ Commit 3 — Sidebar Widget Timeout Fix
 
 ---
 
 ## Current Snapshot
 
-- Date: 2026-05-29
+- Date: 2026-05-30
 - Branch: main
 - Repository: `C:\wamp64\www\nuxnan`
 - Frontend: `ui/` Nuxt/Vue/TypeScript/Pinia/Tailwind/PrimeVue
 - Backend: `api/nuxnanravel/` Laravel/PHP/JWT/MySQL/Reverb
-- Current focus: ไม่มีงานค้าง — พร้อมรับ feature ใหม่
-- Pending commit: ไม่มี — ทุกอย่าง committed ใน main
+- Current focus: ไม่มีงานค้าง - พร้อมรับงานถัดไป
+- Pending commit: ไม่มี - ทุกงาน committed แล้ว
 
 ## Active Work
 
 | Scope | Owner | Status | Files | Notes |
 | --- | --- | --- | --- | --- |
-| — | — | — | — | ไม่มีงานที่กำลังทำอยู่ |
+| - | - | - | - | ไม่มีงานที่กำลังทำอยู่ |
 
 ## Coordination Board
 
@@ -68,22 +68,51 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Analysis Timeline
 
-### 2026-05-29 - Exam Retake Phase 2 + Course Feed Edit Bug — COMPLETED
-- Course Feed: `CourseEditPostModal.vue` ใช้ `api.patch(url, formData)` → PHP ไม่ parse multipart สำหรับ non-POST → เปลี่ยนเป็น `api.post` + `_method=PATCH` ใน FormData body
-- Exam Retake Phase 2: เพิ่ม 3 columns ใน `course_quiz_results` (`retake_unlocked_at`, `retake_used_at`, `retake_granted_by_enrollment_id`); `RemediationService` grant เมื่อ passed+quiz_id; `CourseQuizResultController` mark used; `CourseQuizController` return `retake_status`; `ExamEligibilityPanel` + quiz page แสดง state
-- Committed: `3caf0ffc` (feed fix), `26b04ce5` (retake phase 2)
+### 2026-05-30 - Course progress includes admin/owner analysis
+- User reported `/Learn/Courses/5/progress` shows course owner/admin in Top Performers and the needs-help card.
+- Read-only finding: `ui/components/learn/course/ProgressList.vue` renders progress from `/api/courses/{course}/progress` and top performers from `/api/courses/{course}/top-performers`; at-risk students are computed from the returned `members`.
+- Backend finding: `CourseController::progress()` and `CourseController::topPerformers()` both start from `$course->courseMembers()` without filtering learner roles or excluding the course owner. `course_members.role` documents 1=student, 2=student_leader, 3=teacher, 4=admin.
+- Likely fix plan: add a shared learner-member query/scope for active learner memberships, probably `whereIn(role, [1, 2])`, `where(course_member_status, 1)`, and `where(user_id, '!=', $course->user_id)`, then use it consistently in progress, stats, top performers, grade distribution, at-risk card, and export if expected to be learner-only.
+- Verification plan: add/adjust focused feature coverage for a course with student, student_leader, teacher/admin, and owner membership; verify `/api/courses/{course}/progress` pagination/stats and `/top-performers` exclude non-learners; smoke-test `/Learn/Courses/5/progress`.
+
+### 2026-05-30 - Dashboard activity login label analysis
+- User asked whether `login` and `เข้าสู่ระบบ` in `/dashboard` recent activity are the same thing.
+- Finding: `DashboardActivityFeed.vue` renders two separate data sources: gamification `recent_xp` and points `transactions`. Auth login fires `UsageEventType::LOGIN`; `GamificationRuleEngine` then creates an XP/rule log and points transactions for the login rule and daily-login quest.
+- Interpretation: `login`, `เข้าสู่ระบบ`, and `รางวัลภารกิจ: Daily Login` are related to the same login usage event, but displayed as separate reward records from different systems. No code changes requested yet.
+
+### 2026-05-30 - Dashboard leaderboard NaN analysis
+- User reported `/dashboard` top points leaderboard showing `NaN P`.
+- Finding: `DashboardLeaderboard.vue` formats `user.total_points`, while `/api/gamification/leaderboard/points` currently returns `points` from `users.pp` without a `total_points` alias.
+- Plan: keep the API contract compatible by adding `total_points` to the points leaderboard response, and make the dashboard widget normalize `total_points`/`points`/`score` safely before formatting.
+- Intended files: `api/nuxnanravel/app/Http/Controllers/Api/GamificationController.php`, `ui/components/dashboard/DashboardLeaderboard.vue`.
+- Verification plan: run PHP syntax check for the controller and a focused frontend type/lint check if practical; browser smoke test `/dashboard` if local auth/session allows.
+- Completed: API now returns both `points` and `total_points`; dashboard widget falls back across `total_points`, `points`, `score`, and `pp` and formats only finite numbers.
+- Verification: `php -l app/Http/Controllers/Api/GamificationController.php` passed; Pint ran for `GamificationController.php`; `php artisan route:list --path=gamification/leaderboard/points` confirmed the route; local endpoint returned numeric `total_points`; `http://localhost:3000/dashboard` returned 200. `cmd /c npx vue-tsc --noEmit --pretty false` still fails on broad pre-existing TypeScript errors unrelated to this widget.
+
+### 2026-05-30 - Sidebar widget API timeout fix completed
+- User reported 30s frontend timeouts for `/api/friends/suggestions`, `/api/friends/pending`, `/api/donates/widget`, and `/api/advertises/widget`.
+- Findings: routes existed and `/api/ping` responded, but local PHP responses were slow enough that concurrent widget calls could queue. Friend widget endpoints serialized full `UserResource` records and triggered extra count queries; advert widget serialized advertiser via full `UserResource`; donate widget selected full rows.
+- Changed: compact friend widget payloads in `FriendController`, narrow donate/advert widget queries, compact `AdvertResource` advertiser payload, and fix `AdvertisesWidget.vue` click handler mismatch.
+- Verification: PHP syntax checks passed; Pint ran on the touched PHP files; direct endpoint timings after the change were about 2.46-3.44s. `npx nuxi typecheck` still fails on broad pre-existing TypeScript issues across unrelated files; `npm run build` reached client bundling but timed out at 180s.
+
+### 2026-05-30 - Cleared stale analysis board
+- Removed the completed User Profile analysis and Work Plan from this file so the board is ready for the next task.
+- Reset Current Snapshot and Active Work to show no active task.
+
+### 2026-05-29 - User profile page fixes completed
+- User Profile phases were implemented before this cleanup, including backend privacy/resource updates, frontend profile/sidebar/tab fixes, rich text handling, video/certificate behavior, and `UserProfilePrivacyTest.php`.
+- Existing uncommitted files still include those profile changes; treat them as user/previous-session work unless explicitly asked to modify them.
+
+### 2026-05-29 - Exam Retake Phase 2 + Course Feed Edit Bug completed
+- Course Feed edit fixed by using `api.post` with `_method=PATCH` in `FormData` for multipart updates.
+- Exam Retake Phase 2 added retake grant/use fields, remediation grant logic, quiz result use tracking, `retake_status` response data, and frontend panel states.
+- Committed: `3caf0ffc` (feed fix), `26b04ce5` (retake phase 2).
 
 ### 2026-05-29 - Course feed admin delete/copy plan review
-- User asked to review a proposed plan for `/Learn/Courses/24/feeds`, where admin deleting a member post appears to create a copy instead.
-- Read-only inspection confirmed backend routes are distinct: `POST /courses/{course}/posts` creates, `PATCH /courses/{course}/posts/{course_post}` updates, and `DELETE /courses/{course}/posts/{course_post}` deletes. `CoursePostController::destroy()` performs real deletion with owner/admin authorization.
-- Strongest likely bug is in `CourseEditPostModal.vue`: edit submit uses `api.post(...?_method=PATCH, formData)` with method override in the query string. The local FormData convention elsewhere in the repo appends `_method` to the body before posting to the resource URL.
-- Recommended scope: frontend-only first. Change edit update to append `_method=PATCH` in FormData body.
+- Read-only inspection confirmed create/update/delete routes were distinct and backend delete behavior was valid.
+- Likely bug was frontend multipart PATCH handling in `CourseEditPostModal.vue`; recommended body `_method=PATCH` convention.
 
-### 2026-05-27 - Plan sync & Phase 2 improvement (อ่านแผนและปรับปรุง)
-- ตรวจสอบ `latest-analysis.md` + `worklog.md` กับ `git log` พบ 4 จุด outdated
-- อัพเดท Current Snapshot, Active Work, Work Plan Phase 2 ละเอียด, ปิด Open Questions
-
-### 2026-05-27 - Typing Classroom Race — deep code review & improved plan
-- อ่านโค้ดจริงทุกไฟล์: race.vue, useClassroomRace.ts, TypingRaceController.php ยืนยันและพบ 5 bugs
-- Bug 1: countdown view ไม่แสดง; Bug 2: Echo leave API ผิด; Bug 3: memory leak throttle; Bug 4: finalize ค้างกับคนออก; Bug 5: race condition ใน rank
-- ทั้ง 5 bugs แก้แล้วใน commit `f389406e`
+### 2026-05-27 - Typing Classroom Race review and fixes
+- Reviewed `race.vue`, `useClassroomRace.ts`, and `TypingRaceController.php`.
+- Fixed countdown view, Echo leave usage, progress throttle cleanup, finalize logic for left participants, and rank race condition.
+- Committed in `f389406e`.
