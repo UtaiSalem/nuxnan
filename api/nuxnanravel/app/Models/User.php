@@ -569,6 +569,14 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasMany(AcademyMember::class, 'user_id');
     }
 
+    /**
+     * Get academy member record for a specific academy
+     */
+    public function academyMember($academyId)
+    {
+        return $this->memberAcademies()->where('academy_id', $academyId)->first();
+    }
+
     public function donateRecipients(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'donate_recipients', 'user_id', 'donate_id');

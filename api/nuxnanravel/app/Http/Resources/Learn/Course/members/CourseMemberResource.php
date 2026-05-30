@@ -37,6 +37,13 @@ class CourseMemberResource extends JsonResource
             'notes_comments' => $this->notes_comments,
             'order_number' => $this->order_number,
             'member_code' => $this->member_code,
+
+            // Effective identity fields (fallback to resolved data if not set on member)
+            'effective_member_name' => $this->member_name ?? ($this->identity_data['member_name'] ?? $this->user->name),
+            'effective_member_code' => $this->member_code ?? ($this->identity_data['member_code'] ?? null),
+            'effective_order_number' => $this->order_number ?? ($this->identity_data['order_number'] ?? null),
+            'identity_source' => $this->identity_data['source'] ?? 'unknown',
+
             'role' => $this->role,
             'status' => $this->status,
             'course_member_status' => $this->course_member_status,

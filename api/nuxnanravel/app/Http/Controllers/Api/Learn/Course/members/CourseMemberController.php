@@ -17,6 +17,7 @@ use App\Models\CourseMember;
 use App\Models\CourseQuizResult;
 use App\Models\UserAnswerQuestion;
 use App\Services\AttendanceEligibilityService;
+use App\Services\LearnerIdentityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -24,9 +25,12 @@ class CourseMemberController extends Controller
 {
     protected AttendanceEligibilityService $eligibilityService;
 
-    public function __construct(AttendanceEligibilityService $eligibilityService)
+    protected LearnerIdentityService $identityService;
+
+    public function __construct(AttendanceEligibilityService $eligibilityService, LearnerIdentityService $identityService)
     {
         $this->eligibilityService = $eligibilityService;
+        $this->identityService = $identityService;
     }
 
     public function index(Course $course, Request $request)
@@ -65,6 +69,7 @@ class CourseMemberController extends Controller
         // passing to the resource so CourseMemberResource reads from $member->eligibility_data
         foreach ($members as $member) {
             $member->eligibility_data = $this->eligibilityService->canTakeExam($member);
+            $member->identity_data = $this->identityService->resolve($member->user, $member->course);
         }
 
         // Check if this is API V2 request
@@ -301,6 +306,10 @@ class CourseMemberController extends Controller
             $new_course_member->status = $courseAutoAcceptMembers;
             $new_course_member->course_member_status = $courseAutoAcceptMembers;
             $new_course_member->enrollment_date = now();
+
+            // Auto-populate identity from Academy/Classroom
+            $this->identityService->autoPopulate($new_course_member);
+
             $new_course_member->save();
 
             // Fire gamification event

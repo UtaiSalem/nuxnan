@@ -114,7 +114,7 @@ const fetchData = async () => {
         // Populate form
         if (data.value.member) {
             form.value = {
-                member_name: data.value.member.member_name || data.value.member.user?.name || '',
+                member_name: data.value.member.member_name ?? '',
                 member_code: data.value.member.member_code != null ? String(data.value.member.member_code) : '',
                 order_number: data.value.member.order_number != null ? data.value.member.order_number : '',
                 group_id: data.value.member.group_id ?? null,
@@ -128,6 +128,15 @@ const fetchData = async () => {
 };
 
 onMounted(fetchData);
+
+const sourceBadge = computed(() => {
+    const s = data.value?.member?.identity_source;
+    if (s === 'classroom') return { label: 'ใช้ข้อมูลห้องเรียน', class: 'bg-green-100 text-green-700 border-green-200' };
+    if (s === 'academy') return { label: 'ใช้ข้อมูลสถาบัน', class: 'bg-blue-100 text-blue-700 border-blue-200' };
+    if (s === 'user') return { label: 'ใช้ข้อมูลทั่วไป', class: 'bg-gray-100 text-gray-700 border-gray-200' };
+    if (s === 'course_override') return { label: 'ระบุเฉพาะวิชานี้', class: 'bg-orange-100 text-orange-700 border-orange-200' };
+    return null;
+});
 
 const stats = computed(() => {
     if (!data.value) return {};
@@ -395,8 +404,11 @@ onMounted(() => {
                              <span v-else class="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full border border-blue-200">
                                  นักเรียน (Student)
                              </span>
+                             <span v-if="sourceBadge" :class="['px-2 py-0.5 text-[10px] font-bold rounded-full border', sourceBadge.class]">
+                                 {{ sourceBadge.label }}
+                             </span>
                          </h3>
-                         <p class="text-sm text-gray-500">แก้ไขข้อมูลพื้นฐานของคุณในรายวิชานี้</p>
+                         <p class="text-sm text-gray-500">แก้ไขข้อมูลพื้นฐานของคุณในรายวิชานี้ (หากเว้นว่างจะใช้ข้อมูลกลาง)</p>
                     </div>
                     <div class="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium">
                         กลุ่มเรียน: {{ stats.groupName }}
@@ -406,15 +418,15 @@ onMounted(() => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">เลขที่ (Order No.)</label>
-                        <input v-model="form.order_number" type="number" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="ระบุเลขที่..." />
+                        <input v-model="form.order_number" type="number" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-blue-500 focus:border-blue-500" :placeholder="data.member?.effective_order_number || 'ระบุเลขที่...'" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสประจำตัว (Student ID)</label>
-                        <input v-model="form.member_code" type="text" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="ระบุรหัสประจำตัว..." />
+                        <input v-model="form.member_code" type="text" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-blue-500 focus:border-blue-500" :placeholder="data.member?.effective_member_code || 'ระบุรหัสประจำตัว...'" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อ-นามสกุล (Name)</label>
-                        <input v-model="form.member_name" type="text" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="ระบุชื่อ-นามสกุล..." />
+                        <input v-model="form.member_name" type="text" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm focus:ring-blue-500 focus:border-blue-500" :placeholder="data.member?.effective_member_name || 'ระบุชื่อ-นามสกุล...'" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">กลุ่มเรียน (Group)</label>

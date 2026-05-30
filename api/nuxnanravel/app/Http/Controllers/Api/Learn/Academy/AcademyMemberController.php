@@ -708,6 +708,42 @@ class AcademyMemberController extends Controller
     }
 
     /**
+     * Update member identity fields at Academy level
+     */
+    public function updateIdentity(Academy $academy, AcademyMember $member, Request $request)
+    {
+        // Check if current user is the member themselves OR has permission to manage members
+        $user = auth()->user();
+        $isOwnerOfMemberRecord = $member->user_id === $user->id;
+        
+        if (!$isOwnerOfMemberRecord && !$this->canManageMembers($academy)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้'
+            ], 403);
+        }
+
+        if ($member->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'member_code' => 'nullable|string|max:50',
+        ]);
+
+        $member->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'อัพเดทข้อมูลเรียบร้อยแล้ว',
+            'member' => new AcademyMemberResource($member->load(['user', 'student'])),
+        ]);
+    }
+
+    /**
      * Update member details (note, enrollment date, etc.)
      */
     public function updateMember(Academy $academy, AcademyMember $member, Request $request)

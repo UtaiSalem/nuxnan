@@ -68,6 +68,13 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Analysis Timeline
 
+### 2026-05-30 - Course member identity duplication analysis
+- User asked for a sustainable plan to avoid requiring students to update name, student/member code, and order number separately for every course enrollment.
+- Finding: course membership identity fields currently live on `course_members` (`member_name`, `member_code`, `order_number`) and are editable through `CourseMemberController::update`, `updateOrderNumber`, `updateMemberCode`, `updateOwnProfile`, plus UI surfaces such as `MyProgressDetails.vue`, `ProgressList.vue`, member edit pages, groups, attendance, gradebook, and progress views.
+- Related source-of-truth candidates already exist: `students.student_id`, `academy_members.member_code`/`student_id`, and `classroom_students.student_number`; courses also have nullable `academy_id`, so an academy/course-aware learner profile is safer than copying values into every course member record.
+- Recommended direction: introduce a centralized learner profile/resolution layer, keep course-specific overrides only when genuinely needed, backfill from existing `course_members`, then update resources/UI to read effective values from the centralized source while preserving backward compatibility.
+- Verification plan for implementation: migration/backfill tests, course enrollment/update feature tests, resource contract checks for members/progress/groups/attendance, and focused Nuxt smoke tests for course join, my progress, member list, and admin progress editing.
+
 ### 2026-05-30 - Course progress includes admin/owner analysis
 - User reported `/Learn/Courses/5/progress` shows course owner/admin in Top Performers and the needs-help card.
 - Read-only finding: `ui/components/learn/course/ProgressList.vue` renders progress from `/api/courses/{course}/progress` and top performers from `/api/courses/{course}/top-performers`; at-risk students are computed from the returned `members`.

@@ -154,6 +154,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::post('/{academy}/members/{member}/suspend', [AcademyMemberController::class, 'suspendMember'])->name('api.academy.members.suspend');
     Route::post('/{academy}/members/{member}/unsuspend', [AcademyMemberController::class, 'unsuspendMember'])->name('api.academy.members.unsuspend');
     Route::patch('/{academy}/members/{member}', [AcademyMemberController::class, 'updateMember'])->name('api.academy.members.update');
+    Route::patch('/{academy}/members/{member}/identity', [AcademyMemberController::class, 'updateIdentity'])->name('api.academy.members.updateIdentity');
     
     // Member profile routes
     Route::get('/{academy}/members/{member}/profile', [AcademyMemberController::class, 'getMemberProfile'])->name('api.academy.members.profile');
