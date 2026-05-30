@@ -57,7 +57,7 @@ class CourseController extends Controller
                         'exception' => get_class($e),
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
-                        'trace' => collect($e->getTrace())->take(5)->map(fn ($t) => ($t['file'] ?? '') . ':' . ($t['line'] ?? ''))->all(),
+                        'trace' => collect($e->getTrace())->take(5)->map(fn ($t) => ($t['file'] ?? '').':'.($t['line'] ?? ''))->all(),
                     ]
                     : null,
             ], 500);
@@ -887,7 +887,10 @@ class CourseController extends Controller
     public function progress(Course $course, Request $request)
     {
         // Only select needed user columns to reduce data transfer
-        $query = $course->courseMembers()->with(['user:id,name,email,profile_photo_path']);
+        // role 1=student, 2=student_leader; exclude teacher(3)/admin(4)/owner
+        $query = $course->courseMembers()
+            ->whereIn('role', [1, 2])
+            ->with(['user:id,name,email,profile_photo_path']);
 
         // Filter by Group
         if ($request->has('group_id') && $request->group_id && $request->group_id !== 'all') {
@@ -1118,9 +1121,9 @@ class CourseController extends Controller
             ];
         }
 
-        // Calculate Class Stats
-        $totalMembers = $course->courseMembers()->count();
-        $completedMembers = $course->courseMembers()->where('course_member_status', 1)->count();
+        // Calculate Class Stats — learners only (role 1=student, 2=student_leader)
+        $totalMembers = $course->courseMembers()->whereIn('role', [1, 2])->count();
+        $completedMembers = $course->courseMembers()->whereIn('role', [1, 2])->where('course_member_status', 1)->count();
 
         return response()->json([
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
@@ -1150,8 +1153,9 @@ class CourseController extends Controller
     {
         $limit = $request->get('limit', 5);
 
-        // Fetch all course members with user info
+        // Fetch learner members only (role 1=student, 2=student_leader)
         $courseMembers = $course->courseMembers()
+            ->whereIn('role', [1, 2])
             ->with('user')
             ->get();
 
