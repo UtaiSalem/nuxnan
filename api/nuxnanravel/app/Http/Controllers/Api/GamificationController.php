@@ -3,17 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\GamificationService;
 use App\Services\AchievementService;
 use App\Services\ActivitySummaryService;
-use Illuminate\Http\Request;
+use App\Services\GamificationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class GamificationController extends Controller
 {
     protected GamificationService $gamificationService;
+
     protected AchievementService $achievementService;
+
     protected ActivitySummaryService $summaryService;
 
     public function __construct(
@@ -33,7 +35,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -58,7 +60,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -93,7 +95,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -115,7 +117,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -199,7 +201,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -222,14 +224,14 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
             ], 401);
         }
 
-        if (!$user->isSuperAdmin()) {
+        if (! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -251,7 +253,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -273,7 +275,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -295,7 +297,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -319,7 +321,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -343,7 +345,7 @@ class GamificationController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -374,13 +376,15 @@ class GamificationController extends Controller
                 ->get(['id', 'name', 'pp', 'profile_photo_path'])
                 ->map(function ($user, $index) {
                     $avatar = $user->profile_photo_url;
+                    $points = (float) ($user->pp ?? 0);
 
                     return [
                         'rank' => $index + 1,
                         'id' => $user->id,
                         'name' => $user->name,
                         'username' => $user->name,
-                        'points' => $user->pp ?? 0,
+                        'points' => $points,
+                        'total_points' => $points,
                         'avatar' => $avatar,
                     ];
                 });
@@ -392,7 +396,8 @@ class GamificationController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            \Log::error('Gamification leaderboard error: ' . $e->getMessage());
+            \Log::error('Gamification leaderboard error: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch leaderboard',

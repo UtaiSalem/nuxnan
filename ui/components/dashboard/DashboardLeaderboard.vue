@@ -4,7 +4,10 @@ import { Icon } from '@iconify/vue'
 interface User {
   id: number
   name: string
-  total_points: number
+  total_points?: number | string | null
+  points?: number | string | null
+  score?: number | string | null
+  pp?: number | string | null
 }
 
 interface Props {
@@ -27,8 +30,15 @@ const getRankBadgeClass = (index: number): string => {
   return classes[index] || 'bg-slate-300 text-gray-700'
 }
 
-const formatPoints = (value: number): string => {
-  return new Intl.NumberFormat('th-TH').format(value)
+const getUserPoints = (user: User): number => {
+  const value = user.total_points ?? user.points ?? user.score ?? user.pp ?? 0
+  const points = Number(value)
+  return Number.isFinite(points) ? points : 0
+}
+
+const formatPoints = (value: number | string | null | undefined): string => {
+  const points = Number(value ?? 0)
+  return new Intl.NumberFormat('th-TH').format(Number.isFinite(points) ? points : 0)
 }
 </script>
 
@@ -72,7 +82,7 @@ const formatPoints = (value: number): string => {
               {{ user.name }}
             </p>
             <p class="text-[9px] text-amber-600 dark:text-amber-400 font-bold leading-none mt-0.5">
-              {{ formatPoints(user.total_points) }} P
+              {{ formatPoints(getUserPoints(user)) }} P
             </p>
           </div>
         </div>

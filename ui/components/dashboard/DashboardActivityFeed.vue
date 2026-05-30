@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 
 interface Transaction {
   id: number
-  type: string
+  transaction_type: string
   amount: number
   description?: string
   created_at: string
@@ -37,7 +37,10 @@ const getTransactionIcon = (type: string): string => {
     earn: 'mdi:arrow-up-circle',
     spend: 'mdi:arrow-down-circle',
     refund: 'mdi:refresh-circle',
+    transfer_in: 'mdi:arrow-down-circle',
+    transfer_out: 'mdi:arrow-up-circle',
     transfer: 'mdi:swap-horizontal',
+    admin_adjust: 'mdi:account-edit',
     conversion: 'mdi:currency-exchange',
   }
   return icons[type] || 'mdi:star-circle'
@@ -48,7 +51,10 @@ const getTransactionColor = (type: string): string => {
     earn: 'text-green-500',
     spend: 'text-red-500',
     refund: 'text-blue-500',
+    transfer_in: 'text-green-500',
+    transfer_out: 'text-orange-500',
     transfer: 'text-orange-500',
+    admin_adjust: 'text-yellow-500',
     conversion: 'text-purple-500',
   }
   return colors[type] || 'text-gray-500'
@@ -68,7 +74,10 @@ const getTypeLabel = (type: string): string => {
     earn: 'รับแต้ม',
     spend: 'ใช้แต้ม',
     refund: 'คืนแต้ม',
+    transfer_in: 'รับโอนแต้ม',
+    transfer_out: 'โอนแต้มออก',
     transfer: 'โอนแต้ม',
+    admin_adjust: 'ปรับโดย Admin',
     conversion: 'แลกแต้ม',
   }
   return labels[type] || type
@@ -135,25 +144,25 @@ const formatXpLabel = (log: XpLog): string => {
         :key="transaction.id"
         class="flex items-center gap-3 p-2 md:p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors group border border-transparent"
       >
-        <div 
+        <div
           class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-gray-50 dark:bg-vikinger-dark-50 transition-all group-hover:scale-110"
-          :class="getTransactionColor(transaction.type)"
+          :class="getTransactionColor(transaction.transaction_type)"
         >
-          <Icon :icon="getTransactionIcon(transaction.type)" class="w-4 h-4 md:w-5 md:h-5" />
+          <Icon :icon="getTransactionIcon(transaction.transaction_type)" class="w-4 h-4 md:w-5 md:h-5" />
         </div>
         <div class="min-w-0 flex-1 px-1">
           <p class="font-bold text-gray-900 dark:text-white text-xs md:text-sm truncate">
-            {{ transaction.description || getTypeLabel(transaction.type) }}
+            {{ transaction.description || getTypeLabel(transaction.transaction_type) }}
           </p>
           <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-0.5">
             {{ formatDate(transaction.created_at) }}
           </p>
         </div>
-        <div 
+        <div
           class="text-xs md:text-sm font-black shrink-0"
-          :class="getTransactionColor(transaction.type)"
+          :class="getTransactionColor(transaction.transaction_type)"
         >
-          {{ ['earn', 'refund'].includes(transaction.type) ? '+' : '-' }}{{ formatPoints(transaction.amount) }}
+          {{ ['earn', 'refund', 'transfer_in'].includes(transaction.transaction_type) ? '+' : '-' }}{{ formatPoints(transaction.amount) }}
         </div>
       </div>
     </div>
