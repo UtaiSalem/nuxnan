@@ -24,7 +24,7 @@ const fetchAdvertises = async () => {
   }
 }
 
-async function handleAdView(advertId) {
+async function viewAdvertise(advertId) {
   try {
     await api.post(`/api/advertises/${advertId}/view`)
     // View recorded; no refresh required per current UX

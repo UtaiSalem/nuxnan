@@ -3,7 +3,6 @@
 namespace App\Http\Resources\Shared;
 
 use Illuminate\Http\Request;
-use App\Http\Resources\UserResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class AdvertResource extends JsonResource
@@ -16,22 +15,36 @@ class AdvertResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'                => $this->id,
-            'advertiser'        => new UserResource($this->advertiser),
-            'amounts'           => $this->amounts,
-            'title'             => $this->title,
-            'description'       => $this->description,
-            'media_link'        => $this->media_link,
-            'duration'          => $this->duration,
-            'total_views'       => $this->total_views,
-            'remaining_views'   => $this->remaining_views,
-            'slip'              => $this->slip,
-            'status'            => $this->status,
-            'media_image'       => $this->media_image,
-            'transfer_date'     => $this->transfer_date,
-            'transfer_time'     => $this->transfer_time,
-            'created_at'        => $this->created_at,
-            'updated_at'        => $this->updated_at,
+            'id' => $this->id,
+            'advertiser' => $this->whenLoaded('advertiser', function () {
+                if (! $this->advertiser) {
+                    return null;
+                }
+
+                return [
+                    'id' => $this->advertiser->id,
+                    'name' => $this->advertiser->name,
+                    'username' => $this->advertiser->name,
+                    'avatar' => $this->advertiser->profile_photo_url,
+                    'profile_photo_url' => $this->advertiser->profile_photo_url,
+                    'reference_code' => $this->advertiser->reference_code,
+                ];
+            }),
+            'supporter' => $this->whenLoaded('advertiser', fn () => $this->advertiser?->name),
+            'amounts' => $this->amounts,
+            'title' => $this->title,
+            'description' => $this->description,
+            'media_link' => $this->media_link,
+            'duration' => $this->duration,
+            'total_views' => $this->total_views,
+            'remaining_views' => $this->remaining_views,
+            'slip' => $this->slip,
+            'status' => $this->status,
+            'media_image' => $this->media_image,
+            'transfer_date' => $this->transfer_date,
+            'transfer_time' => $this->transfer_time,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

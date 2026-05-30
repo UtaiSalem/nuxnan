@@ -2,13 +2,8 @@
 
 namespace App\Http\Controllers\Api\Play;
 
+use App\Models\Friendship;
 use App\Models\User;
-use App\Models\Friend;
-use App\Http\Requests\StoreFriendRequest;
-use App\Http\Requests\UpdateFriendRequest;
-use App\Http\Resources\UserResource;
-use App\Http\Resources\Play\FriendshipResource;
-use Illuminate\Support\Facades\Auth;
 
 class FriendController extends \App\Http\Controllers\Controller
 {
@@ -18,17 +13,38 @@ class FriendController extends \App\Http\Controllers\Controller
      */
     public function suggestions()
     {
-        $authFriends = auth()->user()->getFriends()->pluck('id')->toArray();
+        $authUser = auth()->user();
+        $userType = User::class;
 
-        $suggestions = User::where('id', '!=', Auth::id())
-            ->whereNotIn('id', $authFriends)
+        $excludedUserIds = Friendship::query()
+            ->where(function ($query) use ($authUser, $userType) {
+                $query->where(function ($query) use ($authUser, $userType) {
+                    $query->where('sender_type', $userType)
+                        ->where('sender_id', $authUser->id);
+                })->orWhere(function ($query) use ($authUser, $userType) {
+                    $query->where('recipient_type', $userType)
+                        ->where('recipient_id', $authUser->id);
+                });
+            })
+            ->get(['sender_id', 'recipient_id'])
+            ->flatMap(fn (Friendship $friendship) => [
+                (int) $friendship->sender_id,
+                (int) $friendship->recipient_id,
+            ])
+            ->push((int) $authUser->id)
+            ->unique()
+            ->values();
+
+        $suggestions = User::query()
+            ->select(['id', 'name', 'email', 'reference_code', 'profile_photo_path'])
+            ->whereNotIn('id', $excludedUserIds)
             ->inRandomOrder()
-            ->limit(15)
+            ->limit(10)
             ->get();
 
         return response()->json([
             'success' => true,
-            'users' => UserResource::collection($suggestions),
+            'users' => $suggestions->map(fn (User $user) => $this->formatWidgetUser($user)),
         ]);
     }
 
@@ -37,11 +53,36 @@ class FriendController extends \App\Http\Controllers\Controller
      */
     public function pendingRequests()
     {
-        $pendingFriends = auth()->user()->getFriendRequests();
+        $authUser = auth()->user();
+        $userType = User::class;
+
+        $pendingFriends = Friendship::query()
+            ->with([
+                'sender:id,name,email,reference_code,profile_photo_path',
+                'recipient:id,name,email,reference_code,profile_photo_path',
+            ])
+            ->where('recipient_type', $userType)
+            ->where('recipient_id', $authUser->id)
+            ->where('status', 'pending')
+            ->latest()
+            ->limit(10)
+            ->get();
 
         return response()->json([
             'success' => true,
-            'requests' => FriendshipResource::collection($pendingFriends),
+            'requests' => $pendingFriends->map(fn (Friendship $friendship) => [
+                'id' => $friendship->id,
+                'sender' => $friendship->sender ? $this->formatWidgetUser($friendship->sender) : null,
+                'recipient' => $friendship->recipient ? $this->formatWidgetUser($friendship->recipient) : null,
+                'sender_type' => $friendship->sender_type,
+                'sender_id' => $friendship->sender_id,
+                'recipient_type' => $friendship->recipient_type,
+                'recipient_id' => $friendship->recipient_id,
+                'status' => $friendship->status,
+                'created_at' => $friendship->created_at,
+                'updated_at' => $friendship->updated_at,
+                'diff_humans_created_at' => $friendship->created_at?->diffForHumans(),
+            ]),
         ]);
     }
 
@@ -57,7 +98,7 @@ class FriendController extends \App\Http\Controllers\Controller
         return response()->json([
             'success' => true,
             'user' => $recipient,
-            'message' => 'Friend request sent successfully.'
+            'message' => 'Friend request sent successfully.',
         ], 200);
     }
 
@@ -72,21 +113,22 @@ class FriendController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Friend request accepted successfully.'
+            'message' => 'Friend request accepted successfully.',
         ], 200);
     }
 
     /**
      * deny friend request
      */
-    public function denyFriendRequest(User $friend){
+    public function denyFriendRequest(User $friend)
+    {
 
         // $user = auth()->user();
         auth()->user()->denyFriendRequest($friend);
 
         return response()->json([
             'success' => true,
-            'message' => 'Friend request denied successfully.'
+            'message' => 'Friend request denied successfully.',
         ], 200);
     }
 
@@ -101,7 +143,7 @@ class FriendController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Friend removed successfully.'
+            'message' => 'Friend removed successfully.',
         ], 200);
     }
 
@@ -116,7 +158,7 @@ class FriendController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Friend removed successfully.'
+            'message' => 'Friend removed successfully.',
         ], 200);
     }
 
@@ -135,7 +177,7 @@ class FriendController extends \App\Http\Controllers\Controller
                 'current_page' => 1,
                 'last_page' => 1,
                 'total' => $friends->count(),
-            ]
+            ],
         ]);
     }
 
@@ -150,7 +192,7 @@ class FriendController extends \App\Http\Controllers\Controller
             ->orWhere('name', $identifier)
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -166,7 +208,7 @@ class FriendController extends \App\Http\Controllers\Controller
                 'current_page' => 1,
                 'last_page' => 1,
                 'total' => $friends->count(),
-            ]
+            ],
         ]);
     }
 
@@ -181,7 +223,7 @@ class FriendController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Unfriended successfully.'
+            'message' => 'Unfriended successfully.',
         ], 200);
     }
 
@@ -213,13 +255,13 @@ class FriendController extends \App\Http\Controllers\Controller
     {
         return $friends->map(function ($friend) {
             $profile = $friend->profile;
-            
+
             return [
                 'id' => $friend->id,
                 'user_id' => $friend->id,
                 'username' => $friend->name,
                 'name' => $friend->name,
-                'full_name' => $profile ? trim(($profile->first_name ?? '') . ' ' . ($profile->last_name ?? '')) ?: $friend->name : $friend->name,
+                'full_name' => $profile ? trim(($profile->first_name ?? '').' '.($profile->last_name ?? '')) ?: $friend->name : $friend->name,
                 'avatar' => $friend->profile_photo_url ?? '/images/default-avatar.png',
                 'reference_code' => $friend->reference_code,
                 'level' => $profile ? $this->calculateLevel($friend->pp ?? 0) : 1,
@@ -228,6 +270,22 @@ class FriendController extends \App\Http\Controllers\Controller
                 'mutual_friends_count' => $this->getMutualFriendsCount($friend),
             ];
         })->values();
+    }
+
+    /**
+     * Format the compact user shape needed by sidebar widgets.
+     */
+    private function formatWidgetUser(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->name,
+            'email' => $user->email,
+            'avatar' => $user->profile_photo_url,
+            'profile_photo_url' => $user->profile_photo_url,
+            'reference_code' => $user->reference_code,
+        ];
     }
 
     /**
@@ -244,7 +302,10 @@ class FriendController extends \App\Http\Controllers\Controller
      */
     private function isUserOnline(User $user): bool
     {
-        if (!$user->updated_at) return false;
+        if (! $user->updated_at) {
+            return false;
+        }
+
         return $user->updated_at->diffInMinutes(now()) < 5;
     }
 
@@ -254,11 +315,13 @@ class FriendController extends \App\Http\Controllers\Controller
     private function getMutualFriendsCount(User $friend): int
     {
         $authUser = auth()->user();
-        if (!$authUser) return 0;
-        
+        if (! $authUser) {
+            return 0;
+        }
+
         $authFriends = $authUser->getFriends()->pluck('id')->toArray();
         $friendFriends = $friend->getFriends()->pluck('id')->toArray();
-        
+
         return count(array_intersect($authFriends, $friendFriends));
     }
 }

@@ -2,17 +2,15 @@
 
 namespace App\Http\Controllers\Api\Earn;
 
-use App\Models\User;
-
-use App\Models\Donate;
-use App\Models\Activity;
-use Illuminate\Http\Request;
 use App\Enums\ActivityType;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\Earn\DonateResource;
-use App\Http\Resources\UserResource;
 use App\Http\Resources\Play\ActivityResource;
+use App\Http\Resources\UserResource;
+use App\Models\Activity;
+use App\Models\Donate;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 class DonateController extends \App\Http\Controllers\Controller
@@ -52,14 +50,14 @@ class DonateController extends \App\Http\Controllers\Controller
     public function store(Request $request)
     {
         $user = auth()->user() ?? auth('api')->user();
-        
+
         // If user is not authenticated but user_id is sent (for Slip payment via Web)
-        if (!$user && $request->has('user_id') && $request->input('payment_method') === 'slip') {
-           $user = User::find($request->input('user_id'));
+        if (! $user && $request->has('user_id') && $request->input('payment_method') === 'slip') {
+            $user = User::find($request->input('user_id'));
         }
 
         $isAnonymousRequested = $request->boolean('is_anonymous', false);
-        $isAnonymous = $isAnonymousRequested || !$user;
+        $isAnonymous = $isAnonymousRequested || ! $user;
         $paymentMethod = $request->input('payment_method', 'slip');
 
         // กำหนด validation rules - anonymous ต้องมี slip เสมอ
@@ -86,12 +84,12 @@ class DonateController extends \App\Http\Controllers\Controller
             $slip_filename = null;
             if ($request->hasFile('slip')) {
                 $slip_file = $request->file('slip');
-                $slip_filename = uniqid() . '.' . $slip_file->getClientOriginalExtension();
+                $slip_filename = uniqid().'.'.$slip_file->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/donates', $slip_file, $slip_filename);
             }
 
-            $donate = new Donate();
-            
+            $donate = new Donate;
+
             // กำหนดข้อมูลผู้บริจาค
             if ($isAnonymous) {
                 $donate->user_id = null;
@@ -102,21 +100,21 @@ class DonateController extends \App\Http\Controllers\Controller
                 $donate->donor_id = $user->id;
                 $donate->donor_name = $request->input('donor_name', $user->name);
             }
-            
+
             $donate->amounts = $validated['amounts'];
             $donate->transfer_date = Carbon::parse($request->transfer_date);
             $donate->transfer_time = $validated['transfer_time'];
             $donate->slip = $slip_filename ?? '';
             $donate->remaining_points = $validated['amounts'] * 1080;
             $donate->payment_method = $paymentMethod;
-            
+
             // จัดการตาม payment_method
             switch ($paymentMethod) {
                 case 'slip':
                     // มี slip = รอตรวจสอบจาก admin
                     $donate->status = 0; // Pending
                     break;
-                    
+
                 case 'wallet':
                     // หักจาก wallet
                     if ($user->wallet < $validated['amounts']) {
@@ -129,7 +127,7 @@ class DonateController extends \App\Http\Controllers\Controller
                     $user->decrement('wallet', $validated['amounts']);
                     $donate->status = 1; // Approved
                     break;
-                    
+
                 case 'points':
                     // หักจากแต้มสะสม (pp) - อัตราแลกเปลี่ยน: 1 บาท = 100 แต้ม
                     $pointsRequired = $validated['amounts'] * 100;
@@ -147,7 +145,7 @@ class DonateController extends \App\Http\Controllers\Controller
             }
 
             $donate->save();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'สร้างการสนับสนุนสำเร็จ',
@@ -158,11 +156,12 @@ class DonateController extends \App\Http\Controllers\Controller
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $th->getMessage(),
+                'message' => 'เกิดข้อผิดพลาด: '.$th->getMessage(),
             ], 500);
         }
     }
-// ... (skip unchanged methods)
+
+    // ... (skip unchanged methods)
     // get donor
     public function getDonor(User $user)
     {
@@ -172,12 +171,12 @@ class DonateController extends \App\Http\Controllers\Controller
         ]);
     }
 
-    //recieve
+    // recieve
     public function recieve(Donate $donate)
     {
         $donate->update([
-            'status'        => 1,
-            'approved_by'   => auth()->user()->id,
+            'status' => 1,
+            'approved_by' => auth()->user()->id,
         ]);
 
         return response()->json([
@@ -186,12 +185,12 @@ class DonateController extends \App\Http\Controllers\Controller
         ], 200);
     }
 
-    //cancel
+    // cancel
     public function reject(Donate $donate)
     {
         $donate->update([
             'status' => 2,
-            'approved_by'   => auth()->user()->id,
+            'approved_by' => auth()->user()->id,
         ]);
 
         return response()->json([
@@ -200,16 +199,17 @@ class DonateController extends \App\Http\Controllers\Controller
         ], 200);
     }
 
-    //get donate
+    // get donate
     public function getDonate(Donate $donate)
     {
         // ตรวจสอบสถานะการอนุมัติ (status: 0=รอ, 1=อนุมัติ, 2=ปฏิเสธ)
-        if($donate->status !== 1){
-            $statusMessage = match($donate->status) {
+        if ($donate->status !== 1) {
+            $statusMessage = match ($donate->status) {
                 0 => 'การสนับสนุนนี้ยังรอการตรวจสอบและอนุมัติจากแอดมิน',
                 2 => 'การสนับสนุนนี้ถูกปฏิเสธ',
                 default => 'การสนับสนุนนี้ยังไม่พร้อมใช้งาน',
             };
+
             return response()->json([
                 'success' => false,
                 'donate' => $donate,
@@ -218,7 +218,7 @@ class DonateController extends \App\Http\Controllers\Controller
             ]);
         }
 
-        if($donate->remaining_points < 270){
+        if ($donate->remaining_points < 270) {
             return response()->json([
                 'success' => false,
                 'donate' => $donate,
@@ -226,7 +226,7 @@ class DonateController extends \App\Http\Controllers\Controller
             ]);
         }
         try {
-            if($donate->remaining_points > 269){
+            if ($donate->remaining_points > 269) {
                 $authUser = auth()->user();
 
                 // ตรวจสอบจำนวนครั้งที่รับแต้มจาก donate นี้ในวันนี้ (จำกัด 10 ครั้ง/คน/วัน/การสนับสนุน)
@@ -247,34 +247,32 @@ class DonateController extends \App\Http\Controllers\Controller
 
                 $donate->recipients()->attach($authUser->id);
 
-                
                 $donate->decrement('remaining_points', 270);
-                
+
                 $authUser->increment('pp', 240);
-                 
+
                 $suggesterCode = $authUser->suggester_code ?? 99999999;
-                
+
                 $suggester = User::where('personal_code', $authUser->suggester_code)->first();
 
-                if($suggester) {
+                if ($suggester) {
                     $suggester->increment('pp', 30);
                 }
-                
-                $activity = new Activity();
+
+                $activity = new Activity;
                 $activity->user_id = $authUser->id;
                 $activity->activity_type = ActivityType::RECEIVE_DONATION->value;
                 $activity->activityable()->associate($donate->donateRecipients()->where('user_id', $authUser->id)->latest()->first());
                 $activity->save();
-       
 
                 $donate->refresh();
-        
+
                 return response()->json([
                     'success' => true,
                     'donate' => $donate,
                     'activity' => new ActivityResource($activity),
                 ]);
-            }else {
+            } else {
                 return response()->json([
                     'success' => false,
                     'donate' => $donate,
@@ -284,12 +282,13 @@ class DonateController extends \App\Http\Controllers\Controller
         } catch (\Throwable $th) {
             // throw $th;
             return response()->json([
-                'success'   => false,
-                'message'   => 'ไม่สามารถสนับสนุนได้',
-                'error'     => $th->getMessage(),
+                'success' => false,
+                'message' => 'ไม่สามารถสนับสนุนได้',
+                'error' => $th->getMessage(),
             ]);
         }
     }
+
     /**
      * Get all available donations for public view.
      */
@@ -327,7 +326,22 @@ class DonateController extends \App\Http\Controllers\Controller
      */
     public function widget()
     {
-        $donates = Donate::whereIn('status', [0, 1])
+        $donates = Donate::query()
+            ->select([
+                'id',
+                'donor_id',
+                'donor_name',
+                'amounts',
+                'slip',
+                'transfer_date',
+                'transfer_time',
+                'remaining_points',
+                'status',
+                'payment_method',
+                'created_at',
+                'updated_at',
+            ])
+            ->whereIn('status', [0, 1])
             ->where('remaining_points', '>', 0)
             ->latest()
             ->take(10)
@@ -352,4 +366,3 @@ class DonateController extends \App\Http\Controllers\Controller
         ]);
     }
 }
-
