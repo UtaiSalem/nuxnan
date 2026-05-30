@@ -25,7 +25,11 @@ const shouldShowReadMore = ref(false)
 
 const sanitizedContent = computed(() => {
   const html = convertPlainTextToHtml(props.content)
-  return sanitizeHtml(html)
+  const sanitized = sanitizeHtml(html)
+  
+  // Add sandbox to iframes that don't already have it (avoids duplicate attribute)
+  const sandboxValue = 'allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin'
+  return sanitized.replace(/<iframe(?![^>]*\ssandbox)/gi, `<iframe sandbox="${sandboxValue}"`)
 })
 
 const checkHeight = () => {

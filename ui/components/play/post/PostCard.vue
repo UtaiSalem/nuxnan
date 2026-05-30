@@ -76,7 +76,12 @@
     </div>
 
     <div v-if="post.video" class="mb-4 rounded-lg overflow-hidden aspect-video">
-      <iframe :src="post.video" allowfullscreen class="w-full h-full"></iframe>
+      <iframe 
+        :src="post.video" 
+        allowfullscreen 
+        class="w-full h-full"
+        sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin"
+      ></iframe>
     </div>
 
     <div v-if="post.album" class="mb-4 grid grid-cols-2 gap-2">

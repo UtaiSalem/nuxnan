@@ -30,15 +30,19 @@ class UserProfileResource extends JsonResource
         $points = $user->pp ?? 0;
         $levelData = $this->calculateLevel($points);
 
+        $isOwner = $request->user() && $request->user()->id === $this->user_id;
+        $isFriend = $request->user() && $request->user()->isFriendWith($user);
+        $canViewPrivate = $isOwner || $isFriend;
+
         return [
             'id'                => $this->id,
             'user_id'           => $this->user_id,
             
             // User basic info
             'username'          => $user->name,
-            'email'             => $user->email,
-            'phone'             => $user->phone_number,
-            'personal_code'     => $user->personal_code,
+            'email'             => $this->when($isOwner || ($this->show_email && $isFriend), $user->email),
+            'phone'             => $this->when($isOwner || ($this->show_phone && $isFriend), $user->phone_number),
+            'personal_code'     => $this->when($isOwner, $user->personal_code),
             'reference_code'    => $user->reference_code,
             
             // Profile info
@@ -46,9 +50,9 @@ class UserProfileResource extends JsonResource
             'last_name'         => $this->last_name,
             'full_name'         => trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? '')) ?: $user->name,
             'bio'               => $this->bio,
-            'birthdate'         => $this->birthdate,
+            'birthdate'         => $this->when($isOwner || ($this->show_birthdate && $isFriend), $this->birthdate),
             'gender'            => $this->gender,
-            'location'          => $this->location,
+            'location'          => $this->when($isOwner || ($this->show_location && $isFriend), $this->location),
             'website'           => $this->website,
             'interests'         => $this->interests,
             
@@ -65,6 +69,7 @@ class UserProfileResource extends JsonResource
             'friends'           => $this->friends ?? 0,
             'friends_count'     => $this->friends ?? 0,
             'posts_count'       => $user->activities()->count(),
+            'visits'            => $this->visits ?? 0,
             'visits_count'      => $this->visits ?? 0,
             
             // Level & Experience
@@ -72,6 +77,7 @@ class UserProfileResource extends JsonResource
             'grade'             => $this->getStudentGrade($user), // ระดับชั้น ม.1-6
             'experience'        => $levelData['current_xp'],
             'experience_to_next_level' => $levelData['xp_to_next'],
+            'level_progress'    => $levelData['progress'],
             
             // Badges Gamification
             'badges_unlocked'   => $user->badges()->count(),
@@ -86,6 +92,16 @@ class UserProfileResource extends JsonResource
                     'earned_at' => $badge->pivot->earned_at,
                 ];
             }),
+
+            // Friends Preview
+            'friends_preview'   => $user->getFriends(6)->map(function($friend) {
+                return [
+                    'id' => $friend->id,
+                    'name' => $friend->name,
+                    'avatar' => $friend->avatar,
+                    'reference_code' => $friend->reference_code,
+                ];
+            }),
             
             // Points & Wallet
             'points'            => $user->pp ?? 0,
@@ -93,6 +109,11 @@ class UserProfileResource extends JsonResource
             
             // Settings
             'privacy_settings'  => $this->privacy_settings ?? 'public',
+
+            // Permission Flags
+            'can_view_full_profile' => $canViewPrivate,
+            'is_own_profile' => $isOwner,
+            'is_friend' => $isFriend,
             
             // Profile Completion
             'profile_completion'=> $completion,

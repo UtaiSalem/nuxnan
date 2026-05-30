@@ -10,32 +10,30 @@ const loading = ref(false)
 const page = ref(1)
 const lastPage = ref(1)
 const total = ref(0)
-const config = useRuntimeConfig()
+const api = useApi()
 
 const fetchCertificates = async () => {
   if (loading.value) return
 
   loading.value = true
   try {
-    const { data }: any = await useFetch(`${config.public.apiBase}/api/users/${props.userId}/membered-courses`, {
-      query: {
-        page: page.value,
-        status: 'completed',
-        per_page: 8
-      },
-      headers: {
-        Authorization: `Bearer ${useCookie('auth_token').value}`
-      }
+    const response = await api.get(`/api/users/${props.userId}/membered-courses`, {
+      page: page.value,
+      status: 'completed',
+      per_page: 8
     })
 
-    if (data.value && data.value.success) {
+    if (response.success) {
       if (page.value === 1) {
-        certificates.value = data.value.courses
+        certificates.value = response.courses || response.data?.courses || []
       } else {
-        certificates.value = [...certificates.value, ...data.value.courses]
+        const newCourses = response.courses || response.data?.courses || []
+        certificates.value = [...certificates.value, ...newCourses]
       }
-      lastPage.value = data.value.pagination.last_page
-      total.value = data.value.pagination.total
+      
+      const pagination = response.pagination || response.data?.pagination || { last_page: 1, total: 0 }
+      lastPage.value = pagination.last_page
+      total.value = pagination.total
     }
   } catch (error) {
     console.error('Failed to fetch certificates:', error)

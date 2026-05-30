@@ -46,7 +46,8 @@ export const useRichText = () => {
         'data-type', 
         'data-checked',
         'target',
-        'rel'
+        'rel',
+        'sandbox'
       ],
       FORCE_BODY: true
     })

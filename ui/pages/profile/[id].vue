@@ -1049,7 +1049,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                       stroke-width="6" 
                       fill="none" 
                       stroke-linecap="round"
-                      :stroke-dasharray="`${(profile.level_progress || 65) * 2.64} 264`"
+                      :stroke-dasharray="`${(profile.level_progress || 0) * 2.64} 264`"
                       class="transition-all duration-1000 drop-shadow-[0_0_10px_rgba(97,93,250,0.5)]"
                     />
                     <!-- Inner decorative circle -->
@@ -1083,13 +1083,13 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               <div class="space-y-3">
                 <div class="flex justify-between text-sm">
                   <span class="text-gray-400 font-medium">Experience Points</span>
-                  <span class="text-vikinger-cyan font-bold">{{ (profile.level_progress || 65) }}%</span>
+                  <span class="text-vikinger-cyan font-bold">{{ (profile.level_progress || 0) }}%</span>
                 </div>
                 <div class="relative h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
                   <!-- Progress Fill -->
                   <div 
                     class="absolute inset-y-0 left-0 bg-gradient-to-r from-vikinger-purple via-purple-500 to-vikinger-cyan rounded-full transition-all duration-1000 shadow-lg shadow-vikinger-purple/30"
-                    :style="{ width: (profile.level_progress || 65) + '%' }"
+                    :style="{ width: (profile.level_progress || 0) + '%' }"
                   >
                     <!-- Shimmer effect -->
                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
@@ -1098,7 +1098,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   <!-- XP Text Inside Bar -->
                   <div class="absolute inset-0 flex items-center justify-center">
                     <span class="text-[10px] font-bold text-white drop-shadow-lg">
-                      {{ ((profile.points || profile.pp || 0) * 0.65).toLocaleString() }} / {{ ((profile.points || profile.pp || 0) * 0.65 + 1000).toLocaleString() }} XP
+                      {{ (profile.experience || 0).toLocaleString() }} / {{ ((profile.experience || 0) + (profile.experience_to_next_level || 0)).toLocaleString() }} XP
                     </span>
                   </div>
                 </div>
@@ -1188,7 +1188,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   </div>
                   <div class="flex-1">
                     <span class="text-xs text-gray-400 uppercase tracking-wider">ประเทศ</span>
-                    <p class="text-white font-medium">Thailand</p>
+                    <p class="text-white font-medium">{{ profile.location || 'Thailand' }}</p>
                   </div>
                 </div>
                 
@@ -1233,7 +1233,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                     <Icon icon="fluent:trophy-24-filled" class="w-4 h-4 text-white" />
                   </div>
                   Badges
-                  <span class="ml-1 px-2 py-0.5 bg-vikinger-cyan/20 text-vikinger-cyan text-xs font-bold rounded-full">{{ profile.badges_count || 0 }}</span>
+                  <span class="ml-1 px-2 py-0.5 bg-vikinger-cyan/20 text-vikinger-cyan text-xs font-bold rounded-full">{{ profile.badges_unlocked || 0 }}</span>
                 </h3>
                 <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
                   <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-400 hover:text-white" />
@@ -1242,26 +1242,34 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               
               <!-- Badges Grid - Enhanced -->
               <div class="grid grid-cols-5 gap-2 mb-4">
-                <div 
-                  v-for="i in 10" 
-                  :key="i"
-                  :class="[
-                    'group relative aspect-square rounded-xl flex items-center justify-center transition-all cursor-pointer hover:scale-110',
-                    i <= 3 ? 'bg-gradient-to-br from-yellow-500/20 to-amber-600/20 border border-yellow-500/30' : 'bg-gray-800/50 border border-gray-700'
-                  ]"
-                >
-                  <Icon 
-                    :icon="i <= 3 ? 'fluent:trophy-24-filled' : 'fluent:trophy-24-regular'" 
-                    :class="[
-                      'w-6 h-6 transition-colors',
-                      i <= 3 ? 'text-yellow-400' : 'text-gray-600 group-hover:text-gray-400'
-                    ]" 
-                  />
-                  <!-- Tooltip -->
-                  <div class="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-gray-700">
-                    {{ i <= 3 ? 'Badge Unlocked!' : 'Locked' }}
+                <template v-if="profile.badges && profile.badges.length > 0">
+                  <div 
+                    v-for="badge in profile.badges.slice(0, 10)" 
+                    :key="badge.id"
+                    class="group relative aspect-square rounded-xl flex items-center justify-center transition-all cursor-pointer hover:scale-110 bg-gradient-to-br from-yellow-500/20 to-amber-600/20 border border-yellow-500/30"
+                  >
+                    <Icon 
+                      :icon="badge.icon || 'fluent:trophy-24-filled'" 
+                      class="w-6 h-6 text-yellow-400" 
+                    />
+                    <!-- Tooltip -->
+                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-gray-700">
+                      {{ badge.name }}
+                    </div>
                   </div>
-                </div>
+                </template>
+                <template v-else>
+                  <div 
+                    v-for="i in 5" 
+                    :key="i"
+                    class="group relative aspect-square rounded-xl flex items-center justify-center transition-all bg-gray-800/50 border border-gray-700 opacity-50"
+                  >
+                    <Icon 
+                      icon="fluent:trophy-24-regular" 
+                      class="w-6 h-6 text-gray-600" 
+                    />
+                  </div>
+                </template>
               </div>
               
               <!-- View All Button -->
@@ -1296,13 +1304,29 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               
               <!-- Friends Avatar Stack -->
               <div class="flex items-center -space-x-3 mb-4">
-                <div v-for="i in 6" :key="i" class="relative group">
-                  <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 border-3 border-gray-900 flex items-center justify-center overflow-hidden hover:scale-110 hover:z-10 transition-transform cursor-pointer shadow-lg">
-                    <Icon icon="fluent:person-24-regular" class="w-6 h-6 text-gray-400" />
-                  </div>
+                <template v-if="profile.friends_preview && profile.friends_preview.length > 0">
+                  <NuxtLink 
+                    v-for="friend in profile.friends_preview" 
+                    :key="friend.id"
+                    :to="`/profile/${friend.reference_code || friend.id}`"
+                    class="relative group"
+                  >
+                    <div class="w-12 h-12 rounded-full border-3 border-gray-900 overflow-hidden hover:scale-110 hover:z-10 transition-transform shadow-lg">
+                      <img :src="friend.avatar" :alt="friend.name" class="w-full h-full object-cover" />
+                    </div>
+                    <!-- Tooltip -->
+                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-gray-700">
+                      {{ friend.name }}
+                    </div>
+                  </NuxtLink>
+                </template>
+                <div v-else class="flex items-center gap-2 text-gray-500 text-xs italic py-2">
+                  <Icon icon="fluent:people-24-regular" class="w-5 h-5" />
+                  ยังไม่มีเพื่อนในขณะนี้
                 </div>
-                <div v-if="(profile.friends_count || 0) > 6" class="w-12 h-12 rounded-full bg-gray-800 border-3 border-gray-900 flex items-center justify-center text-xs font-bold text-gray-400 hover:bg-gray-700 cursor-pointer transition-colors">
-                  +{{ (profile.friends_count || 0) - 6 }}
+                
+                <div v-if="(profile.friends_count || 0) > (profile.friends_preview?.length || 0)" class="w-12 h-12 rounded-full bg-gray-800 border-3 border-gray-900 flex items-center justify-center text-xs font-bold text-gray-400 hover:bg-gray-700 cursor-pointer transition-colors relative z-0">
+                  +{{ (profile.friends_count || 0) - (profile.friends_preview?.length || 0) }}
                 </div>
               </div>
               
@@ -1336,9 +1360,43 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
 
         <!-- Main Content Area (Center) -->
         <div class="lg:col-span-6 space-y-2 sm:space-y-3">
-          <!-- Profile Tabs Content -->
-          <!-- Timeline Tab -->
-          <template v-if="activeTab === 'timeline'">
+          <!-- Private Profile Message — แสดงเฉพาะ timeline tab เพราะ about tab ยังเปิดให้ guest ดูได้ -->
+          <template v-if="!canViewFullProfile && !isOwnProfile && activeTab === 'timeline'">
+            <BaseCard class="bg-gray-800 border-gray-700 text-center py-20 px-6 overflow-hidden relative">
+              <!-- Background Effects -->
+              <div class="absolute inset-0 opacity-10 pointer-events-none">
+                <Icon icon="fluent:lock-closed-48-regular" class="w-64 h-64 absolute -bottom-10 -right-10 rotate-12" />
+              </div>
+              
+              <div class="relative z-10">
+                <div class="w-24 h-24 bg-gradient-to-br from-vikinger-purple to-vikinger-cyan rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-vikinger-purple/20">
+                  <Icon icon="fluent:lock-closed-24-filled" class="w-12 h-12 text-white" />
+                </div>
+                <h2 class="text-2xl font-black text-white mb-2">โปรไฟล์นี้เป็นส่วนตัว</h2>
+                <p class="text-gray-400 mb-8 max-w-sm mx-auto">
+                  คุณต้องเป็นเพื่อนกับ <strong>{{ displayName }}</strong> เพื่อดูโพสต์ รูปภาพ และข้อมูลอื่นๆ
+                </p>
+                
+                <button 
+                  v-if="friendshipStatus?.status !== 'pending_sent' && friendshipStatus?.status !== 'pending_received'"
+                  @click="handleFriendAction"
+                  class="px-8 py-3 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl font-bold shadow-lg hover:scale-105 transition-all flex items-center gap-2 mx-auto"
+                >
+                  <Icon icon="fluent:person-add-24-filled" class="w-5 h-5" />
+                  ขอเป็นเพื่อนเพื่อดูข้อมูล
+                </button>
+                <div v-else class="px-6 py-3 bg-gray-700/50 text-gray-300 rounded-xl font-medium inline-flex items-center gap-2">
+                  <Icon icon="fluent:clock-24-regular" class="w-5 h-5" />
+                  {{ friendshipStatus?.status === 'pending_sent' ? 'ส่งคำขอแล้ว รอการยืนยัน' : 'รอคุณยืนยันคำขอเป็นเพื่อน' }}
+                </div>
+              </div>
+            </BaseCard>
+          </template>
+
+          <!-- Profile Tabs Content (Visible only if canViewFullProfile) -->
+          <template v-else>
+            <!-- Timeline Tab -->
+            <template v-if="activeTab === 'timeline'">
             <!-- Create Post (Own Profile Only) -->
             <CreatePostBox v-if="isOwnProfile" @post-created="handlePostCreated" />
 
@@ -1375,6 +1433,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                 Share your first post with friends!
               </p>
             </BaseCard>
+            </template>
           </template>
 
           <!-- About Tab -->

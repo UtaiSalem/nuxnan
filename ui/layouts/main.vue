@@ -63,13 +63,11 @@ const {
   isCollapsed: isLeftDrawerCollapsed,
   isMobileOpen: isMobileSidebarOpen,
   isDesktop,
-  isWideDesktop
+  isWideDesktop,
+  toggleSidebar: toggleLeftDrawer
 } = useResponsiveSidebar()
 
-const isLeftDrawerOpen = computed({
-  get: () => !isLeftDrawerCollapsed.value,
-  set: (val) => isLeftDrawerCollapsed.value = !val
-})
+const isLeftDrawerOpen = computed(() => !isLeftDrawerCollapsed.value)
 
 const enableRightSidebar = ref(false)
 const isRightDrawerOpen = ref(false)
@@ -112,7 +110,7 @@ const earnSubmenu = [
 // Games submenu items
 const gamesSubmenu = [
   { name: 'หน้าหลักเกม', href: '/play/games', icon: 'fluent:home-24-regular' },
-  { name: 'Cross Math', href: '/play/games/cross-math-game', icon: 'fluent:calculate-24-regular' },
+  { name: 'Cross Math', href: '/play/games/cross-math-game', icon: 'fluent:calculator-24-regular' },
   { name: 'Vocab Match', href: '/play/games/english-vocab-game', icon: 'fluent:book-open-24-regular' },
   { name: 'ทายตัวเลข', href: '/play/games/guessing-number-game', icon: 'fluent:number-symbol-24-regular' },
   { name: 'XO', href: '/play/games/xo-game', icon: 'fluent:grid-24-regular' },
@@ -220,8 +218,6 @@ const navigation = [
 ]
 
 // Toggle functions
-const { toggleSidebar: toggleLeftDrawer } = useResponsiveSidebar()
-
 const toggleRightDrawer = () => {
   isRightDrawerOpen.value = !isRightDrawerOpen.value
 }
@@ -453,10 +449,6 @@ const onQRActionComplete = (result) => {
           <!-- Logo + App Name -->
           <NuxtLink to="/" class="flex items-center gap-3">
             <img src="/images/plearnd-logo.png" alt="Plearnd Logo" class="w-10 h-10" />
-            <span
-              class="hidden md:inline-block px-3 py-1 text-lg font-audiowide text-white rounded-lg bg-gradient-vikinger shadow-lg"
-              >NUXNAN</span
-            >
           </NuxtLink>
         </div>
 
@@ -497,7 +489,7 @@ const onQRActionComplete = (result) => {
             <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
               <Icon icon="fluent:star-24-filled" class="w-3.5 h-3.5 text-white" />
             </div>
-            <span class="font-bold text-sm" :class="isDarkMode ? 'text-amber-400' : 'text-amber-600'">
+            <span class="font-bold text-sm whitespace-nowrap" :class="isDarkMode ? 'text-amber-400' : 'text-amber-600'">
               {{ formatNumber(authUser.pp) }}
             </span>
           </NuxtLink>
@@ -515,7 +507,7 @@ const onQRActionComplete = (result) => {
             <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center">
               <Icon icon="fluent:money-24-filled" class="w-3.5 h-3.5 text-white" />
             </div>
-            <span class="font-bold text-sm" :class="isDarkMode ? 'text-emerald-400' : 'text-emerald-600'">
+            <span class="font-bold text-sm whitespace-nowrap" :class="isDarkMode ? 'text-emerald-400' : 'text-emerald-600'">
               ฿{{ formatNumber(authUser.wallet) }}
             </span>
           </NuxtLink>
@@ -1606,7 +1598,7 @@ const onQRActionComplete = (result) => {
         </div>
       </aside>
     </div>
-    
+
     <!-- Slide-out Panel Backdrop -->
     <Transition name="fade">
       <div
@@ -1618,7 +1610,7 @@ const onQRActionComplete = (result) => {
 
     <!-- Left Panel Toggle (visible < lg when left widgets exist) -->
     <div
-      class="fixed left-0 top-1/2 -translate-y-1/2 z-30 transition-all duration-300"
+      class="fixed left-0 top-16 z-30 transition-all duration-300"
       :class="hasLeft && !layoutWidgets.isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full'"
     >
       <button
@@ -1632,7 +1624,7 @@ const onQRActionComplete = (result) => {
 
     <!-- Right Panel Toggle (visible < xl when right widgets exist) -->
     <div
-      class="fixed right-0 top-1/2 -translate-y-1/2 z-30 transition-all duration-300"
+      class="fixed right-0 top-16 z-30 transition-all duration-300"
       :class="hasRight && !layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'"
     >
       <button

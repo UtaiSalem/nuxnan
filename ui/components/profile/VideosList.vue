@@ -64,11 +64,11 @@ const fetchVideos = async () => {
     if (response.success) {
       videos.value = response.data || response.videos || []
     } else {
-      videos.value = getMockVideos()
+      videos.value = []
     }
   } catch (error) {
     console.error('Error fetching videos:', error)
-    videos.value = getMockVideos()
+    videos.value = []
   } finally {
     isLoading.value = false
   }

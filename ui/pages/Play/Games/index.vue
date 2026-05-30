@@ -10,7 +10,7 @@ definePageMeta({
   {
     title: 'Cross Math',
     description: 'ปริศนาตัวเลข เติมตัวเลขให้สมการถูกต้องทั้งแนวนอนและแนวตั้ง',
-    icon: 'fluent:calculate-24-regular',
+    icon: 'fluent:calculator-24-regular',
     route: '/play/games/cross-math-game',
     color: 'from-amber-500 to-amber-600'
   },
