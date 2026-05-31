@@ -36,6 +36,8 @@ const recentScans = ref<Array<{
   identifier: string
   studentName: string
   studentPhoto?: string
+  studentNumber?: number | null
+  classroomName?: string | null
   status: string
   time: string
 }>>([])
@@ -65,6 +67,8 @@ const doScan = async () => {
         identifier,
         studentName: res.student_name || identifier,
         studentPhoto: res.student_photo,
+        studentNumber: res.student_number ?? null,
+        classroomName: res.classroom_name ?? null,
         status: res.status,
         time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
       })
@@ -116,6 +120,8 @@ interface ManualRecord {
   student_id: number
   name: string
   photo: string
+  student_number?: number | null
+  classroom_name?: string | null
   status: string
   remark: string
 }
@@ -159,6 +165,8 @@ const loadStudents = async () => {
         student_id: s.user_id || s.user?.id || s.id,
         name: s.name || s.user?.name || [s.title_prefix_th, s.first_name_th, s.last_name_th].filter(Boolean).join(' ') || s.student_id || '',
         photo: s.profile_photo_path || s.user?.profile_photo_path || s.profile_image_url || s.profile_image || '',
+        student_number: s.student_number ?? null,
+        classroom_name: s.classroom_name ?? s.classroom?.name ?? null,
         status: 'present',
         remark: '',
       }))
@@ -603,7 +611,11 @@ const summaryPercent = (count: number) => {
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{{ scan.studentName }}</p>
-                    <p class="text-xs text-slate-400 font-mono">{{ scan.identifier }}</p>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-slate-400 font-mono">{{ scan.identifier }}</span>
+                      <span v-if="scan.studentNumber" class="text-xs text-slate-400 font-mono">#{{ scan.studentNumber }}</span>
+                      <span v-if="scan.classroomName" class="text-xs text-sky-600 dark:text-sky-400 font-medium">{{ scan.classroomName }}</span>
+                    </div>
                   </div>
                   <div class="flex items-center gap-2 shrink-0">
                     <Icon :icon="statusIcon(scan.status).icon" :class="['w-4 h-4', statusIcon(scan.status).cls]" />
@@ -649,7 +661,17 @@ const summaryPercent = (count: number) => {
                   >
                     <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-purple-500 dark:text-purple-400" />
                   </div>
-                  <span class="font-medium text-slate-900 dark:text-white truncate">{{ record.name }}</span>
+                  <div class="min-w-0">
+                    <p class="font-medium text-slate-900 dark:text-white truncate text-sm">{{ record.name }}</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <span v-if="record.student_number" class="text-xs text-slate-400 font-mono">
+                        #{{ record.student_number }}
+                      </span>
+                      <span v-if="record.classroom_name" class="text-xs text-sky-600 dark:text-sky-400 font-medium">
+                        {{ record.classroom_name }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Status buttons -->
@@ -728,19 +750,29 @@ const summaryPercent = (count: number) => {
                   <p class="font-medium text-slate-900 dark:text-white text-sm truncate">
                     {{ rec.student?.name || 'ไม่ระบุ' }}
                   </p>
-                  <p class="text-xs text-slate-500 dark:text-slate-400">
-                    {{ formatTime(rec.checked_in_at || rec.created_at) }}
-                    <span v-if="rec.method" class="ml-2">
-                      <Icon
-                        :icon="rec.method === 'qr' ? 'fluent:qr-code-24-regular' : 'fluent:pen-24-regular'"
-                        class="w-3 h-3 inline"
-                      />
-                      {{ rec.method === 'qr' ? 'QR' : 'Manual' }}
+                  <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                    <span v-if="rec.student_number" class="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                      <Icon icon="fluent:number-symbol-24-regular" class="w-3 h-3" />
+                      {{ rec.student_number }}
                     </span>
-                  </p>
+                    <span v-if="rec.classroom_name" class="inline-flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400 font-medium">
+                      <Icon icon="fluent:building-24-regular" class="w-3 h-3" />
+                      {{ rec.classroom_name }}
+                    </span>
+                    <span class="text-xs text-slate-400">
+                      {{ formatTime(rec.checked_in_at || rec.created_at) }}
+                    </span>
+                    <span v-if="rec.check_in_method" class="inline-flex items-center gap-0.5 text-xs text-slate-400">
+                      <Icon
+                        :icon="rec.check_in_method === 'qr' ? 'fluent:qr-code-24-regular' : 'fluent:pen-24-regular'"
+                        class="w-3 h-3"
+                      />
+                      {{ rec.check_in_method === 'qr' ? 'QR' : 'Manual' }}
+                    </span>
+                  </div>
                 </div>
 
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium" :class="recordBadgeClass(rec.status)">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0" :class="recordBadgeClass(rec.status)">
                   {{ statusConfig[rec.status]?.label || rec.status }}
                 </span>
               </div>

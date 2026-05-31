@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyMember;
+use App\Models\ClassroomStudent;
 use App\Models\Learn\Academy\SchoolAttendance;
 use App\Models\Learn\Academy\SchoolAttendanceRecord;
 use App\Models\Student;
@@ -118,6 +119,8 @@ class SchoolAttendanceController extends Controller
             'records.student:id,name,profile_photo_path',
             'creator:id,name',
         ]);
+
+        $this->enrichRecordsWithClassroomInfo($attendance->records, $academy->id);
 
         $summary = [
             'total' => $attendance->records->count(),
@@ -373,6 +376,8 @@ class SchoolAttendanceController extends Controller
             return $rec;
         });
 
+        [$studentNumber, $classroomName] = $this->resolveStudentClassroomInfo($userId, $academy->id);
+
         return response()->json([
             'success' => true,
             'message' => ($studentName ?? 'นักเรียน').' — '.($status === 'late' ? 'มาสาย' : 'มาเรียน'),
@@ -380,6 +385,8 @@ class SchoolAttendanceController extends Controller
             'record' => $record,
             'student_name' => $studentName,
             'student_photo' => $studentPhoto,
+            'student_number' => $studentNumber,
+            'classroom_name' => $classroomName,
         ]);
     }
 
@@ -441,5 +448,62 @@ class SchoolAttendanceController extends Controller
     private function authorizeAttendance(Academy $academy, SchoolAttendance $attendance): void
     {
         abort_if($attendance->academy_id !== $academy->id, 404);
+    }
+
+    // Enrich a collection of SchoolAttendanceRecord with student_number and classroom_name.
+    // Uses 2 batched queries (no N+1): AcademyMember → ClassroomStudent → Classroom.
+    private function enrichRecordsWithClassroomInfo(\Illuminate\Support\Collection $records, int $academyId): void
+    {
+        $userIds = $records->pluck('student_id')->filter()->unique()->values();
+        if ($userIds->isEmpty()) {
+            return;
+        }
+
+        // user_id → member_code + student FK
+        $memberMap = AcademyMember::where('academy_id', $academyId)
+            ->whereIn('user_id', $userIds)
+            ->get(['user_id', 'member_code', 'student_id'])
+            ->keyBy('user_id');
+
+        // student FK → student_number + classroom name
+        $studentFkIds = $memberMap->pluck('student_id')->filter()->unique();
+        $classroomMap = collect();
+        if ($studentFkIds->isNotEmpty()) {
+            $classroomMap = ClassroomStudent::where('academy_id', $academyId)
+                ->whereIn('student_id', $studentFkIds)
+                ->where('status', ClassroomStudent::STATUS_ACTIVE)
+                ->with('classroom:id,name')
+                ->get(['student_id', 'classroom_id', 'student_number'])
+                ->keyBy('student_id');
+        }
+
+        $records->each(function ($record) use ($memberMap, $classroomMap) {
+            $member = $memberMap->get($record->student_id);
+            $record->member_code = $member?->member_code;
+
+            $cs = $member?->student_id ? $classroomMap->get($member->student_id) : null;
+            $record->student_number = $cs?->student_number;
+            $record->classroom_name = $cs?->classroom?->name;
+        });
+    }
+
+    // Resolve classroom info for a single user — used in real-time scan responses.
+    private function resolveStudentClassroomInfo(int $userId, int $academyId): array
+    {
+        $member = AcademyMember::where('academy_id', $academyId)
+            ->where('user_id', $userId)
+            ->value('student_id');
+
+        if (! $member) {
+            return [null, null];
+        }
+
+        $cs = ClassroomStudent::where('academy_id', $academyId)
+            ->where('student_id', $member)
+            ->where('status', ClassroomStudent::STATUS_ACTIVE)
+            ->with('classroom:id,name')
+            ->first(['student_id', 'classroom_id', 'student_number']);
+
+        return [$cs?->student_number, $cs?->classroom?->name];
     }
 }
