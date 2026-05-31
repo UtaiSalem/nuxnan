@@ -78,7 +78,7 @@ class SchoolAttendanceController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        $qrToken = $attendance->generateQrToken(60);
+        $qrToken = $attendance->generateQrToken(); // no TTL — valid for full session
 
         return response()->json([
             'success' => true,
@@ -86,7 +86,6 @@ class SchoolAttendanceController extends Controller
             'data' => $attendance,
             'qr_token' => $qrToken,
             'qr_content' => "CHECKIN:SCHOOL:{$academy->id}:{$attendance->id}:{$qrToken}",
-            'qr_url' => url("/school-attendance/check-in/{$qrToken}"),
         ], 201);
     }
 
@@ -99,13 +98,14 @@ class SchoolAttendanceController extends Controller
             return response()->json(['success' => false, 'message' => 'การเช็คชื่อนี้ปิดแล้ว ไม่สามารถต่ออายุ QR ได้'], 422);
         }
 
-        $token = $attendance->generateQrToken(60);
+        // No TTL — token valid for entire session (session open/closed is the security gate)
+        $token = $attendance->generateQrToken();
 
         return response()->json([
             'success' => true,
             'qr_token' => $token,
             'qr_content' => "CHECKIN:SCHOOL:{$academy->id}:{$attendance->id}:{$token}",
-            'expires_at' => $attendance->qr_token_expires_at,
+            'expires_at' => null,
         ]);
     }
 
