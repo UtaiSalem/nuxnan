@@ -6,7 +6,7 @@ import AchievementToast from '~/components/games/typing/ui/AchievementToast.vue'
 import confetti from 'canvas-confetti'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
 })
 
 const store = useTypingStore()
@@ -103,8 +103,7 @@ function formatWpm(wpm: number) {
 </script>
 
 <template>
-  <NuxtLayout name="main">
-    <div class="max-w-4xl mx-auto py-12 px-4 space-y-12">
+  <div class="max-w-4xl mx-auto py-12 px-4 space-y-12">
       <!-- Achievement Notification -->
       <AchievementToast :achievements="newAchievements" />
 
@@ -236,6 +235,5 @@ function formatWpm(wpm: number) {
           LOBBY
         </NuxtLink>
       </div>
-    </div>
-  </NuxtLayout>
+  </div>
 </template>
