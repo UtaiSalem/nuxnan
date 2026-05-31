@@ -309,6 +309,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::delete('/', [ClassroomController::class, 'destroy'])->name('api.academy.classrooms.destroy');
         Route::post('archive', [ClassroomController::class, 'archive'])->name('api.academy.classrooms.archive');
 
+        // Attendance routes removed — replaced by school-attendances (session-based)
+
         // Legacy student management
         Route::post('students', [ClassroomController::class, 'addStudents'])->name('api.academy.classrooms.students.add');
         Route::delete('students/{student}', [ClassroomController::class, 'removeStudent'])->name('api.academy.classrooms.students.remove');
@@ -680,9 +682,40 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/layout/reset', [DashboardWidgetController::class, 'resetLayout'])->name('api.academy.dashboard.layout.reset');
     });
 
+    // Extended Modules (Phase 6)
+    Route::prefix('{academy}')->group(function () {
+        // Library
+        Route::prefix('library')->group(function () {
+            Route::get('/books', [\App\Http\Controllers\Api\Learn\Academy\LibraryController::class, 'index'])->name('api.academy.library.books.index');
+            Route::post('/books', [\App\Http\Controllers\Api\Learn\Academy\LibraryController::class, 'store'])->name('api.academy.library.books.store');
+            Route::post('/borrow', [\App\Http\Controllers\Api\Learn\Academy\LibraryController::class, 'borrow'])->name('api.academy.library.borrow');
+            Route::post('/borrowings/{borrowing}/return', [\App\Http\Controllers\Api\Learn\Academy\LibraryController::class, 'returnBook'])->name('api.academy.library.return');
+        });
+
+        // Assets
+        Route::prefix('assets')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\Learn\Academy\AssetController::class, 'index'])->name('api.academy.assets.index');
+            Route::post('/', [\App\Http\Controllers\Api\Learn\Academy\AssetController::class, 'store'])->name('api.academy.assets.store');
+            Route::post('/{asset}/maintenance', [\App\Http\Controllers\Api\Learn\Academy\AssetController::class, 'requestMaintenance'])->name('api.academy.assets.maintenance');
+        });
+    });
+
+    // Gamification & Points
+    Route::prefix('{academy}/gamification')->group(function () {
+        Route::get('/points/rules', [\App\Http\Controllers\Api\Learn\Academy\AcademyPointRuleController::class, 'index'])->name('api.academy.gamification.points.rules');
+        Route::post('/points/rules', [\App\Http\Controllers\Api\Learn\Academy\AcademyPointRuleController::class, 'store'])->name('api.academy.gamification.points.rules.store');
+        Route::patch('/points/rules/{rule}', [\App\Http\Controllers\Api\Learn\Academy\AcademyPointRuleController::class, 'update'])->name('api.academy.gamification.points.rules.update');
+        Route::delete('/points/rules/{rule}', [\App\Http\Controllers\Api\Learn\Academy\AcademyPointRuleController::class, 'destroy'])->name('api.academy.gamification.points.rules.delete');
+        
+        Route::get('/leaderboard/houses', [AnalyticsController::class, 'houseLeaderboard'])->name('api.academy.gamification.leaderboard.houses');
+        Route::get('/leaderboard/classrooms', [AnalyticsController::class, 'classroomLeaderboard'])->name('api.academy.gamification.leaderboard.classrooms');
+    });
+
     // Analytics
     Route::prefix('/{academy}/analytics')->group(function () {
         // Overview & Snapshots
+        Route::get('/dashboard-stats', [AnalyticsController::class, 'dashboardStats'])->name('api.academy.analytics.dashboardStats');
+        Route::get('/at-risk', [AnalyticsController::class, 'getAtRiskStudents'])->name('api.academy.analytics.atRisk');
         Route::get('/overview', [AnalyticsController::class, 'overview'])->name('api.academy.analytics.overview');
         Route::get('/snapshots', [AnalyticsController::class, 'getSnapshots'])->name('api.academy.analytics.snapshots');
 
@@ -715,6 +748,20 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('/alerts/unacknowledged-count', [AnalyticsController::class, 'getUnacknowledgedCount'])->name('api.academy.analytics.alerts.unacknowledgedCount');
         Route::post('/alerts/{alert}/acknowledge', [AnalyticsController::class, 'acknowledgeAlert'])->name('api.academy.analytics.alerts.acknowledge');
         Route::post('/alerts/bulk-acknowledge', [AnalyticsController::class, 'bulkAcknowledge'])->name('api.academy.analytics.alerts.bulkAcknowledge');
+    });
+
+    // =====================================================
+    // School Attendance Routes (session-based, QR check-in)
+    // =====================================================
+    Route::prefix('{academy}/school-attendances')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'index'])->name('api.academy.schoolAttendance.index');
+        Route::post('/', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'store'])->name('api.academy.schoolAttendance.store');
+        Route::get('/student/{student}', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'studentHistory'])->name('api.academy.schoolAttendance.studentHistory');
+        Route::get('/{attendance}', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'show'])->name('api.academy.schoolAttendance.show');
+        Route::post('/{attendance}/check-in', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'checkIn'])->name('api.academy.schoolAttendance.checkIn');
+        Route::post('/{attendance}/scan-student', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'scanStudent'])->name('api.academy.schoolAttendance.scanStudent');
+        Route::post('/{attendance}/records', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'storeRecords'])->name('api.academy.schoolAttendance.storeRecords');
+        Route::post('/{attendance}/close', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'close'])->name('api.academy.schoolAttendance.close');
     });
 });
 

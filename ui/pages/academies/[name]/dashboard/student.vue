@@ -107,27 +107,27 @@ const fetchAnnouncements = async () => {
 // Quick actions for student
 const quickActions = computed(() => [
   {
-    title: 'รายวิชาของฉัน',
+    title: 'หน้ารวมวิชา',
     icon: 'fluent:book-24-regular',
-    to: `/academies/${academyName.value}/student/courses`,
+    to: `/academies/${academyName.value}`,
     color: 'bg-purple-500',
   },
   {
     title: 'ดูผลการเรียน',
     icon: 'fluent:document-checkmark-24-regular',
-    to: `/academies/${academyName.value}/student/grades`,
+    to: `/academies/${academyName.value}/my-transcript`,
     color: 'bg-green-500',
   },
   {
-    title: 'งานที่ต้องทำ',
-    icon: 'fluent:clipboard-task-24-regular',
-    to: `/academies/${academyName.value}/student/assignments`,
+    title: 'บัตรนักเรียน',
+    icon: 'fluent:person-v-card-24-regular',
+    to: `/academies/${academyName.value}/my-card`,
     color: 'bg-amber-500',
   },
   {
-    title: 'ตารางเรียน',
-    icon: 'fluent:calendar-24-regular',
-    to: `/academies/${academyName.value}/student/schedule`,
+    title: 'ร้านค้าโรงเรียน',
+    icon: 'fluent:building-shop-24-regular',
+    to: `/academies/${academyName.value}/store`,
     color: 'bg-blue-500',
   },
 ])
@@ -232,7 +232,7 @@ const quickActions = computed(() => [
           <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">รายวิชาของฉัน</h2>
             <NuxtLink 
-              :to="`/academies/${academyName}/student/courses`"
+              :to="`/academies/${academyName}`"
               class="text-sm text-primary-500 hover:underline"
             >
               ดูทั้งหมด

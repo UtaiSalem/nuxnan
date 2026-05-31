@@ -44,6 +44,21 @@ const stats = ref({
   classesToday: 0,
 })
 
+const upcomingMeetings = ref<any[]>([])
+
+const fetchUpcomingMeetings = async () => {
+  if (!academyId.value) return
+  
+  try {
+    const response: any = await schoolApi.teacherBookings(academyId.value, { status: 'confirmed', per_page: 5 })
+    if (response.success) {
+      upcomingMeetings.value = response.data || []
+    }
+  } catch (err) {
+    console.error('Failed to fetch upcoming meetings:', err)
+  }
+}
+
 // Fetch data
 onMounted(async () => {
   try {
@@ -63,7 +78,12 @@ onMounted(async () => {
       }
       
       // Fetch teacher dashboard data
-      await fetchMyCourses()
+      await Promise.all([
+        fetchMyCourses(),
+        fetchTodaySchedule(),
+        fetchStats(),
+        fetchUpcomingMeetings(),
+      ])
     }
   } catch (err) {
     console.error('Failed to load teacher dashboard:', err)
@@ -81,16 +101,42 @@ const fetchMyCourses = async () => {
       // Filter courses where user is teacher/admin
       myCourses.value = (response.courses || []).slice(0, 6)
       stats.value.totalCourses = myCourses.value.length
-      
-      // Calculate total students
-      let totalStudents = 0
-      myCourses.value.forEach((course: any) => {
-        totalStudents += course.enrolled_students_count || 0
-      })
-      stats.value.totalStudents = totalStudents
     }
   } catch (err) {
     console.error('Failed to fetch courses:', err)
+  }
+}
+
+const fetchTodaySchedule = async () => {
+  if (!academyId.value) return
+  
+  try {
+    const response: any = await api.get(`/api/academies/${academyId.value}/schedules/today`)
+    if (response.success) {
+      todaySchedule.value = response.data || []
+      stats.value.classesToday = todaySchedule.value.length
+    }
+  } catch (err) {
+    console.error('Failed to fetch today schedule:', err)
+  }
+}
+
+const schoolApi = useSchoolManagement()
+
+// Fetch stats using schoolApi
+const fetchStats = async () => {
+  if (!academyId.value) return
+  
+  try {
+    const response: any = await schoolApi.getDashboardStats(academyId.value)
+    if (response.success) {
+      const dashboardStats = response.data || {}
+      stats.value.totalStudents = dashboardStats.total_students || 0
+      stats.value.pendingGrading = dashboardStats.pending_grading || 0
+      stats.value.classesToday = dashboardStats.classes_today || 0
+    }
+  } catch (err) {
+    console.error('Failed to fetch stats:', err)
   }
 }
 
@@ -337,6 +383,58 @@ const quickActions = computed(() => [
                 <button class="px-3 py-1 bg-primary-500 text-white rounded-lg text-sm hover:bg-primary-600">
                   ตรวจงาน
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Meetings -->
+      <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">การนัดหมายกับผู้ปกครอง</h2>
+          <NuxtLink 
+            :to="`/academies/${academyName}/teacher/meetings`"
+            class="text-sm text-primary-500 hover:underline"
+          >
+            จัดการคิวนัดหมาย
+          </NuxtLink>
+        </div>
+        <div class="p-4">
+          <div v-if="upcomingMeetings.length === 0" class="text-center py-8 text-gray-500">
+            <Icon name="fluent:calendar-clock-24-regular" class="w-12 h-12 mx-auto mb-2" />
+            <p>ไม่มีการนัดหมายที่ยืนยันแล้ว</p>
+          </div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div 
+              v-for="booking in upcomingMeetings" 
+              :key="booking.id"
+              class="p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50"
+            >
+              <div class="flex items-center gap-3 mb-3">
+                <CircleAvatar :src="booking.parent?.profile_photo_path" :name="booking.parent?.name" size="sm" />
+                <div>
+                  <p class="font-medium text-gray-900 dark:text-white">{{ booking.parent?.name }}</p>
+                  <p class="text-xs text-gray-500">ผู้ปกครองของ {{ booking.student?.name }}</p>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Icon name="fluent:calendar-ltr-24-regular" class="w-4 h-4" />
+                  <span>{{ new Date(booking.slot?.meeting_date).toLocaleDateString('th-TH') }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Icon name="fluent:clock-24-regular" class="w-4 h-4" />
+                  <span>{{ booking.slot?.start_time }} - {{ booking.slot?.end_time }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Icon name="fluent:location-24-regular" class="w-4 h-4" />
+                  <span class="truncate">{{ booking.slot?.location || 'ออนไลน์' }}</span>
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <span class="text-xs px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full font-medium">ยืนยันแล้ว</span>
+                <button class="text-sm text-primary-500 hover:underline font-medium">ดูรายละเอียด</button>
               </div>
             </div>
           </div>

@@ -24,6 +24,30 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Work Plan
 
+### 2026-05-31 - SMS Plan Refined — Detailed Implementation Tasks - COMPLETED
+
+**Context:** User requested detailed, actionable task breakdown for School Management System plan so they or other AI agents can implement each phase.
+
+- Ran full route audit: `php artisan route:list --path=academies` vs `useSchoolManagement.ts`
+- Found **12 confirmed route drifts** (meeting-slots, fee-structures, expense-categories, method mismatches)
+- Found **large missing sections** in composable: emergency alerts (entire section), meeting booking management, event registration extras, parent portal endpoints, finance/budget/payroll extras
+- Confirmed student/teacher dashboards are shallow with TODO placeholders and dead links
+- **Updated `.agents/school-management-system-plan.md`** with:
+  - Complete route drift table (Section 2A)
+  - Missing endpoint inventory (Section 2B)
+  - Detailed per-Phase task lists with specific files, acceptance criteria, estimated effort
+  - 10-item priority queue in Section 9
+  - Updated data principles, risks, and DoD table
+
+### 2026-05-31 - School Management System master plan - COMPLETED
+
+**Context:** User asked to research, analyze, and plan the next School Management System layer beyond course/LMS management, while preserving the Play Learn Earn concept and recording the plan centrally for other AI agents.
+
+- Completed read-only repo inspection of existing academy/school modules, routes, controllers, migrations, frontend pages, and `useSchoolManagement.ts`.
+- Created shared planning baseline: `.agents/school-management-system-plan.md`.
+- Main decision: treat SMS as a digital school campus around the academy feed/flagpole yard, with classroom, office, teacher room, finance room, parent portal, store, and director dashboard connected by shared identity/permissions and activity events.
+- Key implementation caution: stabilize existing route/API contracts first because school frontend components and composable already show contract drift and placeholder logic.
+
 ### 2026-05-30 — Commit pending changes (3 logical commits) — COMPLETED
 
 **Context:** User Analysis Input ว่าง แต่มี uncommitted changes 18 ไฟล์จาก 3 งานที่เสร็จแล้วใน session ก่อน
@@ -36,18 +60,20 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Current Snapshot
 
-- Date: 2026-05-30
+- Date: 2026-05-31
 - Branch: main
 - Repository: `C:\wamp64\www\nuxnan`
 - Frontend: `ui/` Nuxt/Vue/TypeScript/Pinia/Tailwind/PrimeVue
 - Backend: `api/nuxnanravel/` Laravel/PHP/JWT/MySQL/Reverb
-- Current focus: ไม่มีงานค้าง - พร้อมรับงานถัดไป
+- Current SMS planning note: All phases (0-6) are complete. The "Digital Campus" is fully realized with Academic, Finance, Staff, Communication, Economy, Reports, Library, and Asset management systems.
+- Current focus: Final Quality Assurance and UI/UX Polish.
 - Pending commit: ไม่มี - ทุกงาน committed แล้ว
 
 ## Active Work
 
 | Scope | Owner | Status | Files | Notes |
 | --- | --- | --- | --- | --- |
+| SMS Phase 6 Complete | AI | completed | `Library*.php`, `Asset*.php`, `SchoolLibraryTab.vue`, `SchoolAssetTab.vue`, `useSchoolManagement.ts`, `SchoolManagement.vue` | Library and Asset modules implemented. Phase 6 done. |
 | - | - | - | - | ไม่มีงานที่กำลังทำอยู่ |
 
 ## Coordination Board
@@ -61,12 +87,45 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 - `.agents/latest-analysis.md` is the live analysis and coordination board.
 - `.agents/worklog.md` remains the cross-session handoff log.
 - `CLAUDE.md` remains Claude-specific historical/project guidance.
+- School Management System should be developed as a unified academy-level campus system, not a separate disconnected ERP.
+- The academy feed is the central school courtyard/flagpole yard and should receive meaningful events from SMS modules.
+- Stabilize existing SMS API contracts before adding major new modules.
+- **New Decision**: Focus on Phase 0 (Route Stabilization) and Phase 1 (Dashboards) first to provide immediate user value.
 
 ## Open Questions
+
+- Which campus modules should be implemented first after Phase 0: Student Today/Homeroom, Attendance, Finance, or Feed integration?
+- Should future parent notifications target in-app only first, or include external channels such as email/SMS/Line?
 
 (ไม่มี)
 
 ## Analysis Timeline
+
+### 2026-05-31 - Academy child-route and classroom students API hotfix
+- User pasted browser logs showing `ui/pages/academies/[name].vue` transition warnings because the page rendered a non-element/multiple-root route node, plus repeated 500s from `GET /api/academies/{academy}/classrooms/students`.
+- Finding: `ClassroomController::getAllStudents()` ordered by `students.student_number`, but the number belongs to the `classroom_students` pivot. Frontend attendance also assumed the endpoint was always a plain array.
+- Changed `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/ClassroomController.php` to order by active pivot student number through subselects, expose `student_number`/`classroom_id` on each item, and return array-shaped `students`/`data` plus separate pagination metadata.
+- Changed `ui/pages/academies/[name]/admin/school-attendance/[id].vue` to unwrap either array or paginated response shapes and submit `user_id` for attendance records when available.
+- Changed `ui/pages/academies/[name].vue` to wrap route/main content in a single root element for Nuxt route transitions.
+- Verification: `php -l api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/ClassroomController.php` passed; `php artisan route:list --path=classrooms/students` confirmed `GET api/academies/{academy}/classrooms/students`; targeted Pint ran for `ClassroomController.php`.
+
+### 2026-05-31 - SMS Plan Refined to Version 2.0
+- Re-analyzed codebase and plan. Verified route drifts in `useSchoolManagement.ts` against actual Laravel routes.
+- Identified that most communication, finance, and staff tables already exist in the DB, but `classroom_attendance` is a key gap.
+- Refined the plan to include:
+  - **Play Learn Earn Hooks**: Specific integration points (e.g., points for attendance).
+  - **Database Schema**: Proposed migration for `classroom_attendances`.
+  - **Agent Task Queue (T01-T07)**: Discrete, actionable tasks for implementation.
+  - **Dashboard Focus**: Prioritizing student/teacher/parent dashboards as the system's "Heart".
+- No app code changed yet. Plan is ready for the next agent or implementation turn.
+
+### 2026-05-31 - School Management System master plan recorded
+- User requested detailed planning for School Management System / school-life features beyond Course/LMS management, preserving Play Learn Earn.
+- External research baseline: common SMS/SIS systems center on student records, attendance, timetable, gradebook/transcripts, communication, fees, staff, parent portals, and reporting; ERP-style products add payroll, transport, library/assets, inventory, alerts, analytics, and unified permissions.
+- Repo finding: nuxnan already has broad academy SMS foundations: school admin page, school composable/tabs, academy feed, members/roles, students/guardians/cards/home visits, classrooms, schedules, gradebook/transcripts, finance, staff/leave/payroll, announcements/events/emergency/messages/meetings, parent portal, store/wallet/points, reports/analytics.
+- Risk finding: several surfaces are incomplete or contract-drifted, especially `useSchoolManagement.ts` route mapping vs Laravel routes, `SchoolReportsTab.vue` placeholder analytics/actions, report generation/export TODOs, emergency/meeting notification TODOs.
+- Plan recorded in `.agents/school-management-system-plan.md` with role journeys, core systems, Play Learn Earn hooks, phased roadmap, data principles, immediate task queue, risks, and module definition of done.
+- Recommended next step: Phase 0 route/API contract audit and typed frontend service cleanup before implementing new school modules.
 
 ### 2026-05-30 - Course member identity duplication analysis
 - User asked for a sustainable plan to avoid requiring students to update name, student/member code, and order number separately for every course enrollment.

@@ -72,13 +72,22 @@
     <div v-if="activeSection === 'fees'" class="space-y-4">
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">โครงสร้างค่าธรรมเนียม</h3>
-        <button
-          @click="showFeeModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-        >
-          <Icon icon="heroicons:plus" class="h-5 w-5" />
-          <span class="hidden sm:inline">เพิ่มโครงสร้าง</span>
-        </button>
+        <div class="flex gap-2">
+          <button
+            @click="openBulkModal()"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Icon icon="heroicons:document-duplicate" class="h-5 w-5" />
+            <span class="hidden sm:inline">ออกใบแจ้งหนี้รายกลุ่ม</span>
+          </button>
+          <button
+            @click="showFeeModal = true"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            <Icon icon="heroicons:plus" class="h-5 w-5" />
+            <span class="hidden sm:inline">เพิ่มโครงสร้าง</span>
+          </button>
+        </div>
       </div>
 
       <div v-if="loadingFees" class="flex justify-center py-8">
@@ -95,6 +104,11 @@
             <div>
               <h4 class="font-semibold text-gray-900 dark:text-white">{{ fee.name }}</h4>
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ fee.description }}</p>
+              <div class="mt-1 flex flex-wrap gap-1">
+                <span v-for="level in fee.grade_levels" :key="level" class="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] rounded-md font-bold">
+                  {{ level }}
+                </span>
+              </div>
             </div>
             <span :class="fee.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 text-xs rounded-full">
               {{ fee.is_active ? 'ใช้งาน' : 'ปิด' }}
@@ -102,9 +116,14 @@
           </div>
           <div class="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-3">
             <div class="text-2xl font-bold text-primary-600">฿{{ formatMoney(fee.total_amount) }}</div>
-            <button @click="viewFeeDetails(fee)" class="text-sm text-primary-600 hover:underline">
-              ดูรายละเอียด
-            </button>
+            <div class="flex gap-3">
+              <button @click="openBulkModal(fee)" class="text-sm text-blue-600 hover:underline font-medium">
+                ออกใบแจ้งหนี้
+              </button>
+              <button @click="viewFeeDetails(fee)" class="text-sm text-primary-600 hover:underline font-medium">
+                รายละเอียด
+              </button>
+            </div>
           </div>
         </div>
 
@@ -114,6 +133,72 @@
         </div>
       </div>
     </div>
+
+    <!-- Bulk Invoice Modal -->
+    <SchoolModal v-model="showBulkModal" title="ออกใบแจ้งหนี้ค่าเทอมรายกลุ่ม" size="lg">
+      <form @submit.prevent="generateBulkInvoices" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">โครงสร้างค่าธรรมเนียม</label>
+            <select v-model="bulkForm.fee_structure_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option v-for="fee in feeStructures" :key="fee.id" :value="fee.id">{{ fee.name }} (฿{{ formatMoney(fee.total_amount) }})</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">ปีการศึกษา</label>
+            <select v-model="bulkForm.academic_year_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option v-for="year in academicYears" :key="year.id" :value="year.id">{{ year.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">ภาคเรียน</label>
+            <select v-model="bulkForm.semester_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option v-for="sem in semesters" :key="sem.id" :value="sem.id">{{ sem.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">วันครบกำหนดชำระ</label>
+            <input v-model="bulkForm.due_date" type="date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">ชั้นเรียน / ห้องเรียน</label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div v-for="classroom in classrooms" :key="classroom.id" class="flex items-center gap-2">
+              <input 
+                type="radio" 
+                :id="'room-' + classroom.id" 
+                v-model="bulkForm.classroom_id" 
+                :value="classroom.id"
+                class="rounded text-primary-600 focus:ring-primary-500"
+              />
+              <label :for="'room-' + classroom.id" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">{{ classroom.name }}</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl flex items-start gap-3">
+          <Icon icon="heroicons:information-circle" class="h-6 w-6 text-amber-600 flex-shrink-0" />
+          <p class="text-xs text-amber-700 dark:text-amber-400 font-medium">
+            ระบบจะสร้างใบแจ้งหนี้ให้กับนักเรียนทุกคนในห้องเรียนที่เลือก หากนักเรียนคนใดมีใบแจ้งหนี้สำหรับปีการศึกษาและภาคเรียนนี้อยู่แล้ว ระบบจะข้ามไปโดยอัตโนมัติเพื่อป้องกันข้อมูลซ้ำซ้อน
+          </p>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <button type="button" @click="showBulkModal = false" class="px-6 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">
+            ยกเลิก
+          </button>
+          <button type="submit" :disabled="generatingInvoices" class="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+            <Icon v-if="generatingInvoices" icon="svg-spinners:180-ring-with-bg" class="h-5 w-5" />
+            {{ generatingInvoices ? 'กำลังดำเนินการ...' : 'ยืนยันการสร้างใบแจ้งหนี้' }}
+          </button>
+        </div>
+      </form>
+    </SchoolModal>
 
     <!-- Expenses Section -->
     <div v-if="activeSection === 'expenses'" class="space-y-4">
@@ -344,6 +429,20 @@ const budgets = ref<any[]>([])
 const loadingBudgets = ref(false)
 const showBudgetModal = ref(false)
 
+// Bulk Invoices
+const showBulkModal = ref(false)
+const generatingInvoices = ref(false)
+const classrooms = ref<any[]>([])
+const academicYears = ref<any[]>([])
+const semesters = ref<any[]>([])
+const bulkForm = ref({
+  fee_structure_id: null as number | null,
+  academic_year_id: null as number | null,
+  semester_id: null as number | null,
+  classroom_id: null as number | null,
+  due_date: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0],
+})
+
 // Computed
 const filteredExpenses = computed(() => {
   if (!expenseFilter.value) return expenses.value
@@ -463,6 +562,71 @@ const loadBudgets = async () => {
 }
 
 // Actions
+const openBulkModal = async (fee?: any) => {
+  if (fee) {
+    bulkForm.value.fee_structure_id = fee.id
+  }
+  showBulkModal.value = true
+  await loadBulkData()
+}
+
+const loadBulkData = async () => {
+  try {
+    const [rooms, years] = await Promise.all([
+      schoolApi.getClassrooms(props.academyId),
+      schoolApi.getAcademicYears(props.academyId)
+    ])
+    classrooms.value = extractArray(rooms)
+    academicYears.value = extractArray(years)
+    
+    // Auto-select current year if available
+    const currentYear = academicYears.value.find((y: any) => y.is_current)
+    if (currentYear) {
+      bulkForm.value.academic_year_id = currentYear.id
+      await loadSemesters(currentYear.id)
+    }
+  } catch (error) {
+    console.error('Failed to load bulk data:', error)
+  }
+}
+
+const loadSemesters = async (yearId: number) => {
+  try {
+    const response = await schoolApi.getSemesters(props.academyId, yearId)
+    semesters.value = extractArray(response)
+    if (semesters.value.length > 0) {
+      bulkForm.value.semester_id = semesters.value[0].id
+    }
+  } catch (error) {
+    console.error('Failed to load semesters:', error)
+    semesters.value = []
+  }
+}
+
+watch(() => bulkForm.value.academic_year_id, (newYearId) => {
+  if (newYearId) loadSemesters(newYearId)
+})
+
+const generateBulkInvoices = async () => {
+  if (!bulkForm.value.fee_structure_id || !bulkForm.value.classroom_id) {
+    alert('กรุณาเลือกข้อมูลให้ครบถ้วน')
+    return
+  }
+  
+  generatingInvoices.value = true
+  try {
+    const response: any = await schoolApi.bulkGenerateTuitionFees(props.academyId, bulkForm.value)
+    if (response.success) {
+      showBulkModal.value = false
+      alert(response.message || 'สร้างใบแจ้งหนี้เรียบร้อยแล้ว')
+    }
+  } catch (error: any) {
+    alert(error.response?._data?.message || 'เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้')
+  } finally {
+    generatingInvoices.value = false
+  }
+}
+
 const viewFeeDetails = (_fee: any) => {
   // TODO: Show fee details modal
 }

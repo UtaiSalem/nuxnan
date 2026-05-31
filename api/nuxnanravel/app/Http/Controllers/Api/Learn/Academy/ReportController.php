@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\ReportDefinition;
-use App\Models\SavedReport;
-use App\Models\ReportSchedule;
 use App\Models\ReportExport;
+use App\Models\ReportSchedule;
+use App\Models\SavedReport;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -155,7 +155,7 @@ class ReportController extends Controller
 
         $definitionId = $definition->id;
         $definitionName = $definition->name;
-        
+
         $definition->delete();
 
         $this->auditLog->log(
@@ -259,23 +259,60 @@ class ReportController extends Controller
         ]);
 
         $definition = ReportDefinition::findOrFail($validated['definition_id']);
-        
-        if ($definition->academy_id !== $academy->id) {
+
+        if ($definition->academy_id !== $academy->id && $definition->academy_id !== 1) {
             return response()->json([
                 'success' => false,
                 'message' => 'Report definition not found in this academy',
             ], 404);
         }
 
-        // TODO: Implement actual report generation logic here
-        // For now, create a placeholder with empty cached data
+        // Simple query-backed generation logic
+        $data = [];
+        $params = $validated['parameters'] ?? [];
+        $sourceType = is_array($definition->data_source) ? ($definition->data_source['type'] ?? '') : $definition->data_source;
+
+        switch ($sourceType) {
+            case 'school_attendances':
+                $data = DB::table('school_attendance_records')
+                    ->join('school_attendances', 'school_attendance_records.attendance_id', '=', 'school_attendances.id')
+                    ->select(
+                        'school_attendances.date',
+                        'school_attendances.title',
+                        DB::raw("SUM(CASE WHEN school_attendance_records.status = 'present' THEN 1 ELSE 0 END) as present_count"),
+                        DB::raw("SUM(CASE WHEN school_attendance_records.status = 'absent' THEN 1 ELSE 0 END) as absent_count"),
+                        DB::raw("SUM(CASE WHEN school_attendance_records.status = 'late' THEN 1 ELSE 0 END) as late_count"),
+                        DB::raw('COUNT(*) as total_count')
+                    )
+                    ->where('school_attendance_records.academy_id', $academy->id)
+                    ->groupBy('school_attendances.date', 'school_attendances.title')
+                    ->orderByDesc('school_attendances.date')
+                    ->get();
+                break;
+
+            case 'tuition_fees':
+                $data = DB::table('tuition_fees')
+                    ->join('users', 'tuition_fees.user_id', '=', 'users.id')
+                    ->leftJoin('classrooms', 'tuition_fees.classroom_id', '=', 'classrooms.id')
+                    ->select('users.name as student_name', 'classrooms.name as classroom_name',
+                        'total_amount', 'paid_amount', 'remaining_amount', 'due_date')
+                    ->where('tuition_fees.academy_id', $academy->id)
+                    ->get();
+                break;
+
+            case 'at_risk_students':
+                $atRiskResponse = app(AnalyticsController::class)->getAtRiskStudents($request, $academy);
+                $data = $atRiskResponse->getData()->data;
+                break;
+        }
+
         $savedReport = SavedReport::create([
             'academy_id' => $academy->id,
             'definition_id' => $definition->id,
             'user_id' => Auth::id(),
             'name' => $validated['name'],
-            'parameters' => $validated['parameters'] ?? [],
-            'cached_data' => [], // This should be generated based on definition
+            'parameters' => $params,
+            'cached_data' => $data,
             'generated_at' => now(),
             'expires_at' => now()->addDays(7),
         ]);
@@ -415,7 +452,7 @@ class ReportController extends Controller
         ]);
 
         $savedReport = SavedReport::findOrFail($validated['saved_report_id']);
-        
+
         if ($savedReport->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
@@ -504,7 +541,7 @@ class ReportController extends Controller
             ], 404);
         }
 
-        $schedule->update(['is_active' => !$schedule->is_active]);
+        $schedule->update(['is_active' => ! $schedule->is_active]);
 
         return response()->json([
             'success' => true,

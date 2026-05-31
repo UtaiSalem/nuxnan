@@ -298,6 +298,33 @@ class PointsService
     }
 
     /**
+     * Award points to a user based on a rule key
+     */
+    public function awardByRule(User $user, string $ruleKey, ?int $sourceId = null, ?string $description = null, ?array $metadata = null): ?PointsTransaction
+    {
+        $rule = $this->getRule($ruleKey);
+        
+        if (!$rule) {
+            Log::warning("Point rule not found: {$ruleKey}");
+            return null;
+        }
+
+        if (!$this->canEarnFromRule($user, $rule)) {
+            return null;
+        }
+
+        return $this->earn(
+            $user, 
+            $rule->calculateAmount(), 
+            $rule->source_type ?? $ruleKey, 
+            $sourceId, 
+            $description ?? $rule->rule_name, 
+            $metadata, 
+            $rule->xp_amount ?? 0
+        );
+    }
+
+    /**
      * Update user level based on total points
      */
     protected function updateUserLevel(User $user): void

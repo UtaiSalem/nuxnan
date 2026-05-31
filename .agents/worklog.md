@@ -123,3 +123,29 @@
 - **Cross Math Enter key** (2026-05-23)
 
 ---
+
+## 2026-05-31 - School Management System Phase 6 Complete (Full Implementation)
+
+- **Task:** พัฒนาโมดูลเสริม Library (ห้องสมุด) และ Asset (ทรัพย์สิน) ให้สมบูรณ์ตามแผน SMS
+- **Files touched:**
+  - `api/nuxnanravel/app/Models/Learn/Academy/Library*.php`
+  - `api/nuxnanravel/app/Models/Learn/Academy/SchoolAsset.php`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/LibraryController.php`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AssetController.php`
+  - `ui/components/school/SchoolLibraryTab.vue`
+  - `ui/components/school/SchoolAssetTab.vue`
+  - `ui/components/school/SchoolManagement.vue`
+  - `ui/composables/useSchoolManagement.ts`
+- **Done:**
+  - **Library System**: สร้างระบบแคตตาล็อกหนังสือและบันทึกการยืม-คืน พร้อมระบบตรวจสอบสถานะ Overdue และจำนวนเล่มที่เหลือ
+  - **Asset Management**: สร้างระบบทะเบียนทรัพย์สินและพัสดุโรงเรียน รองรับการแจ้งซ่อม (Maintenance) และการคำนวณมูลค่ารวมของทรัพย์สิน
+  - **Main Navigation**: อัปเดตแท็บในหน้าบริหารจัดการโรงเรียนให้ครอบคลุมโมดูลใหม่ทั้งหมด
+  - **Full Project Wrap-up**: ดำเนินการตามแผน SMS Master Plan ครบถ้วนทุก Phase (0-6)
+- **Status:** **Completed 100%**
+- **Recommended next work:**
+  - ดำเนินการทดสอบระบบ (QA) เชิงลึกในแต่ละโมดูล
+  - เก็บรายละเอียดความสวยงาม (Fine-tuning UI) และความเร็วในการตอบสนอง (Optimization)
+- **Verification:**
+  - รัน Migration สำหรับ Library และ Assets สำเร็จ
+  - เพิ่มแท็บและเชื่อมต่อ UI กับ Composable ใหม่เรียบร้อย
+

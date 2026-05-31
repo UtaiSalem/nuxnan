@@ -553,9 +553,15 @@ const loadReports = async () => {
 const loadAnalytics = async () => {
   loadingAnalytics.value = true
   try {
-    // TODO: Implement when API is ready
-    // const response = await schoolApi.getReportAnalytics(props.academyId, analyticsDateFrom.value, analyticsDateTo.value)
-    // analyticsData.value = response
+    const response: any = await schoolApi.getAnalyticsOverview(props.academyId)
+    if (response.success && response.data) {
+      // Map response data to UI state
+      analyticsData.value = {
+        totalRevenue: response.data.revenue || 0,
+        totalExpense: response.data.expense || 0,
+        profit: (response.data.revenue || 0) - (response.data.expense || 0),
+      }
+    }
   } catch (error) {
     console.error('Failed to load analytics:', error)
   } finally {
@@ -566,7 +572,7 @@ const loadAnalytics = async () => {
 const loadKpis = async () => {
   loadingKpis.value = true
   try {
-    const response = await schoolApi.getKPIs(props.academyId)
+    const response: any = await schoolApi.getKPIs(props.academyId)
     kpiDefinitions.value = extractArray(response)
   } catch (error) {
     console.error('Failed to load KPIs:', error)
@@ -576,9 +582,23 @@ const loadKpis = async () => {
   }
 }
 
-// Actions (TODO: wire up to backend once endpoints are ready)
-const generateReport = (_report: any) => {
-  // placeholder
+// Actions
+const generateReport = async (report: any) => {
+  const reportName = prompt('ระบุชื่อรายงานที่ต้องการสร้าง:', report.name)
+  if (!reportName) return
+  
+  try {
+    const response: any = await schoolApi.generateReport(props.academyId, report.id, {
+      name: reportName,
+      parameters: {} // Default params
+    })
+    
+    if (response.success) {
+      alert('สร้างรายงานเรียบร้อยแล้ว คุณสามารถดูได้ที่แท็บ "รายงานที่บันทึกไว้"')
+    }
+  } catch (error) {
+    console.error('Failed to generate report:', error)
+  }
 }
 
 const downloadReport = (_report: any, _format: string) => {

@@ -46,6 +46,21 @@
       <div v-else-if="activeTab === 'reports'">
         <SchoolReportsTab :academy-id="academyId" />
       </div>
+
+      <!-- Gamification Tab -->
+      <div v-else-if="activeTab === 'gamification'">
+        <SchoolGamificationTab :academy-id="academyId" />
+      </div>
+
+      <!-- Library Tab -->
+      <div v-else-if="activeTab === 'library'">
+        <SchoolLibraryTab :academy-id="academyId" />
+      </div>
+
+      <!-- Assets Tab -->
+      <div v-else-if="activeTab === 'assets'">
+        <SchoolAssetTab :academy-id="academyId" />
+      </div>
     </div>
   </div>
 </template>
@@ -65,6 +80,9 @@ const tabs = [
   { id: 'finance', name: 'การเงิน', icon: 'heroicons:banknotes' },
   { id: 'staff', name: 'บุคลากร', icon: 'heroicons:user-group' },
   { id: 'communication', name: 'สื่อสาร', icon: 'heroicons:megaphone' },
+  { id: 'gamification', name: 'แต้มรางวัล', icon: 'heroicons:trophy' },
+  { id: 'library', name: 'ห้องสมุด', icon: 'heroicons:book-open' },
+  { id: 'assets', name: 'ทรัพย์สิน', icon: 'heroicons:archive-box' },
   { id: 'reports', name: 'รายงาน', icon: 'heroicons:chart-bar' },
 ]
 </script>

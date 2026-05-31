@@ -4,19 +4,18 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\AnalyticsAlertHistory;
+use App\Models\AnalyticsAlertRule;
 use App\Models\AnalyticsSnapshot;
+use App\Models\ComparativeAnalytics;
 use App\Models\KpiDefinition;
 use App\Models\KpiValue;
-use App\Models\ComparativeAnalytics;
 use App\Models\TrendAnalysis;
-use App\Models\AnalyticsAlertRule;
-use App\Models\AnalyticsAlertHistory;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
-use Carbon\Carbon;
 
 class AnalyticsController extends Controller
 {
@@ -30,12 +29,175 @@ class AnalyticsController extends Controller
     // ==================== ANALYTICS SNAPSHOTS ====================
 
     /**
+     * Get dashboard stats for teachers/admins
+     */
+    public function dashboardStats(Request $request, Academy $academy): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Basic counts
+        $totalStudents = $academy->members()->where('role', 'student')->count();
+        $totalCourses = $academy->courses()->count();
+
+        // Classes today
+        $today = now()->dayOfWeekIso; // 1-7
+        $classesToday = \App\Models\Learn\Academy\ClassSchedule::where('academy_id', $academy->id)
+            ->where('day_of_week', $today)
+            ->where('is_active', true);
+
+        // If not admin/owner, filter by teacher
+        $isFullAdmin = $academy->user_id === $user->id; // simplified check
+        if (! $isFullAdmin) {
+            $classesToday->where('teacher_id', $user->id);
+        }
+
+        $classesCount = $classesToday->count();
+
+        // Pending grading (simplified: count submissions not graded)
+        // This depends on the LMS structure. Assuming CourseAssignmentSubmission model.
+        $pendingGrading = 0;
+        if (class_exists('\App\Models\Learn\Course\CourseAssignmentSubmission')) {
+            $pendingGrading = \App\Models\Learn\Course\CourseAssignmentSubmission::whereHas('assignment.course', function ($q) use ($academy) {
+                $q->where('academy_id', $academy->id);
+            })
+                ->whereNull('grade')
+                ->whereNull('graded_at');
+
+            if (! $isFullAdmin) {
+                $pendingGrading->whereHas('assignment', function ($q) use ($user) {
+                    $q->where('teacher_id', $user->id);
+                });
+            }
+            $pendingGrading = $pendingGrading->count();
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_students' => $totalStudents,
+                'total_courses' => $totalCourses,
+                'classes_today' => $classesCount,
+                'pending_grading' => $pendingGrading,
+            ],
+        ]);
+    }
+
+    /**
+     * Get house leaderboard
+     */
+    public function houseLeaderboard(Request $request, Academy $academy): JsonResponse
+    {
+        $houses = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+            ->where('type', 'house')
+            ->get();
+
+        $leaderboard = $houses->map(function ($house) {
+            $totalPoints = DB::table('users')
+                ->join('academy_group_members', 'users.id', '=', 'academy_group_members.user_id')
+                ->where('academy_group_members.academy_group_id', $house->id)
+                ->sum('pp'); // Assuming pp is the points column in users table
+
+            return [
+                'id' => $house->id,
+                'name' => $house->name,
+                'points' => (float) $totalPoints,
+                'member_count' => $house->members()->count(),
+                'icon' => $house->settings['icon'] ?? 'fluent:shield-24-filled',
+                'color' => $house->settings['color'] ?? '#3B82F6',
+            ];
+        })->sortByDesc('points')->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $leaderboard,
+        ]);
+    }
+
+    /**
+     * Get classroom leaderboard
+     */
+    public function classroomLeaderboard(Request $request, Academy $academy): JsonResponse
+    {
+        $classrooms = \App\Models\Learn\Academy\Classroom::where('academy_id', $academy->id)->get();
+
+        $leaderboard = $classrooms->map(function ($classroom) {
+            $totalPoints = DB::table('users')
+                ->join('classroom_members', 'users.id', '=', 'classroom_members.student_id')
+                ->where('classroom_members.classroom_id', $classroom->id)
+                ->sum('pp');
+
+            return [
+                'id' => $classroom->id,
+                'name' => $classroom->name,
+                'points' => (float) $totalPoints,
+                'student_count' => $classroom->members()->count(),
+            ];
+        })->sortByDesc('points')->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $leaderboard,
+        ]);
+    }
+
+    /**
+     * Get at-risk students based on attendance and grades
+     */
+    public function getAtRiskStudents(Request $request, Academy $academy): JsonResponse
+    {
+        $attendanceThreshold = $request->get('attendance_threshold', 80);
+
+        // Get students with low attendance
+        $atRiskAttendance = DB::table('school_attendance_records')
+            ->select('student_id', DB::raw('COUNT(*) as total_days'), DB::raw("SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_days"))
+            ->where('academy_id', $academy->id)
+            ->groupBy('student_id')
+            ->havingRaw('total_days > 0 AND (present_days / total_days) * 100 < ?', [$attendanceThreshold])
+            ->pluck('student_id')
+            ->toArray();
+
+        // Get students with overdue fees
+        $atRiskFees = DB::table('tuition_fees')
+            ->where('academy_id', $academy->id)
+            ->where('status', 'overdue')
+            ->pluck('user_id')
+            ->toArray();
+
+        $allAtRiskIds = array_unique(array_merge($atRiskAttendance, $atRiskFees));
+
+        $students = \App\Models\User::whereIn('id', $allAtRiskIds)
+            ->select('id', 'name', 'profile_photo_path', 'email')
+            ->with(['academyMember' => function ($q) use ($academy) {
+                $q->where('academy_id', $academy->id);
+            }])
+            ->get()
+            ->map(function ($student) use ($atRiskAttendance, $atRiskFees) {
+                $factors = [];
+                if (in_array($student->id, $atRiskAttendance)) {
+                    $factors[] = 'low_attendance';
+                }
+                if (in_array($student->id, $atRiskFees)) {
+                    $factors[] = 'overdue_fees';
+                }
+
+                $student->risk_factors = $factors;
+
+                return $student;
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $students,
+        ]);
+    }
+
+    /**
      * Get analytics overview/summary
      */
     public function overview(Request $request, Academy $academy): JsonResponse
     {
         $date = $request->get('date', now()->toDateString());
-        
+
         $snapshots = AnalyticsSnapshot::where('academy_id', $academy->id)
             ->forDate($date)
             ->get()
@@ -65,11 +227,11 @@ class AnalyticsController extends Controller
         $query = AnalyticsSnapshot::where('academy_id', $academy->id)
             ->byCategory($validated['category']);
 
-        if (!empty($validated['type'])) {
+        if (! empty($validated['type'])) {
             $query->byType($validated['type']);
         }
 
-        if (!empty($validated['start_date']) && !empty($validated['end_date'])) {
+        if (! empty($validated['start_date']) && ! empty($validated['end_date'])) {
             $query->betweenDates($validated['start_date'], $validated['end_date']);
         }
 
@@ -231,7 +393,7 @@ class AnalyticsController extends Controller
 
         $kpiId = $kpi->id;
         $kpiName = $kpi->name;
-        
+
         $kpi->delete();
 
         $this->auditLog->log(
@@ -267,11 +429,11 @@ class AnalyticsController extends Controller
 
         $query = $kpi->values();
 
-        if (!empty($validated['period_type'])) {
+        if (! empty($validated['period_type'])) {
             $query->byPeriodType($validated['period_type']);
         }
 
-        if (!empty($validated['start_date']) && !empty($validated['end_date'])) {
+        if (! empty($validated['start_date']) && ! empty($validated['end_date'])) {
             $query->betweenDates($validated['start_date'], $validated['end_date']);
         }
 
@@ -700,7 +862,7 @@ class AnalyticsController extends Controller
         $updated = 0;
         foreach ($validated['alert_ids'] as $alertId) {
             $alert = AnalyticsAlertHistory::find($alertId);
-            if ($alert && $alert->alertRule->academy_id === $academy->id && !$alert->is_acknowledged) {
+            if ($alert && $alert->alertRule->academy_id === $academy->id && ! $alert->is_acknowledged) {
                 $alert->acknowledge(Auth::id());
                 $updated++;
             }

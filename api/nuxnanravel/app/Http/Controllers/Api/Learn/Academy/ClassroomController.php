@@ -3,20 +3,22 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
+use App\Models\Academy;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
-use App\Models\Academy;
 use App\Models\Student;
 use App\Services\ClassroomService;
 use App\Services\MemberService;
 use App\Services\StudentEnrollmentService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ClassroomController extends Controller
 {
     private ClassroomService $classroomService;
+
     private MemberService $memberService;
+
     private StudentEnrollmentService $enrollmentService;
 
     public function __construct(
@@ -58,11 +60,11 @@ class ClassroomController extends Controller
 
         // Query students through classroom_students pivot (source of truth)
         $students = Student::whereIn('id', function ($query) use ($id) {
-                $query->select('student_id')
-                    ->from('classroom_students')
-                    ->where('classroom_id', $id)
-                    ->where('status', 'active');
-            })
+            $query->select('student_id')
+                ->from('classroom_students')
+                ->where('classroom_id', $id)
+                ->where('status', 'active');
+        })
             ->select('id', 'student_id', 'title_prefix_th', 'first_name_th', 'last_name_th',
                 'nickname', 'gender', 'profile_image', 'status', 'class_level', 'class_section')
             ->orderBy('first_name_th')
@@ -78,6 +80,7 @@ class ClassroomController extends Controller
                 if ($student->profile_image) {
                     $student->profile_image_url = asset("storage/images/students/{$student->class_level}/{$student->class_section}/{$student->profile_image}");
                 }
+
                 return $student;
             })
             ->sortBy('student_number')
@@ -96,6 +99,7 @@ class ClassroomController extends Controller
                     if ($student->profile_image) {
                         $student->profile_image_url = asset("storage/images/students/{$student->class_level}/{$student->class_section}/{$student->profile_image}");
                     }
+
                     return $student;
                 });
         }
@@ -126,7 +130,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -158,7 +162,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -193,7 +197,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -213,7 +217,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -251,7 +255,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -284,7 +288,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -311,7 +315,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -336,7 +340,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -355,7 +359,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -387,7 +391,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -414,7 +418,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -436,7 +440,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -478,7 +482,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -514,7 +518,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -534,7 +538,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -559,7 +563,9 @@ class ClassroomController extends Controller
     protected function canManage(Academy $academy): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
         if ($academy->user_id === $user->id) {
             return true;
@@ -578,18 +584,18 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
         $query = Student::where('academy_id', $academyId)
-            ->with(['user', 'classroom', 'studentCard']);
+            ->with(['user', 'classroom', 'studentCard', 'currentEnrollment.classroom']);
 
         // Apply filters
         if ($request->filled('classroom_id')) {
             $query->whereHas('classroomStudents', function ($q) use ($request) {
                 $q->where('classroom_id', $request->query('classroom_id'))
-                  ->where('status', 'active');
+                    ->where('status', 'active');
             });
         }
 
@@ -597,18 +603,43 @@ class ClassroomController extends Controller
             $query->where('status', $request->query('status'));
         }
 
-        // Include latest GPA
+        // Include latest GPA and active classroom metadata without assuming columns exist on students.
         $query->addSelect([
-            'gpa' => \DB::raw("(SELECT gpa FROM semester_transcripts WHERE semester_transcripts.student_id = students.id ORDER BY created_at DESC LIMIT 1)"),
-            'gpax' => \DB::raw("(SELECT gpax FROM annual_transcripts WHERE annual_transcripts.student_id = students.id ORDER BY created_at DESC LIMIT 1)")
+            'current_student_number' => \DB::raw("(SELECT classroom_students.student_number FROM classroom_students WHERE classroom_students.student_id = students.id AND classroom_students.status = 'active' ORDER BY classroom_students.created_at DESC LIMIT 1)"),
+            'current_classroom_id' => \DB::raw("(SELECT classroom_students.classroom_id FROM classroom_students WHERE classroom_students.student_id = students.id AND classroom_students.status = 'active' ORDER BY classroom_students.created_at DESC LIMIT 1)"),
+            'gpa' => \DB::raw('(SELECT gpa FROM semester_transcripts WHERE semester_transcripts.student_id = students.id ORDER BY created_at DESC LIMIT 1)'),
+            'gpax' => \DB::raw('(SELECT gpax FROM annual_transcripts WHERE annual_transcripts.student_id = students.id ORDER BY created_at DESC LIMIT 1)'),
         ]);
 
         $perPage = $request->query('per_page', 20);
-        $students = $query->orderBy('student_number')->paginate($perPage);
+        $students = $query
+            ->orderBy('class_level')
+            ->orderBy('class_section')
+            ->orderByRaw('current_student_number IS NULL')
+            ->orderBy('current_student_number')
+            ->orderBy('student_id')
+            ->orderBy('first_name_th')
+            ->paginate($perPage);
+
+        $items = $students->getCollection()
+            ->map(function (Student $student) {
+                $student->student_number = $student->current_student_number;
+                $student->classroom_id = $student->current_classroom_id;
+
+                return $student;
+            })
+            ->values();
 
         return response()->json([
             'success' => true,
-            'students' => $students,
+            'students' => $items,
+            'data' => $items,
+            'pagination' => [
+                'current_page' => $students->currentPage(),
+                'last_page' => $students->lastPage(),
+                'per_page' => $students->perPage(),
+                'total' => $students->total(),
+            ],
         ]);
     }
 
@@ -619,7 +650,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -651,7 +682,7 @@ class ClassroomController extends Controller
 
         $student = $query->first();
 
-        if (!$student) {
+        if (! $student) {
             return response()->json([
                 'success' => true,
                 'student' => null,

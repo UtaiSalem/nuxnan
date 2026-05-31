@@ -858,11 +858,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- Child Route Content (admin, dashboard, etc.) -->
-  <NuxtPage v-if="isChildRoute" />
-  
-  <!-- Main Academy Page Content -->
-  <div v-else class="min-h-screen bg-gray-200 dark:bg-vikinger-dark-300">
+  <div>
+    <!-- Child Route Content (admin, dashboard, etc.) -->
+    <NuxtPage v-if="isChildRoute" />
+    
+    <!-- Main Academy Page Content -->
+    <div v-else class="min-h-screen bg-gray-200 dark:bg-vikinger-dark-300">
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
       <div class="text-center">
@@ -889,6 +890,16 @@ onMounted(() => {
 
     <!-- Academy Content -->
     <div v-else-if="academy" class="max-w-7xl mx-auto px-4 py-6">
+      <!-- Emergency Alerts -->
+      <SchoolEmergencyAlertBanner :academy-id="academy.id" />
+
+      <!-- School Attendance Widget (role-aware) -->
+      <SchoolAttendanceWidget
+        v-if="!isChildRoute"
+        :academy-id="academy.id"
+        :academy-name="academyName"
+      />
+
       <!-- Cover & Profile Section -->
       <div class="relative bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-lg overflow-hidden mb-6">
         <!-- Cover Image -->
@@ -2266,5 +2277,6 @@ onMounted(() => {
         </div>
       </div>
     </Teleport>
+    </div>
   </div>
 </template>
