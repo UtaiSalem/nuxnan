@@ -8,6 +8,8 @@ import QRCodeVue3 from 'qrcode-vue3'
 interface StudentInfo {
   id: number
   student_number?: string
+  qr_content?: string
+  qr_url?: string
   title_name?: string
   first_name_thai?: string
   last_name_thai?: string
@@ -44,6 +46,11 @@ const emit = defineEmits<{
   (e: 'edit'): void
   (e: 'upload-photo'): void
 }>()
+
+// Computed: QR Value
+const qrValue = computed(() => {
+  return props.student.qr_content || props.student.student_number || ''
+})
 
 // Computed: Full name
 const displayFullNameThai = computed(() => {
@@ -268,7 +275,7 @@ const formatDateEn = (dateStr?: string) => {
       <div v-if="showQrCode" class="absolute bottom-[5%] right-[3%] w-[15%] aspect-square">
         <div class="w-full h-full bg-white flex items-center justify-center rounded-lg shadow-md">
           <QRCodeVue3
-            :value="student.student_number || ''"
+            :value="qrValue"
             :cornersSquareOptions="{ type: 'extra-rounded', color: '#000' }"
             :dotsOptions="{ type: 'dots', color: '#000' }"
             :cornersDotOptions="{ type: 'square', color: '#000' }"

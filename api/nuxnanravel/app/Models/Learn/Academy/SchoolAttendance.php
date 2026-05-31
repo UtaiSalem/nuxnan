@@ -13,12 +13,13 @@ class SchoolAttendance extends Model
 
     protected $fillable = [
         'academy_id', 'date', 'title', 'start_time',
-        'late_minutes', 'qr_token', 'status', 'created_by',
+        'late_minutes', 'qr_token', 'qr_token_expires_at', 'status', 'created_by',
         'closed_at', 'notes',
     ];
 
     protected $casts = [
         'date' => 'date',
+        'qr_token_expires_at' => 'datetime',
         'closed_at' => 'datetime',
     ];
 
@@ -37,12 +38,22 @@ class SchoolAttendance extends Model
         return $this->hasMany(SchoolAttendanceRecord::class, 'attendance_id');
     }
 
-    public function generateQrToken(): string
+    public function generateQrToken(int $ttlSeconds = 60): string
     {
         $token = Str::random(32);
-        $this->update(['qr_token' => $token]);
+        $this->update([
+            'qr_token' => $token,
+            'qr_token_expires_at' => now()->addSeconds($ttlSeconds),
+        ]);
 
         return $token;
+    }
+
+    public function isQrTokenValid(string $token): bool
+    {
+        return $this->qr_token === $token
+            && $this->qr_token_expires_at !== null
+            && now()->lt($this->qr_token_expires_at);
     }
 
     public function isOpen(): bool

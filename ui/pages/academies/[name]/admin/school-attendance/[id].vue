@@ -199,12 +199,6 @@ const saveManualRecords = async () => {
   }
 }
 
-const qrImageUrl = computed(() => {
-  if (typeof window === 'undefined' || !session.value?.qr_token) return ''
-  const checkInUrl = `${window.location.origin}/academies/${academyName.value}/attendance/check-in?token=${session.value.qr_token}&aid=${academyId.value}&sid=${sessionId.value}`
-  return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(checkInUrl)}`
-})
-
 const statusConfig: Record<string, { label: string; btn: string; selectedBtn: string }> = {
   present: {
     label: 'มา',
@@ -410,51 +404,31 @@ const summaryPercent = (count: number) => {
           </div>
 
           <!-- Tab: QR -->
-          <div v-if="activeTab === 'qr'" class="p-6">
+          <div v-if="activeTab === 'qr'" class="p-6 flex flex-col items-center">
             <div
               v-if="session.status === 'closed'"
-              class="mb-4 flex items-center gap-2 px-4 py-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-300 text-sm"
+              class="w-full mb-6 flex items-center gap-2 px-4 py-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-300 text-sm"
             >
               <Icon icon="fluent:warning-24-filled" class="w-5 h-5 flex-shrink-0" />
               การเช็คชื่อนี้ปิดแล้ว นักเรียนไม่สามารถสแกน QR ได้อีก
             </div>
 
-            <div class="flex flex-col items-center gap-6">
+            <div v-if="session.status === 'open' && academyId" class="w-full max-w-lg">
+              <SchoolAttendanceQRDisplay 
+                :academy-id="academyId" 
+                :attendance-id="sessionId" 
+              />
+            </div>
+            
+            <div v-else-if="session.status === 'closed'" class="flex flex-col items-center gap-6">
               <div
-                class="p-4 bg-white dark:bg-slate-700 rounded-vikinger border-2 border-slate-200 dark:border-slate-600 shadow-lg print:shadow-none"
+                class="p-4 bg-white dark:bg-slate-700 rounded-vikinger border-2 border-slate-200 dark:border-slate-600 shadow-lg opacity-50"
               >
-                <img
-                  v-if="qrImageUrl"
-                  :src="qrImageUrl"
-                  alt="QR Code เช็คชื่อ"
-                  class="w-64 h-64 object-contain"
-                />
-                <div v-else class="w-64 h-64 flex items-center justify-center">
-                  <Icon icon="fluent:qr-code-24-regular" class="w-20 h-20 text-slate-300 dark:text-slate-600" />
+                <div class="w-64 h-64 flex items-center justify-center">
+                  <Icon icon="fluent:lock-closed-24-regular" class="w-20 h-20 text-slate-300 dark:text-slate-600" />
                 </div>
               </div>
-
-              <div class="text-center space-y-2">
-                <p class="text-sm text-slate-500 dark:text-slate-400">รหัสเช็คชื่อ</p>
-                <code
-                  class="block px-6 py-3 bg-slate-100 dark:bg-slate-700 rounded-lg font-mono text-xl font-bold tracking-widest text-slate-900 dark:text-white select-all"
-                >
-                  {{ session.qr_token || '-' }}
-                </code>
-                <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
-                  สแกน QR Code หรือพิมพ์รหัส
-                  <strong class="text-slate-700 dark:text-slate-200">{{ session.qr_token }}</strong>
-                  ที่หน้าเช็คชื่อ
-                </p>
-              </div>
-
-              <button
-                class="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
-                @click="() => window.print()"
-              >
-                <Icon icon="fluent:print-24-regular" class="w-5 h-5" />
-                พิมพ์ QR Code
-              </button>
+              <p class="text-slate-500">เซสชันนี้ปิดแล้ว</p>
             </div>
           </div>
 

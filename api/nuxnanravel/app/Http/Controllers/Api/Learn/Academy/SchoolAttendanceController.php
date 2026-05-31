@@ -78,15 +78,35 @@ class SchoolAttendanceController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        $qrToken = $attendance->generateQrToken();
+        $qrToken = $attendance->generateQrToken(60);
 
         return response()->json([
             'success' => true,
             'message' => 'สร้างการเช็คชื่อสำเร็จ',
             'data' => $attendance,
             'qr_token' => $qrToken,
+            'qr_content' => "CHECKIN:SCHOOL:{$academy->id}:{$attendance->id}:{$qrToken}",
             'qr_url' => url("/school-attendance/check-in/{$qrToken}"),
         ], 201);
+    }
+
+    // POST /academies/{academy}/school-attendances/{attendance}/refresh-qr
+    public function refreshQr(Academy $academy, SchoolAttendance $attendance): JsonResponse
+    {
+        $this->authorizeAttendance($academy, $attendance);
+
+        if (! $attendance->isOpen()) {
+            return response()->json(['success' => false, 'message' => 'การเช็คชื่อนี้ปิดแล้ว ไม่สามารถต่ออายุ QR ได้'], 422);
+        }
+
+        $token = $attendance->generateQrToken(60);
+
+        return response()->json([
+            'success' => true,
+            'qr_token' => $token,
+            'qr_content' => "CHECKIN:SCHOOL:{$academy->id}:{$attendance->id}:{$token}",
+            'expires_at' => $attendance->qr_token_expires_at,
+        ]);
     }
 
     // GET /academies/{academy}/school-attendances/{attendance}
@@ -127,8 +147,8 @@ class SchoolAttendanceController extends Controller
             return response()->json(['success' => false, 'message' => 'การเช็คชื่อนี้ปิดแล้ว'], 422);
         }
 
-        if ($attendance->qr_token !== $validated['qr_token']) {
-            return response()->json(['success' => false, 'message' => 'QR Code ไม่ถูกต้อง'], 422);
+        if (! $attendance->isQrTokenValid($validated['qr_token'])) {
+            return response()->json(['success' => false, 'message' => 'QR Code หมดอายุหรือไม่ถูกต้อง กรุณาสแกนใหม่'], 422);
         }
 
         $student = auth()->user();
@@ -236,6 +256,7 @@ class SchoolAttendanceController extends Controller
 
         $validated = $request->validate([
             'identifier' => 'required|string|max:50',
+            'scan_method' => 'nullable|string|in:qr,manual',
         ]);
 
         if (! $attendance->isOpen()) {
@@ -243,6 +264,7 @@ class SchoolAttendanceController extends Controller
         }
 
         $identifier = trim($validated['identifier']);
+        $scanMethod = $validated['scan_method'] ?? 'manual';
         $userId = null;
         $studentName = null;
         $studentPhoto = null;
@@ -326,13 +348,13 @@ class SchoolAttendanceController extends Controller
             }
         }
 
-        $record = DB::transaction(function () use ($attendance, $academy, $userId, $status) {
+        $record = DB::transaction(function () use ($attendance, $academy, $userId, $status, $scanMethod) {
             $rec = SchoolAttendanceRecord::create([
                 'attendance_id' => $attendance->id,
                 'academy_id' => $academy->id,
                 'student_id' => $userId,
                 'status' => $status,
-                'check_in_method' => 'manual',
+                'check_in_method' => $scanMethod,
                 'checked_in_at' => now(),
                 'recorded_by' => auth()->id(),
             ]);

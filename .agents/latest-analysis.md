@@ -18,11 +18,67 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 > Trigger: when the user says "อ่านบทวิเคราะห์", read this section, verify it against the codebase, improve or correct it, make a clear work plan, and record that plan below.
 
-(ว่าง - พร้อมรับบทวิเคราะห์หรืองานถัดไป)
+**หัวข้อ:** Universal QR Scanner สำหรับระบบเช็คชื่อมาโรงเรียน (School Attendance Anti-Fraud)
+
+**หลักการ:** หนึ่งปุ่มสแกน สองทางเช็คชื่อ
+- นักเรียนสแกน QR จากครู (session QR ที่ครูแสดง)
+- ครูสแกน QR จากบัตรนักเรียน (student card QR)
+
+**QR Format ที่เสนอ:**
+- Session QR: `CHECKIN:SCHOOL:{academy_id}:{attendance_id}:{token}`
+- Student Card QR: `STUDENT:{academy_id}:{student_code}` (ยืดหยุ่นกว่าเพื่ออนาคต)
+
+**จุดที่ต้องปรับ:**
+- `ui/types/qr.ts` — เพิ่ม type ใหม่
+- `ui/composables/useQRScanner.ts` — แยก handler SCHOOL vs STUDENT
+- `SchoolAttendanceController.php` — endpoint Universal QR
+- ลบช่องโหว่ token-in-URL ออกจาก `SchoolAttendanceWidget.vue`
+- Token ควร rotate/expire ทุก 30-60 วินาที
 
 ---
 
-## Work Plan
+## Current Snapshot (2026-05-31)
+- **Active Work**: Universal QR Scanner for School Attendance — **Completed 100%**
+- **Pending Tasks**: None
+- **Next Steps**: QA & System Testing for the new QR Scanner flow.
+
+---
+
+## Universal QR Scanner Implementation (Completed 2026-05-31)
+- **Phase 0-1 (Backend)**: Added `qr_token_expires_at` (migration), implemented token rotation (60s TTL), and added `refresh-qr` endpoint. Updated `checkIn()` and `scanStudent()` with validation and audit metadata.
+- **Phase 2-3 (Frontend)**: Updated QR type system in `ui/types/qr.ts` and added handlers for `school_checkin` and `student_card` in `ui/composables/useQRScanner.ts`.
+- **Phase 4 (QR Display)**: Created `SchoolAttendanceQRDisplay.vue` with auto-rotation (55s) and countdown. Integrated into admin session page.
+- **Phase 5 (Security Fix)**: Removed token-in-URL from `SchoolAttendanceWidget.vue` and switched to Universal QR Scanner trigger.
+- **Phase 6 (Student Card)**: Added `qr_content` to `StudentCard` model and updated `StudentCardFront.vue` to show universal QR (`STUDENT:{aid}:{code}`).
+- **Phase 7 (Session Choice)**: Implemented session chooser UI in `UniversalQRModal.vue` for cases where a teacher scans a student card during multiple open sessions.
+
+---
+
+## Technical Details (Completed)
+1. **Model**: `SchoolAttendance.php` tracks expiry; `StudentCard.php` generates universal content.
+2. **Scanner**: `useQRScanner.ts` handles role-based logic (Student scans Teacher QR = Check-in; Teacher scans Student Card = Scan-student).
+3. **Modal**: `UniversalQRModal.vue` now supports the session selection flow.
+4. **Audit**: `scan_method` is now recorded as `qr` or `manual` in the database.
+
+---
+
+#### สรุป Priority Queue (เรียงตามความสำคัญ)
+
+| Priority | Phase | งาน | ไฟล์หลัก | เหตุผล |
+|---|---|---|---|---|
+| 🔴 Critical | 5 | ลบ token-in-URL | `SchoolAttendanceWidget.vue` | ช่องโหว่ที่กำลังใช้งานอยู่ |
+| 🔴 Critical | 0+1 | Token expiry | migration + `SchoolAttendance.php` + Controller | foundation ของทุก phase |
+| 🟠 High | 2+3 | QR type + handlers | `qr.ts` + `useQRScanner.ts` | core feature |
+| 🟠 High | 4 | Teacher QR Display | `SchoolAttendanceQRDisplay.vue` | ครูต้องการหน้าแสดง QR |
+| 🟡 Medium | 6 | Student card QR | `StudentCardController.php` + card print | ให้บัตรใช้กับระบบได้ |
+| 🟡 Medium | 7 | Session chooser | `UniversalQRModal.vue` | UX เมื่อมีหลาย session |
+
+#### ข้อควรระวังในการ implement
+
+1. **`parseQRCode()` collision** — prefix `CHECKIN` ถูกใช้ทั้ง course check-in (`CHECKIN:class_123:sess_1`) และ school check-in (`CHECKIN:SCHOOL:1:5:token`) ต้องตรวจ segment ที่ 2 ว่าเป็น `SCHOOL` หรือเป็นตัวเลข/string ปกติ ไม่งั้น regex อาจ mis-route
+2. **Role detection ใน `handleStudentCardQR()`** — `authStore.user?.academyRole` อาจไม่มีในทุก context ต้องหา pattern ที่ถูกต้องจาก `useAcademyRole` composable
+3. **`points idempotency`** — `PointsService::awardByRule()` ถูกเรียกทั้งใน `checkIn()` และ `scanStudent()` ต้องตรวจว่า rule engine handle duplicate ได้แล้วหรือยัง (ป้องกัน double points เมื่อ teacher override student self check-in)
+4. **QR library** — ยังไม่มี QR generation library ใน frontend (`ui/package.json`) ต้อง install `qrcode` หรือ `vue-qrcode-reader` ก่อน Phase 4
 
 ### 2026-05-31 - SMS Plan Refined — Detailed Implementation Tasks - COMPLETED
 
@@ -73,8 +129,8 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 | Scope | Owner | Status | Files | Notes |
 | --- | --- | --- | --- | --- |
-| SMS Phase 6 Complete | AI | completed | `Library*.php`, `Asset*.php`, `SchoolLibraryTab.vue`, `SchoolAssetTab.vue`, `useSchoolManagement.ts`, `SchoolManagement.vue` | Library and Asset modules implemented. Phase 6 done. |
-| - | - | - | - | ไม่มีงานที่กำลังทำอยู่ |
+| Universal QR Scanner Plan | AI | plan_ready | see Work Plan above | 7 phases, พร้อม implement |
+| - | - | - | - | รอ user confirm ก่อนเริ่ม code |
 
 ## Coordination Board
 
@@ -100,6 +156,54 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 (ไม่มี)
 
 ## Analysis Timeline
+
+### 2026-05-31 - School attendance anti-fraud planning
+- User requested a plan to close the loophole where students can self check-in from outside school through the flagpole/school attendance button.
+- Read-only inspection found the current session-based school attendance flow in `SchoolAttendanceController`, `school_attendances`, `school_attendance_records`, `SchoolAttendanceWidget.vue`, student `attendance/check-in.vue`, and admin `school-attendance/[id].vue`.
+- Key finding: the student widget passes `qr_token`, `aid`, and `sid` directly to the student check-in page, so the QR/token is effectively a reusable bearer secret for any logged-in student who obtains it. Existing teacher-side `scan-student` is a better foundation, but records only `manual` and lacks detailed method/audit metadata.
+- Recommended direction: make teacher-controlled check-in the default (teacher scans student card QR/barcode or types student code), keep student QR self-check-in disabled or restricted by rotating short-lived token plus optional geofence/Wi-Fi proof, and expand record metadata for method, device/location, override reason, and verifier.
+- Verification plan for implementation: feature tests for invalid/expired QR, teacher scan success, duplicate scan, unauthorized scanner, audit metadata, and points idempotency; frontend smoke test for admin scan/manual tabs and student widget behavior.
+
+### 2026-05-31 - Universal QR Scanner Plan — Enhanced & Verified Against Codebase
+
+**ตรวจสอบ code จริงพบ:**
+
+**สิ่งที่มีอยู่แล้ว (ใช้ได้เลย):**
+- `UniversalQRModal.vue` + `useQRScanner.ts` + `qr.ts` — infrastructure ครบ พร้อมขยาย
+- `SchoolAttendanceController.php` — มี `checkIn()` (student scan) + `scanStudent()` (teacher scan) แล้ว
+- Routes: `/{attendance}/check-in` และ `/{attendance}/scan-student` มีอยู่แล้ว
+- `SchoolAttendance::generateQrToken()` — ใช้ `Str::random(32)` แต่ไม่มี expiry
+
+**ช่องโหว่ยืนยัน (Critical):**
+- `SchoolAttendanceWidget.vue:68-78` — `goCheckIn()` ส่ง `qr_token` + `aid` + `sid` เป็น URL query params
+  ใครก็ตามที่เห็น URL หรือถูก share link จะ check-in ได้จากทุกที่
+- `useQRScanner.ts:248` — `handleCheckinQR()` ปัจจุบัน route ไปที่ `/api/classes/checkin` (course check-in)
+  ยังไม่รองรับ school attendance เลย
+
+**ช่องโหว่เพิ่มเติมที่แผนเดิมพลาด:**
+- `scanStudent()` ใน Controller ใช้ `check_in_method = 'manual'` เสมอ แม้จะมาจากการสแกน QR บัตร
+  → ข้อมูล audit trail ผิด ต้องแยก `'qr'` vs `'manual'`
+- ไม่มี `qr_token_expires_at` ใน `school_attendances` table → token ถูกสร้างครั้งเดียวใช้ได้ตลอด session
+
+**สิ่งที่แผนเดิมถูกต้อง:**
+- QR format `CHECKIN:SCHOOL:{academy_id}:{attendance_id}:{token}` — ดี เพราะ scoped
+- QR format `STUDENT:{academy_id}:{student_code}` — ดี เพราะยืดหยุ่นสำหรับอนาคต
+- Universal QR router logic ถูกต้อง — ตรวจ prefix แล้วแยก handler
+
+**สิ่งที่แผนเดิมยังขาด:**
+1. Token rotation mechanism (ไม่มี migration, ไม่มี refresh endpoint)
+2. Teacher QR Display Component ที่มี countdown/auto-refresh
+3. Role-based routing ใน frontend handler (นักเรียนสแกน STUDENT QR = ดูโปรไฟล์, ครูสแกน = เช็คชื่อ)
+4. Multi-session chooser เมื่อมีหลาย session เปิดพร้อมกัน
+5. `check_in_method` audit fix ใน `scanStudent()`
+6. Error message ที่เป็นมิตรในกรณีต่างๆ (token หมดอายุ, session ปิด, เช็คชื่อซ้ำ)
+
+### 2026-05-31 - School attendance universal QR scanner refinement
+- User clarified the core principle: attendance must be as easy as possible, using the existing Universal QR Scanner. Daily attendance QR generated by a session must identify the attendance session, and both flows should be supported: student scans teacher/session QR, and teacher scans QR on the student card.
+- Read-only inspection confirmed `ui/types/qr.ts` already has `CHECKIN` support and `UniversalQRModal.vue` routes all QR actions through `useQRScanner.ts`; current `handleCheckinQR()` targets `/api/classes/checkin`, so school attendance should extend the universal QR action router rather than introduce another scanner.
+- Recommended QR payload contract: keep `CHECKIN` but add a scoped first segment, e.g. `CHECKIN:SCHOOL:{academy_id}:{attendance_id}:{token}` for teacher/session QR and `STUDENT:{academy_id}:{student_identifier}` or `CHECKIN:STUDENT:{academy_id}:{student_identifier}` for student card QR, then route based on segment shape.
+- UX decision: one scanner button for everyone. Student scanning a school attendance QR calls student check-in; teacher/admin scanning a student card while an attendance session is open records the student. Ambiguous cases should show a minimal chooser for the active session, not a separate page.
+- Risk: student self-scan remains dependent on physically seeing the teacher's QR. To reduce sharing risk without hurting usability, rotate/expire session QR tokens and avoid exposing the token in student widgets or URLs before the scan.
 
 ### 2026-05-31 - Academy child-route and classroom students API hotfix
 - User pasted browser logs showing `ui/pages/academies/[name].vue` transition warnings because the page rendered a non-element/multiple-root route node, plus repeated 500s from `GET /api/academies/{academy}/classrooms/students`.

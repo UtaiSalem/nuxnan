@@ -20,13 +20,15 @@ class StudentCard extends Model
         'first_name_thai',
         'last_name_thai',
         'first_name_english',
-		'birth_date',
+        'birth_date',
         'birth_date_string',
         'card_issue_date',
         'card_expiry_date',
         'student_status',
         'profile_image',
     ];
+
+    protected $appends = ['qr_content', 'qr_url'];
 
     /**
      * Get the corresponding student from normalized database
@@ -37,6 +39,22 @@ class StudentCard extends Model
         return Student::where('student_id', $this->student_number)
             ->orWhere('citizen_id', $this->national_id)
             ->first();
+    }
+
+    /**
+     * Get the universal QR content for this student card
+     */
+    public function getQrContentAttribute(): string
+    {
+        return "STUDENT:{$this->academy_id}:{$this->student_number}";
+    }
+
+    /**
+     * Get the student profile URL (for legacy scanner fallback)
+     */
+    public function getQrUrlAttribute(): string
+    {
+        return url("/academies/{$this->academy_id}/members/{$this->student_number}");
     }
 
     public function academy(): BelongsTo

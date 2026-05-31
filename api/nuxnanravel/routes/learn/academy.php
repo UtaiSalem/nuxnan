@@ -759,6 +759,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('/student/{student}', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'studentHistory'])->name('api.academy.schoolAttendance.studentHistory');
         Route::get('/{attendance}', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'show'])->name('api.academy.schoolAttendance.show');
         Route::post('/{attendance}/check-in', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'checkIn'])->name('api.academy.schoolAttendance.checkIn');
+        Route::post('/{attendance}/refresh-qr', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'refreshQr'])->name('api.academy.schoolAttendance.refreshQr');
         Route::post('/{attendance}/scan-student', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'scanStudent'])->name('api.academy.schoolAttendance.scanStudent');
         Route::post('/{attendance}/records', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'storeRecords'])->name('api.academy.schoolAttendance.storeRecords');
         Route::post('/{attendance}/close', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'close'])->name('api.academy.schoolAttendance.close');

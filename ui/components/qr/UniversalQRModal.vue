@@ -32,6 +32,7 @@ onMounted(() => {
 const mode = ref<'scan' | 'input'>('input')
 const manualCode = ref('')
 const detectedType = ref<QRCodeType | null>(null)
+const sessionChoiceData = ref<any>(null)
 
 // Refs for camera
 const videoRef = ref<HTMLVideoElement | null>(null)
@@ -41,6 +42,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 const close = () => {
   stopScanning()
   reset()
+  sessionChoiceData.value = null
   emit('update:modelValue', false)
 }
 
@@ -75,11 +77,44 @@ const handleManualSubmit = async () => {
   }
 }
 
+// Handle session choice for student card scan
+const handleSessionChoice = async (session: any) => {
+  if (!sessionChoiceData.value) return
+  
+  const { academyId, studentCode } = sessionChoiceData.value
+  isProcessing.value = true
+  
+  try {
+    const res = await api.post(`/api/academies/${academyId}/school-attendances/${session.id}/scan-student`, {
+      identifier: studentCode,
+      scan_method: 'qr'
+    }) as any
+    
+    if (res.success) {
+      toast.success(res.message || 'บันทึกการเช็คชื่อสำเร็จ')
+      actionResult.value = {
+        success: true,
+        type: 'student_card',
+        message: res.message || 'บันทึกการเช็คชื่อสำเร็จ',
+        data: res.data
+      }
+      sessionChoiceData.value = null
+    } else {
+      toast.error(res.message || 'เกิดข้อผิดพลาด')
+    }
+  } catch (err: any) {
+    toast.error(err.data?.message || err.message || 'เกิดข้อผิดพลาด')
+  } finally {
+    isProcessing.value = false
+  }
+}
+
 // Try again
 const tryAgain = () => {
   reset()
   manualCode.value = ''
   detectedType.value = null
+  sessionChoiceData.value = null
 }
 
 // Input ref for focus
@@ -162,6 +197,13 @@ watch(manualCode, detectTypeFromInput)
 // Watch action result
 watch(actionResult, (result) => {
   if (result) {
+    // Check for session choice requirement
+    if (result.type === 'student_card' && result.data?.requireSessionChoice) {
+      sessionChoiceData.value = result.data
+      actionResult.value = null // Clear result to show choice UI
+      return
+    }
+
     if (result.success) {
       toast.success(result.message)
     } else {
@@ -201,9 +243,54 @@ onUnmounted(() => {
           </button>
 
           <!-- ========== Result State ========== -->
-          <div v-if="actionResult">
+          <div v-if="actionResult || sessionChoiceData">
+            <!-- Session Choice UI -->
+            <div v-if="sessionChoiceData">
+              <div class="p-6 bg-gradient-to-br from-teal-500 to-emerald-500 text-white">
+                <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-white/20 flex items-center justify-center">
+                  <Icon icon="fluent:building-people-24-filled" class="w-8 h-8" />
+                </div>
+                <h2 class="text-xl font-black text-center">เลือกวิชา/รอบ</h2>
+                <p class="text-white/80 text-sm text-center mt-1">
+                  นักเรียนรหัส {{ sessionChoiceData.studentCode }} สแกนสำเร็จ กรุณาเลือกรอบที่ต้องการบันทึก
+                </p>
+              </div>
+              
+              <div class="p-5 max-h-[40vh] overflow-y-auto">
+                <div class="space-y-3">
+                  <button 
+                    v-for="session in sessionChoiceData.sessions" 
+                    :key="session.id"
+                    @click="handleSessionChoice(session)"
+                    class="w-full p-4 text-left bg-gray-50 dark:bg-gray-800 hover:bg-teal-50 dark:hover:bg-teal-900/30 border border-gray-200 dark:border-gray-700 rounded-xl transition-all group"
+                  >
+                    <div class="flex justify-between items-start">
+                      <div>
+                        <p class="font-bold text-gray-900 dark:text-white group-hover:text-teal-600">
+                          {{ session.title }}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                          เริ่ม: {{ session.start_time || '--:--' }} | มาสายหลัง {{ session.late_minutes }} นาที
+                        </p>
+                      </div>
+                      <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5 text-gray-400 group-hover:text-teal-500" />
+                    </div>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="p-5 pt-0">
+                <button 
+                  @click="sessionChoiceData = null"
+                  class="w-full py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all text-sm"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </div>
+
             <!-- Success Result -->
-            <template v-if="actionResult.success">
+            <template v-else-if="actionResult.success">
               <!-- Success Header -->
               <div class="p-6 text-center bg-gradient-to-r from-green-500 to-emerald-500">
                 <!-- Type Icon -->

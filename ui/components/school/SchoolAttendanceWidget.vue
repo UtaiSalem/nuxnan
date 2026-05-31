@@ -64,17 +64,12 @@ onMounted(async () => {
   isLoading.value = false
 })
 
-// Student: navigate to check-in page (pass token via query)
-const goCheckIn = () => {
+const emits = defineEmits(['open-qr-scanner'])
+
+// Student: open Universal QR Scanner
+const openScanner = () => {
   if (!todaySession.value) return
-  navigateTo({
-    path: `/academies/${props.academyName}/attendance/check-in`,
-    query: {
-      token: todaySession.value.qr_token,
-      aid: props.academyId,
-      sid: todaySession.value.id,
-    },
-  })
+  emits('open-qr-scanner')
 }
 
 // Admin/Teacher: navigate to manage session
@@ -170,22 +165,23 @@ const statusLabel = (status: string) => {
   <!-- STUDENT — มี session + ยังไม่ได้เช็ค -->
   <div
     v-else-if="isStudent && todaySession && !myRecord"
-    class="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-vikinger shadow-vikinger p-4 mb-4 transition-all duration-200"
+    class="bg-gradient-to-r from-teal-600 to-emerald-600 rounded-vikinger shadow-vikinger p-4 mb-4 transition-all duration-200"
   >
     <div class="flex items-center gap-4">
       <div class="shrink-0">
-        <Icon icon="fluent:hand-wave-24-filled" class="w-10 h-10 text-white/80" />
+        <Icon icon="fluent:qr-code-24-filled" class="w-10 h-10 text-white/80" />
       </div>
       <div class="flex-1 min-w-0">
-        <p class="text-white text-lg font-bold font-heading leading-tight">เช็คชื่อการมาโรงเรียน</p>
-        <p class="text-white/70 text-sm mt-0.5 truncate">{{ todaySession.title }} • {{ todayFormatted }}</p>
+        <p class="text-white text-lg font-bold font-heading leading-tight">เช็คชื่อมาโรงเรียน</p>
+        <p class="text-white/70 text-sm mt-0.5 truncate">สแกน QR ที่ครูฉายบนจอ • {{ todayFormatted }}</p>
       </div>
     </div>
     <button
-      @click="goCheckIn"
-      class="w-full mt-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold py-3 rounded-lg transition-all hover:scale-[1.02] text-base border border-white/30"
+      @click="openScanner"
+      class="w-full mt-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold py-3 rounded-lg transition-all hover:scale-[1.02] text-base border border-white/30 flex items-center justify-center gap-2"
     >
-      🖐 เช็คชื่อตอนนี้
+      <Icon icon="fluent:scan-qr-code-24-filled" class="text-xl" />
+      สแกน QR ตอนนี้
     </button>
   </div>
 

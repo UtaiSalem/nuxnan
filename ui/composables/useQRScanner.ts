@@ -171,6 +171,12 @@ export function useQRScanner() {
       case 'checkin':
         return await handleCheckinQR(parsed)
       
+      case 'school_checkin':
+        return await handleSchoolCheckinQR(parsed)
+      
+      case 'student_card':
+        return await handleStudentCardQR(parsed)
+      
       case 'event':
         return await handleEventQR(parsed)
       
@@ -271,7 +277,120 @@ export function useQRScanner() {
       return {
         success: false,
         type: 'checkin',
-        message: err.message || 'เกิดข้อผิดพลาดในการเช็คชื่อ'
+        message: err.data?.message || err.message || 'เกิดข้อผิดพลาดในการเช็คชื่อ'
+      }
+    }
+  }
+
+  // Handle School Check-in QR (Session-based)
+  const handleSchoolCheckinQR = async (parsed: ParsedQRData): Promise<QRActionResult> => {
+    const [academyId, attendanceId, token] = parsed.data
+
+    try {
+      const response = await api.post(`/api/academies/${academyId}/school-attendances/${attendanceId}/check-in`, {
+        qr_token: token
+      }) as ApiResponse
+
+      if (response.success) {
+        return {
+          success: true,
+          type: 'school_checkin',
+          message: response.message || 'เช็คชื่อมาโรงเรียนสำเร็จ!',
+          data: response.data
+        }
+      } else {
+        return {
+          success: false,
+          type: 'school_checkin',
+          message: response.message || 'ไม่สามารถเช็คชื่อได้'
+        }
+      }
+    } catch (err: any) {
+      return {
+        success: false,
+        type: 'school_checkin',
+        message: err.data?.message || err.message || 'เกิดข้อผิดพลาดในการเช็คชื่อ'
+      }
+    }
+  }
+
+  // Handle Student Card QR
+  const handleStudentCardQR = async (parsed: ParsedQRData): Promise<QRActionResult> => {
+    const [academyId, studentCode] = parsed.data
+    
+    // Check if the current user has teacher/admin role in this academy
+    // We'll try to get the role status first
+    try {
+      const roleRes: any = await api.get(`/api/academies/${academyId}/my-role`)
+      const isAdminOrTeacher = roleRes.success && (roleRes.is_admin || roleRes.is_owner || roleRes.role?.name === 'teacher')
+
+      // If not teacher/admin, just open the student profile
+      if (!isAdminOrTeacher) {
+        router.push(`/academies/${academyId}/members/${studentCode}`)
+        return {
+          success: true,
+          type: 'student_card',
+          message: 'กำลังเปิดโปรไฟล์นักเรียน...',
+          data: { academyId, studentCode }
+        }
+      }
+
+      // If teacher/admin, try to find active school attendance sessions for today
+      const today = new Date().toISOString().split('T')[0]
+      const sessionRes: any = await api.get(`/api/academies/${academyId}/school-attendances`, {
+        params: { date: today, status: 'open' }
+      })
+
+      const sessions = sessionRes.data?.data || []
+
+      if (sessions.length === 0) {
+        // No open session, fallback to profile view
+        router.push(`/academies/${academyId}/members/${studentCode}`)
+        return {
+          success: true,
+          type: 'student_card',
+          message: 'ไม่พบรอบการเช็คชื่อที่เปิดอยู่ กำลังเปิดโปรไฟล์...',
+          data: { academyId, studentCode }
+        }
+      }
+
+      if (sessions.length > 1) {
+        // Multiple sessions, need to choose
+        return {
+          success: true,
+          type: 'student_card',
+          message: 'กรุณาเลือกวิชาหรือรอบที่ต้องการเช็คชื่อ',
+          data: {
+            requireSessionChoice: true,
+            sessions,
+            studentCode,
+            academyId
+          }
+        }
+      }
+
+      // Single session, proceed with check-in
+      const attendance = sessions[0]
+      const scanRes = await api.post(`/api/academies/${academyId}/school-attendances/${attendance.id}/scan-student`, {
+        identifier: studentCode,
+        scan_method: 'qr'
+      }) as ApiResponse
+
+      return {
+        success: scanRes.success,
+        type: 'student_card',
+        message: scanRes.message || 'บันทึกการเช็คชื่อสำเร็จ',
+        data: scanRes.data
+      }
+
+    } catch (err: any) {
+      // On error, fallback to profile view
+      router.push(`/academies/${academyId}/members/${studentCode}`)
+      return {
+        success: true,
+        type: 'student_card',
+        message: 'กำลังเปิดโปรไฟล์นักเรียน...',
+        data: { academyId, studentCode }
       }
     }
   }

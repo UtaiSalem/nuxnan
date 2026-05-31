@@ -124,7 +124,14 @@
 
 ---
 
-## 2026-05-31 - School Management System Phase 6 Complete (Full Implementation)
+## 2026-05-31 — Universal QR Scanner Implementation — COMPLETED
+**สถานะ:** เสร็จสมบูรณ์ (100%)
+- ✅ **Backend:** Rotating QR Tokens (60s TTL), Refresh endpoint, Audit metadata.
+- ✅ **Frontend:** QR Routing for `school_checkin` & `student_card`.
+- ✅ **UI:** `SchoolAttendanceQRDisplay.vue` (Auto-rotate) & `UniversalQRModal.vue` (Session chooser).
+- ✅ **Security:** Token-in-URL removed from student widgets.
+
+## 2026-05-31 — School Management System Phase 6 Complete (Full Implementation)
 
 - **Task:** พัฒนาโมดูลเสริม Library (ห้องสมุด) และ Asset (ทรัพย์สิน) ให้สมบูรณ์ตามแผน SMS
 - **Files touched:**
