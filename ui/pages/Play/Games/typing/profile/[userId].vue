@@ -71,7 +71,7 @@ onMounted(async () => {
   try {
     // โหลดข้อมูลคู่กัน
     const [profileRes, statsRes, achRes, allAchRes, histRes, wpmRes] = await Promise.all([
-      $api.get(`/users/${userId.value}/profile`),
+      $api.get(`/users/${userId.value}/show`),
       $api.get('/typing/sessions/best'), // Use the new best endpoint
       $api.get('/typing/achievements/mine'),
       $api.get('/typing/achievements'),
