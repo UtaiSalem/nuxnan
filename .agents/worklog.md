@@ -6,7 +6,20 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-05-29, updated)
+## สถานะปัจจุบัน (2026-06-03, updated)
+
+### School Department Management Feature — Codex Tasks Active
+
+**Feature**: ระบบบริหารจัดการแผนกโรงเรียน — แก้ bugs เพื่อให้ feature ใช้งานได้จริง
+
+**งานที่ Codex ต้องทำ**: ดู `.agents/codex-tasks.md` (TASK-001 ถึง TASK-006)
+**สิ่งที่มีอยู่แล้ว**: `DepartmentController`, Routes, `departments.vue` (ต้องแก้ bugs)
+
+**Claude Routine**: ตรวจสอบ codex-tasks.md ว่า Codex ทำงานเสร็จ + ถูกต้องหรือไม่
+
+---
+
+## สถานะปัจจุบัน (2026-05-29, archived)
 
 - **งานที่เสร็จแล้วทั้งหมด (committed ใน main):**
   - **Typing Game — Responsive Fix** (typing/index.vue)
