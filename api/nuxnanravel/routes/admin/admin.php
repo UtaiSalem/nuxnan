@@ -1,16 +1,14 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AdminController;
-use App\Http\Controllers\Api\AdminAuthController;
-use App\Http\Controllers\Api\AdminRoleController;
-use App\Http\Controllers\Api\AdminPermissionController;
-use App\Http\Controllers\Api\CouponController;
-use App\Http\Controllers\Api\AdminPointsController;
-use App\Http\Controllers\Api\AdminWalletController;
-use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\Admin\GamificationRuleLogController;
 use App\Http\Controllers\Api\Admin\PointRuleController;
+use App\Http\Controllers\Api\AdminAuthController;
+use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminPermissionController;
+use App\Http\Controllers\Api\AdminRoleController;
+use App\Http\Controllers\Api\AdminWalletController;
+use App\Http\Controllers\Api\AuditLogController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,14 +30,14 @@ Route::get('/health', function () {
         'success' => true,
         'message' => 'Admin API is running',
         'version' => '2.0.0',
-        'timestamp' => now()->toDateTimeString()
+        'timestamp' => now()->toDateTimeString(),
     ]);
 });
 
 // Auth Routes (public - no middleware)
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login']);
-    
+
     // Protected auth routes
     Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout']);
@@ -50,7 +48,7 @@ Route::prefix('auth')->group(function () {
 
 // Protected Admin Routes
 Route::middleware(['auth:api', 'admin'])->group(function () {
-    
+
     // =====================================================
     // Dashboard
     // =====================================================
@@ -65,7 +63,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         $usersThisMonth = \App\Models\User::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)->count();
 
-        $usersGrowth = $usersLastMonth > 0 
+        $usersGrowth = $usersLastMonth > 0
             ? round((($usersThisMonth - $usersLastMonth) / $usersLastMonth) * 100, 1)
             : 100;
 
@@ -74,6 +72,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             'data' => [
                 'total_users' => \App\Models\User::count(),
                 'verified_users' => \App\Models\User::whereNotNull('email_verified_at')->count(),
+                'pending_users' => \App\Models\User::whereNull('email_verified_at')->count(),
                 'new_users_today' => \App\Models\User::whereDate('created_at', today())->count(),
                 'new_users_this_week' => \App\Models\User::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
                 'new_users_this_month' => $usersThisMonth,
@@ -81,7 +80,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
                 'total_academies' => \App\Models\Academy::count(),
                 'total_revenue' => $revenue,
                 'users_growth' => $usersGrowth,
-            ]
+            ],
         ]);
     })->name('admin.stats');
 
@@ -134,14 +133,14 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             ->get()
             ->map(function ($user) {
                 return [
-                    'id' => 'user_' . $user->id,
+                    'id' => 'user_'.$user->id,
                     'type' => 'user',
                     'user' => $user->name,
                     'action' => 'สมัครสมาชิกใหม่',
                     'target' => '',
                     'timestamp' => $user->created_at,
                     'icon' => 'fluent:person-add-24-regular',
-                    'color' => 'text-blue-500'
+                    'color' => 'text-blue-500',
                 ];
             });
         $activities = $activities->merge($users);
@@ -153,14 +152,14 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             ->get()
             ->map(function ($course) {
                 return [
-                    'id' => 'course_' . $course->id,
+                    'id' => 'course_'.$course->id,
                     'type' => 'course',
                     'user' => $course->creator->name ?? 'Unknown',
                     'action' => 'สร้างคอร์สใหม่',
                     'target' => $course->title,
                     'timestamp' => $course->created_at,
                     'icon' => 'fluent:hat-graduation-24-regular',
-                    'color' => 'text-green-500'
+                    'color' => 'text-green-500',
                 ];
             });
         $activities = $activities->merge($courses);
@@ -172,14 +171,14 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             ->get()
             ->map(function ($academy) {
                 return [
-                    'id' => 'academy_' . $academy->id,
+                    'id' => 'academy_'.$academy->id,
                     'type' => 'academy',
                     'user' => $academy->owner->name ?? 'Unknown',
                     'action' => 'สร้างอะคาเดมีใหม่',
                     'target' => $academy->name,
                     'timestamp' => $academy->created_at,
                     'icon' => 'fluent:building-24-regular',
-                    'color' => 'text-purple-500'
+                    'color' => 'text-purple-500',
                 ];
             });
         $activities = $activities->merge($academies);
@@ -189,6 +188,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         $formatted = $sorted->map(function ($item) {
             $item['time'] = \Carbon\Carbon::parse($item['timestamp'])->diffForHumans();
             unset($item['timestamp']);
+
             return $item;
         });
 
@@ -203,6 +203,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             ->map(function ($course) {
                 $enrollments = $course->members_count;
                 $price = $course->price ?? 0;
+
                 return [
                     'id' => $course->id,
                     'name' => $course->title,
@@ -222,9 +223,28 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::get('/datatable', [AdminController::class, 'datatable'])->name('admin.users.datatable');
         Route::get('/statistics', [AdminController::class, 'statistics'])->name('admin.users.statistics');
         Route::post('/', [AdminController::class, 'store'])->middleware('permission:user-create')->name('admin.users.store');
+
+        Route::post('/bulk-verify', [AdminController::class, 'bulkVerify'])
+            ->middleware('permission:user-edit')
+            ->name('admin.users.bulk-verify');
+
         Route::get('/{id}', [AdminController::class, 'show'])->name('admin.users.show');
         Route::put('/{id}', [AdminController::class, 'update'])->middleware('permission:user-edit')->name('admin.users.update');
-        Route::delete('/{id}', [AdminController::class, 'destroy'])->middleware('permission:user-delete')->name('admin.users.destroy');
+
+        // ── DELETE FLOW ──────────────────────────────────────────
+        Route::get('/{id}/delete-impact', [AdminController::class, 'getDeleteImpact'])
+            ->middleware('permission:user-delete')
+            ->name('admin.users.delete-impact');
+
+        Route::delete('/{id}', [AdminController::class, 'destroy'])
+            ->middleware('permission:user-delete')
+            ->name('admin.users.destroy');
+
+        Route::post('/{id}/restore', [AdminController::class, 'restoreUser'])
+            ->middleware('permission:user-delete')
+            ->name('admin.users.restore');
+        // ─────────────────────────────────────────────────────────
+
         Route::post('/{id}/verify-email', [AdminController::class, 'verifyEmail'])->middleware('permission:user-edit')->name('admin.users.verify-email');
         Route::post('/{id}/unverify-email', [AdminController::class, 'unverifyEmail'])->middleware('permission:user-edit')->name('admin.users.unverify-email');
         Route::post('/{id}/toggle-ban', [AdminController::class, 'toggleBan'])->middleware('permission:user-edit')->name('admin.users.toggle-ban');
@@ -262,23 +282,24 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
     Route::prefix('courses')->group(function () {
         Route::get('/', function (\Illuminate\Http\Request $request) {
             $query = \App\Models\Course::with(['user'])->withCount('members');
-            
+
             if ($request->has('search') && $request->search) {
-                $query->where('title', 'like', '%' . $request->search . '%');
+                $query->where('title', 'like', '%'.$request->search.'%');
             }
-            
+
             $courses = $query->orderBy('created_at', 'desc')
                 ->paginate($request->get('per_page', 10));
-            
+
             // Append cover_url attribute
             $courses->getCollection()->transform(function ($course) {
                 $course->append('cover_url');
+
                 return $course;
             });
-            
+
             return response()->json(['success' => true, 'data' => $courses]);
         })->name('admin.courses.index');
-        
+
         Route::post('/', function (\App\Http\Requests\Admin\StoreCourseRequest $request) {
             $course = \App\Models\Course::create([
                 ...$request->validated(),
@@ -290,6 +311,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
 
         Route::get('/{id}', function ($id) {
             $course = \App\Models\Course::with(['user'])->findOrFail($id);
+
             return response()->json(['success' => true, 'data' => $course]);
         })->name('admin.courses.show');
 
@@ -297,12 +319,14 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             $course = \App\Models\Course::findOrFail($id);
             // ใช้ validated() แทน all() เพื่อป้องกัน mass assignment
             $course->update($request->validated());
+
             return response()->json(['success' => true, 'data' => $course]);
         })->middleware('permission:course-edit')->name('admin.courses.update');
-        
+
         Route::delete('/{id}', function ($id) {
             $course = \App\Models\Course::findOrFail($id);
             $course->delete();
+
             return response()->json(['success' => true, 'message' => 'ลบคอร์สสำเร็จ']);
         })->middleware('permission:course-delete')->name('admin.courses.destroy');
     });
@@ -315,10 +339,10 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             $academies = \App\Models\Academy::with('owner')
                 ->orderBy('created_at', 'desc')
                 ->paginate($request->get('per_page', 10));
-            
+
             return response()->json(['success' => true, 'data' => $academies]);
         })->name('admin.academies.index');
-        
+
         Route::post('/', function (\App\Http\Requests\Admin\StoreAcademyRequest $request) {
             $academy = \App\Models\Academy::create([
                 ...$request->validated(),
@@ -330,6 +354,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
 
         Route::get('/{id}', function ($id) {
             $academy = \App\Models\Academy::with('owner')->findOrFail($id);
+
             return response()->json(['success' => true, 'data' => $academy]);
         })->name('admin.academies.show');
 
@@ -337,12 +362,14 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             $academy = \App\Models\Academy::findOrFail($id);
             // ใช้ validated() แทน all() เพื่อป้องกัน mass assignment
             $academy->update($request->validated());
+
             return response()->json(['success' => true, 'data' => $academy]);
         })->middleware('permission:academy-edit')->name('admin.academies.update');
-        
+
         Route::delete('/{id}', function ($id) {
             $academy = \App\Models\Academy::findOrFail($id);
             $academy->delete();
+
             return response()->json(['success' => true, 'message' => 'ลบอะคาเดมีสำเร็จ']);
         })->middleware('permission:academy-delete')->name('admin.academies.destroy');
     });
@@ -353,17 +380,17 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
     Route::prefix('coupons')->group(function () {
         Route::get('/', function (\Illuminate\Http\Request $request) {
             $query = \App\Models\Coupon::with(['creator', 'usedBy']);
-            
+
             if ($request->has('status')) {
                 $query->where('status', $request->status);
             }
-            
+
             $coupons = $query->orderBy('created_at', 'desc')
                 ->paginate($request->get('per_page', 10));
-            
+
             return response()->json(['success' => true, 'data' => $coupons]);
         })->name('admin.coupons.index');
-        
+
         Route::post('/', function (\Illuminate\Http\Request $request) {
             $validated = $request->validate([
                 'code' => 'required|string|unique:coupons,code',
@@ -372,31 +399,34 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
                 'description' => 'nullable|string',
                 'expires_at' => 'nullable|date',
             ]);
-            
+
             $coupon = \App\Models\Coupon::create([
                 ...$validated,
                 'creator_id' => auth()->id(),
                 'status' => 'unused',
             ]);
-            
+
             return response()->json(['success' => true, 'data' => $coupon], 201);
         })->middleware('permission:coupon-create')->name('admin.coupons.store');
-        
+
         Route::get('/{id}', function ($id) {
             $coupon = \App\Models\Coupon::with(['creator', 'usedBy'])->findOrFail($id);
+
             return response()->json(['success' => true, 'data' => $coupon]);
         })->name('admin.coupons.show');
-        
+
         Route::put('/{id}', function (\App\Http\Requests\Admin\UpdateCouponRequest $request, $id) {
             $coupon = \App\Models\Coupon::findOrFail($id);
             // ใช้ validated() แทน all() เพื่อป้องกัน mass assignment
             $coupon->update($request->validated());
+
             return response()->json(['success' => true, 'data' => $coupon]);
         })->middleware('permission:coupon-edit')->name('admin.coupons.update');
-        
+
         Route::delete('/{id}', function ($id) {
             $coupon = \App\Models\Coupon::findOrFail($id);
             $coupon->delete();
+
             return response()->json(['success' => true, 'message' => 'ลบคูปองสำเร็จ']);
         })->middleware('permission:coupon-delete')->name('admin.coupons.destroy');
     });
@@ -406,31 +436,31 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
     // =====================================================
     Route::get('/points-transactions', function (\Illuminate\Http\Request $request) {
         $query = \App\Models\PointsTransaction::with(['user', 'targetUser']);
-        
+
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
-        
+
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
-        
+
         return response()->json(['success' => true, 'data' => $transactions]);
     })->name('admin.points-transactions.index');
 
     Route::get('/wallet-transactions', function (\Illuminate\Http\Request $request) {
         $query = \App\Models\WalletTransaction::with(['user']);
-        
+
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
-        
+
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-        
+
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
-        
+
         return response()->json(['success' => true, 'data' => $transactions]);
     })->name('admin.wallet-transactions.index');
 
@@ -439,18 +469,18 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
     // =====================================================
     Route::get('/activities', function (\Illuminate\Http\Request $request) {
         $query = \App\Models\ActivityLog::with('user');
-        
+
         if ($request->has('type')) {
             $query->where('type', $request->type);
         }
-        
+
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
-        
+
         $activities = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
-        
+
         return response()->json(['success' => true, 'data' => $activities]);
     })->name('admin.activities.index');
 
@@ -459,8 +489,8 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             'success' => true,
             'data' => [
                 'data' => [],
-                'total' => 0
-            ]
+                'total' => 0,
+            ],
         ]);
     })->name('admin.content.index');
 
@@ -489,7 +519,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
                     'app_url' => config('app.url'),
                     'app_env' => config('app.env'),
                     'app_debug' => config('app.debug'),
-                ]
+                ],
             ]);
         });
     });
@@ -506,7 +536,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::get('/my-logs', [AuditLogController::class, 'myLogs'])->name('admin.audit-logs.my-logs');
         Route::get('/export', [AuditLogController::class, 'export'])->name('admin.audit-logs.export');
         Route::get('/{auditLog}', [AuditLogController::class, 'show'])->name('admin.audit-logs.show');
-        
+
         // Cleanup (Super Admin only)
         Route::delete('/cleanup', [AuditLogController::class, 'cleanup'])
             ->middleware('admin:SUPER_ADMIN')

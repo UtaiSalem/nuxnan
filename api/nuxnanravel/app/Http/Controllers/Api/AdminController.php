@@ -4,25 +4,40 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\UserResource;
-use App\Models\User;
 use App\Models\Role;
+use App\Models\User;
+use App\Services\Admin\UserDeletionImpactService;
+use App\Services\Admin\UserDeletionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Yajra\DataTables\Facades\DataTables;
 
 class AdminController extends Controller
 {
+    public function __construct(
+        private UserDeletionImpactService $impactService,
+        private UserDeletionService $deletionService
+    ) {}
+
     /**
      * Display a listing of users with filtering and pagination.
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
         $query = User::with(['roles', 'profile']);
+
+        // Scope filter (SoftDeletes support)
+        $scope = $request->get('scope', 'active');
+        if ($scope === 'deleted') {
+            $query->onlyTrashed();
+        } elseif ($scope === 'all') {
+            $query->withTrashed();
+        }
 
         // Search filter (enhanced: name, email, phone, personal_code)
         if ($request->has('search') && $request->search) {
@@ -46,7 +61,7 @@ class AdminController extends Controller
         if ($request->has('status') && $request->status) {
             if ($request->status === 'verified' || $request->status === 'active') {
                 $query->whereNotNull('email_verified_at');
-            } elseif ($request->status === 'unverified' || $request->status === 'inactive') {
+            } elseif ($request->status === 'unverified' || $request->status === 'inactive' || $request->status === 'pending') {
                 $query->whereNull('email_verified_at');
             }
         }
@@ -81,14 +96,14 @@ class AdminController extends Controller
                 'last_page' => $users->lastPage(),
                 'per_page' => $users->perPage(),
                 'total' => $users->total(),
-            ]
+                'total_pending' => User::whereNull('email_verified_at')->count(),
+            ],
         ]);
     }
 
     /**
      * Get users data for DataTables (server-side processing)
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function datatable(Request $request)
@@ -106,7 +121,7 @@ class AdminController extends Controller
         if ($request->has('status') && $request->status && $request->status !== 'all') {
             if ($request->status === 'verified' || $request->status === 'active') {
                 $query->whereNotNull('email_verified_at');
-            } elseif ($request->status === 'unverified' || $request->status === 'inactive') {
+            } elseif ($request->status === 'unverified' || $request->status === 'inactive' || $request->status === 'pending') {
                 $query->whereNull('email_verified_at');
             }
         }
@@ -124,6 +139,7 @@ class AdminController extends Controller
                         'INSTRUCTOR' => 'green',
                         'USER' => 'gray',
                     ];
+
                     return [
                         'name' => $role->name,
                         'display_name' => $role->display_name ?? $role->name,
@@ -179,14 +195,13 @@ class AdminController extends Controller
                 'new_users_this_week' => $newUsersThisWeek,
                 'new_users_this_month' => $newUsersThisMonth,
                 'role_distribution' => $roleDistribution,
-            ]
+            ],
         ]);
     }
 
     /**
      * Store a newly created user in storage.
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
@@ -205,7 +220,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -237,24 +252,24 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'สร้างผู้ใช้สำเร็จ',
-            'data' => new UserResource($user->load('roles'))
+            'data' => new UserResource($user->load('roles')),
         ], 201);
     }
 
     /**
      * Display the specified user.
      *
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function show($id)
     {
         $user = User::with(['roles', 'profile'])->find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบผู้ใช้'
+                'message' => 'ไม่พบผู้ใช้',
             ], 404);
         }
 
@@ -266,7 +281,7 @@ class AdminController extends Controller
                 'username' => $user->username,
                 'email' => $user->email,
                 'avatar' => $user->avatar ?? $user->profile_photo_url,
-                'roles' => $user->roles->map(fn($r) => [
+                'roles' => $user->roles->map(fn ($r) => [
                     'id' => $r->id,
                     'name' => $r->name,
                     'display_name' => $r->display_name ?? $r->name,
@@ -287,25 +302,24 @@ class AdminController extends Controller
                 'points' => $user->points ?? 0,
                 'courses_count' => $user->courses()->count() ?? 0,
                 'login_count' => $user->login_count ?? 0,
-            ]
+            ],
         ]);
     }
 
     /**
      * Update the specified user in storage.
      *
-     * @param Request $request
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบผู้ใช้'
+                'message' => 'ไม่พบผู้ใช้',
             ], 404);
         }
 
@@ -323,13 +337,13 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         // Update basic fields
         $user->fill($request->only(['name', 'email', 'phone_number']));
-        
+
         if ($request->has('password') && $request->password) {
             $user->password = Hash::make($request->password);
         }
@@ -350,72 +364,152 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'อัปเดตผู้ใช้สำเร็จ',
-            'data' => new UserResource($user->load('roles'))
+            'data' => new UserResource($user->load('roles')),
         ]);
     }
 
     /**
-     * Remove the specified user from storage.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * GET /api/admin/users/{id}/delete-impact
+     * ตรวจสอบผลกระทบก่อนลบ
      */
-    public function destroy($id)
+    public function getDeleteImpact(int $id): \Illuminate\Http\JsonResponse
     {
-        $user = User::find($id);
+        $user = User::withTrashed()->find($id);
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบผู้ใช้'
-            ], 404);
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบผู้ใช้'], 404);
         }
 
-        // Prevent deleting super admins
         if ($user->isSuperAdmin()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่สามารถลบ Super Admin ได้'
-            ], 403);
+            return response()->json(['success' => false, 'message' => 'ไม่สามารถลบ Super Admin ได้'], 403);
         }
 
-        // Prevent deleting yourself
         if (auth()->id() === $user->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่สามารถลบบัญชีตัวเองได้'
-            ], 403);
+            return response()->json(['success' => false, 'message' => 'ไม่สามารถลบบัญชีตัวเองได้'], 403);
         }
 
-        $user->delete();
+        $impact = $this->impactService->getImpact($user);
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบผู้ใช้สำเร็จ'
+            'data' => $impact,
+        ]);
+    }
+
+    /**
+     * DELETE /api/admin/users/{id}
+     * Soft delete + anonymize user
+     */
+    public function destroy(int $id): \Illuminate\Http\JsonResponse
+    {
+        $user = User::find($id);
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบผู้ใช้'], 404);
+        }
+
+        if ($user->isSuperAdmin()) {
+            return response()->json(['success' => false, 'message' => 'ไม่สามารถลบ Super Admin ได้'], 403);
+        }
+
+        if (auth()->id() === $user->id) {
+            return response()->json(['success' => false, 'message' => 'ไม่สามารถลบบัญชีตัวเองได้'], 403);
+        }
+
+        $validated = request()->validate([
+            'reason' => 'required|string|min:5|max:500',
+        ]);
+
+        try {
+            $result = $this->deletionService->softDelete(
+                user: $user,
+                deletedBy: auth()->user(),
+                reason: $validated['reason']
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result['impact_summary'],
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่สามารถลบได้ กรุณาจัดการปัญหาก่อน',
+                'blockers' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/users/{id}/restore
+     * Restore user ที่ถูก soft delete
+     */
+    public function restoreUser(int $id): \Illuminate\Http\JsonResponse
+    {
+        $user = User::withTrashed()->find($id);
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบผู้ใช้'], 404);
+        }
+
+        if (! $user->trashed()) {
+            return response()->json(['success' => false, 'message' => 'ผู้ใช้นี้ไม่ได้ถูกปิดใช้งาน'], 422);
+        }
+
+        $this->deletionService->restore($user, auth()->user());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'กู้คืนบัญชีสำเร็จ หมายเหตุ: email/ชื่อถูก anonymize ไปแล้ว กรุณาอัพเดตผ่านหน้า Edit',
+        ]);
+    }
+
+    public function bulkVerify(Request $request)
+    {
+        $request->validate([
+            'user_ids' => 'required|array|min:1|max:100',
+            'user_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $count = User::whereIn('id', $request->user_ids)
+            ->whereNull('email_verified_at')
+            ->update(['email_verified_at' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "ยืนยันบัญชีสำเร็จ {$count} คน",
+            'verified_count' => $count,
         ]);
     }
 
     /**
      * Verify user's email
      *
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function verifyEmail($id)
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบผู้ใช้'
+                'message' => 'ไม่พบผู้ใช้',
             ], 404);
         }
 
         if ($user->email_verified_at) {
             return response()->json([
                 'success' => false,
-                'message' => 'อีเมลได้รับการยืนยันแล้ว'
+                'message' => 'อีเมลได้รับการยืนยันแล้ว',
             ], 400);
         }
 
@@ -425,31 +519,31 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'ยืนยันอีเมลสำเร็จ',
-            'data' => new UserResource($user)
+            'data' => new UserResource($user),
         ]);
     }
 
     /**
      * Unverify user's email
      *
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function unverifyEmail($id)
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบผู้ใช้'
+                'message' => 'ไม่พบผู้ใช้',
             ], 404);
         }
 
-        if (!$user->email_verified_at) {
+        if (! $user->email_verified_at) {
             return response()->json([
                 'success' => false,
-                'message' => 'อีเมลยังไม่ได้รับการยืนยัน'
+                'message' => 'อีเมลยังไม่ได้รับการยืนยัน',
             ], 400);
         }
 
@@ -459,24 +553,24 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'ยกเลิกการยืนยันอีเมลสำเร็จ',
-            'data' => new UserResource($user)
+            'data' => new UserResource($user),
         ]);
     }
 
     /**
      * Toggle user ban status
      *
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function toggleBan($id)
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบผู้ใช้'
+                'message' => 'ไม่พบผู้ใช้',
             ], 404);
         }
 
@@ -484,11 +578,11 @@ class AdminController extends Controller
         if ($user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถแบนบัญชี Super Admin ได้'
+                'message' => 'ไม่สามารถแบนบัญชี Super Admin ได้',
             ], 403);
         }
 
-        $user->is_banned = !($user->is_banned ?? false);
+        $user->is_banned = ! ($user->is_banned ?? false);
         $user->save();
 
         $action = $user->is_banned ? 'แบน' : 'ปลดแบน';
@@ -498,7 +592,7 @@ class AdminController extends Controller
             'message' => "{$action}ผู้ใช้สำเร็จ",
             'data' => [
                 'is_banned' => $user->is_banned,
-            ]
+            ],
         ]);
     }
 }

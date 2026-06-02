@@ -146,7 +146,7 @@ const handleLogin = async () => {
               />
               <span class="text-sm text-gray-300">จดจำฉัน</span>
             </label>
-            <NuxtLink to="/auth/forgot-password" class="text-sm text-purple-400 hover:text-purple-300 transition-colors">
+            <NuxtLink to="/auth/ForgotPassword" class="text-sm text-purple-400 hover:text-purple-300 transition-colors">
               ลืมรหัสผ่าน?
             </NuxtLink>
           </div>

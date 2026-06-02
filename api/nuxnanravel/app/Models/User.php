@@ -3,45 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
-
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Support\Facades\Auth;
-
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 // use App\Models\User; // Recursive import removed
-use App\Models\Course;
-use App\Models\Lesson;
-use App\Models\Academy;
-use App\Models\Advert;
-use App\Models\Activity;
-use App\Models\CourseQuiz;
-use App\Models\Friendship;
-use App\Models\LessonLike;
-use App\Models\CourseGroup;
-use App\Models\PostComment;
-use App\Models\UserProfile;
-use App\Models\PlearndAdmin;
-use App\Models\AcademyMember;
-use App\Models\LessonComment;
-use App\Models\LessonDislike;
-use App\Models\AssignmentAnswer;
-use App\Models\CourseQuizResult;
-use App\Models\CourseGroupMember;
-use App\Models\UserAnswerQuestion;
-use App\Models\Permission;
-use App\Models\Badge;
 
 use Illuminate\Support\Str;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
+
 // use Laravel\Sanctum\HasApiTokens;
 
 // use App\Models\UserActivity;
@@ -49,14 +25,18 @@ use Illuminate\Support\Str;
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 {
     public const ADMIN_SUGGESTER_CODE = '11111111';
+
     public const MAX_REFERRALS_PER_SUGGESTER = 5;
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
+
     // use HasApiTokens;
     use \Multicaret\Acquaintances\Traits\Friendable;
 
     public $incrementing = true;
+
+    protected static ?bool $permissionsSchemaReady = null;
 
     /**
      * The attributes that are mass assignable.
@@ -95,6 +75,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'xp_level',
         'xp_for_next_level',
         'current_xp',
+        'deleted_by',
+        'deletion_reason',
+        'anonymized_at',
     ];
 
     /**
@@ -134,6 +117,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'no_of_ref' => 'integer',
             'pp' => 'decimal:2',
             'wallet' => 'decimal:2',
+            'anonymized_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -252,6 +237,10 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             return true;
         }
 
+        if (! $this->permissionsSchemaReady()) {
+            return false;
+        }
+
         // Check direct permissions
         if ($this->permissions()->where('name', $permissionName)->exists()) {
             return true;
@@ -277,6 +266,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
                 return true;
             }
         }
+
         return false;
     }
 
@@ -285,14 +275,31 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function getAllPermissions(): array
     {
+        if (! $this->permissionsSchemaReady()) {
+            return [];
+        }
+
         $directPermissions = $this->permissions()->pluck('name')->toArray();
-        
+
         $rolePermissions = [];
         foreach ($this->roles as $role) {
             $rolePermissions = array_merge($rolePermissions, $role->permissions()->pluck('name')->toArray());
         }
 
         return array_unique(array_merge($directPermissions, $rolePermissions));
+    }
+
+    private function permissionsSchemaReady(): bool
+    {
+        if (self::$permissionsSchemaReady !== null) {
+            return self::$permissionsSchemaReady;
+        }
+
+        self::$permissionsSchemaReady = Schema::hasTable('permissions')
+            && Schema::hasTable('role_permissions')
+            && Schema::hasTable('user_permissions');
+
+        return self::$permissionsSchemaReady;
     }
 
     /**
@@ -330,6 +337,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         if (User::where('personal_code', $personal_code)->exists()) {
             return self::generateReferralCode();
         }
+
         return (string) $personal_code;
     }
 
@@ -348,14 +356,14 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->no_of_ref < self::MAX_REFERRALS_PER_SUGGESTER;
     }
 
-    //get referal link
+    // get referal link
     public function getReferalLinkAttribute()
     {
-        return env('APP_URL') . '/register/' . $this->reference_code;
+        return env('APP_URL').'/register/'.$this->reference_code;
     }
 
-    //get profile photo url
-    //get profile photo url
+    // get profile photo url
+    // get profile photo url
     public function getProfilePhotoUrlAttribute()
     {
         return $this->avatar;
@@ -374,14 +382,16 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 
             // Clean up the path: remove any leading slash, 'storage/', or '/storage/' prefix
             $cleanPath = preg_replace('#^/?(storage/)?#', '', $path);
-            
+
             // Build the URL manually for better cross-environment support
             $appUrl = rtrim(config('app.url'), '/');
-            return $appUrl . '/storage/' . ltrim($cleanPath, '/');
+
+            return $appUrl.'/storage/'.ltrim($cleanPath, '/');
         }
 
         // Fallback: UI Avatars
         $name = urlencode($this->name ?? 'User');
+
         return "https://ui-avatars.com/api/?name={$name}&color=7F9CF5&background=EBF4FF";
     }
 
@@ -394,8 +404,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         $oauthProviders = ['google', 'facebook', 'twitter', 'github', 'linkedin'];
 
         foreach ($oauthProviders as $provider) {
-            $field = $provider . '_id';
-            if (!empty($this->$field)) {
+            $field = $provider.'_id';
+            if (! empty($this->$field)) {
                 $providers[] = $provider;
             }
         }
@@ -408,8 +418,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function hasProvider($provider)
     {
-        $field = $provider . '_id';
-        return !empty($this->$field);
+        $field = $provider.'_id';
+
+        return ! empty($this->$field);
     }
 
     /**
@@ -610,13 +621,13 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             if ($friend) {
                 if ($authUser->isFriendWith($friend)) {
                     return 1;
-                    //accepted
+                    // accepted
                 } elseif ($authUser->hasSentFriendRequestTo($friend)) {
                     return 0;
-                    //pending
+                    // pending
                 } else {
                     return null;
-                    //not friend
+                    // not friend
                 }
             } else {
                 return null;
@@ -780,11 +791,12 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     {
         if ($this->isFollowing($user)) {
             $this->unfollow($user);
+
             return ['following' => false, 'followers_count' => $user->followers()->count()];
         } else {
             $this->follow($user);
+
             return ['following' => true, 'followers_count' => $user->followers()->count()];
         }
     }
-
 }

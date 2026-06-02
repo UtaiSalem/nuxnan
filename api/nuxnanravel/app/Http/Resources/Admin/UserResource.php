@@ -23,13 +23,13 @@ class UserResource extends JsonResource
             'reference_code' => $this->reference_code,
             'avatar' => $this->avatar,
             'profile_photo_url' => $this->profile_photo_url,
-            
+
             // Status
             'email_verified_at' => $this->email_verified_at,
             'phone_verified_at' => $this->phone_verified_at,
             'verified' => $this->verified,
             'is_verified' => $this->email_verified_at !== null,
-            
+
             // Points & Wallet
             'pp' => $this->pp,
             'wallet' => $this->wallet,
@@ -38,7 +38,7 @@ class UserResource extends JsonResource
             'level' => $this->level,
             'current_xp' => $this->current_xp,
             'xp_for_next_level' => $this->xp_for_next_level,
-            
+
             // Roles & Permissions
             'roles' => $this->whenLoaded('roles', function () {
                 return $this->roles->map(function ($role) {
@@ -51,7 +51,7 @@ class UserResource extends JsonResource
             }),
             'is_super_admin' => $this->isSuperAdmin(),
             'is_admin' => $this->hasAnyRole(['SUPER_ADMIN', 'ADMIN']),
-            
+
             // Profile
             'profile' => $this->whenLoaded('profile', function () {
                 return [
@@ -68,17 +68,17 @@ class UserResource extends JsonResource
                     'linkedin' => $this->profile->linkedin ?? null,
                 ];
             }),
-            
+
             // Social Logins
             'connected_providers' => $this->connected_providers,
-            
+
             // Referral
             'no_of_ref' => $this->no_of_ref,
             'referal_link' => $this->referal_link,
-            
+
             // Timestamps (handle both Carbon objects and strings)
-            'created_at' => $this->formatTimestamp($this->created_at),
-            'updated_at' => $this->formatTimestamp($this->updated_at),
+            'created_at' => $this->formatTimestamp($this->getRawOriginal('created_at')),
+            'updated_at' => $this->formatTimestamp($this->getRawOriginal('updated_at')),
         ];
     }
 
@@ -90,11 +90,11 @@ class UserResource extends JsonResource
         if ($value === null) {
             return null;
         }
-        
-        if (is_string($value)) {
-            return $value;
+
+        try {
+            return \Carbon\Carbon::parse($value)->toISOString();
+        } catch (\Throwable $e) {
+            return is_string($value) ? $value : null;
         }
-        
-        return $value->format('Y-m-d H:i:s');
     }
 }

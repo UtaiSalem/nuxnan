@@ -10,125 +10,290 @@ definePageMeta({
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase as string
 
-// State
-const users = ref([])
-const isLoading = ref(true)
+// ─── State ────────────────────────────────────────────────────
+const users       = ref<any[]>([])
+const isLoading   = ref(true)
 const searchQuery = ref('')
-const selectedRole = ref('all')
+const selectedRole  = ref('all')
+const selectedScope = ref('active')   // active | deleted | all
+const selectedStatus = ref('all')  // all | pending | verified
 const currentPage = ref(1)
-const totalPages = ref(1)
-const perPage = ref(10)
-const totalUsers = ref(0)
+const totalPages  = ref(1)
+const perPage     = ref(10)
+const totalUsers  = ref(0)
+const totalPendingUsers = ref(0)
+const toast       = ref<{ type: 'success' | 'error'; message: string } | null>(null)
 
-// Delete modal
-const showDeleteModal = ref(false)
-const userToDelete = ref(null)
+// ─── Delete modal state ───────────────────────────────────────
+const showDeleteModal   = ref(false)
+const userToDelete      = ref<any>(null)
+const deleteReason      = ref('')
+const isLoadingImpact   = ref(false)
+const isDeleting        = ref(false)
+const deleteImpact      = ref<any>(null)
+const impactError       = ref('')
+const warningAcknowledged = ref(false)
 
-// Roles
+// ─── Verify modal state ───────────────────────────────────────
+const showVerifyModal = ref(false)
+const userToVerify    = ref<any>(null)
+const verifyAction    = ref<'verify' | 'unverify'>('verify')
+const verifyNote      = ref('')
+const isVerifying     = ref(false)
+
+// ─── Bulk Select state ────────────────────────────────────────
+const selectedUserIds = ref<number[]>([])
+const isAllSelected   = computed(() => users.value.length > 0 && selectedUserIds.value.length === users.value.length)
+
+// ─── Computed ─────────────────────────────────────────────────
+const hasBlockers = computed(() =>
+  deleteImpact.value && deleteImpact.value.blockers?.length > 0
+)
+const hasWarnings = computed(() =>
+  deleteImpact.value && deleteImpact.value.warnings?.length > 0
+)
+const canConfirmDelete = computed(() => {
+  if (!deleteImpact.value || hasBlockers.value) return false
+  if (deleteReason.value.trim().length < 5) return false
+  if (hasWarnings.value && !warningAcknowledged.value) return false
+  return true
+})
+
 const roles = [
   { value: 'all', label: 'ทั้งหมด' },
   { value: 'user', label: 'ผู้ใช้ทั่วไป' },
   { value: 'instructor', label: 'ผู้สอน' },
-  { value: 'admin', label: 'ผู้ดูแล' }
+  { value: 'admin', label: 'ผู้ดูแล' },
+]
+const scopes = [
+  { value: 'active',  label: 'ใช้งานอยู่' },
+  { value: 'deleted', label: 'ถูกปิดใช้งาน' },
+  { value: 'all',     label: 'ทั้งหมด' },
+]
+const statusOptions = [
+  { value: 'all',     label: 'ทุกสถานะ' },
+  { value: 'pending', label: 'รอยืนยัน' },
+  { value: 'verified', label: 'ยืนยันแล้ว' },
 ]
 
-// Fetch users
+// ─── API helper ───────────────────────────────────────────────
+function getHeaders() {
+  const token = useCookie('token')
+  return { Authorization: `Bearer ${token.value}` }
+}
+
+function showToast(type: 'success' | 'error', message: string) {
+  toast.value = { type, message }
+  setTimeout(() => { toast.value = null }, 4000)
+}
+
+// ─── Fetch users ──────────────────────────────────────────────
 const fetchUsers = async () => {
   isLoading.value = true
   try {
-    const token = useCookie('token')
     const params = new URLSearchParams({
-      page: currentPage.value.toString(),
+      page:     currentPage.value.toString(),
       per_page: perPage.value.toString(),
+      scope:    selectedScope.value,
+      status:   selectedStatus.value,
       ...(searchQuery.value && { search: searchQuery.value }),
-      ...(selectedRole.value !== 'all' && { role: selectedRole.value })
+      ...(selectedRole.value !== 'all' && { role: selectedRole.value }),
     })
-
-    const response = await $fetch(`${apiBase}/api/admin/users?${params}`, {
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      }
+    const response: any = await $fetch(`${apiBase}/api/admin/users?${params}`, {
+      headers: getHeaders(),
     })
-
     if (response.success) {
-      users.value = response.data.data || response.data
-      totalPages.value = response.data.last_page || 1
-      totalUsers.value = response.data.total || users.value.length
+      users.value      = response.data.data || response.data
+      totalPages.value = response.meta?.last_page || response.data.last_page || 1
+      totalUsers.value = response.meta?.total || response.data.total || users.value.length
+      totalPendingUsers.value = response.meta?.total_pending || 0
     }
-  } catch (error) {
-    console.error('Failed to fetch users:', error)
+  } catch (e: any) {
+    showToast('error', 'โหลดข้อมูลล้มเหลว: ' + (e?.data?.message || e.message))
   } finally {
     isLoading.value = false
   }
 }
 
-// Handle search
-const handleSearch = () => {
-  currentPage.value = 1
-  fetchUsers()
+const handleSearch = () => { currentPage.value = 1; fetchUsers() }
+const handleFilter = () => { currentPage.value = 1; fetchUsers() }
+const goToPage = (p: number) => { currentPage.value = p; fetchUsers() }
+
+// ─── Verify flow ──────────────────────────────────────────────
+const openVerifyModal = (user: any) => {
+  userToVerify.value = user
+  verifyAction.value = 'verify'
+  verifyNote.value = ''
+  showVerifyModal.value = true
 }
 
-// Handle role filter
-const handleRoleFilter = () => {
-  currentPage.value = 1
-  fetchUsers()
+const openUnverifyModal = (user: any) => {
+  userToVerify.value = user
+  verifyAction.value = 'unverify'
+  verifyNote.value = ''
+  showVerifyModal.value = true
 }
 
-// Handle pagination
-const goToPage = (page: number) => {
-  currentPage.value = page
-  fetchUsers()
-}
-
-// Open delete modal
-const openDeleteModal = (user: any) => {
-  userToDelete.value = user
-  showDeleteModal.value = true
-}
-
-// Confirm delete
-const confirmDelete = async () => {
-  if (!userToDelete.value) return
-
+const confirmVerify = async () => {
+  if (!userToVerify.value || isVerifying.value) return
+  
+  isVerifying.value = true
+  const endpoint = verifyAction.value === 'verify' ? 'verify-email' : 'unverify-email'
+  
   try {
-    const token = useCookie('token')
-    await $fetch(`${apiBase}/api/admin/users/${userToDelete.value.id}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      }
+    const res: any = await $fetch(`${apiBase}/api/admin/users/${userToVerify.value.id}/${endpoint}`, {
+      method: 'POST',
+      headers: getHeaders(),
     })
-    showDeleteModal.value = false
-    userToDelete.value = null
+    showToast('success', res.message || 'ดำเนินการสำเร็จ')
+    showVerifyModal.value = false
     fetchUsers()
-  } catch (error) {
-    console.error('Failed to delete user:', error)
+  } catch (e: any) {
+    showToast('error', e?.data?.message || 'เกิดข้อผิดพลาด')
+  } finally {
+    isVerifying.value = false
   }
 }
 
-// Get status badge class
-const getStatusBadge = (status: string) => {
-  const badges = {
-    active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    inactive: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-    suspended: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+const bulkVerify = async () => {
+  if (!selectedUserIds.value.length) return
+  if (!confirm(`ยืนยันบัญชี ${selectedUserIds.value.length} คน?`)) return
+  try {
+    const res: any = await $fetch(`${apiBase}/api/admin/users/bulk-verify`, {
+      method: 'POST', 
+      headers: getHeaders(),
+      body: { user_ids: selectedUserIds.value }
+    })
+    showToast('success', res.message)
+    selectedUserIds.value = []
+    fetchUsers()
+  } catch (e: any) {
+    showToast('error', e?.data?.message || 'เกิดข้อผิดพลาด')
   }
-  return badges[status] || badges.inactive
 }
 
-// Get role badge class
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedUserIds.value = []
+  } else {
+    selectedUserIds.value = users.value.map(u => u.id)
+  }
+}
+
+const toggleSelectUser = (id: number) => {
+  const index = selectedUserIds.value.indexOf(id)
+  if (index === -1) {
+    selectedUserIds.value.push(id)
+  } else {
+    selectedUserIds.value.splice(index, 1)
+  }
+}
+
+// ─── Delete flow ──────────────────────────────────────────────
+const openDeleteModal = async (user: any) => {
+  userToDelete.value      = user
+  deleteReason.value      = ''
+  deleteImpact.value      = null
+  impactError.value       = ''
+  warningAcknowledged.value = false
+  showDeleteModal.value   = true
+
+  // โหลด impact ทันทีที่เปิด modal
+  isLoadingImpact.value = true
+  try {
+    const res: any = await $fetch(
+      `${apiBase}/api/admin/users/${user.id}/delete-impact`,
+      { headers: getHeaders() }
+    )
+    deleteImpact.value = res.data
+  } catch (e: any) {
+    impactError.value = 'โหลดข้อมูลผลกระทบล้มเหลว: ' + (e?.data?.message || e.message)
+  } finally {
+    isLoadingImpact.value = false
+  }
+}
+
+const closeDeleteModal = () => {
+  if (isDeleting.value) return   // ห้ามปิดระหว่าง request
+  showDeleteModal.value = false
+  userToDelete.value    = null
+}
+
+const confirmDelete = async () => {
+  if (!canConfirmDelete.value || isDeleting.value) return
+
+  isDeleting.value = true
+  try {
+    const res: any = await $fetch(
+      `${apiBase}/api/admin/users/${userToDelete.value.id}`,
+      {
+        method:  'DELETE',
+        headers: getHeaders(),
+        body:    { reason: deleteReason.value },
+      }
+    )
+    showDeleteModal.value = false
+    showToast('success', res.message || 'ปิดใช้งานบัญชีสำเร็จ')
+    fetchUsers()
+  } catch (e: any) {
+    const msg = e?.data?.message || 'เกิดข้อผิดพลาด'
+    const blockers = e?.data?.blockers
+    if (blockers) {
+      // อัพเดท impact เพื่อแสดง blocker ใหม่ (กรณี race)
+      impactError.value = msg
+    } else {
+      showToast('error', msg)
+      closeDeleteModal()
+    }
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+// ─── Restore ──────────────────────────────────────────────────
+const restoreUser = async (user: any) => {
+  if (!confirm(`กู้คืนบัญชี "${user.name}" ใช่หรือไม่?\n\nหมายเหตุ: email/ชื่ออาจถูก anonymize ไปแล้ว ต้องอัพเดทเองหลังกู้คืน`)) return
+  try {
+    const res: any = await $fetch(
+      `${apiBase}/api/admin/users/${user.id}/restore`,
+      { method: 'POST', headers: getHeaders() }
+    )
+    showToast('success', res.message)
+    fetchUsers()
+  } catch (e: any) {
+    showToast('error', e?.data?.message || 'กู้คืนล้มเหลว')
+  }
+}
+
+const getStatusLabel = (user: any) => {
+  if (user.deleted_at) return 'ถูกปิดใช้งาน'
+  if (!user.is_verified) return 'รอยืนยัน'
+  return 'ยืนยันแล้ว'
+}
+
+const getStatusBadge = (user: any) => {
+  if (user.deleted_at) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+  if (!user.is_verified) return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+  return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+}
+
 const getRoleBadge = (role: string) => {
-  const badges = {
-    admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  const badges: Record<string, string> = {
+    admin:      'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     instructor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    user: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+    user:       'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
   }
-  return badges[role] || badges.user
+  return badges[role] ?? badges.user
 }
 
-onMounted(() => {
-  fetchUsers()
-})
+const formatDate = (dateStr: string | null | undefined) => {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString('th-TH')
+}
+
+onMounted(fetchUsers)
 </script>
 
 <template>
@@ -136,7 +301,12 @@ onMounted(() => {
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">จัดการผู้ใช้</h1>
+        <div class="flex items-center gap-3">
+          <h1 class="text-2xl font-bold text-gray-800 dark:text-white">จัดการผู้ใช้</h1>
+          <span v-if="totalPendingUsers > 0" class="px-2 py-0.5 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full text-xs font-medium">
+            {{ totalPendingUsers }} รอยืนยัน
+          </span>
+        </div>
         <p class="text-gray-500 dark:text-gray-400 mt-1">
           ผู้ใช้งานทั้งหมด {{ totalUsers.toLocaleString() }} คน
         </p>
@@ -165,14 +335,36 @@ onMounted(() => {
           />
         </div>
 
+        <!-- Status Filter -->
+        <select
+          v-model="selectedStatus"
+          class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          @change="handleFilter"
+        >
+          <option v-for="status in statusOptions" :key="status.value" :value="status.value">
+            {{ status.label }}
+          </option>
+        </select>
+
         <!-- Role Filter -->
         <select
           v-model="selectedRole"
           class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          @change="handleRoleFilter"
+          @change="handleFilter"
         >
           <option v-for="role in roles" :key="role.value" :value="role.value">
             {{ role.label }}
+          </option>
+        </select>
+
+        <!-- Scope Filter -->
+        <select
+          v-model="selectedScope"
+          class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          @change="handleFilter"
+        >
+          <option v-for="s in scopes" :key="s.value" :value="s.value">
+            {{ s.label }}
           </option>
         </select>
 
@@ -182,6 +374,31 @@ onMounted(() => {
           class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white transition-colors"
         >
           ค้นหา
+        </button>
+      </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div v-if="selectedUserIds.length > 0" class="flex items-center justify-between gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center">
+          <Icon icon="fluent:select-all-24-regular" class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">เลือก {{ selectedUserIds.length }} คน</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button 
+          @click="bulkVerify" 
+          class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors flex items-center gap-2"
+        >
+          <Icon icon="fluent:checkmark-circle-24-regular" class="w-4 h-4" />
+          ยืนยันบัญชีที่เลือก
+        </button>
+        <button 
+          @click="selectedUserIds = []" 
+          class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          ยกเลิก
         </button>
       </div>
     </div>
@@ -199,6 +416,14 @@ onMounted(() => {
         <table class="w-full">
           <thead class="bg-gray-50 dark:bg-gray-700/50">
             <tr>
+              <th class="px-6 py-4 text-left">
+                <input
+                  type="checkbox"
+                  :checked="isAllSelected"
+                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  @change="toggleSelectAll"
+                />
+              </th>
               <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 ผู้ใช้
               </th>
@@ -224,7 +449,16 @@ onMounted(() => {
               v-for="user in users"
               :key="user.id"
               class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+              :class="{ 'bg-indigo-50/50 dark:bg-indigo-900/10': selectedUserIds.includes(user.id) }"
             >
+              <td class="px-6 py-4 whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  :checked="selectedUserIds.includes(user.id)"
+                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  @change="toggleSelectUser(user.id)"
+                />
+              </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center gap-3">
                   <img
@@ -247,34 +481,65 @@ onMounted(() => {
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="[getStatusBadge(user.status || 'active'), 'px-2.5 py-1 rounded-full text-xs font-medium']">
-                  {{ user.status || 'active' }}
+                <span :class="[getStatusBadge(user), 'px-2.5 py-1 rounded-full text-xs font-medium']">
+                  {{ getStatusLabel(user) }}
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="text-gray-600 dark:text-gray-300">
-                  {{ new Date(user.created_at).toLocaleDateString('th-TH') }}
+                  {{ formatDate(user.created_at) }}
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right">
-                <div class="flex items-center justify-end gap-2">
+                <div class="flex items-center justify-end gap-1">
+                  <!-- Quick Verify -->
+                  <button
+                    v-if="!user.is_verified && !user.deleted_at"
+                    @click="openVerifyModal(user)"
+                    class="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                    title="ยืนยันบัญชี"
+                  >
+                    <Icon icon="fluent:checkmark-circle-24-regular" class="w-5 h-5" />
+                  </button>
+                  <button
+                    v-if="user.is_verified && !user.deleted_at"
+                    @click="openUnverifyModal(user)"
+                    class="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 rounded-lg transition-colors"
+                    title="ถอนการยืนยัน"
+                  >
+                    <Icon icon="fluent:dismiss-circle-24-regular" class="w-5 h-5" />
+                  </button>
+
+                  <div class="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1" />
+
                   <NuxtLink
                     :to="`/nuxnan-admin/users/${user.id}`"
                     class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                    title="ดูรายละเอียด"
                   >
                     <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
                   </NuxtLink>
                   <NuxtLink
                     :to="`/nuxnan-admin/users/${user.id}/edit`"
                     class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    title="แก้ไข"
                   >
                     <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
                   </NuxtLink>
                   <button
                     @click="openDeleteModal(user)"
                     class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    title="ลบ"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
+                  </button>
+                  <button
+                    v-if="user.deleted_at"
+                    @click="restoreUser(user)"
+                    class="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                    title="กู้คืนบัญชี"
+                  >
+                    <Icon icon="fluent:arrow-undo-24-regular" class="w-5 h-5" />
                   </button>
                 </div>
               </td>
@@ -316,38 +581,237 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
+    <!-- Toast Notification -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="toast"
+          class="fixed top-6 right-6 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg text-white text-sm font-medium"
+          :class="toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'"
+        >
+          <Icon :icon="toast.type === 'success' ? 'fluent:checkmark-circle-24-filled' : 'fluent:dismiss-circle-24-filled'" class="w-5 h-5 flex-shrink-0" />
+          {{ toast.message }}
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Verify/Unverify Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showVerifyModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <div class="absolute inset-0 bg-black/50" @click="showVerifyModal = false" />
+          <div class="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-xl p-6">
+            <div class="flex items-center gap-4 mb-6">
+              <div 
+                class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                :class="verifyAction === 'verify' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-yellow-100 dark:bg-yellow-900/30'"
+              >
+                <Icon 
+                  :icon="verifyAction === 'verify' ? 'fluent:checkmark-circle-24-regular' : 'fluent:dismiss-circle-24-regular'" 
+                  class="w-6 h-6"
+                  :class="verifyAction === 'verify' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'"
+                />
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white">
+                  {{ verifyAction === 'verify' ? 'ยืนยันบัญชีผู้ใช้' : 'ยกเลิกการยืนยันบัญชี' }}
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ userToVerify?.name }} ({{ userToVerify?.email }})
+                </p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div v-if="verifyAction === 'verify'" class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl text-sm text-blue-700 dark:text-blue-300">
+                การยืนยันจะทำให้ผู้ใช้สามารถเข้าสู่ระบบและใช้งานฟีเจอร์ต่างๆ ได้ตามปกติ
+              </div>
+              
+              <div class="space-y-1.5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  หมายเหตุ (ไม่บังคับ)
+                </label>
+                <textarea
+                  v-model="verifyNote"
+                  rows="2"
+                  placeholder="ระบุข้อความสั้นๆ..."
+                  class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+              </div>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+              <button
+                @click="showVerifyModal = false"
+                :disabled="isVerifying"
+                class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                @click="confirmVerify"
+                :disabled="isVerifying"
+                class="flex-1 px-4 py-2.5 text-white rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                :class="verifyAction === 'verify' ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'"
+              >
+                <Icon v-if="isVerifying" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
+                <span>{{ isVerifying ? 'กำลังดำเนินการ...' : 'ยืนยัน' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Delete Modal with Impact Preview -->
     <Teleport to="body">
       <Transition name="modal">
         <div
           v-if="showDeleteModal"
           class="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
-          <div class="absolute inset-0 bg-black/50" @click="showDeleteModal = false" />
-          <div class="relative bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <div class="text-center">
-              <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Icon icon="fluent:warning-24-regular" class="w-6 h-6 text-red-600 dark:text-red-400" />
+          <div class="absolute inset-0 bg-black/50" @click="closeDeleteModal" />
+          <div class="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
+
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Icon icon="fluent:person-delete-24-regular" class="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 class="text-base font-semibold text-gray-800 dark:text-white">ปิดใช้งานบัญชี</h3>
+                  <p class="text-sm text-gray-500">{{ userToDelete?.name }}</p>
+                </div>
               </div>
-              <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">
-                ยืนยันการลบผู้ใช้
-              </h3>
-              <p class="text-gray-500 dark:text-gray-400">
-                คุณต้องการลบผู้ใช้ "{{ userToDelete?.name }}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
-              </p>
             </div>
-            <div class="flex gap-3 mt-6">
+
+            <!-- Body (scrollable) -->
+            <div class="overflow-y-auto p-6 space-y-4 flex-1">
+
+              <!-- Loading impact -->
+              <div v-if="isLoadingImpact" class="flex items-center justify-center py-8 gap-3 text-gray-500">
+                <Icon icon="fluent:spinner-ios-20-regular" class="w-6 h-6 animate-spin" />
+                <span>กำลังตรวจสอบผลกระทบ...</span>
+              </div>
+
+              <!-- Impact error -->
+              <div v-else-if="impactError" class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+                {{ impactError }}
+              </div>
+
+              <template v-else-if="deleteImpact">
+
+                <!-- BLOCKERS -->
+                <div v-if="hasBlockers" class="space-y-2">
+                  <p class="text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                    <Icon icon="fluent:error-circle-24-filled" class="w-4 h-4" />
+                    ต้องจัดการก่อนลบ
+                  </p>
+                  <div
+                    v-for="b in deleteImpact.blockers"
+                    :key="b.type"
+                    class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm"
+                  >
+                    <p class="font-medium text-red-700 dark:text-red-300">{{ b.message }}</p>
+                    <ul v-if="b.items?.length" class="mt-1.5 space-y-0.5 text-red-600 dark:text-red-400">
+                      <li v-for="item in b.items.slice(0, 5)" :key="item.id" class="flex items-center gap-1.5">
+                        <Icon icon="fluent:chevron-right-12-regular" class="w-3 h-3 flex-shrink-0" />
+                        {{ item.name }}
+                      </li>
+                      <li v-if="b.items.length > 5" class="text-xs opacity-70">และอีก {{ b.items.length - 5 }} รายการ</li>
+                    </ul>
+                    <ul v-if="b.tables?.length" class="mt-1.5 space-y-0.5 text-red-600 dark:text-red-400">
+                      <li v-for="t in b.tables" :key="t.table" class="flex items-center gap-1.5 text-xs">
+                        <Icon icon="fluent:table-24-regular" class="w-3 h-3 flex-shrink-0" />
+                        {{ t.label }} ({{ t.count }} รายการ)
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- WARNINGS -->
+                <div v-if="hasWarnings" class="space-y-2">
+                  <p class="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <Icon icon="fluent:warning-24-filled" class="w-4 h-4" />
+                    ข้อมูลที่จะได้รับผลกระทบ
+                  </p>
+                  <div
+                    v-for="w in deleteImpact.warnings"
+                    :key="w.type"
+                    class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm"
+                  >
+                    <p class="font-medium text-amber-700 dark:text-amber-300">{{ w.message }}</p>
+                    <div v-if="w.counts" class="mt-1.5 flex flex-wrap gap-2">
+                      <span
+                        v-for="(count, table) in w.counts"
+                        :key="table"
+                        class="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full text-xs"
+                      >
+                        {{ table }}: {{ count }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Warning acknowledge checkbox -->
+                  <label class="flex items-start gap-2.5 cursor-pointer p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                    <input
+                      v-model="warningAcknowledged"
+                      type="checkbox"
+                      class="mt-0.5 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500"
+                    />
+                    <span class="text-sm text-gray-700 dark:text-gray-300">
+                      รับทราบว่าข้อมูลที่ระบุจะได้รับผลกระทบและไม่สามารถย้อนกลับได้
+                    </span>
+                  </label>
+                </div>
+
+                <!-- No issues — all clear -->
+                <div v-if="!hasBlockers && !hasWarnings" class="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+                  <Icon icon="fluent:checkmark-circle-24-filled" class="w-4 h-4 flex-shrink-0" />
+                  ไม่พบข้อมูลที่อาจเป็นปัญหา สามารถปิดใช้งานได้เลย
+                </div>
+
+              </template>
+
+              <!-- Reason textarea (แสดงเฉพาะเมื่อไม่มี blocker) -->
+              <div v-if="deleteImpact && !hasBlockers" class="space-y-1.5">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  เหตุผลที่ปิดใช้งาน <span class="text-red-500">*</span>
+                </label>
+                <textarea
+                  v-model="deleteReason"
+                  rows="3"
+                  placeholder="ระบุเหตุผลอย่างน้อย 5 ตัวอักษร..."
+                  class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                />
+                <p v-if="deleteReason.length > 0 && deleteReason.trim().length < 5" class="text-xs text-red-500">
+                  กรุณาระบุเหตุผลอย่างน้อย 5 ตัวอักษร
+                </p>
+              </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex gap-3">
               <button
-                @click="showDeleteModal = false"
-                class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                @click="closeDeleteModal"
+                :disabled="isDeleting"
+                class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>
               <button
+                v-if="deleteImpact && !hasBlockers"
                 @click="confirmDelete"
-                class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
+                :disabled="!canConfirmDelete || isDeleting"
+                class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                ลบผู้ใช้
+                <Icon v-if="isDeleting" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
+                <span>{{ isDeleting ? 'กำลังดำเนินการ...' : 'ยืนยันปิดใช้งาน' }}</span>
               </button>
             </div>
           </div>

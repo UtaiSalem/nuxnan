@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use App\Http\Resources\UserResource;
 
 class AuthController extends Controller
 {
@@ -47,31 +47,40 @@ class AuthController extends Controller
             ->first();
 
         // Check if user exists
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'error' => 'Unauthorized',
-                'message' => 'Invalid credentials'
+                'message' => 'Invalid credentials',
             ], 401);
         }
 
         // Verify password
-        if (!Hash::check($password, $user->password)) {
+        if (! Hash::check($password, $user->password)) {
             return response()->json([
                 'success' => false,
                 'error' => 'Unauthorized',
-                'message' => 'Invalid credentials'
+                'message' => 'Invalid credentials',
             ], 401);
+        }
+
+        // Block unverified (pending) users
+        if (is_null($user->email_verified_at)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'AccountPending',
+                'message' => 'บัญชีของคุณยังไม่ได้รับการอนุมัติจากผู้ดูแล กรุณารอการตรวจสอบ',
+            ], 403);
         }
 
         // Generate JWT token
         $token = auth('api')->login($user);
 
-        if (!$token) {
+        if (! $token) {
             return response()->json([
                 'success' => false,
                 'error' => 'Server Error',
-                'message' => 'Failed to generate token'
+                'message' => 'Failed to generate token',
             ], 500);
         }
 
@@ -105,13 +114,13 @@ class AuthController extends Controller
                 if ($suggesterCode !== User::ADMIN_SUGGESTER_CODE) {
                     $referrer = User::where('personal_code', $suggesterCode)->lockForUpdate()->first();
 
-                    if (!$referrer) {
+                    if (! $referrer) {
                         throw ValidationException::withMessages([
                             'reference_code' => ['Invalid referral code. Please check and try again.'],
                         ]);
                     }
 
-                    if (!$referrer->canAcceptReferral()) {
+                    if (! $referrer->canAcceptReferral()) {
                         throw ValidationException::withMessages([
                             'reference_code' => ['Suggester has reached the maximum number of referrals.'],
                         ]);
@@ -151,13 +160,13 @@ class AuthController extends Controller
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
-            \Log::error('Registration error: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
-            
+            \Log::error('Registration error: '.$e->getMessage());
+            \Log::error('Stack trace: '.$e->getTraceAsString());
+
             return response()->json([
                 'error' => 'Registration failed',
                 'message' => $e->getMessage(),
-                'trace' => config('app.debug') ? $e->getTraceAsString() : null
+                'trace' => config('app.debug') ? $e->getTraceAsString() : null,
             ], 500);
         }
     }
@@ -172,10 +181,10 @@ class AuthController extends Controller
         $user = auth('api')->user();
         $user->load('roles'); // Load relationships for resource
         $user->loadCount(['posts', 'followers', 'following', 'userAchievements']);
-        
+
         return response()->json([
             'success' => true,
-            'data' => new UserResource($user)
+            'data' => new UserResource($user),
         ]);
     }
 
@@ -190,7 +199,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Successfully logged out'
+            'message' => 'Successfully logged out',
         ]);
     }
 
@@ -230,7 +239,7 @@ class AuthController extends Controller
         $referrer = User::where('personal_code', $referenceCode)->first();
 
         if ($referrer) {
-            if (!$referrer->canAcceptReferral()) {
+            if (! $referrer->canAcceptReferral()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Suggester has reached the maximum number of referrals.',
@@ -238,11 +247,11 @@ class AuthController extends Controller
             }
 
             // Generate avatar URL
-            $avatarUrl = $referrer->profile_photo_path 
-                ? (filter_var($referrer->profile_photo_path, FILTER_VALIDATE_URL) 
-                    ? $referrer->profile_photo_path 
+            $avatarUrl = $referrer->profile_photo_path
+                ? (filter_var($referrer->profile_photo_path, FILTER_VALIDATE_URL)
+                    ? $referrer->profile_photo_path
                     : \Storage::url($referrer->profile_photo_path))
-                : 'https://ui-avatars.com/api/?name=' . urlencode($referrer->name) . '&color=7F9CF5&background=EBF4FF';
+                : 'https://ui-avatars.com/api/?name='.urlencode($referrer->name).'&color=7F9CF5&background=EBF4FF';
 
             return response()->json([
                 'success' => true,
@@ -265,8 +274,7 @@ class AuthController extends Controller
     /**
      * Get the token array structure.
      *
-     * @param  string $token
-     *
+     * @param  string  $token
      * @return \Illuminate\Http\JsonResponse
      */
     protected function respondWithToken($token)
@@ -274,13 +282,13 @@ class AuthController extends Controller
         $user = auth('api')->user();
         $user->load('roles'); // Load relationships for resource
         $user->loadCount(['posts', 'followers', 'following', 'userAchievements']);
-        
+
         return response()->json([
             'success' => true,
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => auth('api')->factory()->getTTL() * 60,
-            'user' => new UserResource($user)
+            'user' => new UserResource($user),
         ]);
     }
 }

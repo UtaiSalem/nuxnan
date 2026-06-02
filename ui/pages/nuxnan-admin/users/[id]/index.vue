@@ -68,6 +68,7 @@ const getRoleBadge = (role: string) => {
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '-'
   const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return '-'
   return date.toLocaleString('th-TH', {
     year: 'numeric',
     month: 'long',

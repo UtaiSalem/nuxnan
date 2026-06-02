@@ -15,8 +15,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Get users with profile photos
-        $users = \App\Models\User::whereNotNull('profile_photo_path')->get();
+        // Get users with profile photos using DB facade to avoid model-specific traits like SoftDeletes
+        $users = DB::table('users')->whereNotNull('profile_photo_path')->get();
         $count = 0;
 
         foreach ($users as $user) {

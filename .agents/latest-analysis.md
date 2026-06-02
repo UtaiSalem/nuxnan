@@ -18,7 +18,161 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 > Trigger: when the user says "อ่านบทวิเคราะห์", read this section, verify it against the codebase, improve or correct it, make a clear work plan, and record that plan below.
 
-**หัวข้อ:** Universal QR Scanner สำหรับระบบเช็คชื่อมาโรงเรียน (School Attendance Anti-Fraud)
+**หัวข้อ:** Safe User Deletion — nuxnan-admin `/nuxnan-admin/users`
+
+**วันที่วิเคราะห์:** 2026-06-02
+
+**สถานะปัจจุบัน (verified จาก code จริง):**
+- `AdminController::destroy()` ทำแค่ `$user->delete()` ตรงๆ ไม่มี transaction, audit, impact check
+- `User` model ไม่มี `SoftDeletes`, `users` table ไม่มี `deleted_at`
+- มีพฤติกรรม 3 แบบปนกัน:
+  1. **Orphan** — ตารางเก่าไม่มี FK: `courses`, `academies`, `lessons`, `posts`, `course_members`, `assignment_answers`, `course_quiz_results`
+  2. **Cascade DELETE ถาวร** — `wallet_transactions`, `points_transactions`, `course_purchases (buyer+seller)`, `follows`, `user_achievements`, `grade_edit_logs`, `course_certificates`, `coupon_redemptions`, `daily_point_limits`, `point_streaks`
+  3. **FK RESTRICT → 500** — `school_attendances.created_by`, `library_loans.handled_by`, `asset_management.requested_by`, `course_permissions.granted_by` (ไม่มี onDelete → MySQL default RESTRICT; ถ้า user เคยทำ action เหล่านี้ `$user->delete()` จะ throw QueryException)
+- Frontend `index.vue` ใช้ `$fetch` ตรง, catch แค่ `console.error`, ไม่มี impact preview, ไม่มี error toast
+
+---
+
+## Work Plan — Safe User Deletion
+
+### Phase 1: Policy (ตกลง convention ก่อน implement)
+- ปุ่ม "ลบ" ใน admin = **soft delete/deactivate เท่านั้น** ไม่ใช่ hard delete
+- block ลบตัวเอง และ `SUPER_ADMIN` เหมือนเดิม
+- **BLOCKER** (ต้องจัดการก่อนลบ):
+  - เป็น **sole** owner/admin ของ academy ที่มี active members (ถ้ามี co-admin คนอื่น → ไม่ block)
+  - เป็น **sole** owner ของ course ที่มี active members
+  - มี `wallet_deposit_requests` ที่ยัง pending (เงินยังไม่ settle)
+  - FK RESTRICT ที่ไม่ nullable: `school_attendances.created_by`, `library_loans.handled_by`, `asset_management.requested_by`, `course_permissions.granted_by`
+- **WARNING** (แจ้งแต่ดำเนินการต่อได้ พร้อม checkbox ยืนยัน):
+  - `course_purchases`, `wallet_transactions`, `points_transactions` จะถูก cascade delete ถาวร
+  - `posts`, `lessons`, `courses`, `academies` ที่ user สร้างจะ orphan (ยังอยู่ใน DB แต่ไม่มีเจ้าของ)
+- **Anonymize พร้อม soft delete เสมอ** (ไม่แยก step) เพราะ email unique constraint — ต้อง hash email ทันที
+- Restore คืนได้เฉพาะ user row + orphan records; cascade-deleted records (wallet/points/purchase history) **ไม่กลับมา** — ต้องแจ้ง admin ให้ชัด
+- บันทึก `deleted_by`, `deletion_reason`, `user_snapshot`, `impact_snapshot` ทุกครั้ง
+
+### Phase 2: Database Migration
+```
+Migration 1: add_soft_delete_to_users_table
+  - $table->softDeletes()                    // deleted_at
+  - $table->unsignedBigInteger('deleted_by')->nullable()
+  - $table->string('deletion_reason')->nullable()
+  - $table->timestamp('anonymized_at')->nullable()
+  - $table->index('deleted_at')              // performance
+
+Migration 2: create_admin_user_deletion_audits_table
+  - id
+  - deleted_user_id (nullable — เผื่อ hard delete ในอนาคต)
+  - deleted_by (FK users.id, set null on delete)
+  - mode: enum('soft_delete', 'restore', 'force_delete')
+  - reason: text
+  - user_snapshot: json           // email, name, roles ณ เวลาลบ
+  - impact_snapshot: json         // counts ที่ affected
+  - timestamps
+```
+**หมายเหตุ:** ยังไม่แก้ FK ทั้งระบบ — audit แยก migration ทีหลัง
+
+### Phase 3: Backend Services
+**`app/Services/Admin/UserDeletionImpactService.php`**
+```
+getImpact(User $user): array
+  returns:
+    blockers: [
+      { type: 'sole_academy_owner', count, items: [{id, name}] },
+      { type: 'sole_course_owner', count, items: [{id, name}] },
+      { type: 'pending_deposit', count },
+      { type: 'fk_restrict', tables: ['school_attendances', ...] },
+    ]
+    warnings: [
+      { type: 'cascade_delete', tables: { wallet_transactions: N, course_purchases: N, ... } },
+      { type: 'orphan', tables: { courses: N, posts: N, ... } },
+    ]
+    can_delete: bool   // true เมื่อ blockers ว่างเปล่า
+```
+- SOLE owner check: นับ admin ของ academy/course — block เฉพาะเมื่อ user เป็น admin คนเดียว
+- FK RESTRICT detection: query EXISTS ก่อนลบ ไม่รอให้ DB throw exception
+
+**`app/Services/Admin/UserDeletionService.php`**
+```
+softDelete(User $user, Admin $by, string $reason): void
+  1. DB::transaction() + lockForUpdate()
+  2. validate blockers ผ่าน ImpactService (throw หากยังมี blocker)
+  3. anonymize: email → "deleted_{id}@nuxnan.del", name → "Deleted User", phone/avatar/bio → null
+  4. $user->delete() (soft)
+  5. $user->update([deleted_by, deletion_reason, anonymized_at])
+  6. JWTAuth::setToken($user->currentToken())->invalidate() — หรือ blacklist token ทั้งหมดของ user
+  7. บันทึก AdminUserDeletionAudit (snapshot ก่อนลบ)
+
+restore(User $user, Admin $by): void
+  1. $user->restore()
+  2. เคลียร์ deleted_by / deletion_reason / anonymized_at (ต้องแจ้ง admin ว่า email ถูก anonymize ไปแล้ว)
+  3. บันทึก audit mode='restore'
+```
+
+### Phase 4: API Contract
+```
+GET  /api/admin/users/{id}/delete-impact   → ImpactService::getImpact()
+DELETE /api/admin/users/{id}               → UserDeletionService::softDelete()
+  body: { reason: string (required) }
+  response 422: { blockers: [...] } ถ้ายังมี blocker
+  response 200: { message, impact_summary }
+POST /api/admin/users/{id}/restore         → UserDeletionService::restore()
+```
+- Route ใหม่เพิ่มใน `routes/admin/admin.php` ใต้ middleware `auth:api`, `admin`, `permission:user-delete`
+- `destroy()` เปลี่ยนเป็นเรียก `UserDeletionService` ไม่เรียก `$user->delete()` ตรงๆ อีกต่อไป
+
+### Phase 5: Model / Query
+- `User.php`: เพิ่ม `use SoftDeletes`, cast `deleted_at`
+- ตรวจ `auth:api` JWT middleware — SoftDeletes global scope ทำให้ `User::find()` คืน null สำหรับ soft-deleted user อัตโนมัติ → JWT auth จะ reject token โดยอัตโนมัติ ✅
+- Admin list query: เพิ่ม filter `scope=active|deleted|all`; default = `active` (withoutTrashed)
+- ระวัง relation queries อื่นๆ ใน codebase ที่อาจต้องการ `withTrashed()` — audit เป็น TODO แยก
+
+### Phase 6: Frontend (`ui/pages/nuxnan-admin/users/index.vue`)
+1. เรียก `GET /delete-impact` เมื่อ admin คลิกปุ่มลบ (loading spinner ระหว่างรอ)
+2. Modal แสดงผลกระทบแบ่งเป็น 2 ส่วน:
+   - 🔴 **Blocker section**: ถ้ามี → ปุ่ม "ยืนยัน" disabled, แสดง action ที่ต้องทำ
+   - 🟡 **Warning section**: ถ้ามี → checkbox "รับทราบว่าข้อมูลต่อไปนี้จะหายถาวร" ก่อน enable ปุ่ม
+3. Textarea `reason` (required, min 10 chars)
+4. ใช้ `useApi` composable แทน `$fetch` ตรงๆ
+5. Error toast แทน `console.error` (ครอบ network error + 422 blocker + 500)
+6. หลังลบสำเร็จ: refresh list, แสดง badge "ปิดใช้งาน" บน row นั้น
+7. เพิ่ม filter tab: Active | ถูกปิดใช้งาน | ทั้งหมด
+
+### Phase 7: Tests (PHPUnit Feature Tests)
+```
+AdminUserDeletionTest.php ครอบ:
+1. ลบ user ปกติ → deleted_at set, login ล้มเหลว, audit created
+2. ห้ามลบตัวเอง → 403
+3. ห้ามลบ super admin → 403
+4. user เป็น sole owner academy → 422 + blocker message
+5. user เป็น co-admin academy → ผ่าน (ไม่ block)
+6. user มี pending deposit → 422 + blocker
+7. user มี school_attendances.created_by → impact service detect FK RESTRICT → 422 ก่อน delete
+8. wallet/points/purchase ถูก cascade delete หลังลบ → ยืนยัน behavior (documented test)
+9. orphan courses ยังอยู่หลังลบ → documented test
+10. restore → deleted_at null, soft-deleted user กลับมา
+11. reason required → validation error
+```
+
+### ลำดับทำจริง
+```
+Step 1  Migration soft delete + audit table
+Step 2  User model: SoftDeletes + casts
+Step 3  UserDeletionImpactService + GET /delete-impact endpoint
+Step 4  UserDeletionService (soft delete + anonymize email + JWT invalidate)
+        → ปรับ AdminController::destroy() และเพิ่ม restore()
+Step 5  Frontend: impact modal, blocker/warning UX, reason, error toast, filter tabs
+Step 6  PHPUnit: AdminUserDeletionTest (11 scenarios)
+```
+
+### ข้อจำกัดที่รับรู้ (Known Limitations)
+- **Restore ไม่คืน cascade-deleted records** (wallet/points/purchase history) — by design, ต้องแจ้ง admin ใน UI
+- **Email ถูก anonymize ไม่กลับมา** หลัง restore — admin ต้อง set email ใหม่เองถ้าจำเป็น
+- **FK RESTRICT tables** (`school_attendances`, `library_loans`, `asset_management`, `course_permissions`) — ตราบใดที่ยังมี records อยู่ จะ block การลบ; แก้ที่ root ต้องทำ migration เพิ่ม `onDelete('set null')` แยก (TODO future)
+- **Hard delete/purge** ยังไม่ implement ในรอบนี้ — เป็น admin-only job สำหรับอนาคต
+
+---
+
+**หัวข้อเก่า (archived):** Universal QR Scanner สำหรับระบบเช็คชื่อมาโรงเรียน (School Attendance Anti-Fraud)
 
 **หลักการ:** หนึ่งปุ่มสแกน สองทางเช็คชื่อ
 - นักเรียนสแกน QR จากครู (session QR ที่ครูแสดง)
@@ -37,10 +191,10 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ---
 
-## Current Snapshot (2026-05-31)
-- **Active Work**: Universal QR Scanner for School Attendance — **Completed 100%**
-- **Pending Tasks**: None
-- **Next Steps**: QA & System Testing for the new QR Scanner flow.
+## Current Snapshot (2026-06-02)
+- **Active Work**: Safe User Deletion — Plan finalized, ready to implement
+- **Pending Tasks**: Step 1–6 per Work Plan above
+- **Next Steps**: เริ่มที่ Step 1 (migration) → Step 3 (ImpactService) → Step 4 (DeletionService)
 
 ---
 
@@ -129,8 +283,7 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 | Scope | Owner | Status | Files | Notes |
 | --- | --- | --- | --- | --- |
-| Universal QR Scanner Plan | AI | plan_ready | see Work Plan above | 7 phases, พร้อม implement |
-| - | - | - | - | รอ user confirm ก่อนเริ่ม code |
+| Safe User Deletion | AI | plan_ready | see Work Plan above | 6 steps, plan confirmed by user |
 
 ## Coordination Board
 
@@ -286,3 +439,48 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 - Reviewed `race.vue`, `useClassroomRace.ts`, and `TypingRaceController.php`.
 - Fixed countdown view, Echo leave usage, progress throttle cleanup, finalize logic for left participants, and rank race condition.
 - Committed in `f389406e`.
+
+### 2026-06-02 - Nuxnan admin login redirect fix
+- User reported `/nuxnan-admin/login` could not be opened because it immediately redirected to the admin dashboard.
+- Finding: `ui/pages/nuxnan-admin/login.vue` uses `admin-guest`, and `ui/middleware/admin-guest.ts` redirected already-authenticated admin users to `/nuxnan-admin`.
+- Changed `ui/middleware/admin-guest.ts` so direct navigation to `/nuxnan-admin/login` always shows the login form, allowing admins to re-login or switch accounts.
+- Verification: read-back check of the middleware confirmed the login-path bypass is in place. Full Nuxt build/typecheck was not run for this one-line middleware change.
+
+### 2026-06-02 - Safe User Deletion plan finalized
+
+**Context:** User requested detailed implementation plan for safe user account deletion in nuxnan-admin.
+
+**Findings (verified against codebase):**
+- `AdminController::destroy()` calls bare `$user->delete()` — no transaction, audit, or impact check
+- `User` model has no `SoftDeletes`; `users` table has no `deleted_at`
+- DB behavior splits into 3 categories: orphan (old tables, no FK), cascade delete (newer tables — wallet/points/purchase history permanently lost), FK RESTRICT causing 500 (school_attendances.created_by, library_loans.handled_by, asset_management.requested_by, course_permissions.granted_by)
+- Frontend uses direct `$fetch`, catch only logs to console, no impact preview
+
+**Plan decisions:**
+- Default action = soft delete + anonymize email immediately (prevent unique constraint conflict on new registration)
+- BLOCKER vs WARNING distinction: sole academy/course owner and FK RESTRICT tables are blockers; cascade/orphan are warnings with checkbox confirmation
+- JWT token invalidated immediately on soft delete
+- Restore recovers user row + orphan records only; cascade-deleted records are gone permanently (documented in UI)
+- Hard delete/purge deferred to future admin purge job
+
+**Plan recorded in Work Plan section above. 6 implementation steps, 11 PHPUnit test scenarios.**
+
+### 2026-06-02 - Admin login 500 and forgot-password route warning fix
+- User pasted browser logs showing `No match found for location with path "/auth/forgot-password"` and `POST /api/admin/auth/login` returning 500.
+- Finding: `ui/pages/nuxnan-admin/login.vue` linked to `/auth/forgot-password`, but the existing Nuxt page path is `/auth/ForgotPassword`. Laravel log showed admin login 500 came from `User::getAllPermissions()` querying the missing `permissions` table.
+- Changed `ui/pages/nuxnan-admin/login.vue` to use the existing forgot-password page path. Changed `api/nuxnanravel/app/Models/User.php` so `hasPermission()` and `getAllPermissions()` gracefully handle missing RBAC permission tables by returning `false`/`[]` instead of throwing.
+- Verification: `php -l app/Models/User.php` passed; `php artisan route:list --path=admin/auth/login` confirmed the login route; bootstrapped Laravel via `php -r` and confirmed `getAllPermissions()` returns an empty array without SQL errors when permission tables are missing; Pint ran for `User.php`; `git diff --check` passed.
+
+### 2026-06-02 - Admin new-user verification plan
+- User requested an implementation plan for `/nuxnan-admin/users` so admins can verify newly registered users.
+- Read-only findings: `AuthController::register()` creates self-registered users with `verified=false` and null `email_verified_at`, but immediately issues a JWT; `AdminController` already has `verifyEmail()` and `unverifyEmail()` routes under `permission:user-edit`; user list filtering maps `status=verified|unverified` to `email_verified_at`; `UserResource` exposes `verified`, `is_verified`, and `email_verified_at`.
+- Browser check: unauthenticated local navigation to `http://localhost:3000/nuxnan-admin/users` redirects to `/nuxnan-admin/login`, so UI verification of the table needs an admin session.
+- Plan direction: reuse `email_verified_at` as the approval gate, optionally keep `verified` synchronized for compatibility, add a Pending Verification queue/filter/bulk actions on the users list, and enforce pending-user access in auth/middleware if the policy is "must be admin verified before use".
+- Intended files: `api/nuxnanravel/app/Http/Controllers/Api/AdminController.php`, `api/nuxnanravel/routes/admin/admin.php`, `api/nuxnanravel/app/Http/Controllers/Api/Auth/AuthController.php`, optional middleware under `api/nuxnanravel/app/Http/Middleware/`, `ui/pages/nuxnan-admin/users/index.vue`, `ui/pages/nuxnan-admin/users/[id]/index.vue`, and focused tests under `api/nuxnanravel/tests/Feature/`.
+- Risks: existing code currently treats email verification and admin approval as the same thing; changing login/API access for unverified users may affect onboarding, OAuth users, gamification login rewards, and flows that expect immediate access after registration.
+
+### 2026-06-02 - Admin users Invalid Date analysis
+- User asked why some rows in `/nuxnan-admin/users` show `Invalid Date` for registration date.
+- Finding: frontend renders `new Date(user.created_at).toLocaleDateString('th-TH')` in `ui/pages/nuxnan-admin/users/index.vue`, while admin `UserResource` passes `$this->created_at` through `formatTimestamp()`. The `User` model also overrides `getCreatedAtAttribute()` to return `d-m-Y H:i:s`, which is not a safe JavaScript date string.
+- Impact: dates where the day is greater than 12 become `Invalid Date`; dates where the day is 1-12 may parse as `MM-DD-YYYY`, so displayed values such as `6/1/2569` can be silently wrong, not just cosmetically odd.
+- Recommended fix: remove or avoid the global `getCreatedAtAttribute()` date accessor, return ISO/RFC3339 timestamps from admin resources (e.g. `toISOString()`/`toJSON()`), and add a frontend `formatDate()` helper that validates null/invalid dates before display.
