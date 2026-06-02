@@ -19,6 +19,7 @@ const modes = [
   { id: 'sentence_typing',name: 'Sentences',      icon: 'heroicons:chat-bubble-bottom-center-text', description: 'ฝึกประโยคยาว เครื่องหมายวรรคตอน',  color: 'bg-blue-500',    badge: null },
   { id: 'monster_battle', name: 'Monster Battle', icon: 'heroicons:fire',                      description: 'โจมตีมอนสเตอร์ด้วยการพิมพ์!',             color: 'bg-red-500',     badge: 'New' },
   { id: 'falling_words',  name: 'Falling Words',  icon: 'heroicons:arrow-down-circle',         description: 'จับคำที่ตกลงมาก่อนถึงพื้น',              color: 'bg-purple-500',  badge: 'New' },
+  // { id: 'letter_runner', name: 'Letter Runner', icon: 'heroicons:arrow-right-circle', description: 'วิ่งเก็บเหรียญ พิมพ์ตัวอักษรทำลายอุปสรรค!', color: 'bg-cyan-500', badge: 'New' },
 ]
 
 const isKeyTraining = computed(() => store.selectedMode === 'key_training')

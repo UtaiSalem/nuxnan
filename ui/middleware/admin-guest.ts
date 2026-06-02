@@ -1,17 +1,24 @@
-export default defineNuxtRouteMiddleware((to, from) => {
+export default defineNuxtRouteMiddleware(async (to, from) => {
   const authStore = useAuthStore()
 
-  if (to.path === '/nuxnan-admin/login') {
-    return
+  if (!authStore.isAuthenticated) {
+    return // ไม่มี token → แสดงหน้า login ตามปกติ
   }
 
-  // If user is already authenticated and is an admin, redirect to admin dashboard
-  if (authStore.isAuthenticated) {
-    if (authStore.user?.is_plearnd_admin || authStore.user?.is_super_admin) {
-      return navigateTo('/nuxnan-admin')
+  // มี token แต่ user ยังไม่โหลด (เช่น เปิดแท็บใหม่) → fetch ก่อน
+  if (!authStore.user) {
+    try {
+      await authStore.fetchUser()
+    } catch {
+      return // token หมดอายุ → แสดงหน้า login
     }
-    // If authenticated but not admin, stay on login page to show error
-    // or redirect to regular site
-    return navigateTo('/play/newsfeed')
   }
+
+  // login อยู่แล้วและเป็น admin → ข้ามไป dashboard
+  if (authStore.user?.is_plearnd_admin || authStore.user?.is_super_admin) {
+    return navigateTo('/nuxnan-admin')
+  }
+
+  // login อยู่แต่ไม่ใช่ admin → กลับหน้าหลัก
+  return navigateTo('/play/newsfeed')
 })

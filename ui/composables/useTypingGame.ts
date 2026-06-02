@@ -127,22 +127,23 @@ export function useTypingGame(config: GameConfig) {
 
   function onInput(value: string) {
     if (gameState.value !== 'playing') return
-    
-    // In some modes like sentence typing, we might want to handle space differently
-    // For Word Typing, we usually submit on space.
-    
-    currentInput.value = value
-    totalChars.value++
 
-    const lastChar = value.slice(-1)
-    const expectedChar = currentWord.value[value.length - 1]
-    
-    if (lastChar === expectedChar) {
-      correctChars.value++
-      updateCorrectChars(correctChars.value)
-    } else {
-      mistakes.value++
-      breakCombo()
+    const prevLength = currentInput.value.length
+    currentInput.value = value
+
+    if (value.length > prevLength) {
+      totalChars.value++
+
+      const lastChar = value.slice(-1)
+      const expectedChar = currentWord.value[value.length - 1]
+
+      if (lastChar === expectedChar) {
+        correctChars.value++
+        updateCorrectChars(correctChars.value)
+      } else {
+        mistakes.value++
+        breakCombo()
+      }
     }
   }
 

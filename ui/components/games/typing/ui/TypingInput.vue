@@ -3,6 +3,7 @@ interface Props {
   modelValue: string
   disabled?: boolean
   autofocus?: boolean
+  submitOn?: 'space' | 'enter' | 'both'
 }
 
 const props = defineProps<Props>()
@@ -17,7 +18,18 @@ function onInput(e: Event) {
 
 function onKeydown(e: KeyboardEvent) {
   emit('keydown', e)
-  if (e.key === ' ' || e.key === 'Enter') {
+  const submitOn = props.submitOn ?? 'both'
+  const isSpace = e.key === ' '
+  const isEnter = e.key === 'Enter'
+  const shouldSubmit =
+    (submitOn === 'space' && isSpace) ||
+    (submitOn === 'enter' && isEnter) ||
+    (submitOn === 'both' && (isSpace || isEnter))
+
+  if (shouldSubmit) {
+    e.preventDefault()
+    ;(e.target as HTMLInputElement).value = ''
+    emit('update:modelValue', '')
     emit('submit')
   }
 }

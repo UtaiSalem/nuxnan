@@ -166,6 +166,7 @@ const authUser = computed(() => {
       posts: '0',
       friends: '0',
       visits: '0',
+      is_super_admin: false,
     }
   }
 
@@ -193,6 +194,7 @@ const authUser = computed(() => {
     friends: formatCompactCount(friendsCount),
     visits: formatCompactCount(visitsCount),
     is_plearnd_admin: user.is_plearnd_admin || false,
+    is_super_admin: user.is_super_admin || false,
   }
 })
 
@@ -648,6 +650,20 @@ const onQRActionComplete = (result) => {
                 >
                   <Icon icon="mdi:hand-heart" class="w-5 h-5 text-green-500" />
                   <span>จัดการการสนับสนุน</span>
+                </NuxtLink>
+                <!-- Super Admin only - Nuxnan Admin Dashboard -->
+                <NuxtLink
+                  v-if="authUser.is_super_admin"
+                  to="/nuxnan-admin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  @click="closeSettings"
+                  class="flex items-center gap-3 px-4 py-3 transition-colors"
+                  :class="isDarkMode ? 'hover:bg-vikinger-dark-200 text-indigo-400' : 'hover:bg-indigo-50 text-indigo-600'"
+                >
+                  <Icon icon="fluent:shield-person-24-regular" class="w-5 h-5 text-indigo-500" />
+                  <span>Nuxnan Admin</span>
+                  <Icon icon="fluent:open-24-regular" class="w-3.5 h-3.5 ml-auto opacity-50" />
                 </NuxtLink>
                 
                 <div class="border-t my-1" :class="isDarkMode ? 'border-vikinger-dark-50/30' : 'border-gray-200'"></div>

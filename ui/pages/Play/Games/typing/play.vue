@@ -7,6 +7,7 @@ import SentenceTypingMode from '~/components/games/typing/modes/SentenceTypingMo
 import MonsterBattleMode from '~/components/games/typing/modes/MonsterBattleMode.vue'
 import FallingWordsMode from '~/components/games/typing/modes/FallingWordsMode.vue'
 import KeyTrainingMode from '~/components/games/typing/modes/KeyTrainingMode.vue'
+import LetterRunnerMode from '~/components/games/typing/modes/LetterRunnerMode.vue'
 import { useTypingApi } from '~/composables/useTypingApi'
 
 definePageMeta({
@@ -52,6 +53,7 @@ const currentModeComponent = computed(() => {
     case 'sentence_typing': return SentenceTypingMode
     case 'monster_battle':  return MonsterBattleMode
     case 'falling_words':   return FallingWordsMode
+    case 'letter_runner':   return LetterRunnerMode
     default:                return WordTypingMode
   }
 })

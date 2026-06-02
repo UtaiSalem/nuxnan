@@ -28,7 +28,7 @@ class TypingSessionController extends Controller
     {
         $data = $request->validate([
             'session_token' => 'required|string|unique:typing_sessions',
-            'game_mode'     => 'required|in:word_typing,time_attack,sentence_typing,monster_battle,falling_words,classroom_race,daily_challenge',
+            'game_mode'     => 'required|in:word_typing,time_attack,sentence_typing,monster_battle,falling_words,classroom_race,daily_challenge,key_training,letter_runner',
             'language'      => 'required|in:th,en,ar',
             'difficulty'    => 'required|in:beginner,easy,normal,hard,expert',
             'correct_chars' => 'required|integer|min:0',

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export type GameMode = 'word_typing' | 'time_attack' | 'sentence_typing' | 'monster_battle' | 'falling_words' | 'classroom_race' | 'daily_challenge' | 'key_training'
+export type GameMode = 'word_typing' | 'time_attack' | 'sentence_typing' | 'monster_battle' | 'falling_words' | 'classroom_race' | 'daily_challenge' | 'key_training' | 'letter_runner'
 export type Lang = 'th' | 'en' | 'ar'
 export type Difficulty = 'beginner' | 'easy' | 'normal' | 'hard' | 'expert'
 

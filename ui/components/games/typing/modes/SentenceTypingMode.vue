@@ -115,6 +115,7 @@ watch(gameState, (newVal) => {
         <TypingInput 
           v-model="currentInput"
           :disabled="gameState === 'finished'"
+          submit-on="enter"
           autofocus
           @submit="submitWord"
           @update:model-value="onInput"

@@ -25,7 +25,6 @@ Route::get('/typing/leaderboard', [TypingLeaderboardController::class, 'index'])
 Route::get('/typing/daily', [\App\Http\Controllers\Api\Play\Typing\TypingDailyChallengeController::class, 'today'])->name('typing.daily.today');
 Route::get('/typing/tournaments', [\App\Http\Controllers\Api\Play\Typing\TypingTournamentController::class, 'index']);
 Route::get('/typing/tournaments/{tournament}', [\App\Http\Controllers\Api\Play\Typing\TypingTournamentController::class, 'show']);
-Route::get('/typing/sessions/wpm-history', [TypingSessionController::class, 'wpmHistory']);
 
 // Authenticated routes
 Route::middleware('auth:api')->group(function () {

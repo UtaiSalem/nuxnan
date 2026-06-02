@@ -1,14 +1,20 @@
-export default defineNuxtRouteMiddleware((to, from) => {
+export default defineNuxtRouteMiddleware(async (to, from) => {
   const authStore = useAuthStore()
 
-  // Check if user is authenticated
   if (!authStore.isAuthenticated) {
     return navigateTo('/nuxnan-admin/login')
   }
 
-  // Check if user is a Plearnd Admin or Super Admin
+  // เปิดแท็บใหม่ → Pinia reset → user เป็น null แม้มี token → fetch ก่อนเช็ค
+  if (!authStore.user) {
+    try {
+      await authStore.fetchUser()
+    } catch {
+      return navigateTo('/nuxnan-admin/login')
+    }
+  }
+
   if (!authStore.user?.is_plearnd_admin && !authStore.user?.is_super_admin) {
-    // Redirect to login with error
     return navigateTo('/nuxnan-admin/login?error=unauthorized')
   }
 })
