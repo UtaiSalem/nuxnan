@@ -102,16 +102,19 @@ const fetchDepartments = async () => {
   isLoadingDepartments.value = true
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/departments`, {
-      search: searchQuery.value || undefined,
-      page: pagination.value.current_page,
-      per_page: pagination.value.per_page
+      query: {
+        search: searchQuery.value || undefined,
+        page: pagination.value.current_page,
+        per_page: pagination.value.per_page
+      }
     })
     
     if (response.success) {
-      departments.value = response.departments || []
-      if (response.pagination) {
-        pagination.value = response.pagination
-      }
+      const departmentData = response.data || {}
+      departments.value = departmentData.departments || []
+      pagination.value.total = departmentData.total || departments.value.length
+      pagination.value.last_page = departmentData.last_page || 1
+      pagination.value.current_page = departmentData.current_page || pagination.value.current_page
     }
   } catch (err) {
     console.error('Failed to fetch departments:', err)
@@ -127,7 +130,7 @@ const fetchStatistics = async () => {
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/departments/statistics`)
     if (response.success) {
-      statistics.value = response.statistics
+      statistics.value = response.data
     }
   } catch (err) {
     console.error('Failed to fetch statistics:', err)
@@ -161,7 +164,7 @@ const openEditModal = (department: any) => {
   departmentForm.value = {
     name: department.name,
     description: department.description || '',
-    head_user_id: department.head_user_id
+    head_user_id: department.head_user_id || department.settings?.head_user_id || null
   }
   formErrors.value = {}
   showEditModal.value = true
@@ -217,7 +220,7 @@ const updateDepartment = async () => {
   formErrors.value = {}
   
   try {
-    const response: any = await api.put(`/api/academies/departments/${selectedDepartment.value.id}`, {
+    const response: any = await api.patch(`/api/academies/${academyId.value}/departments/${selectedDepartment.value.id}`, {
       name: departmentForm.value.name,
       description: departmentForm.value.description || undefined,
       head_user_id: departmentForm.value.head_user_id || undefined
@@ -264,7 +267,7 @@ const deleteDepartment = async (department: any) => {
   
   if (result.isConfirmed) {
     try {
-      const response: any = await api.delete(`/api/academies/departments/${department.id}`)
+      const response: any = await api.delete(`/api/academies/${academyId.value}/departments/${department.id}`)
       
       if (response.success) {
         await fetchDepartments()
@@ -308,7 +311,7 @@ const fetchDepartmentPermissions = async (departmentId: number) => {
   isLoadingPermissions.value = true
   try {
     const response: any = await api.get(
-      `/academies/${academyId.value}/departments/${departmentId}/permissions`
+      `/api/academies/${academyId.value}/departments/${departmentId}/permissions`
     )
     if (response.success) {
       departmentPermissions.value = response.data.enabled_keys || []
@@ -327,7 +330,7 @@ const saveDepartmentPermissions = async () => {
   isSubmitting.value = true
   try {
     const response: any = await api.put(
-      `/academies/${academyId.value}/departments/${selectedDepartment.value.id}/permissions`,
+      `/api/academies/${academyId.value}/departments/${selectedDepartment.value.id}/permissions`,
       { permission_keys: departmentPermissions.value }
     )
 
@@ -358,10 +361,20 @@ const fetchDepartmentMembers = async (departmentId: number) => {
   isLoadingMembers.value = true
   try {
     const response: any = await api.get(
-      `/academies/${academyId.value}/departments/${departmentId}/members`
+      `/api/academies/${academyId.value}/departments/${departmentId}/members`
     )
     if (response.success) {
-      departmentMembers.value = response.data?.members || response.members || []
+      const members = response.data?.members || response.members || []
+      departmentMembers.value = members.map((member: any) => ({
+        ...member,
+        user_id: member.user_id || member.id,
+        user: member.user || {
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          profile_photo_url: member.profile_photo_url || member.avatar
+        }
+      }))
     }
   } catch (err) {
     console.error('Failed to fetch members:', err)
@@ -383,13 +396,15 @@ const fetchAvailableMembers = async () => {
   if (!academyId.value) return
 
   try {
-    const response: any = await api.get(`/academies/${academyId.value}/members`, {
-      status: 2, // Approved members
-      per_page: 100
+    const response: any = await api.get(`/api/academies/${academyId.value}/members`, {
+      query: {
+        status: 2, // Approved members
+        per_page: 100
+      }
     })
 
     if (response.success) {
-      const existingMemberIds = departmentMembers.value.map((m: any) => m.user_id)
+      const existingMemberIds = departmentMembers.value.map((m: any) => m.user_id || m.id)
       availableMembers.value = (response.members || []).filter(
         (m: any) => !existingMemberIds.includes(m.user_id)
       )
@@ -406,7 +421,7 @@ const addMembersToDepartment = async () => {
   isSubmitting.value = true
   try {
     const response: any = await api.post(
-      `/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members/bulk`,
+      `/api/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members/bulk`,
       {
         user_ids: selectedMemberIds.value,
         role: memberRole.value
@@ -454,7 +469,8 @@ const removeMember = async (memberId: number) => {
   if (result.isConfirmed) {
     try {
       const response: any = await api.delete(
-        `/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members/${memberId}`
+        `/api/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members`,
+        { body: { user_id: memberId } }
       )
 
       if (response.success) {
@@ -483,9 +499,9 @@ const updateMemberRole = async (memberId: number, newRole: string) => {
   if (!selectedDepartment.value || !academyId.value) return
 
   try {
-    const response: any = await api.put(
-      `/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members/${memberId}/role`,
-      { role: newRole }
+    const response: any = await api.patch(
+      `/api/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members/role`,
+      { user_id: memberId, role: newRole }
     )
 
     if (response.success) {
@@ -521,15 +537,15 @@ const filteredAvailableMembers = computed(() => {
 const roleOptions = [
   { value: 'member', label: 'สมาชิก' },
   { value: 'head', label: 'หัวหน้าแผนก' },
-  { value: 'deputy', label: 'รองหัวหน้าแผนก' },
-  { value: 'secretary', label: 'เลขานุการ' }
+  { value: 'staff', label: 'เจ้าหน้าที่' },
+  { value: 'admin', label: 'ผู้ดูแล' }
 ]
 
 const getRoleBadgeClass = (role: string) => {
   switch (role) {
     case 'head': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'
-    case 'deputy': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-    case 'secretary': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
+    case 'staff': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+    case 'admin': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
     default: return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
   }
 }

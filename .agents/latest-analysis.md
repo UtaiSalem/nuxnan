@@ -270,25 +270,27 @@ Step 6  PHPUnit: AdminUserDeletionTest (11 scenarios)
 
 ## Current Snapshot
 
-- Date: 2026-05-31
+- Date: 2026-06-03
 - Branch: main
 - Repository: `C:\wamp64\www\nuxnan`
 - Frontend: `ui/` Nuxt/Vue/TypeScript/Pinia/Tailwind/PrimeVue
 - Backend: `api/nuxnanravel/` Laravel/PHP/JWT/MySQL/Reverb
 - Current SMS planning note: All phases (0-6) are complete. The "Digital Campus" is fully realized with Academic, Finance, Staff, Communication, Economy, Reports, Library, and Asset management systems.
-- Current focus: Final Quality Assurance and UI/UX Polish.
-- Pending commit: ไม่มี - ทุกงาน committed แล้ว
+- Current focus: School Department Management TASK-001..TASK-006 completed; ready for Claude/user review.
+- Pending commit: Department Management task fixes plus agent log updates.
 
 ## Active Work
 
 | Scope | Owner | Status | Files | Notes |
 | --- | --- | --- | --- | --- |
 | Safe User Deletion | AI | plan_ready | see Work Plan above | 6 steps, plan confirmed by user |
+| School Department Management | Codex | completed | `DepartmentController.php`, `academy.php`, `departments.vue`, `.agents/codex-tasks.md` | TASK-001..TASK-006 done; focused backend checks passed; broader test/typecheck blocked by existing environment/dependency issues |
 
 ## Coordination Board
 
 | Claim ID | Owner | Scope | Files or folders | Status | Handoff note |
 | --- | --- | --- | --- | --- | --- |
+| 2026-06-03-departments-codex | Codex | Department Management TASK-001..TASK-006 | `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/DepartmentController.php`, `api/nuxnanravel/routes/learn/academy.php`, `ui/pages/academies/[name]/admin/departments.vue`, `.agents/codex-tasks.md` | completed | Fixed backend stats/head user and aligned frontend calls with Laravel response shapes and academy-scoped routes. |
 
 ## Decisions And Assumptions
 
@@ -309,6 +311,19 @@ Step 6  PHPUnit: AdminUserDeletionTest (11 scenarios)
 (ไม่มี)
 
 ## Analysis Timeline
+
+### 2026-06-03 - Department Management Codex task implementation started
+- User asked Codex to start work from `.agents/codex-instructions.md`; `.agents/codex-tasks.md` has TASK-001..TASK-006 pending for School Department Management.
+- Read `DepartmentController`, department routes, `departments.vue`, and `useApi.ts`; confirmed `useApi` already has `patch()`.
+- Route finding: list/create/statistics are `api/academies/{academy}/departments...`; detail/member/permission routes currently list as `api/academies/departments/{department}...`, while task contract expects academy-scoped URLs. Permission controller already expects `Academy $academy`, so route scoping needs to be corrected with controller signatures/checks.
+- Intended edits: add `head_user` and `departments_with_head`, align academy-scoped department routes, fix frontend `/api` prefixes, PATCH methods, response `.data` reads, and member role/remove request bodies.
+
+### 2026-06-03 - Department Management Codex tasks completed
+- Completed TASK-001..TASK-006 in `.agents/codex-tasks.md`.
+- Backend: `DepartmentController::index()` now returns `head_user_id` and `head_user` from bulk-loaded users; `getStatistics()` returns `departments_with_head`; department detail/member mutations now validate the department belongs to the requested academy.
+- Routes: department detail/member/permission endpoints are academy-scoped as `/api/academies/{academy}/departments/{department}...`; `route:list --path=departments` confirmed the expected methods.
+- Frontend: `departments.vue` now reads `response.data`, uses `api.patch()` for department update/member role, includes `/api` prefixes, sends `user_id` in remove/role bodies, and normalizes flat department member payloads for the existing template.
+- Verification: `php -l DepartmentController.php`, `php artisan route:list --path=departments`, backend Pint on touched PHP files, and `git diff --check` passed. `php artisan test ...test_can_list_departments` is blocked by missing sqlite `users` table; `cmd /c npx vue-tsc --noEmit --pretty false` timed out and reported `vue-router/volar/sfc-route-blocks` package export failure.
 
 ### 2026-05-31 - School attendance anti-fraud planning
 - User requested a plan to close the loophole where students can self check-in from outside school through the flagpole/school attendance button.

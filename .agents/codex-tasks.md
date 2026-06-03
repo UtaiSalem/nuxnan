@@ -18,9 +18,11 @@
 ```yaml
 id: TASK-001
 assigned_to: codex
-status: pending
+status: done
 priority: high
 type: backend
+completed_at: 2026-06-03 06:33
+completion_notes: getStatistics now returns departments_with_head while preserving existing statistic fields.
 ```
 
 **ปัญหา**: หน้า `departments.vue` แสดง `statistics.departments_with_head` แต่ `getStatistics()` ไม่ได้ return field นี้
@@ -54,9 +56,11 @@ type: backend
 ```yaml
 id: TASK-002
 assigned_to: codex
-status: pending
+status: done
 priority: high
 type: backend
+completed_at: 2026-06-03 06:33
+completion_notes: Department index now resolves head_user_id values in bulk and includes head_user objects or null.
 ```
 
 **ปัญหา**: หน้า departments.vue แสดง `department.head_user` แต่ `index()` ไม่ส่ง head_user object มาด้วย
@@ -79,10 +83,12 @@ type: backend
 ```yaml
 id: TASK-003
 assigned_to: codex
-status: pending
+status: done
 priority: critical
 type: frontend
 depends_on: []
+completed_at: 2026-06-03 06:33
+completion_notes: Fixed department page API URLs, added missing /api prefixes, and sent member remove/role payloads in request bodies.
 ```
 
 **ปัญหา**: หลาย API calls ใน `departments.vue` ใช้ URL ผิด — บางจุดขาด `/api/` prefix, บางจุดมี route pattern ผิด
@@ -122,10 +128,12 @@ depends_on: []
 ```yaml
 id: TASK-004
 assigned_to: codex
-status: pending
+status: done
 priority: critical
 type: frontend
 depends_on: [TASK-001, TASK-002]
+completed_at: 2026-06-03 06:33
+completion_notes: fetchDepartments and fetchStatistics now read Laravel-wrapped response.data shape and pagination total from data.
 ```
 
 **ปัญหา**: หลาย function อ่าน response shape ผิด เพราะ Laravel controller wrap data ไว้ใน `data` key
@@ -152,10 +160,12 @@ depends_on: [TASK-001, TASK-002]
 ```yaml
 id: TASK-005
 assigned_to: codex
-status: pending
+status: done
 priority: medium
 type: frontend
 depends_on: [TASK-003]
+completed_at: 2026-06-03 06:33
+completion_notes: updateDepartment now uses api.patch against the academy-scoped department update endpoint.
 ```
 
 **ปัญหา**: `updateDepartment()` ใช้ `api.put()` แต่ backend route กำหนดเป็น `PATCH`
@@ -174,10 +184,12 @@ depends_on: [TASK-003]
 ```yaml
 id: TASK-006
 assigned_to: codex
-status: pending
+status: done
 priority: medium
 type: frontend
 depends_on: [TASK-005]
+completed_at: 2026-06-03 06:33
+completion_notes: Verified useApi already provides patch(), so no useApi code change was needed.
 ```
 
 **ปัญหา**: ต้องตรวจสอบว่า `useApi` composable มี method `patch()` หรือไม่
@@ -196,12 +208,12 @@ depends_on: [TASK-005]
 
 | Task | Status | Verified |
 |------|--------|---------|
-| TASK-001 | pending | - |
-| TASK-002 | pending | - |
-| TASK-003 | pending | - |
-| TASK-004 | pending | - |
-| TASK-005 | pending | - |
-| TASK-006 | pending | - |
+| TASK-001 | done | Codex |
+| TASK-002 | done | Codex |
+| TASK-003 | done | Codex |
+| TASK-004 | done | Codex |
+| TASK-005 | done | Codex |
+| TASK-006 | done | Codex |
 
 **Last updated**: 2026-06-03
-**Updated by**: Claude (task definition)
+**Updated by**: Codex (implementation)

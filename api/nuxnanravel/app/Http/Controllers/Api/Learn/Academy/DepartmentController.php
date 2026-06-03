@@ -5,17 +5,15 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyGroup;
-use App\Models\AcademyGroupMember;
 use App\Models\User;
 use App\Services\AcademyGroupPermissionService;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * Department Controller
- * 
+ *
  * จัดการฝ่ายงาน/แผนก ภายในสถาบัน
  * เช่น ฝ่ายวิชาการ, ฝ่ายการเงิน, ฝ่ายบุคคล
  */
@@ -35,12 +33,27 @@ class DepartmentController extends Controller
      */
     protected function checkPermission(AcademyGroup $department, string $permissionKey): void
     {
-        if (!$this->permissionService->hasPermission($department, $permissionKey)) {
+        if (! $this->permissionService->hasPermission($department, $permissionKey)) {
             abort(response()->json([
                 'success' => false,
-                'message' => "ฝ่ายงานนี้ไม่ได้เปิดใช้งานสิทธิ์: {$permissionKey}"
+                'message' => "ฝ่ายงานนี้ไม่ได้เปิดใช้งานสิทธิ์: {$permissionKey}",
             ], 403));
         }
+    }
+
+    /**
+     * Ensure the group is a department under the requested academy.
+     */
+    protected function ensureDepartment(Academy $academy, AcademyGroup $department): ?JsonResponse
+    {
+        if ($department->academy_id !== $academy->id || $department->type !== 'department') {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบฝ่ายงานที่ระบุ',
+            ], 404);
+        }
+
+        return null;
     }
 
     /**
@@ -58,7 +71,7 @@ class DepartmentController extends Controller
 
         // Search by name
         if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'like', '%'.$request->search.'%');
         }
 
         // Include members if requested
@@ -67,13 +80,37 @@ class DepartmentController extends Controller
         }
 
         $departments = $query->orderBy('name')->get();
+        $headUserIds = $departments
+            ->map(fn ($department) => data_get($department->settings, 'head_user_id'))
+            ->filter()
+            ->unique()
+            ->values();
+        $headUsers = $headUserIds->isNotEmpty()
+            ? User::query()
+                ->whereIn('id', $headUserIds)
+                ->get(['id', 'name', 'email', 'avatar', 'profile_photo_path'])
+                ->keyBy('id')
+            : collect();
+
+        $departments->each(function ($department) use ($headUsers) {
+            $headUserId = data_get($department->settings, 'head_user_id');
+            $headUser = $headUserId ? $headUsers->get((int) $headUserId) : null;
+
+            $department->setAttribute('head_user_id', $headUserId);
+            $department->setAttribute('head_user', $headUser ? [
+                'id' => $headUser->id,
+                'name' => $headUser->name,
+                'email' => $headUser->email,
+                'profile_photo_url' => $headUser->profile_photo_url,
+            ] : null);
+        });
 
         return response()->json([
             'success' => true,
             'data' => [
                 'departments' => $departments,
                 'total' => $departments->count(),
-            ]
+            ],
         ]);
     }
 
@@ -101,29 +138,26 @@ class DepartmentController extends Controller
         ]);
 
         // Add head as admin if specified
-        if (!empty($validated['head_user_id'])) {
+        if (! empty($validated['head_user_id'])) {
             $department->members()->attach($validated['head_user_id'], [
-                'role' => 'admin'
+                'role' => 'admin',
             ]);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'สร้างฝ่ายงานสำเร็จ',
-            'data' => $department->load('members')
+            'data' => $department->load('members'),
         ], 201);
     }
 
     /**
      * Get department details
      */
-    public function show(AcademyGroup $department): JsonResponse
+    public function show(Academy $academy, AcademyGroup $department): JsonResponse
     {
-        if ($department->type !== 'department') {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบฝ่ายงานที่ระบุ'
-            ], 404);
+        if ($response = $this->ensureDepartment($academy, $department)) {
+            return $response;
         }
 
         $this->checkPermission($department, 'departments.view');
@@ -145,20 +179,17 @@ class DepartmentController extends Controller
                     'email' => $headUser->email,
                     'avatar' => $headUser->avatar,
                 ] : null,
-            ]
+            ],
         ]);
     }
 
     /**
      * Update department
      */
-    public function update(Request $request, AcademyGroup $department): JsonResponse
+    public function update(Request $request, Academy $academy, AcademyGroup $department): JsonResponse
     {
-        if ($department->type !== 'department') {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบฝ่ายงานที่ระบุ'
-            ], 404);
+        if ($response = $this->ensureDepartment($academy, $department)) {
+            return $response;
         }
 
         $this->checkPermission($department, 'departments.manage');
@@ -191,20 +222,17 @@ class DepartmentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'อัปเดตฝ่ายงานสำเร็จ',
-            'data' => $department->fresh()
+            'data' => $department->fresh(),
         ]);
     }
 
     /**
      * Delete department
      */
-    public function destroy(AcademyGroup $department): JsonResponse
+    public function destroy(Academy $academy, AcademyGroup $department): JsonResponse
     {
-        if ($department->type !== 'department') {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบฝ่ายงานที่ระบุ'
-            ], 404);
+        if ($response = $this->ensureDepartment($academy, $department)) {
+            return $response;
         }
 
         $this->checkPermission($department, 'departments.manage');
@@ -214,7 +242,7 @@ class DepartmentController extends Controller
         if ($membersCount > 0) {
             return response()->json([
                 'success' => false,
-                'message' => "ไม่สามารถลบได้ เนื่องจากมีสมาชิก {$membersCount} คน กรุณาย้ายสมาชิกออกก่อน"
+                'message' => "ไม่สามารถลบได้ เนื่องจากมีสมาชิก {$membersCount} คน กรุณาย้ายสมาชิกออกก่อน",
             ], 400);
         }
 
@@ -222,20 +250,17 @@ class DepartmentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบฝ่ายงานสำเร็จ'
+            'message' => 'ลบฝ่ายงานสำเร็จ',
         ]);
     }
 
     /**
      * Get department members with roles
      */
-    public function getMembers(Request $request, AcademyGroup $department): JsonResponse
+    public function getMembers(Request $request, Academy $academy, AcademyGroup $department): JsonResponse
     {
-        if ($department->type !== 'department') {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบฝ่ายงานที่ระบุ'
-            ], 404);
+        if ($response = $this->ensureDepartment($academy, $department)) {
+            return $response;
         }
 
         $this->checkPermission($department, 'departments.manage-members');
@@ -249,7 +274,7 @@ class DepartmentController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('users.name', 'like', "%{$search}%")
-                  ->orWhere('users.email', 'like', "%{$search}%");
+                    ->orWhere('users.email', 'like', "%{$search}%");
             });
         }
 
@@ -269,25 +294,23 @@ class DepartmentController extends Controller
                         'name' => $member->name,
                         'email' => $member->email,
                         'avatar' => $member->avatar,
+                        'profile_photo_url' => $member->profile_photo_url,
                         'role' => $member->pivot->role,
                         'joined_at' => $member->pivot->created_at,
                     ];
                 }),
                 'total' => $members->count(),
-            ]
+            ],
         ]);
     }
 
     /**
      * Add member to department
      */
-    public function addMember(Request $request, AcademyGroup $department): JsonResponse
+    public function addMember(Request $request, Academy $academy, AcademyGroup $department): JsonResponse
     {
-        if ($department->type !== 'department') {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบฝ่ายงานที่ระบุ'
-            ], 404);
+        if ($response = $this->ensureDepartment($academy, $department)) {
+            return $response;
         }
 
         $this->checkPermission($department, 'departments.manage-members');
@@ -301,30 +324,27 @@ class DepartmentController extends Controller
         if ($department->members()->where('users.id', $validated['user_id'])->exists()) {
             return response()->json([
                 'success' => false,
-                'message' => 'ผู้ใช้นี้เป็นสมาชิกของฝ่ายงานนี้อยู่แล้ว'
+                'message' => 'ผู้ใช้นี้เป็นสมาชิกของฝ่ายงานนี้อยู่แล้ว',
             ], 400);
         }
 
         $department->members()->attach($validated['user_id'], [
-            'role' => $validated['role'] ?? 'member'
+            'role' => $validated['role'] ?? 'member',
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'เพิ่มสมาชิกเข้าฝ่ายงานสำเร็จ'
+            'message' => 'เพิ่มสมาชิกเข้าฝ่ายงานสำเร็จ',
         ]);
     }
 
     /**
      * Remove member from department
      */
-    public function removeMember(Request $request, AcademyGroup $department): JsonResponse
+    public function removeMember(Request $request, Academy $academy, AcademyGroup $department): JsonResponse
     {
-        if ($department->type !== 'department') {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบฝ่ายงานที่ระบุ'
-            ], 404);
+        if ($response = $this->ensureDepartment($academy, $department)) {
+            return $response;
         }
 
         $this->checkPermission($department, 'departments.manage-members');
@@ -337,20 +357,17 @@ class DepartmentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบสมาชิกออกจากฝ่ายงานสำเร็จ'
+            'message' => 'ลบสมาชิกออกจากฝ่ายงานสำเร็จ',
         ]);
     }
 
     /**
      * Bulk add members to department
      */
-    public function bulkAddMembers(Request $request, AcademyGroup $department): JsonResponse
+    public function bulkAddMembers(Request $request, Academy $academy, AcademyGroup $department): JsonResponse
     {
-        if ($department->type !== 'department') {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบฝ่ายงานที่ระบุ'
-            ], 404);
+        if ($response = $this->ensureDepartment($academy, $department)) {
+            return $response;
         }
 
         $this->checkPermission($department, 'departments.manage-members');
@@ -358,7 +375,7 @@ class DepartmentController extends Controller
         $validated = $request->validate([
             'user_ids' => 'required|array|min:1',
             'user_ids.*' => 'exists:users,id',
-            'role' => 'nullable|string|in:member,staff,admin',
+            'role' => 'nullable|string|in:member,staff,admin,head',
         ]);
 
         $role = $validated['role'] ?? 'member';
@@ -368,6 +385,7 @@ class DepartmentController extends Controller
         foreach ($validated['user_ids'] as $userId) {
             if ($department->members()->where('users.id', $userId)->exists()) {
                 $skipped++;
+
                 continue;
             }
 
@@ -377,24 +395,21 @@ class DepartmentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => "เพิ่มสมาชิกสำเร็จ {$added} คน" . ($skipped > 0 ? " (ข้าม {$skipped} คนที่มีอยู่แล้ว)" : ''),
+            'message' => "เพิ่มสมาชิกสำเร็จ {$added} คน".($skipped > 0 ? " (ข้าม {$skipped} คนที่มีอยู่แล้ว)" : ''),
             'data' => [
                 'added' => $added,
                 'skipped' => $skipped,
-            ]
+            ],
         ]);
     }
 
     /**
      * Update member role in department
      */
-    public function updateMemberRole(Request $request, AcademyGroup $department): JsonResponse
+    public function updateMemberRole(Request $request, Academy $academy, AcademyGroup $department): JsonResponse
     {
-        if ($department->type !== 'department') {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบฝ่ายงานที่ระบุ'
-            ], 404);
+        if ($response = $this->ensureDepartment($academy, $department)) {
+            return $response;
         }
 
         $validated = $request->validate([
@@ -402,15 +417,15 @@ class DepartmentController extends Controller
             'role' => 'required|string|in:member,staff,admin,head',
         ]);
 
-        if (!$department->members()->where('users.id', $validated['user_id'])->exists()) {
+        if (! $department->members()->where('users.id', $validated['user_id'])->exists()) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบผู้ใช้ในฝ่ายงานนี้'
+                'message' => 'ไม่พบผู้ใช้ในฝ่ายงานนี้',
             ], 404);
         }
 
         $department->members()->updateExistingPivot($validated['user_id'], [
-            'role' => $validated['role']
+            'role' => $validated['role'],
         ]);
 
         // If setting as head, update settings
@@ -422,7 +437,7 @@ class DepartmentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'อัปเดตบทบาทสมาชิกสำเร็จ'
+            'message' => 'อัปเดตบทบาทสมาชิกสำเร็จ',
         ]);
     }
 
@@ -437,9 +452,12 @@ class DepartmentController extends Controller
             ->get();
 
         $totalMembers = $departments->sum('members_count');
-        $avgMembers = $departments->count() > 0 
-            ? round($totalMembers / $departments->count(), 1) 
+        $avgMembers = $departments->count() > 0
+            ? round($totalMembers / $departments->count(), 1)
             : 0;
+        $departmentsWithHead = $departments->filter(function ($department) {
+            return ! empty(data_get($department->settings, 'head_user_id'));
+        })->count();
 
         return response()->json([
             'success' => true,
@@ -447,6 +465,7 @@ class DepartmentController extends Controller
                 'total_departments' => $departments->count(),
                 'total_members' => $totalMembers,
                 'average_members_per_department' => $avgMembers,
+                'departments_with_head' => $departmentsWithHead,
                 'departments' => $departments->map(function ($dept) {
                     return [
                         'id' => $dept->id,
@@ -454,7 +473,7 @@ class DepartmentController extends Controller
                         'members_count' => $dept->members_count,
                     ];
                 }),
-            ]
+            ],
         ]);
     }
 }

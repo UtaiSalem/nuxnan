@@ -17,6 +17,33 @@
 
 **Claude Routine**: ตรวจสอบ codex-tasks.md ว่า Codex ทำงานเสร็จ + ถูกต้องหรือไม่
 
+### School Department Management Feature — Codex Tasks Completed (2026-06-03)
+
+- **Branch**: main
+- **Files touched**:
+  - `.agents/codex-tasks.md`
+  - `.agents/latest-analysis.md`
+  - `.agents/worklog.md`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/DepartmentController.php`
+  - `api/nuxnanravel/routes/learn/academy.php`
+  - `ui/pages/academies/[name]/admin/departments.vue`
+- **Done**:
+  - TASK-001: `getStatistics()` now returns `departments_with_head`.
+  - TASK-002: `index()` now resolves department `head_user` in bulk without N+1 queries.
+  - TASK-003: Fixed Department Management frontend API paths and request bodies.
+  - TASK-004: Fixed frontend reads for Laravel `response.data` shape.
+  - TASK-005: `updateDepartment()` now uses `api.patch()`.
+  - TASK-006: Confirmed `useApi.ts` already has `patch()`.
+  - Department detail/member/permission routes are now academy-scoped as `/api/academies/{academy}/departments/{department}...`, matching the frontend contract and permission controller signature.
+- **Verification**:
+  - `php -l app\Http\Controllers\Api\Learn\Academy\DepartmentController.php` passed.
+  - `php artisan route:list --path=departments` confirmed all department routes and HTTP methods.
+  - `vendor\bin\pint.bat app\Http\Controllers\Api\Learn\Academy\DepartmentController.php routes\learn\academy.php` passed and formatted touched PHP files.
+  - `git diff --check` passed.
+- **Blocked verification**:
+  - `php artisan test tests\Api\SchoolManagementApiTest.php --filter=test_can_list_departments` failed during test setup because sqlite has no `users` table.
+  - `cmd /c npx vue-tsc --noEmit --pretty false` timed out after 120s and reported pre-existing `vue-router/volar/sfc-route-blocks` package export failure before checking the changed page.
+
 ---
 
 ## สถานะปัจจุบัน (2026-05-29, archived)
@@ -168,4 +195,3 @@
 - **Verification:**
   - รัน Migration สำหรับ Library และ Assets สำเร็จ
   - เพิ่มแท็บและเชื่อมต่อ UI กับ Composable ใหม่เรียบร้อย
-
