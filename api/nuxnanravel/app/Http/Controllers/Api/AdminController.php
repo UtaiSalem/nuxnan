@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\UserResource;
+use App\Models\PlearndAdmin;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Admin\UserDeletionImpactService;
@@ -280,6 +281,7 @@ class AdminController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'email' => $user->email,
+                'role' => strtolower($user->roles->first()?->name ?? 'user'),
                 'avatar' => $user->avatar ?? $user->profile_photo_url,
                 'roles' => $user->roles->map(fn ($r) => [
                     'id' => $r->id,
@@ -323,8 +325,12 @@ class AdminController extends Controller
             ], 404);
         }
 
+        if ($request->has('role') && $request->role) {
+            $request->merge(['role' => strtoupper($request->role)]);
+        }
+
         $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
+            'name' => ['sometimes', 'string', 'max:255', Rule::unique('users')->ignore($id)],
             'email' => ['sometimes', 'email', Rule::unique('users')->ignore($id)],
             'password' => 'sometimes|string|min:6',
             'phone_number' => 'nullable|string|max:20',
@@ -344,11 +350,41 @@ class AdminController extends Controller
         // Update basic fields
         $user->fill($request->only(['name', 'email', 'phone_number']));
 
+        if ($request->has('status')) {
+            match ($request->status) {
+                'active' => $user->email_verified_at = $user->email_verified_at ?? now(),
+                'inactive',
+                'suspended' => $user->email_verified_at = null,
+                default => null,
+            };
+        }
+
         if ($request->has('password') && $request->password) {
             $user->password = Hash::make($request->password);
         }
 
         $user->save();
+
+        // จัดการ is_super_admin ผ่าน SUPER_ADMIN role
+        if ($request->has('is_super_admin')) {
+            $superAdminRole = Role::where('name', 'SUPER_ADMIN')->first();
+            if ($superAdminRole) {
+                if ($request->boolean('is_super_admin')) {
+                    $user->roles()->syncWithoutDetaching([$superAdminRole->id]);
+                } else {
+                    $user->roles()->detach($superAdminRole->id);
+                }
+            }
+        }
+
+        // จัดการ is_plearnd_admin ผ่าน PlearndAdmin table
+        if ($request->has('is_plearnd_admin')) {
+            if ($request->boolean('is_plearnd_admin')) {
+                PlearndAdmin::firstOrCreate(['user_id' => $user->id]);
+            } else {
+                PlearndAdmin::where('user_id', $user->id)->delete();
+            }
+        }
 
         // Update roles
         if ($request->has('roles') && is_array($request->roles)) {
@@ -468,6 +504,63 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'กู้คืนบัญชีสำเร็จ หมายเหตุ: email/ชื่อถูก anonymize ไปแล้ว กรุณาอัพเดตผ่านหน้า Edit',
+        ]);
+    }
+
+    /**
+     * POST /api/admin/users/bulk-delete
+     * Soft delete หลายคนพร้อมกัน (ไม่รวม Super Admin และตัวเอง)
+     */
+    public function bulkDelete(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'user_ids' => 'required|array|min:1|max:50',
+            'user_ids.*' => 'integer|exists:users,id',
+            'reason' => 'required|string|min:5|max:500',
+        ]);
+
+        $currentUserId = auth()->id();
+        $deletedBy = auth()->user();
+        $skipped = [];
+        $deleted = 0;
+
+        foreach ($request->user_ids as $id) {
+            if ($id === $currentUserId) {
+                $skipped[] = ['id' => $id, 'reason' => 'ไม่สามารถลบบัญชีตัวเองได้'];
+
+                continue;
+            }
+
+            $user = User::find($id);
+            if (! $user) {
+                $skipped[] = ['id' => $id, 'reason' => 'ไม่พบผู้ใช้'];
+
+                continue;
+            }
+
+            if ($user->isSuperAdmin()) {
+                $skipped[] = ['id' => $id, 'reason' => 'ไม่สามารถลบ Super Admin ได้'];
+
+                continue;
+            }
+
+            try {
+                $this->deletionService->softDelete(
+                    user: $user,
+                    deletedBy: $deletedBy,
+                    reason: $request->reason
+                );
+                $deleted++;
+            } catch (\Exception $e) {
+                $skipped[] = ['id' => $id, 'reason' => $e->getMessage()];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "ลบผู้ใช้สำเร็จ {$deleted} คน".(count($skipped) ? ', ข้ามไป '.count($skipped).' คน' : ''),
+            'deleted_count' => $deleted,
+            'skipped' => $skipped,
         ]);
     }
 

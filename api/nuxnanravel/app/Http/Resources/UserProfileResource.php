@@ -26,7 +26,15 @@ class UserProfileResource extends JsonResource
         // Calculate profile completion
         $completion = $this->calculateProfileCompletion($user);
 
-        // Calculate level from points
+        // Level data from actual XP fields (same source as auth/gamification)
+        $xpLevel = (int) ($user->xp_level ?? 1);
+        $currentXp = (int) ($user->current_xp ?? 0);
+        $xpForNextLevel = (int) ($user->xp_for_next_level ?? 0);
+        $levelProgress = $xpForNextLevel > 0
+            ? min(100, round(($currentXp / $xpForNextLevel) * 100))
+            : 0;
+
+        // Still need calculateLevel for grade calculation
         $points = $user->pp ?? 0;
         $levelData = $this->calculateLevel($points);
 
@@ -72,12 +80,13 @@ class UserProfileResource extends JsonResource
             'visits'            => $this->visits ?? 0,
             'visits_count'      => $this->visits ?? 0,
             
-            // Level & Experience
-            'level'             => $levelData['level'],
-            'grade'             => $this->getStudentGrade($user), // ระดับชั้น ม.1-6
-            'experience'        => $levelData['current_xp'],
-            'experience_to_next_level' => $levelData['xp_to_next'],
-            'level_progress'    => $levelData['progress'],
+            // Level & Experience (from actual XP system, consistent with auth/sidebar)
+            'level'             => $xpLevel,
+            'grade'             => $this->getStudentGrade($user),
+            'experience'        => $currentXp,
+            'experience_to_next_level' => $xpForNextLevel,
+            'total_experience'  => (int) ($user->xp ?? 0),
+            'level_progress'    => $levelProgress,
             
             // Badges Gamification
             'badges_unlocked'   => $user->badges()->count(),

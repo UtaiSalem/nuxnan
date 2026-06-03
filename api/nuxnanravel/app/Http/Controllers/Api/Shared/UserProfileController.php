@@ -2,24 +2,20 @@
 
 namespace App\Http\Controllers\Api\Shared;
 
-use App\Models\Post;
-use App\Models\User;
-
-use App\Models\Friend;
-use App\Models\Activity;
-use App\Models\UserProfile;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Http\Requests\UpdateUserProfileRequest;
 use App\Http\Resources\Play\ActivityResource;
 use App\Http\Resources\UserProfileResource;
-use App\Http\Requests\StoreUserProfileRequest;
-use App\Http\Requests\UpdateUserProfileRequest;
+use App\Models\Activity;
+use App\Models\Friend;
+use App\Models\Post;
+use App\Models\User;
 use Carbon\Carbon;
-use Intervention\Image\ImageManager;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class UserProfileController extends \App\Http\Controllers\Controller
 {
@@ -28,19 +24,29 @@ class UserProfileController extends \App\Http\Controllers\Controller
      */
     private function safeParseDate($date): string
     {
-        if (!$date) {
+        if (! $date) {
             return now()->format('Y-m-d H:i:s');
         }
-        
+
         try {
             if ($date instanceof Carbon) {
                 return $date->format('Y-m-d H:i:s');
             }
+
             return Carbon::parse($date)->format('Y-m-d H:i:s');
         } catch (\Exception $e) {
             // If date parsing fails, return current time
             return now()->format('Y-m-d H:i:s');
         }
+    }
+
+    private function findUserByProfileIdentifier(string $identifier): ?User
+    {
+        return User::where('id', $identifier)
+            ->orWhere('reference_code', $identifier)
+            ->orWhere('personal_code', $identifier)
+            ->orWhere('name', $identifier)
+            ->first();
     }
 
     /**
@@ -51,7 +57,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
         // ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบเป็นเพื่อนกับผู้ใช้ที่เป็นเจ้าของโปรไฟล์หรือไม่
         $heIsMyFriend = Friend::where('user_id', auth()->id())->where('friend_id', $user->id)
             ->whereStatus(1)->exists();
-        
+
         // ตรวจสอบว่าผู้ใช้ที่เป็นเจ้าของโปรไฟล์ป็นเพื่อนกับผู้ใช้ที่เข้าสู่ระบบเหรือไม่
         $iAmHisFriend = Friend::where('friend_id', auth()->id())->where('user_id', $user->id)
             ->whereStatus(1)->exists();
@@ -59,43 +65,44 @@ class UserProfileController extends \App\Http\Controllers\Controller
         $friendWithAuth = $heIsMyFriend || $iAmHisFriend;
 
         $privacySettings = $friendWithAuth ? [2, 3] : [3];
-    
 
         // ใช้ Eloquent ORM เพื่อดึงโพสต์จากตาราง "กิจกรรม" โดยกำหนดเงื่อนไขตามที่ระบุ
         $activities = Activity::whereHasMorph('activityable', // ชื่อของ relation ในโมเดล Activity
-                [Post::class], // ระบุโมเดลที่เป็นไปได้ใน relation
-                function ($query) use ($user, $privacySettings) {
-                    $query->whereIn('privacy_settings', $privacySettings)
-                        ->where(function ($query) use ($user) {
-                            $query->where('user_id', $user->id); // โพสต์จากผู้ใช้ที่เป็นเจ้าของโปรไฟล์
-                        });
-                }
-            )
+            [Post::class], // ระบุโมเดลที่เป็นไปได้ใน relation
+            function ($query) use ($user, $privacySettings) {
+                $query->whereIn('privacy_settings', $privacySettings)
+                    ->where(function ($query) use ($user) {
+                        $query->where('user_id', $user->id); // โพสต์จากผู้ใช้ที่เป็นเจ้าของโปรไฟล์
+                    });
+            }
+        )
             ->latest()
             ->paginate();
 
         return response()->json([
-            'user'          => $user,
-            'activities'    => ActivityResource::collection($activities),
+            'user' => $user,
+            'activities' => ActivityResource::collection($activities),
         ]);
     }
 
-    function checkUsernameExists($name) {
+    public function checkUsernameExists($name)
+    {
         $user = User::where('name', $name)->first();
         if ($user) {
             return response()->json([
                 'exists' => true,
-                'message' => 'name already exists'
+                'message' => 'name already exists',
             ]);
         } else {
             return response()->json([
                 'exists' => false,
-                'message' => 'name is available'
+                'message' => 'name is available',
             ]);
         }
     }
 
-    function checkEmailExists($email) {
+    public function checkEmailExists($email)
+    {
         $user = User::where('email', $email)->first();
         if ($user) {
             return response()->json([
@@ -116,7 +123,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
         $user = Auth::user();
         $profile = $user->profile;
 
-        if (!$profile) {
+        if (! $profile) {
             // Create profile if doesn't exist
             $profile = $user->profile()->create([
                 'join_date' => $this->safeParseDate($user->created_at),
@@ -130,28 +137,24 @@ class UserProfileController extends \App\Http\Controllers\Controller
     }
 
     /**
-     * Get user profile by identifier (supports ID, reference_code, or username)
+     * Get user profile by identifier (supports ID, reference_code, personal_code, or username)
      */
     public function show(string $identifier)
     {
         $authUser = Auth::user();
-        
-        // Find user by ID, reference_code, or username
-        $user = User::where('id', $identifier)
-            ->orWhere('reference_code', $identifier)
-            ->orWhere('name', $identifier)
-            ->first();
-        
-        if (!$user) {
+
+        $user = $this->findUserByProfileIdentifier($identifier);
+
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
             ], 404);
         }
-        
+
         $profile = $user->profile;
 
-        if (!$profile) {
+        if (! $profile) {
             $profile = $user->profile()->create([
                 'join_date' => $this->safeParseDate($user->created_at),
             ]);
@@ -159,7 +162,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
 
         // Check friendship status
         $friendshipStatus = $this->getFriendshipStatus($authUser, $user);
-        
+
         // Check privacy settings
         $canViewFullProfile = $this->canViewFullProfile($authUser, $user, $profile);
 
@@ -169,7 +172,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
         }
 
         $profileData = new UserProfileResource($profile);
-        
+
         return response()->json([
             'success' => true,
             'data' => $profileData,
@@ -187,7 +190,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
         $user = Auth::user();
         $profile = $user->profile;
 
-        if (!$profile) {
+        if (! $profile) {
             $profile = $user->profile()->create([
                 'join_date' => $this->safeParseDate($user->created_at),
             ]);
@@ -227,8 +230,9 @@ class UserProfileController extends \App\Http\Controllers\Controller
             finfo_close($finfo);
 
             $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
-            if (!in_array($mimeType, $allowedMimeTypes)) {
+            if (! in_array($mimeType, $allowedMimeTypes)) {
                 Log::warning('Invalid MIME type for avatar upload', ['user_id' => Auth::id(), 'mime' => $mimeType]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid file type. Only images are allowed.',
@@ -237,8 +241,9 @@ class UserProfileController extends \App\Http\Controllers\Controller
 
             // Check if file is actually an image
             $imageInfo = getimagesize($file->getPathname());
-            if (!$imageInfo) {
+            if (! $imageInfo) {
                 Log::warning('Uploaded file is not a valid image', ['user_id' => Auth::id()]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Uploaded file is not a valid image.',
@@ -248,21 +253,21 @@ class UserProfileController extends \App\Http\Controllers\Controller
             $user = Auth::user();
 
             // Delete old avatar if exists
-            if ($user->profile_photo_path && !filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
+            if ($user->profile_photo_path && ! filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($user->profile_photo_path);
             }
 
             // Resize image to 300x300 max, maintain aspect ratio
-            $manager = new ImageManager(new Driver());
+            $manager = new ImageManager(new Driver);
             $image = $manager->read($file);
             $image->scaleDown(width: 300, height: 300);
 
             // Generate filename
-            $filename = $user->id . '_' . time() . '_' . uniqid() . '.jpg';
+            $filename = $user->id.'_'.time().'_'.uniqid().'.jpg';
 
             // Generate hashed path for sharding (Option 3) -> REMOVED
             // New Standard: public/avatars/{user_id}/{filename}
-            
+
             // Store path
             $path = "avatars/{$user->id}/{$filename}";
 
@@ -284,7 +289,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
             Log::error('Avatar upload failed', [
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -312,8 +317,9 @@ class UserProfileController extends \App\Http\Controllers\Controller
             finfo_close($finfo);
 
             $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
-            if (!in_array($mimeType, $allowedMimeTypes)) {
+            if (! in_array($mimeType, $allowedMimeTypes)) {
                 Log::warning('Invalid MIME type for cover upload', ['user_id' => Auth::id(), 'mime' => $mimeType]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid file type. Only images are allowed.',
@@ -322,8 +328,9 @@ class UserProfileController extends \App\Http\Controllers\Controller
 
             // Check if file is actually an image
             $imageInfo = getimagesize($file->getPathname());
-            if (!$imageInfo) {
+            if (! $imageInfo) {
                 Log::warning('Uploaded file is not a valid image', ['user_id' => Auth::id()]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Uploaded file is not a valid image.',
@@ -333,7 +340,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
             $user = Auth::user();
             $profile = $user->profile;
 
-            if (!$profile) {
+            if (! $profile) {
                 $profile = $user->profile()->create([
                     'join_date' => $user->created_at,
                 ]);
@@ -341,20 +348,20 @@ class UserProfileController extends \App\Http\Controllers\Controller
 
             // Delete old cover if exists
             $oldCover = $profile->cover_image ?? $profile->cover_image_url;
-            if ($oldCover && !filter_var($oldCover, FILTER_VALIDATE_URL)) {
+            if ($oldCover && ! filter_var($oldCover, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($oldCover);
             }
 
             // Resize image to 1200x400 max, maintain aspect ratio
-            $manager = new ImageManager(new Driver());
+            $manager = new ImageManager(new Driver);
             $image = $manager->read($file);
             $image->scaleDown(width: 1200, height: 400);
 
             // Generate filename
-            $filename = time() . '_' . uniqid() . '.jpg';
+            $filename = time().'_'.uniqid().'.jpg';
 
             // Store path
-            $path = 'covers/' . $user->id . '/' . $filename;
+            $path = 'covers/'.$user->id.'/'.$filename;
 
             // Save resized image to storage
             Storage::disk('public')->put($path, (string) $image->toJpeg(quality: 85));
@@ -374,7 +381,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
             Log::error('Cover upload failed', [
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -392,7 +399,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
         $user = Auth::user();
         $profile = $user->profile;
 
-        if (!$profile) {
+        if (! $profile) {
             $profile = $user->profile()->create([
                 'join_date' => $user->created_at,
             ]);
@@ -419,7 +426,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
         $user = Auth::user();
         $profile = $user->profile;
 
-        if (!$profile) {
+        if (! $profile) {
             $profile = $user->profile()->create([
                 'join_date' => $user->created_at,
             ]);
@@ -437,15 +444,15 @@ class UserProfileController extends \App\Http\Controllers\Controller
     }
 
     /**
-     * Get user activities by identifier (supports ID, reference_code, or username)
+     * Get user activities by identifier (supports ID, reference_code, personal_code, or username)
      */
     public function activities(string $identifier)
     {
         $authUser = Auth::user();
-        
+
         // Handle 'me' identifier - use authenticated user
         if ($identifier === 'me') {
-            if (!$authUser) {
+            if (! $authUser) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Authentication required',
@@ -453,14 +460,10 @@ class UserProfileController extends \App\Http\Controllers\Controller
             }
             $user = $authUser;
         } else {
-            // Find user by ID, reference_code, or username
-            $user = User::where('id', $identifier)
-                ->orWhere('reference_code', $identifier)
-                ->orWhere('name', $identifier)
-                ->first();
+            $user = $this->findUserByProfileIdentifier($identifier);
         }
-        
-        if (!$user) {
+
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -468,7 +471,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
         }
 
         // ถ้าไม่มี authUser (guest) ให้ดูได้เฉพาะ public posts
-        if (!$authUser) {
+        if (! $authUser) {
             $privacySettings = [3]; // Global only
             $isOwnProfile = false;
             $friendWithAuth = false;
@@ -476,13 +479,13 @@ class UserProfileController extends \App\Http\Controllers\Controller
             // ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบเป็นเพื่อนกับผู้ใช้ที่เป็นเจ้าของโปรไฟล์หรือไม่
             $heIsMyFriend = Friend::where('user_id', $authUser->id)->where('friend_id', $user->id)
                 ->whereStatus(1)->exists();
-            
+
             // ตรวจสอบว่าผู้ใช้ที่เป็นเจ้าของโปรไฟล์ป็นเพื่อนกับผู้ใช้ที่เข้าสู่ระบบเหรือไม่
             $iAmHisFriend = Friend::where('friend_id', $authUser->id)->where('user_id', $user->id)
                 ->whereStatus(1)->exists();
 
             $friendWithAuth = $heIsMyFriend || $iAmHisFriend;
-            
+
             // ถ้าเป็นโปรไฟล์ของตัวเอง ให้ดูได้ทุกอย่าง
             $isOwnProfile = $authUser->id === $user->id;
 
@@ -492,23 +495,23 @@ class UserProfileController extends \App\Http\Controllers\Controller
         // ใช้ Eloquent ORM เพื่อดึงกิจกรรมจากตาราง activities
         // ตรวจสอบ privacy_settings จากตาราง Posts หรือ CoursePosts แทน
         $activities = Activity::with([
-                'user',
-                'activityable',
-                'activityable.user',
-            ])
+            'user',
+            'activityable',
+            'activityable.user',
+        ])
             ->where('user_id', $user->id)
             ->where(function ($query) use ($privacySettings) {
-                 $query->whereHasMorph('activityable',
-                     ['App\Models\Post', 'App\Models\CoursePost'],
-                     function ($q) use ($privacySettings) {
-                         $q->whereIn('privacy_settings', $privacySettings);
-                     }
-                 )
-                 ->orWhereNotIn('activityable_type', ['App\Models\Post', 'App\Models\CoursePost']);
+                $query->whereHasMorph('activityable',
+                    ['App\Models\Post', 'App\Models\CoursePost'],
+                    function ($q) use ($privacySettings) {
+                        $q->whereIn('privacy_settings', $privacySettings);
+                    }
+                )
+                    ->orWhereNotIn('activityable_type', ['App\Models\Post', 'App\Models\CoursePost']);
             })
             ->latest()
             ->paginate(10);
-        
+
         // Eager load specific relationships based on activityable type
         $activities->getCollection()->each(function ($activity) {
             $activityable = $activity->activityable;
@@ -516,9 +519,9 @@ class UserProfileController extends \App\Http\Controllers\Controller
                 // Load postImages if the relationship exists
                 if (method_exists($activityable, 'postImages')) {
                     $activityable->load('postImages');
-                } else if ($activity->activityable_type === 'App\Models\CoursePost') {
+                } elseif ($activity->activityable_type === 'App\Models\CoursePost') {
                     // CoursePost uses 'post_images' relation name in some contexts, but let's check standard
-                     $activityable->load('post_images');
+                    $activityable->load('post_images');
                 }
 
                 // Load postComments if the relationship exists
@@ -528,22 +531,22 @@ class UserProfileController extends \App\Http\Controllers\Controller
 
                 // Load Polls for Post and CoursePost
                 if (in_array($activity->activityable_type, ['App\Models\Post', 'App\Models\CoursePost'])) {
-                     $activityable->load(['poll.options', 'poll.user']);
+                    $activityable->load(['poll.options', 'poll.user']);
                 }
             }
-            
+
             // Load specific types
             if ($activity->activityable_type === 'App\Models\DonateRecipient' && $activity->activityable) {
                 $activity->activityable->load(['reciever', 'donation']);
             }
-            
+
             // Load Share comments for Share activities
             if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {
                 $activity->activityable->load([
-                    'shareComments' => function($query) {
+                    'shareComments' => function ($query) {
                         $query->with('user')->latest()->limit(3);
                     },
-                    'shareable.user' // Load original post and its author
+                    'shareable.user', // Load original post and its author
                 ]);
             }
         });
@@ -562,34 +565,30 @@ class UserProfileController extends \App\Http\Controllers\Controller
     }
 
     /**
-     * Get user stats by identifier (supports ID, reference_code, or username)
+     * Get user stats by identifier (supports ID, reference_code, personal_code, or username)
      */
-    public function stats(string $identifier = null)
+    public function stats(?string $identifier = null)
     {
         // If no identifier, use auth user
-        if (!$identifier) {
+        if (! $identifier) {
             $user = Auth::user();
         } else {
-            // Find user by ID, reference_code, or username
-            $user = User::where('id', $identifier)
-                ->orWhere('reference_code', $identifier)
-                ->orWhere('name', $identifier)
-                ->first();
-            
-            if (!$user) {
+            $user = $this->findUserByProfileIdentifier($identifier);
+
+            if (! $user) {
                 return response()->json([
                     'success' => false,
                     'message' => 'User not found',
                 ], 404);
             }
         }
-        
+
         $postsCount = Activity::where('user_id', $user->id)->count();
-        
+
         // Get friends count
         $friendsCount = Friend::where(function ($query) use ($user) {
             $query->where('user_id', $user->id)
-                  ->orWhere('friend_id', $user->id);
+                ->orWhere('friend_id', $user->id);
         })->where('status', 1)->count();
 
         return response()->json([
@@ -611,10 +610,10 @@ class UserProfileController extends \App\Http\Controllers\Controller
      */
     private function getFriendshipStatus($authUser, $targetUser): array
     {
-        if (!$authUser) {
+        if (! $authUser) {
             return ['status' => 'guest', 'label' => 'ผู้เยี่ยมชม'];
         }
-        
+
         if ($authUser->id === $targetUser->id) {
             return ['status' => 'self', 'label' => 'ตัวเอง'];
         }
@@ -626,7 +625,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
             $query->where('user_id', $targetUser->id)->where('friend_id', $authUser->id);
         })->first();
 
-        if (!$friendship) {
+        if (! $friendship) {
             return ['status' => 'none', 'label' => 'ไม่ใช่เพื่อน'];
         }
 
@@ -646,11 +645,11 @@ class UserProfileController extends \App\Http\Controllers\Controller
      */
     private function canViewFullProfile($authUser, $targetUser, $profile): bool
     {
-        if (!$authUser) {
+        if (! $authUser) {
             // Guest users can only view public profiles
             return ($profile->privacy_settings ?? 'public') === 'public';
         }
-        
+
         if ($authUser->id === $targetUser->id) {
             return true;
         }
@@ -681,76 +680,80 @@ class UserProfileController extends \App\Http\Controllers\Controller
     public function search(Request $request)
     {
         $query = $request->get('q', '');
-        $limit = min((int)$request->get('limit', 10), 50);
-        
+        $limit = min((int) $request->get('limit', 10), 50);
+
         if (strlen($query) < 2) {
             return response()->json([
                 'success' => true,
                 'data' => [],
-                'message' => 'Query too short'
+                'message' => 'Query too short',
             ]);
         }
-        
+
         $currentUserId = Auth::id();
-        
+
         $users = User::where(function ($q) use ($query) {
             $q->where('name', 'like', "%{$query}%")
-              ->orWhere('email', 'like', "%{$query}%")
-              ->orWhere('reference_code', 'like', "%{$query}%")
-              ->orWhere('personal_code', 'like', "%{$query}%")
-              ->orWhere('phone_number', 'like', "%{$query}%");
+                ->orWhere('email', 'like', "%{$query}%")
+                ->orWhere('reference_code', 'like', "%{$query}%")
+                ->orWhere('personal_code', 'like', "%{$query}%")
+                ->orWhere('phone_number', 'like', "%{$query}%");
         })
-        ->where('id', '!=', $currentUserId) // Exclude current user
-        ->select([
-            'id', 
-            'name', 
-            'email', 
-            'reference_code', 
-            'personal_code',
-            'profile_photo_path'
-        ])
-        ->limit($limit)
-        ->get()
-        ->map(function ($user) {
-            $avatar = $user->profile_photo_url 
-                ?: 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=random&color=fff';
-            
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $this->maskEmail($user->email),
-                'reference_code' => $user->reference_code,
-                'personal_code' => $user->personal_code,
-                'profile_photo_url' => $avatar,
-                'avatar' => $avatar,
-            ];
-        });
-        
+            ->where('id', '!=', $currentUserId) // Exclude current user
+            ->select([
+                'id',
+                'name',
+                'email',
+                'reference_code',
+                'personal_code',
+                'profile_photo_path',
+            ])
+            ->limit($limit)
+            ->get()
+            ->map(function ($user) {
+                $avatar = $user->profile_photo_url
+                    ?: 'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=random&color=fff';
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $this->maskEmail($user->email),
+                    'reference_code' => $user->reference_code,
+                    'personal_code' => $user->personal_code,
+                    'profile_photo_url' => $avatar,
+                    'avatar' => $avatar,
+                ];
+            });
+
         return response()->json([
             'success' => true,
             'data' => $users,
         ]);
     }
-    
+
     /**
      * Mask email for privacy
      */
     private function maskEmail($email)
     {
-        if (!$email) return null;
-        
+        if (! $email) {
+            return null;
+        }
+
         $parts = explode('@', $email);
-        if (count($parts) !== 2) return $email;
-        
+        if (count($parts) !== 2) {
+            return $email;
+        }
+
         $name = $parts[0];
         $domain = $parts[1];
-        
-        if (strlen($name) <= 2) {
-            return $name . '***@' . $domain;
-        }
-        
-        $visible = substr($name, 0, 2);
-        return $visible . '***@' . $domain;
-    }
 
+        if (strlen($name) <= 2) {
+            return $name.'***@'.$domain;
+        }
+
+        $visible = substr($name, 0, 2);
+
+        return $visible.'***@'.$domain;
+    }
 }

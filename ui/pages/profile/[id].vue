@@ -120,10 +120,10 @@ const loadActivities = async (page: number = 1) => {
     // Use actual user identifier (for 'me', use auth user's reference_code or id)
     let userIdentifier = referenceCode.value
     if (isViewingOwnProfile.value && authStore.user) {
-      userIdentifier = authStore.user.personal_code || authStore.user.reference_code || authStore.user.id
+      userIdentifier = String(authStore.user.personal_code || authStore.user.reference_code || authStore.user.id)
     } else if (profile.value) {
       // Use loaded profile's reference_code or user_id
-      userIdentifier = profile.value.reference_code || profile.value.user_id || referenceCode.value
+      userIdentifier = String(profile.value.reference_code || profile.value.user_id || referenceCode.value)
     }
     
     // Limit per page to reduce memory usage (default 10, can be adjusted)
@@ -1098,7 +1098,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   <!-- XP Text Inside Bar -->
                   <div class="absolute inset-0 flex items-center justify-center">
                     <span class="text-[10px] font-bold text-white drop-shadow-lg">
-                      {{ (profile.experience || 0).toLocaleString() }} / {{ ((profile.experience || 0) + (profile.experience_to_next_level || 0)).toLocaleString() }} XP
+                      {{ (profile.experience || 0).toLocaleString() }} / {{ (profile.experience_to_next_level || 0).toLocaleString() }} XP
                     </span>
                   </div>
                 </div>

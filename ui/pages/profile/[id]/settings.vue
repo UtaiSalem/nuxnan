@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, provide } from 'vue'
 import { Icon } from '@iconify/vue'
+import { onBeforeRouteLeave } from 'vue-router'
 
-// Lazy load heavy settings components
 const AccountInfo = defineAsyncComponent(() => import('~/components/settings/AccountInfo.vue'))
 const ProfileInfo = defineAsyncComponent(() => import('~/components/settings/ProfileInfo.vue'))
 const PrivacySettings = defineAsyncComponent(() => import('~/components/settings/PrivacySettings.vue'))
 const Socials = defineAsyncComponent(() => import('~/components/settings/Socials.vue'))
-const Security = defineAsyncComponent(() => import('~/components/settings/Security.vue'))
 const NotificationSettings = defineAsyncComponent(() => import('~/components/settings/NotificationSettings.vue'))
 
 definePageMeta({
@@ -22,26 +21,50 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-// Get id from route params (can be reference_code or 'me')
 const routeId = computed(() => route.params.id as string)
 
-// Check if user is viewing their own settings
 const isOwnProfile = computed(() => {
   if (!authStore.user) return false
-  return routeId.value === 'me' || 
-         routeId.value === authStore.user.reference_code ||
-         routeId.value === String(authStore.user.personal_code || '') ||
-         routeId.value === String(authStore.user.id)
+  return routeId.value === 'me' ||
+    routeId.value === authStore.user.reference_code ||
+    routeId.value === String(authStore.user.personal_code || '') ||
+    routeId.value === String(authStore.user.id)
 })
 
+// Unsaved changes tracking — child components call markDirty()/markClean()
+const isDirty = ref(false)
+provide('markDirty', () => { isDirty.value = true })
+provide('markClean', () => { isDirty.value = false })
 
-// Redirect if not own profile
+onBeforeRouteLeave((to, from, next) => {
+  if (isDirty.value) {
+    const confirmed = window.confirm('คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?')
+    confirmed ? next() : next(false)
+  } else {
+    next()
+  }
+})
+
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (isDirty.value) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
 onMounted(() => {
   if (!isOwnProfile.value) {
     router.replace(`/profile/${routeId.value}`)
     return
   }
-  // If viewing 'me', redirect to actual personal code (preferred) or reference code
   const targetId = authStore.user?.personal_code || authStore.user?.reference_code
   if (routeId.value === 'me' && targetId) {
     router.replace(`/profile/${targetId}/settings`)
@@ -57,19 +80,16 @@ watch(() => route.params.id, (newId) => {
   }
 })
 
-// Settings tabs configuration
 const settingsTabs = [
   { id: 'profile', label: 'โปรไฟล์', icon: 'fluent:contact-card-24-regular', description: 'แก้ไขข้อมูลโปรไฟล์' },
   { id: 'account', label: 'บัญชี', icon: 'fluent:person-info-24-regular', description: 'จัดการข้อมูลบัญชี' },
   { id: 'privacy', label: 'ความเป็นส่วนตัว', icon: 'fluent:shield-24-regular', description: 'ตั้งค่าความเป็นส่วนตัว' },
   { id: 'notifications', label: 'การแจ้งเตือน', icon: 'fluent:alert-24-regular', description: 'จัดการการแจ้งเตือน' },
   { id: 'socials', label: 'โซเชียล', icon: 'fluent:share-24-regular', description: 'เชื่อมต่อโซเชียลมีเดีย' },
-  { id: 'security', label: 'ความปลอดภัย', icon: 'fluent:shield-keyhole-24-regular', description: 'จัดการรหัสผ่าน' },
 ]
 
 const activeTab = ref('profile')
 
-// Sync tab with URL query
 onMounted(() => {
   if (route.query.tab && typeof route.query.tab === 'string') {
     const validTab = settingsTabs.find(t => t.id === route.query.tab)
@@ -79,12 +99,10 @@ onMounted(() => {
   }
 })
 
-// Update URL when tab changes
 watch(activeTab, (newTab) => {
   router.replace({ query: { ...route.query, tab: newTab } })
 })
 
-// Update tab when URL changes (e.g. back button)
 watch(() => route.query.tab, (newTab) => {
   if (newTab && typeof newTab === 'string') {
     const validTab = settingsTabs.find(t => t.id === newTab)
@@ -94,16 +112,18 @@ watch(() => route.query.tab, (newTab) => {
   }
 })
 
-// Navigate back to profile
 const goBackToProfile = () => {
   router.push(`/profile/${routeId.value}`)
 }
 
-// Mobile sidebar state
 const showMobileSidebar = ref(false)
 
-// Select tab function (closes mobile sidebar after selection)
 const selectTab = (tabId: string) => {
+  if (isDirty.value) {
+    const confirmed = window.confirm('คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการเปลี่ยนแท็บหรือไม่?')
+    if (!confirmed) return
+    isDirty.value = false
+  }
   activeTab.value = tabId
   showMobileSidebar.value = false
 }
@@ -113,8 +133,7 @@ const selectTab = (tabId: string) => {
   <div class="w-full pb-20 md:pb-4">
     <!-- Header with back button -->
     <div class="mb-4 sm:mb-6">
-      <!-- Back Button -->
-      <button 
+      <button
         @click="goBackToProfile"
         class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-3"
       >
@@ -133,8 +152,13 @@ const selectTab = (tabId: string) => {
           </p>
         </div>
 
-        <!-- Mobile menu toggle -->
-        <button 
+        <!-- Unsaved changes indicator -->
+        <div v-if="isDirty" class="hidden sm:flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-700">
+          <Icon icon="fluent:warning-24-regular" class="w-4 h-4 flex-shrink-0" />
+          <span>มีการเปลี่ยนแปลงที่ยังไม่บันทึก</span>
+        </div>
+
+        <button
           @click="showMobileSidebar = !showMobileSidebar"
           class="lg:hidden p-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
@@ -143,7 +167,7 @@ const selectTab = (tabId: string) => {
       </div>
     </div>
 
-    <!-- Mobile Horizontal Tab Scroller (visible on small screens) -->
+    <!-- Mobile Horizontal Tab Scroller -->
     <div class="lg:hidden mb-4 -mx-4 px-4">
       <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         <button
@@ -151,8 +175,8 @@ const selectTab = (tabId: string) => {
           :key="tab.id"
           @click="selectTab(tab.id)"
           class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
-          :class="activeTab === tab.id 
-            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
+          :class="activeTab === tab.id
+            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
             : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'"
         >
           <Icon :icon="tab.icon" class="w-4 h-4" />
@@ -162,7 +186,7 @@ const selectTab = (tabId: string) => {
     </div>
 
     <div class="flex flex-col lg:flex-row gap-6">
-      <!-- Desktop Sidebar (hidden on mobile) -->
+      <!-- Desktop Sidebar -->
       <div class="hidden lg:block lg:w-1/4 xl:w-1/5">
         <div class="sticky top-24">
           <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
@@ -173,21 +197,21 @@ const selectTab = (tabId: string) => {
               </h3>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">จัดการบัญชีของคุณ</p>
             </div>
-            
+
             <div class="p-2">
               <button
                 v-for="tab in settingsTabs"
                 :key="tab.id"
                 @click="selectTab(tab.id)"
                 class="w-full flex items-start gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left group"
-                :class="activeTab === tab.id 
-                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 shadow-sm' 
+                :class="activeTab === tab.id
+                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
               >
-                <div 
+                <div
                   class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
-                  :class="activeTab === tab.id 
-                    ? 'bg-blue-100 dark:bg-blue-800/30' 
+                  :class="activeTab === tab.id
+                    ? 'bg-blue-100 dark:bg-blue-800/30'
                     : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-gray-200 dark:group-hover:bg-gray-600'"
                 >
                   <Icon :icon="tab.icon" class="w-5 h-5" />
@@ -196,10 +220,10 @@ const selectTab = (tabId: string) => {
                   <div class="font-medium text-sm">{{ tab.label }}</div>
                   <div v-if="tab.description" class="text-xs mt-0.5 opacity-60">{{ tab.description }}</div>
                 </div>
-                <Icon 
-                  v-if="activeTab === tab.id" 
-                  icon="fluent:chevron-right-24-regular" 
-                  class="w-4 h-4 flex-shrink-0 mt-2.5 opacity-50" 
+                <Icon
+                  v-if="activeTab === tab.id"
+                  icon="fluent:chevron-right-24-regular"
+                  class="w-4 h-4 flex-shrink-0 mt-2.5 opacity-50"
                 />
               </button>
             </div>
@@ -209,6 +233,12 @@ const selectTab = (tabId: string) => {
 
       <!-- Content Area -->
       <div class="flex-1 lg:w-3/4 xl:w-4/5 min-w-0">
+        <!-- Mobile unsaved indicator -->
+        <div v-if="isDirty" class="sm:hidden mb-3 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-700">
+          <Icon icon="fluent:warning-24-regular" class="w-4 h-4 flex-shrink-0" />
+          <span>มีการเปลี่ยนแปลงที่ยังไม่บันทึก</span>
+        </div>
+
         <Transition name="fade" mode="out-in">
           <div v-if="activeTab === 'profile'" key="profile">
             <ProfileInfo />
@@ -224,9 +254,6 @@ const selectTab = (tabId: string) => {
           </div>
           <div v-else-if="activeTab === 'socials'" key="socials">
             <Socials />
-          </div>
-          <div v-else-if="activeTab === 'security'" key="security">
-            <Security />
           </div>
         </Transition>
       </div>
@@ -250,7 +277,6 @@ const selectTab = (tabId: string) => {
   transform: translateY(-8px);
 }
 
-/* Hide scrollbar but allow scrolling */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;

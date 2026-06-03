@@ -7,14 +7,12 @@ definePageMeta({
   middleware: 'nuxnan-admin'
 })
 
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase as string
+const api = useApi()
 const router = useRouter()
 const route = useRoute()
 
 const userId = route.params.id as string
 
-// Form state
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const errors = ref<Record<string, string>>({})
@@ -23,123 +21,97 @@ const successMessage = ref('')
 const form = reactive({
   name: '',
   email: '',
-  username: '',
+  phone_number: '',
   password: '',
   password_confirmation: '',
   role: 'user',
   is_super_admin: false,
   is_plearnd_admin: false,
-  status: 'active'
+  status: 'active',
 })
 
-// Roles
 const roles = [
   { value: 'user', label: 'ผู้ใช้ทั่วไป' },
   { value: 'instructor', label: 'ผู้สอน' },
-  { value: 'admin', label: 'ผู้ดูแล' }
+  { value: 'admin', label: 'ผู้ดูแล' },
 ]
 
-// Statuses
 const statuses = [
   { value: 'active', label: 'ใช้งาน' },
   { value: 'inactive', label: 'ไม่ใช้งาน' },
-  { value: 'suspended', label: 'ระงับการใช้งาน' }
+  { value: 'suspended', label: 'ระงับการใช้งาน' },
 ]
 
-// Fetch user data
 const fetchUser = async () => {
   isLoading.value = true
   try {
-    const token = useCookie('token')
-    const response = await $fetch(`${apiBase}/api/admin/users/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      }
-    })
-    
+    const response = await api.get<any>(`/api/admin/users/${userId}`)
+
     if (response.success) {
       const user = response.data
       form.name = user.name || ''
       form.email = user.email || ''
-      form.username = user.username || ''
-      form.role = user.role || 'user'
+      form.phone_number = user.phone_number || ''
+      form.role = user.role ?? (user.roles?.[0]?.name?.toLowerCase() ?? 'user')
       form.is_super_admin = user.is_super_admin || false
       form.is_plearnd_admin = user.is_plearnd_admin || false
       form.status = user.status || 'active'
     }
-  } catch (error) {
-    console.error('Failed to fetch user:', error)
-    errors.value.general = 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้'
+  } catch (error: any) {
+    errors.value.general = error.data?.message || 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้'
   } finally {
     isLoading.value = false
   }
 }
 
-// Validate form
 const validateForm = () => {
   errors.value = {}
-  
+
   if (!form.name) {
     errors.value.name = 'กรุณากรอกชื่อ'
   }
-  
+
   if (!form.email) {
     errors.value.email = 'กรุณากรอกอีเมล'
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
     errors.value.email = 'รูปแบบอีเมลไม่ถูกต้อง'
   }
-  
-  if (!form.username) {
-    errors.value.username = 'กรุณากรอก Username'
-  }
-  
-  // Password is optional for edit
+
   if (form.password && form.password.length < 8) {
     errors.value.password = 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร'
   }
-  
+
   if (form.password && form.password !== form.password_confirmation) {
     errors.value.password_confirmation = 'รหัสผ่านไม่ตรงกัน'
   }
-  
+
   return Object.keys(errors.value).length === 0
 }
 
-// Submit form
 const handleSubmit = async () => {
   if (!validateForm()) return
-  
+
   isSubmitting.value = true
   successMessage.value = ''
-  
+
   try {
-    const token = useCookie('token')
-    
-    // Build data without empty password
-    const data: any = {
+    const data: Record<string, any> = {
       name: form.name,
       email: form.email,
-      username: form.username,
+      phone_number: form.phone_number,
       role: form.role,
       is_super_admin: form.is_super_admin,
       is_plearnd_admin: form.is_plearnd_admin,
-      status: form.status
+      status: form.status,
     }
-    
+
     if (form.password) {
       data.password = form.password
       data.password_confirmation = form.password_confirmation
     }
-    
-    const response = await $fetch(`${apiBase}/api/admin/users/${userId}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-        'Content-Type': 'application/json'
-      },
-      body: data
-    })
-    
+
+    const response = await api.put<any>(`/api/admin/users/${userId}`, data)
+
     if (response.success) {
       successMessage.value = 'บันทึกข้อมูลสำเร็จ'
       setTimeout(() => {
@@ -235,19 +207,17 @@ onMounted(() => {
           <p v-if="errors.email" class="mt-1 text-sm text-red-500">{{ errors.email }}</p>
         </div>
 
-        <!-- Username -->
+        <!-- Phone Number -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Username <span class="text-red-500">*</span>
+            เบอร์โทรศัพท์
           </label>
           <input
-            v-model="form.username"
-            type="text"
+            v-model="form.phone_number"
+            type="tel"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            :class="{ 'border-red-500': errors.username }"
-            placeholder="username"
+            placeholder="08xxxxxxxx"
           />
-          <p v-if="errors.username" class="mt-1 text-sm text-red-500">{{ errors.username }}</p>
         </div>
 
         <!-- Password (Optional) -->
@@ -315,7 +285,7 @@ onMounted(() => {
         <!-- Admin Options -->
         <div class="space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
           <h3 class="font-medium text-gray-700 dark:text-gray-300">สิทธิ์ผู้ดูแล</h3>
-          
+
           <label class="flex items-center gap-3 cursor-pointer">
             <input
               v-model="form.is_super_admin"
@@ -346,7 +316,7 @@ onMounted(() => {
             <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
             {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลง' }}
           </button>
-          
+
           <NuxtLink
             to="/nuxnan-admin/users"
             class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 font-medium transition-colors"

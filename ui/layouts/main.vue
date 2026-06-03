@@ -198,6 +198,17 @@ const authUser = computed(() => {
   }
 })
 
+const xpProgressPercent = computed(() => {
+  const p = authUser.value.levelProgress
+  if (p > 0) return Math.min(100, p)
+  const storeProgress = gamificationStore.levelProgress
+  if (storeProgress > 0) return Math.min(100, storeProgress)
+  const cur = authUser.value.currentXp
+  const max = authUser.value.xpForNextLevel
+  if (max > 0) return Math.min(100, Math.round((cur / max) * 100))
+  return 0
+})
+
 const copyPersonalCode = async () => {
   if (authUser.value.personalCode) {
     try {
@@ -290,6 +301,7 @@ onMounted(async () => {
   }
 
   fetchLeaderboard()
+  gamificationStore.fetchProgress()
 
   // Reset login transition flag once layout is mounted and data is ready
   if (authStore.isLoginTransitioning) {
@@ -732,15 +744,37 @@ const onQRActionComplete = (result) => {
         <div v-if="isLeftDrawerOpen" class="p-6 space-y-6">
           <!-- Profile Card -->
           <div class="text-center">
-            <div class="relative inline-block mb-4">
+            <div class="relative w-28 h-28 flex items-center justify-center mx-auto mb-4">
+              <!-- XP Progress Ring -->
+              <svg class="absolute inset-0 w-28 h-28 -rotate-90" viewBox="0 0 112 112">
+                <defs>
+                  <linearGradient id="xp-ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#8b5cf6"/>
+                    <stop offset="100%" stop-color="#06b6d4"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="56" cy="56" r="50" fill="none" stroke-width="4" stroke="rgba(139,92,246,0.18)"/>
+                <circle
+                  cx="56" cy="56" r="50" fill="none" stroke-width="4"
+                  stroke="url(#xp-ring-gradient)"
+                  stroke-linecap="round"
+                  :style="{
+                    strokeDasharray: 314.16,
+                    strokeDashoffset: 314.16 * (1 - xpProgressPercent / 100),
+                    transition: 'stroke-dashoffset 0.8s ease'
+                  }"
+                />
+              </svg>
+              <!-- Avatar -->
               <img
                 :src="authUser.avatar"
-                class="w-24 h-24 rounded-full border-4 border-vikinger-purple shadow-lg"
+                class="w-24 h-24 rounded-full object-cover shadow-lg"
                 :alt="authUser.name"
                 @error="(e) => e.target.src = '/images/default-avatar.png'"
               />
+              <!-- Level badge -->
               <div
-                class="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-vikinger rounded-full flex items-center justify-center text-white font-bold border-4 transition-colors duration-300"
+                class="absolute -bottom-2 -right-2 w-10 h-10 bg-gradient-vikinger rounded-full flex items-center justify-center text-white font-bold border-4 transition-colors duration-300 z-10"
                 :class="isDarkMode ? 'border-vikinger-dark-100' : 'border-white'"
               >
                 {{ authUser.level }}
@@ -752,6 +786,26 @@ const onQRActionComplete = (result) => {
             <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
               {{ authUser.email }}
             </p>
+
+            <!-- XP Progress Bar -->
+            <div class="mt-2 mb-1 px-2">
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-semibold" :class="isDarkMode ? 'text-vikinger-cyan' : 'text-vikinger-purple'">
+                  Lv.{{ authUser.level }}
+                </span>
+                <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ xpProgressPercent }}%</span>
+              </div>
+              <div class="w-full h-1.5 rounded-full overflow-hidden" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                <div
+                  class="h-full rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan transition-all duration-700"
+                  :style="{ width: `${xpProgressPercent}%` }"
+                />
+              </div>
+              <div v-if="authUser.xpForNextLevel > 0" class="text-[10px] mt-0.5 text-center" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
+                {{ authUser.currentXp }} / {{ authUser.xpForNextLevel }} XP
+              </div>
+            </div>
+
             <p v-if="authUser.personalCode" 
                class="text-xs mt-1 flex items-center justify-center gap-1 cursor-pointer hover:text-vikinger-purple transition-colors"
                :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
@@ -1013,13 +1067,34 @@ const onQRActionComplete = (result) => {
         <div v-else class="p-3 space-y-2 flex flex-col items-center">
           <!-- Profile Avatar (Collapsed) -->
           <NuxtLink to="/profile" class="mb-2 flex flex-col items-center"
-            :title="`${authUser.name}${authUser.personalCode ? ' • ' + authUser.personalCode : ''}`">
-            <img
-              :src="authUser.avatar"
-              class="w-12 h-12 rounded-full border-2 border-vikinger-purple shadow-lg"
-              :alt="authUser.name"
-              @error="(e) => e.target.src = '/images/default-avatar.png'"
-            />
+            :title="`${authUser.name} • Lv.${authUser.level} • ${xpProgressPercent}% XP${authUser.personalCode ? ' • ' + authUser.personalCode : ''}`">
+            <div class="relative w-14 h-14 flex items-center justify-center">
+              <svg class="absolute inset-0 w-14 h-14 -rotate-90" viewBox="0 0 56 56">
+                <defs>
+                  <linearGradient id="xp-ring-gradient-sm" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#8b5cf6"/>
+                    <stop offset="100%" stop-color="#06b6d4"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="28" cy="28" r="25" fill="none" stroke-width="3" stroke="rgba(139,92,246,0.18)"/>
+                <circle
+                  cx="28" cy="28" r="25" fill="none" stroke-width="3"
+                  stroke="url(#xp-ring-gradient-sm)"
+                  stroke-linecap="round"
+                  :style="{
+                    strokeDasharray: 157.08,
+                    strokeDashoffset: 157.08 * (1 - xpProgressPercent / 100),
+                    transition: 'stroke-dashoffset 0.8s ease'
+                  }"
+                />
+              </svg>
+              <img
+                :src="authUser.avatar"
+                class="w-12 h-12 rounded-full object-cover shadow-lg"
+                :alt="authUser.name"
+                @error="(e) => e.target.src = '/images/default-avatar.png'"
+              />
+            </div>
             <span 
               class="mt-1 text-xs font-medium truncate max-w-[60px] text-center"
               :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
@@ -1389,14 +1464,37 @@ const onQRActionComplete = (result) => {
 
           <!-- Profile Card -->
           <div class="text-center">
-            <div class="relative inline-block mb-3">
+            <div class="relative w-24 h-24 flex items-center justify-center mx-auto mb-3">
+              <!-- XP Progress Ring -->
+              <svg class="absolute inset-0 w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                <defs>
+                  <linearGradient id="xp-ring-gradient-mobile" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#8b5cf6"/>
+                    <stop offset="100%" stop-color="#06b6d4"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="48" cy="48" r="44" fill="none" stroke-width="3" stroke="rgba(139,92,246,0.18)"/>
+                <circle
+                  cx="48" cy="48" r="44" fill="none" stroke-width="3"
+                  stroke="url(#xp-ring-gradient-mobile)"
+                  stroke-linecap="round"
+                  :style="{
+                    strokeDasharray: 276.46,
+                    strokeDashoffset: 276.46 * (1 - xpProgressPercent / 100),
+                    transition: 'stroke-dashoffset 0.8s ease'
+                  }"
+                />
+              </svg>
+              <!-- Avatar -->
               <img
                 :src="authUser.avatar"
-                class="w-20 h-20 rounded-full mx-auto border-4 border-vikinger-purple"
+                class="w-20 h-20 rounded-full object-cover shadow-lg"
+                :alt="authUser.name"
                 @error="(e) => e.target.src = '/images/default-avatar.png'"
               />
+              <!-- Level badge -->
               <div
-                class="absolute -bottom-1 -right-1 w-8 h-8 bg-gradient-vikinger rounded-full flex items-center justify-center text-white text-xs font-bold border-2"
+                class="absolute -bottom-1 -right-1 w-8 h-8 bg-gradient-vikinger rounded-full flex items-center justify-center text-white text-xs font-bold border-2 transition-colors duration-300 z-10"
                 :class="isDarkMode ? 'border-vikinger-dark-100' : 'border-white'"
               >
                 {{ authUser.level }}
@@ -1408,6 +1506,23 @@ const onQRActionComplete = (result) => {
             <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
               {{ authUser.email }}
             </p>
+
+            <!-- XP Progress Bar -->
+            <div class="mt-2 mb-1 px-4">
+              <div class="flex justify-between text-[10px] mb-1">
+                <span class="font-semibold" :class="isDarkMode ? 'text-vikinger-cyan' : 'text-vikinger-purple'">
+                  Lv.{{ authUser.level }}
+                </span>
+                <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ xpProgressPercent }}%</span>
+              </div>
+              <div class="w-full h-1 rounded-full overflow-hidden" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                <div
+                  class="h-full rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan transition-all duration-700"
+                  :style="{ width: `${xpProgressPercent}%` }"
+                />
+              </div>
+            </div>
+
             <p v-if="authUser.personalCode" 
                class="text-xs mt-1 flex items-center justify-center gap-1 cursor-pointer hover:text-vikinger-purple transition-colors"
                :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"

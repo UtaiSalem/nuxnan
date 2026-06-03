@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use App\Models\User;
-use App\Models\UserProfile;
-use Intervention\Image\ImageManager;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class SettingsController extends Controller
 {
@@ -22,9 +22,10 @@ class SettingsController extends Controller
     {
         $user = Auth::user();
         $user->load('profile');
+
         return response()->json([
             'success' => true,
-            'data' => $user
+            'data' => $user,
         ]);
     }
 
@@ -34,7 +35,11 @@ class SettingsController extends Controller
     public function updateProfile(Request $request)
     {
         $user = Auth::user();
-        
+
+        if ($request->filled('birthday') && ! $request->filled('birthdate')) {
+            $request->merge(['birthdate' => $request->input('birthday')]);
+        }
+
         // Validate
         $validated = $request->validate([
             'first_name' => 'nullable|string|max:255',
@@ -70,13 +75,13 @@ class SettingsController extends Controller
 
         // Create profile if not exists
         $profile = $user->profile ?? new UserProfile(['user_id' => $user->id]);
-        
+
         // Update fields
         $profile->fill($validated);
         $user->profile()->save($profile);
 
         // Update phone_number in users table if provided
-        if (isset($validated['phone_number'])) {
+        if (array_key_exists('phone_number', $validated)) {
             $user->phone_number = $validated['phone_number'];
             $user->save();
         }
@@ -84,7 +89,7 @@ class SettingsController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
-            'data' => $user->load('profile')
+            'data' => $user->load('profile'),
         ]);
     }
 
@@ -96,7 +101,7 @@ class SettingsController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'sometimes|string|max:255',
             'phone_number' => 'nullable|string|max:20',
             // Email updates usually require verification, skipping for now or strictly validating unique
             // 'email' => 'required|email|unique:users,email,'.$user->id,
@@ -107,7 +112,7 @@ class SettingsController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Account info updated successfully',
-            'data' => $user
+            'data' => $user,
         ]);
     }
 
@@ -123,10 +128,10 @@ class SettingsController extends Controller
 
         $user = Auth::user();
 
-        if (!Hash::check($request->current_password, $user->password)) {
+        if (! Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'The provided password does not match your current password.'
+                'message' => 'The provided password does not match your current password.',
             ], 422);
         }
 
@@ -136,7 +141,7 @@ class SettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Password updated successfully'
+            'message' => 'Password updated successfully',
         ]);
     }
 
@@ -158,8 +163,9 @@ class SettingsController extends Controller
             finfo_close($finfo);
 
             $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
-            if (!in_array($mimeType, $allowedMimeTypes)) {
+            if (! in_array($mimeType, $allowedMimeTypes)) {
                 Log::warning('Invalid MIME type for avatar upload', ['user_id' => Auth::id(), 'mime' => $mimeType]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'ประเภทไฟล์ไม่ถูกต้อง อนุญาตเฉพาะไฟล์รูปภาพเท่านั้น',
@@ -168,8 +174,9 @@ class SettingsController extends Controller
 
             // Check if file is actually an image
             $imageInfo = getimagesize($file->getPathname());
-            if (!$imageInfo) {
+            if (! $imageInfo) {
                 Log::warning('Uploaded file is not a valid image', ['user_id' => Auth::id()]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'ไฟล์ที่อัปโหลดไม่ใช่รูปภาพที่ถูกต้อง',
@@ -179,21 +186,21 @@ class SettingsController extends Controller
             $user = Auth::user();
 
             // Delete old avatar if exists
-            if ($user->profile_photo_path && !filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
+            if ($user->profile_photo_path && ! filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($user->profile_photo_path);
             }
 
             // Resize image to 300x300 max, maintain aspect ratio
-            $manager = new ImageManager(new Driver());
+            $manager = new ImageManager(new Driver);
             $image = $manager->read($file);
             $image->scaleDown(width: 300, height: 300);
 
             // Generate filename
-            $filename = $user->id . '_' . time() . '_' . uniqid() . '.jpg';
+            $filename = $user->id.'_'.time().'_'.uniqid().'.jpg';
 
             // Generate hashed path for sharding (Option 3) -> REMOVED
             // New Standard: public/avatars/{user_id}/{filename}
-            
+
             // Store path
             $path = "avatars/{$user->id}/{$filename}";
 
@@ -205,10 +212,8 @@ class SettingsController extends Controller
                 'profile_photo_path' => $path,
             ]);
 
-
-
             // Get clean full URL from model accessor
-            // We need to refresh/reload or just use the accessor logic manually here if needed, 
+            // We need to refresh/reload or just use the accessor logic manually here if needed,
             // but simply calling the accessor on the instance should work if attributes were updated.
             $fullUrl = $user->profile_photo_url;
 
@@ -224,7 +229,7 @@ class SettingsController extends Controller
             Log::error('Avatar upload failed', [
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -252,8 +257,9 @@ class SettingsController extends Controller
             finfo_close($finfo);
 
             $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
-            if (!in_array($mimeType, $allowedMimeTypes)) {
+            if (! in_array($mimeType, $allowedMimeTypes)) {
                 Log::warning('Invalid MIME type for cover upload', ['user_id' => Auth::id(), 'mime' => $mimeType]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'ประเภทไฟล์ไม่ถูกต้อง อนุญาตเฉพาะไฟล์รูปภาพเท่านั้น',
@@ -262,8 +268,9 @@ class SettingsController extends Controller
 
             // Check if file is actually an image
             $imageInfo = getimagesize($file->getPathname());
-            if (!$imageInfo) {
+            if (! $imageInfo) {
                 Log::warning('Uploaded file is not a valid image', ['user_id' => Auth::id()]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'ไฟล์ที่อัปโหลดไม่ใช่รูปภาพที่ถูกต้อง',
@@ -275,20 +282,20 @@ class SettingsController extends Controller
 
             // Delete old cover if exists
             $oldCover = $profile->cover_image;
-            if ($oldCover && !filter_var($oldCover, FILTER_VALIDATE_URL)) {
+            if ($oldCover && ! filter_var($oldCover, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($oldCover);
             }
 
             // Resize image to 1200x400 max, maintain aspect ratio
-            $manager = new ImageManager(new Driver());
+            $manager = new ImageManager(new Driver);
             $image = $manager->read($file);
             $image->scaleDown(width: 1200, height: 400);
 
             // Generate filename
-            $filename = time() . '_' . uniqid() . '.jpg';
+            $filename = time().'_'.uniqid().'.jpg';
 
             // Store path
-            $path = 'covers/' . $user->id . '/' . $filename;
+            $path = 'covers/'.$user->id.'/'.$filename;
 
             // Save resized image to storage
             Storage::disk('public')->put($path, (string) $image->toJpeg(quality: 85));
@@ -310,7 +317,7 @@ class SettingsController extends Controller
             Log::error('Cover upload failed', [
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([

@@ -17,6 +17,7 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'username' => $this->username ?? null,
             'email' => $this->email,
             'phone_number' => $this->phone_number,
             'personal_code' => $this->personal_code,
@@ -25,10 +26,14 @@ class UserResource extends JsonResource
             'profile_photo_url' => $this->profile_photo_url,
 
             // Status
+            'status' => $this->email_verified_at ? 'active' : 'inactive',
             'email_verified_at' => $this->email_verified_at,
             'phone_verified_at' => $this->phone_verified_at,
             'verified' => $this->verified,
             'is_verified' => $this->email_verified_at !== null,
+            'is_banned' => $this->is_banned ?? false,
+            'last_login_at' => $this->last_login_at ?? null,
+            'login_count' => $this->login_count ?? 0,
 
             // Points & Wallet
             'pp' => $this->pp,
@@ -49,14 +54,16 @@ class UserResource extends JsonResource
                     ];
                 });
             }),
+            'role' => $this->whenLoaded('roles', fn () => strtolower($this->roles->first()?->name ?? 'user')),
             'is_super_admin' => $this->isSuperAdmin(),
             'is_admin' => $this->hasAnyRole(['SUPER_ADMIN', 'ADMIN']),
+            'is_plearnd_admin' => $this->is_plearnd_admin,
 
             // Profile
             'profile' => $this->whenLoaded('profile', function () {
                 return [
                     'bio' => $this->profile->bio ?? null,
-                    'birthday' => $this->profile->birthday ?? null,
+                    'birthday' => $this->profile->birthdate ?? null,
                     'gender' => $this->profile->gender ?? null,
                     'address' => $this->profile->address ?? null,
                     'city' => $this->profile->city ?? null,
@@ -76,7 +83,7 @@ class UserResource extends JsonResource
             'no_of_ref' => $this->no_of_ref,
             'referal_link' => $this->referal_link,
 
-            // Timestamps (handle both Carbon objects and strings)
+            // Timestamps
             'created_at' => $this->formatTimestamp($this->getRawOriginal('created_at')),
             'updated_at' => $this->formatTimestamp($this->getRawOriginal('updated_at')),
         ];

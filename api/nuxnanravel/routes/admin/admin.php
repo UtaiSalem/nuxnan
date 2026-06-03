@@ -228,6 +228,10 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             ->middleware('permission:user-edit')
             ->name('admin.users.bulk-verify');
 
+        Route::post('/bulk-delete', [AdminController::class, 'bulkDelete'])
+            ->middleware('permission:user-delete')
+            ->name('admin.users.bulk-delete');
+
         Route::get('/{id}', [AdminController::class, 'show'])->name('admin.users.show');
         Route::put('/{id}', [AdminController::class, 'update'])->middleware('permission:user-edit')->name('admin.users.update');
 
