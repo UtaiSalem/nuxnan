@@ -138,7 +138,7 @@ class AdminController extends Controller
                         'ADMIN' => 'purple',
                         'MODERATOR' => 'blue',
                         'INSTRUCTOR' => 'green',
-                        'USER' => 'gray',
+                        'STUDENT' => 'gray',
                     ];
 
                     return [
@@ -227,6 +227,7 @@ class AdminController extends Controller
 
         $user = User::create([
             'name' => $request->name,
+            'username' => $request->username ?? $request->name . rand(100, 999),
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'phone_number' => $request->phone_number,
@@ -243,8 +244,8 @@ class AdminController extends Controller
                 $user->roles()->attach($role->id);
             }
         } else {
-            // Default to USER role
-            $userRole = Role::where('name', 'USER')->first();
+            // Default to STUDENT role
+            $userRole = Role::where('name', 'STUDENT')->first();
             if ($userRole) {
                 $user->roles()->attach($userRole->id);
             }
@@ -281,7 +282,7 @@ class AdminController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'email' => $user->email,
-                'role' => strtolower($user->roles->first()?->name ?? 'user'),
+                'role' => strtolower($user->roles->first()?->name ?? 'student'),
                 'avatar' => $user->avatar ?? $user->profile_photo_url,
                 'roles' => $user->roles->map(fn ($r) => [
                     'id' => $r->id,
@@ -329,8 +330,23 @@ class AdminController extends Controller
             $request->merge(['role' => strtoupper($request->role)]);
         }
 
+        foreach (['username', 'name', 'email', 'phone_number'] as $field) {
+            if ($request->has($field) && is_string($request->input($field))) {
+                $request->merge([$field => trim($request->input($field))]);
+            }
+        }
+
+        if ($request->has('username') && $request->input('username') === $user->username) {
+            $request->request->remove('username');
+        }
+
+        if ($request->has('roles') && is_array($request->roles)) {
+            $request->merge(['roles' => array_map('strtoupper', $request->roles)]);
+        }
+
         $validator = Validator::make($request->all(), [
-            'name' => ['sometimes', 'string', 'max:255', Rule::unique('users')->ignore($id)],
+            'username' => ['sometimes', 'required', 'string', 'max:191', Rule::unique('users', 'username')->ignore($id)],
+            'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', Rule::unique('users')->ignore($id)],
             'password' => 'sometimes|string|min:6',
             'phone_number' => 'nullable|string|max:20',
@@ -348,7 +364,7 @@ class AdminController extends Controller
         }
 
         // Update basic fields
-        $user->fill($request->only(['name', 'email', 'phone_number']));
+        $user->fill($request->only(['name', 'username', 'email', 'phone_number']));
 
         if ($request->has('status')) {
             match ($request->status) {

@@ -74,14 +74,14 @@ export const useAuthStore = defineStore('auth', () => {
   async function adminLogin(credentials: { email: string; password: string }) {
     isLoading.value = true
     try {
-      const response = await $fetch<any>(`${apiBase}/api/admin/auth/login`, {
+      const response = await $fetch(`${apiBase}/api/admin/auth/login`, {
         method: 'POST',
         credentials: 'include',
         body: {
           login: credentials.email, // Backend expects 'login' field, not 'email'
           password: credentials.password,
         },
-      })
+      }) as any
 
       if (response.success) {
         const accessToken = response.data?.token
@@ -169,12 +169,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      const response = await $fetch<any>(`${apiBase}/api/me`, {
+      const response = await $fetch(`${apiBase}/api/me`, {
         credentials: 'include',
         headers: {
           Authorization: `Bearer ${token.value}`,
         },
-      })
+      }) as any
 
       // Handle response structure from AuthController
       // Response format: { success: true, data: UserResource }
@@ -229,13 +229,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function _doRefresh(): Promise<boolean> {
     try {
-      const response = await $fetch<any>(`${apiBase}/api/refresh`, {
+      const response = await $fetch(`${apiBase}/api/refresh`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           Authorization: `Bearer ${token.value}`,
         },
-      })
+      }) as any
 
       // Backend respondWithToken returns:
       // { success: true, access_token: "...", token_type: "bearer", expires_in: 3600, user: {...} }

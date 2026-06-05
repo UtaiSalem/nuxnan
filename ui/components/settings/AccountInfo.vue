@@ -14,6 +14,7 @@ const markClean = inject<() => void>('markClean', () => {})
 const isLoadingAccount = ref(false)
 
 const form = ref({
+  username: '',
   name: '',
   phone_number: '',
   email: '',
@@ -27,6 +28,7 @@ watch(form, () => {
 function hydrateForm(data: any) {
   if (!data) return
   form.value = {
+    username: data.username || '',
     name: data.name || '',
     phone_number: data.phone_number || '',
     email: data.email || '',
@@ -94,30 +96,44 @@ async function saveAccount() {
       <div class="p-4 sm:p-6 space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ชื่อผู้ใช้ (Username/Handle)</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username (ชื่อผู้ใช้)</label>
             <div class="relative">
               <Icon icon="fluent:mention-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
-                v-model="form.name"
+                v-model="form.username"
                 type="text"
                 class="pl-10 w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-all"
                 placeholder="username"
               />
             </div>
-            <p class="mt-1 text-xs text-gray-500">นี่คือชื่อที่จะแสดงใน URL โปรไฟล์และใช้ในการค้นหา</p>
+            <p class="mt-1 text-xs text-gray-500">นี่คือชื่อที่จะแสดงใน URL โปรไฟล์และใช้ในการค้นหา (ห้ามซ้ำ)</p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เบอร์โทรศัพท์</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ชื่อแสดงผล (Display Name)</label>
             <div class="relative">
-              <Icon icon="fluent:call-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Icon icon="fluent:person-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
-                v-model="form.phone_number"
-                type="tel"
+                v-model="form.name"
+                type="text"
                 class="pl-10 w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-all"
-                placeholder="08xxxxxxxx"
+                placeholder="ชื่อของคุณ"
               />
             </div>
+            <p class="mt-1 text-xs text-gray-500">ชื่อที่จะแสดงให้คนอื่นเห็นในระบบ (ซ้ำได้)</p>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เบอร์โทรศัพท์</label>
+          <div class="relative">
+            <Icon icon="fluent:call-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              v-model="form.phone_number"
+              type="tel"
+              class="pl-10 w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-all"
+              placeholder="08xxxxxxxx"
+            />
           </div>
         </div>
 

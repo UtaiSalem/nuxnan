@@ -54,7 +54,7 @@ class UserResource extends JsonResource
                     ];
                 });
             }),
-            'role' => $this->whenLoaded('roles', fn () => strtolower($this->roles->first()?->name ?? 'user')),
+            'role' => $this->whenLoaded('roles', fn () => strtolower($this->roles->first()?->name ?? 'student')),
             'is_super_admin' => $this->isSuperAdmin(),
             'is_admin' => $this->hasAnyRole(['SUPER_ADMIN', 'ADMIN']),
             'is_plearnd_admin' => $this->is_plearnd_admin,

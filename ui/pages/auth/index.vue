@@ -85,7 +85,7 @@
     <div class="flex justify-center lg:justify-end relative px-4 lg:px-8">
       <ClientOnly>
         <Transition name="card-transition" mode="out-in">
-          <AuthCard :key="activeTab" :active-tab="activeTab" />
+          <AuthCard :key="activeTab" :active-tab="activeTab" :initial-code="initialReferralCode" />
         </Transition>
       </ClientOnly>
     </div>
@@ -111,6 +111,11 @@ const activeTab = computed(() => {
   const tab = route.query.tab as string
   return ['login', 'register'].includes(tab) ? (tab as 'login' | 'register') : 'login'
 })
+
+// Auto-fill referral code from ?ref= query param
+const initialReferralCode = computed(() => 
+  typeof route.query.ref === 'string' ? route.query.ref : ''
+)
 
 const setTab = (tab: 'login' | 'register') => {
   router.push({ query: { ...route.query, tab } })

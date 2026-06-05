@@ -41,7 +41,7 @@ class RolesDataTable extends DataTable
                 ];
             })
             ->addColumn('is_protected', function ($role) {
-                return in_array($role->name, ['SUPER_ADMIN', 'ADMIN', 'USER']);
+                return in_array($role->name, ['SUPER_ADMIN', 'ADMIN', 'STUDENT']);
             })
             ->editColumn('created_at', function ($role) {
                 return $role->created_at?->format('Y-m-d H:i');

@@ -74,7 +74,7 @@
     "loginSuccess": "Login Successful",
     "registerSuccess": "Registration Successful",
     "logoutSuccess": "Logout Successful",
-    "referralCode": "Referral Code",
+    "referralCode": "Referrer's Code",
     "referralCodeRequired": "Referral Code Required",
     "referralCodePlaceholder": "Enter Referral Code (8 digits)",
     "enterReferralCode": "Please enter your referrer's code to continue",

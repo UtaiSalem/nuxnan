@@ -47,7 +47,8 @@ class UserProfileResource extends JsonResource
             'user_id'           => $this->user_id,
             
             // User basic info
-            'username'          => $user->name,
+            'username'          => $user->username ?? $user->name,
+            'display_name'      => $user->name,
             'email'             => $this->when($isOwner || ($this->show_email && $isFriend), $user->email),
             'phone'             => $this->when($isOwner || ($this->show_phone && $isFriend), $user->phone_number),
             'personal_code'     => $this->when($isOwner, $user->personal_code),

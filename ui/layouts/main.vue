@@ -1,5 +1,4 @@
 <script setup>
-import { ref, computed, onBeforeUnmount, onMounted, watch, provide } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
@@ -8,6 +7,7 @@ import { useGamification } from '~/composables/useGamification'
 import { useResponsiveSidebar } from '~/composables/useResponsiveSidebar'
 import QrUniversalQRModal from '~/components/qr/UniversalQRModal.vue'
 import LayoutBottomNav from '~/components/layout/BottomNav.vue'
+import PersonalCodeCard from '~/components/user/PersonalCodeCard.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -209,17 +209,6 @@ const xpProgressPercent = computed(() => {
   return 0
 })
 
-const copyPersonalCode = async () => {
-  if (authUser.value.personalCode) {
-    try {
-      await navigator.clipboard.writeText(authUser.value.personalCode)
-      // We could use a toast here if available, but for now visual feedback is enough
-      // The user suggested adding click-to-copy with a tooltip or similar
-    } catch (err) {
-      console.error('Failed to copy personal code:', err)
-    }
-  }
-}
 
 // Navigation
 const navigation = [
@@ -783,6 +772,9 @@ const onQRActionComplete = (result) => {
             <h3 class="text-xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
               {{ authUser.name }}
             </h3>
+            <p class="text-xs font-bold text-vikinger-cyan mb-1">
+              @{{ authUser.username }}
+            </p>
             <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
               {{ authUser.email }}
             </p>
@@ -806,14 +798,8 @@ const onQRActionComplete = (result) => {
               </div>
             </div>
 
-            <p v-if="authUser.personalCode" 
-               class="text-xs mt-1 flex items-center justify-center gap-1 cursor-pointer hover:text-vikinger-purple transition-colors"
-               :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
-               @click="copyPersonalCode"
-               :title="'คลิกเพื่อคัดลอก'">
-              <Icon icon="fluent:id-card-24-regular" class="w-3.5 h-3.5" />
-              {{ authUser.personalCode }}
-            </p>
+            <!-- รหัสส่วนตัว -->
+            <PersonalCodeCard :code="authUser.personalCode" :is-dark-mode="isDarkMode" />
           </div>
 
           <!-- Badge Icons -->
@@ -1523,14 +1509,8 @@ const onQRActionComplete = (result) => {
               </div>
             </div>
 
-            <p v-if="authUser.personalCode" 
-               class="text-xs mt-1 flex items-center justify-center gap-1 cursor-pointer hover:text-vikinger-purple transition-colors"
-               :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
-               @click="copyPersonalCode"
-               :title="'คลิกเพื่อคัดลอก'">
-              <Icon icon="fluent:id-card-24-regular" class="w-3.5 h-3.5" />
-              {{ authUser.personalCode }}
-            </p>
+            <!-- รหัสส่วนตัว -->
+            <PersonalCodeCard :code="authUser.personalCode" :is-dark-mode="isDarkMode" />
           </div>
 
           <!-- Stats -->

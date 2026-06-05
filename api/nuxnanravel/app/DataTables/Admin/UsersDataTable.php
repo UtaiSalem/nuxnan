@@ -32,7 +32,7 @@ class UsersDataTable extends DataTable
                         'ADMIN' => 'bg-purple-500',
                         'MODERATOR' => 'bg-blue-500',
                         'INSTRUCTOR' => 'bg-green-500',
-                        'USER' => 'bg-gray-500',
+                        'STUDENT' => 'bg-gray-500',
                     ];
                     $color = $colors[$role->name] ?? 'bg-gray-500';
                     return [

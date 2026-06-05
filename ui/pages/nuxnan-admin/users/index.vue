@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 
 definePageMeta({
@@ -41,6 +41,27 @@ const verifyAction    = ref<'verify' | 'unverify'>('verify')
 const verifyNote      = ref('')
 const isVerifying     = ref(false)
 
+// ─── Edit modal state ─────────────────────────────────────────
+const showEditModal = ref(false)
+const userToEdit = ref<any>(null)
+const isLoadingEdit = ref(false)
+const isSavingEdit = ref(false)
+const editErrors = ref<Record<string, string>>({})
+const originalEditUsername = ref('')
+
+const editForm = reactive({
+  username: '',
+  name: '',
+  email: '',
+  phone_number: '',
+  password: '',
+  password_confirmation: '',
+  role: 'student',
+  is_super_admin: false,
+  is_plearnd_admin: false,
+  status: 'active',
+})
+
 // ─── Bulk Select state ────────────────────────────────────────
 const selectedUserIds = ref<number[]>([])
 const isAllSelected   = computed(() => users.value.length > 0 && selectedUserIds.value.length === users.value.length)
@@ -61,10 +82,11 @@ const canConfirmDelete = computed(() => {
 
 const roles = [
   { value: 'all', label: 'ทั้งหมด' },
-  { value: 'user', label: 'ผู้ใช้ทั่วไป' },
+  { value: 'student', label: 'ผู้ใช้ทั่วไป' },
   { value: 'instructor', label: 'ผู้สอน' },
   { value: 'admin', label: 'ผู้ดูแล' },
 ]
+const editableRoles = roles.filter(role => role.value !== 'all')
 const scopes = [
   { value: 'active',  label: 'ใช้งานอยู่' },
   { value: 'deleted', label: 'ถูกปิดใช้งาน' },
@@ -74,6 +96,11 @@ const statusOptions = [
   { value: 'all',     label: 'ทุกสถานะ' },
   { value: 'pending', label: 'รอยืนยัน' },
   { value: 'verified', label: 'ยืนยันแล้ว' },
+]
+const editStatuses = [
+  { value: 'active', label: 'เปิดใช้งาน' },
+  { value: 'inactive', label: 'ยังไม่ยืนยัน' },
+  { value: 'suspended', label: 'ระงับการใช้งาน' },
 ]
 
 // ─── API helper ───────────────────────────────────────────────
@@ -85,6 +112,15 @@ function getHeaders() {
 function showToast(type: 'success' | 'error', message: string) {
   toast.value = { type, message }
   setTimeout(() => { toast.value = null }, 4000)
+}
+
+const normalizeErrors = (validationErrors: Record<string, string | string[]>) => {
+  return Object.fromEntries(
+    Object.entries(validationErrors).map(([field, message]) => [
+      field,
+      Array.isArray(message) ? message[0] : message,
+    ])
+  ) as Record<string, string>
 }
 
 // ─── Fetch users ──────────────────────────────────────────────
@@ -189,6 +225,146 @@ const toggleSelectUser = (id: number) => {
   }
 }
 
+// ─── Edit flow ────────────────────────────────────────────────
+const resetEditForm = () => {
+  originalEditUsername.value = ''
+  editForm.username = ''
+  editForm.name = ''
+  editForm.email = ''
+  editForm.phone_number = ''
+  editForm.password = ''
+  editForm.password_confirmation = ''
+  editForm.role = 'student'
+  editForm.is_super_admin = false
+  editForm.is_plearnd_admin = false
+  editForm.status = 'active'
+  editErrors.value = {}
+}
+
+const normalizeEditStatus = (user: any) => {
+  if (user.deleted_at || user.status === 'suspended') return 'suspended'
+  if (user.status === 'inactive' || user.status === 'unverified' || user.is_verified === false) return 'inactive'
+  return 'active'
+}
+
+const fillEditForm = (user: any) => {
+  userToEdit.value = user
+  originalEditUsername.value = user.username || ''
+  editForm.username = originalEditUsername.value || user.name || ''
+  editForm.name = user.name || ''
+  editForm.email = user.email || ''
+  editForm.phone_number = user.phone_number || ''
+  editForm.role = user.role ?? (user.roles?.[0]?.name?.toLowerCase() ?? 'student')
+  editForm.is_super_admin = Boolean(user.is_super_admin)
+  editForm.is_plearnd_admin = Boolean(user.is_plearnd_admin)
+  editForm.status = normalizeEditStatus(user)
+}
+
+const openEditModal = async (user: any) => {
+  resetEditForm()
+  showEditModal.value = true
+  isLoadingEdit.value = true
+  fillEditForm(user)
+
+  try {
+    const response: any = await $fetch(`${apiBase}/api/admin/users/${user.id}`, {
+      headers: getHeaders(),
+    })
+
+    if (response.success) {
+      fillEditForm(response.data)
+    }
+  } catch (e: any) {
+    showToast('error', e?.data?.message || 'โหลดข้อมูลผู้ใช้ล้มเหลว')
+  } finally {
+    isLoadingEdit.value = false
+  }
+}
+
+const closeEditModal = () => {
+  if (isSavingEdit.value) return
+  showEditModal.value = false
+  userToEdit.value = null
+  resetEditForm()
+}
+
+const validateEditForm = () => {
+  editErrors.value = {}
+
+  if (!editForm.username.trim()) {
+    editErrors.value.username = 'กรุณากรอกชื่อผู้ใช้'
+  }
+
+  if (!editForm.name.trim()) {
+    editErrors.value.name = 'กรุณากรอกชื่อ'
+  }
+
+  if (!editForm.email.trim()) {
+    editErrors.value.email = 'กรุณากรอกอีเมล'
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
+    editErrors.value.email = 'รูปแบบอีเมลไม่ถูกต้อง'
+  }
+
+  if (editForm.password && editForm.password.length < 6) {
+    editErrors.value.password = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'
+  }
+
+  if (editForm.password && editForm.password !== editForm.password_confirmation) {
+    editErrors.value.password_confirmation = 'รหัสผ่านไม่ตรงกัน'
+  }
+
+  return Object.keys(editErrors.value).length === 0
+}
+
+const saveEditUser = async () => {
+  if (!userToEdit.value || isSavingEdit.value || !validateEditForm()) return
+
+  isSavingEdit.value = true
+  editErrors.value = {}
+
+  const data: Record<string, any> = {
+    name: editForm.name.trim(),
+    email: editForm.email.trim(),
+    phone_number: editForm.phone_number.trim(),
+    role: editForm.role,
+    is_super_admin: editForm.is_super_admin,
+    is_plearnd_admin: editForm.is_plearnd_admin,
+    status: editForm.status,
+  }
+
+  const nextUsername = editForm.username.trim()
+  if (nextUsername !== originalEditUsername.value) {
+    data.username = nextUsername
+  }
+
+  if (editForm.password) {
+    data.password = editForm.password
+    data.password_confirmation = editForm.password_confirmation
+  }
+
+  try {
+    const response: any = await $fetch(`${apiBase}/api/admin/users/${userToEdit.value.id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: data,
+    })
+
+    showToast('success', response.message || 'อัปเดตผู้ใช้สำเร็จ')
+    showEditModal.value = false
+    userToEdit.value = null
+    resetEditForm()
+    fetchUsers()
+  } catch (e: any) {
+    if (e?.data?.errors) {
+      editErrors.value = normalizeErrors(e.data.errors)
+    } else {
+      editErrors.value.general = e?.data?.message || 'บันทึกข้อมูลผู้ใช้ล้มเหลว'
+    }
+  } finally {
+    isSavingEdit.value = false
+  }
+}
+
 // ─── Delete flow ──────────────────────────────────────────────
 const openDeleteModal = async (user: any) => {
   userToDelete.value      = user
@@ -281,9 +457,9 @@ const getRoleBadge = (role: string) => {
   const badges: Record<string, string> = {
     admin:      'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     instructor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    user:       'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    student:    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
   }
-  return badges[role] ?? badges.user
+  return badges[role] ?? badges.student
 }
 
 const formatDate = (dateStr: string | null | undefined) => {
@@ -468,7 +644,8 @@ onMounted(fetchUsers)
                   />
                   <div>
                     <p class="font-medium text-gray-800 dark:text-white">{{ user.name }}</p>
-                    <p class="text-sm text-gray-500">ID: {{ user.id }}</p>
+                    <p class="text-xs text-vikinger-cyan font-semibold">@{{ user.username }}</p>
+                    <p class="text-xs text-gray-500">ID: {{ user.id }}</p>
                   </div>
                 </div>
               </td>
@@ -519,13 +696,13 @@ onMounted(fetchUsers)
                   >
                     <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
                   </NuxtLink>
-                  <NuxtLink
-                    :to="`/nuxnan-admin/users/${user.id}/edit`"
+                  <button
+                    @click="openEditModal(user)"
                     class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                     title="แก้ไข"
                   >
                     <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
-                  </NuxtLink>
+                  </button>
                   <button
                     @click="openDeleteModal(user)"
                     class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
@@ -591,6 +768,200 @@ onMounted(fetchUsers)
         >
           <Icon :icon="toast.type === 'success' ? 'fluent:checkmark-circle-24-filled' : 'fluent:dismiss-circle-24-filled'" class="w-5 h-5 flex-shrink-0" />
           {{ toast.message }}
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Edit User Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showEditModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <div class="absolute inset-0 bg-black/50" @click="closeEditModal" />
+          <form
+            class="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]"
+            @submit.prevent="saveEditUser"
+          >
+            <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 class="text-base font-semibold text-gray-800 dark:text-white">แก้ไขผู้ใช้</h3>
+                  <p class="text-sm text-gray-500">{{ userToEdit?.name || 'กำลังโหลดข้อมูล...' }}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                :disabled="isSavingEdit"
+                @click="closeEditModal"
+              >
+                <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
+              </button>
+            </div>
+
+            <div class="overflow-y-auto p-6 space-y-5 flex-1">
+              <div v-if="isLoadingEdit" class="flex items-center justify-center py-8 gap-3 text-gray-500">
+                <Icon icon="fluent:spinner-ios-20-regular" class="w-6 h-6 animate-spin" />
+                <span>กำลังโหลดข้อมูลผู้ใช้...</span>
+              </div>
+
+              <template v-else>
+                <div v-if="editErrors.general" class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+                  {{ editErrors.general }}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      ชื่อผู้ใช้ (Username) <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      v-model="editForm.username"
+                      type="text"
+                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      :class="{ 'border-red-500': editErrors.username }"
+                      placeholder="เช่น nuxnan_user"
+                    />
+                    <p v-if="editErrors.username" class="mt-1 text-sm text-red-500">{{ editErrors.username }}</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      ชื่อแสดงผล <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      v-model="editForm.name"
+                      type="text"
+                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      :class="{ 'border-red-500': editErrors.name }"
+                      placeholder="ชื่อที่ต้องการให้แสดง"
+                    />
+                    <p v-if="editErrors.name" class="mt-1 text-sm text-red-500">{{ editErrors.name }}</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      อีเมล <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      v-model="editForm.email"
+                      type="email"
+                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      :class="{ 'border-red-500': editErrors.email }"
+                      placeholder="email@example.com"
+                    />
+                    <p v-if="editErrors.email" class="mt-1 text-sm text-red-500">{{ editErrors.email }}</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เบอร์โทรศัพท์</label>
+                    <input
+                      v-model="editForm.phone_number"
+                      type="tel"
+                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      :class="{ 'border-red-500': editErrors.phone_number }"
+                      placeholder="เช่น 0812345678"
+                    />
+                    <p v-if="editErrors.phone_number" class="mt-1 text-sm text-red-500">{{ editErrors.phone_number }}</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">บทบาทหลัก</label>
+                    <select
+                      v-model="editForm.role"
+                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      :class="{ 'border-red-500': editErrors.role }"
+                    >
+                      <option v-for="role in editableRoles" :key="role.value" :value="role.value">
+                        {{ role.label }}
+                      </option>
+                    </select>
+                    <p v-if="editErrors.role" class="mt-1 text-sm text-red-500">{{ editErrors.role }}</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">สถานะบัญชี</label>
+                    <select
+                      v-model="editForm.status"
+                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option v-for="status in editStatuses" :key="status.value" :value="status.value">
+                        {{ status.label }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">รหัสผ่านใหม่</label>
+                    <input
+                      v-model="editForm.password"
+                      type="password"
+                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      :class="{ 'border-red-500': editErrors.password }"
+                      placeholder="เว้นว่างไว้ถ้าไม่เปลี่ยน"
+                    />
+                    <p v-if="editErrors.password" class="mt-1 text-sm text-red-500">{{ editErrors.password }}</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ยืนยันรหัสผ่านใหม่</label>
+                    <input
+                      v-model="editForm.password_confirmation"
+                      type="password"
+                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      :class="{ 'border-red-500': editErrors.password_confirmation }"
+                      placeholder="กรอกซ้ำเมื่อเปลี่ยนรหัสผ่าน"
+                    />
+                    <p v-if="editErrors.password_confirmation" class="mt-1 text-sm text-red-500">{{ editErrors.password_confirmation }}</p>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl cursor-pointer">
+                    <input
+                      v-model="editForm.is_super_admin"
+                      type="checkbox"
+                      class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span class="text-sm text-gray-700 dark:text-gray-300">ให้สิทธิ์ Super Admin</span>
+                  </label>
+
+                  <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl cursor-pointer">
+                    <input
+                      v-model="editForm.is_plearnd_admin"
+                      type="checkbox"
+                      class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span class="text-sm text-gray-700 dark:text-gray-300">ให้สิทธิ์ Plearnd Admin</span>
+                  </label>
+                </div>
+              </template>
+            </div>
+
+            <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                @click="closeEditModal"
+                :disabled="isSavingEdit"
+                class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                :disabled="isLoadingEdit || isSavingEdit"
+                class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Icon v-if="isSavingEdit" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
+                <span>{{ isSavingEdit ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข' }}</span>
+              </button>
+            </div>
+          </form>
         </div>
       </Transition>
     </Teleport>

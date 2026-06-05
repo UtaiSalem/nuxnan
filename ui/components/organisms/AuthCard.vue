@@ -32,7 +32,7 @@
             <LoginForm />
           </div>
           <div v-else key="register" class="w-full">
-            <RegisterForm />
+            <RegisterForm :initial-code="initialCode" />
           </div>
         </Transition>
       </div>
@@ -47,12 +47,14 @@ import RegisterForm from '../molecules/RegisterForm.vue'
 
 const config = useRuntimeConfig()
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     activeTab?: 'login' | 'register'
+    initialCode?: string
   }>(),
   {
     activeTab: 'login',
+    initialCode: '',
   }
 )
 

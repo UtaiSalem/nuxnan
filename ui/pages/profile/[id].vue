@@ -384,7 +384,7 @@ const hasChildRoute = computed(() => {
 // Computed properties
 const displayName = computed(() => {
   if (!profile.value) return ''
-  return profile.value.username || `${profile.value.first_name || ''} ${profile.value.last_name || ''}`.trim() || 'User'
+  return profile.value.display_name || profile.value.username || 'User'
 })
 
 const memberSince = computed(() => {
@@ -736,6 +736,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   {{ displayName }}
                   <Icon v-if="profile.is_verified" icon="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-vikinger-cyan" />
                 </h1>
+                <p class="text-vikinger-cyan font-bold text-sm">@{{ profile.username }}</p>
                 <p v-if="profile.title || profile.bio" class="text-gray-500 dark:text-gray-400 text-sm mt-1 max-w-md">
                   {{ profile.title || (profile.bio?.substring(0, 60) + (profile.bio?.length > 60 ? '...' : '')) }}
                 </p>

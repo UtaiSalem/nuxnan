@@ -58,9 +58,11 @@ class SocialAuthController extends Controller
                 ]);
             } else {
                 // Create new user
+                $generatedUsername = $this->generateUniqueUsername($googleUser->name);
                 $user = User::create([
                     'email' => $googleUser->email,
-                    'username' => $this->generateUniqueUsername($googleUser->name),
+                    'name' => $googleUser->name,
+                    'username' => $generatedUsername,
                     'google_id' => $googleUser->id,
                     'avatar' => $googleUser->avatar,
                     'password' => null, // No password for social login
@@ -70,11 +72,11 @@ class SocialAuthController extends Controller
                     'reference_code' => User::generateReferenceCode(),
                 ]);
 
-                // Create profile
+                // Create profile with compatible fields
                 $user->profile()->create([
-                    'username' => $this->generateUniqueUsername($googleUser->name),
-                    'display_name' => $googleUser->name,
-                    'profile_image_url' => $googleUser->avatar,
+                    'first_name' => $googleUser->user['given_name'] ?? null,
+                    'last_name' => $googleUser->user['family_name'] ?? null,
+                    'profile_picture' => $googleUser->avatar,
                 ]);
 
                 // Assign default role
@@ -99,13 +101,11 @@ class SocialAuthController extends Controller
      */
     protected function generateUniqueUsername(string $name): string
     {
-        $username = Str::slug($name);
+        $username = Str::slug($name, '');
         $originalUsername = $username;
         $count = 1;
 
-        while (User::whereHas('profile', function ($query) use ($username) {
-            $query->where('username', $username);
-        })->exists()) {
+        while (User::where('username', $username)->exists()) {
             $username = "{$originalUsername}{$count}";
             $count++;
         }

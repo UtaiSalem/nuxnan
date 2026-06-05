@@ -103,7 +103,8 @@ class SettingsController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255|unique:users,name,'.$user->id,
+            'name' => 'sometimes|string|max:255',
+            'username' => 'sometimes|string|max:191|alpha_dash|unique:users,username,'.$user->id,
             'phone_number' => 'nullable|string|max:20',
         ]);
 

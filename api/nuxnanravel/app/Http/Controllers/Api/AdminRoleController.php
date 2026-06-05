@@ -87,12 +87,12 @@ class AdminRoleController extends Controller
                     'ADMIN' => 'purple',
                     'MODERATOR' => 'blue',
                     'INSTRUCTOR' => 'green',
-                    'USER' => 'gray',
+                    'STUDENT' => 'gray',
                 ];
                 return $colors[$role->name] ?? 'indigo';
             })
             ->addColumn('is_system', function ($role) {
-                $systemRoles = ['SUPER_ADMIN', 'ADMIN', 'USER'];
+                $systemRoles = ['SUPER_ADMIN', 'ADMIN', 'STUDENT'];
                 return in_array($role->name, $systemRoles);
             })
             ->editColumn('status', function ($role) {
@@ -193,7 +193,7 @@ class AdminRoleController extends Controller
         }
 
         // Prevent modifying system roles name
-        $systemRoles = ['SUPER_ADMIN', 'ADMIN', 'USER'];
+        $systemRoles = ['SUPER_ADMIN', 'ADMIN', 'STUDENT'];
         if (in_array($role->name, $systemRoles) && $request->has('name') && $request->name !== $role->name) {
             return response()->json([
                 'success' => false,
@@ -257,7 +257,7 @@ class AdminRoleController extends Controller
         }
 
         // Prevent deleting system roles
-        $systemRoles = ['SUPER_ADMIN', 'ADMIN', 'USER'];
+        $systemRoles = ['SUPER_ADMIN', 'ADMIN', 'STUDENT'];
         if (in_array($role->name, $systemRoles)) {
             return response()->json([
                 'success' => false,

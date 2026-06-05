@@ -22,7 +22,7 @@ const form = reactive({
   username: '',
   password: '',
   password_confirmation: '',
-  role: 'user',
+  role: 'student',
   is_super_admin: false,
   is_plearnd_admin: false,
   status: 'active'
@@ -30,7 +30,7 @@ const form = reactive({
 
 // Roles
 const roles = [
-  { value: 'user', label: 'ผู้ใช้ทั่วไป' },
+  { value: 'student', label: 'ผู้ใช้ทั่วไป' },
   { value: 'instructor', label: 'ผู้สอน' },
   { value: 'admin', label: 'ผู้ดูแล' }
 ]

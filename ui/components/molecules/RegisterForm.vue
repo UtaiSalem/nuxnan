@@ -181,16 +181,19 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
 import InputText from '../atoms/InputText.vue'
 import AppButton from '../atoms/Button.vue'
 import Checkbox from '../atoms/Checkbox.vue'
+
+const props = defineProps<{
+  initialCode?: string
+}>()
 
 const authStore = useAuthStore()
 const config = useRuntimeConfig()
 
 // Referral code state
-const referralCode = ref('')
+const referralCode = ref(props.initialCode || '')
 const referralCodeValidated = ref(false)
 const validatingReferralCode = ref(false)
 const referralError = ref('')
@@ -200,6 +203,13 @@ const referrerInfo = ref<{
   personal_code: string
   avatar: string
 } | null>(null)
+
+// Auto-validate on mount if initialCode is provided and valid
+onMounted(() => {
+  if (props.initialCode && props.initialCode.length === 8 && /^\d{8}$/.test(props.initialCode)) {
+    validateReferralCode()
+  }
+})
 
 // Helper function to get full avatar URL
 const getAvatarUrl = (avatar: string | undefined) => {
@@ -262,7 +272,12 @@ const validateReferralCode = async () => {
   referrerInfo.value = null
 
   try {
-    const response = await $fetch<{
+    const response = await $fetch(`${config.public.apiBase}/api/validate-referral-code`, {
+      method: 'POST',
+      body: {
+        reference_code: referralCode.value,
+      },
+    }) as {
       success: boolean
       message: string
       is_admin?: boolean
@@ -271,12 +286,7 @@ const validateReferralCode = async () => {
         personal_code: string
         avatar?: string
       }
-    }>(`${config.public.apiBase}/api/validate-referral-code`, {
-      method: 'POST',
-      body: {
-        reference_code: referralCode.value,
-      },
-    })
+    }
 
     if (response.success) {
       if (response.is_admin) {
@@ -367,6 +377,7 @@ const handleSubmit = async () => {
   try {
     // Register with the new JWT auth system including reference_code
     await authStore.register({
+      username: form.username,
       name: form.username,
       email: form.email,
       password: form.password,

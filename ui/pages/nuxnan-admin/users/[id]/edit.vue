@@ -17,21 +17,23 @@ const isLoading = ref(true)
 const isSubmitting = ref(false)
 const errors = ref<Record<string, string>>({})
 const successMessage = ref('')
+const originalUsername = ref('')
 
 const form = reactive({
+  username: '',
   name: '',
   email: '',
   phone_number: '',
   password: '',
   password_confirmation: '',
-  role: 'user',
+  role: 'student',
   is_super_admin: false,
   is_plearnd_admin: false,
   status: 'active',
 })
 
 const roles = [
-  { value: 'user', label: 'ผู้ใช้ทั่วไป' },
+  { value: 'student', label: 'ผู้ใช้ทั่วไป' },
   { value: 'instructor', label: 'ผู้สอน' },
   { value: 'admin', label: 'ผู้ดูแล' },
 ]
@@ -42,6 +44,15 @@ const statuses = [
   { value: 'suspended', label: 'ระงับการใช้งาน' },
 ]
 
+const normalizeErrors = (validationErrors: Record<string, string | string[]>) => {
+  return Object.fromEntries(
+    Object.entries(validationErrors).map(([field, message]) => [
+      field,
+      Array.isArray(message) ? message[0] : message,
+    ])
+  ) as Record<string, string>
+}
+
 const fetchUser = async () => {
   isLoading.value = true
   try {
@@ -49,10 +60,12 @@ const fetchUser = async () => {
 
     if (response.success) {
       const user = response.data
+      originalUsername.value = user.username || ''
+      form.username = originalUsername.value || user.name || ''
       form.name = user.name || ''
       form.email = user.email || ''
       form.phone_number = user.phone_number || ''
-      form.role = user.role ?? (user.roles?.[0]?.name?.toLowerCase() ?? 'user')
+      form.role = user.role ?? (user.roles?.[0]?.name?.toLowerCase() ?? 'student')
       form.is_super_admin = user.is_super_admin || false
       form.is_plearnd_admin = user.is_plearnd_admin || false
       form.status = user.status || 'active'
@@ -69,6 +82,10 @@ const validateForm = () => {
 
   if (!form.name) {
     errors.value.name = 'กรุณากรอกชื่อ'
+  }
+
+  if (originalUsername.value && !form.username) {
+    errors.value.username = 'กรุณากรอกชื่อผู้ใช้'
   }
 
   if (!form.email) {
@@ -96,13 +113,17 @@ const handleSubmit = async () => {
 
   try {
     const data: Record<string, any> = {
-      name: form.name,
-      email: form.email,
-      phone_number: form.phone_number,
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone_number: form.phone_number.trim(),
       role: form.role,
       is_super_admin: form.is_super_admin,
       is_plearnd_admin: form.is_plearnd_admin,
       status: form.status,
+    }
+
+    if (form.username !== originalUsername.value && form.username !== form.name) {
+      data.username = form.username.trim()
     }
 
     if (form.password) {
@@ -120,7 +141,7 @@ const handleSubmit = async () => {
     }
   } catch (error: any) {
     if (error.data?.errors) {
-      errors.value = error.data.errors
+      errors.value = normalizeErrors(error.data.errors)
     } else {
       errors.value.general = error.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'
     }
@@ -177,19 +198,36 @@ onMounted(() => {
 
       <!-- Form -->
       <form @submit.prevent="handleSubmit" class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+        <!-- Username -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            ชื่อผู้ใช้ (Username) <span class="text-red-500">*</span>
+          </label>
+          <input
+            v-model="form.username"
+            type="text"
+            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            :class="{ 'border-red-500': errors.username }"
+            placeholder="เช่น nuxnan_user"
+          />
+          <p v-if="errors.username" class="mt-1 text-sm text-red-500">{{ errors.username }}</p>
+          <p class="mt-1 text-xs text-gray-500">ชื่อที่ใช้ในระบบ ค้นหา และ @mention (ห้ามซ้ำ)</p>
+        </div>
+
         <!-- Name -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            ชื่อ <span class="text-red-500">*</span>
+            ชื่อแสดงผล (Display Name) <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.name"
             type="text"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             :class="{ 'border-red-500': errors.name }"
-            placeholder="กรอกชื่อผู้ใช้"
+            placeholder="ชื่อที่ต้องการให้แสดง"
           />
           <p v-if="errors.name" class="mt-1 text-sm text-red-500">{{ errors.name }}</p>
+          <p class="mt-1 text-xs text-gray-500">ชื่อที่จะแสดงให้คนอื่นเห็น (ซ้ำได้)</p>
         </div>
 
         <!-- Email -->

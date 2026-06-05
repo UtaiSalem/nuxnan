@@ -23,8 +23,9 @@ class AdvertResource extends JsonResource
 
                 return [
                     'id' => $this->advertiser->id,
+                    'username' => $this->advertiser->username ?? $this->advertiser->name,
+                    'display_name' => $this->advertiser->name,
                     'name' => $this->advertiser->name,
-                    'username' => $this->advertiser->name,
                     'avatar' => $this->advertiser->profile_photo_url,
                     'profile_photo_url' => $this->advertiser->profile_photo_url,
                     'reference_code' => $this->advertiser->reference_code,
