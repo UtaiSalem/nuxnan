@@ -9,6 +9,7 @@ const props = defineProps({
   isAdmin: { type: Boolean, default: false },
   academy: { type: Object, default: null },
   courseMemberOfAuth: { type: Object, default: null },
+  isCheckingMembership: { type: Boolean, default: false },
   hideCover: { type: Boolean, default: false },
 })
 
@@ -250,6 +251,7 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
                 variant="hero"
                 :course="course"
                 :course-member-of-auth="courseMemberOfAuth"
+                :is-checking-membership="isCheckingMembership"
                 @refresh="emit('refresh')"
                 @request-member="emit('request-member')"
                 @purchase-course="emit('purchase-course')"

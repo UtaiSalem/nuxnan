@@ -5,26 +5,33 @@ definePageMeta({
   layout: false,
 })
 
-const { call } = useApi()
+const api      = useApi()
 const store    = useTypingStore()
 const router   = useRouter()
 
 const challenge = ref<any>(null)
 const completed = ref(false)
 const loading   = ref(true)
+const error     = ref<string | null>(null)
 
-onMounted(async () => {
+async function fetchChallenge() {
+  loading.value = true
+  error.value = null
   try {
-    const res = await call('GET', '/typing/daily')
+    const res = await api.get('/typing/daily')
     if (res.success) {
       challenge.value = res.challenge
       completed.value = res.completed
     }
-  } catch (error) {
-    console.error('Failed to fetch daily challenge', error)
+  } catch (e) {
+    error.value = 'โหลดข้อมูลไม่สำเร็จ'
+    console.error('Failed to fetch daily challenge', e)
+  } finally {
+    loading.value = false
   }
-  finally { loading.value = false }
-})
+}
+
+onMounted(fetchChallenge)
 
 function startChallenge() {
   if (!challenge.value) return
@@ -32,7 +39,7 @@ function startChallenge() {
   store.selectedLang = challenge.value.language
   store.selectedDifficulty = challenge.value.difficulty
   
-  router.push('/Play/Games/typing/play?challenge=' + challenge.value.id)
+  router.push('/play/games/typing/play?challenge=' + challenge.value.id)
 }
 </script>
 
@@ -49,11 +56,19 @@ function startChallenge() {
         <p class="text-slate-400 font-bold">กำลังโหลดภารกิจ...</p>
       </div>
 
+      <div v-else-if="error" class="flex flex-col items-center justify-center min-h-64 gap-4 text-slate-400">
+        <Icon icon="heroicons:exclamation-circle" class="text-4xl text-red-400" />
+        <p>{{ error }}</p>
+        <button @click="fetchChallenge()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-bold">
+          ลองใหม่
+        </button>
+      </div>
+
       <div v-else-if="!challenge" class="bg-slate-100 dark:bg-slate-900 rounded-3xl p-12 text-center space-y-4">
         <Icon icon="heroicons:calendar-days" class="text-6xl text-slate-300 dark:text-slate-700" />
         <p class="text-slate-500 font-bold text-xl">ไม่มีภารกิจสำหรับวันนี้</p>
         <p class="text-slate-400">ลองกลับมาตรวจสอบใหม่ภายหลังนะ!</p>
-        <NuxtLink to="/Play/Games/typing" class="inline-block mt-4 text-primary-500 font-bold hover:underline">
+        <NuxtLink to="/play/games/typing" class="inline-block mt-4 text-primary-500 font-bold hover:underline">
           กลับสู่หน้าหลัก
         </NuxtLink>
       </div>
@@ -113,7 +128,7 @@ function startChallenge() {
             START MISSION
           </button>
           <NuxtLink
-            to="/Play/Games/typing"
+            to="/play/games/typing"
             class="w-full py-4 bg-white dark:bg-slate-900 text-slate-500 font-bold rounded-2xl border-2 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-center block"
           >
             BACK TO LOBBY

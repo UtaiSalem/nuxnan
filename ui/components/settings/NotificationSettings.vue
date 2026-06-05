@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
-import { useAuthStore } from '~/stores/auth'
 
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
-const authStore = useAuthStore()
+const api = useApi()
+
+const settingsData = inject<any>('settingsData')
+const reloadSettings = inject<() => Promise<void>>('reloadSettings', async () => {})
+const markDirty = inject<() => void>('markDirty', () => {})
+const markClean = inject<() => void>('markClean', () => {})
 
 const isLoading = ref(false)
-const isFetching = ref(true)
+const isFetching = ref(false) // No longer needed for fetching, but kept for UI if needed
 
 const notificationForm = ref({
   email_notifications: true,
@@ -29,6 +31,36 @@ const notificationForm = ref({
   notify_system_updates: true,
   notify_security_alerts: true,
 })
+
+let watcherActive = false
+watch(notificationForm, () => {
+  if (watcherActive) markDirty()
+}, { deep: true })
+
+function hydrateForm(data: any) {
+  if (!data || !data.profile) return
+  if (data.profile.notification_settings) {
+    const settings = typeof data.profile.notification_settings === 'string'
+      ? JSON.parse(data.profile.notification_settings)
+      : data.profile.notification_settings
+    notificationForm.value = { ...notificationForm.value, ...settings }
+  }
+  setTimeout(() => {
+    watcherActive = true
+  }, 100)
+}
+
+onMounted(() => {
+  if (settingsData?.value) {
+    hydrateForm(settingsData.value)
+  }
+})
+
+watch(() => settingsData?.value, (newData) => {
+  if (newData && !watcherActive) {
+    hydrateForm(newData)
+  }
+}, { immediate: true })
 
 const notificationGroups = [
   {
@@ -78,36 +110,16 @@ const notificationGroups = [
   },
 ]
 
-onMounted(async () => {
-  try {
-    const res = await $fetch<any>(`${apiBase}/api/settings`, {
-      headers: { Authorization: `Bearer ${authStore.token}` }
-    })
-    if (res.success && res.data?.profile?.notification_settings) {
-      const settings = typeof res.data.profile.notification_settings === 'string'
-        ? JSON.parse(res.data.profile.notification_settings)
-        : res.data.profile.notification_settings
-      notificationForm.value = { ...notificationForm.value, ...settings }
-    }
-  } catch (e) {
-    console.error('Fetch notification settings error', e)
-  } finally {
-    isFetching.value = false
-  }
-})
-
 async function saveNotificationSettings() {
   isLoading.value = true
   try {
-    const res = await $fetch<any>(`${apiBase}/api/settings/profile`, {
-      method: 'POST',
-      body: {
+    const res = await api.post<any>('/api/settings/profile', {
         notification_settings: notificationForm.value
-      },
-      headers: { Authorization: `Bearer ${authStore.token}` }
     })
     
     if (res.success) {
+      markClean()
+      await reloadSettings()
       Swal.fire({
         icon: 'success',
         title: 'บันทึกสำเร็จ!',
@@ -119,7 +131,7 @@ async function saveNotificationSettings() {
       })
     }
   } catch (error: any) {
-    Swal.fire('ผิดพลาด', error.response?._data?.message || 'ไม่สามารถบันทึกได้', 'error')
+    Swal.fire('ผิดพลาด', error.data?.message || 'ไม่สามารถบันทึกได้', 'error')
   } finally {
     isLoading.value = false
   }
@@ -149,93 +161,81 @@ function setNotifValue(key: string, val: boolean) {
 
 <template>
 <div class="space-y-6">
-  <!-- Loading Skeleton -->
-  <template v-if="isFetching">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-pulse">
-      <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-      <div class="space-y-4">
-        <div v-for="i in 3" :key="i" class="h-16 bg-gray-100 dark:bg-gray-700/50 rounded-xl"></div>
-      </div>
-    </div>
-  </template>
-
   <!-- Notification Settings Groups -->
-  <template v-else>
-    <div 
-      v-for="group in notificationGroups" 
-      :key="group.title"
-      class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
-    >
-      <!-- Group Header -->
-      <div class="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div 
-              class="w-10 h-10 rounded-xl flex items-center justify-center"
-              :class="`bg-${group.color}-100 dark:bg-${group.color}-900/20`"
-            >
-              <Icon :icon="group.icon" class="w-5 h-5" :class="`text-${group.color}-500`" />
-            </div>
-            <div>
-              <h3 class="text-base font-bold text-gray-900 dark:text-white">{{ group.title }}</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ group.description }}</p>
-            </div>
-          </div>
-          
-          <!-- Toggle All -->
-          <button 
-            @click="toggleGroup(group, !isGroupAllEnabled(group))"
-            class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-            :class="isGroupAllEnabled(group) 
-              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 hover:bg-blue-100' 
-              : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200'"
+  <div 
+    v-for="group in notificationGroups" 
+    :key="group.title"
+    class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
+  >
+    <!-- Group Header -->
+    <div class="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/10">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div 
+            class="w-10 h-10 rounded-xl flex items-center justify-center"
+            :class="`bg-${group.color}-100 dark:bg-${group.color}-900/20`"
           >
-            {{ isGroupAllEnabled(group) ? 'ปิดทั้งหมด' : 'เปิดทั้งหมด' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Group Items -->
-      <div class="divide-y divide-gray-50 dark:divide-gray-700/50">
-        <div 
-          v-for="item in group.items" 
-          :key="item.key"
-          class="flex items-center justify-between p-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-        >
-          <div class="flex items-center gap-3 flex-1 min-w-0">
-            <Icon :icon="item.icon" class="w-5 h-5 text-gray-400 flex-shrink-0" />
-            <div class="min-w-0">
-              <p class="font-medium text-sm text-gray-900 dark:text-white">{{ item.label }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">{{ item.description }}</p>
-            </div>
+            <Icon :icon="group.icon" class="w-5 h-5" :class="`text-${group.color}-500`" />
           </div>
-          
-          <!-- Toggle Switch -->
-          <label class="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-3">
-            <input 
-              type="checkbox" 
-              :checked="getNotifValue(item.key)"
-              @change="setNotifValue(item.key, ($event.target as HTMLInputElement).checked)"
-              class="sr-only peer" 
-            />
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-          </label>
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white">{{ group.title }}</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ group.description }}</p>
+          </div>
         </div>
+        
+        <!-- Toggle All -->
+        <button 
+          @click="toggleGroup(group, !isGroupAllEnabled(group))"
+          class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+          :class="isGroupAllEnabled(group) 
+            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 hover:bg-blue-100' 
+            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200'"
+        >
+          {{ isGroupAllEnabled(group) ? 'ปิดทั้งหมด' : 'เปิดทั้งหมด' }}
+        </button>
       </div>
     </div>
 
-    <!-- Save Button -->
-    <div class="flex justify-end sticky bottom-20 md:bottom-4">
-      <button 
-        @click="saveNotificationSettings" 
-        :disabled="isLoading"
-        class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+    <!-- Group Items -->
+    <div class="divide-y divide-gray-50 dark:divide-gray-700/50">
+      <div 
+        v-for="item in group.items" 
+        :key="item.key"
+        class="flex items-center justify-between p-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
       >
-        <Icon v-if="isLoading" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-        <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
-        <span>บันทึกการตั้งค่าการแจ้งเตือน</span>
-      </button>
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <Icon :icon="item.icon" class="w-5 h-5 text-gray-400 flex-shrink-0" />
+          <div class="min-w-0">
+            <p class="font-medium text-sm text-gray-900 dark:text-white">{{ item.label }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">{{ item.description }}</p>
+          </div>
+        </div>
+        
+        <!-- Toggle Switch -->
+        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-3">
+          <input 
+            type="checkbox" 
+            :checked="getNotifValue(item.key)"
+            @change="setNotifValue(item.key, ($event.target as HTMLInputElement).checked)"
+            class="sr-only peer" 
+          />
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+        </label>
+      </div>
     </div>
-  </template>
+  </div>
+
+  <!-- Save Button -->
+  <div class="flex justify-end sticky bottom-20 md:bottom-4">
+    <button 
+      @click="saveNotificationSettings" 
+      :disabled="isLoading"
+      class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+    >
+      <Icon v-if="isLoading" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+      <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
+      <span>บันทึกการตั้งค่าการแจ้งเตือน</span>
+    </button>
+  </div>
 </div>
 </template>

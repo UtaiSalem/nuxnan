@@ -67,7 +67,7 @@ function buildShareText(): string {
 onMounted(async () => {
   if (!result.value) {
     // If no result, redirect back
-    return useRouter().push('/Play/Games/typing')
+    return useRouter().push('/play/games/typing')
   }
 
   // Extract achievements from result
@@ -202,8 +202,8 @@ function formatWpm(wpm: number) {
 
       <!-- Actions -->
       <div class="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-        <NuxtLink 
-          to="/Play/Games/typing/play"
+        <NuxtLink
+          to="/play/games/typing/play"
           class="px-12 py-4 bg-primary-600 hover:bg-primary-700 text-white font-black text-xl rounded-2xl shadow-lg shadow-primary-500/30 transition-all hover:scale-105 active:scale-95 text-center"
         >
           PLAY AGAIN
@@ -222,14 +222,14 @@ function formatWpm(wpm: number) {
           </template>
         </button>
 
-        <NuxtLink :to="`/Play/Games/typing/profile/${useAuthStore().user?.id}`"
+        <NuxtLink v-if="authStore.user" :to="`/play/games/typing/profile/${authStore.user.id}`"
           class="px-8 py-4 border-2 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-400 font-black rounded-2xl transition-all text-center hover:scale-105 flex items-center justify-center"
         >
           👤 ดูโปรไฟล์ฉัน
         </NuxtLink>
 
-        <NuxtLink 
-          to="/Play/Games/typing"
+        <NuxtLink
+          to="/play/games/typing"
           class="px-12 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xl rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 text-center"
         >
           LOBBY

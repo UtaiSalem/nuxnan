@@ -26,6 +26,7 @@ const academy = ref<any>(null)
 const isCourseAdmin = ref(false)
 const courseMemberOfAuth = ref<any>(null)
 const isLoading = ref(true)
+const isCheckingMembership = ref(true)
 const error = ref<string | null>(null)
 
 // UI State
@@ -70,6 +71,7 @@ const fetchCourse = async (forceRefresh = false) => {
   if (shouldShowLoading) {
     isLoading.value = true
   }
+  isCheckingMembership.value = true
   error.value = null
 
   try {
@@ -94,6 +96,7 @@ const fetchCourse = async (forceRefresh = false) => {
     }
   } finally {
     isLoading.value = false
+    isCheckingMembership.value = false
   }
 }
 
@@ -176,9 +179,18 @@ provide('courseMemberOfAuth', courseMemberOfAuth)
 provide('isLoading', isLoading)
 provide('refreshCourse', fetchCourse)
 
+const authStore = useAuthStore()
+
 onMounted(() => {
-  fetchCourse()
+  if (authStore.user) {
+    fetchCourse()
+  }
+  // ถ้า user ยังไม่พร้อม รอ watcher ด้านล่าง
 })
+
+watch(() => authStore.user?.id, (id) => {
+  if (id && !course.value) fetchCourse()
+}, { immediate: false })
 
 watch(course, (newCourse) => {
   if (newCourse?.name) {
@@ -220,6 +232,7 @@ watch(courseId, (newId) => {
         :is-course-admin="isCourseAdmin"
         :course-member-of-auth="courseMemberOfAuth"
         :course-groups="courseGroups"
+        :is-checking-membership="isCheckingMembership"
         :is-enrolling="isEnrolling"
         :is-toggling-favorite="isTogglingFavorite"
         :is-wishlisted="isWishlisted"

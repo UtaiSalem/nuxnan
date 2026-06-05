@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
-import { useAuthStore } from '~/stores/auth'
 
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
-const authStore = useAuthStore()
+const api = useApi()
+
+const settingsData = inject<any>('settingsData')
+const reloadSettings = inject<() => Promise<void>>('reloadSettings', async () => {})
+const markDirty = inject<() => void>('markDirty', () => {})
+const markClean = inject<() => void>('markClean', () => {})
 
 const isLoading = ref(false)
 
@@ -45,48 +47,58 @@ const visibilityOptions = [
     },
 ]
 
-onMounted(async () => {
-    try {
-        const res = await $fetch<any>(`${apiBase}/api/settings`, {
-            headers: { Authorization: `Bearer ${authStore.token}` }
-        })
-        if (res.success && res.data.profile) {
-            const p = res.data.profile
-            privacyForm.value = {
-                profile_visibility: p.privacy_settings || 'public',
-                show_email: p.show_email ?? false,
-                show_phone: p.show_phone ?? false,
-                show_birthdate: p.show_birthdate ?? false,
-                show_location: p.show_location ?? false,
-                allow_friend_requests: p.allow_friend_requests ?? true,
-                allow_messages: p.allow_messages ?? true,
-                show_online_status: p.show_online_status ?? true,
-            }
-        }
-    } catch (e) {
-        console.error("Fetch privacy settings error", e)
-    }
+let watcherActive = false
+watch(privacyForm, () => {
+  if (watcherActive) markDirty()
+}, { deep: true })
+
+function hydrateForm(data: any) {
+  if (!data || !data.profile) return
+  const p = data.profile
+  privacyForm.value = {
+    profile_visibility: p.privacy_settings || 'public',
+    show_email: p.show_email ?? false,
+    show_phone: p.show_phone ?? false,
+    show_birthdate: p.show_birthdate ?? false,
+    show_location: p.show_location ?? false,
+    allow_friend_requests: p.allow_friend_requests ?? true,
+    allow_messages: p.allow_messages ?? true,
+    show_online_status: p.show_online_status ?? true,
+  }
+  setTimeout(() => {
+    watcherActive = true
+  }, 100)
+}
+
+onMounted(() => {
+  if (settingsData?.value) {
+    hydrateForm(settingsData.value)
+  }
 })
+
+watch(() => settingsData?.value, (newData) => {
+  if (newData && !watcherActive) {
+    hydrateForm(newData)
+  }
+}, { immediate: true })
 
 async function savePrivacySettings() {
     isLoading.value = true
     try {
-        const res = await $fetch<any>(`${apiBase}/api/settings/profile`, {
-            method: 'POST',
-            body: {
-                privacy_settings: privacyForm.value.profile_visibility,
-                show_email: privacyForm.value.show_email,
-                show_phone: privacyForm.value.show_phone,
-                show_birthdate: privacyForm.value.show_birthdate,
-                show_location: privacyForm.value.show_location,
-                allow_friend_requests: privacyForm.value.allow_friend_requests,
-                allow_messages: privacyForm.value.allow_messages,
-                show_online_status: privacyForm.value.show_online_status,
-            },
-            headers: { Authorization: `Bearer ${authStore.token}` }
+        const res = await api.post<any>('/api/settings/profile', {
+            privacy_settings: privacyForm.value.profile_visibility,
+            show_email: privacyForm.value.show_email,
+            show_phone: privacyForm.value.show_phone,
+            show_birthdate: privacyForm.value.show_birthdate,
+            show_location: privacyForm.value.show_location,
+            allow_friend_requests: privacyForm.value.allow_friend_requests,
+            allow_messages: privacyForm.value.allow_messages,
+            show_online_status: privacyForm.value.show_online_status,
         })
         
         if (res.success) {
+            markClean()
+            await reloadSettings()
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกสำเร็จ!',
@@ -109,7 +121,7 @@ async function savePrivacySettings() {
 <div class="space-y-6">
     <!-- Profile Visibility -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+        <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-blue-50/30 dark:bg-blue-900/10">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Icon icon="fluent:eye-24-regular" class="text-blue-500" />
                 การมองเห็นโปรไฟล์
@@ -145,7 +157,7 @@ async function savePrivacySettings() {
 
     <!-- Personal Information Visibility -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+        <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-purple-50/30 dark:bg-purple-900/10">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Icon icon="fluent:person-info-24-regular" class="text-purple-500" />
                 การแสดงข้อมูลส่วนตัว
@@ -214,7 +226,7 @@ async function savePrivacySettings() {
 
     <!-- Interaction Settings -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+        <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-green-50/30 dark:bg-green-900/10">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Icon icon="fluent:chat-24-regular" class="text-green-500" />
                 การตั้งค่าการโต้ตอบ
@@ -275,6 +287,7 @@ async function savePrivacySettings() {
             class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
             <Icon v-if="isLoading" icon="svg-spinners:ring-resize" />
+            <Icon v-else icon="fluent:save-24-regular" class="w-4 h-4" />
             <span>บันทึกการตั้งค่าความเป็นส่วนตัว</span>
         </button>
     </div>

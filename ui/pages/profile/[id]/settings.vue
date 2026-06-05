@@ -20,6 +20,7 @@ useHead({
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const api = useApi()
 
 const routeId = computed(() => route.params.id as string)
 
@@ -30,6 +31,27 @@ const isOwnProfile = computed(() => {
     routeId.value === String(authStore.user.personal_code || '') ||
     routeId.value === String(authStore.user.id)
 })
+
+// Centralized Settings Data
+const settingsData = ref<any>(null)
+const isLoadingSettings = ref(false)
+
+async function fetchSettings() {
+  isLoadingSettings.value = true
+  try {
+    const res = await api.get<any>('/api/settings')
+    if (res.success) {
+      settingsData.value = res.data
+    }
+  } catch (e) {
+    console.error('Fetch settings error', e)
+  } finally {
+    isLoadingSettings.value = false
+  }
+}
+
+provide('settingsData', computed(() => settingsData.value))
+provide('reloadSettings', fetchSettings)
 
 // Unsaved changes tracking — child components call markDirty()/markClean()
 const isDirty = ref(false)
@@ -54,6 +76,7 @@ const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload)
+  fetchSettings()
 })
 
 onBeforeUnmount(() => {
@@ -82,7 +105,7 @@ watch(() => route.params.id, (newId) => {
 
 const settingsTabs = [
   { id: 'profile', label: 'โปรไฟล์', icon: 'fluent:contact-card-24-regular', description: 'แก้ไขข้อมูลโปรไฟล์' },
-  { id: 'account', label: 'บัญชี', icon: 'fluent:person-info-24-regular', description: 'จัดการข้อมูลบัญชี' },
+  { id: 'account', label: 'บัญชีและรหัสผ่าน', icon: 'fluent:person-info-24-regular', description: 'จัดการข้อมูลบัญชีและเปลี่ยนรหัสผ่าน' },
   { id: 'privacy', label: 'ความเป็นส่วนตัว', icon: 'fluent:shield-24-regular', description: 'ตั้งค่าความเป็นส่วนตัว' },
   { id: 'notifications', label: 'การแจ้งเตือน', icon: 'fluent:alert-24-regular', description: 'จัดการการแจ้งเตือน' },
   { id: 'socials', label: 'โซเชียล', icon: 'fluent:share-24-regular', description: 'เชื่อมต่อโซเชียลมีเดีย' },
@@ -116,8 +139,6 @@ const goBackToProfile = () => {
   router.push(`/profile/${routeId.value}`)
 }
 
-const showMobileSidebar = ref(false)
-
 const selectTab = (tabId: string) => {
   if (isDirty.value) {
     const confirmed = window.confirm('คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการเปลี่ยนแท็บหรือไม่?')
@@ -125,7 +146,6 @@ const selectTab = (tabId: string) => {
     isDirty.value = false
   }
   activeTab.value = tabId
-  showMobileSidebar.value = false
 }
 </script>
 
@@ -158,12 +178,6 @@ const selectTab = (tabId: string) => {
           <span>มีการเปลี่ยนแปลงที่ยังไม่บันทึก</span>
         </div>
 
-        <button
-          @click="showMobileSidebar = !showMobileSidebar"
-          class="lg:hidden p-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-        >
-          <Icon icon="fluent:navigation-24-regular" class="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
       </div>
     </div>
 
@@ -185,7 +199,13 @@ const selectTab = (tabId: string) => {
       </div>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-6">
+    <!-- Loading State -->
+    <div v-if="isLoadingSettings && !settingsData" class="py-20 flex flex-col items-center justify-center gap-4">
+      <Icon icon="svg-spinners:ring-resize" class="w-10 h-10 text-blue-500" />
+      <p class="text-gray-500 animate-pulse">กำลังโหลดข้อมูลการตั้งค่า...</p>
+    </div>
+
+    <div v-else class="flex flex-col lg:flex-row gap-6">
       <!-- Desktop Sidebar -->
       <div class="hidden lg:block lg:w-1/4 xl:w-1/5">
         <div class="sticky top-24">

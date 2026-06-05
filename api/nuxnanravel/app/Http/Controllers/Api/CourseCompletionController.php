@@ -137,7 +137,7 @@ class CourseCompletionController extends Controller
             ], 404);
         }
 
-        $canView = in_array($course->finalization_status, ['grading', 'finalized', 'archived']);
+        $canView = in_array($course->finalization_status, ['grading', 'published', 'finalized', 'archived']);
 
         return response()->json([
             'success' => true,
@@ -370,5 +370,8 @@ class CourseCompletionController extends Controller
                 'statistics' => $this->gradingService->calculateGradeStatistics($course),
             ],
         ]);
+    }
+}
+;
     }
 }

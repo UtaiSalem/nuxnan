@@ -63,6 +63,7 @@ class UserProfileResource extends JsonResource
             'location'          => $this->when($isOwner || ($this->show_location && $isFriend), $this->location),
             'website'           => $this->website,
             'interests'         => $this->interests,
+            'skills'            => $this->skills,
             
             // Images
             'avatar'            => $avatarUrl,
@@ -76,7 +77,12 @@ class UserProfileResource extends JsonResource
             'following'         => $this->following ?? 0,
             'friends'           => $this->friends ?? 0,
             'friends_count'     => $this->friends ?? 0,
-            'posts_count'       => $user->activities()->count(),
+            'posts_count'       => $user->activities()
+                ->whereHasMorph('activityable', ['App\Models\Post', 'App\Models\CoursePost'],
+                    function($q) use ($canViewPrivate) {
+                        $q->whereIn('privacy_settings', $canViewPrivate ? [1, 2, 3] : [3]);
+                    }
+                )->count(),
             'visits'            => $this->visits ?? 0,
             'visits_count'      => $this->visits ?? 0,
             

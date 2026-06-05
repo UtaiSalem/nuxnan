@@ -28,24 +28,30 @@ definePageMeta({
 })
 
 const route = useRoute()
-const { call } = useApi()
+const api = useApi()
 const academyId = route.params.academyId
 
 const reportData = ref<any>(null)
 const loading = ref(true)
+const error = ref<string | null>(null)
 
-onMounted(async () => {
+async function fetchReport() {
+  loading.value = true
+  error.value = null
   try {
-    const res = await call('GET', `/typing/classroom/${academyId}/report`)
+    const res = await api.get(`/typing/classroom/${academyId}/report`)
     if (res.success) {
       reportData.value = res.data
     }
-  } catch (error) {
-    console.error('Failed to fetch report', error)
+  } catch (e) {
+    error.value = 'โหลดข้อมูลไม่สำเร็จ'
+    console.error('Failed to fetch report', e)
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(fetchReport)
 
 const chartData = computed(() => {
   if (!reportData.value?.trend) return null
@@ -83,7 +89,7 @@ const chartOptions = {
           <h1 class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Typing Class Report</h1>
           <p class="text-slate-500 font-medium">สถิติการฝึกพิมพ์ของนักเรียนในระดับห้องเรียน</p>
         </div>
-        <NuxtLink to="/Play/Games/typing" class="text-sm font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2">
+        <NuxtLink to="/play/games/typing" class="text-sm font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2">
           <Icon icon="heroicons:arrow-left" />
           กลับหน้าหลัก
         </NuxtLink>
@@ -91,6 +97,14 @@ const chartOptions = {
 
       <div v-if="loading" class="flex flex-col items-center justify-center py-40">
         <Icon icon="eos-icons:loading" class="text-5xl text-primary-500" />
+      </div>
+
+      <div v-else-if="error" class="flex flex-col items-center justify-center min-h-64 gap-4 text-slate-400">
+        <Icon icon="heroicons:exclamation-circle" class="text-4xl text-red-400" />
+        <p>{{ error }}</p>
+        <button @click="fetchReport()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-bold">
+          ลองใหม่
+        </button>
       </div>
 
       <template v-else-if="reportData">

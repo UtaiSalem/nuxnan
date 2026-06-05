@@ -6,17 +6,23 @@ definePageMeta({
 const { $api } = useNuxtApp()
 const data     = ref<any>(null)
 const loading  = ref(true)
+const error    = ref<string | null>(null)
 
-onMounted(async () => {
+async function fetchTournaments() {
+  loading.value = true
+  error.value = null
   try {
     const res  = await $api.get('/typing/tournaments')
     data.value = res.data
-  } catch (error) {
-    console.error('Failed to load tournaments:', error)
+  } catch (e) {
+    error.value = 'โหลดข้อมูลไม่สำเร็จ'
+    console.error('Failed to load tournaments:', e)
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(fetchTournaments)
 
 function formatTimeLeft(endsAt: string): string {
   const diff = new Date(endsAt).getTime() - Date.now()
@@ -47,6 +53,13 @@ function formatDate(d: string): string {
         กำลังโหลดข้อมูลการแข่งขัน...
       </div>
 
+      <div v-else-if="error" class="flex flex-col items-center justify-center min-h-64 gap-4 text-slate-400">
+        <p>{{ error }}</p>
+        <button @click="fetchTournaments()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-bold">
+          ลองใหม่
+        </button>
+      </div>
+
       <template v-else>
         <!-- Active Tournaments -->
         <section v-if="data?.active?.length">
@@ -57,7 +70,7 @@ function formatDate(d: string): string {
           <div class="grid md:grid-cols-2 gap-6">
             <NuxtLink
               v-for="t in data.active" :key="t.id"
-              :to="`/Play/Games/typing/tournaments/${t.id}`"
+              :to="`/play/games/typing/tournaments/${t.id}`"
               class="group relative overflow-hidden rounded-3xl p-8 border-2 transition-all hover:scale-[1.02] hover:shadow-2xl"
               :style="{ borderColor: t.banner_color + '40', background: t.banner_color + '10' }"
             >
@@ -125,7 +138,7 @@ function formatDate(d: string): string {
           <h2 class="text-xl font-black uppercase tracking-wider text-slate-800 dark:text-white mb-6">ที่จบไปแล้ว</h2>
           <div class="grid md:grid-cols-3 gap-4">
             <NuxtLink v-for="t in data.finished" :key="t.id"
-              :to="`/Play/Games/typing/tournaments/${t.id}`"
+              :to="`/play/games/typing/tournaments/${t.id}`"
               class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-100 dark:border-slate-800 space-y-3 hover:border-primary-500 transition-colors">
               <span class="text-xs font-black uppercase text-slate-400">{{ t.type }}</span>
               <h3 class="font-black text-slate-700 dark:text-slate-200">{{ t.name }}</h3>

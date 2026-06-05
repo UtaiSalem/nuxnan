@@ -43,7 +43,7 @@ function selectMode(modeId: GameMode) {
 }
 
 function start() {
-  router.push('/Play/Games/typing/play')
+  router.push('/play/games/typing/play')
 }
 </script>
 
@@ -55,18 +55,18 @@ function start() {
       <p class="text-xl text-slate-500">Master your typing speed and accuracy with fun challenges.</p>
       
       <div class="flex flex-wrap justify-center gap-4 mt-6">
-        <NuxtLink to="/Play/Games/typing/race" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-lg shadow-indigo-500/30 transition-all hover:scale-105 flex items-center gap-2">
+        <NuxtLink to="/play/games/typing/race" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-lg shadow-indigo-500/30 transition-all hover:scale-105 flex items-center gap-2">
           <span>🏁 CLASSROOM RACE</span>
           <span class="px-1.5 py-0.5 bg-white/20 text-[10px] rounded-md">PVP</span>
         </NuxtLink>
-        <NuxtLink to="/Play/Games/typing/daily" class="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl shadow-lg shadow-amber-500/30 transition-all hover:scale-105 flex items-center gap-2">
+        <NuxtLink to="/play/games/typing/daily" class="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl shadow-lg shadow-amber-500/30 transition-all hover:scale-105 flex items-center gap-2">
           <span>📅 DAILY CHALLENGE</span>
         </NuxtLink>
-        <NuxtLink to="/Play/Games/typing/tournaments" class="px-8 py-3 bg-rose-500 hover:bg-rose-600 text-white font-black rounded-2xl shadow-lg shadow-rose-500/30 transition-all hover:scale-105 flex items-center gap-2">
+        <NuxtLink to="/play/games/typing/tournaments" class="px-8 py-3 bg-rose-500 hover:bg-rose-600 text-white font-black rounded-2xl shadow-lg shadow-rose-500/30 transition-all hover:scale-105 flex items-center gap-2">
           <Icon icon="heroicons:trophy" />
           <span>🏆 TOURNAMENTS</span>
         </NuxtLink>
-        <NuxtLink :to="`/Play/Games/typing/profile/${useAuthStore().user?.id}`" class="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black rounded-2xl border-2 border-slate-200 dark:border-slate-700 transition-all hover:scale-105 flex items-center gap-2">
+        <NuxtLink v-if="authStore.user" :to="`/play/games/typing/profile/${authStore.user.id}`" class="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black rounded-2xl border-2 border-slate-200 dark:border-slate-700 transition-all hover:scale-105 flex items-center gap-2">
           <Icon icon="heroicons:user" />
           <span>MY PROFILE</span>
         </NuxtLink>

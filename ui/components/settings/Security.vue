@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, inject } from 'vue'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
-import { useAuthStore } from '~/stores/auth'
 
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
-const authStore = useAuthStore()
+const api = useApi()
+
+const markDirty = inject<() => void>('markDirty', () => {})
+const markClean = inject<() => void>('markClean', () => {})
+
 const isLoading = ref(false)
 
 const showCurrentPassword = ref(false)
@@ -19,26 +20,43 @@ const form = ref({
     password_confirmation: ''
 })
 
+let watcherActive = true
+watch(form, () => {
+  if (watcherActive && (form.value.current_password || form.value.password || form.value.password_confirmation)) {
+    markDirty()
+  }
+}, { deep: true })
+
 async function updatePassword() {
+    if (!form.value.current_password || !form.value.password) {
+        Swal.fire('Error', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'error')
+        return
+    }
+
     if (form.value.password !== form.value.password_confirmation) {
-        Swal.fire('Error', 'New passwords do not match', 'error')
+        Swal.fire('Error', 'รหัสผ่านใหม่ไม่ตรงกัน', 'error')
         return
     }
 
     isLoading.value = true
     try {
-        const res = await $fetch<any>(`${apiBase}/api/settings/password`, {
-            method: 'POST',
-            body: form.value,
-            headers: { Authorization: `Bearer ${authStore.token}` }
-        })
+        const res = await api.post<any>('/api/settings/password', form.value)
         
         if (res.success) {
-            Swal.fire('Success', 'Password updated successfully', 'success')
+            markClean()
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ!',
+                text: 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            })
             form.value = { current_password: '', password: '', password_confirmation: '' }
         }
     } catch (error: any) {
-        Swal.fire('Error', error.response?._data?.message || 'Update failed', 'error')
+        Swal.fire('Error', error.data?.message || 'Update failed', 'error')
     } finally {
         isLoading.value = false
     }
@@ -47,12 +65,12 @@ async function updatePassword() {
 
 <template>
 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-    <div class="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700 bg-red-50/50 dark:bg-red-900/10">
+    <div class="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700 bg-orange-50/50 dark:bg-orange-900/10">
         <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Icon icon="fluent:shield-lock-24-filled" class="text-red-500" />
+            <Icon icon="fluent:shield-lock-24-filled" class="text-orange-500" />
             ความปลอดภัย & รหัสผ่าน
         </h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400">ตรวจสอบว่าบัญชีของคุณใช้รหัสผ่านที่รัดกุม</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">ตรวจสอบว่าบัญชีของคุณใช้รหัสผ่านที่รัดกุม</p>
     </div>
 
     <div class="p-4 sm:p-6 space-y-6">
@@ -62,7 +80,8 @@ async function updatePassword() {
                 <input 
                     v-model="form.current_password" 
                     :type="showCurrentPassword ? 'text' : 'password'" 
-                    class="w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-red-500 pr-10" 
+                    class="w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-orange-500 pr-10" 
+                    placeholder="••••••••"
                 />
                 <button 
                     @click="showCurrentPassword = !showCurrentPassword" 
@@ -81,7 +100,8 @@ async function updatePassword() {
                     <input 
                         v-model="form.password" 
                         :type="showNewPassword ? 'text' : 'password'" 
-                        class="w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-red-500 pr-10" 
+                        class="w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-orange-500 pr-10" 
+                        placeholder="••••••••"
                     />
                     <button 
                         @click="showNewPassword = !showNewPassword" 
@@ -98,7 +118,8 @@ async function updatePassword() {
                     <input 
                         v-model="form.password_confirmation" 
                         :type="showConfirmPassword ? 'text' : 'password'" 
-                        class="w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-red-500 pr-10" 
+                        class="w-full rounded-xl border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-orange-500 pr-10" 
+                        placeholder="••••••••"
                     />
                     <button 
                         @click="showConfirmPassword = !showConfirmPassword" 
@@ -115,9 +136,10 @@ async function updatePassword() {
             <button 
                 @click="updatePassword" 
                 :disabled="isLoading"
-                class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow-lg hover:shadow-red-500/30 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                class="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-medium shadow-lg hover:shadow-orange-500/30 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 <Icon v-if="isLoading" icon="svg-spinners:ring-resize" />
+                <Icon v-else icon="fluent:save-24-regular" class="w-4 h-4" />
                 <span>เปลี่ยนรหัสผ่าน</span>
             </button>
         </div>

@@ -30,7 +30,7 @@ async function onFinished(result: any) {
   try {
     const savedResult = await submitSession(result)
     store.setResult(savedResult)
-    router.push('/Play/Games/typing/result')
+    router.push('/play/games/typing/result')
   } catch (error) {
     console.error('Failed to submit session', error)
     // Even if it fails to save, we show the local result
@@ -42,7 +42,7 @@ async function onFinished(result: any) {
       combo_bonus: 0,
       accuracy_bonus: 0
     })
-    router.push('/Play/Games/typing/result')
+    router.push('/play/games/typing/result')
   }
 }
 
@@ -64,7 +64,7 @@ const currentModeComponent = computed(() => {
     <div class="max-w-5xl mx-auto space-y-8">
       <!-- Breadcrumbs / Back -->
       <div class="flex items-center gap-4">
-        <NuxtLink to="/Play/Games/typing" class="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors group">
+        <NuxtLink to="/play/games/typing" class="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors group">
           <Icon icon="heroicons:arrow-left" class="text-xl group-hover:-translate-x-1 transition-transform" />
           <span class="font-bold uppercase tracking-widest text-xs">Back to Lobby</span>
         </NuxtLink>

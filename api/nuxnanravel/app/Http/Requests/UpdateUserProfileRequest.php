@@ -30,6 +30,7 @@ class UpdateUserProfileRequest extends FormRequest
             'location'          => ['nullable', 'string', 'max:255'],
             'website'           => ['nullable', 'url', 'max:255'],
             'interests'         => ['nullable', 'string', 'max:1000'],
+            'skills'            => ['nullable', 'array'],
             'social_media_links'=> ['nullable', 'array'],
             'social_media_links.facebook'   => ['nullable', 'url'],
             'social_media_links.twitter'    => ['nullable', 'url'],

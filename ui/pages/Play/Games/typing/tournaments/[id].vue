@@ -215,7 +215,7 @@ onMounted(loadTournament)
                 </p>
               </div>
               
-              <NuxtLink to="/Play/Games/typing/tournaments" class="block text-slate-400 hover:text-primary-500 font-bold text-sm transition-colors">
+              <NuxtLink to="/play/games/typing/tournaments" class="block text-slate-400 hover:text-primary-500 font-bold text-sm transition-colors">
                 ← กลับไปดูรายการอื่น
               </NuxtLink>
             </div>
@@ -294,7 +294,7 @@ onMounted(loadTournament)
         <Icon icon="heroicons:exclamation-triangle" class="text-5xl text-red-500 mb-4" />
         <h2 class="text-2xl font-black text-slate-800 dark:text-white">ไม่พบข้อมูลการแข่งขัน</h2>
         <p class="text-slate-500 mb-6">ลิงก์อาจไม่ถูกต้อง หรือการแข่งขันถูกลบออกไปแล้ว</p>
-        <NuxtLink to="/Play/Games/typing/tournaments" class="px-8 py-4 bg-primary-600 text-white font-black rounded-2xl shadow-lg">
+        <NuxtLink to="/play/games/typing/tournaments" class="px-8 py-4 bg-primary-600 text-white font-black rounded-2xl shadow-lg">
           กลับสู่รายการทั้งหมด
         </NuxtLink>
       </div>

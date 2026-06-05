@@ -9,6 +9,8 @@ use App\Models\GradeEditLog;
 use App\Models\GradeScale;
 use App\Models\GradeScaleItem;
 use App\Models\User;
+use App\Models\CourseGrade;
+use App\Models\Student;
 use Illuminate\Support\Facades\DB;
 
 class CourseGradingService
@@ -123,9 +125,11 @@ class CourseGradingService
     protected function calculateMemberTotalScore(CourseMember $member): float
     {
         // Try to get from gradebook scores
+        // CC-BUG-2 Fix: Use user_id instead of non-existent course_member_id
         $scores = DB::table('gradebook_scores')
             ->join('gradebook_assessments', 'gradebook_scores.assessment_id', '=', 'gradebook_assessments.id')
-            ->where('gradebook_scores.course_member_id', $member->id)
+            ->where('gradebook_scores.user_id', $member->user_id)
+            ->where('gradebook_assessments.course_id', $member->course_id)
             ->select(
                 'gradebook_scores.score',
                 'gradebook_assessments.max_score',
@@ -134,7 +138,10 @@ class CourseGradingService
             ->get();
 
         if ($scores->isEmpty()) {
-            return 0;
+            // Gap 2 Fix: Fallback to CourseMember.achieved_score if no gradebook entries
+            // This is useful for courses that don't use the full gradebook system
+            $percentage = $member->getPercentageScore();
+            return $percentage !== null ? (float)$percentage : 0;
         }
 
         $totalWeightedScore = 0;
@@ -193,6 +200,11 @@ class CourseGradingService
         return DB::transaction(function () use ($course, $performer, $gradeScale) {
             // Calculate draft grades
             $results = $this->calculateDraftGrades($course, $gradeScale);
+
+            // CC-GAP-1 Fix: Update status to published
+            $course->update([
+                'finalization_status' => 'published',
+            ]);
 
             // Update completion status
             $course->members()->update([
@@ -260,6 +272,9 @@ class CourseGradingService
                 'finalized_by' => $performer->id,
             ]);
 
+            // CC-GAP-4 Fix: Bridge to Transcript system (CourseGrade)
+            $this->syncToTranscripts($course, $performer);
+
             $stats = $this->calculateGradeStatistics($course);
 
             CourseFinalizationLog::create([
@@ -278,6 +293,41 @@ class CourseGradingService
 
             return $course->fresh();
         });
+    }
+
+    /**
+     * Sync course grades to transcript system (CourseGrade)
+     */
+    protected function syncToTranscripts(Course $course, User $performer): void
+    {
+        $members = $course->members()->with('user')->get();
+        
+        foreach ($members as $member) {
+            if ($member->final_grade === null) continue;
+
+            // Find student record linked to user
+            $student = Student::where('user_id', $member->user_id)->first();
+
+            CourseGrade::updateOrCreate(
+                [
+                    'course_id'  => $course->id,
+                    'user_id'    => $member->user_id,
+                ],
+                [
+                    'academy_id'   => $course->academy_id,
+                    'student_id'   => $student?->id,
+                    'semester_id'  => null, // Course model has no semester_id; set via transcript generation
+                    'total_score'  => $member->final_total_score,
+                    'percentage'   => $member->getPercentageScore() ?? $member->final_total_score,
+                    'letter_grade' => $member->final_grade,
+                    'grade_points' => $member->final_grade_point,
+                    'status'       => CourseGrade::STATUS_COMPLETED,
+                    'is_published' => true,
+                    'approved_by'  => $performer->id,
+                    'approved_at'  => now(),
+                ]
+            );
+        }
     }
 
     /**
@@ -421,7 +471,7 @@ class CourseGradingService
             ],
             'pending_appeals' => $pendingAppeals,
             'active_remediation_sessions' => $activeRemediation,
-            'can_finalize' => $course->finalization_status === 'grading' && $pendingAppeals === 0,
+            'can_finalize' => in_array($course->finalization_status, ['grading', 'published']) && $pendingAppeals === 0,
         ];
     }
 

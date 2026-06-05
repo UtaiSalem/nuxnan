@@ -38,6 +38,17 @@ class CourseMemberResource extends JsonResource
             'order_number' => $this->order_number,
             'member_code' => $this->member_code,
 
+            // Grading Fields
+            'draft_total_score' => (float) $this->draft_total_score,
+            'draft_grade' => $this->draft_grade,
+            'draft_grade_point' => (float) $this->draft_grade_point,
+            'final_total_score' => (float) $this->final_total_score,
+            'final_grade' => $this->final_grade,
+            'final_grade_point' => (float) $this->final_grade_point,
+            'grade_accepted_at' => $this->grade_accepted_at,
+            'completion_status' => $this->completion_status,
+            'completed_at' => $this->completed_at,
+
             // Effective identity fields (fallback to resolved data if not set on member)
             'effective_member_name' => $this->member_name ?? ($this->identity_data['member_name'] ?? $this->user->name),
             'effective_member_code' => $this->member_code ?? ($this->identity_data['member_code'] ?? null),

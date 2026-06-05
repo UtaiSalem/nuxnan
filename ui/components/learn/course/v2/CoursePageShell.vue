@@ -27,6 +27,7 @@ const props = defineProps<{
   isCourseAdmin: boolean
   courseMemberOfAuth: any
   courseGroups: any[]
+  isCheckingMembership?: boolean
   isEnrolling?: boolean
   isTogglingFavorite?: boolean
   isWishlisted?: boolean
@@ -111,6 +112,7 @@ onUnmounted(() => {
         :is-admin="isCourseAdmin" 
         :academy="academy"
         :course-member-of-auth="courseMemberOfAuth"
+        :is-checking-membership="isCheckingMembership"
         :hide-cover="!isCourseInfoRoute"
         @edit-name="$emit('edit-name')"
         @refresh="$emit('refresh')"
@@ -155,6 +157,7 @@ onUnmounted(() => {
           :course-member-of-auth="courseMemberOfAuth"
           :is-course-admin="isCourseAdmin"
           :course-groups="courseGroups"
+          :is-checking-membership="isCheckingMembership"
           :is-enrolling="isEnrolling"
           :is-toggling-favorite="isTogglingFavorite"
           :is-wishlisted="isWishlisted"
@@ -186,6 +189,7 @@ onUnmounted(() => {
           :course-member-of-auth="courseMemberOfAuth"
           :is-course-admin="isCourseAdmin"
           :course-groups="courseGroups"
+          :is-checking-membership="isCheckingMembership"
           :is-enrolling="isEnrolling"
           :is-toggling-favorite="isTogglingFavorite"
           :is-wishlisted="isWishlisted"

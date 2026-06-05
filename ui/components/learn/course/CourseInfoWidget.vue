@@ -6,6 +6,7 @@ interface Props {
   courseMemberOfAuth?: any
   isCourseAdmin?: boolean
   courseGroups?: any[]
+  isCheckingMembership?: boolean
   isEnrolling?: boolean
   isTogglingFavorite?: boolean
   isWishlisted?: boolean
@@ -15,6 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
   courseMemberOfAuth: null,
   isCourseAdmin: false,
   courseGroups: () => [],
+  isCheckingMembership: false,
   isEnrolling: false,
   isTogglingFavorite: false,
   isWishlisted: false
@@ -112,7 +114,17 @@ const formatPrice = (price: number) => {
 
       <!-- Action Buttons -->
       <div class="space-y-3 mb-6">
-        <template v-if="!isMember && !isCourseAdmin">
+        <!-- Guard: กำลังตรวจสอบสถานะ -->
+        <button
+          v-if="isCheckingMembership"
+          disabled
+          class="w-full py-3.5 bg-gray-100 dark:bg-vikinger-dark-100 text-gray-400 dark:text-gray-500 rounded-xl font-black opacity-50 cursor-wait flex items-center justify-center gap-2"
+        >
+          <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" />
+          <span>กำลังตรวจสอบ...</span>
+        </button>
+
+        <template v-else-if="!isMember && !isCourseAdmin">
           <!-- Group Selector -->
           <div v-if="hasGroups" class="space-y-1.5">
             <label class="text-[10px] font-bold uppercase text-gray-400 px-1">เลือกกลุ่มเรียน</label>

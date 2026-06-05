@@ -120,6 +120,8 @@ class CourseResource extends JsonResource
             'allow_unlock_by_reading' => $this->allow_unlock_by_reading,
             'unlock_reading_minutes' => $this->unlock_reading_minutes,
             'allow_self_unlock' => $this->allow_self_unlock,
+            'finalization_status' => $this->finalization_status,
+            'finalized_at' => $this->finalized_at,
             'total_sales' => $this->total_sales,
             'is_owned' => $this->when(auth()->guard('api')->check(), function () {
                 $user = auth()->guard('api')->user();

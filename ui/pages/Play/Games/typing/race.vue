@@ -128,7 +128,7 @@ function getPlayComponent() {
             <p>ระดับ: <span class="font-bold text-slate-700 dark:text-slate-300 capitalize">{{ store.selectedDifficulty }}</span></p>
           </div>
           <p class="text-xs text-slate-400">
-            ต้องการเปลี่ยน? <NuxtLink to="/Play/Games/typing" class="text-primary-500 underline font-bold">กลับไปตั้งค่า</NuxtLink>
+            ต้องการเปลี่ยน? <NuxtLink to="/play/games/typing" class="text-primary-500 underline font-bold">กลับไปตั้งค่า</NuxtLink>
           </p>
           <button 
             @click="handleCreate" 
@@ -299,7 +299,7 @@ function getPlayComponent() {
         <button @click="view='home'; leaveRoom()" class="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl hover:opacity-90 transition-opacity">
           กลับหน้าหลัก
         </button>
-        <NuxtLink to="/Play/Games/typing" class="flex-1 py-4 bg-primary-600 text-white font-black rounded-2xl text-center hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/30">
+        <NuxtLink to="/play/games/typing" class="flex-1 py-4 bg-primary-600 text-white font-black rounded-2xl text-center hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/30">
           เล่นเกมอื่น
         </NuxtLink>
       </div>

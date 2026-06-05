@@ -11,14 +11,14 @@ use App\Models\UserAnswerQuestion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\CourseResource;
-use App\Http\Resources\LessonResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Http\Resources\Learn\Course\lessons\LessonResource;
 use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
-use App\Http\Resources\CourseQuizResource;
-use App\Http\Resources\CourseGroupResource;
-use App\Http\Resources\CourseMemberResource;
-use App\Http\Resources\AssignmentAnswerResource;
-use App\Http\Resources\CourseQuizResultResource;
+use App\Http\Resources\Learn\Course\quizzes\CourseQuizResource;
+use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
+use App\Http\Resources\Learn\Course\members\CourseMemberResource;
+use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
+use App\Http\Resources\Learn\Course\quizzes\CourseQuizResultResource;
 
 class CourseMemberGradeProgressController extends Controller
 {

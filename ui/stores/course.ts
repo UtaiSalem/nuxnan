@@ -5,6 +5,8 @@ export const useCourseStore = defineStore('course', () => {
   const currentCourse = ref<any>(null)
   const academy = ref<any>(null)
   const isCourseAdmin = ref(false)
+  const courseMemberOfAuth = ref<any>(null)
+  const courseGroups = ref<any[]>([])
   const lessons = ref<any[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -34,6 +36,14 @@ export const useCourseStore = defineStore('course', () => {
     isCourseAdmin.value = isAdmin
   }
 
+  const setCourseMemberOfAuth = (member: any) => {
+    courseMemberOfAuth.value = member
+  }
+
+  const setCourseGroups = (groups: any[]) => {
+    courseGroups.value = groups
+  }
+
   const updateCourse = (updates: Partial<any>) => {
     if (currentCourse.value) {
       currentCourse.value = { ...currentCourse.value, ...updates }
@@ -44,6 +54,8 @@ export const useCourseStore = defineStore('course', () => {
     currentCourse.value = null
     academy.value = null
     isCourseAdmin.value = false
+    courseMemberOfAuth.value = null
+    courseGroups.value = []
     lessons.value = []
     error.value = null
     lastFetchTime.value = null
@@ -54,7 +66,15 @@ export const useCourseStore = defineStore('course', () => {
     
     // Return cached data if valid and not forcing refresh
     if (!forceRefresh && isCacheValid.value && isSameCourse) {
-      return { success: true, course: currentCourse.value, academy: academy.value, isCourseAdmin: isCourseAdmin.value }
+      return { 
+        success: true, 
+        course: currentCourse.value, 
+        academy: academy.value, 
+        isCourseAdmin: isCourseAdmin.value,
+        courseMemberOfAuth: courseMemberOfAuth.value,
+        courseMember: courseMemberOfAuth.value,
+        courseGroups: courseGroups.value
+      }
     }
 
     // Only show loading if we don't have the course data yet or forcing a hard refresh
@@ -73,6 +93,9 @@ export const useCourseStore = defineStore('course', () => {
         setCourse(response.course)
         setAcademy(response.academy)
         setIsCourseAdmin(response.isCourseAdmin || false)
+        setCourseMemberOfAuth(response.courseMemberOfAuth || response.courseMember || null)
+        setCourseGroups(response.courseGroups || [])
+        
         lastFetchTime.value = Date.now()
         return response
       }
@@ -129,6 +152,8 @@ export const useCourseStore = defineStore('course', () => {
     currentCourse,
     academy,
     isCourseAdmin,
+    courseMemberOfAuth,
+    courseGroups,
     lessons,
     isLoading,
     error,
@@ -141,6 +166,8 @@ export const useCourseStore = defineStore('course', () => {
     setLessons,
     setAcademy,
     setIsCourseAdmin,
+    setCourseMemberOfAuth,
+    setCourseGroups,
     updateCourse,
     clearCourse,
     fetchCourse,

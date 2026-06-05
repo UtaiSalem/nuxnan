@@ -152,7 +152,7 @@ const stats = computed(() => {
     return {
         totalScore,
         maxScore,
-        grade: d.member?.grade_name || '-',
+        grade: d.member?.final_grade || d.member?.draft_grade || d.member?.grade_name || '-',
         gradeProgress: d.member?.grade_progress ?? 0,
         completedLessons: d.lessons?.filter(l => l.completed).length || 0,
         totalLessons: d.lessons?.length || 0,
@@ -379,6 +379,40 @@ const submitAppeal = async () => {
 onMounted(() => {
     fetchEligibilityStatus();
 });
+
+// ── Grade Acceptance ──────────────────────────────────────────────────
+const isAcceptingGrade = ref(false);
+const acceptGrade = async () => {
+    const confirm = await swal.confirm(
+        'ยืนยันผลการเรียน?',
+        `คุณยอมรับเกรด ${data.value.member.draft_grade} สำหรับรายวิชานี้ใช่หรือไม่? หากยืนยันแล้วจะไม่สามารถแก้ไขได้`,
+        'info',
+        'ยืนยันรับเกรด',
+        'ยกเลิก'
+    );
+
+    if (!confirm.isConfirmed) return;
+
+    isAcceptingGrade.value = true;
+    try {
+        await api.post(`/api/courses/${props.courseId}/completion/accept-grade`);
+        swal.toast('ยืนยันผลการเรียนเรียบร้อยแล้ว', 'success');
+        await fetchData(); // Refresh to show final grade
+    } catch (e) {
+        console.error('Failed to accept grade:', e);
+        swal.toast('ยืนยันผลการเรียนไม่สำเร็จ', 'error');
+    } finally {
+        isAcceptingGrade.value = false;
+    }
+};
+
+const showGradeAcceptance = computed(() => {
+    if (!data.value || !data.value.course || !data.value.member) return false;
+    
+    // Only show if course is published and student needs to accept
+    return data.value.course.finalization_status === 'published' && 
+           data.value.member.completion_status === 'pending_acceptance';
+});
 // ─────────────────────────────────────────────────────────────────────
 </script>
 
@@ -501,6 +535,62 @@ onMounted(() => {
                         </div>
                      </RadialProgress>
                 </div>
+             </div>
+
+             <!-- Grade Acceptance Prompt -->
+             <div v-if="showGradeAcceptance" class="mb-6 animate-bounce-subtle">
+                 <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg border border-blue-400/30 overflow-hidden relative">
+                     <!-- Decoration -->
+                     <Icon icon="fluent:ribbon-star-24-filled" class="absolute -right-4 -bottom-4 w-32 h-32 text-white/10 rotate-12" />
+                     
+                     <div class="relative z-10">
+                         <div class="flex items-center gap-3 mb-4">
+                             <div class="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/30">
+                                 <Icon icon="fluent:mortarboard-24-filled" class="w-7 h-7" />
+                             </div>
+                             <div>
+                                 <h3 class="text-xl font-bold">ประกาศผลการเรียนเบื้องต้น</h3>
+                                 <p class="text-blue-100 text-sm">ผู้สอนได้ประกาศผลการเรียนแล้ว กรุณาตรวจสอบและยืนยัน</p>
+                             </div>
+                         </div>
+
+                         <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 flex flex-wrap items-center justify-between gap-4 mb-6">
+                             <div class="flex gap-6">
+                                 <div>
+                                     <div class="text-xs text-blue-100 mb-1">คะแนนรวม</div>
+                                     <div class="text-2xl font-black">{{ data.member.draft_total_score }}</div>
+                                 </div>
+                                 <div>
+                                     <div class="text-xs text-blue-100 mb-1">เกรดที่ได้</div>
+                                     <div class="text-2xl font-black text-yellow-300">{{ data.member.draft_grade }}</div>
+                                 </div>
+                             </div>
+                             
+                             <div class="flex-1 min-w-[200px] sm:text-right">
+                                 <p class="text-xs text-blue-100 italic mb-2">* เมื่อกดยืนยันแล้ว ผลการเรียนจะถูกบันทึกลงในระเบียนประวัติถาวร</p>
+                             </div>
+                         </div>
+
+                         <div class="flex flex-col sm:flex-row gap-3">
+                             <button 
+                                @click="acceptGrade"
+                                :disabled="isAcceptingGrade"
+                                class="flex-1 bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                             >
+                                 <Icon v-if="isAcceptingGrade" icon="eos-icons:loading" class="animate-spin" />
+                                 <Icon v-else icon="fluent:checkmark-circle-24-filled" />
+                                 ยืนยันรับผลการเรียน
+                             </button>
+                             
+                             <button 
+                                class="flex-1 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-bold transition-all border border-white/30 flex items-center justify-center gap-2"
+                             >
+                                 <Icon icon="fluent:chat-help-24-filled" />
+                                 สอบถาม / อุทธรณ์เกรด
+                             </button>
+                         </div>
+                     </div>
+                 </div>
              </div>
 
              <!-- Eligibility Status Section -->

@@ -5,6 +5,8 @@ import Swal from 'sweetalert2'
 
 const api = useApi()
 
+const settingsData = inject<any>('settingsData')
+const reloadSettings = inject<() => Promise<void>>('reloadSettings', async () => {})
 const markDirty = inject<() => void>('markDirty', () => {})
 const markClean = inject<() => void>('markClean', () => {})
 
@@ -46,41 +48,49 @@ watch([profileForm, skillsList], () => {
   if (watcherActive) markDirty()
 }, { deep: true })
 
-onMounted(async () => {
-  try {
-    const res = await api.get<any>('/api/settings')
-    if (res.success) {
-      const p = res.data.profile || {}
+function hydrateForm(data: any) {
+  if (!data) return
+  const p = data.profile || {}
 
-      profileForm.value = {
-        first_name: p.first_name || '',
-        last_name: p.last_name || '',
-        bio: p.bio || '',
-        location: p.location || '',
-        website: p.website || '',
-        birthdate: p.birthdate ? p.birthdate.split('T')[0] : '',
-        gender: p.gender || 'male',
-        address: p.address || '',
-        city: p.city || '',
-        country: p.country || '',
-        postal_code: p.postal_code || '',
-        job_title: p.job_title || '',
-        company: p.company || '',
-        industry: p.industry || '',
-        experience_years: p.experience_years || '',
-      }
+  profileForm.value = {
+    first_name: p.first_name || '',
+    last_name: p.last_name || '',
+    bio: p.bio || '',
+    location: p.location || '',
+    website: p.website || '',
+    birthdate: p.birthdate ? p.birthdate.split('T')[0] : '',
+    gender: p.gender || 'male',
+    address: p.address || '',
+    city: p.city || '',
+    country: p.country || '',
+    postal_code: p.postal_code || '',
+    job_title: p.job_title || '',
+    company: p.company || '',
+    industry: p.industry || '',
+    experience_years: p.experience_years || '',
+  }
 
-      skillsList.value = Array.isArray(p.skills)
-        ? p.skills
-        : (p.skills ? p.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [])
+  skillsList.value = Array.isArray(p.skills)
+    ? p.skills
+    : (p.skills ? p.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [])
 
-      // start watching after initial load so form hydration doesn't trigger dirty
-      watcherActive = true
-    }
-  } catch (e) {
-    console.error('Fetch profile error', e)
+  // start watching after initial load so form hydration doesn't trigger dirty
+  setTimeout(() => {
+    watcherActive = true
+  }, 100)
+}
+
+onMounted(() => {
+  if (settingsData?.value) {
+    hydrateForm(settingsData.value)
   }
 })
+
+watch(() => settingsData?.value, (newData) => {
+  if (newData && !watcherActive) {
+    hydrateForm(newData)
+  }
+}, { immediate: true })
 
 function addSkill() {
   const val = skillInput.value.trim().replace(/,$/, '')
@@ -110,6 +120,7 @@ async function saveProfile() {
 
     if (res.success) {
       markClean()
+      await reloadSettings()
       Swal.fire({
         icon: 'success',
         title: 'บันทึกสำเร็จ!',

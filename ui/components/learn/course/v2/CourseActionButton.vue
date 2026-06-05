@@ -6,6 +6,7 @@ import Swal from 'sweetalert2'
 const props = defineProps({
   course: { type: Object, required: true },
   courseMemberOfAuth: { type: Object, default: null },
+  isCheckingMembership: { type: Boolean, default: false },
   variant: { type: String, default: 'standalone' }, // 'standalone' or 'hero'
 })
 
@@ -127,9 +128,20 @@ async function completePayment() {
 
 <template>
   <div class="w-full" :class="variant === 'standalone' ? 'space-y-3' : 'flex items-center gap-2'">
+    <!-- Guard: กำลังตรวจสอบสถานะ -->
+    <button
+      v-if="isCheckingMembership"
+      disabled
+      class="flex items-center justify-center gap-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-black opacity-50 cursor-wait"
+      :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+    >
+      <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" />
+      <span>กำลังตรวจสอบ...</span>
+    </button>
+
     <!-- Active Member Button -->
     <button
-      v-if="courseMemberOfAuth && (accessStatus === 1 || accessStatus === 'active')"
+      v-else-if="courseMemberOfAuth && (accessStatus === 1 || accessStatus === 'active')"
       @click="handleAction"
       :disabled="isProcessing"
       class="group flex items-center justify-center gap-2 rounded-xl bg-emerald-500 text-white font-black shadow-lg shadow-emerald-500/20 hover:bg-red-500 transition-all active:scale-95 disabled:opacity-50"

@@ -506,8 +506,9 @@ class UserProfileController extends \App\Http\Controllers\Controller
                     function ($q) use ($privacySettings) {
                         $q->whereIn('privacy_settings', $privacySettings);
                     }
-                )
-                    ->orWhereNotIn('activityable_type', ['App\Models\Post', 'App\Models\CoursePost']);
+                );
+                // Removed orWhereNotIn to prevent privacy leak. 
+                // All activity types should have proper privacy checks if they are to be displayed.
             })
             ->latest()
             ->paginate(10);

@@ -131,10 +131,12 @@ const myCoursesLoading = ref(false)
 const myCoursesError = ref<string | null>(null)
 
 const fetchMyCourses = async () => {
+  const userId = authStore.user?.id
+  if (!userId) return
+  
   myCoursesLoading.value = true
   myCoursesError.value = null
   try {
-    const userId = authStore.user?.id
     const res: any = await api.get(`/api/courses/users/${userId}/my-courses`)
     myCourses.value = res.courses?.data || res.courses || res.data || []
   } catch (e) {
@@ -151,10 +153,12 @@ const enrolledLoading = ref(false)
 const enrolledError = ref<string | null>(null)
 
 const fetchEnrolledCourses = async () => {
+  const userId = authStore.user?.id
+  if (!userId) return
+
   enrolledLoading.value = true
   enrolledError.value = null
   try {
-    const userId = authStore.user?.id
     const res: any = await api.get(`/api/courses/users/${userId}/membered`)
     const data = res.courses?.data || res.courses || res.data || []
     enrolledCourses.value = Array.isArray(data) ? data : []
@@ -265,6 +269,12 @@ const resetFilters = () => {
   isFree.value = false
   fetchCourses(1)
 }
+
+watch(() => authStore.user?.id, (id) => {
+  if (!id) return
+  if (activeTab.value === 'my') fetchMyCourses()
+  else if (activeTab.value === 'enrolled') fetchEnrolledCourses()
+}, { immediate: false })
 
 onMounted(() => {
   fetchFilterOptions()

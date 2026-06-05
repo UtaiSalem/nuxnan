@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 
+use App\Http\Resources\UserResource;
+
 class SettingsController extends Controller
 {
     /**
@@ -25,7 +27,7 @@ class SettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $user,
+            'data' => new UserResource($user),
         ]);
     }
 
@@ -101,10 +103,8 @@ class SettingsController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
+            'name' => 'sometimes|string|max:255|unique:users,name,'.$user->id,
             'phone_number' => 'nullable|string|max:20',
-            // Email updates usually require verification, skipping for now or strictly validating unique
-            // 'email' => 'required|email|unique:users,email,'.$user->id,
         ]);
 
         $user->update($validated);
@@ -112,7 +112,7 @@ class SettingsController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Account info updated successfully',
-            'data' => $user,
+            'data' => $user->load('profile'),
         ]);
     }
 
