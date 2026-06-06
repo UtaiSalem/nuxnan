@@ -10,6 +10,8 @@ use Tests\TestCase;
 
 class CourseCompletionApiTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
      * Test eligibility endpoint returns proper response
      */

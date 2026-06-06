@@ -165,10 +165,9 @@ class CourseMemberGradeProgressController extends Controller
             // 6. ตรวจสอบความถูกต้องของคะแนน
             $scoreValidation = $this->validateScore($totalScore, $courseTotalScore, $memberId, $courseId);
 
-            // 7. อัปเดตคะแนนรวมในตาราง course_members
-            CourseMember::where('course_id', $courseId)
-                ->where('id', $memberId)
-                ->update(['achieved_score' => $totalScore]);
+            // 7. อัปเดตคะแนนรวมในตาราง course_members ผ่าน CourseScoreService
+            $scoreService = app(\App\Services\CourseScoreService::class);
+            $breakdown = $scoreService->recompute($courseMember);
 
             DB::commit();
 
@@ -176,7 +175,7 @@ class CourseMemberGradeProgressController extends Controller
             $response = [
                 'success' => true,
                 'message' => 'Grades processed successfully',
-                'total_score' => $totalScore,
+                'total_score' => $breakdown->internalEarned(),
                 'course_total_score' => $courseTotalScore,
                 'quizzes_processed' => count($updateData),
                 'validation' => $scoreValidation

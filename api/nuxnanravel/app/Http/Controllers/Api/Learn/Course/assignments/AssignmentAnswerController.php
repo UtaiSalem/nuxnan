@@ -153,27 +153,16 @@ class AssignmentAnswerController extends Controller
 
         $courseMember = CourseMember::where('course_id', $courseId)->where('user_id', $answer->user_id)->first();
         
-        // Only update score if member found (e.g. not admin grading themselves or test data)
-        if ($courseMember) {
-            $oldAnswer = $assignment->answers()->where('user_id', $answer->user_id)->orderBy('updated_at', 'desc')->get();
-            if (count($oldAnswer) > 1) {
-                $oldPoints = $oldAnswer[0]->points;
-                $newPoints = $request->points ?? 0;
-            }else{
-                $oldPoints = $answer->points ?? 0;
-                $newPoints = $request->points ?? 0;      
-            }
-
-            $courseMember->achieved_score -= $oldPoints;
-            $courseMember->achieved_score += $newPoints;
-            $courseMember->save();
-        }
-
         $answer->update([
             'points' => $request->points,
             'feedback' => $request->feedback,
             'status' => 'graded', // Set status to graded when points are assigned
         ]);
+
+        // Only update score if member found (e.g. not admin grading themselves or test data)
+        if ($courseMember) {
+            app(\App\Services\CourseScoreService::class)->recompute($courseMember);
+        }
 
         // Fire gamification event
         if ($answer->points > 0) {
@@ -184,4 +173,31 @@ class AssignmentAnswerController extends Controller
             'success' => true,
         ], 200);
     }
+}
+    'success' => true,
+        ], 200);
+    }
+}
+
+}
+wer->points > 0) {
+            \App\Services\UsageEventService::fire($answer->user, \App\Enums\UsageEventType::ASSIGNMENT_GRADED->value, 'assignment', $assignment->id, ['points' => $answer->points]);
+        }
+
+        return response()->json([
+            'success' => true,
+        ], 200);
+    }
+}
+    'success' => true,
+        ], 200);
+    }
+}
+
+}
+   'success' => true,
+        ], 200);
+    }
+}
+
 }

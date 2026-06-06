@@ -6,7 +6,48 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-06-03, updated)
+## สถานะปัจจุบัน (2026-06-06, updated)
+
+### Course Completion Workflow v2 — Shipped, tests blocked
+
+**Commits**: `e74312c0` (fix), `b89a3687` (docs) — push แล้ว
+
+**สิ่งที่ทำเสร็จ**:
+- ✅ ลบ syntax garbage ท้าย `CourseCompletionController.php`
+- ✅ Finalize guard รองรับ `grading` + `published`
+- ✅ `finalizeGrades` ใช้ `courseMembers()` (HasMany) แทน `members()` (BelongsToMany) → fix Bug B
+- ✅ `syncToTranscripts` scope ด้วย `academy_id`
+- ✅ `overrideGrade` re-sync เมื่อ status = `finalized`
+- ✅ `reopenGrading` set `CourseGrade.is_published = false`
+- ✅ `getMyGrade` ตัด `'grading'` ออกจาก `can_view`
+- ✅ Migration `add_semester_id_to_courses_table` + service ใช้ `$course->semester_id`
+- ✅ เขียน regression test 4 cases (`CourseCompletionWorkflowTest.php`)
+
+**🚫 Blocker ที่ค้าง**:
+- Regression tests **รันไม่ได้** เพราะมี migration อื่นในโปรเจคใช้ MySQL syntax `ALTER TABLE ... MODIFY COLUMN ... ENUM(...)` ที่ SQLite ไม่รองรับ
+- ผลกระทบ: ทั้งโปรเจคไม่มี automated test coverage เพราะ `RefreshDatabase` fail ตั้งแต่ setUp
+- ติดตามใน spawn task แยก (Course Completion ไม่ blocked แต่ทั้งโปรเจคควรแก้)
+
+**งานถัดไป**: รอรับมอบหมายงานใหม่
+
+---
+
+### User Management & Username Integration — Completed
+
+**Feature**: แก้ไขระบบจัดการผู้ใช้ใน Admin Panel และเปิดใช้งานระบบ Username
+
+**สิ่งที่ทำเสร็จแล้ว**:
+- ✅ **Fixed 422 Error**: ปรับปรุงชื่อ role จาก `USER` เป็น `STUDENT` ให้ตรงกับฐานข้อมูล ป้องกัน validation error
+- ✅ **Username Integration**: เพิ่มคอลัมน์ `username` ใน DB, อัปเดต Model, Controller และ UI ให้รองรับการแก้ไข/แสดงผล
+- ✅ **Inline Edit Modal**: เพิ่มระบบแก้ไขผู้ใช้ผ่าน Modal ในหน้ารายชื่อผู้ใช้ (index.vue) เพื่อ UX ที่ดีขึ้น
+- ✅ **Auth Store Stability**: ปรับปรุงระบบ registration และ auth state ให้รองรับการส่ง username และข้อมูลอ้างอิง
+- ✅ **Committed & Pushed**: ทุกไฟล์ถูก push ขึ้น main เรียบร้อยแล้ว
+
+**งานถัดไป**: รอรับมอบหมายงานใหม่ (เช่น ระบบ Course Completion หรือ Transcript ที่วิเคราะห์ไว้)
+
+---
+
+## สถานะปัจจุบัน (2026-06-03, archived)
 
 ### School Department Management Feature — Codex Tasks Active
 

@@ -225,7 +225,7 @@ class CourseExternalScoreController extends Controller
         foreach ($affectedMemberIds as $memberId) {
             $member = CourseMember::find($memberId);
             if ($member) {
-                $this->scoreService->syncMemberExternalScore($member);
+                $this->scoreService->recompute($member);
             }
         }
 
@@ -290,7 +290,7 @@ class CourseExternalScoreController extends Controller
         foreach (array_unique($affectedMemberIds) as $memberId) {
             $member = CourseMember::find($memberId);
             if ($member) {
-                $this->scoreService->syncMemberExternalScore($member);
+                $this->scoreService->recompute($member);
             }
         }
 

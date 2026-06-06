@@ -11,15 +11,22 @@ use App\Models\GradeScaleItem;
 use App\Models\User;
 use App\Models\CourseGrade;
 use App\Models\Student;
+use App\Models\CourseMemberGradeSnapshot;
+use App\Services\CourseScoreService;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
 class CourseGradingService
 {
     protected AttendanceEligibilityService $eligibilityService;
+    protected CourseScoreService $scoreService;
 
-    public function __construct(AttendanceEligibilityService $eligibilityService)
-    {
+    public function __construct(
+        AttendanceEligibilityService $eligibilityService,
+        CourseScoreService $scoreService
+    ) {
         $this->eligibilityService = $eligibilityService;
+        $this->scoreService = $scoreService;
     }
 
     /**
@@ -95,23 +102,26 @@ class CourseGradingService
         $results = [];
 
         foreach ($members as $member) {
-            // Get total score from gradebook if available
-            $totalScore = $this->calculateMemberTotalScore($member);
+            $breakdown = $this->scoreService->recompute($member);
+            $percentage = $breakdown->percentage();
             
-            $gradeResult = $this->calculateGrade($totalScore, $gradeScale);
+            $gradeResult = $this->calculateGrade($percentage, $gradeScale);
             
             $member->update([
-                'draft_total_score' => $totalScore,
-                'draft_grade' => $gradeResult['grade'],
-                'draft_grade_point' => $gradeResult['grade_point'],
+                'draft_earned_score' => $breakdown->totalEarned(),
+                'draft_max_score'    => $breakdown->totalMax(),
+                'draft_percentage'   => $percentage,
+                'draft_grade'        => $gradeResult['grade'],
+                'draft_grade_point'  => $gradeResult['grade_point'],
+                'draft_total_score'  => $percentage, // Legacy
             ]);
 
             $results[] = [
-                'member_id' => $member->id,
-                'user_id' => $member->user_id,
-                'user' => $member->user,
-                'total_score' => $totalScore,
-                'grade' => $gradeResult['grade'],
+                'member_id'   => $member->id,
+                'user_id'     => $member->user_id,
+                'user'        => $member->user,
+                'total_score' => $percentage,
+                'grade'       => $gradeResult['grade'],
                 'grade_point' => $gradeResult['grade_point'],
             ];
         }
@@ -121,46 +131,22 @@ class CourseGradingService
 
     /**
      * Calculate total score for a member from gradebook
+     * Note: Returns 0-100 percentage.
+     * @deprecated Use CourseScoreService::recompute instead.
      */
     protected function calculateMemberTotalScore(CourseMember $member): float
     {
-        // Try to get from gradebook scores
-        // CC-BUG-2 Fix: Use user_id instead of non-existent course_member_id
-        $scores = DB::table('gradebook_scores')
-            ->join('gradebook_assessments', 'gradebook_scores.assessment_id', '=', 'gradebook_assessments.id')
-            ->where('gradebook_scores.user_id', $member->user_id)
-            ->where('gradebook_assessments.course_id', $member->course_id)
-            ->select(
-                'gradebook_scores.score',
-                'gradebook_assessments.max_score',
-                'gradebook_assessments.weight'
-            )
-            ->get();
-
-        if ($scores->isEmpty()) {
-            // Gap 2 Fix: Fallback to CourseMember.achieved_score if no gradebook entries
-            // This is useful for courses that don't use the full gradebook system
-            $percentage = $member->getPercentageScore();
-            return $percentage !== null ? (float)$percentage : 0;
-        }
-
-        $totalWeightedScore = 0;
-        $totalWeight = 0;
-
-        foreach ($scores as $score) {
-            if ($score->max_score > 0) {
-                $percentage = ($score->score / $score->max_score) * 100;
-                $totalWeightedScore += $percentage * ($score->weight / 100);
-                $totalWeight += $score->weight;
-            }
-        }
-
-        // Normalize if weights don't add up to 100
-        if ($totalWeight > 0 && $totalWeight != 100) {
-            $totalWeightedScore = ($totalWeightedScore / $totalWeight) * 100;
-        }
-
-        return round($totalWeightedScore, 2);
+        // For P0 hotfix: directly calculate percentage from member score fields.
+        // The legacy gradebook path is removed until P2/P3.
+        $course = $member->course;
+        if (!$course || $course->total_score <= 0) return 0;
+        
+        $earned = ($member->achieved_score ?? 0) + 
+                  ($member->external_score_points ?? 0) + 
+                  ($member->bonus_points ?? 0);
+        
+        $percentage = ($earned / $course->total_score) * 100;
+        return (float) max(0, min(100, $percentage));
     }
 
     /**
@@ -198,25 +184,70 @@ class CourseGradingService
     public function publishDraftGrades(Course $course, User $performer, ?GradeScale $gradeScale = null): array
     {
         return DB::transaction(function () use ($course, $performer, $gradeScale) {
-            // Calculate draft grades
-            $results = $this->calculateDraftGrades($course, $gradeScale);
+            $lockedCourse = Course::lockForUpdate()->findOrFail($course->id);
+            $runId = (string) Str::uuid();
+
+            $members = $lockedCourse->members()->with('user')->get();
+            $results = [];
+
+            foreach ($members as $member) {
+                // recompute, calculate grade, update draft_* fields
+                $breakdown = $this->scoreService->recompute($member);
+                $percentage = $breakdown->percentage();
+                $gradeResult = $this->calculateGrade($percentage, $gradeScale);
+
+                $member->update([
+                    'draft_earned_score' => $breakdown->totalEarned(),
+                    'draft_max_score'    => $breakdown->totalMax(),
+                    'draft_percentage'   => $percentage,
+                    'draft_grade'        => $gradeResult['grade'],
+                    'draft_grade_point'  => $gradeResult['grade_point'],
+                    'draft_total_score'  => $percentage, // Legacy
+                ]);
+
+                // Update old snapshots
+                CourseMemberGradeSnapshot::where('course_member_id', $member->id)
+                    ->update(['is_current' => false]);
+
+                // Insert new row into CourseMemberGradeSnapshot
+                CourseMemberGradeSnapshot::create([
+                    'course_member_id' => $member->id,
+                    'published_run_id' => $runId,
+                    'is_current'       => true,
+                    'published_by'     => $performer->id,
+                    'earned_score'     => $breakdown->totalEarned(),
+                    'max_score'        => $breakdown->totalMax(),
+                    'percentage'       => $percentage,
+                    'letter_grade'     => $gradeResult['grade'],
+                    'grade_point'      => $gradeResult['grade_point'],
+                ]);
+
+                $results[] = [
+                    'member_id'   => $member->id,
+                    'user_id'     => $member->user_id,
+                    'user'        => $member->user,
+                    'total_score' => $percentage,
+                    'grade'       => $gradeResult['grade'],
+                    'grade_point' => $gradeResult['grade_point'],
+                ];
+            }
 
             // CC-GAP-1 Fix: Update status to published
-            $course->update([
+            $lockedCourse->update([
                 'finalization_status' => 'published',
             ]);
 
             // Update completion status
-            $course->members()->update([
+            $lockedCourse->members()->update([
                 'completion_status' => 'pending_acceptance',
             ]);
 
             // Calculate statistics
-            $stats = $this->calculateGradeStatistics($course);
+            $stats = $this->calculateGradeStatistics($lockedCourse);
 
             // Log the action
             CourseFinalizationLog::create([
-                'course_id' => $course->id,
+                'course_id' => $lockedCourse->id,
                 'performed_by' => $performer->id,
                 'action' => CourseFinalizationLog::ACTION_PUBLISH_DRAFT,
                 'snapshot' => [
@@ -241,14 +272,36 @@ class CourseGradingService
      */
     public function acceptGrade(CourseMember $member): CourseMember
     {
-        $member->update([
-            'final_total_score' => $member->draft_total_score,
-            'final_grade' => $member->draft_grade,
-            'final_grade_point' => $member->draft_grade_point,
-            'grade_accepted_at' => now(),
-            'completion_status' => $member->draft_grade === 'F' ? 'failed' : 'completed',
-            'completed_at' => $member->draft_grade !== 'F' ? now() : null,
-        ]);
+        $snapshot = CourseMemberGradeSnapshot::where('course_member_id', $member->id)
+            ->where('is_current', true)
+            ->first();
+
+        if ($snapshot) {
+            $member->update([
+                'final_earned_score' => $snapshot->earned_score,
+                'final_max_score'    => $snapshot->max_score,
+                'final_percentage'   => $snapshot->percentage,
+                'final_grade'        => $snapshot->letter_grade,
+                'final_grade_point'  => $snapshot->grade_point,
+                'final_total_score'  => $snapshot->percentage, // Legacy fallback
+                'grade_accepted_at'  => now(),
+                'completion_status'  => $snapshot->letter_grade === 'F' ? 'failed' : 'completed',
+                'completed_at'       => $snapshot->letter_grade !== 'F' ? now() : null,
+            ]);
+        } else {
+            // Legacy fallback
+            $member->update([
+                'final_earned_score' => $member->draft_earned_score ?? $member->draft_total_score,
+                'final_max_score'    => $member->draft_max_score ?? 100,
+                'final_percentage'   => $member->draft_percentage ?? $member->draft_total_score,
+                'final_total_score'  => $member->draft_total_score,
+                'final_grade'        => $member->draft_grade,
+                'final_grade_point'  => $member->draft_grade_point,
+                'grade_accepted_at'  => now(),
+                'completion_status'  => $member->draft_grade === 'F' ? 'failed' : 'completed',
+                'completed_at'       => $member->draft_grade !== 'F' ? now() : null,
+            ]);
+        }
 
         return $member->fresh();
     }
@@ -259,7 +312,16 @@ class CourseGradingService
     public function finalizeGrades(Course $course, User $performer): Course
     {
         return DB::transaction(function () use ($course, $performer) {
-            // Finalize all pending grades
+            if (!in_array($course->finalization_status, ['grading', 'published'])) {
+                return $course;
+            }
+
+            if ($course->finalization_status === 'grading') {
+                $this->publishDraftGrades($course, $performer);
+                $course->refresh();
+            }
+
+            // Finalize all pending grades (auto-accept)
             $course->members()
                 ->where('completion_status', 'pending_acceptance')
                 ->each(function ($member) {
@@ -318,7 +380,7 @@ class CourseGradingService
                     'student_id'   => $student?->id,
                     'semester_id'  => null, // Course model has no semester_id; set via transcript generation
                     'total_score'  => $member->final_total_score,
-                    'percentage'   => $member->getPercentageScore() ?? $member->final_total_score,
+                    'percentage'   => $member->final_percentage ?? $member->getPercentageScore() ?? $member->final_total_score,
                     'letter_grade' => $member->final_grade,
                     'grade_points' => $member->final_grade_point,
                     'status'       => CourseGrade::STATUS_COMPLETED,
@@ -371,10 +433,31 @@ class CourseGradingService
             // Update the grade
             $member->update([
                 'final_total_score' => $newScore ?? $member->draft_total_score,
+                'final_percentage'  => $newScore ?? $member->draft_percentage ?? $member->draft_total_score,
                 'final_grade' => $newGrade,
                 'final_grade_point' => $gradeResult['grade_point'],
                 'completion_status' => $newGrade === 'F' ? 'failed' : 'completed',
             ]);
+
+            // If the course is finalized, insert a new snapshot to track this override before syncing to the transcript
+            if ($member->course && $member->course->finalization_status === 'finalized') {
+                $runId = (string) Str::uuid();
+
+                CourseMemberGradeSnapshot::where('course_member_id', $member->id)
+                    ->update(['is_current' => false]);
+
+                CourseMemberGradeSnapshot::create([
+                    'course_member_id' => $member->id,
+                    'published_run_id' => $runId,
+                    'is_current'       => true,
+                    'published_by'     => $editor->id,
+                    'earned_score'     => $newScore ?? $member->final_earned_score ?? 0,
+                    'max_score'        => $member->final_max_score ?? 100,
+                    'percentage'       => $newScore ?? $member->final_percentage ?? 0,
+                    'letter_grade'     => $newGrade,
+                    'grade_point'      => $gradeResult['grade_point'],
+                ]);
+            }
 
             return $member->fresh();
         });
@@ -481,6 +564,15 @@ class CourseGradingService
     public function reopenGrading(Course $course, User $performer, string $reason): Course
     {
         return DB::transaction(function () use ($course, $performer, $reason) {
+            // Mark all CourseMemberGradeSnapshot for the course as is_current=false
+            $memberIds = $course->members()->pluck('id');
+            CourseMemberGradeSnapshot::whereIn('course_member_id', $memberIds)
+                ->update(['is_current' => false]);
+
+            // Update transcripts (CourseGrade): set is_published=false for this course
+            CourseGrade::where('course_id', $course->id)
+                ->update(['is_published' => false]);
+
             $course->update([
                 'finalization_status' => 'grading',
             ]);

@@ -284,6 +284,76 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
 
     <!-- Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <!-- Step Bar -->
+      <div class="mb-8 overflow-hidden bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <nav aria-label="Progress">
+          <ol role="list" class="flex items-center">
+            <!-- Step 1: Active -->
+            <li class="relative flex-1">
+              <div class="flex items-center group">
+                <span class="flex items-center">
+                  <span class="relative flex h-8 w-8 items-center justify-center rounded-full" :class="summary?.finalization_status !== 'active' ? 'bg-primary-600' : 'border-2 border-primary-600 bg-white'">
+                    <Icon v-if="summary?.finalization_status !== 'active'" icon="heroicons:check" class="h-5 w-5 text-white" />
+                    <span v-else class="h-2.5 w-2.5 rounded-full bg-primary-600"></span>
+                  </span>
+                  <span class="ml-4 text-sm font-medium" :class="summary?.finalization_status === 'active' ? 'text-primary-600' : 'text-gray-900 dark:text-white'">เริ่มออกเกรด</span>
+                </span>
+              </div>
+              <div class="absolute top-4 left-0 -ml-px mt-0.5 h-0.5 w-full bg-gray-200 dark:bg-gray-700" aria-hidden="true">
+                 <div class="h-full bg-primary-600" :style="{ width: summary?.finalization_status !== 'active' ? '100%' : '0%' }"></div>
+              </div>
+            </li>
+
+            <!-- Step 2: Grading -->
+            <li class="relative flex-1">
+              <div class="flex items-center group ml-8">
+                <span class="flex items-center">
+                  <span class="relative flex h-8 w-8 items-center justify-center rounded-full" :class="['published', 'finalized', 'archived'].includes(summary?.finalization_status) ? 'bg-primary-600' : (summary?.finalization_status === 'grading' ? 'border-2 border-primary-600 bg-white' : 'border-2 border-gray-300 bg-white')">
+                    <Icon v-if="['published', 'finalized', 'archived'].includes(summary?.finalization_status)" icon="heroicons:check" class="h-5 w-5 text-white" />
+                    <span v-else-if="summary?.finalization_status === 'grading'" class="h-2.5 w-2.5 rounded-full bg-primary-600"></span>
+                    <span v-else class="h-2.5 w-2.5 rounded-full bg-gray-300"></span>
+                  </span>
+                  <span class="ml-4 text-sm font-medium" :class="summary?.finalization_status === 'grading' ? 'text-primary-600' : 'text-gray-500'">ประกาศเกรด</span>
+                </span>
+              </div>
+              <div class="absolute top-4 left-0 -ml-px mt-0.5 h-0.5 w-full bg-gray-200 dark:bg-gray-700" aria-hidden="true">
+                 <div class="h-full bg-primary-600" :style="{ width: ['published', 'finalized', 'archived'].includes(summary?.finalization_status) ? '100%' : '0%' }"></div>
+              </div>
+            </li>
+
+            <!-- Step 3: Published -->
+            <li class="relative flex-1">
+              <div class="flex items-center group ml-8">
+                <span class="flex items-center">
+                  <span class="relative flex h-8 w-8 items-center justify-center rounded-full" :class="['finalized', 'archived'].includes(summary?.finalization_status) ? 'bg-primary-600' : (summary?.finalization_status === 'published' ? 'border-2 border-primary-600 bg-white' : 'border-2 border-gray-300 bg-white')">
+                    <Icon v-if="['finalized', 'archived'].includes(summary?.finalization_status)" icon="heroicons:check" class="h-5 w-5 text-white" />
+                    <span v-else-if="summary?.finalization_status === 'published'" class="h-2.5 w-2.5 rounded-full bg-primary-600"></span>
+                    <span v-else class="h-2.5 w-2.5 rounded-full bg-gray-300"></span>
+                  </span>
+                  <span class="ml-4 text-sm font-medium" :class="summary?.finalization_status === 'published' ? 'text-primary-600' : 'text-gray-500'">รอการยืนยัน</span>
+                </span>
+              </div>
+              <div class="absolute top-4 left-0 -ml-px mt-0.5 h-0.5 w-full bg-gray-200 dark:bg-gray-700" aria-hidden="true">
+                 <div class="h-full bg-primary-600" :style="{ width: ['finalized', 'archived'].includes(summary?.finalization_status) ? '100%' : '0%' }"></div>
+              </div>
+            </li>
+
+            <!-- Step 4: Finalized -->
+            <li class="relative">
+              <div class="flex items-center group ml-8">
+                <span class="flex items-center">
+                  <span class="relative flex h-8 w-8 items-center justify-center rounded-full" :class="['finalized', 'archived'].includes(summary?.finalization_status) ? 'bg-green-600' : 'border-2 border-gray-300 bg-white'">
+                    <Icon v-if="['finalized', 'archived'].includes(summary?.finalization_status)" icon="heroicons:check" class="h-5 w-5 text-white" />
+                    <span v-else class="h-2.5 w-2.5 rounded-full bg-gray-300"></span>
+                  </span>
+                  <span class="ml-4 text-sm font-medium" :class="['finalized', 'archived'].includes(summary?.finalization_status) ? 'text-green-600' : 'text-gray-500'">ปิดเกรดถาวร</span>
+                </span>
+              </div>
+            </li>
+          </ol>
+        </nav>
+      </div>
+
       <!-- Loading -->
       <div v-if="isLoading" class="flex justify-center py-12">
         <Icon icon="heroicons:arrow-path" class="w-8 h-8 animate-spin text-primary-600" />

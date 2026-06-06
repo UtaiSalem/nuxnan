@@ -45,32 +45,8 @@ class LessonAnswerQuestionController extends Controller
             ->where('user_id', auth()->id())
             ->first();
 
-        // Check if this question was previously answered correctly to avoid double counting?
-        // Actually, since we use `LessonAnswerQuestion` table, let's sum up all correct answers for this course's lessons.
-        // We need to filter by course lessons.
-        // Or simpler: Just calculate all `total points` from `lesson_answer_questions` for this user in this course.
-        // But `LessonAnswerQuestion` doesn't have `course_id`. It has `lesson_id`.
-        // So we need to join lessons.
-
         if ($courseMember) {
-             $totalLessonScore = LessonAnswerQuestion::where('user_id', auth()->id())
-                ->whereHas('lesson', function($q) use ($courseId) {
-                    $q->where('course_id', $courseId);
-                })
-                ->sum('points');
-             
-             // Note: This only covers LESSON quizzes. 
-             // Does `achieved_score` include Course Quizzes too? 
-             // If so, we need to sum COURSE QUIZ scores + LESSON QUIZ scores.
-             // Based on `UserAnswerQuestionController::updateCourseMemberScore` (seen in step 250), it sums `CourseQuizResult`.
-             // So we must ADD them together.
-             
-             $totalQuizScore = \App\Models\CourseQuizResult::where('course_id', $courseId)
-                ->where('user_id', auth()->id())
-                ->sum('score');
-                
-             $courseMember->achieved_score = $totalLessonScore + $totalQuizScore;
-             $courseMember->save();
+             app(\App\Services\CourseScoreService::class)->recompute($courseMember);
         }
 
         return response()->json([

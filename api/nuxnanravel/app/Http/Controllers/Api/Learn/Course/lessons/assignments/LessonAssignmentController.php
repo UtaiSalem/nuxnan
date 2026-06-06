@@ -126,17 +126,18 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
      */
     public function destroy(Lesson $lesson, Assignment $assignment)
     {
+        $affectedCourseMembers = [];
+
         // Delete all answers and their images
         foreach ($assignment->answers as $answer) {            
-            // Deduct points from CourseMember if answer has points
+            // Collect course members to recompute later
             if ($answer->points > 0) {
                 $courseMember = \App\Models\CourseMember::where('course_id', $lesson->course_id)
                     ->where('user_id', $answer->user_id)
                     ->first();
                 
                 if ($courseMember) {
-                    $courseMember->achieved_score -= $answer->points;
-                    $courseMember->save();
+                    $affectedCourseMembers[] = $courseMember;
                 }
             }
 
@@ -146,6 +147,10 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
             $answer->images()->delete();
         }
         $assignment->answers()->delete();
+
+        foreach ($affectedCourseMembers as $cm) {
+            app(\App\Services\CourseScoreService::class)->recompute($cm);
+        }
 
         // Delete assignment images
         foreach ($assignment->images as $image) {

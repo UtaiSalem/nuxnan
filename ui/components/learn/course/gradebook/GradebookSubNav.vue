@@ -8,14 +8,21 @@ interface Props {
 const props = defineProps<Props>()
 const route = useRoute()
 
-const tabs = [
-  { name: 'สมุดคะแนน', icon: 'fluent:text-grammar-checkmark-24-filled', path: 'gradebook', exact: true },
-  { name: 'สิทธิ์สอบ', icon: 'heroicons:shield-check', path: 'gradebook/eligibility' },
-  { name: 'จบวิชา/เกรด', icon: 'heroicons:academic-cap', path: 'gradebook/completion' },
-  { name: 'อุทธรณ์', icon: 'heroicons:chat-bubble-left-right', path: 'gradebook/appeals' },
-  { name: 'แก้ตัว', icon: 'heroicons:arrow-path-rounded-square', path: 'gradebook/remediation' },
-  { name: 'ใบประกาศ', icon: 'heroicons:document-check', path: 'gradebook/certificates' },
-]
+// Inject from parent layout
+const course = inject('course') as Ref<any>
+
+const tabs = computed(() => {
+  const list = [
+    { name: 'สรุปคะแนน', icon: 'fluent:data-trending-24-regular', path: 'gradebook', exact: true, show: true },
+    { name: 'การประเมิน', icon: 'mdi:clipboard-edit-outline', path: 'gradebook/assessments', show: course.value?.use_legacy_gradebook },
+    { name: 'สิทธิ์สอบ', icon: 'heroicons:shield-check', path: 'gradebook/eligibility', show: true },
+    { name: 'จบวิชา/เกรด', icon: 'heroicons:academic-cap', path: 'gradebook/completion', show: true },
+    { name: 'อุทธรณ์', icon: 'heroicons:chat-bubble-left-right', path: 'gradebook/appeals', show: true },
+    { name: 'แก้ตัว', icon: 'heroicons:arrow-path-rounded-square', path: 'gradebook/remediation', show: true },
+    { name: 'ใบประกาศ', icon: 'heroicons:document-check', path: 'gradebook/certificates', show: true },
+  ]
+  return list.filter(t => t.show)
+})
 
 const activeClass = 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
 const inactiveClass = 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'

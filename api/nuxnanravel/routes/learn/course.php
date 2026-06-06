@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\Learn\Course\members\CourseMemberGradeProgressContr
 use App\Http\Controllers\Api\Learn\Course\posts\CoursePostCommentReactionController;
 use App\Http\Controllers\Api\Learn\Course\posts\CoursePostImageCommentReactionController;
 use App\Http\Controllers\Api\Learn\Course\scores\CourseExternalScoreController;
+use App\Http\Controllers\Api\Learn\Course\scores\CourseScoreBreakdownController;
 use App\Http\Controllers\Api\Learn\Course\lessons\LessonProgressController;
 use App\Http\Controllers\CoursePostShareController;
 use App\Http\Controllers\Api\Learn\Course\admins\CourseAdminController;
@@ -441,4 +442,10 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/external-
     Route::patch('/{externalScore}', [CourseExternalScoreController::class, 'update'])->name('course.external-scores.update');
     Route::delete('/{externalScore}', [CourseExternalScoreController::class, 'destroy'])->name('course.external-scores.destroy');
     Route::post('/{externalScore}/entries', [CourseExternalScoreController::class, 'saveEntries'])->name('course.external-scores.entries.save');
+});
+
+// Course Score Breakdown Dashboard Routes
+Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/score-breakdown')->group(function () {
+    Route::get('/', [CourseScoreBreakdownController::class, 'index'])->name('course.score-breakdown.index');
+    Route::post('/resync', [CourseScoreBreakdownController::class, 'resync'])->name('course.score-breakdown.resync');
 });
