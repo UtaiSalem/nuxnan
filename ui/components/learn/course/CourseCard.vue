@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import CourseLifecycleBadge from '~/components/learn/course/CourseLifecycleBadge.vue'
 
 const props = defineProps<{
   course: any
@@ -64,6 +65,14 @@ const goToCourse = () => {
       >
         {{ getBadgeType(course, index ?? 0) === 'bestseller' ? 'Best Seller' : 'Trending' }}
       </div>
+
+      <!-- Lifecycle badge (top-right) — only shown when not in default Active state -->
+      <CourseLifecycleBadge
+        :course="course"
+        hide-when-active
+        size="sm"
+        class="absolute top-3 right-3 shadow-md"
+      />
 
       <!-- Rating Badge -->
       <div
