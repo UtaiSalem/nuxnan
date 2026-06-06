@@ -463,8 +463,14 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 ## Current Snapshot
 
 - Date: 2026-06-06
-- Branch: main
-- Active Work: Course Completion Workflow v2 shipped (commits `e74312c0`, `b89a3687`) — code ผ่าน `php -l` ทุกไฟล์, แต่ PHPUnit regression tests ยังรันไม่ได้เพราะ test DB (SQLite) ไม่รองรับ `ALTER TABLE ... MODIFY COLUMN ENUM` ที่ใช้ใน migration อื่นของโปรเจค
+- Branch: refactor/course-score-source-of-truth
+- Active Work: 
+  - **P0 Hotfix**: ✅ Shipped and unblocked production.
+  - **P1 Schema & Single Source**: ✅ Completed `course_members` split, `ScoreBreakdown` DTO, and refactored `CourseScoreService` + controllers. `CourseExternalScoreEntryObserver` added.
+  - **P2 Snapshot**: ✅ Completed `course_member_grade_snapshots` migration and `CourseGradingService` refactoring for snapshots, publish, accept, reopen, override.
+  - **P3 Legacy Flag**: ✅ Backend completed (`use_legacy_gradebook` migration + fallback in `recompute`). UI updates pending.
+  - **P4 UI ใหม่**: ⏳ Pending.
+  - **P5 Tests**: ⏳ Pending SQLite fix.
 
 ## Known Blockers (project-wide)
 
