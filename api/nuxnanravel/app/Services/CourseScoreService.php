@@ -6,46 +6,190 @@ use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\CourseExternalScore;
 use App\Models\CourseExternalScoreEntry;
+use App\DataTransferObjects\ScoreBreakdown;
 use Illuminate\Support\Facades\DB;
 
 class CourseScoreService
 {
     /**
-     * Recompute the total score of a course based on lessons, assignments, quizzes, and external scores.
+     * Compute a detailed breakdown of a member's score across all sources.
+     * Note: This does not write to the database.
      */
-    public function syncCourseTotalScore(Course $course): int
+    public function computeBreakdown(CourseMember $member): ScoreBreakdown
     {
-        // 1. Calculate internal scores (assignments, quizzes, etc.)
-        // For now, we assume internal scores are already managed. 
-        // We'll focus on adding external max_scores to the existing total.
+        $breakdown = new ScoreBreakdown();
+        $userId = $member->user_id;
+        $courseId = $member->course_id;
+
+        // 1. Quizzes (Course level)
+        $courseQuizzes = DB::table('course_quizzes')->where('course_id', $courseId)->get(['id', 'total_score']);
+        $breakdown->courseQuizMax = $courseQuizzes->sum('total_score');
+        $quizIds = $courseQuizzes->pluck('id')->toArray();
         
-        // However, a better way is to sum everything from scratch if possible.
-        // Let's see what currently contributes to total_score.
+        $completedQuizIds = [];
+        if (!empty($quizIds)) {
+            $quizResults = DB::table('course_quiz_results')
+                ->where('course_id', $courseId)
+                ->where('user_id', $userId)
+                ->get(['score', 'quiz_id']);
+                
+            $breakdown->courseQuizEarned = $quizResults->sum('score');
+            $completedQuizIds = $quizResults->pluck('quiz_id')->toArray();
+        }
+        $breakdown->missingSources['quiz_ids'] = array_values(array_diff($quizIds, $completedQuizIds));
+
+        // 2. Course Assignments
+        $courseAssignments = DB::table('assignments')
+            ->where('assignmentable_id', $courseId)
+            ->where('assignmentable_type', Course::class)
+            ->get(['id', 'points']);
+        $breakdown->courseAssignmentMax = $courseAssignments->sum('points');
+        $courseAssignIds = $courseAssignments->pluck('id')->toArray();
         
-        $internalTotal = $this->calculateInternalTotalScore($course);
-        $externalTotal = CourseExternalScore::where('course_id', $course->id)->sum('max_score');
+        $completedCourseAssignIds = [];
+        if (!empty($courseAssignIds)) {
+            $assignResults = DB::table('assignment_answers')
+                ->whereIn('assignment_id', $courseAssignIds)
+                ->where('user_id', $userId)
+                ->where(function($q) {
+                    $q->where('status', 'graded')->orWhereNotNull('points');
+                })
+                ->get(['assignment_id', 'points']);
+                
+            $breakdown->courseAssignmentEarned = $assignResults->sum('points');
+            $completedCourseAssignIds = $assignResults->pluck('assignment_id')->toArray();
+        }
+        $breakdown->missingSources['course_assignment_ids'] = array_values(array_diff($courseAssignIds, $completedCourseAssignIds));
+
+        // 3. Lesson Sources (Assignments & Questions)
+        $lessonIds = DB::table('lessons')->where('course_id', $courseId)->pluck('id')->toArray();
         
-        $newTotal = $internalTotal + $externalTotal;
+        // 3.1 Lesson Assignments
+        $lessonAssignments = DB::table('assignments')
+            ->whereIn('assignmentable_id', $lessonIds)
+            ->where('assignmentable_type', 'App\Models\Lesson')
+            ->get(['id', 'points']);
+        $breakdown->lessonAssignmentMax = $lessonAssignments->sum('points');
+        $lessonAssignIds = $lessonAssignments->pluck('id')->toArray();
         
-        $course->update(['total_score' => $newTotal]);
+        $completedLessonAssignIds = [];
+        if (!empty($lessonAssignIds)) {
+            $lessonAssignResults = DB::table('assignment_answers')
+                ->whereIn('assignment_id', $lessonAssignIds)
+                ->where('user_id', $userId)
+                ->where(function($q) {
+                    $q->where('status', 'graded')->orWhereNotNull('points');
+                })
+                ->get(['assignment_id', 'points']);
+                
+            $breakdown->lessonAssignmentEarned = $lessonAssignResults->sum('points');
+            $completedLessonAssignIds = $lessonAssignResults->pluck('assignment_id')->toArray();
+        }
+        $breakdown->missingSources['lesson_assignment_ids'] = array_values(array_diff($lessonAssignIds, $completedLessonAssignIds));
         
-        return $newTotal;
+        // 3.2 Lesson Questions
+        $lessonQuestions = DB::table('questions')
+            ->whereIn('questionable_id', $lessonIds)
+            ->where('questionable_type', 'App\Models\Lesson')
+            ->get(['id', 'points']);
+            
+        // Handle COALESCE(points, 1) in PHP since we fetched them
+        $lessonQuestionMax = 0;
+        foreach ($lessonQuestions as $q) {
+            $lessonQuestionMax += ($q->points !== null ? $q->points : 1);
+        }
+        $breakdown->lessonQuestionMax = $lessonQuestionMax;
+        $lessonQuestionIds = $lessonQuestions->pluck('id')->toArray();
+
+        $completedLessonQuestionIds = [];
+        if (!empty($lessonQuestionIds)) {
+            $lessonQuestionResults = DB::table('lesson_answer_questions')
+                ->where('user_id', $userId)
+                ->whereIn('question_id', $lessonQuestionIds)
+                ->where('is_correct', true)
+                ->get(['question_id', 'points']);
+                
+            $breakdown->lessonQuestionEarned = $lessonQuestionResults->sum('points');
+            // A question is answered regardless of correctness, but we don't have that table available easily here.
+            // For simplicity, we just mark any missing correct ones. Alternatively, we don't track missing questions yet.
+        }
+
+        // 4. External Scores
+        $externalScores = DB::table('course_external_scores')
+            ->where('course_id', $courseId)
+            ->get(['id', 'max_score']);
+        $breakdown->externalMax = $externalScores->sum('max_score');
+        $externalScoreIds = $externalScores->pluck('id')->toArray();
+        
+        if (!empty($externalScoreIds)) {
+            $breakdown->externalEarned = DB::table('course_external_score_entries')
+                ->whereIn('external_score_id', $externalScoreIds)
+                ->where('course_member_id', $member->id)
+                ->sum('score');
+        }
+
+        // 5. Bonus
+        $breakdown->bonus = (float)($member->bonus_points ?? 0);
+        
+        // Bonus penalty clamp -100% is handled in percentage() but we don't cap bonus points directly.
+        
+        return $breakdown;
     }
 
     /**
-     * Calculate internal total score (Quizzes + Assignments)
+     * Recompute all scores for a member, save them to the database, and update their grade.
      */
-    protected function calculateInternalTotalScore(Course $course): int
+    public function recompute(CourseMember $member): ScoreBreakdown
+    {
+        return DB::transaction(function () use ($member) {
+            // Lock the member row
+            $lockedMember = CourseMember::where('id', $member->id)->lockForUpdate()->first();
+            if (!$lockedMember) {
+                return new ScoreBreakdown(); // Should never happen
+            }
+
+            $breakdown = $this->computeBreakdown($lockedMember);
+            
+            $lockedMember->achieved_score = $breakdown->internalEarned();
+            $lockedMember->external_score_points = $breakdown->externalEarned;
+            
+            // Calculate grade
+            $lockedMember->grade_progress = CourseMember::calculateGradeFromPercentage($breakdown->percentage());
+            $lockedMember->last_score_synced_at = now();
+            
+            $lockedMember->save();
+            
+            // Note: Since achieved_score is synced, we might also want to update the course total_score just in case.
+            // But usually course total_score is updated when assignments/quizzes are created.
+            
+            return $breakdown;
+        });
+    }
+
+    /**
+     * Backwards compatibility for P0 Hotfix / Sync All
+     */
+    public function syncAllCourseMembers(Course $course): void
+    {
+        $course->courseMembers()->chunk(100, function ($members) {
+            foreach ($members as $member) {
+                $this->recompute($member);
+            }
+        });
+    }
+
+    /**
+     * Backwards compatibility: Calculate internal total score (Quizzes + Assignments + Questions)
+     */
+    public function calculateInternalTotalScore(Course $course): int
     {
         $quizTotal = $course->courseQuizzes()->sum('total_score');
         
-        // Assignments might be polymorphic
         $assignmentTotal = DB::table('assignments')
             ->where('assignmentable_id', $course->id)
             ->where('assignmentable_type', Course::class)
             ->sum('points');
             
-        // Also check assignments in lessons
         $lessonIds = $course->courseLessons()->pluck('id');
         $lessonAssignmentTotal = DB::table('assignments')
             ->whereIn('assignmentable_id', $lessonIds)
@@ -59,150 +203,53 @@ class CourseScoreService
 
         return (int)($quizTotal + $assignmentTotal + $lessonAssignmentTotal + $lessonQuestionTotal);
     }
-
+    
     /**
-     * Sync a member's achieved score (internal points from assignments, quizzes, etc.)
+     * Backwards compatibility: syncCourseTotalScore
      */
+    public function syncCourseTotalScore(Course $course): int
+    {
+        $internalTotal = $this->calculateInternalTotalScore($course);
+        $externalTotal = CourseExternalScore::where('course_id', $course->id)->sum('max_score');
+        
+        $newTotal = $internalTotal + $externalTotal;
+        $course->update(['total_score' => $newTotal]);
+        
+        return $newTotal;
+    }
+
+    // --- Backwards Compatibility Wrappers for Controllers (P1.6 pending) ---
+
     public function syncMemberAchievedScore(CourseMember $member): int
     {
-        $userId = $member->user_id;
-        $courseId = $member->course_id;
-
-        // 1. Quizzes
-        $quizScore = DB::table('course_quiz_results')
-            ->where('course_id', $courseId)
-            ->where('user_id', $userId)
-            ->sum('score');
-
-        // 2. Assignments (Course level)
-        $courseAssignmentIds = DB::table('assignments')
-            ->where('assignmentable_id', $courseId)
-            ->where('assignmentable_type', Course::class)
-            ->pluck('id');
-            
-        $courseAssignScore = DB::table('assignment_answers')
-            ->whereIn('assignment_id', $courseAssignmentIds)
-            ->where('user_id', $userId)
-            ->where(function($q) {
-                $q->where('status', 'graded')->orWhereNotNull('points');
-            })
-            ->sum('points');
-
-        // 3. Lesson Assignments & Quizzes
-        $lessonIds = DB::table('lessons')->where('course_id', $courseId)->pluck('id');
-        
-        $lessonAssignmentIds = DB::table('assignments')
-            ->whereIn('assignmentable_id', $lessonIds)
-            ->where('assignmentable_type', 'App\Models\Lesson')
-            ->pluck('id');
-            
-        $lessonAssignScore = DB::table('assignment_answers')
-            ->whereIn('assignment_id', $lessonAssignmentIds)
-            ->where('user_id', $userId)
-            ->where(function($q) {
-                $q->where('status', 'graded')->orWhereNotNull('points');
-            })
-            ->sum('points');
-            
-        // 4. Lesson Test Scores (Questions)
-        $lessonQuestionIds = DB::table('questions')
-            ->whereIn('questionable_id', $lessonIds)
-            ->where('questionable_type', 'App\Models\Lesson')
-            ->pluck('id');
-            
-        $lessonTestScore = DB::table('lesson_answer_questions')
-            ->where('user_id', $userId)
-            ->whereIn('question_id', $lessonQuestionIds)
-            ->where('is_correct', true)
-            ->sum('points');
-
-        $totalAchieved = (int)($quizScore + $courseAssignScore + $lessonAssignScore + $lessonTestScore);
-        
-        $member->update(['achieved_score' => $totalAchieved]);
-        
-        $this->updateMemberGradeProgress($member);
-        
-        return $totalAchieved;
+        $breakdown = $this->recompute($member);
+        return (int)$breakdown->internalEarned();
     }
 
-    /**
-     * Sync a member's external score points by summing all their entries.
-     */
     public function syncMemberExternalScore(CourseMember $member): float
     {
-        $externalScorePoints = DB::table('course_external_score_entries')
-            ->join('course_external_scores', 'course_external_score_entries.external_score_id', '=', 'course_external_scores.id')
-            ->where('course_external_scores.course_id', $member->course_id)
-            ->where('course_external_score_entries.course_member_id', $member->id)
-            ->sum('course_external_score_entries.score');
-
-        $member->update(['external_score_points' => $externalScorePoints]);
-        
-        // After updating external scores, we must also update the grade progress
-        $this->updateMemberGradeProgress($member);
-
-        return (float)$externalScorePoints;
+        $breakdown = $this->recompute($member);
+        return $breakdown->externalEarned;
     }
 
-    /**
-     * Update grade progress for a member based on all score components.
-     */
     public function updateMemberGradeProgress(CourseMember $member): void
     {
-        $course = $member->course;
-        if (!$course || $course->total_score <= 0) return;
-
-        $earned = ($member->achieved_score ?? 0) + 
-                  ($member->external_score_points ?? 0) + 
-                  ($member->bonus_points ?? 0);
-        
-        $percentage = ($earned / $course->total_score) * 100;
-        $percentage = min(100, max(0, $percentage));
-        
-        $grade = CourseMember::calculateGradeFromPercentage($percentage);
-        
-        $member->update([
-            'grade_progress' => $grade
-        ]);
+        $this->recompute($member);
     }
 
-    /**
-     * Sync all members in a course.
-     */
-    public function syncAllCourseMembers(Course $course): void
-    {
-        $course->courseMembers()->chunk(100, function ($members) {
-            foreach ($members as $member) {
-                $this->syncMemberAchievedScore($member);
-                $this->syncMemberExternalScore($member);
-            }
-        });
-    }
-
-    /**
-     * Centralized grade calculation logic.
-     */
     public function calculateGradeData(CourseMember $member): array
     {
-        $course = $member->course;
-        $achieved = (float)($member->achieved_score ?? 0);
-        $external = (float)($member->external_score_points ?? 0);
-        $bonus = (float)($member->bonus_points ?? 0);
-        $totalEarned = $achieved + $external + $bonus;
-        $totalMax = (float)($course->total_score ?? 0);
-        
-        $percentage = $totalMax > 0 ? ($totalEarned / $totalMax) * 100 : 0;
-        $percentage = min(100, max(0, $percentage));
-        
+        $breakdown = $this->computeBreakdown($member);
+        $percentage = $breakdown->percentage();
         $gradeValue = CourseMember::calculateGradeFromPercentage($percentage);
         $gradeName = CourseMember::getGradeNameFromGrade($gradeValue);
 
         return [
-            'achieved_score' => $achieved,
-            'external_score_points' => $external,
-            'bonus_points' => $bonus,
-            'total_earned_score' => $totalEarned,
-            'total_score' => $totalMax,
+            'achieved_score' => $breakdown->internalEarned(),
+            'external_score_points' => $breakdown->externalEarned,
+            'bonus_points' => $breakdown->bonus,
+            'total_earned_score' => $breakdown->totalEarned(),
+            'total_score' => $breakdown->totalMax(),
             'score_percentage' => round($percentage, 2),
             'grade_progress' => $gradeValue,
             'grade_name' => $gradeName,
