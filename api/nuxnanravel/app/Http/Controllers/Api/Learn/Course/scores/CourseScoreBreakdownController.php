@@ -33,7 +33,7 @@ class CourseScoreBreakdownController extends Controller
         $this->scoreService->syncAllCourseMembers($course);
 
         // Fetch members with user data
-        $members = $course->courseMembers()->with('user:id,name,username,avatar')->get();
+        $members = $course->courseMembers()->with('user:id,name,username,profile_photo_path')->get();
 
         $data = [];
         foreach ($members as $member) {

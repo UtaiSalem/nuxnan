@@ -462,15 +462,12 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Current Snapshot
 
-- Date: 2026-06-06
-- Branch: refactor/course-score-source-of-truth
+- Date: 2026-06-07
+- Branch: main
 - Active Work: 
-  - **P0 Hotfix**: ✅ Shipped and unblocked production.
-  - **P1 Schema & Single Source**: ✅ Completed `course_members` split, `ScoreBreakdown` DTO, and refactored `CourseScoreService` + controllers. `CourseExternalScoreEntryObserver` added.
-  - **P2 Snapshot**: ✅ Completed `course_member_grade_snapshots` migration and `CourseGradingService` refactoring for snapshots, publish, accept, reopen, override.
-  - **P3 Legacy Flag**: ✅ Backend completed (`use_legacy_gradebook` migration + fallback in `recompute`). UI updates pending.
-  - **P4 UI ใหม่**: ⏳ Pending.
-  - **P5 Tests**: ⏳ Pending SQLite fix.
+  - **Course Lifecycle Policy**: ✅ Merged to main. Implement CourseLifecycleState enum, service, and policy integration. UI components (badge) and composables verified.
+  - **P0-P4 Course Score Refactor**: ✅ Merged to main. P4 UI Dashboard and P5 SQLite blocker fix included in recent merge.
+  - **Course Completion Workflow v2**: ⏳ Pending. Tests blocked by SQLite migration issue.
 
 ## Known Blockers (project-wide)
 
@@ -479,10 +476,11 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Active Work
 
-**✅ เสร็จแล้ว (2026-06-06)**
+**✅ เสร็จแล้ว (2026-06-07)**
 
 | ไฟล์ | การเปลี่ยนแปลง |
 |------|----------------|
+| `feat/course-lifecycle-policy` | Merged into main: Enum, Service, Policy integration, UI badges, and tests. |
 | `AdminController.php` | แก้ไข 422 error, ปรับปรุงการจัดการ username, เพิ่ม bulkDelete |
 | `AdminRoleController.php` | เปลี่ยนชื่อ role จาก `USER` เป็น `STUDENT` เพื่อให้ตรงกับ DB |
 | `UsersDataTable.php` | ปรับปรุง badge color และ role mapping |
@@ -508,6 +506,16 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 - (ว่าง)
 
 ## Analysis Timeline
+
+### 2026-06-07 - Fixed Course Score Breakdown 500 Error
+- **Action**: Modified `CourseScoreBreakdownController::index` eager loading.
+- **Problem**: Encountered `Unknown column "avatar" in "field list"` because `avatar` is an appended accessor on the `User` model, not a DB column.
+- **Fix**: Replaced `avatar` with `profile_photo_path` in the `with('user:id,name,username,profile_photo_path')` clause to resolve the 500 error. The accessor still functions correctly in the serialized JSON.
+
+### 2026-06-07 - Merged Course Lifecycle Policy
+- **Action**: Merged `feat/course-lifecycle-policy` into `main`.
+- **Verification**: Ran `php artisan test --filter=Lifecycle` on main, 31 tests passed.
+- **Scope**: L0-L4 lifecycle states (Draft, Active, Enrollment Closed, Finalized, Archived) now enforced across controllers and UI.
 
 ### 2026-06-06 - Resolved Admin User Management 422 & Username Integration
 - **Implemented**: Username column migration, backend validation logic, and frontend UI integration.
