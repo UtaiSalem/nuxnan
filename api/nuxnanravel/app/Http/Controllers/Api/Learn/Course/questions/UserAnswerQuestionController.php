@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\questions;
 
+use App\Constants\QuizConstants;
 use App\Http\Controllers\Controller;
-use DB;
-use Illuminate\Http\Request;
-use App\Models\Question;
-use App\Models\CourseQuiz;
 use App\Models\CourseMember;
+use App\Models\CourseQuiz;
 use App\Models\CourseQuizResult;
+use App\Models\Question;
 use App\Models\UserAnswerQuestion;
 use App\Services\QuizEfficiencyService;
-use App\Constants\QuizConstants;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
+use DB;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class UserAnswerQuestionController extends Controller
 {
@@ -41,6 +40,19 @@ class UserAnswerQuestionController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
+        // Lifecycle guard: block regular quiz submissions after the course ends.
+        $course = \App\Models\Course::find($quiz->course_id ?? $request->course_id);
+        if ($course) {
+            $gate = \Illuminate\Support\Facades\Gate::inspect('submitQuiz', $course);
+            if ($gate->denied()) {
+                return response()->json([
+                    'success' => false,
+                    'code' => $gate->code() ?: 'WORK_TYPE_LOCKED_AFTER_END',
+                    'message' => $gate->message() ?: 'รายวิชาสิ้นสุดแล้ว ไม่สามารถส่งคำตอบได้',
+                ], 422);
+            }
+        }
+
         return DB::transaction(function () use ($quiz, $question, $request) {
             // First check if an answer already exists
             $existingAnswer = UserAnswerQuestion::where([
@@ -61,10 +73,10 @@ class UserAnswerQuestionController extends Controller
             }
 
             // Additional validation: check if answer belongs to the question
-            if (!$question->options()->where('id', $request->answer_id)->exists()) {
+            if (! $question->options()->where('id', $request->answer_id)->exists()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'ตัวเลือกที่เลือกไม่ถูกต้องสำหรับคำถามนี้'
+                    'message' => 'ตัวเลือกที่เลือกไม่ถูกต้องสำหรับคำถามนี้',
                 ], 422);
             }
 
@@ -110,15 +122,15 @@ class UserAnswerQuestionController extends Controller
             if ($answer->user_id !== auth()->id() || $answer->question_id !== $question->id || $answer->quiz_id !== $quiz->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'ไม่สามารถแก้ไขคำตอบนี้ได้'
+                    'message' => 'ไม่สามารถแก้ไขคำตอบนี้ได้',
                 ], 403);
             }
 
             // Additional validation: check if answer belongs to the question
-            if (!$question->options()->where('id', $request->answer_id)->exists()) {
+            if (! $question->options()->where('id', $request->answer_id)->exists()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'ตัวเลือกที่เลือกไม่ถูกต้องสำหรับคำถามนี้'
+                    'message' => 'ตัวเลือกที่เลือกไม่ถูกต้องสำหรับคำถามนี้',
                 ], 422);
             }
 
@@ -142,11 +154,11 @@ class UserAnswerQuestionController extends Controller
 
             $oldAnswer = $answer->answer_id;
             $newAnswer = $request->answer_id;
-            
+
             // Logic change: Check if the options themselves are marked as correct
             $oldOption = \App\Models\QuestionOption::find($oldAnswer);
             $newOption = \App\Models\QuestionOption::find($newAnswer);
-            
+
             $isOldAnswerCorrect = $oldOption && $oldOption->is_correct;
             $isNewAnswerCorrect = $newOption && $newOption->is_correct;
 
@@ -206,16 +218,16 @@ class UserAnswerQuestionController extends Controller
             'quiz_id' => $answer->quiz_id,
         ])->first();
 
-        if (!$courseQuizResult) {
-            Log::error('Course quiz result not found for answer ID: ' . $answer->id);
+        if (! $courseQuizResult) {
+            Log::error('Course quiz result not found for answer ID: '.$answer->id);
             throw new \Exception('ไม่พบข้อมูลผลลัพธ์การทำแบบทดสอบ');
         }
 
         // Adjust score based on old and new answers
-        if ($isOldAnswerCorrect && !$isNewAnswerCorrect) {
+        if ($isOldAnswerCorrect && ! $isNewAnswerCorrect) {
             // Changed from correct to incorrect - deduct points
             $courseQuizResult->score -= $points;
-        } elseif (!$isOldAnswerCorrect && $isNewAnswerCorrect) {
+        } elseif (! $isOldAnswerCorrect && $isNewAnswerCorrect) {
             // Changed from incorrect to correct - add points
             $courseQuizResult->score += $points;
         }
@@ -240,13 +252,13 @@ class UserAnswerQuestionController extends Controller
             ->where('user_id', auth()->id())
             ->first();
 
-        if (!$courseMember) {
-            Log::error('Course member not found for course ID: ' . $courseId);
+        if (! $courseMember) {
+            Log::error('Course member not found for course ID: '.$courseId);
             throw new \Exception('ไม่พบข้อมูลสมาชิกในคอร์สนี้');
         }
 
         app(\App\Services\CourseScoreService::class)->recompute($courseMember);
-        
+
         return $courseMember;
     }
 
@@ -263,11 +275,11 @@ class UserAnswerQuestionController extends Controller
         $courseQuizResult->correct_answers = $quiz_user_answers->filter(function ($answer) {
             return $answer->points > 0;
         })->count();
-        
+
         $courseQuizResult->incorrect_answers = $quiz_user_answers->filter(function ($answer) {
             return $answer->points == 0;
         })->count();
-  
+
         $courseQuizResult->score = $quiz_user_answers->sum('points');
         $courseQuizResult->percentage = $this->calculatePercentage($quiz->total_score, $courseQuizResult->score);
         $courseQuizResult->status = round($courseQuizResult->percentage, 2) >= $quiz->passing_score
@@ -295,11 +307,11 @@ class UserAnswerQuestionController extends Controller
         $courseQuizResult->correct_answers = $quiz_user_answers->filter(function ($answer) {
             return $answer->points > 0;
         })->count();
-        
+
         $courseQuizResult->incorrect_answers = $quiz_user_answers->filter(function ($answer) {
             return $answer->points == 0;
         })->count();
-  
+
         // Don't recalculate score as it's already updated in the calling method
         $courseQuizResult->percentage = $this->calculatePercentage($quiz->total_score, $courseQuizResult->score);
         $courseQuizResult->status = round($courseQuizResult->percentage, 2) >= $quiz->passing_score
@@ -337,7 +349,7 @@ class UserAnswerQuestionController extends Controller
                 'points' => $points,
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to create user answer question: ' . $e->getMessage());
+            Log::error('Failed to create user answer question: '.$e->getMessage());
             throw $e; // Re-throw the exception for transaction rollback
         }
     }
@@ -361,7 +373,7 @@ class UserAnswerQuestionController extends Controller
             'success' => false,
             'message' => 'ไม่สามารถบันทึกคำตอบได้',
             'points' => 0,
-            'is_correct' => false
+            'is_correct' => false,
         ], 500);
     }
 }

@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api\Learn\Course\assignments;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
 use App\Models\Assignment;
+use App\Models\AssignmentAnswer;
 use App\Models\CourseMember;
 use Illuminate\Http\Request;
-use App\Models\AssignmentAnswer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
 
 class AssignmentAnswerController extends Controller
 {
@@ -21,10 +21,10 @@ class AssignmentAnswerController extends Controller
         $query = $assignment->answers()->with('user', 'images')->latest();
 
         if ($request->filled('group_id') && $request->group_id != 'all') {
-             $groupId = $request->group_id;
-             $query->whereHas('user.courseMembers', function($q) use ($groupId) {
-                 $q->where('group_id', $groupId);
-             });
+            $groupId = $request->group_id;
+            $query->whereHas('user.courseMembers', function ($q) use ($groupId) {
+                $q->where('group_id', $groupId);
+            });
         }
 
         if ($request->filled('user_id')) {
@@ -39,20 +39,33 @@ class AssignmentAnswerController extends Controller
      */
     public function store(Assignment $assignment, Request $request)
     {
+        // Lifecycle guard: block regular assignment submissions after the course ends.
+        $course = \App\Models\Course::find($request->course_id);
+        if ($course) {
+            $gate = \Illuminate\Support\Facades\Gate::inspect('submitAssignment', $course);
+            if ($gate->denied()) {
+                return response()->json([
+                    'success' => false,
+                    'code' => $gate->code() ?: 'WORK_TYPE_LOCKED_AFTER_END',
+                    'message' => $gate->message() ?: 'รายวิชาสิ้นสุดแล้ว ไม่สามารถส่งงานได้',
+                ], 422);
+            }
+        }
+
         $answer = $assignment->answers()->where('user_id', auth()->id())->first();
-        if( $answer ){
+        if ($answer) {
             $oldPoints = $answer->points ?? 0;
             $courseMember = CourseMember::where('course_id', $request->course_id)->where('user_id', $answer->user_id)->first();
             if ($courseMember) {
-                 $courseMember->achieved_score -= $oldPoints;
-                 $courseMember->save();
+                $courseMember->achieved_score -= $oldPoints;
+                $courseMember->save();
             }
 
             $answer->update([
-                'content' => $request->content, 
-                'points' => null
+                'content' => $request->content,
+                'points' => null,
             ]);
-            
+
             // Handle deleted images
             if ($request->filled('deleted_images')) {
                 $deletedIds = $request->input('deleted_images');
@@ -60,7 +73,7 @@ class AssignmentAnswerController extends Controller
                     $imagesToDelete = $answer->images()->whereIn('id', $deletedIds)->get();
                     foreach ($imagesToDelete as $img) {
                         try {
-                             Storage::disk('public')->delete('images/courses/assignments/answers/' . $img->filename);
+                            Storage::disk('public')->delete('images/courses/assignments/answers/'.$img->filename);
                         } catch (\Exception $e) {
                             // Log error but continue
                         }
@@ -68,18 +81,18 @@ class AssignmentAnswerController extends Controller
                     }
                 }
             }
-        }else{
+        } else {
             $answer = $assignment->answers()->create([
                 'user_id' => auth()->id(),
-                'content' => $request->content, 
-                'points' => null
+                'content' => $request->content,
+                'points' => null,
             ]);
 
             // Fire gamification event
             \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::ASSIGNMENT_SUBMIT->value, 'assignment', $assignment->id);
         }
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
                 // Use getClientOriginalExtension first, fallback to guessExtension for reliability
@@ -87,10 +100,10 @@ class AssignmentAnswerController extends Controller
                 if (empty($extension)) {
                     $extension = $image->guessExtension() ?? 'jpg';
                 }
-                $fileName = uniqid() . '.' . $extension;
+                $fileName = uniqid().'.'.$extension;
                 $image_url = Storage::disk('public')->putFileAs('images/courses/assignments/answers/', $image, $fileName);
                 $answer->images()->create([
-                    'filename' => $fileName
+                    'filename' => $fileName,
                 ]);
             }
         }
@@ -101,7 +114,6 @@ class AssignmentAnswerController extends Controller
         ], 200);
     }
 
-
     /**
      * Remove the specified resource from storage.
      */
@@ -109,32 +121,33 @@ class AssignmentAnswerController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             $courseMember = CourseMember::where('course_id', $request->course_id)
                 ->where('user_id', $answer->user_id)
                 ->first();
-            
+
             if ($courseMember) {
                 $courseMember->achieved_score -= $answer->points;
                 $courseMember->save();
             }
-    
+
             foreach ($answer->images as $image) {
                 Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
             }
-    
+
             $answer->images()->delete();
             $answer->delete();
-    
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
             ], 200);
-    
+
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error deleting assignment answer: ' . $e->getMessage());
+            \Log::error('Error deleting assignment answer: '.$e->getMessage());
+
             return response()->json(['error' => 'Failed to delete assignment answer'], 500);
         }
     }
@@ -143,8 +156,8 @@ class AssignmentAnswerController extends Controller
     {
         // Resolve Course ID
         $courseId = $request->course_id;
-        if (!$courseId) {
-             if ($assignment->assignmentable_type === 'App\Models\Lesson') {
+        if (! $courseId) {
+            if ($assignment->assignmentable_type === 'App\Models\Lesson') {
                 $courseId = $assignment->assignmentable->course_id;
             } elseif ($assignment->assignmentable_type === 'App\Models\Course') {
                 $courseId = $assignment->assignmentable->id;
@@ -152,7 +165,7 @@ class AssignmentAnswerController extends Controller
         }
 
         $courseMember = CourseMember::where('course_id', $courseId)->where('user_id', $answer->user_id)->first();
-        
+
         $answer->update([
             'points' => $request->points,
             'feedback' => $request->feedback,
@@ -173,31 +186,4 @@ class AssignmentAnswerController extends Controller
             'success' => true,
         ], 200);
     }
-}
-    'success' => true,
-        ], 200);
-    }
-}
-
-}
-wer->points > 0) {
-            \App\Services\UsageEventService::fire($answer->user, \App\Enums\UsageEventType::ASSIGNMENT_GRADED->value, 'assignment', $assignment->id, ['points' => $answer->points]);
-        }
-
-        return response()->json([
-            'success' => true,
-        ], 200);
-    }
-}
-    'success' => true,
-        ], 200);
-    }
-}
-
-}
-   'success' => true,
-        ], 200);
-    }
-}
-
 }

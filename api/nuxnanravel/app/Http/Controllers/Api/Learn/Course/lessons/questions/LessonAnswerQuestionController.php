@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api\Learn\Course\lessons\questions;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Lesson;
-use App\Models\Question;
 use App\Models\LessonAnswerQuestion;
+use App\Models\Question;
 use App\Models\QuestionOption;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class LessonAnswerQuestionController extends Controller
 {
@@ -18,10 +17,23 @@ class LessonAnswerQuestionController extends Controller
             'answer_id' => 'required|exists:question_options,id',
         ]);
 
+        // Lifecycle guard: block lesson question answers after the course ends.
+        $course = \App\Models\Course::find($lesson->course_id);
+        if ($course) {
+            $gate = \Illuminate\Support\Facades\Gate::inspect('submitLessonQuestion', $course);
+            if ($gate->denied()) {
+                return response()->json([
+                    'success' => false,
+                    'code' => $gate->code() ?: 'WORK_TYPE_LOCKED_AFTER_END',
+                    'message' => $gate->message() ?: 'รายวิชาสิ้นสุดแล้ว ไม่สามารถตอบคำถามได้',
+                ], 422);
+            }
+        }
+
         // Verify question belongs to lesson (via course relationship or direct if polymorph, but keeping simple for now)
         // Verify answer belongs to question
         $option = QuestionOption::find($request->answer_id);
-        
+
         // Flexible Scoring: If the chosen option is correct, give full points.
         $isCorrect = $option->is_correct;
         $points = $isCorrect ? $question->points : 0;
@@ -46,14 +58,14 @@ class LessonAnswerQuestionController extends Controller
             ->first();
 
         if ($courseMember) {
-             app(\App\Services\CourseScoreService::class)->recompute($courseMember);
+            app(\App\Services\CourseScoreService::class)->recompute($courseMember);
         }
 
         return response()->json([
             'success' => true,
             'is_correct' => $isCorrect,
             'points' => $points,
-            'message' => $isCorrect ? 'ถูกต้อง!' : 'ยังไม่ถูกต้อง'
+            'message' => $isCorrect ? 'ถูกต้อง!' : 'ยังไม่ถูกต้อง',
         ]);
     }
 }

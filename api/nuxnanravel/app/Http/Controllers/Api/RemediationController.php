@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseMember;
-use App\Models\CourseRemediationSession;
 use App\Models\CourseRemediationEnrollment;
+use App\Models\CourseRemediationSession;
 use App\Services\RemediationService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class RemediationController extends Controller
 {
@@ -33,7 +33,7 @@ class RemediationController extends Controller
         }
 
         // Non-admin can only see published sessions
-        if (!$request->user()->can('manage', $course)) {
+        if (! $request->user()->can('manage', $course)) {
             $query->whereIn('status', ['open', 'in_progress', 'completed']);
         }
 
@@ -52,7 +52,7 @@ class RemediationController extends Controller
     {
         $this->authorize('manage', $course);
 
-        if (!$course->allow_remediation) {
+        if (! $course->allow_remediation) {
             return response()->json([
                 'success' => false,
                 'message' => 'วิชานี้ไม่อนุญาตให้แก้ตัว',
@@ -121,7 +121,7 @@ class RemediationController extends Controller
     {
         $this->authorize('manage', $session->course);
 
-        if (!in_array($session->status, ['draft', 'open'])) {
+        if (! in_array($session->status, ['draft', 'open'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่สามารถแก้ไขรอบที่เริ่มแล้ว',
@@ -213,11 +213,21 @@ class RemediationController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลการลงทะเบียน',
             ], 404);
+        }
+
+        // Lifecycle guard: needs an active remediation grant + course not archived.
+        $gate = \Illuminate\Support\Facades\Gate::inspect('submitRemediation', $course);
+        if ($gate->denied()) {
+            return response()->json([
+                'success' => false,
+                'code' => $gate->code() ?: 'NO_REMEDIATION_GRANT',
+                'message' => $gate->message() ?: 'ไม่สามารถลงทะเบียนสอบแก้ตัวได้',
+            ], 422);
         }
 
         try {
@@ -257,9 +267,10 @@ class RemediationController extends Controller
         foreach ($request->member_ids as $memberId) {
             $member = CourseMember::find($memberId);
 
-            if (!$member || $member->course_id !== $session->course_id) {
+            if (! $member || $member->course_id !== $session->course_id) {
                 $results['failed']++;
                 $results['errors'][] = "Member ID {$memberId} does not belong to this course.";
+
                 continue;
             }
 
@@ -269,7 +280,7 @@ class RemediationController extends Controller
                 $results['success']++;
             } catch (\Exception $e) {
                 $results['failed']++;
-                $results['errors'][] = "Member ID {$memberId}: " . $e->getMessage();
+                $results['errors'][] = "Member ID {$memberId}: ".$e->getMessage();
             }
         }
 
@@ -313,11 +324,24 @@ class RemediationController extends Controller
 
         $session = $enrollment->remediationSession;
 
-        if (!in_array($session->type, ['assignment', 'project', 'mixed'])) {
+        if (! in_array($session->type, ['assignment', 'project', 'mixed'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'รอบนี้ไม่รับงาน',
             ], 400);
+        }
+
+        // Lifecycle guard: archived courses block all remediation submissions.
+        $course = $session->course;
+        if ($course) {
+            $gate = \Illuminate\Support\Facades\Gate::inspect('submitRemediation', $course);
+            if ($gate->denied()) {
+                return response()->json([
+                    'success' => false,
+                    'code' => $gate->code() ?: 'WORK_TYPE_LOCKED_AFTER_END',
+                    'message' => $gate->message() ?: 'ไม่สามารถส่งงานแก้ตัวได้',
+                ], 422);
+            }
         }
 
         $request->validate([
@@ -405,7 +429,7 @@ class RemediationController extends Controller
 
         foreach ($request->grades as $gradeData) {
             $enrollment = CourseRemediationEnrollment::find($gradeData['enrollment_id']);
-            
+
             if ($enrollment && $enrollment->remediation_session_id === $session->id) {
                 $this->remediationService->gradeEnrollment(
                     $enrollment,
@@ -434,7 +458,7 @@ class RemediationController extends Controller
     {
         $this->authorize('manage', $session->course);
 
-        if (!in_array($session->status, ['in_progress', 'grading'])) {
+        if (! in_array($session->status, ['in_progress', 'grading'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'เฉพาะรอบที่กำลังดำเนินการ',
@@ -465,7 +489,7 @@ class RemediationController extends Controller
             $this->authorize('manage', $enrollment->remediationSession->course);
         }
 
-        if (!in_array($enrollment->status, ['enrolled', 'confirmed'])) {
+        if (! in_array($enrollment->status, ['enrolled', 'confirmed'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่สามารถยกเลิกได้',
