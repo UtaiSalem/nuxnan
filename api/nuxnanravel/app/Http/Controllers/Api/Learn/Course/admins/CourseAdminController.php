@@ -197,16 +197,15 @@ class CourseAdminController extends Controller
             return response()->json(['message' => 'Invitation is not valid'], 400);
         }
 
-        // Lifecycle guard: cannot accept invitations into closed / ended / finalized / archived courses.
-        if (in_array($course->finalization_status, ['finalized', 'archived'], true)
-            || (int) $course->status === 4
-            || ($course->end_date && $course->end_date->isPast())) {
+        // Lifecycle guard: delegate to CoursePolicy::enroll.
+        $gate = \Illuminate\Support\Facades\Gate::inspect('enroll', $course);
+        if ($gate->denied()) {
             $invitation->update(['status' => 'expired_by_lifecycle']);
 
             return response()->json([
                 'success' => false,
-                'code' => 'COURSE_ENROLLMENT_CLOSED',
-                'message' => 'รายวิชานี้ปิดรับสมัครแล้ว ไม่สามารถยอมรับคำเชิญได้',
+                'code' => $gate->code() ?: 'COURSE_ENROLLMENT_CLOSED',
+                'message' => $gate->message() ?: 'รายวิชานี้ปิดรับสมัครแล้ว ไม่สามารถยอมรับคำเชิญได้',
             ], 422);
         }
 

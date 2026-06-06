@@ -290,15 +290,14 @@ class CourseMemberController extends Controller
             ], 200);
         }
 
-        // Lifecycle guard: block enrollment in closed / ended / finalized / archived courses.
-        // Must run BEFORE wallet charge to prevent revenue loss.
-        if (in_array($course->finalization_status, ['finalized', 'archived'], true)
-            || (int) $course->status === 4
-            || ($course->end_date && $course->end_date->isPast())) {
+        // Lifecycle guard: delegate to CoursePolicy::enroll, which calls
+        // CourseLifecycleService. Must run BEFORE wallet charge.
+        $gate = \Illuminate\Support\Facades\Gate::inspect('enroll', $course);
+        if ($gate->denied()) {
             return response()->json([
                 'success' => false,
-                'code' => 'COURSE_ENROLLMENT_CLOSED',
-                'msg' => 'รายวิชานี้ปิดรับสมัครแล้ว',
+                'code' => $gate->code() ?: 'COURSE_ENROLLMENT_CLOSED',
+                'msg' => $gate->message() ?: 'รายวิชานี้ปิดรับสมัครแล้ว',
             ], 422);
         }
 
