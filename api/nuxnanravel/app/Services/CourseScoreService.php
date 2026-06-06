@@ -52,7 +52,12 @@ class CourseScoreService
             ->where('assignmentable_type', 'App\Models\Lesson')
             ->sum('points');
 
-        return (int)($quizTotal + $assignmentTotal + $lessonAssignmentTotal);
+        $lessonQuestionTotal = DB::table('questions')
+            ->whereIn('questionable_id', $lessonIds)
+            ->where('questionable_type', 'App\Models\Lesson')
+            ->sum(DB::raw('COALESCE(points, 1)'));
+
+        return (int)($quizTotal + $assignmentTotal + $lessonAssignmentTotal + $lessonQuestionTotal);
     }
 
     /**
@@ -105,16 +110,17 @@ class CourseScoreService
             ->where('questionable_type', 'App\Models\Lesson')
             ->pluck('id');
             
-        $lessonTestScore = DB::table('user_answer_questions')
-            ->join('questions', 'user_answer_questions.question_id', '=', 'questions.id')
-            ->whereIn('user_answer_questions.question_id', $lessonQuestionIds)
-            ->where('user_answer_questions.user_id', $userId)
-            ->whereRaw('user_answer_questions.answer_id = questions.correct_option_id')
-            ->sum(DB::raw('COALESCE(questions.points, 1)'));
+        $lessonTestScore = DB::table('lesson_answer_questions')
+            ->where('user_id', $userId)
+            ->whereIn('question_id', $lessonQuestionIds)
+            ->where('is_correct', true)
+            ->sum('points');
 
         $totalAchieved = (int)($quizScore + $courseAssignScore + $lessonAssignScore + $lessonTestScore);
         
         $member->update(['achieved_score' => $totalAchieved]);
+        
+        $this->updateMemberGradeProgress($member);
         
         return $totalAchieved;
     }

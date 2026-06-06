@@ -121,46 +121,21 @@ class CourseGradingService
 
     /**
      * Calculate total score for a member from gradebook
+     * Note: Returns 0-100 percentage.
      */
     protected function calculateMemberTotalScore(CourseMember $member): float
     {
-        // Try to get from gradebook scores
-        // CC-BUG-2 Fix: Use user_id instead of non-existent course_member_id
-        $scores = DB::table('gradebook_scores')
-            ->join('gradebook_assessments', 'gradebook_scores.assessment_id', '=', 'gradebook_assessments.id')
-            ->where('gradebook_scores.user_id', $member->user_id)
-            ->where('gradebook_assessments.course_id', $member->course_id)
-            ->select(
-                'gradebook_scores.score',
-                'gradebook_assessments.max_score',
-                'gradebook_assessments.weight'
-            )
-            ->get();
-
-        if ($scores->isEmpty()) {
-            // Gap 2 Fix: Fallback to CourseMember.achieved_score if no gradebook entries
-            // This is useful for courses that don't use the full gradebook system
-            $percentage = $member->getPercentageScore();
-            return $percentage !== null ? (float)$percentage : 0;
-        }
-
-        $totalWeightedScore = 0;
-        $totalWeight = 0;
-
-        foreach ($scores as $score) {
-            if ($score->max_score > 0) {
-                $percentage = ($score->score / $score->max_score) * 100;
-                $totalWeightedScore += $percentage * ($score->weight / 100);
-                $totalWeight += $score->weight;
-            }
-        }
-
-        // Normalize if weights don't add up to 100
-        if ($totalWeight > 0 && $totalWeight != 100) {
-            $totalWeightedScore = ($totalWeightedScore / $totalWeight) * 100;
-        }
-
-        return round($totalWeightedScore, 2);
+        // For P0 hotfix: directly calculate percentage from member score fields.
+        // The legacy gradebook path is removed until P2/P3.
+        $course = $member->course;
+        if (!$course || $course->total_score <= 0) return 0;
+        
+        $earned = ($member->achieved_score ?? 0) + 
+                  ($member->external_score_points ?? 0) + 
+                  ($member->bonus_points ?? 0);
+        
+        $percentage = ($earned / $course->total_score) * 100;
+        return (float) max(0, min(100, $percentage));
     }
 
     /**
