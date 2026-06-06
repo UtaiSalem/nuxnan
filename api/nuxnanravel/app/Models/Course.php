@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CourseLifecycleState;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -152,6 +154,65 @@ class Course extends Model
         'allow_self_unlock' => 'boolean',
         'end_date' => 'datetime',
     ];
+
+    /**
+     * Derived lifecycle state for this course.
+     *
+     * Precedence:
+     *   1. finalization_status = archived  -> Archived
+     *   2. finalization_status = finalized -> Finalized
+     *   3. finalization_status = published -> Published
+     *   4. finalization_status = grading   -> Grading
+     *   5. status = 2 (Draft)              -> Draft
+     *   6. status = 4 (Closed) OR end_date in past -> EnrollmentClosed
+     *   7. otherwise                       -> Active
+     *
+     * Note: finalization_status is source-of-truth; courses.status is a manual
+     * instructor override that only takes effect when finalization_status is
+     * not_started.
+     */
+    public function lifecycleState(): CourseLifecycleState
+    {
+        $fin = $this->finalization_status;
+
+        if ($fin === 'archived') {
+            return CourseLifecycleState::Archived;
+        }
+        if ($fin === 'finalized') {
+            return CourseLifecycleState::Finalized;
+        }
+        if ($fin === 'published') {
+            return CourseLifecycleState::Published;
+        }
+        if ($fin === 'grading') {
+            return CourseLifecycleState::Grading;
+        }
+
+        if ((int) $this->status === 2) {
+            return CourseLifecycleState::Draft;
+        }
+
+        if ((int) $this->status === 4 || ($this->end_date && $this->end_date->isPast())) {
+            return CourseLifecycleState::EnrollmentClosed;
+        }
+
+        return CourseLifecycleState::Active;
+    }
+
+    protected function isEnrollmentOpen(): Attribute
+    {
+        return Attribute::get(fn () => $this->lifecycleState()->isEnrollmentOpen());
+    }
+
+    protected function isLearningActive(): Attribute
+    {
+        return Attribute::get(fn () => $this->lifecycleState()->isLearningActive());
+    }
+
+    protected function isPostEnd(): Attribute
+    {
+        return Attribute::get(fn () => $this->lifecycleState()->isPostEnd());
+    }
 
     public function courseSettings(): HasOne
     {
