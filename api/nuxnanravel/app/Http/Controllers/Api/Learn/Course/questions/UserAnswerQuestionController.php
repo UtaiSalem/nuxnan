@@ -245,13 +245,7 @@ class UserAnswerQuestionController extends Controller
             throw new \Exception('ไม่พบข้อมูลสมาชิกในคอร์สนี้');
         }
 
-        // Recalculate the total achieved score from all quiz results in the course to ensure data integrity.
-        $totalAchievedScore = CourseQuizResult::where('course_id', $courseId)
-            ->where('user_id', auth()->id())
-            ->sum('score');
-
-        $courseMember->achieved_score = $totalAchievedScore;
-        $courseMember->save();
+        app(\App\Services\CourseScoreService::class)->recompute($courseMember);
         
         return $courseMember;
     }

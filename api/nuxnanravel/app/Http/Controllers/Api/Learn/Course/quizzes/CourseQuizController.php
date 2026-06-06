@@ -320,9 +320,12 @@ class CourseQuizController extends Controller
 
         foreach ($userResults as $result) {
             $courseMember = CourseMember::where('user_id', $result->user_id)->where('course_id', $result->course_id)->first();
-            $courseMember->decrement('achieved_score', $result->score);
-
+            
             $result->delete();
+
+            if ($courseMember) {
+                app(\App\Services\CourseScoreService::class)->recompute($courseMember);
+            }
         }
 
         $course->decrement('total_score', $quiz->total_score);
