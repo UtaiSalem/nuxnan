@@ -26,6 +26,7 @@ class Course extends Model
         'user_id',
         'instructor_id',
         'academy_id',
+        'semester_id',
         'creator_id',
         'category_id',
 
@@ -180,6 +181,11 @@ class Course extends Model
     public function academy(): BelongsTo
     {
         return $this->belongsTo(Academy::class);
+    }
+
+    public function semesterRecord(): BelongsTo
+    {
+        return $this->belongsTo(Semester::class, 'semester_id');
     }
 
     public function scopeForMarketplace($query)

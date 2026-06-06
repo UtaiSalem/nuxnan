@@ -259,9 +259,16 @@ class CourseGradingService
     public function finalizeGrades(Course $course, User $performer): Course
     {
         return DB::transaction(function () use ($course, $performer) {
-            // Finalize all pending grades
-            $course->members()
-                ->where('completion_status', 'pending_acceptance')
+            // Bug A & B Fix: Ensure grades are calculated if finalizing from grading
+            if ($course->finalization_status === 'grading') {
+                $this->calculateDraftGrades($course);
+            }
+
+            // Finalize all members who haven't been finalized yet
+            // Bug B: Loop through all non-finalized/non-withdrawn members
+            // Change members() to courseMembers() to get CourseMember instances
+            $course->courseMembers()
+                ->whereNotIn('completion_status', ['completed', 'failed', 'withdrawn'])
                 ->each(function ($member) {
                     $this->acceptGrade($member);
                 });
@@ -298,36 +305,51 @@ class CourseGradingService
     /**
      * Sync course grades to transcript system (CourseGrade)
      */
-    protected function syncToTranscripts(Course $course, User $performer): void
+    protected function syncToTranscripts(Course $course, User $performer, ?CourseMember $specificMember = null): void
     {
-        $members = $course->members()->with('user')->get();
+        if ($specificMember) {
+            $this->syncMemberToTranscript($course, $specificMember, $performer);
+            return;
+        }
+
+        $members = $course->courseMembers()->with('user')->get();
         
         foreach ($members as $member) {
-            if ($member->final_grade === null) continue;
-
-            // Find student record linked to user
-            $student = Student::where('user_id', $member->user_id)->first();
-
-            CourseGrade::updateOrCreate(
-                [
-                    'course_id'  => $course->id,
-                    'user_id'    => $member->user_id,
-                ],
-                [
-                    'academy_id'   => $course->academy_id,
-                    'student_id'   => $student?->id,
-                    'semester_id'  => null, // Course model has no semester_id; set via transcript generation
-                    'total_score'  => $member->final_total_score,
-                    'percentage'   => $member->getPercentageScore() ?? $member->final_total_score,
-                    'letter_grade' => $member->final_grade,
-                    'grade_points' => $member->final_grade_point,
-                    'status'       => CourseGrade::STATUS_COMPLETED,
-                    'is_published' => true,
-                    'approved_by'  => $performer->id,
-                    'approved_at'  => now(),
-                ]
-            );
+            $this->syncMemberToTranscript($course, $member, $performer);
         }
+    }
+
+    /**
+     * Sync a single member's grade to transcript system
+     */
+    protected function syncMemberToTranscript(Course $course, CourseMember $member, User $performer): void
+    {
+        if ($member->final_grade === null) return;
+
+        // CC-SYNC-3 Fix: Find student record linked to user AND academy
+        $student = Student::where('user_id', $member->user_id)
+            ->where('academy_id', $course->academy_id)
+            ->first();
+
+        CourseGrade::updateOrCreate(
+            [
+                'course_id'  => $course->id,
+                'user_id'    => $member->user_id,
+            ],
+            [
+                'academy_id'   => $course->academy_id,
+                'student_id'   => $student?->id,
+                'semester_id'  => $course->semester_id,
+                'total_score'  => $member->final_total_score,
+                'percentage'   => $member->getPercentageScore() ?? $member->final_total_score,
+                'letter_grade' => $member->final_grade,
+                'grade_points' => $member->final_grade_point,
+                'status'       => CourseGrade::STATUS_COMPLETED,
+                'is_published' => true,
+                'approved_by'  => $performer->id,
+                'approved_at'  => now(),
+            ]
+        );
     }
 
     /**
@@ -375,6 +397,11 @@ class CourseGradingService
                 'final_grade_point' => $gradeResult['grade_point'],
                 'completion_status' => $newGrade === 'F' ? 'failed' : 'completed',
             ]);
+
+            // CC-SYNC-1 Fix: Sync to transcripts if course is already finalized
+            if ($member->course->finalization_status === 'finalized') {
+                $this->syncToTranscripts($member->course, $editor, $member);
+            }
 
             return $member->fresh();
         });
@@ -484,6 +511,10 @@ class CourseGradingService
             $course->update([
                 'finalization_status' => 'grading',
             ]);
+
+            // CC-SYNC-2 Fix: Hide grades in transcript system when reopened
+            CourseGrade::where('course_id', $course->id)
+                ->update(['is_published' => false]);
 
             CourseFinalizationLog::create([
                 'course_id' => $course->id,

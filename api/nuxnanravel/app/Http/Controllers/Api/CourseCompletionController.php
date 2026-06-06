@@ -137,7 +137,8 @@ class CourseCompletionController extends Controller
             ], 404);
         }
 
-        $canView = in_array($course->finalization_status, ['grading', 'published', 'finalized', 'archived']);
+        // CC-PRIV-1 Fix: Do not show draft grades during 'grading' status
+        $canView = in_array($course->finalization_status, ['published', 'finalized', 'archived']);
 
         return response()->json([
             'success' => true,
@@ -203,10 +204,10 @@ class CourseCompletionController extends Controller
     {
         $this->authorize('manage', $course);
 
-        if ($course->finalization_status !== 'grading') {
+        if (!in_array($course->finalization_status, ['grading', 'published'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'ต้องอยู่ในช่วงให้เกรดก่อน',
+                'message' => 'ต้องอยู่ในช่วงให้เกรดหรือประกาศเกรดเบื้องต้นก่อน',
             ], 400);
         }
 
@@ -370,8 +371,5 @@ class CourseCompletionController extends Controller
                 'statistics' => $this->gradingService->calculateGradeStatistics($course),
             ],
         ]);
-    }
-}
-;
     }
 }

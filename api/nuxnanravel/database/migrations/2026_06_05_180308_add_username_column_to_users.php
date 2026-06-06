@@ -12,23 +12,34 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // 1. Add nullable username first
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('username', 191)->nullable()->unique()->after('name');
-        });
-        
-        // 2. Backfill: copy name -> username
-        DB::statement('UPDATE users SET username = name WHERE username IS NULL');
+        // 1. Add nullable username first if not exists
+        if (!Schema::hasColumn('users', 'username')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('username', 191)->nullable()->after('name');
+            });
+            
+            // 2. Backfill: copy name -> username
+            DB::statement('UPDATE users SET username = name WHERE username IS NULL');
+        }
+
+        // Add unique if not exists
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->unique('username');
+            });
+        } catch (\Exception $e) {}
         
         // 3. Make username NOT NULL
         Schema::table('users', function (Blueprint $table) {
             $table->string('username', 191)->nullable(false)->change();
         });
         
-        // 4. Drop unique index from name
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropUnique(['name']);
-        });
+        // 4. Drop unique index from name if exists
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropUnique(['name']);
+            });
+        } catch (\Exception $e) {}
     }
 
     /**
