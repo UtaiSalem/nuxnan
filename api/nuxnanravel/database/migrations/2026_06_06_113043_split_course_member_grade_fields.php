@@ -28,20 +28,42 @@ return new class extends Migration
         });
 
         // Data backfill
-        DB::statement("
-            UPDATE course_members cm
-            JOIN courses c ON cm.course_id = c.id
-            SET cm.final_max_score = c.total_score,
-                cm.final_percentage = CASE WHEN c.total_score > 0 THEN (COALESCE(cm.final_earned_score, 0) / c.total_score) * 100 ELSE 0 END
-            WHERE c.finalization_status IN ('published', 'finalized', 'archived')
-        ");
-        
-        DB::statement("
-            UPDATE course_members cm
-            JOIN courses c ON cm.course_id = c.id
-            SET cm.draft_max_score = c.total_score,
-                cm.draft_percentage = CASE WHEN c.total_score > 0 THEN (COALESCE(cm.draft_earned_score, 0) / c.total_score) * 100 ELSE 0 END
-        ");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("
+                UPDATE course_members cm
+                JOIN courses c ON cm.course_id = c.id
+                SET cm.final_max_score = c.total_score,
+                    cm.final_percentage = CASE WHEN c.total_score > 0 THEN (COALESCE(cm.final_earned_score, 0) / c.total_score) * 100 ELSE 0 END
+                WHERE c.finalization_status IN ('published', 'finalized', 'archived')
+            ");
+            
+            DB::statement("
+                UPDATE course_members cm
+                JOIN courses c ON cm.course_id = c.id
+                SET cm.draft_max_score = c.total_score,
+                    cm.draft_percentage = CASE WHEN c.total_score > 0 THEN (COALESCE(cm.draft_earned_score, 0) / c.total_score) * 100 ELSE 0 END
+            ");
+        } else {
+            // SQLite or other: Use subqueries
+            DB::statement("
+                UPDATE course_members
+                SET final_max_score = (SELECT total_score FROM courses WHERE courses.id = course_members.course_id),
+                    final_percentage = (
+                        SELECT CASE WHEN total_score > 0 THEN (COALESCE(final_earned_score, 0) / total_score) * 100 ELSE 0 END 
+                        FROM courses WHERE courses.id = course_members.course_id
+                    )
+                WHERE course_id IN (SELECT id FROM courses WHERE finalization_status IN ('published', 'finalized', 'archived'))
+            ");
+
+            DB::statement("
+                UPDATE course_members
+                SET draft_max_score = (SELECT total_score FROM courses WHERE courses.id = course_members.course_id),
+                    draft_percentage = (
+                        SELECT CASE WHEN total_score > 0 THEN (COALESCE(draft_earned_score, 0) / total_score) * 100 ELSE 0 END 
+                        FROM courses WHERE courses.id = course_members.course_id
+                    )
+            ");
+        }
     }
 
     public function down(): void

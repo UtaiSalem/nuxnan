@@ -124,7 +124,7 @@ const courseId = computed(() => props.course?.id)
           class="flex items-center gap-2 px-3 py-2 text-sm bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
         >
           <Icon icon="fluent:data-trending-24-regular" class="w-4 h-4" />
-          สมุดเกรด
+          สรุปคะแนน
         </NuxtLink>
       </div>
     </div>

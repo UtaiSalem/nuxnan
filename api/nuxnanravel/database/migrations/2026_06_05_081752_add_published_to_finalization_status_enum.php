@@ -12,9 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Add 'published' to finalization_status enum
-        // Using DB::statement for compatibility with existing data
-        DB::statement("ALTER TABLE courses MODIFY COLUMN finalization_status ENUM('active', 'grading', 'published', 'finalized', 'archived') NOT NULL DEFAULT 'active'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE courses MODIFY COLUMN finalization_status ENUM('active', 'grading', 'published', 'finalized', 'archived') NOT NULL DEFAULT 'active'");
+        }
+        // SQLite doesn't need changes as it handles strings/enums as text
     }
 
     /**
@@ -22,6 +23,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE courses MODIFY COLUMN finalization_status ENUM('active', 'grading', 'finalized', 'archived') NOT NULL DEFAULT 'active'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE courses MODIFY COLUMN finalization_status ENUM('active', 'grading', 'finalized', 'archived') NOT NULL DEFAULT 'active'");
+        }
     }
 };

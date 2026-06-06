@@ -13,11 +13,18 @@ return new class extends Migration
             $table->decimal('max_score', 10, 2)->default(0)->after('total_score');
         });
 
-        DB::statement("
-            UPDATE course_grades cg
-            JOIN courses c ON cg.course_id = c.id
-            SET cg.max_score = c.total_score
-        ");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("
+                UPDATE course_grades cg
+                JOIN courses c ON cg.course_id = c.id
+                SET cg.max_score = c.total_score
+            ");
+        } else {
+            DB::statement("
+                UPDATE course_grades
+                SET max_score = (SELECT total_score FROM courses WHERE courses.id = course_grades.course_id)
+            ");
+        }
     }
 
     public function down(): void
