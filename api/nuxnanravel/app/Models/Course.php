@@ -150,6 +150,7 @@ class Course extends Model
         'unlock_reading_lesson_count' => 'integer',
         'unlock_reading_lesson_ids' => 'array',
         'allow_self_unlock' => 'boolean',
+        'end_date' => 'datetime',
     ];
 
     public function courseSettings(): HasOne

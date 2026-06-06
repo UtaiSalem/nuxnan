@@ -259,6 +259,49 @@ class CourseMemberController extends Controller
     {
         $user = auth()->user();
 
+        // Idempotency: if user already a member, return early before doing anything else
+        // (especially before wallet charge — prevents double-billing on retries)
+        $existingMember = CourseMember::where('course_id', $course->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($existingMember) {
+            if ($request->group_id) {
+                $existingMember->group_id = $request->group_id;
+                $existingMember->save();
+
+                $courseGroupMember = CourseGroupMember::where('course_id', $course->id)
+                    ->where('user_id', $user->id)
+                    ->first();
+                if ($courseGroupMember) {
+                    $courseGroupMember->group_id = $request->group_id;
+                    $courseGroupMember->save();
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'newCourseMember' => $existingMember->fresh(),
+                'memberStatus' => $existingMember->status,
+                'paid' => false,
+                'amount_paid' => 0,
+                'transaction_id' => null,
+                'already_member' => true,
+            ], 200);
+        }
+
+        // Lifecycle guard: block enrollment in closed / ended / finalized / archived courses.
+        // Must run BEFORE wallet charge to prevent revenue loss.
+        if (in_array($course->finalization_status, ['finalized', 'archived'], true)
+            || (int) $course->status === 4
+            || ($course->end_date && $course->end_date->isPast())) {
+            return response()->json([
+                'success' => false,
+                'code' => 'COURSE_ENROLLMENT_CLOSED',
+                'msg' => 'รายวิชานี้ปิดรับสมัครแล้ว',
+            ], 422);
+        }
+
         // Calculate course price
         $price = $course->tuition_fees ?? $course->price ?? 0;
 
@@ -295,50 +338,29 @@ class CourseMemberController extends Controller
             }
         }
 
-        $course_member = CourseMember::where('course_id', $course->id)->where('user_id', auth()->id())->first();
+        $new_course_member = new CourseMember;
+        $new_course_member->user_id = $user->id;
+        $new_course_member->course_id = $course->id;
+        $new_course_member->group_id = $request->group_id ?? null;
+        $new_course_member->status = $courseAutoAcceptMembers;
+        $new_course_member->course_member_status = $courseAutoAcceptMembers;
+        $new_course_member->enrollment_date = now();
 
-        if (! $course_member) {
+        // Auto-populate identity from Academy/Classroom
+        $this->identityService->autoPopulate($new_course_member);
 
-            $new_course_member = new CourseMember;
-            $new_course_member->user_id = auth()->id();
-            $new_course_member->course_id = $course->id;
-            $new_course_member->group_id = $request->group_id ?? null;
-            $new_course_member->status = $courseAutoAcceptMembers;
-            $new_course_member->course_member_status = $courseAutoAcceptMembers;
-            $new_course_member->enrollment_date = now();
+        $new_course_member->save();
 
-            // Auto-populate identity from Academy/Classroom
-            $this->identityService->autoPopulate($new_course_member);
+        // Fire gamification event
+        \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::COURSE_JOIN->value, 'course', $course->id);
 
-            $new_course_member->save();
-
-            // Fire gamification event
-            \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::COURSE_JOIN->value, 'course', $course->id);
-
-            if ($new_course_member->group_id) {
-                $newCourseGroupMember = new CourseGroupMember;
-                $newCourseGroupMember->user_id = auth()->id();
-                $newCourseGroupMember->course_id = $new_course_member->course_id;
-                $newCourseGroupMember->group_id = $new_course_member->group_id;
-                $newCourseGroupMember->status = $courseAutoAcceptMembers;
-                $newCourseGroupMember->save();
-            }
-
-        } else {
-
-            if ($request->group_id) {
-                $course_member->group_id = $request->group_id;
-                $course_member->save();
-            }
-            $new_course_member = $course_member;
-
-            if ($request->group_id) {
-                $courseGroupMember = CourseGroupMember::where('course_id', $course->id)->where('user_id', auth()->id())->first();
-                if ($courseGroupMember) {
-                    $courseGroupMember->group_id = $request->group_id;
-                    $courseGroupMember->save();
-                }
-            }
+        if ($new_course_member->group_id) {
+            $newCourseGroupMember = new CourseGroupMember;
+            $newCourseGroupMember->user_id = $user->id;
+            $newCourseGroupMember->course_id = $new_course_member->course_id;
+            $newCourseGroupMember->group_id = $new_course_member->group_id;
+            $newCourseGroupMember->status = $courseAutoAcceptMembers;
+            $newCourseGroupMember->save();
         }
 
         return response()->json([

@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Api\Learn\Course\admins;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\Course;
-use App\Models\CourseMember;
 use App\Models\CourseInvitation;
+use App\Models\CourseMember;
 use App\Models\User;
 use Illuminate\Http\Request;
-use App\Http\Resources\Learn\Course\members\CourseMemberResource;
-use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\DB;
 
 class CourseAdminController extends Controller
@@ -55,7 +54,7 @@ class CourseAdminController extends Controller
      */
     public function index(Course $course)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -105,7 +104,7 @@ class CourseAdminController extends Controller
      */
     public function search(Request $request, Course $course)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -117,20 +116,20 @@ class CourseAdminController extends Controller
 
         // IDs of users who are already members
         $existingMemberIds = $course->courseMembers()->pluck('user_id')->toArray();
-        
+
         // IDs of pending invites
         $invitedIds = CourseInvitation::where('course_id', $course->id)
             ->where('status', 'pending')
             ->pluck('invitee_id')
             ->toArray();
-            
+
         $excludeIds = array_merge($existingMemberIds, $invitedIds);
 
-        $users = User::where(function($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('email', 'like', "%{$query}%")
-                  ->orWhere('reference_code', 'like', "%{$query}%");
-            })
+        $users = User::where(function ($q) use ($query) {
+            $q->where('name', 'like', "%{$query}%")
+                ->orWhere('email', 'like', "%{$query}%")
+                ->orWhere('reference_code', 'like', "%{$query}%");
+        })
             ->whereNotIn('id', $excludeIds)
             ->take(10)
             ->get();
@@ -146,7 +145,7 @@ class CourseAdminController extends Controller
      */
     public function store(Request $request, Course $course)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -154,7 +153,7 @@ class CourseAdminController extends Controller
             'user_id' => 'required|exists:users,id',
             'role' => 'required|in:3,4', // 3: Teacher/TA, 4: Admin
             'permissions' => 'nullable|array',
-            'permissions.*' => 'string|in:' . implode(',', array_keys(\App\Models\CoursePermission::PERMISSIONS)),
+            'permissions.*' => 'string|in:'.implode(',', array_keys(\App\Models\CoursePermission::PERMISSIONS)),
         ]);
 
         $userId = $request->user_id;
@@ -168,7 +167,7 @@ class CourseAdminController extends Controller
 
         // Check if already invited
         if (CourseInvitation::where('course_id', $course->id)->where('invitee_id', $userId)->where('status', 'pending')->exists()) {
-              return response()->json(['message' => 'User already has a pending invitation.'], 422);
+            return response()->json(['message' => 'User already has a pending invitation.'], 422);
         }
 
         // Store permissions in invitation for later assignment
@@ -191,11 +190,38 @@ class CourseAdminController extends Controller
     public function acceptInvitation(Course $course, CourseInvitation $invitation)
     {
         if (auth()->id() !== $invitation->invitee_id) {
-              return response()->json(['success'=>false, 'message'=>'Unauthorized'], 403);
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         if ($invitation->status !== 'pending') {
             return response()->json(['message' => 'Invitation is not valid'], 400);
+        }
+
+        // Lifecycle guard: cannot accept invitations into closed / ended / finalized / archived courses.
+        if (in_array($course->finalization_status, ['finalized', 'archived'], true)
+            || (int) $course->status === 4
+            || ($course->end_date && $course->end_date->isPast())) {
+            $invitation->update(['status' => 'expired_by_lifecycle']);
+
+            return response()->json([
+                'success' => false,
+                'code' => 'COURSE_ENROLLMENT_CLOSED',
+                'message' => 'รายวิชานี้ปิดรับสมัครแล้ว ไม่สามารถยอมรับคำเชิญได้',
+            ], 422);
+        }
+
+        // Idempotency: if invitee is already a member, just mark invitation accepted and skip member creation.
+        $existingMember = CourseMember::where('course_id', $course->id)
+            ->where('user_id', $invitation->invitee_id)
+            ->first();
+        if ($existingMember) {
+            $invitation->update(['status' => 'accepted']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Invitation accepted',
+                'already_member' => true,
+            ]);
         }
 
         DB::transaction(function () use ($invitation, $course) {
@@ -213,7 +239,7 @@ class CourseAdminController extends Controller
 
             // Assign permissions
             $permissions = json_decode($invitation->permissions ?? '[]', true);
-            if (!empty($permissions)) {
+            if (! empty($permissions)) {
                 foreach ($permissions as $permission) {
                     \App\Models\CoursePermission::create([
                         'course_member_id' => $member->id,
@@ -227,30 +253,30 @@ class CourseAdminController extends Controller
             }
         });
 
-        return response()->json(['success'=>true, 'message'=>'Invitation accepted']);
+        return response()->json(['success' => true, 'message' => 'Invitation accepted']);
     }
 
     public function declineInvitation(Course $course, CourseInvitation $invitation)
     {
         if (auth()->id() !== $invitation->invitee_id) {
-             return response()->json(['success'=>false, 'message'=>'Unauthorized'], 403);
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
-        
+
         $invitation->update(['status' => 'declined']);
         $invitation->delete(); // Or keep as declined? Let's delete for now to allow re-invite.
-        
-        return response()->json(['success'=>true, 'message'=>'Invitation declined']);
+
+        return response()->json(['success' => true, 'message' => 'Invitation declined']);
     }
-    
+
     public function cancelInvitation(Course $course, CourseInvitation $invitation)
     {
-        if (!$course->isAdmin(auth()->user()) && $invitation->inviter_id !== auth()->id()) {
-             return response()->json(['success'=>false, 'message'=>'Unauthorized'], 403);
+        if (! $course->isAdmin(auth()->user()) && $invitation->inviter_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
-        
+
         $invitation->delete();
-        
-        return response()->json(['success'=>true, 'message'=>'Invitation cancelled']);
+
+        return response()->json(['success' => true, 'message' => 'Invitation cancelled']);
     }
 
     /**
@@ -258,7 +284,7 @@ class CourseAdminController extends Controller
      */
     public function updatePermissions(Request $request, Course $course, CourseMember $member)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -267,13 +293,13 @@ class CourseAdminController extends Controller
             return response()->json(['success' => false, 'message' => 'Cannot modify owner permissions.'], 403);
         }
 
-        if (!in_array($member->role, [3, 4])) {
+        if (! in_array($member->role, [3, 4])) {
             return response()->json(['success' => false, 'message' => 'Member is not an admin or TA.'], 403);
         }
 
         $request->validate([
             'permissions' => 'required|array',
-            'permissions.*' => 'string|in:' . implode(',', array_keys(\App\Models\CoursePermission::PERMISSIONS)),
+            'permissions.*' => 'string|in:'.implode(',', array_keys(\App\Models\CoursePermission::PERMISSIONS)),
         ]);
 
         DB::transaction(function () use ($member, $request) {
@@ -302,7 +328,7 @@ class CourseAdminController extends Controller
      */
     public function getPermissions(Course $course, CourseMember $member)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -326,20 +352,20 @@ class CourseAdminController extends Controller
      */
     public function destroy(Course $course, CourseMember $member)
     {
-          // Verify admin permissions
-          if (!$course->isAdmin(auth()->user())) {
-              return response()->json(['success'=>false, 'message'=>'Unauthorized'], 403);
-          }
+        // Verify admin permissions
+        if (! $course->isAdmin(auth()->user())) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         // Prevent removing the owner
         if ($member->user_id == $course->user_id) {
-              return response()->json(['success'=>false, 'message'=>'Cannot remove owner.'], 403);
+            return response()->json(['success' => false, 'message' => 'Cannot remove owner.'], 403);
         }
 
         // Prevent removing yourself? (optional)
         if ($member->user_id == auth()->id()) {
-              // Maybe allow "Leave Course"? But destroy implies admin action.
-              // If leaving, use 'leave' endpoint if exists.
+            // Maybe allow "Leave Course"? But destroy implies admin action.
+            // If leaving, use 'leave' endpoint if exists.
         }
 
         // Clean up permissions before deleting member
