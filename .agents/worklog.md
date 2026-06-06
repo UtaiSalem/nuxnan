@@ -6,7 +6,24 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-06-03, updated)
+## สถานะปัจจุบัน (2026-06-06, updated)
+
+### User Management & Username Integration — Completed
+
+**Feature**: แก้ไขระบบจัดการผู้ใช้ใน Admin Panel และเปิดใช้งานระบบ Username
+
+**สิ่งที่ทำเสร็จแล้ว**:
+- ✅ **Fixed 422 Error**: ปรับปรุงชื่อ role จาก `USER` เป็น `STUDENT` ให้ตรงกับฐานข้อมูล ป้องกัน validation error
+- ✅ **Username Integration**: เพิ่มคอลัมน์ `username` ใน DB, อัปเดต Model, Controller และ UI ให้รองรับการแก้ไข/แสดงผล
+- ✅ **Inline Edit Modal**: เพิ่มระบบแก้ไขผู้ใช้ผ่าน Modal ในหน้ารายชื่อผู้ใช้ (index.vue) เพื่อ UX ที่ดีขึ้น
+- ✅ **Auth Store Stability**: ปรับปรุงระบบ registration และ auth state ให้รองรับการส่ง username และข้อมูลอ้างอิง
+- ✅ **Committed & Pushed**: ทุกไฟล์ถูก push ขึ้น main เรียบร้อยแล้ว
+
+**งานถัดไป**: รอรับมอบหมายงานใหม่ (เช่น ระบบ Course Completion หรือ Transcript ที่วิเคราะห์ไว้)
+
+---
+
+## สถานะปัจจุบัน (2026-06-03, archived)
 
 ### School Department Management Feature — Codex Tasks Active
 
