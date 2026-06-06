@@ -7,7 +7,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['resynced'])
 const api = useApi()
-const swal = useSwal()
+const swal = useSweetAlert()
 const isLoading = ref(false)
 
 const handleResync = async () => {
