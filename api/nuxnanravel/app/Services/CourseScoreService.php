@@ -148,7 +148,13 @@ class CourseScoreService
                 return new ScoreBreakdown(); // Should never happen
             }
 
-            $breakdown = $this->computeBreakdown($lockedMember);
+            $course = $lockedMember->course;
+
+            if ($course && $course->use_legacy_gradebook) {
+                $breakdown = $this->computeLegacyBreakdown($lockedMember);
+            } else {
+                $breakdown = $this->computeBreakdown($lockedMember);
+            }
             
             $lockedMember->achieved_score = $breakdown->internalEarned();
             $lockedMember->external_score_points = $breakdown->externalEarned;
@@ -159,11 +165,51 @@ class CourseScoreService
             
             $lockedMember->save();
             
-            // Note: Since achieved_score is synced, we might also want to update the course total_score just in case.
-            // But usually course total_score is updated when assignments/quizzes are created.
-            
             return $breakdown;
         });
+    }
+
+    /**
+     * Compute breakdown using the old gradebook_scores table (Legacy Mode).
+     */
+    protected function computeLegacyBreakdown(CourseMember $member): ScoreBreakdown
+    {
+        $breakdown = new ScoreBreakdown();
+        $course = $member->course;
+        
+        $scores = DB::table('gradebook_scores')
+            ->join('gradebook_assessments', 'gradebook_scores.assessment_id', '=', 'gradebook_assessments.id')
+            ->where('gradebook_scores.user_id', $member->user_id)
+            ->where('gradebook_assessments.course_id', $member->course_id)
+            ->select(
+                'gradebook_scores.score',
+                'gradebook_assessments.max_score',
+                'gradebook_assessments.weight'
+            )
+            ->get();
+
+        $totalWeightedScore = 0;
+        $totalWeight = 0;
+
+        foreach ($scores as $score) {
+            if ($score->max_score > 0) {
+                $percentage = ($score->score / $score->max_score) * 100;
+                $totalWeightedScore += $percentage * ($score->weight / 100);
+                $totalWeight += $score->weight;
+            }
+        }
+
+        if ($totalWeight > 0 && $totalWeight != 100) {
+            $totalWeightedScore = ($totalWeightedScore / $totalWeight) * 100;
+        }
+
+        // Hacky way to inject percentage directly without altering ScoreBreakdown much:
+        // We set externalMax to 100 and externalEarned to $totalWeightedScore, 
+        // so percentage() returns $totalWeightedScore.
+        $breakdown->externalMax = 100;
+        $breakdown->externalEarned = round($totalWeightedScore, 2);
+        
+        return $breakdown;
     }
 
     /**
