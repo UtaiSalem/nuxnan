@@ -1216,6 +1216,11 @@ class CourseController extends Controller
         foreach ($courseMembers as $member) {
             $userId = $member->user_id;
 
+            // Skip members whose user has been deleted
+            if (! $member->user) {
+                continue;
+            }
+
             $courseAssignScore = isset($allAssignmentAnswers[$userId])
                 ? $allAssignmentAnswers[$userId]->whereIn('assignment_id', $courseAssignmentIds)->sum('points')
                 : 0;

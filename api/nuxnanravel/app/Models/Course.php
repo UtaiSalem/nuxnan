@@ -358,6 +358,16 @@ class Course extends Model
         return $this->hasMany(CourseQuizResult::class);
     }
 
+    public function gradeAppeals(): HasMany
+    {
+        return $this->hasMany(GradeAppeal::class);
+    }
+
+    public function remediationSessions(): HasMany
+    {
+        return $this->hasMany(CourseRemediationSession::class);
+    }
+
     public function courseAttendances(): HasMany
     {
         return $this->hasMany(CourseAttendance::class);

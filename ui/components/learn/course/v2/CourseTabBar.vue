@@ -70,7 +70,7 @@ const tabs = computed(() => {
     { id: 7, name: 'เข้าเรียน', icon: 'tabler:calendar-user', href: `/Learn/Courses/${props.courseId}/attendances`, show: props.isCourseAdmin || !!props.courseMemberOfAuth },
     { id: 2, name: 'ภาระงาน', icon: 'material-symbols:assignment-add-outline', href: `/Learn/Courses/${props.courseId}/assignments`, show: true },
     { id: 3, name: 'ทดสอบ', icon: 'healthicons:i-exam-qualification-outline', href: `/Learn/Courses/${props.courseId}/quizzes`, show: !!props.courseMemberOfAuth || props.isCourseAdmin },
-    { id: 14, name: 'บันทึกคะแนนภายนอก', icon: 'mdi:clipboard-text-outline', href: `/Learn/Courses/${props.courseId}/external-scores`, show: props.isCourseAdmin },
+    { id: 14, name: 'คะแนนภายนอก', icon: 'mdi:clipboard-text-outline', href: `/Learn/Courses/${props.courseId}/external-scores`, show: props.isCourseAdmin },
     { id: 15, name: 'สรุปคะแนน', icon: 'fluent:text-grammar-checkmark-24-filled', href: `/Learn/Courses/${props.courseId}/gradebook`, show: props.isCourseAdmin },
     { id: 5, name: 'กลุ่ม', icon: 'heroicons-outline:user-group', href: `/Learn/Courses/${props.courseId}/groups`, show: true },
     { id: 8, name: 'ตั้งค่า', icon: 'mdi-light:settings', href: `/Learn/Courses/${props.courseId}/settings`, show: props.isCourseAdmin },
@@ -178,7 +178,7 @@ watch(activeTab, (newTab, oldTab) => {
           :aria-selected="activeTab === tab.id"
           :title="tab.name"
           :aria-label="tab.name"
-          class="relative flex-shrink-0 flex-1 min-w-[82px] flex flex-col items-center justify-center gap-2 transition-all duration-300 group px-3"
+          class="relative flex-shrink-0 flex-1 min-w-[82px] flex flex-col items-center justify-center gap-2 transition-all duration-300 group px-3 overflow-hidden"
           :class="[
             index > 0
               ? 'border-l border-gray-200/50 dark:border-vikinger-dark-50/20'
