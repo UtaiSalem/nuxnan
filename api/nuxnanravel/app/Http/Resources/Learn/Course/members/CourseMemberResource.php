@@ -39,10 +39,10 @@ class CourseMemberResource extends JsonResource
             'member_code' => $this->member_code,
 
             // Grading Fields
-            'draft_total_score' => (float) $this->draft_total_score,
+            'draft_total_score' => (float) $this->draft_percentage,
             'draft_grade' => $this->draft_grade,
             'draft_grade_point' => (float) $this->draft_grade_point,
-            'final_total_score' => (float) $this->final_total_score,
+            'final_total_score' => (float) $this->final_percentage,
             'final_grade' => $this->final_grade,
             'final_grade_point' => (float) $this->final_grade_point,
             'grade_accepted_at' => $this->grade_accepted_at,

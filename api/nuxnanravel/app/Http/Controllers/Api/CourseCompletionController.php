@@ -8,12 +8,13 @@ use App\Models\CourseMember;
 use App\Models\GradeScale;
 use App\Services\CourseGradingService;
 use App\Services\GradingNotificationService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CourseCompletionController extends Controller
 {
     protected CourseGradingService $gradingService;
+
     protected GradingNotificationService $notificationService;
 
     public function __construct(
@@ -49,7 +50,7 @@ class CourseCompletionController extends Controller
         if ($course->finalization_status !== 'active') {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถเริ่มช่วงให้เกรดได้ สถานะปัจจุบัน: ' . $course->finalization_status,
+                'message' => 'ไม่สามารถเริ่มช่วงให้เกรดได้ สถานะปัจจุบัน: '.$course->finalization_status,
             ], 400);
         }
 
@@ -79,10 +80,21 @@ class CourseCompletionController extends Controller
 
         $results = $this->gradingService->calculateDraftGrades($course, $gradeScale);
 
+        // Groups available for filtering (only groups actually used by learner members)
+        $groups = $course->courseGroups()
+            ->whereHas('members', fn ($q) => $q->whereIn('role', [1, 2]))
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->toArray();
+
+        $ungroupedCount = collect($results)->whereNull('group_id')->count();
+
         return response()->json([
             'success' => true,
             'data' => [
                 'grades' => $results,
+                'groups' => $groups,
+                'ungrouped_count' => $ungroupedCount,
                 'statistics' => $this->gradingService->calculateGradeStatistics($course),
             ],
         ]);
@@ -95,7 +107,7 @@ class CourseCompletionController extends Controller
     {
         $this->authorize('manage', $course);
 
-        if (!in_array($course->finalization_status, ['grading'])) {
+        if (! in_array($course->finalization_status, ['grading'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'ต้องอยู่ในช่วงให้เกรดก่อน',
@@ -125,12 +137,12 @@ class CourseCompletionController extends Controller
     public function getMyGrade(Request $request, Course $course): JsonResponse
     {
         $user = $request->user();
-        
+
         $member = $course->members()
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลการลงทะเบียน',
@@ -146,9 +158,9 @@ class CourseCompletionController extends Controller
                 'finalization_status' => $course->finalization_status,
                 'completion_status' => $member->completion_status,
                 'draft_grade' => $canView ? $member->draft_grade : null,
-                'draft_score' => $canView ? $member->draft_total_score : null,
+                'draft_score' => $canView ? $member->draft_percentage : null,
                 'final_grade' => $member->final_grade,
-                'final_score' => $member->final_total_score,
+                'final_score' => $member->final_percentage,
                 'grade_point' => $member->final_grade_point ?? $member->draft_grade_point,
                 'grade_accepted_at' => $member->grade_accepted_at,
                 'can_accept' => $member->completion_status === 'pending_acceptance',
@@ -163,12 +175,12 @@ class CourseCompletionController extends Controller
     public function acceptGrade(Request $request, Course $course): JsonResponse
     {
         $user = $request->user();
-        
+
         $member = $course->members()
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลการลงทะเบียน',
@@ -178,7 +190,7 @@ class CourseCompletionController extends Controller
         if ($member->completion_status !== 'pending_acceptance') {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถยืนยันเกรดได้ สถานะ: ' . $member->completion_status,
+                'message' => 'ไม่สามารถยืนยันเกรดได้ สถานะ: '.$member->completion_status,
             ], 400);
         }
 
@@ -189,7 +201,7 @@ class CourseCompletionController extends Controller
             'message' => 'ยืนยันเกรดเรียบร้อย',
             'data' => [
                 'grade' => $member->final_grade,
-                'score' => $member->final_total_score,
+                'score' => $member->final_percentage,
                 'grade_point' => $member->final_grade_point,
                 'completion_status' => $member->completion_status,
             ],
@@ -203,10 +215,10 @@ class CourseCompletionController extends Controller
     {
         $this->authorize('manage', $course);
 
-        if ($course->finalization_status !== 'grading') {
+        if (! in_array($course->finalization_status, ['grading', 'published'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'ต้องอยู่ในช่วงให้เกรดก่อน',
+                'message' => 'ต้องอยู่ในช่วงให้เกรดหรือประกาศแล้วก่อนปิดเกรด',
             ], 400);
         }
 
@@ -261,7 +273,7 @@ class CourseCompletionController extends Controller
             'data' => [
                 'member_id' => $member->id,
                 'grade' => $member->final_grade,
-                'score' => $member->final_total_score,
+                'score' => $member->final_percentage,
                 'grade_point' => $member->final_grade_point,
             ],
         ]);
@@ -350,7 +362,7 @@ class CourseCompletionController extends Controller
                     'student_id' => $member->user->student_id ?? $member->user->id,
                     'name' => $member->user->name,
                     'email' => $member->user->email,
-                    'total_score' => $member->final_total_score ?? $member->draft_total_score,
+                    'total_score' => $member->final_percentage ?? $member->draft_percentage,
                     'grade' => $member->final_grade ?? $member->draft_grade,
                     'grade_point' => $member->final_grade_point ?? $member->draft_grade_point,
                     'completion_status' => $member->completion_status,
@@ -370,8 +382,5 @@ class CourseCompletionController extends Controller
                 'statistics' => $this->gradingService->calculateGradeStatistics($course),
             ],
         ]);
-    }
-}
-;
     }
 }

@@ -3,14 +3,13 @@
 namespace App\Services;
 
 use App\Models\Course;
-use App\Models\CourseMember;
 use App\Models\CourseCertificate;
+use App\Models\CourseMember;
 use App\Models\GradeAppeal;
 use App\Models\Notification;
 use App\Models\RemediationSession;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Service สำหรับส่ง Notifications เกี่ยวกับระบบเกรด
@@ -32,7 +31,9 @@ class GradingNotificationService
         $now = now();
 
         foreach ($members as $member) {
-            if (!$member->user) continue;
+            if (! $member->user) {
+                continue;
+            }
 
             $notifications[] = [
                 'user_id' => $member->user->id,
@@ -45,7 +46,7 @@ class GradingNotificationService
                     'course_id' => $course->id,
                     'course_name' => $course->name,
                     'grade' => $member->draft_grade,
-                    'score' => $member->draft_total_score,
+                    'score' => $member->draft_percentage,
                 ]),
                 'read_status' => false,
                 'created_at' => $now,
@@ -53,7 +54,7 @@ class GradingNotificationService
             ];
         }
 
-        if (!empty($notifications)) {
+        if (! empty($notifications)) {
             Notification::insert($notifications);
         }
 
@@ -75,11 +76,13 @@ class GradingNotificationService
         $now = now();
 
         foreach ($members as $member) {
-            if (!$member->user) continue;
+            if (! $member->user) {
+                continue;
+            }
 
             $passed = $member->final_grade !== 'F';
             $message = $passed
-                ? "🎉 ยินดีด้วย! คุณผ่านรายวิชา \"{$course->name}\" ด้วยเกรด {$member->final_grade}"
+                ? "ยินดีด้วย! คุณผ่านรายวิชา \"{$course->name}\" ด้วยเกรด {$member->final_grade}"
                 : "ผลการเรียนรายวิชา \"{$course->name}\" - คุณได้รับเกรด {$member->final_grade}";
 
             $notifications[] = [
@@ -101,7 +104,7 @@ class GradingNotificationService
             ];
         }
 
-        if (!empty($notifications)) {
+        if (! empty($notifications)) {
             Notification::insert($notifications);
         }
 
@@ -144,7 +147,7 @@ class GradingNotificationService
             ];
         }
 
-        if (!empty($notifications)) {
+        if (! empty($notifications)) {
             Notification::insert($notifications);
         }
     }
@@ -194,12 +197,16 @@ class GradingNotificationService
     public function notifyCertificateIssued(CourseCertificate $certificate): void
     {
         $course = $certificate->course;
-        $student = $certificate->member->user;
+        $student = $certificate->courseMember?->user ?? $certificate->student;
+
+        if (! $student) {
+            return;
+        }
 
         Notification::create([
             'user_id' => $student->id,
             'type' => Notification::TYPE_CERTIFICATE_ISSUED,
-            'content' => "🏆 ใบประกาศนียบัตรของคุณสำหรับรายวิชา \"{$course->name}\" พร้อมดาวน์โหลดแล้ว!",
+            'content' => "ใบประกาศนียบัตรของคุณสำหรับรายวิชา \"{$course->name}\" พร้อมดาวน์โหลดแล้ว",
             'action_url' => "/courses/{$course->name}/gradebook/my-grade",
             'sender_id' => $certificate->issued_by,
             'related_id' => $certificate->id,
@@ -208,7 +215,7 @@ class GradingNotificationService
                 'certificate_number' => $certificate->certificate_number,
                 'course_id' => $course->id,
                 'course_name' => $course->name,
-                'grade' => $certificate->final_grade,
+                'grade' => $certificate->grade,
             ],
             'read_status' => false,
         ]);
@@ -224,14 +231,16 @@ class GradingNotificationService
 
         foreach ($certificates as $certificate) {
             $course = $certificate->course;
-            $student = $certificate->member->user;
+            $student = $certificate->courseMember?->user ?? $certificate->student;
 
-            if (!$student) continue;
+            if (! $student) {
+                continue;
+            }
 
             $notifications[] = [
                 'user_id' => $student->id,
                 'type' => Notification::TYPE_CERTIFICATE_ISSUED,
-                'content' => "🏆 ใบประกาศนียบัตรของคุณสำหรับรายวิชา \"{$course->name}\" พร้อมดาวน์โหลดแล้ว!",
+                'content' => "ใบประกาศนียบัตรของคุณสำหรับรายวิชา \"{$course->name}\" พร้อมดาวน์โหลดแล้ว",
                 'action_url' => "/courses/{$course->name}/gradebook/my-grade",
                 'sender_id' => $performer->id,
                 'related_id' => $certificate->id,
@@ -247,7 +256,7 @@ class GradingNotificationService
             ];
         }
 
-        if (!empty($notifications)) {
+        if (! empty($notifications)) {
             Notification::insert($notifications);
         }
 
@@ -290,7 +299,7 @@ class GradingNotificationService
     public function notifyRemediationOpened(RemediationSession $session): int
     {
         $course = $session->course;
-        
+
         // Get eligible students (failed or need remediation)
         $eligibleMembers = $course->courseMembers()
             ->where('status', 1)
@@ -305,7 +314,9 @@ class GradingNotificationService
         $now = now();
 
         foreach ($eligibleMembers as $member) {
-            if (!$member->user) continue;
+            if (! $member->user) {
+                continue;
+            }
 
             $notifications[] = [
                 'user_id' => $member->user->id,
@@ -328,7 +339,7 @@ class GradingNotificationService
             ];
         }
 
-        if (!empty($notifications)) {
+        if (! empty($notifications)) {
             Notification::insert($notifications);
         }
 

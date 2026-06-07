@@ -15,13 +15,17 @@ const isCourseAdmin = inject('isCourseAdmin') as Ref<boolean>
 // State
 const summary = ref<any>(null)
 const grades = ref<any[]>([])
+const groups = ref<any[]>([])
+const ungroupedCount = ref(0)
 const isLoading = ref(true)
 const isProcessing = ref(false)
+const processingMessage = ref('')
 
 // Filters
 const searchQuery = ref('')
 const gradeFilter = ref<string>('all')
 const statusFilter = ref<string>('all')
+const activeGroup = ref<string | number>('all')
 
 // Modals
 const showPublishModal = ref(false)
@@ -62,6 +66,8 @@ const fetchGrades = async () => {
     const res: any = await api.get(`/api/courses/${courseId.value}/completion/preview-grades`)
     if (res.success && res.data) {
       grades.value = res.data.grades || []
+      groups.value = res.data.groups || []
+      ungroupedCount.value = res.data.ungrouped_count || 0
     }
   } catch (err) {
     console.error('Failed to fetch grades:', err)
@@ -72,31 +78,59 @@ const fetchGrades = async () => {
 const filteredGrades = computed(() => {
   let result = [...grades.value]
 
-  // Search
+  // Group filter
+  if (activeGroup.value === 'ungrouped') {
+    result = result.filter((g: any) => !g.group_id)
+  } else if (activeGroup.value !== 'all') {
+    result = result.filter((g: any) => g.group_id === activeGroup.value)
+  }
+
+  // Search (name / username / member_code)
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     result = result.filter((g: any) =>
       g.user?.name?.toLowerCase().includes(query) ||
+      g.user?.username?.toLowerCase().includes(query) ||
       g.member_code?.toLowerCase().includes(query)
     )
   }
 
   // Grade filter
   if (gradeFilter.value !== 'all') {
-    result = result.filter((g: any) => g.grade === gradeFilter.value)
+    if (gradeFilter.value === 'ungraded') {
+      result = result.filter((g: any) => !g.grade)
+    } else {
+      result = result.filter((g: any) => g.grade === gradeFilter.value)
+    }
   }
 
-  // Status filter
+  // Status filter (acceptance status)
   if (statusFilter.value !== 'all') {
-    result = result.filter((g: any) => g.grade_status === statusFilter.value)
+    if (statusFilter.value === 'accepted') {
+      result = result.filter((g: any) => g.is_accepted)
+    } else if (statusFilter.value === 'pending') {
+      result = result.filter((g: any) => !g.is_accepted)
+    }
   }
 
   return result
 })
 
+// Counts per group/grade for badges in filter UI
+const groupCount = (gid: string | number | null) =>
+  gid === 'ungrouped'
+    ? grades.value.filter((g: any) => !g.group_id).length
+    : grades.value.filter((g: any) => g.group_id === gid).length
+
+const gradeCount = (g: string) =>
+  g === 'ungraded'
+    ? grades.value.filter((x: any) => !x.grade).length
+    : grades.value.filter((x: any) => x.grade === g).length
+
 // Actions
 const startGrading = async () => {
   isProcessing.value = true
+  processingMessage.value = 'กำลังเริ่มกระบวนการออกเกรด...'
   try {
     const res: any = await api.post(`/api/courses/${courseId.value}/completion/start-grading`)
     if (res.success) {
@@ -108,11 +142,13 @@ const startGrading = async () => {
     useToast().error('ไม่สามารถเริ่มกระบวนการได้')
   } finally {
     isProcessing.value = false
+    processingMessage.value = ''
   }
 }
 
 const publishGrades = async () => {
   isProcessing.value = true
+  processingMessage.value = `กำลังประกาศเกรด ${grades.value.length} คน... อาจใช้เวลาสักครู่`
   try {
     const res: any = await api.post(`/api/courses/${courseId.value}/completion/publish-grades`)
     if (res.success) {
@@ -125,11 +161,13 @@ const publishGrades = async () => {
     useToast().error('ไม่สามารถประกาศได้')
   } finally {
     isProcessing.value = false
+    processingMessage.value = ''
   }
 }
 
 const finalizeGrades = async () => {
   isProcessing.value = true
+  processingMessage.value = 'กำลังปิดเกรดและบันทึกใบประมวลผล...'
   try {
     const res: any = await api.post(`/api/courses/${courseId.value}/completion/finalize`)
     if (res.success) {
@@ -137,11 +175,13 @@ const finalizeGrades = async () => {
       showFinalizeModal.value = false
       await fetchData()
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to finalize:', err)
-    useToast().error('ไม่สามารถปิดเกรดได้')
+    const msg = err?.data?.message || err?.message || 'ไม่สามารถปิดเกรดได้'
+    useToast().error(msg)
   } finally {
     isProcessing.value = false
+    processingMessage.value = ''
   }
 }
 
@@ -159,6 +199,7 @@ const saveGradeEdit = async () => {
   if (!selectedStudent.value || !editGradeForm.value.reason) return
 
   isProcessing.value = true
+  processingMessage.value = 'กำลังบันทึกการแก้ไขเกรด...'
   try {
     const res: any = await api.patch(
       `/api/courses/${courseId.value}/completion/members/${selectedStudent.value.member_id}/grade`,
@@ -174,6 +215,7 @@ const saveGradeEdit = async () => {
     useToast().error('ไม่สามารถบันทึกได้')
   } finally {
     isProcessing.value = false
+    processingMessage.value = ''
   }
 }
 
@@ -251,8 +293,8 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
                 :disabled="isProcessing"
                 class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
-                <Icon icon="heroicons:calculator" class="w-4 h-4 mr-2" />
-                เริ่มออกเกรด
+                <Icon :icon="isProcessing ? 'heroicons:arrow-path' : 'heroicons:calculator'" :class="['w-4 h-4 mr-2', isProcessing && 'animate-spin']" />
+                {{ isProcessing ? 'กำลังเริ่ม...' : 'เริ่มออกเกรด' }}
               </button>
             </template>
 
@@ -445,7 +487,33 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
         </div>
 
         <!-- Filters -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6 space-y-3">
+          <!-- Group tabs -->
+          <div v-if="groups.length > 0 || ungroupedCount > 0" class="flex flex-wrap gap-2">
+            <button
+              @click="activeGroup = 'all'"
+              :class="['px-3 py-1.5 text-sm rounded-lg border', activeGroup === 'all' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200']"
+            >
+              ทั้งหมด ({{ grades.length }})
+            </button>
+            <button
+              v-for="g in groups"
+              :key="g.id"
+              @click="activeGroup = g.id"
+              :class="['px-3 py-1.5 text-sm rounded-lg border', activeGroup === g.id ? 'bg-primary-500 text-white border-primary-500' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200']"
+            >
+              {{ g.name }} ({{ groupCount(g.id) }})
+            </button>
+            <button
+              v-if="ungroupedCount > 0"
+              @click="activeGroup = 'ungrouped'"
+              :class="['px-3 py-1.5 text-sm rounded-lg border', activeGroup === 'ungrouped' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200']"
+            >
+              ยังไม่จัดกลุ่ม ({{ ungroupedCount }})
+            </button>
+          </div>
+
+          <!-- Search + grade + status -->
           <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div class="flex-1">
               <div class="relative">
@@ -453,8 +521,8 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
                 <input
                   v-model="searchQuery"
                   type="text"
-                  placeholder="ค้นหานักเรียน..."
-                  class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="ค้นหาชื่อ / username / รหัสนักเรียน"
+                  class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -464,9 +532,30 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
                 class="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="all">ทุกเกรด</option>
-                <option v-for="g in gradeOptions" :key="g" :value="g">{{ g }}</option>
+                <option v-for="g in gradeOptions" :key="g" :value="g">{{ g }} ({{ gradeCount(g) }})</option>
+                <option value="ungraded">ยังไม่ออกเกรด ({{ gradeCount('ungraded') }})</option>
+              </select>
+              <select
+                v-model="statusFilter"
+                class="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="all">ทุกสถานะ</option>
+                <option value="accepted">ยอมรับแล้ว</option>
+                <option value="pending">รอยอมรับ</option>
               </select>
             </div>
+          </div>
+
+          <!-- Result count + clear -->
+          <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1">
+            <span>แสดง <b class="text-gray-900 dark:text-white">{{ filteredGrades.length }}</b> / {{ grades.length }} คน</span>
+            <button
+              v-if="activeGroup !== 'all' || searchQuery || gradeFilter !== 'all' || statusFilter !== 'all'"
+              @click="activeGroup = 'all'; searchQuery = ''; gradeFilter = 'all'; statusFilter = 'all'"
+              class="text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              ล้างตัวกรอง
+            </button>
           </div>
         </div>
 
@@ -611,9 +700,10 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
               <button
                 @click="publishGrades"
                 :disabled="isProcessing"
-                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                ประกาศ
+                <Icon v-if="isProcessing" icon="heroicons:arrow-path" class="w-4 h-4 animate-spin" />
+                {{ isProcessing ? 'กำลังประกาศ...' : 'ประกาศ' }}
               </button>
             </div>
           </div>
@@ -644,9 +734,10 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
               <button
                 @click="finalizeGrades"
                 :disabled="isProcessing"
-                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
               >
-                ปิดเกรด
+                <Icon v-if="isProcessing" icon="heroicons:arrow-path" class="w-4 h-4 animate-spin" />
+                {{ isProcessing ? 'กำลังปิดเกรด...' : 'ปิดเกรด' }}
               </button>
             </div>
           </div>
@@ -664,7 +755,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
 
             <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <p class="font-medium text-gray-900 dark:text-white">{{ selectedStudent?.user?.name }}</p>
-              <p class="text-sm text-gray-500">เกรดปัจจุบัน: {{ selectedStudent?.grade || '-' }}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">เกรดปัจจุบัน: {{ selectedStudent?.grade || '-' }}</p>
             </div>
 
             <div class="space-y-4">
@@ -676,16 +767,16 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
                   min="0"
                   max="100"
                   step="0.1"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">เกรดใหม่</label>
                 <select
                   v-model="editGradeForm.grade"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
-                  <option v-for="g in gradeOptions" :key="g" :value="g">{{ g }}</option>
+                  <option v-for="g in gradeOptions" :key="g" :value="g" class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">{{ g }}</option>
                 </select>
               </div>
               <div>
@@ -696,7 +787,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
                   v-model="editGradeForm.reason"
                   rows="3"
                   placeholder="ระบุเหตุผล..."
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 ></textarea>
               </div>
             </div>
@@ -704,19 +795,40 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
             <div class="mt-6 flex gap-3">
               <button
                 @click="showEditGradeModal = false"
-                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
               >
                 ยกเลิก
               </button>
               <button
                 @click="saveGradeEdit"
                 :disabled="!editGradeForm.reason || isProcessing"
-                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
-                บันทึก
+                <Icon v-if="isProcessing" icon="heroicons:arrow-path" class="w-4 h-4 animate-spin" />
+                {{ isProcessing ? 'กำลังบันทึก...' : 'บันทึก' }}
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Global processing overlay -->
+    <Teleport to="body">
+      <div
+        v-if="isProcessing"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      >
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 flex flex-col items-center gap-3 max-w-sm mx-4 border border-gray-200 dark:border-gray-700">
+          <div class="relative">
+            <Icon icon="heroicons:arrow-path" class="w-12 h-12 text-primary-600 animate-spin" />
+          </div>
+          <p class="text-sm font-medium text-gray-900 dark:text-white text-center">
+            {{ processingMessage || 'กำลังประมวลผล...' }}
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+            กรุณาอย่าปิดหน้านี้
+          </p>
         </div>
       </div>
     </Teleport>

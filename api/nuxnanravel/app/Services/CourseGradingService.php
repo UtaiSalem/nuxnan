@@ -3,22 +3,21 @@
 namespace App\Services;
 
 use App\Models\Course;
-use App\Models\CourseMember;
 use App\Models\CourseFinalizationLog;
+use App\Models\CourseGrade;
+use App\Models\CourseMember;
+use App\Models\CourseMemberGradeSnapshot;
 use App\Models\GradeEditLog;
 use App\Models\GradeScale;
-use App\Models\GradeScaleItem;
-use App\Models\User;
-use App\Models\CourseGrade;
 use App\Models\Student;
-use App\Models\CourseMemberGradeSnapshot;
-use App\Services\CourseScoreService;
-use Illuminate\Support\Str;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CourseGradingService
 {
     protected AttendanceEligibilityService $eligibilityService;
+
     protected CourseScoreService $scoreService;
 
     public function __construct(
@@ -35,11 +34,11 @@ class CourseGradingService
     public function calculateGrade(float $score, ?GradeScale $gradeScale = null): array
     {
         // Get default grade scale if not specified
-        if (!$gradeScale) {
+        if (! $gradeScale) {
             $gradeScale = GradeScale::where('is_default', true)->first();
         }
 
-        if (!$gradeScale) {
+        if (! $gradeScale) {
             // Fallback to Thai standard grading
             return $this->calculateDefaultGrade($score);
         }
@@ -49,7 +48,7 @@ class CourseGradingService
             ->orderBy('min_score', 'desc')
             ->first();
 
-        if (!$item) {
+        if (! $item) {
             return [
                 'grade' => 'F',
                 'grade_point' => 0,
@@ -98,31 +97,38 @@ class CourseGradingService
      */
     public function calculateDraftGrades(Course $course, ?GradeScale $gradeScale = null): array
     {
-        $members = $course->members()->with('user')->get();
+        // Learner roles only: 1=student, 2=student_leader. Exclude teachers (3) and admins (4).
+        $members = $course->courseMembers()
+            ->with(['user', 'group'])
+            ->whereIn('role', [1, 2])
+            ->get();
         $results = [];
 
         foreach ($members as $member) {
             $breakdown = $this->scoreService->recompute($member);
             $percentage = $breakdown->percentage();
-            
+
             $gradeResult = $this->calculateGrade($percentage, $gradeScale);
-            
+
             $member->update([
                 'draft_earned_score' => $breakdown->totalEarned(),
-                'draft_max_score'    => $breakdown->totalMax(),
-                'draft_percentage'   => $percentage,
-                'draft_grade'        => $gradeResult['grade'],
-                'draft_grade_point'  => $gradeResult['grade_point'],
-                'draft_total_score'  => $percentage, // Legacy
+                'draft_max_score' => $breakdown->totalMax(),
+                'draft_percentage' => $percentage,
+                'draft_grade' => $gradeResult['grade'],
+                'draft_grade_point' => $gradeResult['grade_point'],
             ]);
 
             $results[] = [
-                'member_id'   => $member->id,
-                'user_id'     => $member->user_id,
-                'user'        => $member->user,
+                'member_id' => $member->id,
+                'user_id' => $member->user_id,
+                'user' => $member->user,
+                'member_code' => $member->member_code,
+                'group_id' => $member->group_id,
+                'group' => $member->group ? ['id' => $member->group->id, 'name' => $member->group->name] : null,
                 'total_score' => $percentage,
-                'grade'       => $gradeResult['grade'],
+                'grade' => $gradeResult['grade'],
                 'grade_point' => $gradeResult['grade_point'],
+                'is_accepted' => $member->completion_status === 'accepted',
             ];
         }
 
@@ -132,6 +138,7 @@ class CourseGradingService
     /**
      * Calculate total score for a member from gradebook
      * Note: Returns 0-100 percentage.
+     *
      * @deprecated Use CourseScoreService::recompute instead.
      */
     protected function calculateMemberTotalScore(CourseMember $member): float
@@ -139,13 +146,16 @@ class CourseGradingService
         // For P0 hotfix: directly calculate percentage from member score fields.
         // The legacy gradebook path is removed until P2/P3.
         $course = $member->course;
-        if (!$course || $course->total_score <= 0) return 0;
-        
-        $earned = ($member->achieved_score ?? 0) + 
-                  ($member->external_score_points ?? 0) + 
+        if (! $course || $course->total_score <= 0) {
+            return 0;
+        }
+
+        $earned = ($member->achieved_score ?? 0) +
+                  ($member->external_score_points ?? 0) +
                   ($member->bonus_points ?? 0);
-        
+
         $percentage = ($earned / $course->total_score) * 100;
+
         return (float) max(0, min(100, $percentage));
     }
 
@@ -187,7 +197,8 @@ class CourseGradingService
             $lockedCourse = Course::lockForUpdate()->findOrFail($course->id);
             $runId = (string) Str::uuid();
 
-            $members = $lockedCourse->members()->with('user')->get();
+            // Learner roles only: 1=student, 2=student_leader.
+            $members = $lockedCourse->courseMembers()->with('user')->whereIn('role', [1, 2])->get();
             $results = [];
 
             foreach ($members as $member) {
@@ -198,11 +209,10 @@ class CourseGradingService
 
                 $member->update([
                     'draft_earned_score' => $breakdown->totalEarned(),
-                    'draft_max_score'    => $breakdown->totalMax(),
-                    'draft_percentage'   => $percentage,
-                    'draft_grade'        => $gradeResult['grade'],
-                    'draft_grade_point'  => $gradeResult['grade_point'],
-                    'draft_total_score'  => $percentage, // Legacy
+                    'draft_max_score' => $breakdown->totalMax(),
+                    'draft_percentage' => $percentage,
+                    'draft_grade' => $gradeResult['grade'],
+                    'draft_grade_point' => $gradeResult['grade_point'],
                 ]);
 
                 // Update old snapshots
@@ -211,23 +221,25 @@ class CourseGradingService
 
                 // Insert new row into CourseMemberGradeSnapshot
                 CourseMemberGradeSnapshot::create([
+                    'course_id' => $member->course_id,
+                    'user_id' => $member->user_id,
                     'course_member_id' => $member->id,
                     'published_run_id' => $runId,
-                    'is_current'       => true,
-                    'published_by'     => $performer->id,
-                    'earned_score'     => $breakdown->totalEarned(),
-                    'max_score'        => $breakdown->totalMax(),
-                    'percentage'       => $percentage,
-                    'letter_grade'     => $gradeResult['grade'],
-                    'grade_point'      => $gradeResult['grade_point'],
+                    'is_current' => true,
+                    'published_by' => $performer->id,
+                    'earned_score' => $breakdown->totalEarned(),
+                    'max_score' => $breakdown->totalMax(),
+                    'percentage' => $percentage,
+                    'letter_grade' => $gradeResult['grade'],
+                    'grade_point' => $gradeResult['grade_point'],
                 ]);
 
                 $results[] = [
-                    'member_id'   => $member->id,
-                    'user_id'     => $member->user_id,
-                    'user'        => $member->user,
+                    'member_id' => $member->id,
+                    'user_id' => $member->user_id,
+                    'user' => $member->user,
                     'total_score' => $percentage,
-                    'grade'       => $gradeResult['grade'],
+                    'grade' => $gradeResult['grade'],
                     'grade_point' => $gradeResult['grade_point'],
                 ];
             }
@@ -237,8 +249,8 @@ class CourseGradingService
                 'finalization_status' => 'published',
             ]);
 
-            // Update completion status
-            $lockedCourse->members()->update([
+            // Update completion status (learners only)
+            $lockedCourse->courseMembers()->whereIn('role', [1, 2])->update([
                 'completion_status' => 'pending_acceptance',
             ]);
 
@@ -279,27 +291,25 @@ class CourseGradingService
         if ($snapshot) {
             $member->update([
                 'final_earned_score' => $snapshot->earned_score,
-                'final_max_score'    => $snapshot->max_score,
-                'final_percentage'   => $snapshot->percentage,
-                'final_grade'        => $snapshot->letter_grade,
-                'final_grade_point'  => $snapshot->grade_point,
-                'final_total_score'  => $snapshot->percentage, // Legacy fallback
-                'grade_accepted_at'  => now(),
-                'completion_status'  => $snapshot->letter_grade === 'F' ? 'failed' : 'completed',
-                'completed_at'       => $snapshot->letter_grade !== 'F' ? now() : null,
+                'final_max_score' => $snapshot->max_score,
+                'final_percentage' => $snapshot->percentage,
+                'final_grade' => $snapshot->letter_grade,
+                'final_grade_point' => $snapshot->grade_point,
+                'grade_accepted_at' => now(),
+                'completion_status' => $snapshot->letter_grade === 'F' ? 'failed' : 'completed',
+                'completed_at' => $snapshot->letter_grade !== 'F' ? now() : null,
             ]);
         } else {
             // Legacy fallback
             $member->update([
-                'final_earned_score' => $member->draft_earned_score ?? $member->draft_total_score,
-                'final_max_score'    => $member->draft_max_score ?? 100,
-                'final_percentage'   => $member->draft_percentage ?? $member->draft_total_score,
-                'final_total_score'  => $member->draft_total_score,
-                'final_grade'        => $member->draft_grade,
-                'final_grade_point'  => $member->draft_grade_point,
-                'grade_accepted_at'  => now(),
-                'completion_status'  => $member->draft_grade === 'F' ? 'failed' : 'completed',
-                'completed_at'       => $member->draft_grade !== 'F' ? now() : null,
+                'final_earned_score' => $member->draft_earned_score,
+                'final_max_score' => $member->draft_max_score ?? 100,
+                'final_percentage' => $member->draft_percentage,
+                'final_grade' => $member->draft_grade,
+                'final_grade_point' => $member->draft_grade_point,
+                'grade_accepted_at' => now(),
+                'completion_status' => $member->draft_grade === 'F' ? 'failed' : 'completed',
+                'completed_at' => $member->draft_grade !== 'F' ? now() : null,
             ]);
         }
 
@@ -312,7 +322,7 @@ class CourseGradingService
     public function finalizeGrades(Course $course, User $performer): Course
     {
         return DB::transaction(function () use ($course, $performer) {
-            if (!in_array($course->finalization_status, ['grading', 'published'])) {
+            if (! in_array($course->finalization_status, ['grading', 'published'])) {
                 return $course;
             }
 
@@ -321,8 +331,9 @@ class CourseGradingService
                 $course->refresh();
             }
 
-            // Finalize all pending grades (auto-accept)
-            $course->members()
+            // Finalize all pending grades (auto-accept) — learners only
+            $course->courseMembers()
+                ->whereIn('role', [1, 2])
                 ->where('completion_status', 'pending_acceptance')
                 ->each(function ($member) {
                     $this->acceptGrade($member);
@@ -362,31 +373,44 @@ class CourseGradingService
      */
     protected function syncToTranscripts(Course $course, User $performer): void
     {
-        $members = $course->members()->with('user')->get();
-        
-        foreach ($members as $member) {
-            if ($member->final_grade === null) continue;
+        // Learner roles only: 1=student, 2=student_leader.
+        $members = $course->courseMembers()->with('user')->whereIn('role', [1, 2])->get();
 
-            // Find student record linked to user
-            $student = Student::where('user_id', $member->user_id)->first();
+        foreach ($members as $member) {
+            if ($member->final_grade === null) {
+                continue;
+            }
+
+            // Find student record linked to user — scoped to course's academy when present
+            $studentQuery = Student::where('user_id', $member->user_id);
+            if ($course->academy_id) {
+                $studentQuery->where('academy_id', $course->academy_id);
+            }
+            $student = $studentQuery->first();
+
+            // Transcript only applies to members enrolled as a Student in the course's academy.
+            // Skip non-academy members (e.g. public learners) — they still have grades on CourseMember.
+            if (! $student) {
+                continue;
+            }
 
             CourseGrade::updateOrCreate(
                 [
-                    'course_id'  => $course->id,
-                    'user_id'    => $member->user_id,
+                    'course_id' => $course->id,
+                    'user_id' => $member->user_id,
                 ],
                 [
-                    'academy_id'   => $course->academy_id,
-                    'student_id'   => $student?->id,
-                    'semester_id'  => null, // Course model has no semester_id; set via transcript generation
-                    'total_score'  => $member->final_total_score,
-                    'percentage'   => $member->final_percentage ?? $member->getPercentageScore() ?? $member->final_total_score,
+                    'academy_id' => $course->academy_id,
+                    'student_id' => $student->id,
+                    'semester_id' => null, // Course model has no semester_id; set via transcript generation
+                    'total_score' => $member->final_earned_score ?? $member->final_percentage,
+                    'percentage' => $member->final_percentage ?? $member->getPercentageScore(),
                     'letter_grade' => $member->final_grade,
                     'grade_points' => $member->final_grade_point,
-                    'status'       => CourseGrade::STATUS_COMPLETED,
+                    'status' => CourseGrade::STATUS_COMPLETED,
                     'is_published' => true,
-                    'approved_by'  => $performer->id,
-                    'approved_at'  => now(),
+                    'approved_by' => $performer->id,
+                    'approved_at' => now(),
                 ]
             );
         }
@@ -406,7 +430,7 @@ class CourseGradingService
         return DB::transaction(function () use ($member, $editor, $newGrade, $newScore, $reason, $changeType) {
             // Get grade point for new grade
             $gradeResult = $this->calculateGrade($newScore ?? 0);
-            
+
             // Find the correct grade point
             $gradeScale = GradeScale::where('is_default', true)->first();
             if ($gradeScale) {
@@ -421,7 +445,7 @@ class CourseGradingService
                 $member,
                 $editor,
                 $changeType,
-                $member->final_total_score ?? $member->draft_total_score,
+                $member->final_percentage ?? $member->draft_percentage,
                 $member->final_grade ?? $member->draft_grade,
                 $member->final_grade_point ?? $member->draft_grade_point,
                 $newScore,
@@ -432,8 +456,8 @@ class CourseGradingService
 
             // Update the grade
             $member->update([
-                'final_total_score' => $newScore ?? $member->draft_total_score,
-                'final_percentage'  => $newScore ?? $member->draft_percentage ?? $member->draft_total_score,
+                'final_earned_score' => $newScore ?? $member->draft_earned_score,
+                'final_percentage' => $newScore ?? $member->draft_percentage,
                 'final_grade' => $newGrade,
                 'final_grade_point' => $gradeResult['grade_point'],
                 'completion_status' => $newGrade === 'F' ? 'failed' : 'completed',
@@ -447,15 +471,17 @@ class CourseGradingService
                     ->update(['is_current' => false]);
 
                 CourseMemberGradeSnapshot::create([
+                    'course_id' => $member->course_id,
+                    'user_id' => $member->user_id,
                     'course_member_id' => $member->id,
                     'published_run_id' => $runId,
-                    'is_current'       => true,
-                    'published_by'     => $editor->id,
-                    'earned_score'     => $newScore ?? $member->final_earned_score ?? 0,
-                    'max_score'        => $member->final_max_score ?? 100,
-                    'percentage'       => $newScore ?? $member->final_percentage ?? 0,
-                    'letter_grade'     => $newGrade,
-                    'grade_point'      => $gradeResult['grade_point'],
+                    'is_current' => true,
+                    'published_by' => $editor->id,
+                    'earned_score' => $newScore ?? $member->final_earned_score ?? 0,
+                    'max_score' => $member->final_max_score ?? 100,
+                    'percentage' => $newScore ?? $member->final_percentage ?? 0,
+                    'letter_grade' => $newGrade,
+                    'grade_point' => $gradeResult['grade_point'],
                 ]);
             }
 
@@ -468,8 +494,9 @@ class CourseGradingService
      */
     public function calculateGradeStatistics(Course $course): array
     {
-        $members = $course->members()->get();
-        
+        // Learner roles only: 1=student, 2=student_leader. Exclude teachers (3) and admins (4).
+        $members = $course->courseMembers()->whereIn('role', [1, 2])->get();
+
         $grades = ['A' => 0, 'B+' => 0, 'B' => 0, 'C+' => 0, 'C' => 0, 'D+' => 0, 'D' => 0, 'F' => 0];
         $scores = [];
         $passed = 0;
@@ -477,13 +504,13 @@ class CourseGradingService
 
         foreach ($members as $member) {
             $grade = $member->final_grade ?? $member->draft_grade;
-            $score = $member->final_total_score ?? $member->draft_total_score;
+            $score = $member->final_percentage ?? $member->draft_percentage;
 
             if ($grade) {
                 if (isset($grades[$grade])) {
                     $grades[$grade]++;
                 }
-                
+
                 if ($grade === 'F') {
                     $failed++;
                 } else {
@@ -565,7 +592,7 @@ class CourseGradingService
     {
         return DB::transaction(function () use ($course, $performer, $reason) {
             // Mark all CourseMemberGradeSnapshot for the course as is_current=false
-            $memberIds = $course->members()->pluck('id');
+            $memberIds = $course->courseMembers()->pluck('id');
             CourseMemberGradeSnapshot::whereIn('course_member_id', $memberIds)
                 ->update(['is_current' => false]);
 
@@ -582,7 +609,7 @@ class CourseGradingService
                 'performed_by' => $performer->id,
                 'action' => CourseFinalizationLog::ACTION_REOPEN,
                 'notes' => $reason,
-                'total_students' => $course->members()->count(),
+                'total_students' => $course->courseMembers()->count(),
             ]);
 
             return $course->fresh();
