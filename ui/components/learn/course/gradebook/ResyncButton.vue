@@ -13,7 +13,7 @@ const isLoading = ref(false)
 const handleResync = async () => {
   isLoading.value = true
   try {
-    const res: any = await api.post(`/api/courses/${props.courseId}/score-breakdown/resync`)
+    const res: any = await api.post(`/api/courses/${props.courseId}/score-breakdown/resync`, {})
     if (res.success) {
       swal.toast(res.message || 'รีซิงค์ข้อมูลคะแนนเรียบร้อยแล้ว', 'success')
       emit('resynced')
@@ -30,7 +30,7 @@ const handleResync = async () => {
   <button
     @click="handleResync"
     :disabled="isLoading"
-    class="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
+    class="flex w-full sm:w-auto items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
   >
     <Icon
       icon="heroicons:arrow-path"
