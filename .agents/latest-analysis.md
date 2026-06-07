@@ -66,3 +66,20 @@ _(empty)_
 - Verification: `php -l` on every modified controller/service/route passed; Pint normalized 4 style issues across 16 PHP files; basic SFC tag-balance check on every modified `.vue` passed.
 - Blockers cleared: previous "SQLite/MySQL ENUM" blocker is no longer reproducible — every `MODIFY COLUMN ... ENUM` migration is guarded with `DB::getDriverName()` and `typing_sentences` generated column uses `config('database.default') !== 'sqlite'`.
 - Remaining risk: no authenticated browser smoke test was run for course 21 in this turn; suggest a manual pass over `/Learn/Courses/{id}/gradebook/{index,appeals,certificates,completion,remediation}` before declaring the gradebook rebuild done.
+
+### 2026-06-07 - Course eligibility roster filtering started
+- Active Work: Course eligibility roster filtering for `/Learn/Courses/{id}/gradebook/eligibility`.
+- Scope: filter course admins/TA out of the exam eligibility roster, add group filtering, and make individual student search reliable.
+- Intended files: `api/nuxnanravel/app/Services/AttendanceEligibilityService.php`, `ui/pages/Learn/Courses/[id]/gradebook/eligibility.vue`.
+- Finding: `AttendanceEligibilityService::getCourseEligibilitySummary()` currently reads all `course_members`, so role `3/4` course admins and TAs can appear in the table.
+- Finding: eligibility UI already searches `member_code`, but summary payload does not include `member_code`; group info is also missing even though course members have `group_id`.
+- Decision: filter summary and refresh calculations to learner roles `[1, 2]`, return member identity/group fields, and add client-side group filter/search reset behavior.
+- Verification plan: PHP lint on touched service, focused frontend sanity where feasible, `git diff --check`.
+
+### 2026-06-07 - Course eligibility roster filtering completed
+- Changed: `AttendanceEligibilityService` now calculates summary/refresh/bulk operations against learner roles `[1, 2]`, excluding course TA/admin roles `[3, 4]`.
+- Changed: eligibility summary payload now includes `member_name`, `member_code`, `role`, `group_id`, `group`, and user `email` so the UI can search and group-filter reliably.
+- Changed: `ExamEligibilityController::bulkUnlock()` respects learner roles, supports `only_ineligible` without explicit member IDs, and avoids accidental all-course unlock unless that flag or a group/member list is provided.
+- Changed: `ui/pages/Learn/Courses/[id]/gradebook/eligibility.vue` adds group dropdown filtering, expanded individual search, group display in desktop/mobile rows, and filtered bulk unlock IDs.
+- Verification: `php -l app\Services\AttendanceEligibilityService.php` passed; `php -l app\Http\Controllers\Api\ExamEligibilityController.php` passed; Pint passed on touched PHP files; SFC parse of eligibility page passed; `git diff --check` passed.
+- Blocked verification: full `vue-tsc --noEmit` still fails on pre-existing project-wide TypeScript errors and `vue-router/volar/sfc-route-blocks` export issue; localhost route returns `302 /auth` without an authenticated session, so browser-content smoke was not completed.

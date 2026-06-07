@@ -592,11 +592,19 @@ class ExamEligibilityController extends Controller
         // Resolve member IDs from group_id when provided
         if ($request->filled('group_id')) {
             $memberIds = CourseMember::where('course_id', $course->id)
+                ->whereIn('role', [1, 2])
                 ->where('group_id', $request->group_id)
                 ->pluck('id')
                 ->toArray();
-        } else {
+        } elseif ($request->has('member_ids')) {
             $memberIds = $request->member_ids ?? [];
+        } elseif ($request->boolean('only_ineligible')) {
+            $memberIds = CourseMember::where('course_id', $course->id)
+                ->whereIn('role', [1, 2])
+                ->pluck('id')
+                ->toArray();
+        } else {
+            $memberIds = [];
         }
 
         if (empty($memberIds)) {
@@ -610,6 +618,7 @@ class ExamEligibilityController extends Controller
         if ($request->boolean('only_ineligible')) {
             $memberIds = CourseMember::whereIn('id', $memberIds)
                 ->where('course_id', $course->id)
+                ->whereIn('role', [1, 2])
                 ->where(function ($query) {
                     // Not yet unlocked: exam_eligible is false/null, or status is explicitly ineligible
                     $query->where('exam_eligible', false)

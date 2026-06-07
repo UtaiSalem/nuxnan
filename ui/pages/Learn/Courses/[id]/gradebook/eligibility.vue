@@ -22,6 +22,7 @@ const isRefreshing = ref(false)
 // Filters
 const searchQuery = ref('')
 const statusFilter = ref<string>('all')
+const groupFilter = ref<string>('all')
 
 // Pagination
 const currentPage = ref(1)
@@ -36,13 +37,44 @@ const isUnlocking = ref(false)
 // Bulk unlock
 const isBulkUnlocking = ref(false)
 
-const ineligibleCount = computed(() =>
-  members.value.filter((m: any) => m.stats?.eligibility_status === 'ineligible').length
-)
+const groupOptions = computed(() => {
+  const groups = new Map<string, any>()
+
+  members.value.forEach((member: any) => {
+    if (member.group_id && member.group?.name) {
+      groups.set(String(member.group_id), member.group)
+    }
+  })
+
+  return Array.from(groups.values()).sort((a: any, b: any) =>
+    String(a.name).localeCompare(String(b.name), 'th')
+  )
+})
+
+const normalizeSearch = (value: unknown) => String(value || '').toLowerCase().trim()
+
+const getMemberSearchText = (member: any) => [
+  member.user?.name,
+  member.user?.email,
+  member.member_name,
+  member.member_code,
+  member.group?.name,
+].map(normalizeSearch).join(' ')
+
+const matchesSelectedGroup = (member: any) =>
+  groupFilter.value === 'all' || String(member.group_id || '') === groupFilter.value
+
+const statusCount = (status: string) => members.value.filter((member: any) =>
+  matchesSelectedGroup(member) && member.stats?.eligibility_status === status
+).length
 
 const showBulkBar = computed(() =>
   statusFilter.value === 'ineligible'
 )
+
+watch([searchQuery, statusFilter, groupFilter], () => {
+  currentPage.value = 1
+})
 
 onMounted(() => {
   if (courseId.value) {
@@ -84,13 +116,15 @@ const refreshEligibility = async () => {
 const filteredMembers = computed(() => {
   let result = [...members.value]
 
+  // Group filter
+  if (groupFilter.value !== 'all') {
+    result = result.filter(matchesSelectedGroup)
+  }
+
   // Search
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter((m: any) =>
-      m.user?.name?.toLowerCase().includes(query) ||
-      m.member_code?.toLowerCase().includes(query)
-    )
+    const query = normalizeSearch(searchQuery.value)
+    result = result.filter((m: any) => getMemberSearchText(m).includes(query))
   }
 
   // Status filter
@@ -100,6 +134,12 @@ const filteredMembers = computed(() => {
 
   return result
 })
+
+const ineligibleMembersForBulk = computed(() =>
+  filteredMembers.value.filter((m: any) => m.stats?.eligibility_status === 'ineligible')
+)
+
+const ineligibleCount = computed(() => ineligibleMembersForBulk.value.length)
 
 // Paginated members
 const paginatedMembers = computed(() => {
@@ -152,7 +192,11 @@ const bulkUnlockIneligible = async () => {
   try {
     const res: any = await api.post(
       `/api/courses/${courseId.value}/eligibility/bulk-unlock`,
-      { only_ineligible: true, reason: 'admin bulk unlock' }
+      {
+        member_ids: ineligibleMembersForBulk.value.map((member: any) => member.id),
+        only_ineligible: true,
+        reason: 'admin bulk unlock',
+      }
     )
     if (res.success) {
       useToast().success(`ปลดล็อคสิทธิ์สอบ ${ineligibleCount.value} คนแล้ว`)
@@ -314,7 +358,7 @@ const unlockMember = async () => {
               { value: 'unlocked', label: 'ปลดล็อคแล้ว', color: 'blue' },
             ]"
             :key="f.value"
-            @click="statusFilter = f.value; currentPage = 1"
+            @click="statusFilter = f.value"
             class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
             :class="statusFilter === f.value
               ? {
@@ -332,7 +376,7 @@ const unlockMember = async () => {
               class="ml-2 text-xs font-bold px-1.5 py-0.5 rounded-full"
               :class="statusFilter === f.value ? 'bg-white/30 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'"
             >
-              {{ members.filter((m: any) => m.stats?.eligibility_status === f.value).length }}
+              {{ statusCount(f.value) }}
             </span>
           </button>
         </div>
@@ -362,7 +406,27 @@ const unlockMember = async () => {
 
         <!-- Filters -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <div class="flex flex-col lg:flex-row gap-3 sm:gap-4">
+            <!-- Group -->
+            <div class="lg:w-64">
+              <div class="relative">
+                <Icon icon="heroicons:user-group" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                <select
+                  v-model="groupFilter"
+                  class="w-full pl-10 pr-8 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="all">ทุกกลุ่ม</option>
+                  <option
+                    v-for="group in groupOptions"
+                    :key="group.id"
+                    :value="String(group.id)"
+                  >
+                    {{ group.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
             <!-- Search -->
             <div class="flex-1">
               <div class="relative">
@@ -370,7 +434,7 @@ const unlockMember = async () => {
                 <input
                   v-model="searchQuery"
                   type="text"
-                  placeholder="ค้นหาชื่อหรือรหัสนักเรียน..."
+                  placeholder="ค้นหาชื่อ อีเมล หรือรหัสนักเรียน..."
                   class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
@@ -387,6 +451,9 @@ const unlockMember = async () => {
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     นักเรียน
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    กลุ่ม
                   </th>
                   <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     จำนวนครั้งเรียน
@@ -430,6 +497,15 @@ const unlockMember = async () => {
                         </div>
                       </div>
                     </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span
+                      v-if="member.group?.name"
+                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                    >
+                      {{ member.group.name }}
+                    </span>
+                    <span v-else class="text-sm text-gray-400">-</span>
                   </td>
                   <td class="px-6 py-4 text-center text-sm text-gray-900 dark:text-white">
                     {{ member.stats?.total_sessions || 0 }}
@@ -492,6 +568,9 @@ const unlockMember = async () => {
                     </p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                       {{ member.member_code || '-' }}
+                    </p>
+                    <p v-if="member.group?.name" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {{ member.group.name }}
                     </p>
                   </div>
                 </div>

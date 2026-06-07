@@ -2,16 +2,15 @@
 
 namespace App\Services;
 
-use App\Models\Course;
-use App\Models\CourseMember;
-use App\Models\CourseAttendance;
 use App\Models\AttendanceDetail;
-use App\Models\ExamEligibilityOverride;
+use App\Models\Course;
+use App\Models\CourseAttendance;
+use App\Models\CourseMember;
 use App\Models\EligibilityAuditLog;
+use App\Models\ExamEligibilityOverride;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 
 class AttendanceEligibilityService
 {
@@ -152,7 +151,7 @@ class AttendanceEligibilityService
 
     public function updateCourseEligibility(Course $course): array
     {
-        $members = $course->courseMembers()->get();
+        $members = $course->courseMembers()->whereIn('role', [1, 2])->get();
         $results = [
             'total' => $members->count(),
             'eligible' => 0,
@@ -182,7 +181,7 @@ class AttendanceEligibilityService
             ->first();
 
         if ($existing) {
-            $label = match($method) {
+            $label = match ($method) {
                 'points' => 'Points',
                 'reading' => 'การอ่าน',
                 'appeal' => 'อุทธรณ์',
@@ -199,7 +198,7 @@ class AttendanceEligibilityService
     {
         $course = $courseMember->course;
 
-        if (!$course->allow_self_unlock) {
+        if (! $course->allow_self_unlock) {
             throw new \Exception('วิชานี้ไม่อนุญาตให้ปลดล็อคด้วยตนเอง');
         }
 
@@ -224,7 +223,7 @@ class AttendanceEligibilityService
             'unlocked',
             EligibilityAuditLog::TYPE_SELF_UNLOCK,
             $courseMember->user_id,
-            "ปลดล็อคด้วยตนเอง",
+            'ปลดล็อคด้วยตนเอง',
             ['override_id' => $override->id]
         );
 
@@ -244,7 +243,7 @@ class AttendanceEligibilityService
     {
         $course = $courseMember->course;
 
-        if (!$course->allow_unlock_by_points) {
+        if (! $course->allow_unlock_by_points) {
             throw new \Exception('วิชานี้ไม่อนุญาตให้ใช้ Points ปลดล็อค');
         }
 
@@ -302,11 +301,11 @@ class AttendanceEligibilityService
 
         $baseQuery = Lesson::where('course_id', $course->id)->where('status', 1)->orderBy('order');
 
-        return match($mode) {
+        return match ($mode) {
             'all_lessons' => $baseQuery->get()->toArray(),
-            'count'       => $baseQuery->take($course->unlock_reading_lesson_count ?? 0)->get()->toArray(),
-            'specific'    => Lesson::whereIn('id', $course->unlock_reading_lesson_ids ?? [])->where('status', 1)->get()->toArray(),
-            default       => [], // minutes mode ไม่ใช้ lesson list
+            'count' => $baseQuery->take($course->unlock_reading_lesson_count ?? 0)->get()->toArray(),
+            'specific' => Lesson::whereIn('id', $course->unlock_reading_lesson_ids ?? [])->where('status', 1)->get()->toArray(),
+            default => [], // minutes mode ไม่ใช้ lesson list
         };
     }
 
@@ -320,7 +319,7 @@ class AttendanceEligibilityService
                 'completed' => 0,
                 'percentage' => 0,
                 'lessons' => [],
-                'can_unlock_now' => false
+                'can_unlock_now' => false,
             ];
         }
 
@@ -335,13 +334,13 @@ class AttendanceEligibilityService
         $completed = count($progresses);
 
         return [
-            'mode'           => $member->course->unlock_reading_mode ?? 'minutes',
-            'required'       => $total,
-            'completed'      => $completed,
-            'percentage'     => $total > 0 ? round(($completed / $total) * 100) : 0,
-            'lessons'        => collect($required)->map(fn($l) => [
-                'id'        => $l['id'],
-                'title'     => $l['title'],
+            'mode' => $member->course->unlock_reading_mode ?? 'minutes',
+            'required' => $total,
+            'completed' => $completed,
+            'percentage' => $total > 0 ? round(($completed / $total) * 100) : 0,
+            'lessons' => collect($required)->map(fn ($l) => [
+                'id' => $l['id'],
+                'title' => $l['title'],
                 'completed' => in_array($l['id'], $progresses),
             ])->toArray(),
             'can_unlock_now' => $completed >= $total && $total > 0,
@@ -356,19 +355,23 @@ class AttendanceEligibilityService
             ->where('status', 'pending')
             ->first();
 
-        if (!$override) return null;
+        if (! $override) {
+            return null;
+        }
 
         $progress = $this->getReadingLessonProgress($member);
-        if (!$progress['can_unlock_now']) return null;
+        if (! $progress['can_unlock_now']) {
+            return null;
+        }
 
         $requiredIds = collect($progress['lessons'])->pluck('id')->toArray();
         $completedIds = collect($progress['lessons'])->where('completed', true)->pluck('id')->toArray();
 
         $override->update([
-            'status'                      => 'approved',
-            'approved_at'                 => now(),
+            'status' => 'approved',
+            'approved_at' => now(),
             'reading_completed_lesson_ids' => $completedIds,
-            'reading_required_lesson_ids'  => $requiredIds,
+            'reading_required_lesson_ids' => $requiredIds,
         ]);
 
         EligibilityAuditLog::log(
@@ -378,16 +381,16 @@ class AttendanceEligibilityService
             $member->user_id,
             "อ่านครบ {$progress['completed']}/{$progress['required']} บทเรียน",
             [
-                'override_id'       => $override->id,
+                'override_id' => $override->id,
                 'completed_lessons' => $completedIds,
-                'required_lessons'  => $requiredIds,
+                'required_lessons' => $requiredIds,
             ]
         );
 
         $member->update([
-            'exam_eligible'            => true,
-            'eligibility_status'       => 'unlocked',
-            'eligibility_unlocked_at'  => now(),
+            'exam_eligible' => true,
+            'eligibility_status' => 'unlocked',
+            'eligibility_unlocked_at' => now(),
             'eligibility_unlock_method' => 'reading',
         ]);
 
@@ -400,7 +403,7 @@ class AttendanceEligibilityService
     {
         $course = $courseMember->course;
 
-        if (!$course->allow_unlock_by_reading) {
+        if (! $course->allow_unlock_by_reading) {
             throw new \Exception('วิชานี้ไม่อนุญาตให้ใช้การอ่านปลดล็อค');
         }
 
@@ -411,16 +414,17 @@ class AttendanceEligibilityService
             $this->checkExistingOverride($courseMember, 'reading');
             $stats = $this->calculateAttendanceStats($courseMember);
             $override = ExamEligibilityOverride::create([
-                'course_member_id'          => $courseMember->id,
-                'course_id'                 => $course->id,
-                'student_id'                => $courseMember->user_id,
-                'unlock_method'             => 'reading',
-                'status'                    => 'pending',
+                'course_member_id' => $courseMember->id,
+                'course_id' => $course->id,
+                'student_id' => $courseMember->user_id,
+                'unlock_method' => 'reading',
+                'status' => 'pending',
                 'reading_minutes_completed' => 0,
                 'absence_percent_at_unlock' => $stats['absence_rate'],
-                'total_sessions_at_unlock'  => $stats['total_sessions'],
+                'total_sessions_at_unlock' => $stats['total_sessions'],
                 'absent_sessions_at_unlock' => $stats['absent'],
             ]);
+
             return ['mode' => 'minutes', 'override' => $override];
         }
 
@@ -438,24 +442,26 @@ class AttendanceEligibilityService
                 ->where('unlock_method', 'reading')
                 ->whereIn('status', ['pending', 'approved'])
                 ->first();
-            if ($existing) throw new \Exception('ปลดล็อคด้วยการอ่านไปแล้ว');
+            if ($existing) {
+                throw new \Exception('ปลดล็อคด้วยการอ่านไปแล้ว');
+            }
 
             $stats = $this->calculateAttendanceStats($courseMember);
             $requiredIds = collect($progress['lessons'])->pluck('id')->toArray();
             $completedIds = collect($progress['lessons'])->where('completed', true)->pluck('id')->toArray();
 
             $override = ExamEligibilityOverride::create([
-                'course_member_id'             => $courseMember->id,
-                'course_id'                    => $course->id,
-                'student_id'                   => $courseMember->user_id,
-                'unlock_method'                => 'reading',
-                'status'                       => 'approved',
-                'approved_at'                  => now(),
+                'course_member_id' => $courseMember->id,
+                'course_id' => $course->id,
+                'student_id' => $courseMember->user_id,
+                'unlock_method' => 'reading',
+                'status' => 'approved',
+                'approved_at' => now(),
                 'reading_completed_lesson_ids' => $completedIds,
-                'reading_required_lesson_ids'  => $requiredIds,
-                'absence_percent_at_unlock'    => $stats['absence_rate'],
-                'total_sessions_at_unlock'     => $stats['total_sessions'],
-                'absent_sessions_at_unlock'    => $stats['absent'],
+                'reading_required_lesson_ids' => $requiredIds,
+                'absence_percent_at_unlock' => $stats['absence_rate'],
+                'total_sessions_at_unlock' => $stats['total_sessions'],
+                'absent_sessions_at_unlock' => $stats['absent'],
             ]);
 
             EligibilityAuditLog::log($courseMember, 'unlocked', EligibilityAuditLog::TYPE_READING_UNLOCK, $courseMember->user_id,
@@ -475,13 +481,13 @@ class AttendanceEligibilityService
         $this->checkExistingOverride($courseMember, 'reading');
         $stats = $this->calculateAttendanceStats($courseMember);
         $override = ExamEligibilityOverride::create([
-            'course_member_id'          => $courseMember->id,
-            'course_id'                 => $course->id,
-            'student_id'                => $courseMember->user_id,
-            'unlock_method'             => 'reading',
-            'status'                    => 'pending',
+            'course_member_id' => $courseMember->id,
+            'course_id' => $course->id,
+            'student_id' => $courseMember->user_id,
+            'unlock_method' => 'reading',
+            'status' => 'pending',
             'absence_percent_at_unlock' => $stats['absence_rate'],
-            'total_sessions_at_unlock'  => $stats['total_sessions'],
+            'total_sessions_at_unlock' => $stats['total_sessions'],
             'absent_sessions_at_unlock' => $stats['absent'],
         ]);
 
@@ -535,7 +541,7 @@ class AttendanceEligibilityService
     {
         $course = $courseMember->course;
 
-        if (!($course->allow_unlock_by_appeal ?? true)) {
+        if (! ($course->allow_unlock_by_appeal ?? true)) {
             throw new \Exception('วิชานี้ไม่อนุญาตให้อุทธรณ์สิทธิ์สอบ');
         }
 
@@ -579,7 +585,7 @@ class AttendanceEligibilityService
         ]);
 
         $member = $override->courseMember;
-        $changeType = match($override->unlock_method) {
+        $changeType = match ($override->unlock_method) {
             'appeal' => EligibilityAuditLog::TYPE_APPEAL_UNLOCK,
             'reading' => EligibilityAuditLog::TYPE_READING_UNLOCK,
             default => EligibilityAuditLog::TYPE_ADMIN_UNLOCK,
@@ -621,11 +627,12 @@ class AttendanceEligibilityService
     {
         $results = ['success' => 0, 'skipped' => 0, 'errors' => []];
 
-        $members = $course->courseMembers()->whereIn('id', $memberIds)->get();
+        $members = $course->courseMembers()->whereIn('id', $memberIds)->whereIn('role', [1, 2])->get();
 
         foreach ($members as $member) {
             if ($member->eligibility_status === 'unlocked') {
                 $results['skipped']++;
+
                 continue;
             }
 
@@ -675,11 +682,12 @@ class AttendanceEligibilityService
     {
         $results = ['success' => 0, 'skipped' => 0];
 
-        $members = $course->courseMembers()->whereIn('id', $memberIds)->get();
+        $members = $course->courseMembers()->whereIn('id', $memberIds)->whereIn('role', [1, 2])->get();
 
         foreach ($members as $member) {
             if ($member->eligibility_status !== 'unlocked') {
                 $results['skipped']++;
+
                 continue;
             }
 
@@ -757,6 +765,8 @@ class AttendanceEligibilityService
     {
         $members = $course->courseMembers()
             ->select('course_members.*')
+            ->whereIn('role', [1, 2])
+            ->with('group:id,name,color')
             ->get();
 
         $summary = [
@@ -774,7 +784,7 @@ class AttendanceEligibilityService
 
         $userIds = $members->pluck('user_id')->unique();
         $users = User::whereIn('id', $userIds)
-            ->select('id', 'name', 'profile_photo_path')
+            ->select('id', 'name', 'email', 'profile_photo_path')
             ->get()
             ->keyBy('id');
 
@@ -820,6 +830,7 @@ class AttendanceEligibilityService
                 $userData = [
                     'id' => $user->id,
                     'name' => $user->name,
+                    'email' => $user->email,
                     'avatar' => $user->avatar,
                 ];
             }
@@ -827,6 +838,15 @@ class AttendanceEligibilityService
             $summary['members'][] = [
                 'id' => $member->id,
                 'user_id' => $member->user_id,
+                'member_name' => $member->member_name,
+                'member_code' => $member->member_code,
+                'role' => $member->role,
+                'group_id' => $member->group_id,
+                'group' => $member->group ? [
+                    'id' => $member->group->id,
+                    'name' => $member->group->name,
+                    'color' => $member->group->color,
+                ] : null,
                 'user' => $userData,
                 'stats' => $stats,
                 'has_pending_request' => $pendingOverrides->has($member->id),
@@ -931,7 +951,7 @@ class AttendanceEligibilityService
             ->where('course_member_id', $courseMember->id)
             ->exists();
 
-        if ($courseMember->eligibility_status === 'unlocked' && !$hasValidOverride) {
+        if ($courseMember->eligibility_status === 'unlocked' && ! $hasValidOverride) {
             EligibilityAuditLog::log(
                 $courseMember,
                 $stats['eligibility_status'],
@@ -951,7 +971,7 @@ class AttendanceEligibilityService
         $canTake = $stats['is_eligible'] || $hasValidOverride;
 
         $reasons = [];
-        if (!$canTake) {
+        if (! $canTake) {
             $reasons[] = sprintf(
                 'ขาดเรียน %.1f%% (เกินกำหนด %.1f%%)',
                 $stats['absence_rate'],
@@ -960,7 +980,7 @@ class AttendanceEligibilityService
         }
 
         $unlockOptions = [];
-        if (!$canTake) {
+        if (! $canTake) {
             $course = $courseMember->course;
 
             $existingOverrides = ExamEligibilityOverride::where('course_member_id', $courseMember->id)
@@ -968,14 +988,14 @@ class AttendanceEligibilityService
                 ->pluck('unlock_method')
                 ->toArray();
 
-            if ($course->allow_self_unlock && !in_array('self', $existingOverrides)) {
+            if ($course->allow_self_unlock && ! in_array('self', $existingOverrides)) {
                 $unlockOptions[] = [
                     'method' => 'self',
                     'label' => 'ปลดล็อคทันที (ด้วยตนเอง)',
                 ];
             }
 
-            if ($course->allow_unlock_by_points && $course->unlock_points_cost && !in_array('points', $existingOverrides)) {
+            if ($course->allow_unlock_by_points && $course->unlock_points_cost && ! in_array('points', $existingOverrides)) {
                 $unlockOptions[] = [
                     'method' => 'points',
                     'cost' => $course->unlock_points_cost,
@@ -983,7 +1003,7 @@ class AttendanceEligibilityService
                 ];
             }
 
-            if ($course->allow_unlock_by_reading && !in_array('reading', $existingOverrides)) {
+            if ($course->allow_unlock_by_reading && ! in_array('reading', $existingOverrides)) {
                 $mode = $course->unlock_reading_mode ?? 'minutes';
                 $readingOption = ['method' => 'reading'];
 
@@ -993,14 +1013,14 @@ class AttendanceEligibilityService
                 } else {
                     $progress = $this->getReadingLessonProgress($courseMember);
                     $readingOption['lesson_mode'] = $mode;
-                    $readingOption['required']    = $progress['required'];
-                    $readingOption['completed']   = $progress['completed'];
-                    $readingOption['label']       = "อ่านบทเรียนเพื่อคืนสิทธิ์สอบ ({$progress['completed']}/{$progress['required']})";
+                    $readingOption['required'] = $progress['required'];
+                    $readingOption['completed'] = $progress['completed'];
+                    $readingOption['label'] = "อ่านบทเรียนเพื่อคืนสิทธิ์สอบ ({$progress['completed']}/{$progress['required']})";
                 }
                 $unlockOptions[] = $readingOption;
             }
 
-            if (($course->allow_unlock_by_appeal ?? true) && !in_array('appeal', $existingOverrides)) {
+            if (($course->allow_unlock_by_appeal ?? true) && ! in_array('appeal', $existingOverrides)) {
                 $unlockOptions[] = [
                     'method' => 'appeal',
                     'label' => 'อุทธรณ์สิทธิ์สอบ',
@@ -1014,7 +1034,7 @@ class AttendanceEligibilityService
         }
 
         $pendingOverride = null;
-        if (!$canTake) {
+        if (! $canTake) {
             $pendingOverride = ExamEligibilityOverride::where('course_member_id', $courseMember->id)
                 ->where('status', 'pending')
                 ->first();
