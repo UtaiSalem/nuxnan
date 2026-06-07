@@ -36,6 +36,26 @@ const settingsForm = ref({
   certificate_free_download: false
 })
 
+const extractArray = (payload: any, keys: string[] = []) => {
+  if (Array.isArray(payload)) return payload
+
+  for (const key of keys) {
+    if (Array.isArray(payload?.[key])) return payload[key]
+  }
+
+  if (Array.isArray(payload?.data)) return payload.data
+
+  return []
+}
+
+const getCertificateUser = (certificate: any) => {
+  return certificate?.student
+    || certificate?.member?.user
+    || certificate?.course_member?.user
+    || certificate?.courseMember?.user
+    || null
+}
+
 onMounted(async () => {
   await fetchData()
   isLoading.value = false
@@ -54,10 +74,11 @@ const fetchCertificates = async () => {
   try {
     const res: any = await api.get(`/api/courses/${courseId.value}/certificates`)
     if (res.success && res.data) {
-      certificates.value = res.data.certificates || res.data || []
+      certificates.value = extractArray(res.data, ['certificates'])
     }
   } catch (err) {
     console.error('Failed to fetch certificates:', err)
+    certificates.value = []
   }
 }
 
@@ -65,10 +86,11 @@ const fetchEligibleStudents = async () => {
   try {
     const res: any = await api.get(`/api/courses/${courseId.value}/certificates/eligible`)
     if (res.success && res.data) {
-      eligibleStudents.value = res.data.students || res.data || []
+      eligibleStudents.value = extractArray(res.data, ['students'])
     }
   } catch (err) {
     console.error('Failed to fetch eligible students:', err)
+    eligibleStudents.value = []
   }
 }
 
@@ -88,10 +110,11 @@ const fetchCertificateSettings = async () => {
     const res: any = await api.get(`/api/courses/${courseId.value}/certificates/settings`)
     if (res.success && res.data) {
       certificateSettings.value = res.data
+      const pricing = res.data.pricing || res.data
       // Populate form
       settingsForm.value = {
-        certificate_download_cost: res.data.cost_thb ?? 10,
-        certificate_free_download: res.data.is_free ?? false
+        certificate_download_cost: res.data.certificate_download_cost ?? pricing.cost_thb ?? 10,
+        certificate_free_download: Boolean(res.data.certificate_free_download ?? pricing.is_free ?? false)
       }
     }
   } catch (err) {
@@ -131,14 +154,16 @@ const calculatedPoints = computed(() => {
 
 // Filtered certificates
 const filteredCertificates = computed(() => {
-  let result = [...certificates.value]
+  let result = [...(Array.isArray(certificates.value) ? certificates.value : [])]
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    result = result.filter((c: any) =>
-      c.member?.user?.name?.toLowerCase().includes(query) ||
+    result = result.filter((c: any) => {
+      const user = getCertificateUser(c)
+
+      return user?.name?.toLowerCase().includes(query) ||
       c.certificate_number?.toLowerCase().includes(query)
-    )
+    })
   }
 
   if (statusFilter.value !== 'all') {
@@ -177,7 +202,7 @@ const issueAllEligible = async () => {
 
   isProcessing.value = true
   try {
-    const res: any = await api.post(`/api/courses/${courseId.value}/certificates/issue-all`)
+    const res: any = await api.post(`/api/courses/${courseId.value}/certificates/issue-all`, {})
     if (res.success) {
       useToast().success('ออกใบประกาศนียบัตรทั้งหมดสำเร็จ')
       await fetchData()
@@ -193,7 +218,7 @@ const issueAllEligible = async () => {
 // Download certificate
 const downloadCertificate = async (cert: any) => {
   try {
-    const res: any = await api.get(`/api/courses/${courseId.value}/certificates/${cert.id}/download`)
+    const res: any = await api.get(`/api/certificates/${cert.id}/download`)
     if (res.success && res.data?.url) {
       window.open(res.data.url, '_blank')
     }
@@ -209,7 +234,9 @@ const revokeCertificate = async (cert: any) => {
 
   isProcessing.value = true
   try {
-    const res: any = await api.post(`/api/courses/${courseId.value}/certificates/${cert.id}/revoke`)
+    const res: any = await api.post(`/api/certificates/${cert.id}/revoke`, {
+      reason: 'Revoked from course gradebook'
+    })
     if (res.success) {
       useToast().success('เพิกถอนสำเร็จ')
       await fetchCertificates()
@@ -318,7 +345,7 @@ const selectAll = () => {
               <div>
                 <p class="text-xs sm:text-sm text-gray-500">ออกแล้วทั้งหมด</p>
                 <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  {{ statistics?.total_issued || certificates.length }}
+                  {{ statistics?.issued ?? statistics?.total_issued ?? certificates.length }}
                 </p>
               </div>
             </div>
@@ -346,7 +373,7 @@ const selectAll = () => {
               <div>
                 <p class="text-xs sm:text-sm text-gray-500">ใช้งานได้</p>
                 <p class="text-lg sm:text-2xl font-bold text-green-600">
-                  {{ statistics?.active || 0 }}
+                  {{ statistics?.issued ?? statistics?.active ?? 0 }}
                 </p>
               </div>
             </div>
@@ -411,9 +438,9 @@ const selectAll = () => {
                 <tr v-for="cert in filteredCertificates" :key="cert.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center">
-                      <img :src="cert.member?.user?.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
+                      <img :src="getCertificateUser(cert)?.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full" />
                       <div class="ml-4">
-                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ cert.member?.user?.name }}</div>
+                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ getCertificateUser(cert)?.name || cert.student_name || '-' }}</div>
                       </div>
                     </div>
                   </td>
@@ -463,9 +490,9 @@ const selectAll = () => {
             <div v-for="cert in filteredCertificates" :key="cert.id" class="p-4">
               <div class="flex items-start justify-between">
                 <div class="flex items-center">
-                  <img :src="cert.member?.user?.avatar || '/images/default-avatar.png'" class="w-12 h-12 rounded-full" />
+                  <img :src="getCertificateUser(cert)?.avatar || '/images/default-avatar.png'" class="w-12 h-12 rounded-full" />
                   <div class="ml-3">
-                    <p class="font-medium text-gray-900 dark:text-white">{{ cert.member?.user?.name }}</p>
+                    <p class="font-medium text-gray-900 dark:text-white">{{ getCertificateUser(cert)?.name || cert.student_name || '-' }}</p>
                     <p class="text-xs text-gray-500 font-mono">{{ cert.certificate_number }}</p>
                   </div>
                 </div>

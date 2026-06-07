@@ -144,7 +144,10 @@ Route::middleware(['auth:api'])->group(function () {
 
     Route::prefix('courses/{course}/certificates')->group(function () {
         Route::get('/', [CertificateController::class, 'index']);
+        Route::get('eligible', [CertificateController::class, 'getEligibleStudents']);
         Route::post('generate', [CertificateController::class, 'generate']);
+        Route::post('issue', [CertificateController::class, 'issueForMembers']);
+        Route::post('issue-all', [CertificateController::class, 'issueAllEligible']);
         Route::post('bulk-issue', [CertificateController::class, 'bulkIssue']);
         Route::get('statistics', [CertificateController::class, 'getStatistics']);
         Route::get('settings', [CertificateController::class, 'getSettings']);

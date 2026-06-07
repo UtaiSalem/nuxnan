@@ -7,13 +7,14 @@ use App\Models\Course;
 use App\Models\CourseCertificate;
 use App\Services\CertificateService;
 use App\Services\GradingNotificationService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class CertificateController extends Controller
 {
     protected CertificateService $certificateService;
+
     protected GradingNotificationService $notificationService;
 
     public function __construct(
@@ -32,7 +33,10 @@ class CertificateController extends Controller
         $this->authorize('manage', $course);
 
         $query = CourseCertificate::where('course_id', $course->id)
-            ->with('student:id,name,avatar,email');
+            ->with([
+                'student:id,name,email,profile_photo_path',
+                'courseMember.user:id,name,email,profile_photo_path',
+            ]);
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -48,6 +52,48 @@ class CertificateController extends Controller
         return response()->json([
             'success' => true,
             'data' => $certificates,
+        ]);
+    }
+
+    /**
+     * Get students eligible for certificate (have completed/passed but no cert yet)
+     */
+    public function getEligibleStudents(Request $request, Course $course): JsonResponse
+    {
+        $this->authorize('manage', $course);
+
+        // Get student IDs who already have a non-revoked certificate
+        $existingCertStudentIds = CourseCertificate::where('course_id', $course->id)
+            ->whereIn('status', [CourseCertificate::STATUS_DRAFT, CourseCertificate::STATUS_ISSUED])
+            ->pluck('student_id');
+
+        // Get members who are students (role 1 or 2), have completed the course, and don't have a certificate yet
+        $eligible = $course->courseMembers()
+            ->whereIn('role', [1, 2])
+            ->whereNotIn('user_id', $existingCertStudentIds)
+            ->whereHas('user')
+            ->with('user:id,name,email,profile_photo_path')
+            ->get()
+            ->map(function ($member) {
+                return [
+                    'id' => $member->id,
+                    'user_id' => $member->user_id,
+                    'user' => [
+                        'id' => $member->user->id,
+                        'name' => $member->user->name,
+                        'email' => $member->user->email,
+                        'avatar' => $member->user->avatar ?? $member->user->profile_photo_url ?? null,
+                    ],
+                    'final_grade' => $member->final_grade ?? $member->draft_grade ?? $member->edited_grade,
+                    'completion_status' => $member->completion_status,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'students' => $eligible,
+            ],
         ]);
     }
 
@@ -122,6 +168,105 @@ class CertificateController extends Controller
     }
 
     /**
+     * Generate missing certificates and issue them for selected course members.
+     */
+    public function issueForMembers(Request $request, Course $course): JsonResponse
+    {
+        $this->authorize('manage', $course);
+
+        $validated = $request->validate([
+            'member_ids' => 'required|array|min:1',
+            'member_ids.*' => 'integer',
+        ]);
+
+        $members = $this->eligibleCertificateMembers($course, $validated['member_ids']);
+
+        return $this->issueMemberCertificates($request, $course, $members, count($validated['member_ids']));
+    }
+
+    /**
+     * Generate missing certificates and issue them for every eligible member.
+     */
+    public function issueAllEligible(Request $request, Course $course): JsonResponse
+    {
+        $this->authorize('manage', $course);
+
+        $members = $this->eligibleCertificateMembers($course);
+
+        return $this->issueMemberCertificates($request, $course, $members, $members->count());
+    }
+
+    private function eligibleCertificateMembers(Course $course, ?array $memberIds = null): Collection
+    {
+        $query = $course->courseMembers()
+            ->whereIn('role', [1, 2])
+            ->where('completion_status', 'completed')
+            ->whereNotNull('final_grade')
+            ->where('final_grade', '!=', 'F')
+            ->whereHas('user')
+            ->with('user');
+
+        if ($memberIds !== null) {
+            $query->whereIn('id', $memberIds);
+        }
+
+        return $query->get();
+    }
+
+    private function issueMemberCertificates(Request $request, Course $course, Collection $members, int $requestedCount): JsonResponse
+    {
+        if ($course->finalization_status !== 'finalized') {
+            return response()->json([
+                'success' => false,
+                'message' => 'ต้องยืนยันเกรดก่อนออกใบประกาศ',
+            ], 400);
+        }
+
+        $issuedCertificates = collect();
+        $generated = 0;
+        $alreadyIssued = 0;
+
+        foreach ($members as $member) {
+            $certificate = CourseCertificate::where('course_member_id', $member->id)
+                ->whereIn('status', [CourseCertificate::STATUS_DRAFT, CourseCertificate::STATUS_ISSUED])
+                ->first();
+
+            if (! $certificate) {
+                $certificate = $this->certificateService->generateCertificate($member);
+                $generated++;
+            }
+
+            if ($certificate->status === CourseCertificate::STATUS_ISSUED) {
+                $alreadyIssued++;
+
+                continue;
+            }
+
+            if ($certificate->status === CourseCertificate::STATUS_DRAFT) {
+                $issuedCertificates->push(
+                    $this->certificateService->issueCertificate($certificate, $request->user())
+                );
+            }
+        }
+
+        if ($issuedCertificates->isNotEmpty()) {
+            $this->notificationService->notifyBulkCertificatesIssued($issuedCertificates, $request->user());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => sprintf('ออกใบประกาศ %d ใบ', $issuedCertificates->count()),
+            'data' => [
+                'issued_count' => $issuedCertificates->count(),
+                'generated_count' => $generated,
+                'already_issued_count' => $alreadyIssued,
+                'skipped_count' => max(0, $requestedCount - $members->count()),
+                'certificates' => $issuedCertificates->values(),
+            ],
+        ]);
+    }
+
+    /**
      * Bulk issue certificates
      */
     public function bulkIssue(Request $request, Course $course): JsonResponse
@@ -180,10 +325,10 @@ class CertificateController extends Controller
         }
 
         // For students: process payment
-        if (!$isAdmin) {
+        if (! $isAdmin) {
             $paymentResult = $this->certificateService->processDownloadPayment($user, $certificate);
-            
-            if (!$paymentResult['success']) {
+
+            if (! $paymentResult['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $paymentResult['message'],
@@ -197,23 +342,23 @@ class CertificateController extends Controller
 
         $path = $this->certificateService->downloadCertificate($certificate);
 
-        if (!$path || !file_exists($path)) {
+        if (! $path || ! file_exists($path)) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบไฟล์ใบประกาศ',
             ], 404);
         }
 
-        return response()->download($path, $certificate->certificate_number . '.pdf');
+        return response()->download($path, $certificate->certificate_number.'.pdf');
     }
-    
+
     /**
      * Check download eligibility and pricing
      */
     public function checkDownload(Request $request, CourseCertificate $certificate): JsonResponse
     {
         $user = $request->user();
-        
+
         // Check ownership
         if ($certificate->student_id !== $user->id) {
             return response()->json([
@@ -221,18 +366,18 @@ class CertificateController extends Controller
                 'message' => 'ไม่มีสิทธิ์ดาวน์โหลด',
             ], 403);
         }
-        
+
         if ($certificate->status !== CourseCertificate::STATUS_ISSUED) {
             return response()->json([
                 'success' => false,
                 'message' => 'ใบประกาศยังไม่ได้ออก',
             ], 400);
         }
-        
+
         $course = $certificate->course;
         $canDownload = $this->certificateService->canDownload($user, $course);
         $pricing = $this->certificateService->getDownloadPricing($course);
-        
+
         return response()->json([
             'success' => true,
             'data' => array_merge($canDownload, [
@@ -245,29 +390,29 @@ class CertificateController extends Controller
             ]),
         ]);
     }
-    
+
     /**
      * Get download pricing info for a course
      */
     public function getDownloadPricing(Request $request, ?Course $course = null): JsonResponse
     {
         $pricing = $this->certificateService->getDownloadPricing($course);
-        
+
         return response()->json([
             'success' => true,
             'data' => $pricing,
         ]);
     }
-    
+
     /**
      * Get certificate settings for a course
      */
     public function getSettings(Request $request, Course $course): JsonResponse
     {
         $this->authorize('manage', $course);
-        
+
         $pricing = $this->certificateService->getDownloadPricing($course);
-        
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -277,22 +422,22 @@ class CertificateController extends Controller
             ],
         ]);
     }
-    
+
     /**
      * Update certificate settings for a course
      */
     public function updateSettings(Request $request, Course $course): JsonResponse
     {
         $this->authorize('manage', $course);
-        
+
         $validated = $request->validate([
             'certificate_download_cost' => 'nullable|numeric|min:0|max:10000',
             'certificate_free_download' => 'nullable|boolean',
         ]);
-        
+
         $course = $this->certificateService->updateCourseSettings($course, $validated);
         $pricing = $this->certificateService->getDownloadPricing($course);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'บันทึกการตั้งค่าสำเร็จ',
@@ -311,7 +456,7 @@ class CertificateController extends Controller
     {
         $result = $this->certificateService->verifyCertificate($verificationCode);
 
-        if (!$result) {
+        if (! $result) {
             return response()->json([
                 'success' => false,
                 'valid' => false,

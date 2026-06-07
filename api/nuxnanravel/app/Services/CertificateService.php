@@ -3,14 +3,14 @@
 namespace App\Services;
 
 use App\Models\Course;
-use App\Models\CourseMember;
 use App\Models\CourseCertificate;
-use App\Models\User;
+use App\Models\CourseMember;
 use App\Models\PointsTransaction;
-use Illuminate\Support\Facades\Storage;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
 
 class CertificateService
 {
@@ -18,22 +18,22 @@ class CertificateService
      * Default certificate download cost in THB
      */
     public const DEFAULT_DOWNLOAD_COST_THB = 10;
-    
+
     /**
      * Points per THB (1 THB = 1080 points)
      */
     public const POINTS_PER_THB = 1080;
-    
+
     /**
      * Instructor share percentage
      */
     public const INSTRUCTOR_SHARE_PERCENT = 90;
-    
+
     /**
      * System share percentage
      */
     public const SYSTEM_SHARE_PERCENT = 10;
-    
+
     /**
      * Get download cost in points (default)
      */
@@ -41,7 +41,7 @@ class CertificateService
     {
         return self::DEFAULT_DOWNLOAD_COST_THB * self::POINTS_PER_THB;
     }
-    
+
     /**
      * Get download cost for a specific course
      */
@@ -56,11 +56,11 @@ class CertificateService
                 'is_custom' => false,
             ];
         }
-        
+
         // Get custom cost or use default
         $costThb = $course->certificate_download_cost ?? self::DEFAULT_DOWNLOAD_COST_THB;
         $costPoints = (int) ($costThb * self::POINTS_PER_THB);
-        
+
         return [
             'cost_thb' => (float) $costThb,
             'cost_points' => $costPoints,
@@ -68,6 +68,7 @@ class CertificateService
             'is_custom' => $course->certificate_download_cost !== null,
         ];
     }
+
     /**
      * Generate certificate for a course member
      */
@@ -77,7 +78,7 @@ class CertificateService
     ): CourseCertificate {
         $course = $member->course;
         $student = $member->user;
-        
+
         // Determine certificate type based on grade
         if ($type === CourseCertificate::TYPE_COMPLETION) {
             $grade = $member->final_grade ?? $member->draft_grade;
@@ -95,7 +96,7 @@ class CertificateService
             'student_id' => $student->id,
             'type' => $type,
             'grade' => $member->final_grade ?? $member->draft_grade,
-            'score' => $member->final_total_score ?? $member->draft_total_score,
+            'score' => $member->final_percentage ?? $member->draft_percentage,
             'grade_point' => $member->final_grade_point ?? $member->draft_grade_point,
             'student_name' => $student->name,
             'course_title' => $course->title,
@@ -148,7 +149,7 @@ class CertificateService
     {
         // Generate QR code URL or base64
         $verificationUrl = $certificate->getVerificationUrl();
-        
+
         // You can use a QR code library here
         // For now, return the URL
         return $verificationUrl;
@@ -160,7 +161,7 @@ class CertificateService
     public function issueCertificate(CourseCertificate $certificate, User $issuer): CourseCertificate
     {
         // Generate PDF if not exists
-        if (!$certificate->pdf_path) {
+        if (! $certificate->pdf_path) {
             $this->generatePdf($certificate);
         }
 
@@ -188,7 +189,7 @@ class CertificateService
                 ->where('type', $type)
                 ->first();
 
-            if (!$existing) {
+            if (! $existing) {
                 $certificates[] = $this->generateCertificate($member, $type);
             } else {
                 $certificates[] = $existing;
@@ -205,7 +206,7 @@ class CertificateService
     {
         $certificate = CourseCertificate::where('verification_code', $verificationCode)->first();
 
-        if (!$certificate) {
+        if (! $certificate) {
             return null;
         }
 
@@ -265,7 +266,7 @@ class CertificateService
      */
     public function downloadCertificate(CourseCertificate $certificate): ?string
     {
-        if (!$certificate->pdf_path || !Storage::disk('public')->exists($certificate->pdf_path)) {
+        if (! $certificate->pdf_path || ! Storage::disk('public')->exists($certificate->pdf_path)) {
             // Regenerate if missing
             $this->generatePdf($certificate);
         }
@@ -274,7 +275,7 @@ class CertificateService
 
         return Storage::disk('public')->path($certificate->pdf_path);
     }
-    
+
     /**
      * Check if user has enough points to download
      */
@@ -283,7 +284,7 @@ class CertificateService
         $costInfo = $this->getCourseDownloadCost($course);
         $requiredPoints = $costInfo['cost_points'];
         $userPoints = $user->pp ?? 0;
-        
+
         return [
             'can_download' => $costInfo['is_free'] || $userPoints >= $requiredPoints,
             'required_points' => $requiredPoints,
@@ -294,7 +295,7 @@ class CertificateService
             'missing_points' => max(0, $requiredPoints - $userPoints),
         ];
     }
-    
+
     /**
      * Process download payment - deduct points from user and distribute
      */
@@ -302,7 +303,7 @@ class CertificateService
     {
         $course = $certificate->course;
         $costInfo = $this->getCourseDownloadCost($course);
-        
+
         // If free, no payment needed
         if ($costInfo['is_free']) {
             return [
@@ -314,10 +315,10 @@ class CertificateService
                 'system_fee' => 0,
             ];
         }
-        
+
         $requiredPoints = $costInfo['cost_points'];
         $userPoints = $user->pp ?? 0;
-        
+
         if ($userPoints < $requiredPoints) {
             return [
                 'success' => false,
@@ -326,23 +327,23 @@ class CertificateService
                 'user_points' => $userPoints,
             ];
         }
-        
+
         return DB::transaction(function () use ($user, $certificate, $course, $costInfo, $requiredPoints) {
             $instructor = $course->instructor;
-            
+
             // Calculate distribution
             $instructorPoints = (int) floor($requiredPoints * self::INSTRUCTOR_SHARE_PERCENT / 100);
             $systemPoints = $requiredPoints - $instructorPoints;
-            
+
             $userBalanceBefore = $user->pp;
             $userBalanceAfter = $userBalanceBefore - $requiredPoints;
-            
+
             // 1. Deduct from user
             $user->update([
                 'pp' => $userBalanceAfter,
                 'total_points_spent' => $user->total_points_spent + $requiredPoints,
             ]);
-            
+
             // Record user spend transaction
             PointsTransaction::create([
                 'user_id' => $user->id,
@@ -361,17 +362,17 @@ class CertificateService
                 ],
                 'status' => 'completed',
             ]);
-            
+
             // 2. Add to instructor (90%)
             if ($instructor && $instructorPoints > 0) {
                 $instructorBalanceBefore = $instructor->pp;
                 $instructorBalanceAfter = $instructorBalanceBefore + $instructorPoints;
-                
+
                 $instructor->update([
                     'pp' => $instructorBalanceAfter,
                     'total_points_earned' => $instructor->total_points_earned + $instructorPoints,
                 ]);
-                
+
                 PointsTransaction::create([
                     'user_id' => $instructor->id,
                     'transaction_type' => 'earn',
@@ -390,10 +391,10 @@ class CertificateService
                     'status' => 'completed',
                 ]);
             }
-            
+
             // 3. System share (10%) - record but don't add to anyone
             // System points are tracked in metadata for reporting
-            
+
             Log::info('Certificate download payment processed', [
                 'user_id' => $user->id,
                 'certificate_id' => $certificate->id,
@@ -401,7 +402,7 @@ class CertificateService
                 'instructor_points' => $instructorPoints,
                 'system_points' => $systemPoints,
             ]);
-            
+
             return [
                 'success' => true,
                 'message' => 'ชำระเงินสำเร็จ',
@@ -412,7 +413,7 @@ class CertificateService
             ];
         });
     }
-    
+
     /**
      * Get download pricing info for a course
      */
@@ -420,6 +421,7 @@ class CertificateService
     {
         if ($course) {
             $costInfo = $this->getCourseDownloadCost($course);
+
             return [
                 'cost_thb' => $costInfo['cost_thb'],
                 'cost_points' => $costInfo['cost_points'],
@@ -431,7 +433,7 @@ class CertificateService
                 'default_cost_thb' => self::DEFAULT_DOWNLOAD_COST_THB,
             ];
         }
-        
+
         return [
             'cost_thb' => self::DEFAULT_DOWNLOAD_COST_THB,
             'cost_points' => self::getDefaultDownloadCostPoints(),
@@ -443,28 +445,28 @@ class CertificateService
             'default_cost_thb' => self::DEFAULT_DOWNLOAD_COST_THB,
         ];
     }
-    
+
     /**
      * Update certificate download settings for a course
      */
     public function updateCourseSettings(Course $course, array $settings): Course
     {
         $data = [];
-        
+
         if (array_key_exists('certificate_download_cost', $settings)) {
             $cost = $settings['certificate_download_cost'];
             // null = use default, 0 or greater = custom cost
             $data['certificate_download_cost'] = $cost === null ? null : max(0, (float) $cost);
         }
-        
+
         if (array_key_exists('certificate_free_download', $settings)) {
             $data['certificate_free_download'] = (bool) $settings['certificate_free_download'];
         }
-        
-        if (!empty($data)) {
+
+        if (! empty($data)) {
             $course->update($data);
         }
-        
+
         return $course->fresh();
     }
 }
