@@ -33,6 +33,7 @@ const canTakeExam = ref(true)
 const eligibility = ref<any>(null)
 const remediationStatus = ref<any>(null)
 const retakeStatus = ref<any>(null)
+const remediationSessionsEnabled = false
 
 // Fetch quiz details
 const { data: quiz, refresh, pending } = await useAsyncData(
@@ -284,7 +285,7 @@ const getStatusBadge = computed(() => {
              </div>
 
              <!-- Remediation Status Card -->
-             <div v-if="remediationStatus" class="mb-6 p-4 rounded-xl border-2 transition-all"
+             <div v-if="remediationSessionsEnabled && remediationStatus" class="mb-6 p-4 rounded-xl border-2 transition-all"
                   :class="[
                     remediationStatus.enrollment?.status === 'passed' ? 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800' :
                     remediationStatus.enrollment?.status === 'failed' ? 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800' :

@@ -18,6 +18,7 @@ const emit = defineEmits(['unlocked'])
 
 const api = useApi()
 const isProcessing = ref(false)
+const remediationSessionsEnabled = false
 
 // Unlock methods
 const requestSelfUnlock = async () => {
@@ -293,7 +294,7 @@ const getMethodColor = (method: string) => {
           </template>
 
           <!-- Placeholder for Remediation (Future) -->
-          <div v-if="eligibility?.has_remediation" class="sm:col-span-2">
+          <div v-if="remediationSessionsEnabled && eligibility?.has_remediation" class="sm:col-span-2">
               <NuxtLink 
                   :to="`/courses/${courseId}/remediation`"
                   class="mt-2 flex items-center justify-center gap-2 p-3 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-xl font-bold border border-orange-200 dark:border-orange-800 hover:bg-orange-200 transition-colors"

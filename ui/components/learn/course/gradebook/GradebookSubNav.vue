@@ -7,18 +7,19 @@ interface Props {
 
 const props = defineProps<Props>()
 const route = useRoute()
+const remediationSessionsEnabled = false
 
 // Inject from parent layout
 const course = inject('course') as Ref<any>
 
 const tabs = computed(() => {
   const list = [
-    { name: 'สรุปคะแนน', icon: 'fluent:data-trending-24-regular', path: 'gradebook', exact: true, show: true },
+    { name: 'ตรวจสอบคะแนน', icon: 'fluent:data-trending-24-regular', path: 'gradebook', exact: true, show: true },
     { name: 'การประเมิน', icon: 'mdi:clipboard-edit-outline', path: 'gradebook/assessments', show: course.value?.use_legacy_gradebook },
     { name: 'สิทธิ์สอบ', icon: 'heroicons:shield-check', path: 'gradebook/eligibility', show: true },
     { name: 'จบวิชา/เกรด', icon: 'heroicons:academic-cap', path: 'gradebook/completion', show: true },
     { name: 'อุทธรณ์', icon: 'heroicons:chat-bubble-left-right', path: 'gradebook/appeals', show: true },
-    { name: 'แก้ตัว', icon: 'heroicons:arrow-path-rounded-square', path: 'gradebook/remediation', show: true },
+    { name: 'แก้ตัว', icon: 'heroicons:arrow-path-rounded-square', path: 'gradebook/remediation', show: remediationSessionsEnabled },
     { name: 'ใบประกาศ', icon: 'heroicons:document-check', path: 'gradebook/certificates', show: true },
   ]
   return list.filter(t => t.show)

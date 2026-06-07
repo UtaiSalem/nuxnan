@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\Models\Course;
 use App\Models\CourseMember;
-use App\Models\CourseRemediationSession;
-use App\Models\CourseRemediationEnrollment;
 use App\Models\CourseQuizResult;
+use App\Models\CourseRemediationEnrollment;
+use App\Models\CourseRemediationSession;
 use App\Models\GradeEditLog;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 class RemediationService
 {
     protected CourseGradingService $gradingService;
+
     protected AttendanceEligibilityService $eligibilityService;
 
     public function __construct(CourseGradingService $gradingService, AttendanceEligibilityService $eligibilityService)
@@ -71,15 +72,15 @@ class RemediationService
         $eligibleGrades = $session->eligible_grades ?? [];
 
         $query = $course->members()
-            ->with('user:id,name,avatar,email')
+            ->with('user:id,name,email,profile_photo_path')
             ->whereIn('completion_status', ['failed', 'completed']);
 
-        if (!empty($eligibleGrades)) {
+        if (! empty($eligibleGrades)) {
             $query->whereIn(DB::raw('COALESCE(final_grade, draft_grade)'), $eligibleGrades);
         }
 
         if ($session->min_score_to_remediate) {
-            $query->where(DB::raw('COALESCE(final_total_score, draft_total_score)'), '>=', $session->min_score_to_remediate);
+            $query->where(DB::raw('COALESCE(final_percentage, draft_percentage)'), '>=', $session->min_score_to_remediate);
         }
 
         // Check max attempts
@@ -97,7 +98,7 @@ class RemediationService
                 'member_id' => $member->id,
                 'user' => $member->user,
                 'grade' => $member->final_grade ?? $member->draft_grade,
-                'score' => $member->final_total_score ?? $member->draft_total_score,
+                'score' => $member->final_percentage ?? $member->draft_percentage,
                 'remediation_attempts' => $member->remediation_attempts,
             ];
         })->toArray();
@@ -112,16 +113,16 @@ class RemediationService
         $course = $session->course;
         $grade = $member->final_grade ?? $member->draft_grade;
 
-        if (!$force && !$session->isGradeEligible($grade)) {
+        if (! $force && ! $session->isGradeEligible($grade)) {
             throw new \Exception("เกรด {$grade} ไม่มีสิทธิ์แก้ตัวในรอบนี้");
         }
 
-        if (!$force && !$session->isRegistrationOpen()) {
+        if (! $force && ! $session->isRegistrationOpen()) {
             throw new \Exception('การลงทะเบียนแก้ตัวปิดแล้ว');
         }
 
         $maxAttempts = $course->max_remediation_attempts ?? 2;
-        if (!$force && $member->remediation_attempts >= $maxAttempts) {
+        if (! $force && $member->remediation_attempts >= $maxAttempts) {
             throw new \Exception("ใช้สิทธิ์แก้ตัวครบ {$maxAttempts} ครั้งแล้ว");
         }
 
@@ -139,7 +140,7 @@ class RemediationService
             'course_member_id' => $member->id,
             'student_id' => $member->user_id,
             'original_grade' => $grade,
-            'original_score' => $member->final_total_score ?? $member->draft_total_score,
+            'original_score' => $member->final_percentage ?? $member->draft_percentage,
             'status' => CourseRemediationEnrollment::STATUS_ENROLLED,
             'enrolled_at' => now(),
             'attempt_number' => $member->remediation_attempts + 1,
@@ -196,11 +197,11 @@ class RemediationService
     ): CourseRemediationEnrollment {
         $session = $enrollment->remediationSession;
         $member = $enrollment->courseMember;
-        
+
         // Calculate grade (capped at max achievable)
         $gradeResult = $this->gradingService->calculateGrade($score);
         $maxGrade = $session->max_grade_achievable;
-        
+
         // Cap the grade
         $gradeOrder = ['F' => 0, 'D' => 1, 'D+' => 2, 'C' => 3, 'C+' => 4, 'B' => 5, 'B+' => 6, 'A' => 7];
         if (isset($gradeOrder[$gradeResult['grade']]) && isset($gradeOrder[$maxGrade])) {
@@ -221,7 +222,7 @@ class RemediationService
                     $member,
                     $grader,
                     GradeEditLog::TYPE_REMEDIATION_RESULT,
-                    $member->final_total_score,
+                    $member->final_percentage,
                     $member->final_grade,
                     $member->final_grade_point,
                     $score,
@@ -234,7 +235,8 @@ class RemediationService
                 );
 
                 $member->update([
-                    'final_total_score' => $score,
+                    'final_percentage' => $score,
+                    'final_earned_score' => $score,
                     'final_grade' => $gradeResult['grade'],
                     'final_grade_point' => $gradeResult['grade_point'],
                     'completion_status' => 'completed',
@@ -350,8 +352,8 @@ class RemediationService
             $stats['average_score'] = $scores->isNotEmpty() ? round($scores->avg(), 2) : 0;
             $stats['min_score'] = $scores->isNotEmpty() ? $scores->min() : 0;
             $stats['max_score'] = $scores->isNotEmpty() ? $scores->max() : 0;
-            $stats['pass_rate'] = $stats['graded'] > 0 
-                ? round(($stats['passed'] / $stats['graded']) * 100, 2) 
+            $stats['pass_rate'] = $stats['graded'] > 0
+                ? round(($stats['passed'] / $stats['graded']) * 100, 2)
                 : 0;
         } else {
             $stats['average_score'] = 0;

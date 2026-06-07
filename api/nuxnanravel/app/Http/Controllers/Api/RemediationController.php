@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 
 class RemediationController extends Controller
 {
+    private const FEATURE_ENABLED = false;
+
     protected RemediationService $remediationService;
 
     public function __construct(RemediationService $remediationService)
@@ -25,6 +27,10 @@ class RemediationController extends Controller
      */
     public function index(Request $request, Course $course): JsonResponse
     {
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         $query = CourseRemediationSession::where('course_id', $course->id)
             ->withCount('enrollments');
 
@@ -51,6 +57,10 @@ class RemediationController extends Controller
     public function store(Request $request, Course $course): JsonResponse
     {
         $this->authorize('manage', $course);
+
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
 
         if (! $course->allow_remediation) {
             return response()->json([
@@ -96,7 +106,11 @@ class RemediationController extends Controller
      */
     public function show(Request $request, CourseRemediationSession $session): JsonResponse
     {
-        $session->load(['enrollments.student:id,name,avatar']);
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
+        $session->load(['enrollments.student:id,name,email,profile_photo_path']);
 
         $data = [
             'session' => $session,
@@ -120,6 +134,10 @@ class RemediationController extends Controller
     public function update(Request $request, CourseRemediationSession $session): JsonResponse
     {
         $this->authorize('manage', $session->course);
+
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
 
         if (! in_array($session->status, ['draft', 'open'])) {
             return response()->json([
@@ -162,6 +180,10 @@ class RemediationController extends Controller
     {
         $this->authorize('manage', $session->course);
 
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         if ($session->status !== 'draft') {
             return response()->json([
                 'success' => false,
@@ -185,6 +207,10 @@ class RemediationController extends Controller
     {
         $this->authorize('manage', $session->course);
 
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         if ($session->status !== 'open') {
             return response()->json([
                 'success' => false,
@@ -206,6 +232,10 @@ class RemediationController extends Controller
      */
     public function enroll(Request $request, CourseRemediationSession $session): JsonResponse
     {
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         $user = $request->user();
         $course = $session->course;
 
@@ -253,6 +283,10 @@ class RemediationController extends Controller
     {
         $this->authorize('manage', $session->course);
 
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         $request->validate([
             'member_ids' => 'required|array',
             'member_ids.*' => 'required|exists:course_members,id',
@@ -296,6 +330,10 @@ class RemediationController extends Controller
      */
     public function myEnrollments(Request $request): JsonResponse
     {
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         $enrollments = CourseRemediationEnrollment::where('student_id', $request->user()->id)
             ->with([
                 'remediationSession:id,title,type,start_at,end_at,status',
@@ -315,6 +353,10 @@ class RemediationController extends Controller
      */
     public function submitWork(Request $request, CourseRemediationEnrollment $enrollment): JsonResponse
     {
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         if ($enrollment->student_id !== $request->user()->id) {
             return response()->json([
                 'success' => false,
@@ -376,6 +418,10 @@ class RemediationController extends Controller
     {
         $this->authorize('manage', $enrollment->remediationSession->course);
 
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         $enrollment = $this->remediationService->markAttendance($enrollment);
 
         return response()->json([
@@ -391,6 +437,10 @@ class RemediationController extends Controller
     public function grade(Request $request, CourseRemediationEnrollment $enrollment): JsonResponse
     {
         $this->authorize('manage', $enrollment->remediationSession->course);
+
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
 
         $request->validate([
             'score' => 'required|numeric|min:0|max:100',
@@ -417,6 +467,10 @@ class RemediationController extends Controller
     public function bulkGrade(Request $request, CourseRemediationSession $session): JsonResponse
     {
         $this->authorize('manage', $session->course);
+
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
 
         $request->validate([
             'grades' => 'required|array',
@@ -458,6 +512,10 @@ class RemediationController extends Controller
     {
         $this->authorize('manage', $session->course);
 
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         if (! in_array($session->status, ['in_progress', 'grading'])) {
             return response()->json([
                 'success' => false,
@@ -477,11 +535,24 @@ class RemediationController extends Controller
         ]);
     }
 
+    private function featureDisabledResponse(): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'code' => 'REMEDIATION_SESSIONS_DISABLED',
+            'message' => 'ฟีเจอร์รอบแก้ตัวถูกปิดชั่วคราว กรุณาใช้การส่งงานและทำแบบทดสอบตามกระบวนการเรียนปกติ',
+        ], 423);
+    }
+
     /**
      * Cancel an enrollment
      */
     public function cancelEnrollment(Request $request, CourseRemediationEnrollment $enrollment): JsonResponse
     {
+        if (! self::FEATURE_ENABLED) {
+            return $this->featureDisabledResponse();
+        }
+
         $user = $request->user();
 
         // Student can cancel their own, admin can cancel any
