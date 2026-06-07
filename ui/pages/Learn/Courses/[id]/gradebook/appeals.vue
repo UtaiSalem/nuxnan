@@ -30,6 +30,43 @@ const reviewForm = ref({
   response: ''
 })
 
+const canSubmitReview = computed(() => {
+  if (reviewForm.value.decision === 'approved') {
+    return !!reviewForm.value.new_grade
+  }
+
+  if (reviewForm.value.decision === 'rejected') {
+    return reviewForm.value.response.trim().length >= 10
+  }
+
+  return false
+})
+
+const extractAppealItems = (payload: any): any[] => {
+  if (Array.isArray(payload)) return payload
+
+  if (Array.isArray(payload?.appeals)) return payload.appeals
+  if (Array.isArray(payload?.data)) return payload.data
+
+  return []
+}
+
+const normalizeAppeal = (appeal: any) => {
+  const member = appeal.member || appeal.course_member || {}
+  const user = member.user || appeal.student || null
+
+  return {
+    ...appeal,
+    member: {
+      ...member,
+      user,
+      member_code: member.member_code || member.order_number || user?.username || '-'
+    },
+    current_grade: appeal.current_grade || appeal.original_grade || member.final_grade || member.draft_grade || '-',
+    response: appeal.response || appeal.reviewer_notes || appeal.rejection_reason || ''
+  }
+}
+
 onMounted(async () => {
   await fetchData()
   isLoading.value = false
@@ -45,11 +82,11 @@ const fetchData = async () => {
 const fetchAppeals = async () => {
   try {
     const res: any = await api.get(`/api/courses/${courseId.value}/appeals`)
-    if (res.success && res.data) {
-      appeals.value = res.data.appeals || res.data || []
-    }
+    const items = extractAppealItems(res?.data ?? res)
+    appeals.value = items.map(normalizeAppeal)
   } catch (err) {
     console.error('Failed to fetch appeals:', err)
+    appeals.value = []
   }
 }
 
@@ -66,12 +103,14 @@ const fetchStatistics = async () => {
 
 // Filtered appeals
 const filteredAppeals = computed(() => {
-  let result = [...appeals.value]
+  let result = [...(Array.isArray(appeals.value) ? appeals.value : [])]
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     result = result.filter((a: any) =>
-      a.member?.user?.name?.toLowerCase().includes(query)
+      a.member?.user?.name?.toLowerCase().includes(query) ||
+      a.member?.user?.username?.toLowerCase().includes(query) ||
+      String(a.member?.member_code || '').toLowerCase().includes(query)
     )
   }
 
@@ -95,20 +134,24 @@ const openDetail = (appeal: any) => {
 
 // Submit review
 const submitReview = async () => {
-  if (!selectedAppeal.value || !reviewForm.value.decision) return
+  if (!selectedAppeal.value || !canSubmitReview.value) return
 
   isProcessing.value = true
   try {
     const endpoint = reviewForm.value.decision === 'approved'
-      ? `/api/courses/${courseId.value}/appeals/${selectedAppeal.value.id}/approve`
-      : `/api/courses/${courseId.value}/appeals/${selectedAppeal.value.id}/reject`
+      ? `/api/grade-appeals/${selectedAppeal.value.id}/approve`
+      : `/api/grade-appeals/${selectedAppeal.value.id}/reject`
 
     const data: any = {
-      response: reviewForm.value.response
+      notes: reviewForm.value.response
     }
 
     if (reviewForm.value.decision === 'approved' && reviewForm.value.new_grade) {
       data.new_grade = reviewForm.value.new_grade
+    }
+
+    if (reviewForm.value.decision === 'rejected') {
+      data.reason = reviewForm.value.response
     }
 
     const res: any = await api.post(endpoint, data)
@@ -513,7 +556,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
                 </button>
                 <button
                   @click="submitReview"
-                  :disabled="!reviewForm.decision || isProcessing"
+                  :disabled="!canSubmitReview || isProcessing"
                   class="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
                 >
                   ยืนยัน

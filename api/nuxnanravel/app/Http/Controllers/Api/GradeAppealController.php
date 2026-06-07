@@ -4,16 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\CourseMember;
 use App\Models\GradeAppeal;
 use App\Services\CourseGradingService;
 use App\Services\GradingNotificationService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class GradeAppealController extends Controller
 {
     protected CourseGradingService $gradingService;
+
     protected GradingNotificationService $notificationService;
 
     public function __construct(
@@ -32,7 +32,12 @@ class GradeAppealController extends Controller
         $this->authorize('manage', $course);
 
         $query = GradeAppeal::where('course_id', $course->id)
-            ->with(['student:id,name,avatar,email', 'reviewer:id,name']);
+            ->with([
+                'student:id,name,email,username,profile_photo_path',
+                'reviewer:id,name',
+                'courseMember:id,user_id,member_code,order_number,final_grade,draft_grade',
+                'courseMember.user:id,name,email,username,profile_photo_path',
+            ]);
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -77,7 +82,7 @@ class GradeAppealController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลการลงทะเบียน',
@@ -85,7 +90,7 @@ class GradeAppealController extends Controller
         }
 
         // Check if appeals are allowed
-        if (!$course->allow_grade_appeal) {
+        if (! $course->allow_grade_appeal) {
             return response()->json([
                 'success' => false,
                 'message' => 'วิชานี้ไม่เปิดรับอุทธรณ์',
@@ -123,7 +128,7 @@ class GradeAppealController extends Controller
             'reason' => $request->reason,
             'evidence' => $request->evidence,
             'original_grade' => $member->final_grade ?? $member->draft_grade,
-            'original_score' => $member->final_total_score ?? $member->draft_total_score,
+            'original_score' => $member->final_percentage ?? $member->draft_percentage,
             'requested_grade' => $request->requested_grade,
             'status' => 'pending',
             'deadline_at' => $deadline,
@@ -152,7 +157,13 @@ class GradeAppealController extends Controller
             $this->authorize('manage', $appeal->course);
         }
 
-        $appeal->load(['student:id,name,avatar,email', 'reviewer:id,name', 'courseMember', 'gradeEditLog']);
+        $appeal->load([
+            'student:id,name,email,username,profile_photo_path',
+            'reviewer:id,name',
+            'courseMember:id,user_id,member_code,order_number,final_grade,draft_grade',
+            'courseMember.user:id,name,email,username,profile_photo_path',
+            'gradeEditLog',
+        ]);
 
         return response()->json([
             'success' => true,
@@ -193,7 +204,7 @@ class GradeAppealController extends Controller
     {
         $this->authorize('manage', $appeal->course);
 
-        if (!in_array($appeal->status, ['pending', 'reviewing'])) {
+        if (! in_array($appeal->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'สถานะไม่ถูกต้อง',
@@ -220,7 +231,7 @@ class GradeAppealController extends Controller
             $request->user(),
             $request->new_grade,
             $request->new_score,
-            'ผลอุทธรณ์: ' . ($request->notes ?? 'อนุมัติ'),
+            'ผลอุทธรณ์: '.($request->notes ?? 'อนุมัติ'),
             \App\Models\GradeEditLog::TYPE_APPEAL_RESULT
         );
 
@@ -241,7 +252,7 @@ class GradeAppealController extends Controller
     {
         $this->authorize('manage', $appeal->course);
 
-        if (!in_array($appeal->status, ['pending', 'reviewing'])) {
+        if (! in_array($appeal->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'สถานะไม่ถูกต้อง',
@@ -281,7 +292,7 @@ class GradeAppealController extends Controller
             ], 403);
         }
 
-        if (!in_array($appeal->status, ['pending'])) {
+        if (! in_array($appeal->status, ['pending'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่สามารถถอนอุทธรณ์ได้ เนื่องจากอยู่ระหว่างพิจารณา',
