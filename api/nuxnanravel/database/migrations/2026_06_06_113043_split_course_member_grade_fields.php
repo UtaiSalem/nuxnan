@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('course_members', 'draft_earned_score')) {
+            return;
+        }
+
         Schema::table('course_members', function (Blueprint $table) {
             $table->renameColumn('draft_total_score', 'draft_earned_score');
             $table->renameColumn('final_total_score', 'final_earned_score');

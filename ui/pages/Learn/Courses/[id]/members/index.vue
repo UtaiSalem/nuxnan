@@ -295,34 +295,90 @@ const submitBulkUnlockGroup = async () => {
 // ─────────────────────────────────────────────────────────────────────
 
 const handleRequestUnmember = async ({ memberId, memberName }: { memberId: number, memberName: string }) => {
-    const result = await Swal.fire({
-        title: 'ยืนยันการลบสมาชิก?',
-        text: `คุณต้องการลบ "${memberName}" ออกจากรายวิชานี้ใช่หรือไม่?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'ใช่, ลบเลย!',
-        cancelButtonText: 'ยกเลิก'
-    })
+    // 1. Get Preview
+    try {
+        const previewRes = await api.get(`/api/courses/${course.value.id}/members/${memberId}/removal-preview`)
+        const preview = previewRes.preview
+        
+        let html = `คุณต้องการลบ "${memberName}" ออกจากรายวิชานี้ใช่หรือไม่?<br><br>`
+        
+        // Data Summary
+        html += `<div class="text-left text-sm bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800 space-y-1 mb-3">`
+        html += `<div class="font-bold mb-1 text-gray-700 dark:text-gray-300 underline">ข้อมูลที่จะถูกลบอย่างถาวร:</div>`
+        html += `<div>• ผลการทดสอบ: ${preview.data_summary.quiz_results} รายการ</div>`
+        html += `<div>• คำตอบแบบฝึกหัด: ${preview.data_summary.question_answers} รายการ</div>`
+        html += `<div>• งานที่ส่ง: ${preview.data_summary.assignment_answers} รายการ</div>`
+        html += `</div>`
 
-    if (result.isConfirmed) {
-        try {
-            await api.delete(`/api/courses/${course.value.id}/members/${memberId}`)
-            Swal.fire(
-                'ลบสำเร็จ!',
-                'สมาชิกธถูกลบออกจากรายวิชาเรียบร้อยแล้ว.',
-                'success'
-            )
-            // Refresh groups to update member lists
-            await courseGroupStore.fetchGroups(course.value.id, true)
-        } catch (error) {
-            console.error('Failed to remove member:', error)
-            Swal.fire(
-                'เกิดข้อผิดพลาด!',
-                'ไม่สามารถลบสมาชิกได้.',
-                'error'
-            )
+        // Refund info
+        if (preview.payment.is_paid) {
+            html += `<div class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-400 font-medium mb-3">`
+            html += `<strong>การคืนเงิน:</strong> รายวิชานี้มีการชำระเงิน ระบบจะคืนเงินจำนวน ${preview.payment.amount} บาท เข้ากระเป๋าของผู้เรียนโดยอัตโนมัติ`
+            html += `</div>`
+        }
+
+        html += `<div class="text-xs text-red-500 font-bold italic">คำเตือน: การกระทำนี้ไม่สามารถย้อนคืนได้</div>`
+
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบสมาชิก?',
+            html: html,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ใช่, ลบเลย!',
+            cancelButtonText: 'ยกเลิก'
+        })
+
+        if (result.isConfirmed) {
+            try {
+                const res = await api.post(`/api/courses/${course.value.id}/members/${memberId}/remove`, {
+                    mode: 'admin_remove',
+                    reason: 'Removed by admin'
+                })
+                
+                let successMsg = 'สมาชิกถูกลบออกจากรายวิชาเรียบร้อยแล้ว'
+                if (res.refunded) {
+                    successMsg += ` และคืนเงินจำนวน ${res.refund_amount} บาทสำเร็จ`
+                }
+
+                Swal.fire(
+                    'ลบสำเร็จ!',
+                    successMsg,
+                    'success'
+                )
+                // Refresh groups to update member lists
+                await courseGroupStore.fetchGroups(course.value.id, true)
+            } catch (error: any) {
+                console.error('Failed to remove member:', error)
+                Swal.fire(
+                    'เกิดข้อผิดพลาด!',
+                    error?.response?.data?.message || 'ไม่สามารถลบสมาชิกได้.',
+                    'error'
+                )
+            }
+        }
+    } catch (error) {
+        console.error('Failed to get removal preview:', error)
+        // Fallback to simple removal if preview fails
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบสมาชิก?',
+            text: `คุณต้องการลบ "${memberName}" ออกจากรายวิชานี้ใช่หรือไม่? (ไม่สามารถดูสรุปผลกระทบได้)`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ใช่, ลบเลย!',
+            cancelButtonText: 'ยกเลิก'
+        })
+        if (result.isConfirmed) {
+            try {
+                await api.post(`/api/courses/${course.value.id}/members/${memberId}/remove`, { mode: 'admin_remove' })
+                await courseGroupStore.fetchGroups(course.value.id, true)
+                Swal.fire('ลบสำเร็จ!', 'สมาชิกถูกลบออกจากรายวิชาแล้ว', 'success')
+            } catch (err) {
+                Swal.fire('ผิดพลาด', 'ไม่สามารถลบสมาชิกได้', 'error')
+            }
         }
     }
 }

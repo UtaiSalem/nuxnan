@@ -271,6 +271,8 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/members')
     Route::patch('/{member}/notes-comments', [CourseMemberController::class, 'updateNotesComments']);
 
     Route::get('/{course_member}/member-settings', [CourseMemberController::class, 'memberSettings'])->name('course.member.settings.page.show');
+    Route::get('/{member}/removal-preview', [CourseMemberController::class, 'removalPreview'])->name('course.member.removal-preview');
+    Route::post('/{member}/remove', [CourseMemberController::class, 'removeMember'])->name('course.member.remove');
     Route::get('/{member}/admin/progress', [CourseMemberController::class, 'memberProgress'])->name('course.admin.member.progress.show');
     Route::post('/process-scores', [CourseMemberController::class, 'processMemberScores'])->name('course.members.process-scores');
 

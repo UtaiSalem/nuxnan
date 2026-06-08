@@ -207,14 +207,32 @@ class AdminController extends Controller
      */
     public function store(Request $request)
     {
+        // 1. Normalize data before validation
+        foreach (['username', 'name', 'email', 'phone_number'] as $field) {
+            if ($request->has($field) && is_string($request->input($field))) {
+                $request->merge([$field => trim($request->input($field))]);
+            }
+        }
+
+        if ($request->has('role') && $request->role) {
+            $request->merge(['role' => strtoupper($request->role)]);
+        }
+
+        if ($request->has('roles') && is_array($request->roles)) {
+            $request->merge(['roles' => array_map('strtoupper', $request->roles)]);
+        }
+
+        // 2. Validate request
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6',
+            'username' => 'required|string|max:191|alpha_dash|unique:users,username',
+            'password' => 'required|string|min:8|confirmed',
             'phone_number' => 'nullable|string|max:20',
             'role' => 'nullable|string|exists:roles,name',
             'roles' => 'nullable|array',
             'roles.*' => 'exists:roles,name',
+            'status' => 'nullable|in:active,inactive,suspended',
         ]);
 
         if ($validator->fails()) {
@@ -225,37 +243,58 @@ class AdminController extends Controller
             ], 422);
         }
 
-        $user = User::create([
-            'name' => $request->name,
-            'username' => $request->username ?? $request->name . rand(100, 999),
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone_number' => $request->phone_number,
-            'email_verified_at' => now(),
-        ]);
+        try {
+            return \DB::transaction(function () use ($request) {
+                // 3. Create user
+                $user = User::create([
+                    'name' => $request->name,
+                    'username' => $request->username,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password), // Model has 'hashed' cast, Hash::make is safe
+                    'phone_number' => $request->phone_number,
+                    'email_verified_at' => $request->status === 'active' ? now() : null,
+                ]);
 
-        // Assign roles
-        if ($request->has('roles') && is_array($request->roles)) {
-            $roleIds = Role::whereIn('name', array_map('strtoupper', $request->roles))->pluck('id');
-            $user->roles()->sync($roleIds);
-        } elseif ($request->has('role')) {
-            $role = Role::where('name', strtoupper($request->role))->first();
-            if ($role) {
-                $user->roles()->attach($role->id);
-            }
-        } else {
-            // Default to STUDENT role
-            $userRole = Role::where('name', 'STUDENT')->first();
-            if ($userRole) {
-                $user->roles()->attach($userRole->id);
-            }
+                // 4. Assign roles
+                if ($request->has('roles') && is_array($request->roles)) {
+                    $roleIds = Role::whereIn('name', array_map('strtoupper', $request->roles))->pluck('id');
+                    $user->roles()->sync($roleIds);
+                } elseif ($request->has('role')) {
+                    $role = Role::where('name', strtoupper($request->role))->first();
+                    if ($role) {
+                        $user->roles()->attach($role->id);
+                    }
+                } else {
+                    $userRole = Role::where('name', 'STUDENT')->first();
+                    if ($userRole) {
+                        $user->roles()->attach($userRole->id);
+                    }
+                }
+
+                // 5. Handle admin flags
+                if ($request->has('is_super_admin') && $request->boolean('is_super_admin')) {
+                    $superAdminRole = Role::where('name', 'SUPER_ADMIN')->first();
+                    if ($superAdminRole) {
+                        $user->roles()->syncWithoutDetaching([$superAdminRole->id]);
+                    }
+                }
+
+                if ($request->has('is_plearnd_admin') && $request->boolean('is_plearnd_admin')) {
+                    PlearndAdmin::firstOrCreate(['user_id' => $user->id]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'สร้างผู้ใช้สำเร็จ',
+                    'data' => new UserResource($user->load('roles')),
+                ], 201);
+            });
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาดในการสร้างผู้ใช้: ' . $e->getMessage(),
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'สร้างผู้ใช้สำเร็จ',
-            'data' => new UserResource($user->load('roles')),
-        ], 201);
     }
 
     /**

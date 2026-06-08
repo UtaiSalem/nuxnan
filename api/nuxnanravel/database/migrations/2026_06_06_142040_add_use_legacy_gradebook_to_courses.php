@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('courses', 'use_legacy_gradebook')) {
+            return;
+        }
+
         Schema::table('courses', function (Blueprint $table) {
             $table->boolean('use_legacy_gradebook')->default(false)->after('total_score');
         });

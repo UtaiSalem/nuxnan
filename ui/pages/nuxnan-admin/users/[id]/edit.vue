@@ -18,6 +18,8 @@ const isSubmitting = ref(false)
 const errors = ref<Record<string, string>>({})
 const successMessage = ref('')
 const originalUsername = ref('')
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const form = reactive({
   username: '',
@@ -80,15 +82,17 @@ const fetchUser = async () => {
 const validateForm = () => {
   errors.value = {}
 
-  if (!form.name) {
+  if (!form.name.trim()) {
     errors.value.name = 'กรุณากรอกชื่อ'
   }
 
-  if (originalUsername.value && !form.username) {
+  if (originalUsername.value && !form.username.trim()) {
     errors.value.username = 'กรุณากรอกชื่อผู้ใช้'
+  } else if (form.username && !/^[a-zA-Z0-9_-]+$/.test(form.username)) {
+    errors.value.username = 'Username ต้องเป็นตัวอักษรภาษาอังกฤษ ตัวเลข หรือ _ และ - เท่านั้น'
   }
 
-  if (!form.email) {
+  if (!form.email.trim()) {
     errors.value.email = 'กรุณากรอกอีเมล'
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
     errors.value.email = 'รูปแบบอีเมลไม่ถูกต้อง'
@@ -207,11 +211,11 @@ onMounted(() => {
             v-model="form.username"
             type="text"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            :class="{ 'border-red-500': errors.username }"
+            :class="{ 'border-red-500 ring-1 ring-red-500': errors.username }"
             placeholder="เช่น nuxnan_user"
           />
+          <p class="mt-1 text-xs text-gray-400">รับเฉพาะภาษาอังกฤษ, ตัวเลข, - และ _</p>
           <p v-if="errors.username" class="mt-1 text-sm text-red-500">{{ errors.username }}</p>
-          <p class="mt-1 text-xs text-gray-500">ชื่อที่ใช้ในระบบ ค้นหา และ @mention (ห้ามซ้ำ)</p>
         </div>
 
         <!-- Name -->
@@ -223,39 +227,42 @@ onMounted(() => {
             v-model="form.name"
             type="text"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            :class="{ 'border-red-500': errors.name }"
+            :class="{ 'border-red-500 ring-1 ring-red-500': errors.name }"
             placeholder="ชื่อที่ต้องการให้แสดง"
           />
           <p v-if="errors.name" class="mt-1 text-sm text-red-500">{{ errors.name }}</p>
           <p class="mt-1 text-xs text-gray-500">ชื่อที่จะแสดงให้คนอื่นเห็น (ซ้ำได้)</p>
         </div>
 
-        <!-- Email -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            อีเมล <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.email"
-            type="email"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            :class="{ 'border-red-500': errors.email }"
-            placeholder="example@email.com"
-          />
-          <p v-if="errors.email" class="mt-1 text-sm text-red-500">{{ errors.email }}</p>
-        </div>
+        <!-- Email & Phone -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              อีเมล <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.email"
+              type="email"
+              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              :class="{ 'border-red-500 ring-1 ring-red-500': errors.email }"
+              placeholder="example@email.com"
+            />
+            <p v-if="errors.email" class="mt-1 text-sm text-red-500">{{ errors.email }}</p>
+          </div>
 
-        <!-- Phone Number -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            เบอร์โทรศัพท์
-          </label>
-          <input
-            v-model="form.phone_number"
-            type="tel"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="08xxxxxxxx"
-          />
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              เบอร์โทรศัพท์
+            </label>
+            <input
+              v-model="form.phone_number"
+              type="tel"
+              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              :class="{ 'border-red-500 ring-1 ring-red-500': errors.phone_number }"
+              placeholder="08xxxxxxxx"
+            />
+            <p v-if="errors.phone_number" class="mt-1 text-sm text-red-500">{{ errors.phone_number }}</p>
+          </div>
         </div>
 
         <!-- Password (Optional) -->
@@ -264,13 +271,22 @@ onMounted(() => {
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               รหัสผ่านใหม่ <span class="text-gray-400 text-xs">(เว้นว่างถ้าไม่เปลี่ยน)</span>
             </label>
-            <input
-              v-model="form.password"
-              type="password"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              :class="{ 'border-red-500': errors.password }"
-              placeholder="••••••••"
-            />
+            <div class="relative">
+              <input
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                :class="{ 'border-red-500 ring-1 ring-red-500': errors.password }"
+                placeholder="••••••••"
+              />
+              <button 
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <Icon :icon="showPassword ? 'fluent:eye-off-24-regular' : 'fluent:eye-24-regular'" class="w-5 h-5" />
+              </button>
+            </div>
             <p v-if="errors.password" class="mt-1 text-sm text-red-500">{{ errors.password }}</p>
           </div>
 
@@ -278,13 +294,22 @@ onMounted(() => {
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               ยืนยันรหัสผ่านใหม่
             </label>
-            <input
-              v-model="form.password_confirmation"
-              type="password"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              :class="{ 'border-red-500': errors.password_confirmation }"
-              placeholder="••••••••"
-            />
+            <div class="relative">
+              <input
+                v-model="form.password_confirmation"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                :class="{ 'border-red-500 ring-1 ring-red-500': errors.password_confirmation }"
+                placeholder="••••••••"
+              />
+              <button 
+                type="button"
+                @click="showConfirmPassword = !showConfirmPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <Icon :icon="showConfirmPassword ? 'fluent:eye-off-24-regular' : 'fluent:eye-24-regular'" class="w-5 h-5" />
+              </button>
+            </div>
             <p v-if="errors.password_confirmation" class="mt-1 text-sm text-red-500">{{ errors.password_confirmation }}</p>
           </div>
         </div>

@@ -14,10 +14,12 @@ use App\Http\Resources\Learn\Course\quizzes\CourseQuizResource;
 use App\Models\Course;
 use App\Models\CourseGroupMember;
 use App\Models\CourseMember;
+use App\Models\CoursePurchase;
 use App\Models\CourseQuizResult;
 use App\Models\UserAnswerQuestion;
 use App\Services\AttendanceEligibilityService;
 use App\Services\LearnerIdentityService;
+use App\Services\CourseMemberRemovalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -27,10 +29,16 @@ class CourseMemberController extends Controller
 
     protected LearnerIdentityService $identityService;
 
-    public function __construct(AttendanceEligibilityService $eligibilityService, LearnerIdentityService $identityService)
-    {
+    protected CourseMemberRemovalService $removalService;
+
+    public function __construct(
+        AttendanceEligibilityService $eligibilityService, 
+        LearnerIdentityService $identityService,
+        CourseMemberRemovalService $removalService
+    ) {
         $this->eligibilityService = $eligibilityService;
         $this->identityService = $identityService;
+        $this->removalService = $removalService;
     }
 
     public function index(Course $course, Request $request)
@@ -377,18 +385,22 @@ class CourseMemberController extends Controller
 
     public function destroy(Course $course, CourseMember $member)
     {
-        if (! $course->hasPermission(auth()->user(), 'remove_members')) {
+        $user = auth()->user();
+        $isSelf = $user && $user->id === $member->user_id;
+
+        if (! $isSelf && ! $course->hasPermission($user, 'remove_members')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         try {
+            // Delete ALL membership rows for this user in this course to handle duplicates and ensure clean exit
+            CourseGroupMember::where('course_id', $course->id)
+                ->where('user_id', $member->user_id)
+                ->delete();
 
-            $member_group = CourseGroupMember::where('group_id', $member->group_id)->where('user_id', $member->user_id)->first();
-            if ($member_group) {
-                $member_group->delete();
-            }
-
-            $member->delete();
+            CourseMember::where('course_id', $course->id)
+                ->where('user_id', $member->user_id)
+                ->delete();
 
             return response()->json([
                 'success' => true,
@@ -709,6 +721,20 @@ class CourseMemberController extends Controller
         try {
             $walletService = app(\App\Services\WalletService::class);
             $transaction = $walletService->purchaseCourse($user, $course);
+
+            // Record the purchase for refund traceability
+            CoursePurchase::create([
+                'purchase_type' => 'enrollment',
+                'source_course_id' => $course->id,
+                'buyer_id' => $user->id,
+                'seller_id' => $course->user_id, // Course owner
+                'course_member_id' => $member->id,
+                'amount_wallet' => $price,
+                'wallet_transaction_id' => $transaction->id,
+                'payment_mode' => 'wallet',
+                'status' => 'completed',
+                'paid_at' => now(),
+            ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'msg' => 'การชำระเงินล้มเหลว: '.$e->getMessage()], 400);
         }
@@ -738,6 +764,41 @@ class CourseMemberController extends Controller
             'quizzes' => CourseQuizResource::collection($course->courseQuizzes),
             'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
         ]);
+    }
+
+    public function removalPreview(Course $course, CourseMember $member)
+    {
+        try {
+            $preview = $this->removalService->preview($course, $member, auth()->user());
+            return response()->json([
+                'success' => true,
+                'preview' => $preview
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function removeMember(Course $course, CourseMember $member, Request $request)
+    {
+        $request->validate([
+            'mode' => 'required|in:self_leave,admin_remove,cancel_request',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $result = $this->removalService->execute(
+                $course, 
+                $member, 
+                auth()->user(), 
+                $request->mode, 
+                $request->reason
+            );
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
     }
 
     public function memberProgress(Course $course, CourseMember $course_member)
@@ -1094,7 +1155,7 @@ class CourseMemberController extends Controller
                         $this->addPointsToMember($member, $request->points, $request->reason);
                         break;
                     case 'remove':
-                        $this->removeMember($member, $request->reason);
+                        $this->internalRemoveMember($member, $request->reason);
                         break;
                 }
 
@@ -1271,7 +1332,7 @@ class CourseMemberController extends Controller
         $member->update(['points_history' => json_encode($history)]);
     }
 
-    private function removeMember(CourseMember $member, ?string $reason)
+    private function internalRemoveMember(CourseMember $member, ?string $reason)
     {
         // Clean up member data
         $this->cleanupMemberData($member);

@@ -201,6 +201,7 @@ class CourseMarketplaceController extends Controller
         $perPage = $request->get('per_page', 20);
         
         $purchases = \App\Models\CoursePurchase::with(['sourceCourse', 'clonedCourse'])
+            ->where('purchase_type', 'marketplace')
             ->where('buyer_id', $user->id)
             ->whereIn('status', ['completed', 'pending_clone', 'paid'])
             ->latest()
@@ -245,7 +246,8 @@ class CourseMarketplaceController extends Controller
         $user = auth()->user();
         
         // Get sales records
-        $salesQuery = \App\Models\CoursePurchase::where('seller_id', $user->id)
+        $salesQuery = \App\Models\CoursePurchase::where('purchase_type', 'marketplace')
+            ->where('seller_id', $user->id)
             ->whereIn('status', ['completed', 'pending_clone', 'paid']);
         
         // Apply date filters

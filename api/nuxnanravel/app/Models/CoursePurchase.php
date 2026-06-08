@@ -55,4 +55,9 @@ class CoursePurchase extends Model
     {
         return $this->belongsTo(WalletTransaction::class, 'seller_income_transaction_id');
     }
+
+    public function courseMember(): BelongsTo
+    {
+        return $this->belongsTo(CourseMember::class, 'course_member_id');
+    }
 }

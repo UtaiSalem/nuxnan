@@ -28,6 +28,9 @@ class Notification extends Model
     public const TYPE_ELIGIBILITY_UNLOCKED = 'eligibility_unlocked';
     public const TYPE_REMEDIATION_OPENED = 'remediation_opened';
     public const TYPE_REMEDIATION_COMPLETED = 'remediation_completed';
+    public const TYPE_COURSE_MEMBER_REMOVED = 'course_member_removed';
+    public const TYPE_COURSE_SELF_LEFT = 'course_self_left';
+    public const TYPE_COURSE_REMOVAL_REFUNDED = 'course_removal_refunded';
 
     // Other types
     public const TYPE_GENERAL = 'general';

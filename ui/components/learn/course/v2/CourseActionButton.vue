@@ -63,9 +63,24 @@ async function handleAction() {
 
   // Case: Active Member -> Leave course
   if (accessStatus.value === 1 || accessStatus.value === 'active') {
+    await confirmAndLeave()
+  }
+}
+
+async function confirmAndLeave() {
+  isProcessing.value = true
+  try {
+    const previewRes = await api.get(`/api/courses/${props.course.id}/members/${props.courseMemberOfAuth.id}/removal-preview`)
+    const preview = previewRes.preview
+    
+    let html = 'คุณจะไม่สามารถเข้าถึงเนื้อหาได้จนกว่าจะสมัครใหม่'
+    if (preview.payment.is_paid) {
+      html += '<br><br><div class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-700 dark:text-amber-400 font-medium"><strong>หมายเหตุ:</strong> รายวิชานี้มีการชำระเงิน การออกจากรายวิชาด้วยตนเองจะไม่ได้รับแต้มหรือเงินคืน</div>'
+    }
+
     const result = await Swal.fire({
       title: 'คุณต้องการออกจากรายวิชา?',
-      text: 'คุณจะไม่สามารถเข้าถึงเนื้อหาได้จนกว่าจะสมัครใหม่',
+      html: html,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'ใช่, ออกจากรายวิชา',
@@ -76,13 +91,32 @@ async function handleAction() {
     if (result.isConfirmed) {
       await leaveCourse()
     }
+  } catch (error) {
+    console.error('Failed to get removal preview:', error)
+    // Fallback to simple confirmation if preview fails
+    const result = await Swal.fire({
+      title: 'คุณต้องการออกจากรายวิชา?',
+      text: 'คุณจะไม่สามารถเข้าถึงเนื้อหาได้จนกว่าจะสมัครใหม่',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'ใช่, ออกจากรายวิชา',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#ef4444'
+    })
+    if (result.isConfirmed) {
+      await leaveCourse()
+    }
+  } finally {
+    isProcessing.value = false
   }
 }
 
 async function leaveCourse() {
   isProcessing.value = true
   try {
-    await api.delete(`/api/courses/${props.course.id}/members/${props.courseMemberOfAuth.id}`)
+    await api.post(`/api/courses/${props.course.id}/members/${props.courseMemberOfAuth.id}/remove`, {
+      mode: 'self_leave'
+    })
     Swal.fire({ title: 'เรียบร้อย', text: 'คุณออกจากรายวิชาแล้ว', icon: 'success', timer: 2000, showConfirmButton: false })
     emit('refresh')
   } catch (error) {
@@ -96,7 +130,9 @@ async function cancelRequest() {
   if (isProcessing.value) return
   isProcessing.value = true
   try {
-    await api.delete(`/api/courses/${props.course.id}/members/${props.courseMemberOfAuth.id}`)
+    await api.post(`/api/courses/${props.course.id}/members/${props.courseMemberOfAuth.id}/remove`, {
+      mode: 'cancel_request'
+    })
     showPendingMenu.value = false
     emit('refresh')
   } catch (error) {

@@ -9,9 +9,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('course_grades', function (Blueprint $table) {
-            $table->decimal('max_score', 10, 2)->default(0)->after('total_score');
-        });
+        if (!Schema::hasColumn('course_grades', 'max_score')) {
+            Schema::table('course_grades', function (Blueprint $table) {
+                $table->decimal('max_score', 10, 2)->default(0)->after('total_score');
+            });
+        }
 
         if (DB::getDriverName() === 'mysql') {
             DB::statement("
