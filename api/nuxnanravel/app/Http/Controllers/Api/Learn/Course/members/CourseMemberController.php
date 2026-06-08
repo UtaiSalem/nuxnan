@@ -294,10 +294,13 @@ class CourseMemberController extends Controller
         // CourseLifecycleService. Must run BEFORE wallet charge.
         $gate = \Illuminate\Support\Facades\Gate::inspect('enroll', $course);
         if ($gate->denied()) {
+            $msg = $gate->message() ?: 'รายวิชานี้ปิดรับสมัครแล้ว';
+
             return response()->json([
                 'success' => false,
                 'code' => $gate->code() ?: 'COURSE_ENROLLMENT_CLOSED',
-                'msg' => $gate->message() ?: 'รายวิชานี้ปิดรับสมัครแล้ว',
+                'message' => $msg,
+                'msg' => $msg,
             ], 422);
         }
 

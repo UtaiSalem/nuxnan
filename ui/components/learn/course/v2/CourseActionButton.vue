@@ -198,9 +198,23 @@ async function completePayment() {
       <div v-if="showPendingMenu" class="fixed inset-0 z-20" @click="showPendingMenu = false"></div>
     </div>
 
+    <!-- Not Member: Enrollment Closed -->
+    <div v-else-if="!courseMemberOfAuth && !course.is_enrollment_open"
+      :class="variant === 'standalone' ? 'w-full' : 'flex items-center gap-2'"
+    >
+      <button
+        disabled
+        class="flex items-center justify-center gap-2 rounded-xl bg-gray-400 dark:bg-gray-600 text-white font-black cursor-not-allowed"
+        :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+      >
+        <Icon icon="heroicons:lock-closed" class="w-5 h-5" />
+        <span>ปิดรับสมัครแล้ว</span>
+      </button>
+    </div>
+
     <!-- Not Member: Join & Purchase Buttons -->
-    <div v-else-if="!courseMemberOfAuth" 
-      class="grid" 
+    <div v-else-if="!courseMemberOfAuth"
+      class="grid"
       :class="[
         variant === 'standalone' ? 'w-full grid-cols-1 gap-3' : 'flex items-center gap-2',
         variant === 'standalone' && canPurchaseCopy && !isCourseSelf ? 'sm:grid-cols-2' : ''

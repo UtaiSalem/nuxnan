@@ -125,11 +125,16 @@ const toggleWishlist = async () => {
 
 // Enrollment
 const handleRequestMember = () => {
+  if (course.value && !course.value.is_enrollment_open) {
+    Swal.fire({ title: 'ปิดรับสมัครแล้ว', text: 'รายวิชานี้ไม่เปิดรับสมัครในขณะนี้', icon: 'warning' })
+    return
+  }
+
   if (selectedGroupId.value) {
     confirmAndEnroll(selectedGroupId.value)
     return
   }
-  
+
   if (courseGroups.value.length > 1) {
     showGroupSelector.value = true
     return
@@ -165,7 +170,7 @@ const executeEnrollment = async (groupId: number | null = null) => {
       await fetchCourse(true)
     }
   } catch (err: any) {
-    Swal.fire({ title: 'ผิดพลาด', text: err.data?.message || 'ไม่สามารถสมัครสมาชิกได้', icon: 'error' })
+    Swal.fire({ title: 'ผิดพลาด', text: err.data?.message || err.data?.msg || 'ไม่สามารถสมัครสมาชิกได้', icon: 'error' })
   } finally {
     isEnrolling.value = false
   }

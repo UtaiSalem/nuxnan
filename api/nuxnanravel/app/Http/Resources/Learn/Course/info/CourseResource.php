@@ -120,6 +120,8 @@ class CourseResource extends JsonResource
             'allow_unlock_by_reading' => $this->allow_unlock_by_reading,
             'unlock_reading_minutes' => $this->unlock_reading_minutes,
             'allow_self_unlock' => $this->allow_self_unlock,
+            'is_enrollment_open' => $this->lifecycleState()->isEnrollmentOpen(),
+            'lifecycle_state' => $this->lifecycleState()->value,
             'finalization_status' => $this->finalization_status,
             'finalized_at' => $this->finalized_at,
             'total_sales' => $this->total_sales,

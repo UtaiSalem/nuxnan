@@ -124,7 +124,7 @@ const formatPrice = (price: number) => {
           <span>กำลังตรวจสอบ...</span>
         </button>
 
-        <template v-else-if="!isMember && !isCourseAdmin">
+        <template v-else-if="!isMember && !isCourseAdmin && course.is_enrollment_open">
           <!-- Group Selector -->
           <div v-if="hasGroups" class="space-y-1.5">
             <label class="text-[10px] font-bold uppercase text-gray-400 px-1">เลือกกลุ่มเรียน</label>
@@ -136,7 +136,7 @@ const formatPrice = (price: number) => {
               <option v-for="g in courseGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
             </select>
           </div>
-          
+
           <button
             @click="emit('enroll')"
             :disabled="isEnrolling"
@@ -147,6 +147,19 @@ const formatPrice = (price: number) => {
             <span>{{ isEnrolling ? 'กำลังสมัคร...' : 'สมัครเรียนตอนนี้' }}</span>
           </button>
         </template>
+
+        <div v-else-if="!isMember && !isCourseAdmin && !course.is_enrollment_open" class="space-y-2">
+          <button
+            disabled
+            class="w-full py-3.5 bg-gray-400 dark:bg-gray-600 text-white rounded-xl font-black cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <Icon icon="heroicons:lock-closed" class="w-5 h-5" />
+            <span>ปิดรับสมัครแล้ว</span>
+          </button>
+          <p class="text-xs text-center text-gray-400 dark:text-gray-500">
+            รายวิชานี้ไม่เปิดรับสมัครในขณะนี้
+          </p>
+        </div>
 
         <NuxtLink
           v-else-if="isMember"
