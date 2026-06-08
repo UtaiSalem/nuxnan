@@ -30,7 +30,18 @@ class LessonAnswerQuestionController extends Controller
             }
         }
 
-        // Verify question belongs to lesson (via course relationship or direct if polymorph, but keeping simple for now)
+        // Completion requirement guard
+        if ($lesson->require_completion_before_exercises) {
+            $isCourseAdmin = $course ? $course->isAdmin(auth()->user()) : false;
+            if (!$lesson->canUserDoExercises(auth()->user(), $isCourseAdmin)) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'LESSON_COMPLETION_REQUIRED',
+                    'message' => 'กรุณาอ่านบทเรียนให้จบก่อนตอบคำถาม',
+                ], 422);
+            }
+        }
+
         // Verify answer belongs to question
         $option = QuestionOption::find($request->answer_id);
 

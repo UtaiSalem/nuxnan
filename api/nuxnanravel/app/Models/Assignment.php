@@ -51,5 +51,21 @@ class Assignment extends Model
         return $this->status === 1;
     }
 
+    /**
+     * Resolve the lesson this assignment belongs to (directly or through topic)
+     */
+    public function getLesson(): ?Lesson
+    {
+        if ($this->assignmentable_type === Lesson::class) {
+            return $this->assignmentable;
+        }
+
+        if ($this->assignmentable_type === Topic::class) {
+            return $this->assignmentable->lesson;
+        }
+
+        return null;
+    }
+
     
 }

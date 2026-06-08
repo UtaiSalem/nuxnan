@@ -67,6 +67,12 @@ const isCreator = computed(() => {
   return props.isAdmin || authStore.user?.id === props.lesson.creater?.id
 })
 
+const exercisesLocked = computed(() => {
+  if (isCreator.value) return false
+  if (!props.lesson.require_completion_before_exercises) return false
+  return !isCompleted.value
+})
+
 const openAddAssignment = () => {
   editingAssignment.value = null
   showAssignmentModal.value = true
@@ -1010,47 +1016,80 @@ const submitReply = async (parentComment: any) => {
           </button>
         </div>
 
-        <LessonAssignmentSection
-          v-if="lesson.assignments?.length"
-          :assignments="lesson.assignments"
-          :lesson-id="lesson.id"
-          :course-id="lesson.course_id"
-          :is-creator="isCreator"
-          @submit="handleSubmitAnswer"
-          @close="activeTab = 'reaction'"
-          @edit="openEditAssignment"
-          @delete="deleteAssignment"
-          @view-submissions="openGradingModal"
-        />
-        
-        <!-- No Assignments Message -->
-        <div
-          v-else
-          class="flex flex-col items-center justify-center py-12 text-center"
-        >
-          <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-            <Icon icon="fluent:clipboard-task-24-regular" class="w-10 h-10 text-green-500 dark:text-green-400" />
-          </div>
-          <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            ยังไม่มีแบบฝึกหัด
-          </h4>
-          <p class="text-gray-500 dark:text-gray-400 max-w-sm">
-            บทเรียนนี้ยังไม่มีแบบฝึกหัดให้ทำ {{ isCreator ? 'คุณสามารถเพิ่มแบบฝึกหัดได้โดยคลิกที่ปุ่มด้านบน' : 'กรุณารอผู้สอนเพิ่มแบบฝึกหัด' }}
-          </p>
+        <!-- Exercises Locked Banner -->
+        <div v-if="exercisesLocked" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center mb-6">
+          <Icon icon="fluent:lock-closed-24-filled" class="w-12 h-12 text-amber-500 mx-auto mb-3" />
+          <h4 class="text-lg font-bold text-amber-800 dark:text-amber-400 mb-1">ส่วนนี้ถูกล็อกอยู่</h4>
+          <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">คุณต้องทำเครื่องหมายว่า "อ่านแล้ว" ในหน้าบทเรียนก่อน จึงจะสามารถทำแบบฝึกหัดได้</p>
+          <button 
+            @click="toggleProgress"
+            :disabled="isTogglingProgress"
+            class="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+          >
+            <Icon v-if="isTogglingProgress" icon="eos-icons:bubble-loading" class="w-4 h-4 inline mr-1" />
+            ทำเครื่องหมายว่าอ่านแล้ว
+          </button>
         </div>
+
+        <template v-else>
+          <LessonAssignmentSection
+            v-if="lesson.assignments?.length"
+            :assignments="lesson.assignments"
+            :lesson-id="lesson.id"
+            :course-id="lesson.course_id"
+            :is-creator="isCreator"
+            @submit="handleSubmitAnswer"
+            @close="activeTab = 'reaction'"
+            @edit="openEditAssignment"
+            @delete="deleteAssignment"
+            @view-submissions="openGradingModal"
+          />
+          
+          <!-- No Assignments Message -->
+          <div
+            v-else
+            class="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+              <Icon icon="fluent:clipboard-task-24-regular" class="w-10 h-10 text-green-500 dark:text-green-400" />
+            </div>
+            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              ยังไม่มีแบบฝึกหัด
+            </h4>
+            <p class="text-gray-500 dark:text-gray-400 max-w-sm">
+              บทเรียนนี้ยังไม่มีแบบฝึกหัดให้ทำ {{ isCreator ? 'คุณสามารถเพิ่มแบบฝึกหัดได้โดยคลิกที่ปุ่มด้านบน' : 'กรุณารอผู้สอนเพิ่มแบบฝึกหัด' }}
+            </p>
+          </div>
+        </template>
       </div>
 
       <!-- Quiz Tab -->
-    <div v-show="activeTab === 'quiz'">
-      <LessonQuizSection
-          :questions="lesson.questions || []"
-          :lesson-id="lesson.id"
-          :is-creator="isCreator"
-          @create="openCreateQuestion"
-          @edit="openEditQuestion"
-          @update:questions="updateQuestions"
-      />
-    </div>
+      <div v-show="activeTab === 'quiz'">
+        <!-- Exercises Locked Banner -->
+        <div v-if="exercisesLocked" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
+          <Icon icon="fluent:lock-closed-24-filled" class="w-12 h-12 text-amber-500 mx-auto mb-3" />
+          <h4 class="text-lg font-bold text-amber-800 dark:text-amber-400 mb-1">แบบทดสอบถูกล็อกอยู่</h4>
+          <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">คุณต้องทำเครื่องหมายว่า "อ่านแล้ว" ในหน้าบทเรียนก่อน จึงจะสามารถทำแบบทดสอบได้</p>
+          <button 
+            @click="toggleProgress"
+            :disabled="isTogglingProgress"
+            class="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+          >
+            <Icon v-if="isTogglingProgress" icon="eos-icons:bubble-loading" class="w-4 h-4 inline mr-1" />
+            ทำเครื่องหมายว่าอ่านแล้ว
+          </button>
+        </div>
+
+        <LessonQuizSection
+            v-else
+            :questions="lesson.questions || []"
+            :lesson-id="lesson.id"
+            :is-creator="isCreator"
+            @create="openCreateQuestion"
+            @edit="openEditQuestion"
+            @update:questions="updateQuestions"
+        />
+      </div>
     </div>
   </div>
 

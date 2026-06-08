@@ -52,6 +52,26 @@ class AssignmentAnswerController extends Controller
             }
         }
 
+        // Completion requirement guard
+        $lesson = $assignment->getLesson();
+        if ($lesson && $lesson->require_completion_before_exercises) {
+            $isCourseAdmin = false;
+            if ($request->filled('course_id')) {
+                $course = \App\Models\Course::find($request->course_id);
+                if ($course) {
+                    $isCourseAdmin = $course->isAdmin(auth()->user());
+                }
+            }
+
+            if (!$lesson->canUserDoExercises(auth()->user(), $isCourseAdmin)) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'LESSON_COMPLETION_REQUIRED',
+                    'message' => 'กรุณาอ่านบทเรียนให้จบก่อนส่งงาน',
+                ], 422);
+            }
+        }
+
         $answer = $assignment->answers()->where('user_id', auth()->id())->first();
         if ($answer) {
             $oldPoints = $answer->points ?? 0;

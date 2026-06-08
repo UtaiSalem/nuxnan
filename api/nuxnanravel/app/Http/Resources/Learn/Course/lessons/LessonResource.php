@@ -46,6 +46,7 @@ class LessonResource extends JsonResource
             'status' => $this->status,
             'publication_status' => $this->publication_status,
             'access_type' => $this->access_type,
+            'require_completion_before_exercises' => (bool) $this->require_completion_before_exercises,
             'point_tuition_fee' => $this->point_tuition_fee,
             'money_tuition_fee' => $this->money_tuition_fee,
             'order' => $this->order,

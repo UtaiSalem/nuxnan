@@ -64,6 +64,7 @@ const form = ref({
   status: 1,
   publication_status: 'published',
   access_type: 'free',
+  require_completion_before_exercises: false,
 })
 
 // Temp images for upload
@@ -90,6 +91,7 @@ watch(
         status: lesson.status ?? 1,
         publication_status: lesson.publication_status ?? 'published',
         access_type: lesson.access_type ?? 'free',
+        require_completion_before_exercises: !!lesson.require_completion_before_exercises,
       }
       existingImages.value = lesson.images || []
     }
@@ -180,6 +182,7 @@ const handleSubmit = async () => {
     formData.append('status', String(form.value.status))
     formData.append('publication_status', form.value.publication_status)
     formData.append('access_type', form.value.access_type)
+    formData.append('require_completion_before_exercises', form.value.require_completion_before_exercises ? '1' : '0')
 
     // Add images
     tempImages.value.forEach((img, index) => {
@@ -476,6 +479,34 @@ const handleCancel = () => {
             min="0"
             class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
           />
+        </div>
+
+        <!-- Require Completion Before Exercises -->
+        <div class="flex items-center gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 col-span-1 md:col-span-2 lg:col-span-3">
+          <div class="flex-shrink-0">
+            <Icon icon="fluent:checkbox-checked-24-filled" class="w-8 h-8 text-blue-500" />
+          </div>
+          <div class="flex-grow">
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">
+              บังคับอ่านบทเรียนให้จบก่อนทำแบบฝึกหัด
+            </label>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              นักเรียนต้องทำเครื่องหมายว่าอ่านบทเรียนแล้วก่อน จึงจะสามารถส่งงานหรือตอบคำถามท้ายบทได้
+            </p>
+          </div>
+          <div class="flex-shrink-0">
+            <button
+              type="button"
+              @click="form.require_completion_before_exercises = !form.require_completion_before_exercises"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              :class="form.require_completion_before_exercises ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'"
+            >
+              <span
+                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                :class="form.require_completion_before_exercises ? 'translate-x-6' : 'translate-x-1'"
+              />
+            </button>
+          </div>
         </div>
       </div>
 

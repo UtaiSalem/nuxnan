@@ -36,6 +36,10 @@ class Lesson extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'require_completion_before_exercises' => 'boolean',
+    ];
+
     protected $appends = [
         'lesson_url',
     ];
@@ -147,6 +151,18 @@ class Lesson extends Model
     {
         $progress = $this->userProgress($user);
         return $progress && $progress->isCompleted();
+    }
+
+    /**
+     * Check if user is allowed to do exercises for this lesson
+     */
+    public function canUserDoExercises(?User $user, bool $isCourseAdmin = false): bool
+    {
+        if ($isCourseAdmin) return true;
+        if (!$this->require_completion_before_exercises) return true;
+        if (!$user) return false;
+        
+        return $this->isCompletedBy($user);
     }
 
     public function accesses(): HasMany

@@ -344,6 +344,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'status' => 'required',
                 'publication_status' => 'nullable|in:draft,published,archived',
                 'access_type' => 'nullable|in:free,points,money',
+                'require_completion_before_exercises' => 'nullable|boolean',
                 'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240', // 10MB max
             ]);
 
@@ -361,6 +362,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'status' => $validated['status'],
                 'publication_status' => $validated['publication_status'] ?? 'published',
                 'access_type' => $validated['access_type'] ?? 'free',
+                'require_completion_before_exercises' => (bool) ($request->require_completion_before_exercises ?? false),
             ]);
 
             // Upload images using helper method
@@ -466,6 +468,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'status' => 'required',
                 'publication_status' => 'nullable|in:draft,published,archived',
                 'access_type' => 'nullable|in:free,points,money',
+                'require_completion_before_exercises' => 'nullable|boolean',
                 'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             ]);
 
@@ -482,6 +485,9 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'status' => $validated['status'],
                 'publication_status' => $validated['publication_status'] ?? $lesson->publication_status,
                 'access_type' => $validated['access_type'] ?? $lesson->access_type,
+                'require_completion_before_exercises' => $request->has('require_completion_before_exercises') 
+                    ? (bool) $request->require_completion_before_exercises 
+                    : $lesson->require_completion_before_exercises,
             ]);
 
             // Upload new images if provided
