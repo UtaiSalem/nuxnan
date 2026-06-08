@@ -83,3 +83,9 @@ _(empty)_
 - Changed: `ui/pages/Learn/Courses/[id]/gradebook/eligibility.vue` adds group dropdown filtering, expanded individual search, group display in desktop/mobile rows, and filtered bulk unlock IDs.
 - Verification: `php -l app\Services\AttendanceEligibilityService.php` passed; `php -l app\Http\Controllers\Api\ExamEligibilityController.php` passed; Pint passed on touched PHP files; SFC parse of eligibility page passed; `git diff --check` passed.
 - Blocked verification: full `vue-tsc --noEmit` still fails on pre-existing project-wide TypeScript errors and `vue-router/volar/sfc-route-blocks` export issue; localhost route returns `302 /auth` without an authenticated session, so browser-content smoke was not completed.
+
+### 2026-06-07 - Added typing practice vocabulary migration
+- Changed: added `api/nuxnanravel/database/migrations/2026_06_07_103000_add_practice_words_to_typing_words_table.php`.
+- Details: migration inserts 60 active `typing_words` rows across Thai and English, all under category `practice_expansion`, using `updateOrInsert` keyed by language/difficulty/text.
+- Verification: `php -l database\migrations\2026_06_07_103000_add_practice_words_to_typing_words_table.php` passed; `php artisan migrate` ran and completed; DB count for `typing_words.category = practice_expansion` is 60.
+- Note: `php artisan tinker --execute` was blocked by PsySH history write permission, so count was verified with a Laravel bootstrap PHP one-liner instead.
