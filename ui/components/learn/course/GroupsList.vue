@@ -125,12 +125,28 @@ defineExpose({
     </div>
 
     <!-- Group Reorder (Admin Only) -->
-    <div v-if="isCourseAdmin && localGroups.length > 1" class="mb-4">
-      <GroupOrderWidget 
-        :groups="localGroups" 
-        :course-id="Number(courseId)" 
-        @saved="emit('refresh')"
-      />
+    <div v-if="isCourseAdmin && localGroups.length > 1" class="mb-6">
+      <details class="group bg-teal-50 dark:bg-teal-900/20 rounded-xl border border-teal-200 dark:border-teal-800 transition-all duration-300">
+        <summary class="flex items-center justify-between p-4 cursor-pointer list-none">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-teal-100 dark:bg-teal-800 rounded-lg group-open:rotate-12 transition-transform duration-300">
+              <Icon icon="fluent:re-order-24-regular" class="w-5 h-5 text-teal-600 dark:text-teal-400" />
+            </div>
+            <div>
+              <h4 class="font-bold text-gray-900 dark:text-white">จัดลำดับกลุ่ม</h4>
+              <p class="text-xs text-gray-500 dark:text-gray-400">ลากเพื่อเปลี่ยนลำดับการแสดงผลของกลุ่มเรียน</p>
+            </div>
+          </div>
+          <Icon icon="fluent:chevron-down-24-regular" class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform duration-300" />
+        </summary>
+        <div class="px-4 pb-4 animate-in fade-in slide-in-from-top-1 duration-300">
+          <GroupOrderWidget 
+            :groups="localGroups" 
+            :course-id="Number(courseId)" 
+            @saved="emit('refresh')"
+          />
+        </div>
+      </details>
     </div>
 
     <!-- Groups Grid -->

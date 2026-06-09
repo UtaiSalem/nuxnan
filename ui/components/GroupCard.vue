@@ -97,6 +97,23 @@ const isMemberOfOtherGroup = computed(() => {
     return member.value?.group_id && member.value.group_id != props.group.id
 })
 
+// Capacity Badge Logic
+const capacityInfo = computed(() => {
+    if (!props.group.max_members) return null
+    
+    const count = props.group.members_count || 0
+    const max = props.group.max_members
+    const remaining = max - count
+
+    if (count >= max) {
+        return { label: 'เต็ม (Full)', class: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' }
+    } else if (count / max >= 0.8) {
+        return { label: `เหลือ ${remaining} ที่`, class: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' }
+    } else {
+        return { label: `ว่าง ${remaining} ที่`, class: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' }
+    }
+})
+
 const handleJoinClick = async () => {
     if (isMemberOfOtherGroup.value) {
         const result = await Swal.fire({
@@ -131,6 +148,11 @@ const handleJoinClick = async () => {
       <!-- Overlay gradient -->
       <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
       
+      <!-- Capacity Badge -->
+      <div v-if="capacityInfo" class="absolute top-3 left-3 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm backdrop-blur-md" :class="capacityInfo.class">
+        {{ capacityInfo.label }}
+      </div>
+
       <!-- Admin Actions Badge -->
       <div v-if="isCourseAdmin" class="absolute top-3 right-3 flex items-center gap-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full px-2 py-1 shadow-lg">
         <button 
@@ -195,35 +217,28 @@ const handleJoinClick = async () => {
       <div v-else class="mb-4"></div>
 
       <!-- Stats -->
-      <div class="flex items-center justify-center gap-6 mb-5">
-        <!-- Members -->
-        <div class="text-center">
-          <div class="text-2xl font-black text-gray-900 dark:text-white">
-            {{ group.members_count || 0 }}
-          </div>
-          <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Members
-          </div>
+      <div class="flex flex-col items-center justify-center gap-3 mb-5">
+        <!-- Members (Primary Stat) -->
+        <div class="flex items-center gap-2">
+            <span class="text-3xl font-black text-gray-900 dark:text-white leading-none">
+                {{ group.members_count || 0 }}
+            </span>
+            <span class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">
+                Members
+            </span>
         </div>
 
-        <!-- Posts -->
-        <div class="text-center">
-          <div class="text-2xl font-black text-gray-900 dark:text-white">
-            {{ group.posts_count || 0 }}
-          </div>
-          <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Posts
-          </div>
-        </div>
-
-        <!-- Visits -->
-        <div class="text-center">
-          <div class="text-2xl font-black text-gray-900 dark:text-white">
-            {{ (group.visits_count && group.visits_count >= 1000) ? (group.visits_count / 1000).toFixed(1) + 'K' : (group.visits_count || 0) }}
-          </div>
-          <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Visits
-          </div>
+        <!-- Posts & Visits (Secondary Stats) -->
+        <div class="flex items-center gap-4 text-gray-400 dark:text-gray-500">
+            <div class="flex items-center gap-1">
+                <Icon icon="fluent:chat-24-regular" class="w-3.5 h-3.5" />
+                <span class="text-xs font-semibold">{{ formatNumber(group.posts_count) }} Posts</span>
+            </div>
+            <div class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+            <div class="flex items-center gap-1">
+                <Icon icon="fluent:eye-24-regular" class="w-3.5 h-3.5" />
+                <span class="text-xs font-semibold">{{ formatNumber(group.visits_count) }} Visits</span>
+            </div>
         </div>
       </div>
 
@@ -233,7 +248,7 @@ const handleJoinClick = async () => {
           <div 
             v-for="(member, index) in memberAvatars" 
             :key="index"
-            class="relative w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 overflow-hidden shadow-md hover:scale-110 hover:z-10 transition-transform"
+            class="relative w-8 h-8 rounded-full border-2 border-white dark:border-gray-800 overflow-hidden shadow-md hover:scale-110 hover:z-10 transition-transform"
             :title="member.name"
           >
             <img 
@@ -246,9 +261,9 @@ const handleJoinClick = async () => {
           <!-- Remaining count -->
           <div 
             v-if="remainingMembers > 0"
-            class="relative w-10 h-10 rounded-full border-2 border-white dark:border-gray-800 bg-gradient-to-br from-slate-400 to-gray-500 flex items-center justify-center shadow-md"
+            class="relative w-8 h-8 rounded-full border-2 border-white dark:border-gray-800 bg-gradient-to-br from-slate-400 to-gray-500 flex items-center justify-center shadow-md"
           >
-            <span class="text-xs font-bold text-white">+{{ remainingMembers }}</span>
+            <span class="text-[10px] font-bold text-white">+{{ remainingMembers }}</span>
           </div>
         </div>
       </div>

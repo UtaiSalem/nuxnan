@@ -22,6 +22,18 @@ const page = usePage()
 
 // State
 const groups = computed(() => courseGroupStore.groups)
+const ungroupedMembersCount = computed(() => courseGroupStore.ungroupedMembers?.length || 0)
+
+// Computed stats for summary strip
+const groupStats = computed(() => {
+    const list = groups.value || []
+    return {
+        total: list.length,
+        full: list.filter(g => g.max_members && (g.members_count || 0) >= g.max_members).length,
+        available: list.filter(g => !g.max_members || (g.members_count || 0) < g.max_members).length
+    }
+})
+
 const isLoading = ref(false)
 const showCreateModal = ref(false)
 const editingGroup = ref<any>(null)
@@ -66,7 +78,7 @@ const joiningGroupId = ref<number | null>(null)
 const handleJoin = async (groupId: number) => {
   // Check Points first
   const userPP = authStore.user?.pp || 0
-  const tuitionFees = courseStore.course?.tuition_fees || 0
+  const tuitionFees = course?.value?.tuition_fees || 0
 
   if (userPP < tuitionFees) {
       await swal.fire({
@@ -119,6 +131,11 @@ const handleJoin = async (groupId: number) => {
                  ...memberData // usage of memberData properties if needed
              }
          })
+    }
+
+    // Update Ungrouped Members (Optimistic)
+    if (courseGroupStore.ungroupedMembers) {
+        courseGroupStore.ungroupedMembers = courseGroupStore.ungroupedMembers.filter((m: any) => m.user_id !== userId)
     }
 
     // --- 2. Update Stores ---
@@ -206,9 +223,35 @@ watch(() => course?.value?.id, async (newId) => {
       <Icon icon="svg-spinners:ring-resize" class="w-8 h-8 text-blue-500" />
     </div>
 
+    <!-- Summary Strip (Admin Only) -->
+    <div v-if="isCourseAdmin && !isLoading" class="mb-4 flex flex-wrap items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium border border-blue-100 dark:border-blue-800">
+        <Icon icon="fluent:document-table-search-24-regular" class="w-4 h-4" />
+        📊 {{ groupStats.total }} กลุ่ม
+      </div>
+      
+      <div 
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg text-sm font-medium border border-amber-100 dark:border-amber-800"
+        :class="ungroupedMembersCount > 0 ? 'cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/50' : ''"
+      >
+        <Icon icon="fluent:person-question-mark-24-regular" class="w-4 h-4" />
+        👤 {{ ungroupedMembersCount }} ยังไม่มีกลุ่ม
+      </div>
+
+      <div class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm font-medium border border-red-100 dark:border-red-800">
+        <Icon icon="fluent:presence-blocked-24-regular" class="w-4 h-4" />
+        🔴 {{ groupStats.full }} เต็ม
+      </div>
+
+      <div class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg text-sm font-medium border border-emerald-100 dark:border-emerald-800">
+        <Icon icon="fluent:presence-available-24-regular" class="w-4 h-4" />
+        🟢 {{ groupStats.available }} ว่าง
+      </div>
+    </div>
+
     <!-- Groups List -->
     <GroupsList 
-      v-else
+      v-if="!isLoading"
       ref="groupsListRef"
       :groups="groups"
       :course-id="course?.id"
