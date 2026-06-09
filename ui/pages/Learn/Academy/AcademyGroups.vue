@@ -6,6 +6,7 @@ import { useApi } from '~/composables/useApi';
 
 import AcademyLayout from '@/layouts/AcademyLayout.vue';
 import AcademyGroupCard from '@/components/learn/academy/AcademyGroupCard.vue';
+import AcademyGroupOrderWidget from '@/components/academy/AcademyGroupOrderWidget.vue';
 
 const route = useRoute();
 const api = useApi();
@@ -187,6 +188,14 @@ onMounted(async () => {
                         สร้างกลุ่มใหม่
                     </button>
                 </div>
+
+                <!-- Reorder Groups Widget (Admin only) -->
+                <AcademyGroupOrderWidget
+                    v-if="isAcademyAdmin && groups.length > 1"
+                    :groups="groups"
+                    :academyId="academy?.id || academy?.data?.id"
+                    @saved="fetchGroups"
+                />
 
                 <!-- Loading State -->
                 <div v-if="isLoading" class="flex justify-center items-center h-[40vh]">

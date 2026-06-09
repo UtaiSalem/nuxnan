@@ -36,6 +36,15 @@ class Lesson extends Model
 
     protected $guarded = [];
 
+    protected static function booted()
+    {
+        static::creating(function ($lesson) {
+            if (!$lesson->order) {
+                $lesson->order = static::where('course_id', $lesson->course_id)->max('order') + 1;
+            }
+        });
+    }
+
     protected $casts = [
         'require_completion_before_exercises' => 'boolean',
     ];

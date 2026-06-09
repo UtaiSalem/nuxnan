@@ -8,11 +8,14 @@
 
 ## สถานะปัจจุบัน (2026-06-09)
 
-### ไม่มีงานค้าง — พร้อมรับงานใหม่
+### งานที่เพิ่งเสร็จสิ้น — Verified & Tested
 
-- **In Progress:** —
-- **TODO:** Academy Group Reorder UI (Optional)
-- **Pending Commit:** Sort Order System changes (Migrations, Controllers, Routes, Models, Resources, UI Widgets)
+- **Done:** Sort Order System (Topics, Course Groups, Academy Groups)
+    - Backend: Automatic `sort_order` in Models, Strict Validation in Controllers, `isAdmin` in Academy model, and Eager Loading (N+1 fix).
+    - Testing: 23/23 tests passed (Feature, Edge cases, Idempotency).
+    - UI: Improved Topic Reorder discoverability with accordion widget at the top of lesson cards.
+- **TODO:** —
+- **Pending Commit:** All Sort Order System changes (Models, Controllers, Tests, Academy model fix).
 
 ---
 
@@ -21,6 +24,7 @@
 | วันที่ | งาน | สถานะ |
 |--------|------|-------|
 | 2026-06-09 | Sort Order System (Topics, Course Groups, Academy Groups) | ✅ Done |
+| 2026-06-09 | Academy Group Reorder UI Implementation | ✅ Done |
 | 2026-06-08 | Lesson Completion Requirement (บังคับอ่านก่อนทำแบบฝึกหัด) | ✅ Done |
 | 2026-06-08 | Course Member Removal/Leave Workflow v2 | ✅ Done |
 | 2026-06-07 | Eligibility Roster Filtering + Backlog Cleanup | ✅ Done |

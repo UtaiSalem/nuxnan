@@ -51,6 +51,7 @@ class LessonResource extends JsonResource
             'money_tuition_fee' => $this->money_tuition_fee,
             'order' => $this->order,
             'display_order' => $this->display_order ?? null,
+            'topics_count' => $this->topics_count ?? ($this->relationLoaded('topics') ? $this->topics->count() : 0),
             'assigned_groups' => $this->assigned_groups,
             'is_liked_by_auth' => $this->likes()->where('user_id', auth()->id())->exists(),
             'is_disliked_by_auth' => $this->dislikes()->where('user_id', auth()->id())->exists(),

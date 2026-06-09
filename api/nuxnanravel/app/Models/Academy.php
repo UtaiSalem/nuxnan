@@ -84,6 +84,17 @@ class Academy extends Model
         return $this->hasOne(AcademySetting::class, 'academy_id');
     }
 
+    public function isAdmin($user)
+    {
+        if (!$user) return false;
+        
+        if ($user->isSuperAdmin()) return true;
+
+        return $this->user_id === $user->id || 
+               $this->owner_id === $user->id ||
+               $this->academyAdmins()->where('user_id', $user->id)->exists();
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

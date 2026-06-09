@@ -261,7 +261,7 @@ class Course extends Model
 
     public function course_lessons(): HasMany
     {
-        return $this->hasMany(Lesson::class);
+        return $this->hasMany(Lesson::class)->orderBy('order')->orderBy('id');
     }
 
     /**
@@ -269,7 +269,7 @@ class Course extends Model
      */
     public function courseLessons(): HasMany
     {
-        return $this->hasMany(Lesson::class);
+        return $this->hasMany(Lesson::class)->orderBy('order')->orderBy('id');
     }
 
     public function topics(): HasMany

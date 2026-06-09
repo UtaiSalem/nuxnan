@@ -21,6 +21,14 @@ class Topic extends Model
     
     protected $guarded = [];
 
+    protected static function booted()
+    {
+        static::creating(function ($topic) {
+            if (!$topic->sort_order) {
+                $topic->sort_order = static::where('lesson_id', $topic->lesson_id)->max('sort_order') + 1;
+            }
+        });
+    }
 
     public function user(): BelongsTo
     {

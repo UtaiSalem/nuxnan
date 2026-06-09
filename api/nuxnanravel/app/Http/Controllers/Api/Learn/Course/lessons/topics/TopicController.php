@@ -40,7 +40,6 @@ class TopicController extends \App\Http\Controllers\Controller
             'content'       => ($validatedData['content'] ?? null) === "null" ? null : ($validatedData['content'] ?? null),
             'youtube_url'   => ($validatedData['youtube_url'] ?? null) === "null" ? null : ($validatedData['youtube_url'] ?? null),
             'min_read'      => $validatedData['min_read'],
-            'sort_order'    => $lesson->topics()->max('sort_order') + 1,
         ]);
 
         // a section to store images files
@@ -261,9 +260,23 @@ class TopicController extends \App\Http\Controllers\Controller
                 'topics.*' => 'required|integer|exists:topics,id',
             ]);
 
-            // Verify topic IDs belong to this lesson
+            // Verify topic IDs belong to this lesson and all are present
             $lessonTopicIds = $lesson->topics()->pluck('id')->toArray();
             $incomingIds = $validated['topics'];
+
+            if (count($incomingIds) !== count($lessonTopicIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'จำนวนหัวข้อไม่ถูกต้อง กรุณาส่งรายการหัวข้อทั้งหมดในบทเรียน',
+                ], 422);
+            }
+
+            if (count($incomingIds) !== count(array_unique($incomingIds))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'มีไอดีหัวข้อซ้ำในรายการที่ส่งมา',
+                ], 422);
+            }
 
             foreach ($incomingIds as $id) {
                 if (!in_array($id, $lessonTopicIds)) {

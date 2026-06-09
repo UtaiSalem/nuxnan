@@ -37,8 +37,6 @@ class AcademyGroupController extends Controller
             'settings' => 'nullable|array'
         ]);
 
-        $validated['sort_order'] = $academy->academyGroups()->max('sort_order') + 1;
-
         $group = $academy->academyGroups()->create($validated);
 
         return response()->json([
@@ -239,9 +237,23 @@ class AcademyGroupController extends Controller
                 'groups.*' => 'required|integer|exists:academy_groups,id',
             ]);
 
-            // Verify group IDs belong to this academy
+            // Verify group IDs belong to this academy and all are present
             $academyGroupIds = $academy->academyGroups()->pluck('id')->toArray();
             $incomingIds = $validated['groups'];
+
+            if (count($incomingIds) !== count($academyGroupIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'จำนวนกลุ่มไม่ถูกต้อง กรุณาส่งรายการกลุ่มทั้งหมดในสถาบันนี้',
+                ], 422);
+            }
+
+            if (count($incomingIds) !== count(array_unique($incomingIds))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'มีไอดีกลุ่มซ้ำในรายการที่ส่งมา',
+                ], 422);
+            }
 
             foreach ($incomingIds as $id) {
                 if (!in_array($id, $academyGroupIds)) {

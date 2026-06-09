@@ -150,8 +150,6 @@ class CourseGroupController extends Controller
                 $groupData['auto_accept_member'] = $validated['auto_accept_member'] ?? 1;
             }
 
-            $groupData['sort_order'] = $course->courseGroups()->max('sort_order') + 1;
-
             $newGroup = $course->courseGroups()->create($groupData);
 
             // Update groups count in course
@@ -289,9 +287,23 @@ class CourseGroupController extends Controller
                 'groups.*' => 'required|integer|exists:course_groups,id',
             ]);
 
-            // Verify group IDs belong to this course
+            // Verify group IDs belong to this course and all are present
             $courseGroupIds = $course->courseGroups()->pluck('id')->toArray();
             $incomingIds = $validated['groups'];
+
+            if (count($incomingIds) !== count($courseGroupIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'จำนวนกลุ่มไม่ถูกต้อง กรุณาส่งรายการกลุ่มทั้งหมดในรายวิชานี้',
+                ], 422);
+            }
+
+            if (count($incomingIds) !== count(array_unique($incomingIds))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'มีไอดีกลุ่มซ้ำในรายการที่ส่งมา',
+                ], 422);
+            }
 
             foreach ($incomingIds as $id) {
                 if (!in_array($id, $courseGroupIds)) {

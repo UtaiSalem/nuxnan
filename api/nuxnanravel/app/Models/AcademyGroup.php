@@ -18,6 +18,15 @@ class AcademyGroup extends Model
         'settings' => 'array',
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($group) {
+            if (!$group->sort_order) {
+                $group->sort_order = static::where('academy_id', $group->academy_id)->max('sort_order') + 1;
+            }
+        });
+    }
+
     public function academy(): BelongsTo
     {
         return $this->belongsTo(Academy::class);

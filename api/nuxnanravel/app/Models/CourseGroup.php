@@ -31,6 +31,15 @@ class CourseGroup extends Model
         'max_members' => 'integer',
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($group) {
+            if (!$group->sort_order) {
+                $group->sort_order = static::where('course_id', $group->course_id)->max('sort_order') + 1;
+            }
+        });
+    }
+
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);

@@ -41,6 +41,14 @@ class CourseMemberController extends Controller
         $this->removalService = $removalService;
     }
 
+    private function orderedCourseLessons(Course $course)
+    {
+        return $course->courseLessons()
+            ->orderByRaw('`order` IS NULL')
+            ->orderBy('order')
+            ->orderBy('created_at');
+    }
+
     public function index(Course $course, Request $request)
     {
         $query = $course->courseMembers()->with('user', 'group', 'course');
@@ -110,7 +118,7 @@ class CourseMemberController extends Controller
         $userId = $member->user_id;
 
         // Get all lessons with completion status
-        $lessons = $course->courseLessons()->get()->map(function ($lesson) use ($userId) {
+        $lessons = $this->orderedCourseLessons($course)->get()->map(function ($lesson) use ($userId) {
             $progress = \App\Models\LessonProgress::where('lesson_id', $lesson->id)
                 ->where('user_id', $userId)
                 ->first();
@@ -128,7 +136,7 @@ class CourseMemberController extends Controller
 
         // Get all assignments (course + lesson) with submission status and scores
         $courseAssignments = $course->courseAssignments;
-        $lessonAssignments = $course->courseLessons()->with('assignments')->get()->flatMap->assignments;
+        $lessonAssignments = $this->orderedCourseLessons($course)->with('assignments')->get()->flatMap->assignments;
         $allAssignments = $courseAssignments->merge($lessonAssignments);
 
         // Filter assignments based on status and group
@@ -807,7 +815,7 @@ class CourseMemberController extends Controller
         $userId = $course_member->user_id;
 
         // Get all lessons with completion status
-        $lessons = $course->courseLessons()->get()->map(function ($lesson) use ($userId) {
+        $lessons = $this->orderedCourseLessons($course)->get()->map(function ($lesson) use ($userId) {
             $progress = \App\Models\LessonProgress::where('lesson_id', $lesson->id)
                 ->where('user_id', $userId)
                 ->first();
@@ -825,7 +833,7 @@ class CourseMemberController extends Controller
 
         // Get all assignments with submission status and scores
         $courseAssignments = $course->courseAssignments;
-        $lessonAssignments = $course->courseLessons()->with('assignments')->get()->flatMap->assignments;
+        $lessonAssignments = $this->orderedCourseLessons($course)->with('assignments')->get()->flatMap->assignments;
         $allAssignments = $courseAssignments->merge($lessonAssignments);
 
         $assignments = $allAssignments->filter(function ($assignment) use ($course_member) {

@@ -110,7 +110,11 @@ export const useCourseStore = defineStore('course', () => {
   }
 
   const fetchLessons = async (courseId: string | number, forceRefresh = false) => {
-    if (!forceRefresh && lessons.value.length > 0 && currentCourse.value?.id == courseId) {
+    const normalizedCourseId = Number(courseId)
+    const lessonsBelongToCourse = lessons.value.length > 0
+      && lessons.value.every((lesson: any) => Number(lesson.course_id) === normalizedCourseId)
+
+    if (!forceRefresh && lessonsBelongToCourse && currentCourse.value?.id == courseId) {
       return { success: true, lessons: lessons.value }
     }
 

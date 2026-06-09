@@ -61,6 +61,8 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             $isCourseAdmin = $course->isAdmin(auth()->user());
 
             $lessonsQuery = $course->courseLessons()
+                ->with('topics')
+                ->withCount('topics')
                 ->orderByRaw('`order` IS NULL')
                 ->orderBy('order')
                 ->orderBy('created_at');
@@ -356,7 +358,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'description' => ($validated['description'] === 'null' || $validated['description'] === '') ? null : $validated['description'],
                 'content' => ($validated['content'] === 'null' || $validated['content'] === '') ? null : $validated['content'],
                 'youtube_url' => ($validated['youtube_url'] === 'null' || $validated['youtube_url'] === '') ? null : $validated['youtube_url'],
-                'order' => $validated['order'] ?? ($course->courseLessons()->max('order') + 1),
+                'order' => $validated['order'] ?? null,
                 'min_read' => $validated['min_read'] ?? 1,
                 'point_tuition_fee' => $validated['point_tuition_fee'] ?? 0,
                 'money_tuition_fee' => $validated['money_tuition_fee'] ?? null,

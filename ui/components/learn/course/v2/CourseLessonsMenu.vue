@@ -18,14 +18,19 @@ const currentLessonId = computed(() => {
 })
 
 const fetchLessons = async () => {
-  if (lessons.value.length === 0) {
-    isLoading.value = true
-    await courseStore.fetchLessons(props.courseId)
+  isLoading.value = true
+  try {
+    await courseStore.fetchLessons(props.courseId, true)
+  } finally {
     isLoading.value = false
   }
 }
 
 onMounted(() => {
+  fetchLessons()
+})
+
+watch(() => props.courseId, () => {
   fetchLessons()
 })
 
