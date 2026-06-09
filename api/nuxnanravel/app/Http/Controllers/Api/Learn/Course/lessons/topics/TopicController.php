@@ -15,6 +15,7 @@ use App\Http\Resources\Learn\Academy\AcademyResource;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\Learn\Course\questions\QuestionResource;
 use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
+use Illuminate\Support\Facades\DB;
 
 class TopicController extends \App\Http\Controllers\Controller
 {
@@ -39,6 +40,7 @@ class TopicController extends \App\Http\Controllers\Controller
             'content'       => ($validatedData['content'] ?? null) === "null" ? null : ($validatedData['content'] ?? null),
             'youtube_url'   => ($validatedData['youtube_url'] ?? null) === "null" ? null : ($validatedData['youtube_url'] ?? null),
             'min_read'      => $validatedData['min_read'],
+            'sort_order'    => $lesson->topics()->max('sort_order') + 1,
         ]);
 
         // a section to store images files
@@ -237,5 +239,60 @@ class TopicController extends \App\Http\Controllers\Controller
         return response()->json([
             'assignment' => new AssignmentResource($assignment),
         ], 200);
+    }
+
+    /**
+     * Reorder topics in a lesson
+     */
+    public function reorder(Lesson $lesson, Request $request)
+    {
+        try {
+            // Check permission
+            if (!$lesson->course->isAdmin(auth()->user())) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คุณไม่มีสิทธิ์จัดลำดับหัวข้อในบทเรียนนี้',
+                ], 403);
+            }
+
+            // Validate request
+            $validated = $request->validate([
+                'topics' => 'required|array|min:1',
+                'topics.*' => 'required|integer|exists:topics,id',
+            ]);
+
+            // Verify topic IDs belong to this lesson
+            $lessonTopicIds = $lesson->topics()->pluck('id')->toArray();
+            $incomingIds = $validated['topics'];
+
+            foreach ($incomingIds as $id) {
+                if (!in_array($id, $lessonTopicIds)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "หัวข้อ ID {$id} ไม่ได้อยู่ในบทเรียนนี้",
+                    ], 422);
+                }
+            }
+
+            // Perform reorder in transaction
+            DB::transaction(function () use ($incomingIds) {
+                foreach ($incomingIds as $index => $id) {
+                    Topic::where('id', $id)->update(['sort_order' => $index + 1]);
+                }
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'บันทึกลำดับหัวข้อสำเร็จ',
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error('Error reordering topics: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาดในการจัดลำดับหัวข้อ',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
     }
 }

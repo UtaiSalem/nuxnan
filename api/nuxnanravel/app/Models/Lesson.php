@@ -56,7 +56,7 @@ class Lesson extends Model
 
     public function topics(): HasMany
     {
-        return $this->hasMany(Topic::class);
+        return $this->hasMany(Topic::class)->orderBy('sort_order')->orderBy('id');
     }
 
     public function images(): HasMany

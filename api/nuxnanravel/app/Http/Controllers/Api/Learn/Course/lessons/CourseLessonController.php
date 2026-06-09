@@ -6,6 +6,7 @@ use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
 use App\Models\Course;
 use App\Models\Lesson;
+use App\Services\CourseMediaService;
 use App\Services\LessonAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;

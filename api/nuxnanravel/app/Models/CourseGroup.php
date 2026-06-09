@@ -23,6 +23,7 @@ class CourseGroup extends Model
         'color',
         'max_members',
         'cover',
+        'sort_order',
     ];
 
     protected $casts = [

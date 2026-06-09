@@ -64,6 +64,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     // Academy Groups
     Route::get('/{academy}/groups', [AcademyGroupController::class, 'index'])->name('academy.groups.index');
+    Route::patch('/{academy}/groups/reorder', [AcademyGroupController::class, 'reorder'])->name('academy.groups.reorder');
     Route::get('/{academy}/groups/type/{type}', [AcademyGroupController::class, 'getByType'])->name('academy.groups.byType');
     Route::post('/{academy}/groups', [AcademyGroupController::class, 'store'])->name('academy.groups.store');
     Route::get('/groups/{academyGroup}', [AcademyGroupController::class, 'show'])->name('academy.groups.show');

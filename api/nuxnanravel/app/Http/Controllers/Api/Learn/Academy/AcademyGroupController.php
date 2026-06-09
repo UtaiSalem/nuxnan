@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyGroup;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AcademyGroupController extends Controller
 {
@@ -20,7 +21,7 @@ class AcademyGroupController extends Controller
     {
         return response()->json([
             'success' => true,
-            'groups' => $academy->academyGroups()->get()
+            'groups' => $academy->academyGroups()->withCount('members')->get()
         ]);
     }
 
@@ -35,6 +36,8 @@ class AcademyGroupController extends Controller
             'type' => 'required|string|in:department,classroom,club',
             'settings' => 'nullable|array'
         ]);
+
+        $validated['sort_order'] = $academy->academyGroups()->max('sort_order') + 1;
 
         $group = $academy->academyGroups()->create($validated);
 
@@ -214,5 +217,60 @@ class AcademyGroupController extends Controller
                 ];
             })
         ]);
+    }
+
+    /**
+     * Reorder academy groups
+     */
+    public function reorder(Academy $academy, Request $request)
+    {
+        try {
+            // Permission check (Academy Admin or Super Admin)
+            if (!$academy->isAdmin(auth()->user())) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คุณไม่มีสิทธิ์จัดลำดับกลุ่มในสถาบันนี้',
+                ], 403);
+            }
+
+            // Validate request
+            $validated = $request->validate([
+                'groups' => 'required|array|min:1',
+                'groups.*' => 'required|integer|exists:academy_groups,id',
+            ]);
+
+            // Verify group IDs belong to this academy
+            $academyGroupIds = $academy->academyGroups()->pluck('id')->toArray();
+            $incomingIds = $validated['groups'];
+
+            foreach ($incomingIds as $id) {
+                if (!in_array($id, $academyGroupIds)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "กลุ่ม ID {$id} ไม่ได้อยู่ในสถาบันนี้",
+                    ], 422);
+                }
+            }
+
+            // Perform reorder in transaction
+            DB::transaction(function () use ($incomingIds) {
+                foreach ($incomingIds as $index => $id) {
+                    AcademyGroup::where('id', $id)->update(['sort_order' => $index + 1]);
+                }
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'บันทึกลำดับกลุ่มสำเร็จ',
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error('Error reordering academy groups: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาดในการจัดลำดับกลุ่ม',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
     }
 }

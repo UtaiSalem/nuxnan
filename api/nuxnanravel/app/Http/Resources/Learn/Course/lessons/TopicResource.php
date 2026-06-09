@@ -41,6 +41,7 @@ class TopicResource extends JsonResource
             'post_type'         => $this->post_type,
             'source_platform'   => $this->source_platform,
             'parent_post_id'    => $this->parent_post_id,
+            'sort_order'        => $this->sort_order,
             'created_at'        => $this->created_at,
             'diff_humans_created_at'    => $this->created_at->diffForHumans(),
         ];

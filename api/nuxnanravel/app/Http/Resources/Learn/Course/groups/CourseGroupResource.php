@@ -50,6 +50,7 @@ class CourseGroupResource extends JsonResource
             'color' => $this->color ?? '#3B82F6',
             'max_members' => $this->max_members,
             'auto_accept_member' => $this->auto_accept_member,
+            'sort_order' => $this->sort_order,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'members_count' => $groupMembers->count(),

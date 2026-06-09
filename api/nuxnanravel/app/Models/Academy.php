@@ -96,7 +96,7 @@ class Academy extends Model
 
     public function academyGroups(): HasMany
     {
-        return $this->hasMany(AcademyGroup::class);
+        return $this->hasMany(AcademyGroup::class)->orderBy('sort_order')->orderBy('id');
     }
 
     public function academyAdmins(): HasMany

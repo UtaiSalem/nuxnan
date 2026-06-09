@@ -147,6 +147,32 @@ export const useCourseStore = defineStore('course', () => {
     }
   }
 
+  const reorderTopics = async (lessonId: number, topicIds: number[]) => {
+    try {
+      const api = useApi()
+      const response = await api.patch(`/api/lessons/${lessonId}/topics/reorder`, {
+        topics: topicIds
+      })
+      return response
+    } catch (err: any) {
+      console.error('Error reordering topics in store:', err)
+      throw err
+    }
+  }
+
+  const reorderGroups = async (courseId: number, groupIds: number[]) => {
+    try {
+      const api = useApi()
+      const response = await api.patch(`/api/courses/${courseId}/groups/reorder`, {
+        groups: groupIds
+      })
+      return response
+    } catch (err: any) {
+      console.error('Error reordering groups in store:', err)
+      throw err
+    }
+  }
+
   return {
     // State
     currentCourse,
@@ -172,6 +198,8 @@ export const useCourseStore = defineStore('course', () => {
     clearCourse,
     fetchCourse,
     fetchLessons,
-    reorderLessons
+    reorderLessons,
+    reorderTopics,
+    reorderGroups
   }
 })

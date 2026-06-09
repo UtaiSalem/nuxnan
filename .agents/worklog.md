@@ -6,13 +6,13 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-06-08)
+## สถานะปัจจุบัน (2026-06-09)
 
 ### ไม่มีงานค้าง — พร้อมรับงานใหม่
 
 - **In Progress:** —
-- **TODO:** —
-- **Pending Commit:** ดู `git status` (มี uncommitted changes จาก feature ล่าสุด)
+- **TODO:** Academy Group Reorder UI (Optional)
+- **Pending Commit:** Sort Order System changes (Migrations, Controllers, Routes, Models, Resources, UI Widgets)
 
 ---
 
@@ -20,6 +20,7 @@
 
 | วันที่ | งาน | สถานะ |
 |--------|------|-------|
+| 2026-06-09 | Sort Order System (Topics, Course Groups, Academy Groups) | ✅ Done |
 | 2026-06-08 | Lesson Completion Requirement (บังคับอ่านก่อนทำแบบฝึกหัด) | ✅ Done |
 | 2026-06-08 | Course Member Removal/Leave Workflow v2 | ✅ Done |
 | 2026-06-07 | Eligibility Roster Filtering + Backlog Cleanup | ✅ Done |

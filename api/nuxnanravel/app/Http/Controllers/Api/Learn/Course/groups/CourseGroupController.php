@@ -8,6 +8,7 @@ use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Course;
 use App\Models\CourseGroup;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -149,6 +150,8 @@ class CourseGroupController extends Controller
                 $groupData['auto_accept_member'] = $validated['auto_accept_member'] ?? 1;
             }
 
+            $groupData['sort_order'] = $course->courseGroups()->max('sort_order') + 1;
+
             $newGroup = $course->courseGroups()->create($groupData);
 
             // Update groups count in course
@@ -264,5 +267,60 @@ class CourseGroupController extends Controller
             'success' => true,
             'groupsCount' => $course->groups,
         ], 200);
+    }
+
+    /**
+     * Reorder course groups
+     */
+    public function reorder(Course $course, Request $request)
+    {
+        try {
+            // Check permission
+            if (!$course->isAdmin(auth()->user())) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คุณไม่มีสิทธิ์จัดลำดับกลุ่มในรายวิชานี้',
+                ], 403);
+            }
+
+            // Validate request
+            $validated = $request->validate([
+                'groups' => 'required|array|min:1',
+                'groups.*' => 'required|integer|exists:course_groups,id',
+            ]);
+
+            // Verify group IDs belong to this course
+            $courseGroupIds = $course->courseGroups()->pluck('id')->toArray();
+            $incomingIds = $validated['groups'];
+
+            foreach ($incomingIds as $id) {
+                if (!in_array($id, $courseGroupIds)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "กลุ่ม ID {$id} ไม่ได้อยู่ในรายวิชานี้",
+                    ], 422);
+                }
+            }
+
+            // Perform reorder in transaction
+            DB::transaction(function () use ($incomingIds) {
+                foreach ($incomingIds as $index => $id) {
+                    CourseGroup::where('id', $id)->update(['sort_order' => $index + 1]);
+                }
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'บันทึกลำดับกลุ่มสำเร็จ',
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error('Error reordering groups: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาดในการจัดลำดับกลุ่ม',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
     }
 }

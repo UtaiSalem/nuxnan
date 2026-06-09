@@ -339,7 +339,7 @@ class Course extends Model
 
     public function courseGroups(): HasMany
     {
-        return $this->hasMany(CourseGroup::class)->orderBy('created_at', 'asc');
+        return $this->hasMany(CourseGroup::class)->orderBy('sort_order')->orderBy('id');
     }
 
     /**

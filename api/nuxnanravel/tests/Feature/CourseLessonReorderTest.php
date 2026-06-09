@@ -36,10 +36,11 @@ class CourseLessonReorderTest extends TestCase
     public function course_admin_can_reorder_lessons()
     {
         $lessonIds = $this->lessons->pluck('id')->toArray();
+        // New order: [ID2, ID0, ID1]
         $newOrder = [
-            ['id' => $lessonIds[2], 'order' => 1],
-            ['id' => $lessonIds[0], 'order' => 2],
-            ['id' => $lessonIds[1], 'order' => 3],
+            $lessonIds[2],
+            $lessonIds[0],
+            $lessonIds[1],
         ];
 
         $response = $this->actingAs($this->admin, 'api')
@@ -50,7 +51,7 @@ class CourseLessonReorderTest extends TestCase
         $response->assertStatus(200)
             ->assertJson(['success' => true]);
 
-        // Verify in DB
+        // Verify in DB - Controller sets order as index + 1
         $this->assertDatabaseHas('lessons', ['id' => $lessonIds[2], 'order' => 1]);
         $this->assertDatabaseHas('lessons', ['id' => $lessonIds[0], 'order' => 2]);
         $this->assertDatabaseHas('lessons', ['id' => $lessonIds[1], 'order' => 3]);
@@ -60,9 +61,7 @@ class CourseLessonReorderTest extends TestCase
     public function non_admin_cannot_reorder_lessons()
     {
         $lessonIds = $this->lessons->pluck('id')->toArray();
-        $newOrder = [
-            ['id' => $lessonIds[0], 'order' => 1],
-        ];
+        $newOrder = [$lessonIds[0]];
 
         $response = $this->actingAs($this->student, 'api')
             ->patchJson("/api/courses/{$this->course->id}/lessons/reorder", [
@@ -80,11 +79,43 @@ class CourseLessonReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/courses/{$this->course->id}/lessons/reorder", [
-                'lessons' => [
-                    ['id' => $otherLesson->id, 'order' => 1]
-                ]
+                'lessons' => [$otherLesson->id]
             ]);
 
         $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function reorder_with_empty_array_returns_422()
+    {
+        $response = $this->actingAs($this->admin, 'api')
+            ->patchJson("/api/courses/{$this->course->id}/lessons/reorder", [
+                'lessons' => []
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function reorder_preserves_order_after_index_fetch()
+    {
+        $lessonIds = $this->lessons->pluck('id')->toArray();
+        $newOrder = [$lessonIds[1], $lessonIds[2], $lessonIds[0]];
+
+        $this->actingAs($this->admin, 'api')
+            ->patchJson("/api/courses/{$this->course->id}/lessons/reorder", [
+                'lessons' => $newOrder
+            ]);
+
+        $response = $this->actingAs($this->admin, 'api')
+            ->getJson("/api/courses/{$this->course->id}/lessons");
+
+        $response->assertStatus(200);
+        
+        $lessons = $response->json()['lessons'];
+        $returnedIds = collect(isset($lessons['data']) ? $lessons['data'] : $lessons)->pluck('id')->toArray();
+        
+        // Check if the order matches the newOrder
+        $this->assertEquals($newOrder, $returnedIds);
     }
 }

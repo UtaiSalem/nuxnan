@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import GroupOrderWidget from '~/components/learn/course/groups/GroupOrderWidget.vue'
 
 interface Props {
   groups: any[]
@@ -121,6 +122,15 @@ defineExpose({
           <span class="hidden sm:inline">เพิ่มกลุ่ม</span>
         </button>
       </div>
+    </div>
+
+    <!-- Group Reorder (Admin Only) -->
+    <div v-if="isCourseAdmin && localGroups.length > 1" class="mb-4">
+      <GroupOrderWidget 
+        :groups="localGroups" 
+        :course-id="Number(courseId)" 
+        @saved="emit('refresh')"
+      />
     </div>
 
     <!-- Groups Grid -->

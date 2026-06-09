@@ -136,6 +136,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/groups')->group(function () {
     Route::get('/', [CourseGroupController::class, 'index'])->name('course.groups.index');
     Route::post('/', [CourseGroupController::class, 'store'])->name('course.groups.store');
+    Route::patch('/reorder', [CourseGroupController::class, 'reorder'])->name('course.groups.reorder');
     Route::get('/{group}', [CourseGroupController::class, 'show'])->name('course.groups.show');
     Route::patch('/{group}', [CourseGroupController::class, 'update'])->name('course.groups.update');
     Route::delete('/{group}', [CourseGroupController::class, 'destroy'])->name('course.groups.destroy');
@@ -211,6 +212,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function 
     ]);
     Route::post('/{lesson}/questions/{question}/answer', [\App\Http\Controllers\Api\Learn\Course\lessons\questions\LessonAnswerQuestionController::class, 'store'])->name('lesson.questions.answer');
     
+    Route::patch('/{lesson}/topics/reorder', [TopicController::class, 'reorder'])->name('lesson.topics.reorder');
     Route::resource('/{lesson}/topics', TopicController::class);
     
 });

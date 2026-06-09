@@ -6,6 +6,7 @@ import VideoModal from '~/components/media/VideoModal.vue'
 import LessonRewardBadge from '~/components/learn/course/points/LessonRewardBadge.vue'
 import TopicAccordion from './TopicAccordion.vue'
 import TopicFormModal from './TopicFormModal.vue'
+import TopicOrderWidget from './TopicOrderWidget.vue'
 import LessonInteractionTabs from './LessonInteractionTabs.vue'
 import Swal from 'sweetalert2'
 
@@ -837,6 +838,14 @@ const publicationStatusColor = computed(() => {
                   <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
                   เพิ่มหัวข้อ
               </button>
+          </div>
+
+          <div v-if="isAdmin && hasTopics" class="mb-4">
+              <TopicOrderWidget 
+                  :topics="lesson.topics" 
+                  :lesson-id="lesson.id" 
+                  @saved="emit('refresh')"
+              />
           </div>
 
           <div v-if="hasTopics">
