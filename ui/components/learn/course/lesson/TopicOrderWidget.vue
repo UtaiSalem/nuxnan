@@ -21,7 +21,6 @@ const swal = useSweetAlert()
 const localList = ref<any[]>([])
 const isDirty = ref(false)
 const isSaving = ref(false)
-const isOpen = ref(false)
 
 // sync เมื่อ topics prop เปลี่ยน
 watch(() => props.topics, (val) => {
@@ -54,48 +53,47 @@ const save = async () => {
 </script>
 
 <template>
-  <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
-    <div class="flex items-center justify-between cursor-pointer select-none" :class="isOpen ? 'mb-3' : 'mb-0'"
-      @click="isOpen = !isOpen">
-      <span class="text-sm font-semibold text-white/80 flex items-center gap-1">
-        <Icon icon="fluent:re-order-24-regular" class="w-4 h-4" />
-        จัดลำดับหัวข้อ (Topics)
-      </span>
-      <div class="flex items-center gap-2">
-        <div v-if="isDirty" class="flex gap-2" @click.stop>
-          <button @click="cancel"
-            class="px-3 py-1 text-xs text-white/60 hover:text-white border border-white/20 rounded-lg transition-colors">
-            ยกเลิก
-          </button>
-          <button @click="save" :disabled="isSaving"
-            class="px-3 py-1 text-xs bg-yellow-400 text-yellow-900 font-bold rounded-lg hover:bg-yellow-300 disabled:opacity-50 transition-colors flex items-center gap-1">
-            <Icon :icon="isSaving ? 'svg-spinners:180-ring-with-bg' : 'fluent:save-24-filled'" class="w-3 h-3" />
-            บันทึก
-          </button>
-        </div>
-        <Icon :icon="isOpen ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'"
-          class="w-4 h-4 text-white/50" />
+  <div class="space-y-4">
+    <!-- Action buttons when dirty -->
+    <div v-if="isDirty" class="flex items-center justify-between bg-white dark:bg-gray-800/80 p-3 rounded-xl border border-yellow-200 dark:border-yellow-900/50 shadow-sm animate-in fade-in slide-in-from-top-2">
+      <div class="flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
+        <Icon icon="fluent:info-24-regular" class="w-4 h-4" />
+        <span class="text-xs font-bold">มีการเปลี่ยนแปลงลำดับ</span>
+      </div>
+      <div class="flex gap-2">
+        <button @click="cancel"
+          class="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          ยกเลิก
+        </button>
+        <button @click="save" :disabled="isSaving"
+          class="px-4 py-1.5 text-xs bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-all shadow-md flex items-center gap-2">
+          <Icon :icon="isSaving ? 'svg-spinners:180-ring-with-bg' : 'fluent:save-24-filled'" class="w-4 h-4" />
+          {{ isSaving ? 'กำลังบันทึก...' : 'บันทึกลำดับ' }}
+        </button>
       </div>
     </div>
 
-    <ClientOnly v-if="isOpen">
+    <!-- Draggable list -->
+    <ClientOnly>
       <draggable
         v-model="localList"
         item-key="id"
         handle=".drag-handle"
         @end="onDragEnd"
-        class="space-y-1 mt-3"
+        class="space-y-1.5"
       >
         <template #item="{ element: topic, index }">
-          <div class="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-white/10 group transition-colors">
-            <!-- drag handle -->
-            <div class="drag-handle cursor-grab active:cursor-grabbing text-white/30 hover:text-white/70">
-              <Icon icon="fluent:re-order-dots-vertical-24-regular" class="w-4 h-4" />
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 group transition-all duration-200">
+            <!-- drag handle with larger touch target -->
+            <div class="drag-handle p-2 -m-2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-400 transition-colors">
+              <Icon icon="fluent:re-order-dots-vertical-24-regular" class="w-5 h-5" />
             </div>
+            
             <!-- order number -->
-            <span class="w-5 text-xs text-white/40 text-right shrink-0">{{ index + 1 }}</span>
+            <span class="w-6 text-xs font-bold text-gray-400 dark:text-gray-500 text-right shrink-0">{{ index + 1 }}</span>
+            
             <!-- title -->
-            <span class="flex-1 text-sm text-white/80 truncate">{{ topic.title }}</span>
+            <span class="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{{ topic.title }}</span>
           </div>
         </template>
       </draggable>

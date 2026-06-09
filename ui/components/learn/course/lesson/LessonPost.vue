@@ -650,37 +650,6 @@ const publicationStatusColor = computed(() => {
         </p>
       </div>
 
-      <!-- Reorder Topics (Admin Only - High Discoverability) -->
-      <div v-if="isAdmin && hasTopics" class="mb-2">
-        <details class="group bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 transition-all duration-300">
-          <summary class="flex items-center justify-between p-3 cursor-pointer list-none font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-xl transition-colors">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-purple-600 text-white rounded-lg shadow-md group-open:scale-90 transition-transform">
-                <Icon icon="fluent:reorder-24-filled" class="w-5 h-5" />
-              </div>
-              <div class="flex flex-col">
-                <span class="text-sm">จัดลำดับหัวข้อ</span>
-                <span class="text-[10px] opacity-60 font-normal">ทั้งหมด {{ lesson.topics.length }} หัวข้อ</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-normal opacity-0 group-hover:opacity-100 transition-opacity hidden md:inline">คลิกเพื่อเปิดส่วนจัดการ</span>
-              <Icon 
-                icon="fluent:chevron-down-24-regular" 
-                class="w-5 h-5 transition-transform duration-300 group-open:rotate-180" 
-              />
-            </div>
-          </summary>
-          <div class="p-4 pt-2 border-t border-purple-100 dark:border-purple-800/50">
-            <TopicOrderWidget 
-              :topics="lesson.topics" 
-              :lesson-id="lesson.id" 
-              @saved="emit('refresh')"
-            />
-          </div>
-        </details>
-      </div>
-
       <!-- Description -->
       <!-- Description -->
       <div v-if="lesson.description" class="mb-8">
@@ -869,6 +838,37 @@ const publicationStatusColor = computed(() => {
                   <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
                   เพิ่มหัวข้อ
               </button>
+          </div>
+
+          <!-- Reorder Topics (Admin Only) -->
+          <div v-if="isAdmin && hasTopics" class="mb-6">
+            <details class="group bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 transition-all duration-300">
+              <summary class="flex items-center justify-between p-3 cursor-pointer list-none font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-xl transition-colors">
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-purple-600 text-white rounded-lg shadow-md group-open:scale-90 transition-transform">
+                    <Icon icon="fluent:reorder-24-filled" class="w-5 h-5" />
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-sm">จัดลำดับหัวข้อ</span>
+                    <span class="text-[10px] opacity-60 font-normal">ทั้งหมด {{ lesson.topics.length }} หัวข้อ</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-normal opacity-0 group-hover:opacity-100 transition-opacity hidden md:inline">คลิกเพื่อเปิดส่วนจัดการ</span>
+                  <Icon 
+                    icon="fluent:chevron-down-24-regular" 
+                    class="w-5 h-5 transition-transform duration-300 group-open:rotate-180" 
+                  />
+                </div>
+              </summary>
+              <div class="p-4 pt-2 border-t border-purple-100 dark:border-purple-800/50">
+                <TopicOrderWidget 
+                  :topics="lesson.topics" 
+                  :lesson-id="lesson.id" 
+                  @saved="emit('refresh')"
+                />
+              </div>
+            </details>
           </div>
 
           <div v-if="hasTopics">
