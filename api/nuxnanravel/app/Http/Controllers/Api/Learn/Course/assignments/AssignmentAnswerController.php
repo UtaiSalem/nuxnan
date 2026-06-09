@@ -11,13 +11,45 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
+use App\Services\ContentVisibilityService;
+
 class AssignmentAnswerController extends Controller
 {
+    protected ContentVisibilityService $visibility;
+
+    public function __construct(ContentVisibilityService $visibility)
+    {
+        $this->visibility = $visibility;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Assignment $assignment, Request $request)
     {
+        $user = auth()->user();
+        $courseId = $request->course_id;
+        
+        // Try to resolve course from assignment if not provided
+        $course = null;
+        if ($courseId) {
+            $course = \App\Models\Course::find($courseId);
+        } else {
+            $lesson = $assignment->getLesson();
+            if ($assignment->assignmentable_type === \App\Models\Course::class) {
+                $course = \App\Models\Course::find($assignment->assignmentable_id);
+            } elseif ($lesson) {
+                $course = $lesson->course;
+            }
+        }
+
+        $isCourseAdmin = $course ? $course->isAdmin($user) : false;
+
+        // Visibility guard for students
+        if (!$isCourseAdmin) {
+            $this->visibility->assertVisibleOrFail($assignment, $user, 404);
+        }
+
         $query = $assignment->answers()->with('user', 'images')->latest();
 
         if ($request->filled('group_id') && $request->group_id != 'all') {
@@ -39,8 +71,29 @@ class AssignmentAnswerController extends Controller
      */
     public function store(Assignment $assignment, Request $request)
     {
+        $user = auth()->user();
+        $courseId = $request->course_id;
+        
+        $course = null;
+        if ($courseId) {
+            $course = \App\Models\Course::find($courseId);
+        } else {
+            $lesson = $assignment->getLesson();
+            if ($assignment->assignmentable_type === \App\Models\Course::class) {
+                $course = \App\Models\Course::find($assignment->assignmentable_id);
+            } elseif ($lesson) {
+                $course = $lesson->course;
+            }
+        }
+
+        $isCourseAdmin = $course ? $course->isAdmin($user) : false;
+
+        // Visibility guard for students
+        if (!$isCourseAdmin) {
+            $this->visibility->assertVisibleOrFail($assignment, $user, 403);
+        }
+
         // Lifecycle guard: block regular assignment submissions after the course ends.
-        $course = \App\Models\Course::find($request->course_id);
         if ($course) {
             $gate = \Illuminate\Support\Facades\Gate::inspect('submitAssignment', $course);
             if ($gate->denied()) {
@@ -55,15 +108,7 @@ class AssignmentAnswerController extends Controller
         // Completion requirement guard
         $lesson = $assignment->getLesson();
         if ($lesson && $lesson->require_completion_before_exercises) {
-            $isCourseAdmin = false;
-            if ($request->filled('course_id')) {
-                $course = \App\Models\Course::find($request->course_id);
-                if ($course) {
-                    $isCourseAdmin = $course->isAdmin(auth()->user());
-                }
-            }
-
-            if (!$lesson->canUserDoExercises(auth()->user(), $isCourseAdmin)) {
+            if (!$lesson->canUserDoExercises($user, $isCourseAdmin)) {
                 return response()->json([
                     'success' => false,
                     'code' => 'LESSON_COMPLETION_REQUIRED',
@@ -139,6 +184,17 @@ class AssignmentAnswerController extends Controller
      */
     public function destroy(Assignment $assignment, AssignmentAnswer $answer, Request $request)
     {
+        $user = auth()->user();
+        
+        // Ownership check: if student, can only delete their own answer
+        if (!$assignment->course->isAdmin($user)) {
+            if ($answer->user_id !== $user->id) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+            }
+            // Draft guard
+            $this->visibility->assertVisibleOrFail($assignment, $user, 403);
+        }
+
         try {
             DB::beginTransaction();
 

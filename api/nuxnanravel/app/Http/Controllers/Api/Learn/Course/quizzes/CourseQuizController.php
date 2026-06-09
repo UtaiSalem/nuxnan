@@ -20,6 +20,7 @@ use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\UserAnswerQuestion;
 use App\Services\AttendanceEligibilityService;
+use App\Services\ContentVisibilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -33,15 +34,18 @@ class CourseQuizController extends Controller
     private const REMEDIATION_SESSIONS_ENABLED = false;
 
     protected AttendanceEligibilityService $eligibilityService;
+    protected ContentVisibilityService $visibility;
 
-    public function __construct(AttendanceEligibilityService $eligibilityService)
+    public function __construct(AttendanceEligibilityService $eligibilityService, ContentVisibilityService $visibility)
     {
         $this->eligibilityService = $eligibilityService;
+        $this->visibility = $visibility;
     }
 
     public function index(Course $course)
     {
-        $isCourseAdmin = $course->isAdmin(auth()->user());
+        $user = auth()->user();
+        $isCourseAdmin = $course->isAdmin($user);
 
         $quizzes = $course->courseQuizzes()
             ->with(['questions', 'userResults' => fn ($q) => $q->where('user_id', auth()->id())])
@@ -111,7 +115,13 @@ class CourseQuizController extends Controller
         // Ownership Check
         abort_if($quiz->course_id !== $course->id, 404);
 
-        $isCourseAdmin = $course->isAdmin(auth()->user());
+        $user = auth()->user();
+        $isCourseAdmin = $course->isAdmin($user);
+
+        // Visibility check for student
+        if (!$isCourseAdmin) {
+            $this->visibility->assertVisibleOrFail($quiz, $user, 404);
+        }
 
         $quiz->load([
             'questions' => function ($q) {

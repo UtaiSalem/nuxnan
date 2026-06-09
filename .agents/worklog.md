@@ -6,16 +6,17 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-06-09)
+## สถานะปัจจุบัน (2026-06-10)
 
 ### งานที่เพิ่งเสร็จสิ้น — Verified & Tested
 
-- **Done:** Sort Order System (Topics, Course Groups, Academy Groups)
-    - Backend: Automatic `sort_order` in Models, Strict Validation in Controllers, `isAdmin` in Academy model, and Eager Loading (N+1 fix).
-    - Testing: 23/23 tests passed (Feature, Edge cases, Idempotency).
-    - UI: Improved Topic Reorder discoverability with accordion widget at the top of lesson cards.
+- **Done:** Draft Visibility & Interaction Lockdown (Lesson/Assignment/Quiz)
+    - Centralized `ContentVisibilityService` with cascade rule (Assignment under draft Lesson/Topic = hidden).
+    - Read path: filter drafts in `CourseLessonController`, `CourseAssignmentController`, `CourseQuizController` index/show.
+    - Action path: `assertVisibleOrFail` guards in `LessonProgressController`, `LessonAnswerQuestionController`, `AssignmentAnswerController`, `CourseQuizResultController`, `UserAnswerQuestionController`.
+    - Testing: 15/15 tests passed (11 unit + 4 feature).
 - **TODO:** —
-- **Pending Commit:** All Sort Order System changes (Models, Controllers, Tests, Academy model fix).
+- **Pending Commit:** — (committed)
 
 ---
 
@@ -23,6 +24,7 @@
 
 | วันที่ | งาน | สถานะ |
 |--------|------|-------|
+| 2026-06-10 | Draft Visibility & Interaction Lockdown (Lesson/Assignment/Quiz) | ✅ Done |
 | 2026-06-09 | Sort Order System (Topics, Course Groups, Academy Groups) | ✅ Done |
 | 2026-06-09 | Academy Group Reorder UI Implementation | ✅ Done |
 | 2026-06-08 | Lesson Completion Requirement (บังคับอ่านก่อนทำแบบฝึกหัด) | ✅ Done |

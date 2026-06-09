@@ -10,6 +10,9 @@ use App\Services\CoursePointAccountService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
+use App\Services\ContentVisibilityService;
+
+
 class LessonProgressController extends Controller
 {
     /**
@@ -17,9 +20,12 @@ class LessonProgressController extends Controller
      */
     protected $coursePointService;
 
-    public function __construct(CoursePointAccountService $coursePointService)
+    protected ContentVisibilityService $visibility;
+
+    public function __construct(CoursePointAccountService $coursePointService, ContentVisibilityService $visibility)
     {
         $this->coursePointService = $coursePointService;
+        $this->visibility = $visibility;
     }
 
     /**
@@ -28,6 +34,12 @@ class LessonProgressController extends Controller
     public function show(Request $request, Lesson $lesson)
     {
         $user = $request->user();
+
+        // Guard for students
+        if (!$lesson->course->isAdmin($user)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 404);
+        }
+
         $progress = $lesson->userProgress($user);
 
         return response()->json([
@@ -49,6 +61,12 @@ class LessonProgressController extends Controller
     public function start(Request $request, Lesson $lesson)
     {
         $user = $request->user();
+
+        // Guard for students
+        if (!$lesson->course->isAdmin($user)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 403);
+        }
+
         $progress = $lesson->getOrCreateProgress($user);
 
         if ($progress->status === LessonProgress::STATUS_NOT_STARTED) {
@@ -74,6 +92,12 @@ class LessonProgressController extends Controller
     public function complete(Request $request, Lesson $lesson)
     {
         $user = $request->user();
+
+        // Guard for students
+        if (!$lesson->course->isAdmin($user)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 403);
+        }
+
         $progress = $lesson->getOrCreateProgress($user);
 
         $wasAlreadyCompleted = $progress->isCompleted();
@@ -121,6 +145,12 @@ class LessonProgressController extends Controller
     public function toggleComplete(Request $request, Lesson $lesson)
     {
         $user = $request->user();
+
+        // Guard for students
+        if (!$lesson->course->isAdmin($user)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 403);
+        }
+
         $progress = $lesson->getOrCreateProgress($user);
 
         if ($progress->isCompleted()) {
@@ -186,6 +216,12 @@ class LessonProgressController extends Controller
         ]);
 
         $user = $request->user();
+
+        // Guard for students
+        if (!$lesson->course->isAdmin($user)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 403);
+        }
+
         $progress = $lesson->getOrCreateProgress($user);
 
         // Auto-start if not started

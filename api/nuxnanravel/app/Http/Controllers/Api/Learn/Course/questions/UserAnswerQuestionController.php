@@ -15,13 +15,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
+use App\Services\ContentVisibilityService;
+
 class UserAnswerQuestionController extends Controller
 {
     protected $quizEfficiencyService;
+    protected ContentVisibilityService $visibility;
 
-    public function __construct(QuizEfficiencyService $quizEfficiencyService)
+    public function __construct(QuizEfficiencyService $quizEfficiencyService, ContentVisibilityService $visibility)
     {
         $this->quizEfficiencyService = $quizEfficiencyService;
+        $this->visibility = $visibility;
     }
 
     /**
@@ -29,6 +33,19 @@ class UserAnswerQuestionController extends Controller
      */
     public function store(CourseQuiz $quiz, Question $question, Request $request)
     {
+        $user = auth()->user();
+        $isCourseAdmin = false;
+        
+        $course = \App\Models\Course::find($quiz->course_id ?? $request->course_id);
+        if ($course) {
+            $isCourseAdmin = $course->isAdmin($user);
+        }
+
+        // Visibility guard for students
+        if (!$isCourseAdmin) {
+            $this->visibility->assertVisibleOrFail($quiz, $user, 403);
+        }
+
         // Validate request data
         $validator = Validator::make($request->all(), [
             'answer_id' => 'required|exists:question_options,id',
@@ -107,6 +124,16 @@ class UserAnswerQuestionController extends Controller
      */
     public function update(CourseQuiz $quiz, Question $question, UserAnswerQuestion $answer, Request $request)
     {
+        $user = auth()->user();
+        
+        $course = \App\Models\Course::find($quiz->course_id);
+        $isCourseAdmin = $course ? $course->isAdmin($user) : false;
+
+        // Visibility guard for students
+        if (!$isCourseAdmin) {
+            $this->visibility->assertVisibleOrFail($quiz, $user, 403);
+        }
+
         // Validate request data
         $validator = Validator::make($request->all(), [
             'answer_id' => 'required|exists:question_options,id',

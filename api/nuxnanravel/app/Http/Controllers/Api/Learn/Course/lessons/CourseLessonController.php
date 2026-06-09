@@ -8,12 +8,16 @@ use App\Models\Course;
 use App\Models\Lesson;
 use App\Services\CourseMediaService;
 use App\Services\LessonAccessService;
+use App\Services\ContentVisibilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CourseLessonController extends \App\Http\Controllers\Controller
 {
-    public function __construct(protected LessonAccessService $accessService) {}
+    public function __construct(
+        protected LessonAccessService $accessService,
+        protected ContentVisibilityService $visibility
+    ) {}
 
     /**
      * Helper method to upload lesson images
@@ -204,12 +208,9 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 ], 404);
             }
 
-            // draft — นักเรียนเห็นไม่ได้
-            if (! $isCourseAdmin && $lesson->publication_status !== Lesson::STATUS_PUBLISHED) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'ไม่พบบทเรียนนี้',
-                ], 404);
+            // Visibility guard for students
+            if (! $isCourseAdmin) {
+                $this->visibility->assertVisibleOrFail($lesson, $user, 404);
             }
 
             // ตรวจสิทธิ์เข้าถึง
@@ -253,6 +254,8 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'access' => $accessStatus,
             ], 200);
 
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            throw $e;
         } catch (\Exception $e) {
             \Log::error('Error showing lesson: '.$e->getMessage());
 
@@ -770,6 +773,12 @@ class CourseLessonController extends \App\Http\Controllers\Controller
     public function toggleBookmark(Course $course, Lesson $lesson)
     {
         $user = auth()->user();
+
+        // Visibility guard for students
+        if (!$this->checkCoursePermission($course)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 403);
+        }
+
         $bookmark = $lesson->bookmarks()->where('user_id', $user->id)->first();
 
         if ($bookmark) {
@@ -793,6 +802,13 @@ class CourseLessonController extends \App\Http\Controllers\Controller
 
     public function shareLesson(Course $course, Lesson $lesson)
     {
+        $user = auth()->user();
+
+        // Visibility guard for students
+        if (!$this->checkCoursePermission($course)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 403);
+        }
+
         $lesson->increment('share_count');
 
         return response()->json([

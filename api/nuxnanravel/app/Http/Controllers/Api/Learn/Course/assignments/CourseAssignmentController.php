@@ -14,26 +14,96 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 
 
+use App\Services\ContentVisibilityService;
+
+
 class CourseAssignmentController extends Controller
 {
+    protected ContentVisibilityService $visibility;
+
+    public function __construct(ContentVisibilityService $visibility)
+    {
+        $this->visibility = $visibility;
+    }
+
     public function index(Course $course)
     {
+        $user = auth()->user();
+        $isCourseAdmin = $course->isAdmin($user);
+
+        // Get lesson IDs for parent visibility filtering
+        $lessonIds = $course->courseLessons()->pluck('id');
+        $topicIds = \App\Models\Topic::whereIn('lesson_id', $lessonIds)->pluck('id');
+
+        $assignmentsQuery = \App\Models\Assignment::where(function($q) use ($course, $lessonIds, $topicIds) {
+            $q->where(function($q) use ($course) {
+                $q->where('assignmentable_type', Course::class)
+                  ->where('assignmentable_id', $course->id);
+            })->orWhere(function($q) use ($lessonIds) {
+                $q->where('assignmentable_type', \App\Models\Lesson::class)
+                  ->whereIn('assignmentable_id', $lessonIds);
+            })->orWhere(function($q) use ($topicIds) {
+                $q->where('assignmentable_type', \App\Models\Topic::class)
+                  ->whereIn('assignmentable_id', $topicIds);
+            });
+        });
+
+        // Filter for students
+        if (!$isCourseAdmin) {
+            $assignmentsQuery->where('status', 1); // Published only
+            
+            // Filter by parent lesson visibility
+            $publishedLessonIds = $course->courseLessons()
+                ->where('publication_status', \App\Models\Lesson::STATUS_PUBLISHED)
+                ->pluck('id');
+            $publishedTopicIds = \App\Models\Topic::whereIn('lesson_id', $publishedLessonIds)->pluck('id');
+
+            $assignmentsQuery->where(function($q) use ($course, $publishedLessonIds, $publishedTopicIds) {
+                $q->where('assignmentable_type', Course::class)
+                  ->orWhere(function($q) use ($publishedLessonIds) {
+                      $q->where('assignmentable_type', \App\Models\Lesson::class)
+                        ->whereIn('assignmentable_id', $publishedLessonIds);
+                  })->orWhere(function($q) use ($publishedTopicIds) {
+                      $q->where('assignmentable_type', \App\Models\Topic::class)
+                        ->whereIn('assignmentable_id', $publishedTopicIds);
+                  });
+            });
+        }
+
         return response()->json([
             'course'                => new CourseResource($course),
-            'assignments'           => AssignmentResource::collection($course->courseAssignments()->withCount('answers')->latest()->paginate(15)),
+            'assignments'           => AssignmentResource::collection($assignmentsQuery->withCount('answers')->latest()->paginate(15)),
             'groups'                => $course->courseGroups()->get(['id', 'name']),
-            'isCourseAdmin'         => $course->isAdmin(auth()->user()),
+            'isCourseAdmin'         => $isCourseAdmin,
             'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),
         ]);
     }
 
     public function show(Course $course, Assignment $assignment)
     {
+        $user = auth()->user();
+        $isCourseAdmin = $course->isAdmin($user);
+
+        // Ownership check: must belong to the course or its lessons/topics
+        $lesson = $assignment->getLesson();
+        if ($assignment->assignmentable_type === Course::class) {
+            abort_if($assignment->assignmentable_id !== $course->id, 404);
+        } elseif ($lesson) {
+            abort_if($lesson->course_id !== $course->id, 404);
+        } else {
+            // Not attached to course or lesson/topic of this course
+            abort(404);
+        }
+
+        if (!$isCourseAdmin) {
+            $this->visibility->assertVisibleOrFail($assignment, $user, 404);
+        }
+
         return response()->json([
             'assignment' => new AssignmentResource($assignment),
             'course' => new CourseResource($course),
             'groups' => $course->courseGroups()->get(['id', 'name']),
-            'isCourseAdmin' => $course->isAdmin(auth()->user()),
+            'isCourseAdmin' => $isCourseAdmin,
         ]);
     }
     

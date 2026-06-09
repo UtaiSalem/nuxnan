@@ -9,10 +9,26 @@ use App\Models\Question;
 use App\Models\QuestionOption;
 use Illuminate\Http\Request;
 
+use App\Services\ContentVisibilityService;
+
 class LessonAnswerQuestionController extends Controller
 {
+    protected ContentVisibilityService $visibility;
+
+    public function __construct(ContentVisibilityService $visibility)
+    {
+        $this->visibility = $visibility;
+    }
+
     public function store(Request $request, Lesson $lesson, Question $question)
     {
+        $user = auth()->user();
+
+        // Guard for students
+        if (!$lesson->course->isAdmin($user)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 403);
+        }
+
         $request->validate([
             'answer_id' => 'required|exists:question_options,id',
         ]);

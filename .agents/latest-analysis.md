@@ -105,6 +105,110 @@ _(empty — awaiting next analysis input)_
 - ไม่มี (ฟีเจอร์เสร็จสมบูรณ์และผ่านการทดสอบครอบคลุมทุกจุด)
 ```
 
+---
+
+### Feature: Draft Visibility & Interaction Lockdown — Work Plan v2 (2026-06-10)
+
+**เป้าหมาย**: นักเรียนต้องไม่เห็น หรือเห็นแต่โต้ตอบไม่ได้ กับ Lesson/Assignment/Quiz ที่เป็น draft โดยปลอดภัยทั้งจาก UI และ direct API access
+
+**Default policy ที่เลือก**: `hide + hard-block` (404 detail, ซ่อน list, 403 action) — ปลอดภัยและ logic ตรงสุด ตามที่ user เสนอใน Findings ข้อ 1
+
+#### Phase 0 — Foundation: Centralized Visibility Policy (1 PR)
+
+สร้างชั้น policy เดียว ที่ทั้ง controller, action endpoint และ resource เรียกใช้ร่วมกัน ป้องกัน drift
+
+**ไฟล์ใหม่**:
+- `api/nuxnanravel/app/Services/ContentVisibilityService.php`
+  - `canStudentViewLesson(User $u, Lesson $l): bool` → `$l->publication_status === STATUS_PUBLISHED`
+  - `canStudentViewAssignment(User $u, Assignment $a): bool` → `$a->is_published && parentVisible($a)` (เช็ก polymorphic parent: ถ้า `assignmentable` คือ Lesson/Topic ต้องเป็น lesson published ด้วย)
+  - `canStudentViewQuiz(User $u, CourseQuiz $q): bool` → `(bool)$q->is_active`
+  - `canStudentInteract...()` × 3 (สำหรับ progress/submit/start — เริ่มจาก == view แต่แยก method ไว้เผื่อ business rule แตก เช่น quiz `end_date` หมดอายุ)
+  - `assertVisibleOrFail($model, $user, int $code = 404): void` — helper ตัดโค้ดซ้ำ
+- `tests/Unit/ContentVisibilityServiceTest.php` — unit test ครอบ matrix (admin/student × draft/published × parent draft cascade)
+
+**Decisions ที่ต้องชัดก่อนเขียน code**:
+- ✅ Topic = inherit Lesson `publication_status` (ไม่เพิ่ม column ใน v1)
+- ✅ Quiz/Assignment ภายใต้ draft lesson = ซ่อนเสมอ แม้จะ published เอง
+- ⚠️ Quiz `is_active=0` ที่มี `userResults` อยู่แล้ว: ห้าม `update` (finalize) เพิ่ม แต่ยัง **อ่าน** ผลคะแนนเก่าได้ — แยก `canStudentViewQuizResult()` ออกอีกตัว
+- ⚠️ Assignment ที่มี `answers` ของนักเรียนคนนั้นอยู่แล้ว แล้วโดน revert เป็น draft: เห็นผลของตัวเองได้ แต่ submit/edit ใหม่ไม่ได้
+
+#### Phase 1 — Backend Read Path Lockdown (1 PR ต่อ domain, 3 PR รวม)
+
+**1A. Lessons** (น้อยสุด — index/show มีอยู่แล้ว)
+- `LessonAccessController` ที่ส่ง access status → ตรวจ `$lesson->course_id == $course->id` (ownership) ทุก method (ปัจจุบันบาง action พึ่ง implicit binding)
+
+**1B. Assignments** (เสี่ยงสูงสุด)
+- `CourseAssignmentController.php:19 index()` → เพิ่ม `->when(!$isAdmin, fn($q) => $q->where('status', 1))` + filter parent visibility ด้วย (ถ้า assignment สังกัด lesson draft, ซ่อน)
+- `CourseAssignmentController.php:30 show()` → เพิ่ม `abort_if($assignment->assignmentable_id !== course-or-descendant, 404)` ownership + `assertVisibleOrFail($assignment, $user, 404)`
+- ตรวจ `Course::courseAssignments()` relation ว่าครอบ assignment ใต้ lesson/topic ของ course หรือไม่ (Finding #5) — ถ้าไม่ครอบ ต้องสร้าง scope รวม
+
+**1C. Quizzes**
+- `CourseQuizController.php:42 index()` → คงเดิม (มี `is_active` filter แล้ว) แต่ตรวจซ้ำผ่าน service
+- `CourseQuizController.php:109 show()` → เพิ่ม `if (!$isCourseAdmin && !$quiz->is_active) abort(404);` ทันทีหลัง ownership check (บรรทัด 112)
+- ตัด strip-questions logic ที่ซ้ำซ้อนเมื่อเป็น draft (จะ 404 ก่อนแล้ว)
+
+#### Phase 2 — Backend Action Path Lockdown (1 PR)
+
+ทุก action endpoint ต้องเรียก `$visibility->assertVisibleOrFail()` ก่อน mutation **เสมอ** (defense in depth — แม้ UI ซ่อนแล้ว direct API call ต้องตาย)
+
+| Endpoint | ไฟล์ | จุดที่ต้องเพิ่ม guard |
+|---|---|---|
+| Lesson progress start/update | `LessonProgressController` | ต้น method `store/update` |
+| Lesson question answer | `LessonAnswerQuestionController` | ต้น method `store` |
+| Assignment submit | `AssignmentAnswerController::store/update` | หลัง resolve $assignment |
+| Assignment delete answer | `AssignmentAnswerController::destroy` | ถ้านักเรียนลบของตัวเอง ต้องเช็ก |
+| Quiz start attempt | `CourseQuizResultController::store` | ต้น method + เช็ก `is_active` |
+| Quiz finalize | `CourseQuizResultController::update` | ต้น method |
+| Per-question submit | `UserAnswerQuestionController::store` | ต้น method |
+
+**Response shape สำหรับ block**: `403 {"success": false, "code": "CONTENT_UNAVAILABLE", "message": "เนื้อหานี้ยังไม่เปิดให้เข้าใช้งาน"}` — frontend ใช้ `code` ตัดสินใจ redirect/toast
+
+#### Phase 3 — Frontend UI Layer (1 PR ต่อ domain, 3 PR)
+
+ลำดับ: ซ่อน list → soft-disable detail (ถ้ามาทาง deep link เก่า) → handle 403/404 error
+
+- `ui/pages/Learn/Courses/[id]/assignments/index.vue`, `[assignmentId].vue` — กรอง `assignment.is_published` ใน computed list (เป็น safety net เพราะ backend กรองแล้ว); ถ้า detail โดน 404 → redirect ไป list + toast
+- `ui/pages/Learn/Courses/[id]/quizzes/index.vue`, `[quizId]/index.vue`, `attempt.vue` — เหมือนกัน; `attempt.vue` ต้องเช็ก `is_active` ก่อนเริ่มสอบ และ disable ปุ่ม "เริ่มทำข้อสอบ" + tooltip "ฉบับร่าง / ยังไม่เปิด"
+- Reuse `LessonAccessService` shape (`access_status: 'unavailable'`) ในการแสดง badge — สร้าง composable `useContentLockBadge(item)` คืน `{ visible, label, tone }` กลาง
+- Admin UI: ใส่ badge "ฉบับร่าง" ที่ list สำหรับ admin ด้วย (currently ไม่ชัดว่าตัวไหน draft) — เป็น UX bonus
+
+#### Phase 4 — Tests (1 PR — ทำพร้อม Phase 1–2 ก็ได้)
+
+**Feature tests** (จัดกลุ่มต่อ domain — 3 ไฟล์):
+- `tests/Feature/DraftLessonVisibilityTest.php`
+- `tests/Feature/DraftAssignmentVisibilityTest.php`
+- `tests/Feature/DraftQuizVisibilityTest.php`
+
+แต่ละไฟล์ครอบ matrix:
+| Scenario | Expected |
+|---|---|
+| Admin list → เห็น draft + published | 200, count = all |
+| Student list → เห็นเฉพาะ published | 200, count = published only |
+| Student GET detail draft | 404 |
+| Student POST action บน draft | 403, code `CONTENT_UNAVAILABLE` |
+| Admin POST action บน draft | 2xx (ยัง preview/manage ได้) |
+| **Cascade test** (Assignment เท่านั้น): assignment published แต่ parent lesson draft → student เห็น 404 |
+| **Mid-attempt edge** (Quiz): นักเรียนมี active result อยู่ก่อน quiz โดนปิด `is_active=0` → finalize ได้ครั้งสุดท้าย? (decision: **ไม่ได้** — block ทันทีตาม policy) |
+
+#### Order of Execution (แนะนำ)
+
+1. Phase 0 (foundation + unit test) — **1 วัน**, ไม่ break อะไร
+2. Phase 1B + 2 (Assignment — เสี่ยงสุด) พร้อมกัน — **0.5 วัน**
+3. Phase 1C + 2 (Quiz) — **0.5 วัน**
+4. Phase 1A + 2 (Lesson actions) — **0.5 วัน**
+5. Phase 3 (Frontend ตามลำดับเดียวกัน) — **1 วัน**
+6. Phase 4 (Tests — ทำคู่กับ 1–2 ตั้งแต่ต้น) — ongoing
+
+รวม ~3.5 วัน, ตัด PR เล็กพอ revert ได้
+
+#### Risks & Open Questions
+
+- **`Course::assignments()` และ `Course::courseAssignments()` เป็น relation ที่ equivalent กัน** (ทั้งคู่นิยามเหมือนกันใน `Course.php:325-333`) แต่ทั้งสองชื่อถูกใช้กระจายในหลาย controller/service จึงเสี่ยง drift — visibility enforcement ต้องบังคับใช้สม่ำเสมอที่ทุก call site (ห้ามแก้ filter ที่ชื่อเดียวแล้วทึกทักว่าครอบหมด)
+- **Backward compat สำหรับ saved data** — นักเรียนที่ submit/start ไปก่อนหน้าที่ admin เปลี่ยน status เป็น draft: รักษาสิทธิ์อ่าน result เก่าได้ (ผ่าน separate `canViewOwnResult`), แต่ห้าม mutate ใหม่
+- **Quiz `end_date`** — ปัจจุบัน **ยังไม่ได้** enforce ใน `show`/`store`/`update` ของ result (มีแค่ใน validation ตอน create/update quiz เท่านั้น) ส่วน `is_active` และ `canTakeExam` ถูกใช้จริง — ควรตัดสินใจ **ดึง `end_date` มารวมเข้า `ContentVisibilityService`** ตอน v1 เลย ไม่งั้นจะกลายเป็น gating ชั้นใหม่ที่หลุดต่อ
+- **Assignment cascade rule (precise)** — visibility cascades from parent lesson **เฉพาะเมื่อ** `assignmentable_type` เป็น `Lesson` หรือ `Topic`; ส่วน course-level assignment (`assignmentable_type === Course`) ใช้ own `status` เพียงอย่างเดียว — ตรงกับ `Assignment::getLesson()` ที่คืน `null` สำหรับ course-level อยู่แล้ว
+- **Topic v2** — ถ้าอนาคตอยากให้ Topic มี draft ของตัวเอง ต้องเพิ่ม column ใน topic table แล้ว update `canStudentViewAssignment` ให้ cascade ผ่าน topic ด้วย — design ของ service ตอนนี้รองรับการขยายแบบนี้ได้
+
 ### ข้อควรระวัง (จากการตรวจโค้ดจริง)
 
 1. **`lessons.order` กับ `display_order` คนละตัว**: `order` = canonical position ใน DB, `display_order` = computed ตอน runtime เฉพาะ published lessons (1-indexed, ไม่มี gap) → ห้ามใช้ `display_order` เป็น field ใน DB
@@ -157,3 +261,18 @@ _(empty — awaiting next analysis input)_
 _(cleared 2026-06-08 — previous entries covered: course self-leave flow analysis, eligibility roster filtering, typing practice vocabulary migration, course member removal/leave workflow v2, lesson completion requirement before exercises)_
 
 - 2026-06-09: Planning review for http://localhost:3000/Learn/Courses/24/groups (course group management page). Re-read ui/pages/Learn/Courses/[id]/groups/index.vue, ui/components/learn/course/GroupsList.vue, ui/components/learn/course/groups/GroupOrderWidget.vue, ui/components/GroupCard.vue, ui/stores/course.ts, ui/stores/courseGroup.ts, and the matching Laravel group controller/resource. Findings: core CRUD/join/reorder exists, but the page still behaves more like a public/community gallery than an instructor management workspace. The reorder widget uses low-contrast dark-overlay styles (g-white/5, 	ext-white/80) inside a light page, so it is hard to scan in light theme. The API and courseGroup store already expose ungrouped_members, but the groups page does not surface that backlog anywhere, which weakens the actual management flow. There is also a likely bug in join fee validation on the groups page: handleJoin() reads courseStore.course?.tuition_fees, while ui/stores/course.ts exposes currentCourse, not course. Plan direction: prioritize a lighter admin control bar, surface ungrouped-member backlog and capacity signals, align group cards with management tasks, and clean up the store/page contract before deeper UX polish.
+
+- 2026-06-10: Planning pass for draft visibility/interaction lockdown across lessons, assignments, and quizzes. Re-verified the current backend/frontend flow before implementation. Findings: lessons already hide draft records in `CourseLessonController::index/show`, but lesson child-action endpoints in `LessonProgressController` and `LessonAnswerQuestionController` do not independently block student interaction with draft lessons if someone hits the API directly. Assignments are currently the weakest area: `CourseAssignmentController::index` returns all course assignments without filtering draft items for students, `show` does not verify course ownership or published status, and `AssignmentAnswerController::store` does not block submissions to draft assignments. Quizzes are partially protected: `CourseQuizController::index` filters `is_active` for students, but `show` still loads inactive quizzes for non-admins and `CourseQuizResultController::store/update` do not enforce active status, so a student could potentially start or finalize attempts against an inactive quiz by direct URL/API access. Frontend pages under `ui/pages/Learn/Courses/[id]/assignments/*` and `ui/pages/Learn/Courses/[id]/quizzes/*` largely trust backend responses and do not add a second safety layer for draft/locked items. Recommended implementation direction: centralize learner visibility checks per content type, enforce them in both list/detail and action endpoints, then add UI-level hiding/disabled states so behavior is consistent even before an API call fails. Verification plan for implementation: feature tests covering student/admin list access, draft detail access, and blocked submit/start/progress actions for each content type.
+
+- 2026-06-10 (Plan v2 — refined): Re-grounded against actual code. Key constraints discovered that the v1 plan glossed over:
+    1. **Status fields are inconsistent across content types** — Lesson uses string `publication_status` (`draft`|`published`), Assignment uses integer `status` (1=published, others=draft) with accessor `$assignment->is_published`, Quiz uses boolean-ish `is_active` (1/0). The central policy MUST normalize these per-model, not assume a single column name.
+    2. **Assignment is polymorphic** (`assignmentable_type` ∈ {Course, Lesson, Topic}). A "published" assignment under a draft lesson must still be invisible to students — visibility cascades from parent. Same applies to assignments under a Topic whose Lesson is draft.
+    3. **Topic visibility is currently undefined** — there is no draft flag on Topic. Decision needed: does Topic inherit lesson `publication_status` only, or get its own status? Recommend: inherit from Lesson for v1 (zero schema change), defer per-topic draft to v2.
+    4. **`LessonAccessService::getAccessStatus()` already returns `access_status: 'unavailable'` for draft lessons** — the frontend layer for "soft-lock UI" largely exists for lessons. We should reuse this pattern (a single resolver returning `is_visible` + `is_locked` + `reason`) for assignment and quiz too, instead of inventing a new shape.
+    5. **`CourseAssignmentController` uses `$course->courseAssignments()` in index but `$course->assignments()` in store** — two relations on Course. Confirm both resolve to the same morph scope before filtering, otherwise the filter on one won't protect the other.
+    6. **Action endpoints to guard** (concrete list verified by grep):
+        - Lesson: `LessonProgressController` (start/complete progress), `LessonAnswerQuestionController` (answer in-lesson questions), lesson unlock endpoints in `LessonAccessController` (already partially handled).
+        - Assignment: `AssignmentAnswerController::store/update/destroy` (submissions), grading endpoints if exposed to students.
+        - Quiz: `CourseQuizResultController::store` (start attempt), `::update` (finalize), `UserAnswerQuestionController` (per-question submit during attempt).
+    7. **Route-model binding is bare** (`Route::patch('.../{quiz}', ...)`) — guard must live in controller or a FormRequest/Policy, not rely on route binding.
+    8. **`show()` controllers must distinguish 403 vs 404** — convention in this repo is `abort(404)` to hide existence (used in `CourseQuizController::show` ownership check). Recommend 404 for students hitting drafts (matches existing pattern, leaks no info), 403 only for action endpoints (more honest for legitimate UI).

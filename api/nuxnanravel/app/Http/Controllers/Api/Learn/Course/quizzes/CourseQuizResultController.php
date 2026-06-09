@@ -12,13 +12,17 @@ use App\Constants\QuizConstants;
 use App\Services\AttendanceEligibilityService;
 use Illuminate\Support\Facades\DB;
 
+use App\Services\ContentVisibilityService;
+
 class CourseQuizResultController extends Controller
 {
     protected AttendanceEligibilityService $eligibilityService;
+    protected ContentVisibilityService $visibility;
 
-    public function __construct(AttendanceEligibilityService $eligibilityService)
+    public function __construct(AttendanceEligibilityService $eligibilityService, ContentVisibilityService $visibility)
     {
         $this->eligibilityService = $eligibilityService;
+        $this->visibility = $visibility;
     }
 
     /**
@@ -26,10 +30,14 @@ class CourseQuizResultController extends Controller
      */
     public function store(Course $course, CourseQuiz $quiz, Request $request)
     {
-        $isCourseAdmin = $course->isAdmin(auth()->user());
+        $user = auth()->user();
+        $isCourseAdmin = $course->isAdmin($user);
 
+        // Visibility guard for students
         if (!$isCourseAdmin) {
-            $member = $course->courseMembers()->where('user_id', auth()->id())->first();
+            $this->visibility->assertVisibleOrFail($quiz, $user, 403);
+            
+            $member = $course->courseMembers()->where('user_id', $user->id)->first();
             if ($member) {
                 $eligibilityInfo = $this->eligibilityService->canTakeExam($member);
                 if (!$eligibilityInfo['can_take_exam'] && $eligibilityInfo['eligibility_status'] !== 'unlocked') {
@@ -46,7 +54,7 @@ class CourseQuizResultController extends Controller
 
         $quizResult = $course->courseQuizResults()
             ->where('quiz_id', $quiz->id)
-            ->where('user_id', auth()->id())
+            ->where('user_id', $user->id)
             ->first();
 
         if ($quizResult) {
@@ -70,7 +78,7 @@ class CourseQuizResultController extends Controller
 
         }else {
             $quizResult = CourseQuizResult::create([
-                'user_id'       => auth()->id(),
+                'user_id'       => $user->id,
                 'course_id'     => $course->id,
                 'quiz_id'       => $quiz->id,
                 'status'        => 0,
@@ -87,9 +95,17 @@ class CourseQuizResultController extends Controller
 
     public function update(Course $course, CourseQuiz $quiz, CourseQuizResult $result, Request $request)
     {
+        $user = auth()->user();
+        $isCourseAdmin = $course->isAdmin($user);
+
         // Ensure the result belongs to the user
-        if ($result->user_id !== auth()->id()) {
+        if ($result->user_id !== $user->id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Visibility guard for students (cannot finalize attempt on inactive quiz)
+        if (!$isCourseAdmin) {
+            $this->visibility->assertVisibleOrFail($quiz, $user, 403);
         }
 
         $data = [];
