@@ -5,7 +5,11 @@ export const useAuthStore = defineStore('auth', () => {
   const apiBase = config.public.apiBase as string
   
   const user = ref(null)
-  const token = useCookie('token')
+  const token = useCookie('token', {
+    maxAge: 60 * 60 * 24 * 7,
+    sameSite: 'lax',
+    path: '/',
+  })
   const isAuthenticated = computed(() => !!token.value)
   const isRefreshing = ref(false)
   const isLoggingOut = ref(false)
@@ -92,7 +96,11 @@ export const useAuthStore = defineStore('auth', () => {
           user.value = userData
           
           // Also store admin token in separate cookie
-          const adminToken = useCookie('admin_token')
+          const adminToken = useCookie('admin_token', {
+            maxAge: 60 * 60 * 24 * 7,
+            sameSite: 'lax',
+            path: '/',
+          })
           adminToken.value = accessToken
         } else {
           throw new Error('Invalid response from server')

@@ -13,6 +13,10 @@ const error = ref(null)
 const processingId = ref(null)
 
 const fetchDonates = async () => {
+  if (!authStore.isAuthenticated) {
+    isLoading.value = false
+    return
+  }
   isLoading.value = true
   error.value = null
   try {

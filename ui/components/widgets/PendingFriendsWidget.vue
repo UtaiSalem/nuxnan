@@ -1,14 +1,20 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useAuthStore } from '~/stores/auth'
 
 const api = useApi()
+const authStore = useAuthStore()
 
 const requests = ref([])
 const isLoading = ref(true)
 const error = ref(null)
 
 const fetchPendingRequests = async () => {
+  if (!authStore.isAuthenticated) {
+    isLoading.value = false
+    return
+  }
   isLoading.value = true
   error.value = null
   try {
