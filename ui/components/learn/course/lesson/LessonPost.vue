@@ -188,31 +188,25 @@ const handleTopicSubmit = async (formData: any) => {
 const deleteTopicImage = async (imageId: number) => {
     try {
         const result = await swal.confirm('คุณต้องการลบรูปภาพนี้ใช่หรือไม่?', 'ยืนยันการลบ')
-        if (result) {
-            // Assuming there is an endpoint for deleting topic images or generic image delete
-            // Since we don't have a specific `deleteImage` in TopicController visible, 
-            // we might need to check how images are handled.
-            // Often there is a `MediaController` or specific route.
-            // For now, let's assume a generic topic image delete route logic or leave it as a TODO if not sure.
-            // Looking at TopicController: `public function destroy(Topic $topic)`...
-            // It doesn't seem to have specific image delete.
-            // But usually systems have a way.
-            // Let's rely on standard practice: DELETE /api/topics/{topic}/images/{image} or similar.
-            // If not available, we warn user.
-            
-            // Wait, I saw `TopicController` earlier. Let me double check if I missed `deleteImage`.
-            // I'll proceed with a standard guess or skip implementing delete EXISTING image individually for now 
-            // and rely on Edit to replace content, but images are tricky.
-            // Actually, usually deleting the generic 'image' model works if it's polymorphic.
-            
-            // For now, let's just log it and show error "Not implemented" to be safe, 
-            // OR try a common pattern `api.delete('/api/images/' + imageId)`.
-            // Let's try to find a generic image delete route later.
-            
-            swal.error('ระบบยังไม่รองรับการลบรูปภาพรายบุคคลในขณะนี้')
+        if (!result) return
+
+        if (!editingTopic.value) return
+
+        await api.delete(`/api/topics/${editingTopic.value.id}/images/${imageId}`)
+        swal.toast('ลบรูปภาพเรียบร้อย', 'success')
+
+        // Sync local state: ลบรูปออกจาก topic object ทันที
+        if (editingTopic.value.images) {
+            editingTopic.value.images = editingTopic.value.images.filter(
+                (img: any) => img.id !== imageId
+            )
         }
-    } catch (err) {
+
+        // Notify parent to update list
+        emit('topic-updated', editingTopic.value)
+    } catch (err: any) {
         console.error(err)
+        swal.error(err.data?.message || 'ไม่สามารถลบรูปภาพได้')
     }
 }
 

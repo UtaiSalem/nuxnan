@@ -44,18 +44,26 @@ const imagePreviews = computed(() => {
   }))
 })
 
+const cleanupImagePreviews = () => {
+  imagePreviews.value.forEach(p => URL.revokeObjectURL(p.url))
+  newImages.value = []
+  if (imageInput.value) imageInput.value.value = ''
+}
+
 // Define resetForm before watchers to avoid "Cannot access before initialization" error
 const resetForm = () => {
   form.title = ''
   form.content = ''
   form.youtube_url = ''
   form.min_read = 5
-  newImages.value = []
+  cleanupImagePreviews()
   errors.value = {}
 }
 
 // Watch for topic changes to populate form
 watch(() => props.topic, (newTopic) => {
+  cleanupImagePreviews()
+  errors.value = {}
   if (newTopic) {
     form.title = newTopic.title || ''
     form.content = newTopic.content || ''
@@ -68,9 +76,8 @@ watch(() => props.topic, (newTopic) => {
 
 watch(() => props.show, (isShow) => {
     if (!isShow) {
-        // defined reset logic if needed when closing?
-        // usually better to reset when opening "Create" mode
-        if (!props.topic) resetForm()
+        cleanupImagePreviews()
+        errors.value = {}
     } else {
         errors.value = {}
     }
@@ -110,6 +117,7 @@ const handleImageSelect = (event: Event) => {
 }
 
 const removeNewImage = (index: number) => {
+  URL.revokeObjectURL(imagePreviews.value[index].url)
   newImages.value.splice(index, 1)
 }
 

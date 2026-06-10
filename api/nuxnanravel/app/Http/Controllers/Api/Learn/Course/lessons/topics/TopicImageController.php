@@ -7,6 +7,7 @@ use App\Models\TopicImage;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreTopicImageRequest;
 use App\Http\Requests\UpdateTopicImageRequest;
+use App\Services\CourseMediaService;
 
 class TopicImageController extends \App\Http\Controllers\Controller
 {
@@ -61,16 +62,34 @@ class TopicImageController extends \App\Http\Controllers\Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Topic $topic, TopicImage $image)
+    public function destroy(Topic $topic, TopicImage $image, CourseMediaService $mediaService)
     {
-        // $topic = Topic::find($topicId);
-        // $image = TopicImage::find($topicImage->id);
+        // 1. Ownership check: image ต้องเป็นของ topic นี้
+        if ($image->topic_id !== $topic->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Image not found for this topic'
+            ], 404);
+        }
 
-        // if (!$image) {
-        //     return response()->json(['message' => 'Image not found'], 404);
-        // }
+        // 2. Authorization: ต้องเป็น course admin
+        if (!$topic->course->isAdmin(auth()->user())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
 
-        Storage::disk('public')->delete('images/courses/lessons/topics', $image->filename);
+        // 3. Safe delete: ใช้ deleteIfUnused กันลบไฟล์ที่ share จาก duplicate course
+        $mediaService->deleteIfUnused(
+            'images/courses/lessons/topics/' . $image->filename,
+            TopicImage::class,
+            'filename',
+            $image->filename,
+            $image->id
+        );
+
+        // 4. ลบ DB record
         $image->delete();
 
         return response()->json([
