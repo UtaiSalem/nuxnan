@@ -7,7 +7,7 @@ import MyCoursesWidget from '~/components/widgets/MyCoursesWidget.vue'
 import MemberedCoursesWidget from '~/components/widgets/MemberedCoursesWidget.vue'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
   middleware: ['auth']
 })
 
@@ -124,7 +124,8 @@ const switchView = (view: 'all' | 'my') => {
   }
 }
 
-// Lifecycle
+usePageLayoutWidgets({ left: true, right: true })
+
 onMounted(() => {
   if (user.value) {
     fetchAllAcademies()
@@ -134,10 +135,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <NuxtLayout name="main">
+  <div class="space-y-6">
     <!-- Hero Banner -->
-    <template #hero>
+    <ClientOnly><Teleport to="#hero-slot">
       <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 shadow-xl">
         <div class="absolute inset-0 opacity-20">
           <div class="absolute inset-0" style="background-image: url('/images/resources/animate-bg.png'); background-size: cover;"></div>
@@ -166,96 +166,100 @@ onMounted(() => {
            </div>
         </div>
       </div>
-    </template>
+    </Teleport></ClientOnly>
 
     <!-- Left Sidebar Slots -->
-    <template #leftWidgets>
-      <!-- Search & Filter Widget -->
-      <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 overflow-hidden">
-        <div class="p-4 border-b border-gray-100 dark:border-vikinger-dark-100 bg-gray-50/50 dark:bg-vikinger-dark-50/50">
-          <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
-            <Icon icon="fluent:filter-24-filled" class="w-5 h-5 text-vikinger-purple" />
-            ค้นหาและตัวกรอง
-          </h3>
-        </div>
-        <div class="p-4 space-y-4">
-          <!-- Search -->
-          <div class="space-y-2">
-            <label class="text-xs font-black text-gray-500 uppercase tracking-wider">ชื่อสถาบัน</label>
-            <div class="relative">
-              <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input 
-                v-model="searchQuery"
-                type="text"
-                placeholder="ค้นหา..."
-                class="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-vikinger-dark-100 border border-gray-100 dark:border-vikinger-dark-50 rounded-lg text-sm focus:ring-2 focus:ring-vikinger-purple/20 focus:border-vikinger-purple outline-none transition-all dark:text-white"
-              />
+    <ClientOnly><Teleport to="#left-widgets-slot">
+      <div class="space-y-4">
+        <!-- Search & Filter Widget -->
+        <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 overflow-hidden">
+          <div class="p-4 border-b border-gray-100 dark:border-vikinger-dark-100 bg-gray-50/50 dark:bg-vikinger-dark-50/50">
+            <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <Icon icon="fluent:filter-24-filled" class="w-5 h-5 text-vikinger-purple" />
+              ค้นหาและตัวกรอง
+            </h3>
+          </div>
+          <div class="p-4 space-y-4">
+            <!-- Search -->
+            <div class="space-y-2">
+              <label class="text-xs font-black text-gray-500 uppercase tracking-wider">ชื่อสถาบัน</label>
+              <div class="relative">
+                <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input 
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="ค้นหา..."
+                  class="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-vikinger-dark-100 border border-gray-100 dark:border-vikinger-dark-50 rounded-lg text-sm focus:ring-2 focus:ring-vikinger-purple/20 focus:border-vikinger-purple outline-none transition-all dark:text-white"
+                />
+              </div>
+            </div>
+
+            <!-- Type Filter -->
+            <div class="space-y-2">
+              <label class="text-xs font-black text-gray-500 uppercase tracking-wider">ประเภทสถาบัน</label>
+              <select 
+                v-model="selectedType"
+                class="w-full px-3 py-2 bg-gray-50 dark:bg-vikinger-dark-100 border border-gray-100 dark:border-vikinger-dark-50 rounded-lg text-sm focus:ring-2 focus:ring-vikinger-purple/20 focus:border-vikinger-purple outline-none transition-all dark:text-white appearance-none cursor-pointer"
+              >
+                <option v-for="type in academyTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
+              </select>
+            </div>
+
+            <!-- View Switcher (My vs All) -->
+            <div class="pt-2">
+               <div class="flex p-1 bg-gray-100 dark:bg-vikinger-dark-100 rounded-lg">
+                  <button 
+                    @click="switchView('all')"
+                    class="flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
+                    :class="currentView === 'all' ? 'bg-white dark:bg-vikinger-dark-50 shadow-sm text-vikinger-purple' : 'text-gray-500'"
+                  >
+                    ทั้งหมด
+                  </button>
+                  <button 
+                    @click="switchView('my')"
+                    class="flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
+                    :class="currentView === 'my' ? 'bg-white dark:bg-vikinger-dark-50 shadow-sm text-vikinger-purple' : 'text-gray-500'"
+                  >
+                    ของฉัน
+                  </button>
+               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Type Filter -->
-          <div class="space-y-2">
-            <label class="text-xs font-black text-gray-500 uppercase tracking-wider">ประเภทสถาบัน</label>
-            <select 
-              v-model="selectedType"
-              class="w-full px-3 py-2 bg-gray-50 dark:bg-vikinger-dark-100 border border-gray-100 dark:border-vikinger-dark-50 rounded-lg text-sm focus:ring-2 focus:ring-vikinger-purple/20 focus:border-vikinger-purple outline-none transition-all dark:text-white appearance-none cursor-pointer"
+        <!-- Membered Academies Mini Widget -->
+        <div v-if="myAcademies.length > 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 overflow-hidden">
+          <div class="p-4 border-b border-gray-100 dark:border-vikinger-dark-100">
+            <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm">
+              <Icon icon="fluent:building-24-filled" class="w-4 h-4 text-blue-500" />
+              โรงเรียนที่ฉันเป็นสมาชิก
+            </h3>
+          </div>
+          <div class="divide-y divide-gray-50 dark:divide-vikinger-dark-50">
+            <NuxtLink
+              v-for="academy in myAcademies.slice(0, 5)"
+              :key="academy.id"
+              :to="`/academies/${encodeURIComponent(academy.name)}`"
+              class="p-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
             >
-              <option v-for="type in academyTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
-            </select>
-          </div>
-
-          <!-- View Switcher (My vs All) -->
-          <div class="pt-2">
-             <div class="flex p-1 bg-gray-100 dark:bg-vikinger-dark-100 rounded-lg">
-                <button 
-                  @click="switchView('all')"
-                  class="flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
-                  :class="currentView === 'all' ? 'bg-white dark:bg-vikinger-dark-50 shadow-sm text-vikinger-purple' : 'text-gray-500'"
-                >
-                  ทั้งหมด
-                </button>
-                <button 
-                  @click="switchView('my')"
-                  class="flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
-                  :class="currentView === 'my' ? 'bg-white dark:bg-vikinger-dark-50 shadow-sm text-vikinger-purple' : 'text-gray-500'"
-                >
-                  ของฉัน
-                </button>
-             </div>
+              <img :src="getLogoUrl(academy)" class="w-8 h-8 rounded-lg object-cover" />
+              <div class="min-w-0 flex-1">
+                <h4 class="text-xs font-bold truncate dark:text-white">{{ academy.name }}</h4>
+                <p class="text-[10px] text-gray-500">{{ getAcademyTypeInfo(academy.type).label }}</p>
+              </div>
+            </NuxtLink>
           </div>
         </div>
       </div>
-
-      <!-- Membered Academies Mini Widget -->
-      <div v-if="myAcademies.length > 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 overflow-hidden">
-        <div class="p-4 border-b border-gray-100 dark:border-vikinger-dark-100">
-          <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm">
-            <Icon icon="fluent:building-24-filled" class="w-4 h-4 text-blue-500" />
-            โรงเรียนที่ฉันเป็นสมาชิก
-          </h3>
-        </div>
-        <div class="divide-y divide-gray-50 dark:divide-vikinger-dark-50">
-          <NuxtLink
-            v-for="academy in myAcademies.slice(0, 5)"
-            :key="academy.id"
-            :to="`/academies/${encodeURIComponent(academy.name)}`"
-            class="p-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
-          >
-            <img :src="getLogoUrl(academy)" class="w-8 h-8 rounded-lg object-cover" />
-            <div class="min-w-0 flex-1">
-              <h4 class="text-xs font-bold truncate dark:text-white">{{ academy.name }}</h4>
-              <p class="text-[10px] text-gray-500">{{ getAcademyTypeInfo(academy.type).label }}</p>
-            </div>
-          </NuxtLink>
-        </div>
-      </div>
-    </template>
+    </Teleport></ClientOnly>
 
     <!-- Right Sidebar Slots -->
-    <template #rightWidgets>
-      <MemberedCoursesWidget />
-      <MyCoursesWidget />
-    </template>
+    <ClientOnly><Teleport to="#right-widgets-slot">
+      <div class="space-y-4">
+        <MemberedCoursesWidget />
+        <MyCoursesWidget />
+      </div>
+    </Teleport></ClientOnly>
 
     <!-- Main Content -->
     <div class="min-w-0">
@@ -376,9 +380,8 @@ onMounted(() => {
         </button>
       </div>
     </div>
-  </NuxtLayout>
   </div>
-  </template>
+</template>
 
 <style scoped>
 .bg-gradient-vikinger {
@@ -388,4 +391,3 @@ onMounted(() => {
   box-shadow: 0 10px 25px -5px rgba(111, 66, 193, 0.3), 0 8px 10px -6px rgba(111, 66, 193, 0.1);
 }
 </style>
-

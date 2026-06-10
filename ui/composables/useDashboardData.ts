@@ -10,7 +10,6 @@ export const useDashboardData = () => {
   const dashboardStore = useDashboardStore()
   const gamificationStore = useGamificationStore()
   
-  const { getLevelProgress } = usePoints()
   const { getBalance: getWalletBalance } = useWallet()
   const { getBalance: getPointsBalance } = usePoints()
 
@@ -90,7 +89,7 @@ export const useDashboardData = () => {
     recentXpLogs,
     
     // Level Helpers
-    levelProgress: computed(() => getLevelProgress()),
+    levelProgress,
 
     // Methods
     loadAllData,

@@ -136,4 +136,21 @@ _(clear — no active multi-agent work)_
 
 ## Analysis Timeline
 
+### 2026-06-11 - Route white-screen / widget-layout recursion stabilization
+- Scope claimed: frontend route-change bug affecting Dashboard, Newsfeed, Academies, Learn/Courses, Marketplace pages, and course shell widget layout.
+- Verified risk pattern: multiple pages/components were mutating shared `useLayoutWidgets()` state directly in mount/unmount hooks, while layout structure and Teleport destinations depended on that same state.
+- Implemented `usePageLayoutWidgets()` in `ui/composables/useLayoutWidgets.ts` with single-owner synchronization plus guarded teardown to reduce route-transition races and recursive updates.
+- Updated affected consumers:
+  - `ui/pages/Dashboard.vue`
+  - `ui/pages/Play/Newsfeed.vue`
+  - `ui/pages/Earn/Marketplace/Sales.vue`
+  - `ui/pages/Earn/Marketplace/History.vue`
+  - `ui/pages/academies/index.vue`
+  - `ui/pages/Learn/Courses/index.vue`
+  - `ui/components/learn/course/v2/CoursePageShell.vue`
+- Additional cleanup: `ui/composables/useDashboardData.ts` now returns store-backed `levelProgress` directly; `ui/pages/Learn/Courses/index.vue` filter reset now writes through `.value` refs correctly.
+- Verification:
+  - `cmd /c npx vue-tsc --noEmit` from `ui/` completed but failed on many pre-existing repo-wide TypeScript issues unrelated to this change set.
+  - No app terminal/browser session was attached, so live route navigation was not exercised in-browser during this turn.
+
 _(consolidated 2026-06-10 — previous entries covered: sort order system implementation+verification, topic reorder UX discoverability, TopicOrderWidget theming mismatch, lesson sidebar widget wrong-course cache, lesson progress widget ordering, lesson delete 500 import fix, course group management page analysis, donation admin duplication analysis+planning, draft visibility analysis+planning v1+v2, topic create/update validation mismatch investigation, topic image edit leakage diagnosis, topic image delete placeholder+backend bugs, infinite scroll implementation for legacy donation page)_

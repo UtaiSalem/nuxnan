@@ -250,7 +250,7 @@ function handleKeydown(e: KeyboardEvent) {
 watch(() => sharedState.gameOver, (over) => {
   if (!over) return
   emit('finished', {
-    session_token: crypto.randomUUID(),
+    session_token: uuid(),
     game_mode: 'falling_words',
     language: props.lang,
     difficulty: props.difficulty,

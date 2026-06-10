@@ -2,7 +2,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useObjectUrl } from '@vueuse/core'
-import MainLayout from '~/layouts/main.vue'
 import Swal from 'sweetalert2'
 import { useAuthStore } from '~/stores/auth'
 import AdvertiseItemCard from '~/components/widgets/advertises/AdvertiseItemCard.vue'
@@ -15,7 +14,7 @@ const apiBase = config.public.apiBase
 const router = useRouter()
 
 definePageMeta({
-  layout: false
+  layout: 'main'
 })
 
 const isLoading = ref(false)
@@ -215,24 +214,22 @@ onMounted(() => {
 </script>
 
 <template>
-<MainLayout>
-    <!-- Header Banner -->
-    <template #hero>
-        <div class="relative rounded-2xl overflow-hidden shadow-lg mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 h-48 flex items-center px-8">
-             <div class="absolute inset-0 opacity-20 bg-[url('/storage/images/banner/banner-bg.png')] bg-cover bg-center"></div>
-             <div class="relative z-10 flex items-center gap-6">
-                 <div class="p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-                     <Icon icon="solar:megaphone-bold-duotone" class="w-12 h-12 text-white" />
+    <div>
+        <ClientOnly><Teleport to="#hero-slot">
+            <div class="relative rounded-2xl overflow-hidden shadow-lg mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 h-48 flex items-center px-8">
+                 <div class="absolute inset-0 opacity-20 bg-[url('/storage/images/banner/banner-bg.png')] bg-cover bg-center"></div>
+                 <div class="relative z-10 flex items-center gap-6">
+                     <div class="p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+                         <Icon icon="solar:megaphone-bold-duotone" class="w-12 h-12 text-white" />
+                     </div>
+                     <div>
+                         <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">ลงโฆษณา</h1>
+                         <p class="text-blue-100 text-lg">โปรโมทสินค้าและบริการของคุณให้ผู้ใช้นับหมื่นเห็นได้ง่ายๆ</p>
+                     </div>
                  </div>
-                 <div>
-                     <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">ลงโฆษณา</h1>
-                     <p class="text-blue-100 text-lg">โปรโมทสินค้าและบริการของคุณให้ผู้ใช้นับหมื่นเห็นได้ง่ายๆ</p>
-                 </div>
-             </div>
-        </div>
-    </template>
+            </div>
+        </Teleport></ClientOnly>
 
-    <template #default>
         <div class="max-w-7xl mx-auto pb-20">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 
@@ -486,10 +483,9 @@ onMounted(() => {
 
             </div>
         </div>
-    </template>
-</MainLayout>
-</template>
+    </div>
 
+</template>
 <style scoped>
 /* Custom Scrollbar for Textarea if needed */
 textarea::-webkit-scrollbar {
@@ -503,3 +499,4 @@ textarea::-webkit-scrollbar-thumb {
   border-radius: 20px;
 }
 </style>
+

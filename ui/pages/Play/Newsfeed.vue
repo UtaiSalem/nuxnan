@@ -18,7 +18,7 @@ import MemberedAcademiesWidget from '~/components/widgets/MemberedAcademiesWidge
 import AllAcademiesWidget from '~/components/widgets/AllAcademiesWidget.vue'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
   middleware: 'auth',
 })
 
@@ -225,6 +225,8 @@ const setupIntersectionObserver = () => {
   }
 }
 
+usePageLayoutWidgets({ left: true, right: true })
+
 onMounted(async () => {
   // Fetch activities - sidebar widgets load their own data independently
   await fetchActivities(1, false)
@@ -241,20 +243,21 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div>
-    <NuxtLayout name="main">
+  <div class="space-y-6">
     <!-- Left Widgets Column -->
-    <template #leftWidgets>
-      <RecentlyViewedCoursesWidget class="mb-6" />
-      <MemberedCoursesWidget class="mb-6" />
-      <PopularCoursesWidget class="mb-6" />
-      <ProfileCompletionWidget
-        :completion="profileCompletion"
-        :quests="quests"
-        :badges="badges"
-      />
-      <StatsBoxWidget :stats="userStats" />
-    </template>
+    <ClientOnly><Teleport to="#left-widgets-slot">
+      <div class="space-y-6">
+        <RecentlyViewedCoursesWidget />
+        <MemberedCoursesWidget />
+        <PopularCoursesWidget />
+        <ProfileCompletionWidget
+          :completion="profileCompletion"
+          :quests="quests"
+          :badges="badges"
+        />
+        <StatsBoxWidget :stats="userStats" />
+      </div>
+    </Teleport></ClientOnly>
 
     <!-- Main Feed Content (Default Slot) -->
     <div class="space-y-6">
@@ -355,62 +358,62 @@ onUnmounted(() => {
     </div>
 
     <!-- Right Widgets Column -->
-    <template #rightWidgets>
-      <!-- <ReactionsWidget /> -->
+    <ClientOnly><Teleport to="#right-widgets-slot">
+      <div class="space-y-6">
+        <!-- Academy Widgets -->
+        <MemberedAcademiesWidget />
+        <AllAcademiesWidget />
 
-      <!-- Academy Widgets -->
-      <MemberedAcademiesWidget />
-      <AllAcademiesWidget />
+        <!-- Self-loading sidebar widgets -->
+        <PeopleMayKnowWidget />
+        <PendingFriendsWidget />
+        <DonatesWidget />
+        <AdvertisesWidget />
 
-      <!-- Self-loading sidebar widgets -->
-      <PeopleMayKnowWidget />
-      <PendingFriendsWidget />
-      <DonatesWidget />
-      <AdvertisesWidget />
+        <!-- Recent Stories Widget -->
+        <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 shadow-sm">
+          <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Recent Stories</h3>
+          <div class="flex gap-2 overflow-x-auto">
+            <div
+              v-for="story in recentStories"
+              :key="story.id"
+              class="flex-shrink-0 w-16 cursor-pointer group"
+            >
+              <div class="relative">
+                <img
+                  :src="story.preview"
+                  :alt="story.user"
+                  class="w-16 h-24 object-cover rounded-lg ring-2 ring-vikinger-purple"
+                />
+                <img
+                  :src="story.avatar"
+                  :alt="story.user"
+                  class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full border-2 border-white dark:border-vikinger-dark-200"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <!-- Recent Stories Widget -->
-      <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 shadow-sm">
-        <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Recent Stories</h3>
-        <div class="flex gap-2 overflow-x-auto">
-          <div
-            v-for="story in recentStories"
-            :key="story.id"
-            class="flex-shrink-0 w-16 cursor-pointer group"
-          >
-            <div class="relative">
-              <img
-                :src="story.preview"
-                :alt="story.user"
-                class="w-16 h-24 object-cover rounded-lg ring-2 ring-vikinger-purple"
-              />
-              <img
-                :src="story.avatar"
-                :alt="story.user"
-                class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full border-2 border-white dark:border-vikinger-dark-200"
-              />
+        <!-- Featured Badges Widget -->
+        <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 shadow-sm">
+          <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Featured Badges</h3>
+          <div class="flex gap-3">
+            <div
+              v-for="badge in featuredBadges"
+              :key="badge.id"
+              class="w-12 h-12 rounded-lg flex items-center justify-center text-2xl bg-gradient-to-br shadow-lg"
+              :class="badge.color"
+            >
+              {{ badge.icon }}
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Featured Badges Widget -->
-      <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 shadow-sm">
-        <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Featured Badges</h3>
-        <div class="flex gap-3">
-          <div
-            v-for="badge in featuredBadges"
-            :key="badge.id"
-            class="w-12 h-12 rounded-lg flex items-center justify-center text-2xl bg-gradient-to-br shadow-lg"
-            :class="badge.color"
-          >
-            {{ badge.icon }}
-          </div>
-        </div>
-      </div>
-    </template>
-  </NuxtLayout>
+    </Teleport></ClientOnly>
   </div>
-  </template>
+</template>
+
 <style scoped>
 /* Hide scrollbar but allow scrolling */
 .scrollbar-hide {
@@ -497,5 +500,3 @@ onUnmounted(() => {
   }
 }
 </style>
-
-

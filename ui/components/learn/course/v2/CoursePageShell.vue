@@ -55,8 +55,6 @@ const {
   error: progressError 
 } = useCourseLearningProgress(courseId.value, props.courseMemberOfAuth?.id, props.isCourseAdmin)
 
-const layoutWidgets = useLayoutWidgets()
-
 const TABLE_ROUTES = [
   'learn-Courses-id-attendances',
   'learn-Courses-id-progress',
@@ -90,16 +88,10 @@ const isCourseBoardRoute = computed(() => {
 
 const shouldShowCourseInfoWidget = computed(() => isCourseInfoRoute.value || isCourseBoardRoute.value)
 
-watchEffect(() => {
-  layoutWidgets.value.hasLeftWidgets = true
-  layoutWidgets.value.hasRightWidgets = !isTableLayout.value
-  layoutWidgets.value.isTableLayout = isTableLayout.value
-})
-
-onUnmounted(() => {
-  layoutWidgets.value.hasLeftWidgets = false
-  layoutWidgets.value.hasRightWidgets = false
-  layoutWidgets.value.isTableLayout = false
+usePageLayoutWidgets({
+  left: true,
+  right: computed(() => !isTableLayout.value),
+  tableLayout: isTableLayout,
 })
 
 </script>

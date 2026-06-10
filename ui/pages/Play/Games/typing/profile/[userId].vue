@@ -25,7 +25,7 @@ ChartJS.register(
 )
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
 })
 
 const route     = useRoute()
@@ -110,7 +110,6 @@ function formatDateShort(d: string) {
 </script>
 
 <template>
-<NuxtLayout name="main">
 <div class="max-w-5xl mx-auto py-12 px-4 space-y-8">
   <div v-if="loading" class="flex items-center justify-center py-40">
     <Icon icon="eos-icons:loading" class="text-5xl text-primary-500 animate-spin" />
@@ -296,5 +295,4 @@ function formatDateShort(d: string) {
     </div>
   </template>
 </div>
-</NuxtLayout>
 </template>

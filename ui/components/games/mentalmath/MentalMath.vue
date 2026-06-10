@@ -152,7 +152,7 @@ function startTimer() {
 
 function startGame() {
   const cfg = LEVEL_CONFIG[currentLevel.value]
-  gameSessionId.value = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2)
+  gameSessionId.value = uuid()
   score.value = 0
   correctCount.value = 0
   wrongCount.value = 0

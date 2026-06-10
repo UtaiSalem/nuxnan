@@ -316,7 +316,7 @@ function resetGame() {
 
 function buildResult() {
   return {
-    session_token: crypto.randomUUID(),
+    session_token: uuid(),
     game_mode: 'letter_runner',
     language: props.lang,
     difficulty: props.difficulty,

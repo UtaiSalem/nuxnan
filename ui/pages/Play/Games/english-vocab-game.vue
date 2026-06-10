@@ -4,7 +4,7 @@ import { usePoints } from '~/composables/usePoints'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
 })
 
 type CardType = 'word' | 'meaning'
@@ -278,165 +278,163 @@ onMounted(() => {
 </script>
 
 <template>
-  <NuxtLayout name="main">
-    <div class="min-h-[calc(100vh-100px)] w-full flex flex-col p-4 bg-gray-50 dark:bg-gray-900">
-      <div class="max-w-4xl mx-auto w-full">
-        <!-- Header -->
-        <div class="text-center mb-6">
-          <h1 class="text-4xl font-black text-gray-900 dark:text-white mb-2">
-            English Vocab Match
-          </h1>
-          <p class="text-gray-600 dark:text-gray-300 text-lg">
-            จับคู่คำศัพท์ภาษาอังกฤษกับความหมายไทย
-          </p>
-          <p class="text-gray-500 dark:text-gray-400 text-sm mt-2 font-black">
-            Level {{ currentLevel }} (Unlocked: {{ unlockedLevel }})
-          </p>
-        </div>
+  <div class="min-h-[calc(100vh-100px)] w-full flex flex-col p-4 bg-gray-50 dark:bg-gray-900">
+    <div class="max-w-4xl mx-auto w-full">
+      <!-- Header -->
+      <div class="text-center mb-6">
+        <h1 class="text-4xl font-black text-gray-900 dark:text-white mb-2">
+          English Vocab Match
+        </h1>
+        <p class="text-gray-600 dark:text-gray-300 text-lg">
+          จับคู่คำศัพท์ภาษาอังกฤษกับความหมายไทย
+        </p>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mt-2 font-black">
+          Level {{ currentLevel }} (Unlocked: {{ unlockedLevel }})
+        </p>
+      </div>
 
-        <!-- Stats -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-5 border-2 border-black">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-            <div class="text-center">
-              <p class="text-sm font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider">
-                Moves
-              </p>
-              <p class="text-4xl font-black text-gray-900 dark:text-white">{{ moves }}</p>
-            </div>
+      <!-- Stats -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-5 border-2 border-black">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+          <div class="text-center">
+            <p class="text-sm font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+              Moves
+            </p>
+            <p class="text-4xl font-black text-gray-900 dark:text-white">{{ moves }}</p>
+          </div>
 
-            <div class="text-center">
-              <p class="text-sm font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider">
-                Pairs
-              </p>
-              <p class="text-4xl font-black text-gray-900 dark:text-white">
-                {{ matchedPairs }}/{{ currentPairsTotal }}
-              </p>
-            </div>
+          <div class="text-center">
+            <p class="text-sm font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+              Pairs
+            </p>
+            <p class="text-4xl font-black text-gray-900 dark:text-white">
+              {{ matchedPairs }}/{{ currentPairsTotal }}
+            </p>
+          </div>
 
-            <div class="text-center">
-              <p class="text-sm font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
-                Level
-              </p>
-              <div class="flex justify-center gap-2 flex-wrap">
-                <button
-                  v-for="cfg in LEVEL_CONFIGS"
-                  :key="cfg.level"
-                  :disabled="isLevelLocked(cfg.level)"
-                  @click="changeLevel(cfg.level)"
-                  :class="[
-                    'px-3 py-2 rounded-lg border-2 border-black font-black text-sm transition',
-                    currentLevel === cfg.level
-                      ? 'bg-green-300 text-black'
-                      : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600',
-                    isLevelLocked(cfg.level) ? 'opacity-60 cursor-not-allowed hover:bg-white dark:hover:bg-gray-700' : ''
-                  ]"
-                >
-                  Level {{ cfg.level }}
-                </button>
-              </div>
+          <div class="text-center">
+            <p class="text-sm font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
+              Level
+            </p>
+            <div class="flex justify-center gap-2 flex-wrap">
+              <button
+                v-for="cfg in LEVEL_CONFIGS"
+                :key="cfg.level"
+                :disabled="isLevelLocked(cfg.level)"
+                @click="changeLevel(cfg.level)"
+                :class="[
+                  'px-3 py-2 rounded-lg border-2 border-black font-black text-sm transition',
+                  currentLevel === cfg.level
+                    ? 'bg-green-300 text-black'
+                    : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600',
+                  isLevelLocked(cfg.level) ? 'opacity-60 cursor-not-allowed hover:bg-white dark:hover:bg-gray-700' : ''
+                ]"
+              >
+                Level {{ cfg.level }}
+              </button>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Board -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 border-2 border-black mb-5">
-          <div
-            class="grid gap-3 mx-auto"
-            :style="`grid-template-columns: repeat(${activeLevelConfig.gridCols}, minmax(0, 1fr)); max-width: ${activeLevelConfig.gridCols * 110}px;`"
-          >
-            <button
-              v-for="card in cards"
-              :key="card.id"
-              @click="flipCard(card)"
-              class="aspect-[1/1] w-full flex items-center justify-center rounded-xl border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] transition active:translate-x-[2px] active:translate-y-[2px]"
-              :class="[
-                card.isMatched
-                  ? 'bg-green-200 cursor-default opacity-80'
-                  : card.isFlipped
-                    ? 'bg-yellow-200'
-                    : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
-              ]"
-              type="button"
-              :disabled="!canFlip(card)"
-            >
-              <div class="px-2 text-center">
-                <div v-if="card.isFlipped || card.isMatched" class="font-black text-gray-900 dark:text-white">
-                  <div v-if="card.type === 'word'" class="text-lg leading-tight">
-                    {{ card.word }}
-                  </div>
-                  <div v-else class="text-lg leading-tight">
-                    {{ card.meaning }}
-                  </div>
-                </div>
-                <div v-else class="font-black text-gray-900 dark:text-white">
-                  ?
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Controls -->
-        <div class="text-center">
+      <!-- Board -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 border-2 border-black mb-5">
+        <div
+          class="grid gap-3 mx-auto"
+          :style="`grid-template-columns: repeat(${activeLevelConfig.gridCols}, minmax(0, 1fr)); max-width: ${activeLevelConfig.gridCols * 110}px;`"
+        >
           <button
-            @click="initializeGame"
-            class="bg-black text-white font-black py-3 px-8 rounded-xl shadow-lg border-2 border-black hover:translate-x-0.5 hover:translate-y-0.5 active:translate-x-1 active:translate-y-1 transition active:shadow-md"
+            v-for="card in cards"
+            :key="card.id"
+            @click="flipCard(card)"
+            class="aspect-[1/1] w-full flex items-center justify-center rounded-xl border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] transition active:translate-x-[2px] active:translate-y-[2px]"
+            :class="[
+              card.isMatched
+                ? 'bg-green-200 cursor-default opacity-80'
+                : card.isFlipped
+                  ? 'bg-yellow-200'
+                  : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+            ]"
             type="button"
+            :disabled="!canFlip(card)"
           >
-            New Game
+            <div class="px-2 text-center">
+              <div v-if="card.isFlipped || card.isMatched" class="font-black text-gray-900 dark:text-white">
+                <div v-if="card.type === 'word'" class="text-lg leading-tight">
+                  {{ card.word }}
+                </div>
+                <div v-else class="text-lg leading-tight">
+                  {{ card.meaning }}
+                </div>
+              </div>
+              <div v-else class="font-black text-gray-900 dark:text-white">
+                ?
+              </div>
+            </div>
           </button>
         </div>
       </div>
 
-      <!-- Victory -->
-      <div
-        v-if="!isGameActive && matchedPairs === currentPairsTotal"
-        class="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4"
-      >
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full text-center border-2 border-black">
-          <div class="text-6xl mb-2">🎉</div>
-          <h2 class="text-3xl font-black text-gray-900 dark:text-white mb-1">
-            Congratulations!
-          </h2>
-          <p class="text-lg text-gray-700 dark:text-gray-200 mb-4">
-            You matched all words.
-          </p>
-
-          <div class="bg-gray-100 dark:bg-gray-700 rounded-xl p-3 mb-4 border-2 border-black/0">
-            <p class="text-sm font-black text-gray-800 dark:text-gray-100">
-              Completed in
-              <span class="font-black text-green-700 dark:text-green-300">{{ moves }}</span>
-              moves
-            </p>
-
-            <p
-              v-if="lastEarnedPoints > 0"
-              class="text-sm font-black text-gray-800 dark:text-gray-100 mt-2"
-            >
-              Earned XP
-              <span class="font-black text-green-700 dark:text-green-300">{{ lastEarnedPoints }}</span>
-              xp
-            </p>
-
-            <p
-              v-if="pendingLevelUp"
-              class="text-sm font-black text-gray-800 dark:text-gray-100 mt-2"
-            >
-              Level Up!
-              Now Level
-              <span class="font-black text-green-700 dark:text-green-300">{{ pendingLevelUp }}</span>
-            </p>
-          </div>
-
-          <button
-            @click="initializeGame"
-            class="w-full bg-black text-white font-black py-3 px-6 rounded-xl border-2 border-black hover:translate-x-0.5 hover:translate-y-0.5 transition active:translate-x-1 active:translate-y-1"
-            type="button"
-          >
-            Play Again
-          </button>
-        </div>
+      <!-- Controls -->
+      <div class="text-center">
+        <button
+          @click="initializeGame"
+          class="bg-black text-white font-black py-3 px-8 rounded-xl shadow-lg border-2 border-black hover:translate-x-0.5 hover:translate-y-0.5 active:translate-x-1 active:translate-y-1 transition active:shadow-md"
+          type="button"
+        >
+          New Game
+        </button>
       </div>
     </div>
-  </NuxtLayout>
+
+    <!-- Victory -->
+    <div
+      v-if="!isGameActive && matchedPairs === currentPairsTotal"
+      class="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full text-center border-2 border-black">
+        <div class="text-6xl mb-2">🎉</div>
+        <h2 class="text-3xl font-black text-gray-900 dark:text-white mb-1">
+          Congratulations!
+        </h2>
+        <p class="text-lg text-gray-700 dark:text-gray-200 mb-4">
+          You matched all words.
+        </p>
+
+        <div class="bg-gray-100 dark:bg-gray-700 rounded-xl p-3 mb-4 border-2 border-black/0">
+          <p class="text-sm font-black text-gray-800 dark:text-gray-100">
+            Completed in
+            <span class="font-black text-green-700 dark:text-green-300">{{ moves }}</span>
+            moves
+          </p>
+
+          <p
+            v-if="lastEarnedPoints > 0"
+            class="text-sm font-black text-gray-800 dark:text-gray-100 mt-2"
+          >
+            Earned XP
+            <span class="font-black text-green-700 dark:text-green-300">{{ lastEarnedPoints }}</span>
+            xp
+          </p>
+
+          <p
+            v-if="pendingLevelUp"
+            class="text-sm font-black text-gray-800 dark:text-gray-100 mt-2"
+          >
+            Level Up!
+            Now Level
+            <span class="font-black text-green-700 dark:text-green-300">{{ pendingLevelUp }}</span>
+          </p>
+        </div>
+
+        <button
+          @click="initializeGame"
+          class="w-full bg-black text-white font-black py-3 px-6 rounded-xl border-2 border-black hover:translate-x-0.5 hover:translate-y-0.5 transition active:translate-x-1 active:translate-y-1"
+          type="button"
+        >
+          Play Again
+        </button>
+      </div>
+    </div>
+  </div>
 </template>

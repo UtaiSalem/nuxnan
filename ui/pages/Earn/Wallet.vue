@@ -604,7 +604,7 @@ const transformTransaction = (tx: any) => {
     transactionType: 'wallet' as const,
     actionType,
     amount: isPositive ? Math.abs(tx.amount) : -Math.abs(tx.amount),
-    balanceAfter: tx.balance_after,
+    balanceAfter: tx.balance_after != null ? Number(tx.balance_after) : undefined,
     createdAt: tx.created_at,
     source,
     destination,

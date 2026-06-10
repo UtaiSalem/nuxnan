@@ -1067,7 +1067,7 @@ function startGame() {
   if (!playerName.value.trim()) return;
 
   // Generate unique session ID for this game session
-  gameSessionId.value = crypto.randomUUID();
+  gameSessionId.value = uuid();
 
   gameState.value = 'playing';
   currentLevel.value = 1;

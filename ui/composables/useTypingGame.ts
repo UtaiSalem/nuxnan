@@ -19,7 +19,7 @@ export interface CharState {
 
 export function useTypingGame(config: GameConfig) {
   // ── State ──────────────────────────────────────────────────────
-  const sessionToken   = ref(crypto.randomUUID())
+  const sessionToken   = ref(uuid())
   const gameState      = ref<'idle' | 'countdown' | 'playing' | 'finished'>('idle')
   const words          = ref<string[]>([])
   const currentIndex   = ref(0)
@@ -103,7 +103,7 @@ export function useTypingGame(config: GameConfig) {
   }
 
   function reset() {
-    sessionToken.value = crypto.randomUUID()
+    sessionToken.value = uuid()
     gameState.value = 'idle'
     currentIndex.value = 0
     currentInput.value = ''
