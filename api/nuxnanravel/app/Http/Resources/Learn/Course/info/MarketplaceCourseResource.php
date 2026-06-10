@@ -65,6 +65,7 @@ class MarketplaceCourseResource extends JsonResource
             'saleable'           => (bool) $this->saleable,
             'is_for_marketplace' => (bool) $this->is_for_marketplace,
             'total_sales'        => $this->total_sales,
+            'owned_by_academy'   => (bool) ($this->owned_by_academy ?? false),
         ];
     }
 }

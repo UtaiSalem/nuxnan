@@ -2,21 +2,21 @@
 
 namespace App\Jobs;
 
+use App\Models\CoursePurchase;
 use App\Models\Notification;
 use App\Models\PointsTransaction;
 use App\Models\WalletTransaction;
-use App\Models\CoursePurchase;
 use App\Services\CourseCloneService;
-use App\Services\Support\CourseCloneContext;
 use App\Services\PointsService;
+use App\Services\Support\CourseCloneContext;
 use App\Services\WalletService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CloneCourseJob implements ShouldQueue
 {
@@ -51,20 +51,23 @@ class CloneCourseJob implements ShouldQueue
      */
     public function handle(CourseCloneService $cloneService): void
     {
-        $purchase = CoursePurchase::with(['sourceCourse', 'buyer'])->find($this->purchaseId);
-        
-        if (!$purchase) {
+        $purchase = CoursePurchase::with(['sourceCourse', 'buyer', 'academy'])->find($this->purchaseId);
+
+        if (! $purchase) {
             Log::error("CoursePurchase record not found: {$this->purchaseId}");
+
             return;
         }
 
         // Idempotency check
         if ($purchase->status === 'completed') {
             Log::info("Purchase {$this->purchaseId} already completed. Skipping.");
+
             return;
         }
         if (in_array($purchase->status, ['failed', 'refunded'])) {
             Log::info("Purchase {$this->purchaseId} is in status {$purchase->status}. Skipping.");
+
             return;
         }
 
@@ -72,7 +75,7 @@ class CloneCourseJob implements ShouldQueue
         $newOwner = $purchase->buyer;
 
         try {
-            $context = new CourseCloneContext(mode: 'purchase');
+            $context = new CourseCloneContext(mode: 'purchase', academyId: $purchase->academy_id);
             $newCourse = $cloneService->clone($source, $newOwner, $context);
 
             $purchase->update([
@@ -81,22 +84,26 @@ class CloneCourseJob implements ShouldQueue
                 'cloned_at' => now(),
             ]);
 
+            $actionUrl = "/Learn/Courses/{$newCourse->id}/settings";
+            if ($purchase->academy_id && $purchase->academy) {
+                $actionUrl = "/academies/{$purchase->academy->name}/admin/courses/{$newCourse->id}/edit";
+            }
+
             Notification::create([
                 'user_id' => $newOwner->id,
                 'type' => Notification::TYPE_COURSE,
-                'title' => 'คัดลอกวิชาสำเร็จ',
-                'message' => "วิชา \"{$source->name}\" ถูกเพิ่มในคลังของคุณแล้ว คุณสามารถเริ่มจัดการเนื้อหาได้ทันที",
+                'content' => "คัดลอกวิชาสำเร็จ: วิชา \"{$source->name}\" ถูกเพิ่มในคลังของคุณแล้ว คุณสามารถเริ่มจัดการเนื้อหาได้ทันที",
                 'metadata' => [
                     'course_id' => $newCourse->id,
                     'source_course_id' => $source->id,
-                    'action_url' => "/Learn/Courses/{$newCourse->id}/settings"
+                    'action_url' => $actionUrl,
                 ],
-                'read_status' => false
+                'read_status' => false,
             ]);
 
             Log::info("Course cloned successfully: {$newCourse->id} from {$source->id} for user {$newOwner->id}");
         } catch (\Exception $e) {
-            Log::error("Failed to clone course {$source->id} for user {$newOwner->id} (attempt {$this->attempts()}): " . $e->getMessage());
+            Log::error("Failed to clone course {$source->id} for user {$newOwner->id} (attempt {$this->attempts()}): ".$e->getMessage());
             // Let Laravel retry naturally — refund only happens in failed() after all retries are exhausted
             throw $e;
         }
@@ -109,12 +116,13 @@ class CloneCourseJob implements ShouldQueue
     {
         $purchase = CoursePurchase::with(['sourceCourse', 'buyer'])->find($this->purchaseId);
 
-        if (!$purchase) {
+        if (! $purchase) {
             Log::error("CloneCourseJob::failed — purchase {$this->purchaseId} not found");
+
             return;
         }
 
-        Log::error("CloneCourseJob permanently failed for purchase {$this->purchaseId}: " . $exception->getMessage());
+        Log::error("CloneCourseJob permanently failed for purchase {$this->purchaseId}: ".$exception->getMessage());
 
         $this->handleRefund($purchase);
 
@@ -125,8 +133,7 @@ class CloneCourseJob implements ShouldQueue
             Notification::create([
                 'user_id' => $newOwner->id,
                 'type' => Notification::TYPE_GENERAL,
-                'title' => 'ไม่สามารถคัดลอกวิชาได้',
-                'message' => "เกิดข้อผิดพลาดในการคัดลอกวิชา \"{$source->name}\" ระบบได้ทำการคืนเงิน/แต้มให้คุณแล้ว กรุณาติดต่อผู้ดูแลระบบหากยังพบปัญหา",
+                'content' => "ไม่สามารถคัดลอกวิชาได้: เกิดข้อผิดพลาดในการคัดลอกวิชา \"{$source->name}\" ระบบได้ทำการคืนเงิน/แต้มให้คุณแล้ว กรุณาติดต่อผู้ดูแลระบบหากยังพบปัญหา",
                 'metadata' => [
                     'source_course_id' => $source->id,
                     'error' => $exception->getMessage(),
@@ -152,10 +159,10 @@ class CloneCourseJob implements ShouldQueue
                 $walletTransaction = WalletTransaction::find($purchase->wallet_transaction_id);
                 if ($walletTransaction && $walletTransaction->status === 'completed') {
                     $walletService->refundCoursePurchase(
-                        $purchase->buyer, 
-                        $purchase->sourceCourse, 
-                        $purchase->amount_wallet, 
-                        "System Refund: Clone failure"
+                        $purchase->buyer,
+                        $purchase->sourceCourse,
+                        $purchase->amount_wallet,
+                        'System Refund: Clone failure'
                     );
                 }
             }
@@ -165,10 +172,10 @@ class CloneCourseJob implements ShouldQueue
                 $pointsTransaction = PointsTransaction::find($purchase->points_transaction_id);
                 if ($pointsTransaction && $pointsTransaction->transaction_type === 'spend') {
                     $pointsService->refund(
-                        $purchase->buyer, 
-                        $purchase->amount_points, 
-                        'App\Models\Course', 
-                        $purchase->source_course_id, 
+                        $purchase->buyer,
+                        $purchase->amount_points,
+                        'App\Models\Course',
+                        $purchase->source_course_id,
                         "Refund for failed course clone: {$purchase->sourceCourse->name}"
                     );
                 }
@@ -181,8 +188,8 @@ class CloneCourseJob implements ShouldQueue
                     $seller = $incomeTransaction->user;
                     $seller->decrement('wallet', $incomeTransaction->amount);
                     $incomeTransaction->update([
-                        'status' => 'failed', 
-                        'description' => $incomeTransaction->description . " (Refunded due to clone failure)"
+                        'status' => 'failed',
+                        'description' => $incomeTransaction->description.' (Refunded due to clone failure)',
                     ]);
                 }
             }

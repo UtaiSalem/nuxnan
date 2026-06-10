@@ -11,6 +11,7 @@ class CourseCloneContext
         public bool $addCopySuffix = false,
         public bool $copyMarketplaceState = false,
         public ?int $sourceCourseId = null,
+        public ?int $academyId = null,
     ) {}
 
     public static function make(array $data): self
@@ -22,6 +23,7 @@ class CourseCloneContext
             addCopySuffix: $data['add_copy_suffix'] ?? false,
             copyMarketplaceState: $data['copy_marketplace_state'] ?? false,
             sourceCourseId: $data['source_course_id'] ?? null,
+            academyId: $data['academy_id'] ?? null,
         );
     }
 }

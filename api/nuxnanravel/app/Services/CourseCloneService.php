@@ -2,20 +2,17 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Topic;
+use App\Models\Assignment;
 use App\Models\Course;
+use App\Models\CourseQuiz;
 use App\Models\Lesson;
 use App\Models\Question;
-use App\Models\Assignment;
-use App\Models\CourseQuiz;
-use App\Models\TopicImage;
-use App\Models\LessonImage;
 use App\Models\QuestionOption;
+use App\Models\Topic;
+use App\Models\User;
 use App\Services\Support\CourseCloneContext;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CourseCloneService
 {
@@ -31,7 +28,7 @@ class CourseCloneService
      */
     public function clone(Course $source, User $newOwner, ?CourseCloneContext $context = null): Course
     {
-        $context = $context ?? new CourseCloneContext();
+        $context = $context ?? new CourseCloneContext;
 
         return DB::transaction(function () use ($source, $newOwner, $context) {
             // Step 1: Clone Course
@@ -125,7 +122,7 @@ class CourseCloneService
             'max_absence_percent', 'allow_unlock_by_points', 'unlock_points_cost',
             'allow_unlock_by_reading', 'unlock_reading_minutes', 'allow_remediation',
             'max_remediation_attempts', 'remediation_max_grade', 'allow_grade_appeal',
-            'appeal_deadline_days', 'price_points', 'price_type'
+            'appeal_deadline_days', 'price_points', 'price_type',
         ];
 
         $data = array_intersect_key($source->getAttributes(), array_flip($allowlist));
@@ -133,20 +130,20 @@ class CourseCloneService
         // New ownership and status
         $data['user_id'] = $newOwner->id;
         $data['instructor_id'] = $newOwner->id;
-        $data['academy_id'] = null;
+        $data['academy_id'] = $context->academyId;
         $data['source_course_id'] = $source->id;
         $data['status'] = 1; // Active
-        
+
         // Handle name
         if ($context->addCopySuffix) {
-            $data['name'] = $source->name . ' (Copy)';
+            $data['name'] = $source->name.' (Copy)';
         }
 
         // Handle marketplace state
         $data['is_for_marketplace'] = $context->copyMarketplaceState ? $source->is_for_marketplace : false;
         $data['saleable'] = $context->copyMarketplaceState ? $source->saleable : false;
         $data['price'] = $context->copyMarketplaceState ? $source->price : 0;
-        
+
         // Reset counters and schedule
         $data['total_sales'] = 0;
         $data['enrolled_students'] = 0;
@@ -168,7 +165,7 @@ class CourseCloneService
         }
 
         // Generate unique slug based on (potentially new) name
-        $data['slug'] = Str::slug($data['name']) . '-' . Str::random(6);
+        $data['slug'] = Str::slug($data['name']).'-'.Str::random(6);
 
         return Course::create($data);
     }
@@ -177,14 +174,14 @@ class CourseCloneService
     {
         $allowlist = [
             'title', 'description', 'content', 'video_url', 'youtube_url',
-            'duration', 'min_read', 'status', 'order', 'point_tuition_fee'
+            'duration', 'min_read', 'status', 'order', 'point_tuition_fee',
         ];
 
         $data = array_intersect_key($source->getAttributes(), array_flip($allowlist));
-        
+
         $data['course_id'] = $newCourse->id;
         $data['user_id'] = $newOwner->id;
-        
+
         // Reset counters
         $data['view_count'] = 0;
         $data['like_count'] = 0;
@@ -200,11 +197,11 @@ class CourseCloneService
     {
         $allowlist = [
             'title', 'content', 'youtube_url', 'min_read', 'status', 'hashtags',
-            'privacy_settings', 'location', 'url', 'tags', 'source_platform', 'meta'
+            'privacy_settings', 'location', 'url', 'tags', 'source_platform', 'meta',
         ];
 
         $data = array_intersect_key($source->getAttributes(), array_flip($allowlist));
-        
+
         $data['course_id'] = $newCourse->id;
         $data['lesson_id'] = $newLesson->id;
         $data['user_id'] = $newOwner->id;
@@ -233,14 +230,14 @@ class CourseCloneService
             $allowlist = [
                 'title', 'description', 'points', 'passing_score', 'increase_points',
                 'decrease_points', 'assignment_type', 'submission_method', 'max_file_size',
-                'is_group_assignment', 'grading_rubric', 'status'
+                'is_group_assignment', 'grading_rubric', 'status',
             ];
 
             $data = array_intersect_key($assignment->getAttributes(), array_flip($allowlist));
-            
+
             $data['assignmentable_type'] = $type;
             $data['assignmentable_id'] = $newId;
-            
+
             // Reset interaction data
             $data['due_date'] = null;
             $data['start_date'] = null;
@@ -267,14 +264,14 @@ class CourseCloneService
     {
         $allowlist = [
             'title', 'description', 'duration', 'pass_percentage', 'max_attempts',
-            'status', 'shuffle_questions', 'shuffle_options', 'view_answers'
+            'status', 'shuffle_questions', 'shuffle_options', 'view_answers',
         ];
 
         $data = array_intersect_key($source->getAttributes(), array_flip($allowlist));
-        
+
         $data['course_id'] = $newCourse->id;
         $data['user_id'] = $newOwner->id;
-        
+
         // Reset dates
         $data['start_date'] = null;
         $data['end_date'] = null;
@@ -291,16 +288,16 @@ class CourseCloneService
         foreach ($questions as $question) {
             $allowlist = [
                 'text', 'type', 'correct_answers', 'explanation', 'difficulty_level',
-                'time_limit', 'points', 'pp_fine', 'position', 'tags'
+                'time_limit', 'points', 'pp_fine', 'position', 'tags',
             ];
 
             $data = array_intersect_key($question->getAttributes(), array_flip($allowlist));
-            
+
             $data['questionable_type'] = $type;
             $data['questionable_id'] = $newId;
             $data['course_id'] = $newCourse->id;
             $data['user_id'] = $newOwner->id;
-            
+
             // Temporary null for correct_option_id, will update after cloning options
             $data['correct_option_id'] = null;
             $data['correct_answers'] = null;
@@ -312,7 +309,7 @@ class CourseCloneService
                 // Determine target path based on searchable locations or standard
                 $filename = $image->filename ?? $image->image_url;
                 $newFilename = $this->mediaService->copyQuestionImage($filename);
-                
+
                 if ($newFilename) {
                     $newQuestion->images()->create([
                         'filename' => $newFilename,
@@ -329,21 +326,21 @@ class CourseCloneService
 
             foreach ($options as $option) {
                 $allowlistOption = [
-                    'text', 'is_correct', 'explanation', 'position', 'status'
+                    'text', 'is_correct', 'explanation', 'position', 'status',
                 ];
 
                 $optionData = array_intersect_key($option->getAttributes(), array_flip($allowlistOption));
-                
+
                 $optionData['optionable_type'] = 'App\Models\Question';
                 $optionData['optionable_id'] = $newQuestion->id;
-                
+
                 $newOption = QuestionOption::create($optionData);
 
                 // Clone Option Images
                 foreach ($option->images as $image) {
                     $filename = $image->filename ?? $image->image_url;
                     $newFilename = $this->mediaService->copyOptionImage($filename);
-                    
+
                     if ($newFilename) {
                         $newOption->images()->create([
                             'filename' => $newFilename,

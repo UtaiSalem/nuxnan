@@ -2,16 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Course;
-use App\Models\WalletTransaction;
-use App\Services\CourseCloneService;
-use App\Services\Support\CourseCloneContext;
-use App\Services\PointsService;
-use App\Services\WalletService;
 use App\Jobs\CloneCourseJob;
-use Illuminate\Support\Facades\DB;
+use App\Models\Course;
+use App\Models\User;
+use App\Models\WalletTransaction;
+use App\Services\Support\CourseCloneContext;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class CoursePurchaseService
 {
@@ -26,12 +23,12 @@ class CoursePurchaseService
     /**
      * Purchase a course from marketplace.
      */
-    public function purchase(User $buyer, Course $course, ?string $paymentMode = null): array
+    public function purchase(User $buyer, Course $course, ?string $paymentMode = null, ?int $academyId = null): array
     {
         $paymentMode = $paymentMode ?? 'wallet';
 
-        return DB::transaction(function () use ($buyer, $course, $paymentMode) {
-            if (!$course->is_for_marketplace) {
+        return DB::transaction(function () use ($buyer, $course, $paymentMode, $academyId) {
+            if (! $course->is_for_marketplace) {
                 throw new Exception('Course is not available for purchase.');
             }
             if ($buyer->id === $course->user_id) {
@@ -42,27 +39,42 @@ class CoursePurchaseService
             $buyer = \App\Models\User::where('id', $buyer->id)->lockForUpdate()->firstOrFail();
 
             // Pessimistic lock on any in-progress purchase record to prevent duplicates
-            $alreadyPurchased = \App\Models\CoursePurchase::where('buyer_id', $buyer->id)
-                ->where('source_course_id', $course->id)
-                ->whereIn('status', ['completed', 'pending_clone', 'paid'])
-                ->lockForUpdate()
-                ->exists();
-
-            if (!$alreadyPurchased) {
-                // Fallback check for legacy data
-                $alreadyPurchased = Course::where('user_id', $buyer->id)
+            if ($academyId) {
+                $alreadyPurchased = \App\Models\CoursePurchase::where('academy_id', $academyId)
                     ->where('source_course_id', $course->id)
+                    ->whereIn('status', ['completed', 'pending_clone', 'paid'])
+                    ->lockForUpdate()
                     ->exists();
+
+                if (! $alreadyPurchased) {
+                    $alreadyPurchased = Course::where('academy_id', $academyId)
+                        ->where('source_course_id', $course->id)
+                        ->exists();
+                }
+            } else {
+                $alreadyPurchased = \App\Models\CoursePurchase::where('buyer_id', $buyer->id)
+                    ->where('source_course_id', $course->id)
+                    ->whereIn('status', ['completed', 'pending_clone', 'paid'])
+                    ->lockForUpdate()
+                    ->exists();
+
+                if (! $alreadyPurchased) {
+                    // Fallback check for legacy data
+                    $alreadyPurchased = Course::where('user_id', $buyer->id)
+                        ->where('source_course_id', $course->id)
+                        ->exists();
+                }
             }
 
             if ($alreadyPurchased) {
-                throw new Exception('You already own this course.');
+                throw new Exception($academyId ? 'โรงเรียนมีคอร์สนี้อยู่แล้ว' : 'You already own this course.');
             }
 
             // Create purchase record
             $purchase = \App\Models\CoursePurchase::create([
                 'source_course_id' => $course->id,
                 'buyer_id' => $buyer->id,
+                'academy_id' => $academyId,
                 'seller_id' => $course->user_id,
                 'payment_mode' => $paymentMode,
                 'status' => 'pending_payment',
@@ -81,14 +93,14 @@ class CoursePurchaseService
             $lessonCount = $course->courseLessons()->count();
             if ($lessonCount > 20) {
                 $purchase->update(['status' => 'pending_clone']);
-                
+
                 CloneCourseJob::dispatch($purchase->id)->afterCommit();
 
                 $newCourse = null;
             } else {
-                $context = new CourseCloneContext(mode: 'purchase');
+                $context = new CourseCloneContext(mode: 'purchase', academyId: $academyId);
                 $newCourse = $this->cloneService->clone($course, $buyer, $context);
-                
+
                 $purchase->update([
                     'cloned_course_id' => $newCourse->id,
                     'status' => 'completed',
@@ -110,7 +122,7 @@ class CoursePurchaseService
     protected function processPayment(User $buyer, Course $course, string $usedMode, \App\Models\CoursePurchase $purchase): array
     {
         $seller = $course->user;
-        if (!$seller) {
+        if (! $seller) {
             throw new Exception('Course owner not found.');
         }
 
@@ -119,6 +131,7 @@ class CoursePurchaseService
         // ฟรี
         if ($priceTHB <= 0) {
             $purchase->update(['payment_mode' => 'free']);
+
             return ['amount' => 0, 'transaction_id' => null, 'mode' => 'free'];
         }
 
@@ -173,7 +186,7 @@ class CoursePurchaseService
             ]);
             $buyer->decrement('wallet', $payFromWallet);
             $transactionId = $tx->id;
-            
+
             $purchase->wallet_transaction_id = $tx->id;
             $purchase->amount_wallet = $payFromWallet;
         }
@@ -192,11 +205,11 @@ class CoursePurchaseService
                     'thb_equivalent' => $payFromPoints / self::POINTS_PER_THB,
                 ]
             );
-            if (!$ptsTx) {
+            if (! $ptsTx) {
                 throw new Exception('Failed to deduct points.');
             }
             $transactionId = $transactionId ?? $ptsTx->id;
-            
+
             $purchase->points_transaction_id = $ptsTx->id;
             $purchase->amount_points = $payFromPoints;
         }
@@ -219,7 +232,7 @@ class CoursePurchaseService
             'status' => 'completed',
         ]);
         $seller->increment('wallet', $priceTHB);
-        
+
         $purchase->seller_income_transaction_id = $incomeTx->id;
         $purchase->payment_mode = $usedMode;
         $purchase->save();

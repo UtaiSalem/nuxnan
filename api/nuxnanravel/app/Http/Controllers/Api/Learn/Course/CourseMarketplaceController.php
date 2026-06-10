@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\Learn\Course;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\info\MarketplaceCourseResource;
 use App\Models\Course;
 use App\Services\CoursePurchaseService;
 use App\Services\WalletService;
-use App\Http\Resources\Learn\Course\info\MarketplaceCourseResource;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class CourseMarketplaceController extends Controller
@@ -27,61 +27,89 @@ class CourseMarketplaceController extends Controller
         $currentUserId = Auth::guard('api')->id();
 
         $query = Course::where(function ($q) {
-                $q->where('is_for_marketplace', true)
-                  ->orWhere('saleable', true);
-            })
+            $q->where('is_for_marketplace', true)
+                ->orWhere('saleable', true);
+        })
             ->with([
-                'user', 
-                'academy', 
-                'courseMembers' => function($q) use ($currentUserId) {
+                'user',
+                'academy',
+                'courseMembers' => function ($q) use ($currentUserId) {
                     $q->where('user_id', $currentUserId);
                 },
-                'favorites' => function($q) use ($currentUserId) {
+                'favorites' => function ($q) use ($currentUserId) {
                     $q->where('user_id', $currentUserId);
-                }
+                },
             ])
             ->withCount([
-                'courseLessons', 
-                'courseAssignments', 
+                'courseLessons',
+                'courseAssignments',
                 'courseQuizzes',
-                'courseMembers as enrolled_students_count' => function($q) {
+                'courseMembers as enrolled_students_count' => function ($q) {
                     $q->where('status', 1);
-                }
+                },
             ]);
 
         // Text
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('code', 'like', "%{$request->search}%");
+                    ->orWhere('code', 'like', "%{$request->search}%");
             });
         }
 
         // Categorical
-        if ($request->filled('category')) $query->where('category', $request->category);
-        if ($request->filled('level')) $query->where('level', $request->level);
-        if ($request->filled('education_level')) $query->where('education_level', $request->education_level);
-        if ($request->filled('education_year')) $query->where('education_year', $request->education_year);
-        if ($request->filled('language')) $query->where('language', $request->language);
-        if ($request->filled('semester')) $query->where('semester', $request->semester);
-        if ($request->filled('academic_year')) $query->where('academic_year', $request->academic_year);
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+        if ($request->filled('level')) {
+            $query->where('level', $request->level);
+        }
+        if ($request->filled('education_level')) {
+            $query->where('education_level', $request->education_level);
+        }
+        if ($request->filled('education_year')) {
+            $query->where('education_year', $request->education_year);
+        }
+        if ($request->filled('language')) {
+            $query->where('language', $request->language);
+        }
+        if ($request->filled('semester')) {
+            $query->where('semester', $request->semester);
+        }
+        if ($request->filled('academic_year')) {
+            $query->where('academic_year', $request->academic_year);
+        }
 
         // Ranges
-        if ($request->filled('credit_units_min')) $query->where('credit_units', '>=', $request->credit_units_min);
-        if ($request->filled('credit_units_max')) $query->where('credit_units', '<=', $request->credit_units_max);
-        if ($request->filled('hours_per_week_min')) $query->where('hours_per_week', '>=', $request->hours_per_week_min);
-        if ($request->filled('hours_per_week_max')) $query->where('hours_per_week', '<=', $request->hours_per_week_max);
+        if ($request->filled('credit_units_min')) {
+            $query->where('credit_units', '>=', $request->credit_units_min);
+        }
+        if ($request->filled('credit_units_max')) {
+            $query->where('credit_units', '<=', $request->credit_units_max);
+        }
+        if ($request->filled('hours_per_week_min')) {
+            $query->where('hours_per_week', '>=', $request->hours_per_week_min);
+        }
+        if ($request->filled('hours_per_week_max')) {
+            $query->where('hours_per_week', '<=', $request->hours_per_week_max);
+        }
 
         // Price
         if ($request->boolean('is_free')) {
             $query->where('price', 0);
         } else {
-            if ($request->filled('price_min')) $query->where('price', '>=', $request->price_min);
-            if ($request->filled('price_max')) $query->where('price', '<=', $request->price_max);
+            if ($request->filled('price_min')) {
+                $query->where('price', '>=', $request->price_min);
+            }
+            if ($request->filled('price_max')) {
+                $query->where('price', '<=', $request->price_max);
+            }
         }
 
         // Rating
-        if ($request->filled('rating_min')) $query->where('rating', '>=', $request->rating_min);
+        if ($request->filled('rating_min')) {
+            $query->where('rating', '>=', $request->rating_min);
+        }
 
         // Sort
         match ($request->sort ?? 'newest') {
@@ -93,6 +121,20 @@ class CourseMarketplaceController extends Controller
         };
 
         $courses = $query->paginate($request->per_page ?? 20);
+
+        // Optional: Check academy ownership if academy_id is provided
+        if ($request->filled('academy_id')) {
+            $academyId = $request->academy_id;
+            $ownedCourseIds = Course::where('academy_id', $academyId)
+                ->whereNotNull('source_course_id')
+                ->whereIn('source_course_id', $courses->pluck('id'))
+                ->pluck('source_course_id')
+                ->toArray();
+
+            foreach ($courses as $course) {
+                $course->owned_by_academy = in_array($course->id, $ownedCourseIds);
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -114,26 +156,45 @@ class CourseMarketplaceController extends Controller
     {
         $request->validate([
             'payment_mode' => 'nullable|in:wallet,points,mixed',
+            'academy_id' => 'nullable|exists:academies,id',
         ]);
 
         try {
             $buyer = Auth::user();
-            $result = $this->purchaseService->purchase($buyer, $course, $request->payment_mode);
+            $academyId = $request->academy_id;
+
+            // Authorization check if purchasing for an academy
+            if ($academyId) {
+                $academy = \App\Models\Academy::find($academyId);
+                $isOwner = $academy->user_id === $buyer->id;
+                $isAdmin = \App\Models\AcademyAdmin::where('academy_id', $academyId)
+                    ->where('user_id', $buyer->id)
+                    ->exists();
+
+                if (! $isOwner && ! $isAdmin) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'คุณไม่มีสิทธิ์ดำเนินการในนามโรงเรียนนี้',
+                    ], 403);
+                }
+            }
+
+            $result = $this->purchaseService->purchase($buyer, $course, $request->payment_mode, $academyId);
 
             return response()->json([
                 'success' => true,
-                'message' => $result['is_queued'] 
-                    ? 'The course is being cloned. You will be notified when it is ready.' 
+                'message' => $result['is_queued']
+                    ? 'The course is being cloned. You will be notified when it is ready.'
                     : 'Course purchased successfully.',
                 'new_course_id' => $result['new_course'] ? $result['new_course']->id : null,
                 'is_queued' => $result['is_queued'],
                 'payment' => $result['payment'],
-                'purchase_id' => $result['purchase_id'] ?? null
+                'purchase_id' => $result['purchase_id'] ?? null,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
@@ -161,7 +222,7 @@ class CourseMarketplaceController extends Controller
         $mixedPointsNeeded = (int) ceil($thbShortfall * $POINTS_PER_THB);
         $canPayMixed = $walletBalance > 0
             && $pointsBalance >= $mixedPointsNeeded
-            && !$canPayWallet;
+            && ! $canPayWallet;
 
         return response()->json([
             'success' => true,
@@ -176,7 +237,7 @@ class CourseMarketplaceController extends Controller
             'can_pay' => [
                 'wallet' => $canPayWallet,
                 'points' => $canPayPoints,
-                'mixed'  => $canPayMixed,
+                'mixed' => $canPayMixed,
             ],
             'mixed_breakdown' => [
                 'wallet_portion' => min($walletBalance, $priceTHB),
@@ -199,17 +260,18 @@ class CourseMarketplaceController extends Controller
     {
         $user = auth()->user();
         $perPage = $request->get('per_page', 20);
-        
+
         $purchases = \App\Models\CoursePurchase::with(['sourceCourse', 'clonedCourse'])
             ->where('purchase_type', 'marketplace')
             ->where('buyer_id', $user->id)
             ->whereIn('status', ['completed', 'pending_clone', 'paid'])
             ->latest()
             ->paginate($perPage);
-        
+
         // Map to a consistent format
         $data = collect($purchases->items())->map(function ($purchase) {
             $course = $purchase->sourceCourse;
+
             return [
                 'id' => $purchase->id,
                 'status' => $purchase->status,
@@ -244,12 +306,12 @@ class CourseMarketplaceController extends Controller
     public function getSalesAnalytics(Request $request): JsonResponse
     {
         $user = auth()->user();
-        
+
         // Get sales records
         $salesQuery = \App\Models\CoursePurchase::where('purchase_type', 'marketplace')
             ->where('seller_id', $user->id)
             ->whereIn('status', ['completed', 'pending_clone', 'paid']);
-        
+
         // Apply date filters
         if ($request->has('from')) {
             $salesQuery->whereDate('created_at', '>=', $request->from);
@@ -257,18 +319,19 @@ class CourseMarketplaceController extends Controller
         if ($request->has('to')) {
             $salesQuery->whereDate('created_at', '<=', $request->to);
         }
-        
+
         $sales = $salesQuery->get();
-        
+
         // Calculate totals
         $totalRevenueTHB = $sales->sum('amount_wallet');
         $totalRevenuePoints = $sales->sum('amount_points');
         $totalSales = $sales->count();
-        
+
         // Group by course
         $salesByCourse = $sales->groupBy('source_course_id')
             ->map(function ($group, $courseId) {
                 $course = Course::find($courseId);
+
                 return [
                     'course_id' => $courseId,
                     'course_name' => $course->name ?? 'Unknown',
@@ -301,7 +364,7 @@ class CourseMarketplaceController extends Controller
         ]);
 
         // Check if requester is admin or course owner
-        if (!$course->isAdmin(auth()->user()) && $course->user_id !== auth()->id()) {
+        if (! $course->isAdmin(auth()->user()) && $course->user_id !== auth()->id()) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่มีสิทธิ์คืนเงิน',
@@ -309,7 +372,7 @@ class CourseMarketplaceController extends Controller
         }
 
         $buyerUser = \App\Models\User::find($request->user_id);
-        
+
         // Find the record in course_purchases
         $purchase = \App\Models\CoursePurchase::where('buyer_id', $buyerUser->id)
             ->where('source_course_id', $course->id)
@@ -317,7 +380,7 @@ class CourseMarketplaceController extends Controller
             ->latest()
             ->first();
 
-        if (!$purchase) {
+        if (! $purchase) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบประวัติการซื้อ',
@@ -344,7 +407,7 @@ class CourseMarketplaceController extends Controller
                         $purchase->amount_points,
                         'App\Models\Course',
                         $course->id,
-                        "Refund: " . ($request->reason ?? "Course Purchase Refund")
+                        'Refund: '.($request->reason ?? 'Course Purchase Refund')
                     );
                 }
 
@@ -356,7 +419,7 @@ class CourseMarketplaceController extends Controller
                         $seller->decrement('wallet', $incomeTransaction->amount);
                         $incomeTransaction->update([
                             'status' => 'failed',
-                            'description' => $incomeTransaction->description . " (Refunded: " . ($request->reason ?? "Manual Refund") . ")"
+                            'description' => $incomeTransaction->description.' (Refunded: '.($request->reason ?? 'Manual Refund').')',
                         ]);
                     }
                 }
@@ -378,7 +441,7 @@ class CourseMarketplaceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'คืนเงินล้มเหลว: ' . $e->getMessage(),
+                'message' => 'คืนเงินล้มเหลว: '.$e->getMessage(),
             ], 400);
         }
     }
@@ -390,7 +453,7 @@ class CourseMarketplaceController extends Controller
     public function stats(Course $course): JsonResponse
     {
         // Only owner or admin can see stats
-        if (Auth::id() !== $course->user_id && !$course->isAdmin(Auth::user())) {
+        if (Auth::id() !== $course->user_id && ! $course->isAdmin(Auth::user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -400,7 +463,7 @@ class CourseMarketplaceController extends Controller
                 'total_sales' => $course->total_sales,
                 'is_for_marketplace' => $course->is_for_marketplace,
                 'price' => $course->price,
-            ]
+            ],
         ]);
     }
 }

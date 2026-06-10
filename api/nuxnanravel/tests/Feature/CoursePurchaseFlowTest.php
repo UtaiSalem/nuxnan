@@ -165,7 +165,7 @@ class CoursePurchaseFlowTest extends TestCase
         ]);
 
         $notification = Notification::where('user_id', $buyer->id)->first();
-        $this->assertStringContainsString('ไม่สามารถคัดลอกวิชาได้', $notification->title);
+        $this->assertStringContainsString('ไม่สามารถคัดลอกวิชาได้', $notification->content);
     }
 
     /**
