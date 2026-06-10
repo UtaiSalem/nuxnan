@@ -10,11 +10,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Donate extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -33,12 +34,15 @@ class Donate extends Model
         'status',
         'approved_by',
         'privacy_settings',
-        'notes'
+        'notes',
+        'reviewed_at',
+        'review_note',
     ];
 
     protected $casts = [
         'transfer_date' => 'date',
         'donation_date' => 'datetime',
+        'reviewed_at'   => 'datetime',
     ];
 
     protected $appends = [

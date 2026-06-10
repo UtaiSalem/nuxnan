@@ -14,10 +14,13 @@ Route::get('/donates/available', [DonateController::class, 'allAvailableDonates'
 
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/supports/donates')->group(function () {
     Route::get('/', [DonateController::class, 'index'])->name('admin.support.donate.index');
-    Route::get('/more', [DonateController::class, 'fetch_more_donates'])->name('admin.support.donate.fetch-more-donates');
-    Route::patch('/{donate}/recieve', [DonateController::class, 'recieve'])->name('admin.support.donate.recieve');
+    Route::post('/bulk-review', [DonateController::class, 'bulkReview'])->name('admin.support.donate.bulk');
+    Route::get('/{donate}', [DonateController::class, 'show'])->name('admin.support.donate.show');
+    Route::patch('/{donate}', [DonateController::class, 'update'])->name('admin.support.donate.update');
+    Route::delete('/{donate}', [DonateController::class, 'destroy'])->name('admin.support.donate.destroy');
+    Route::patch('/{donate}/receive', [DonateController::class, 'recieve'])->name('admin.support.donate.receive');
+    Route::patch('/{donate}/recieve', [DonateController::class, 'recieve']);
     Route::patch('/{donate}/reject', [DonateController::class, 'reject'])->name('admin.support.donate.reject');
-
 });
 
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {

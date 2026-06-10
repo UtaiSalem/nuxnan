@@ -624,13 +624,13 @@ const onQRActionComplete = (result) => {
                 </div>
                 <NuxtLink
                   v-if="authUser.is_plearnd_admin"
-                  to="/PlearndAdmin/Donation/ApproveDonation"
+                  to="/nuxnan-admin/supports"
                   @click="closeSettings"
                   class="flex items-center gap-3 px-4 py-3 transition-colors"
                   :class="isDarkMode ? 'hover:bg-vikinger-dark-200 text-gray-300' : 'hover:bg-gray-100 text-gray-700'"
                 >
-                  <Icon icon="mdi:hand-coin" class="w-5 h-5 text-purple-500" />
-                  <span>อนุมัติการสนับสนุน</span>
+                  <Icon icon="fluent:heart-handshake-24-regular" class="w-5 h-5 text-indigo-500" />
+                  <span>จัดการการสนับสนุน</span>
                 </NuxtLink>
                 <NuxtLink
                   v-if="authUser.is_plearnd_admin"
@@ -641,16 +641,6 @@ const onQRActionComplete = (result) => {
                 >
                   <Icon icon="mdi:lock-reset" class="w-5 h-5 text-orange-500" />
                   <span>รีเซ็ตรหัสผ่าน</span>
-                </NuxtLink>
-                <NuxtLink
-                  v-if="authUser.is_plearnd_admin"
-                  to="/nuxnan-admin/supports"
-                  @click="closeSettings"
-                  class="flex items-center gap-3 px-4 py-3 transition-colors"
-                  :class="isDarkMode ? 'hover:bg-vikinger-dark-200 text-gray-300' : 'hover:bg-gray-100 text-gray-700'"
-                >
-                  <Icon icon="mdi:hand-heart" class="w-5 h-5 text-green-500" />
-                  <span>จัดการการสนับสนุน</span>
                 </NuxtLink>
                 <!-- Super Admin only - Nuxnan Admin Dashboard -->
                 <NuxtLink

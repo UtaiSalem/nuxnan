@@ -41,9 +41,9 @@ _(empty — awaiting next analysis input)_
 
 ## Current Snapshot
 
-- Date: 2026-06-09
+- Date: 2026-06-10
 - Branch: main
-- Active Work: Lesson page sidebar widget bug fix for stale lesson data and incorrect topic counts.
+- Active Work: Donation approval admin consolidation — DECIDED: delete legacy `PlearndAdmin/Donation/*`, consolidate on `nuxnan-admin/supports`, add full admin CRUD. Detailed plan in Work Plan below. Status: planned, not yet implemented.
 
 ## Known Blockers
 
@@ -221,9 +221,322 @@ _(empty — awaiting next analysis input)_
 
 ---
 
+### Feature: Donation Admin Consolidation + Full CRUD (2026-06-10)
+
+**การตัดสินใจของผู้ใช้ (ยืนยันแล้ว):**
+1. **ลบหน้าเก่าทิ้งเลย** — ลบ `ui/pages/PlearndAdmin/Donation/ApproveDonation.vue` + `DonationList.vue` + ลิงก์ใน nav (ไม่ทำ redirect)
+2. **รวมเป็นหน้าเดียว** ที่ `ui/pages/nuxnan-admin/supports/index.vue` เป็น single source of truth
+3. **เพิ่ม CRUD admin เต็ม** — show / update / destroy(soft) / bulk approve-reject + audit fields + tests
+
+**สรุปสาเหตุ (verified against code 2026-06-10):**
+- 2 หน้าทำงานซ้ำกัน ใช้ endpoint เดียว (`GET /api/plearnd-admin/supports/donates`) และการ์ดเดียว (`ApproveDonateCard.vue`)
+- หน้าเก่าอ่าน paginator ผิด path (`response.donates.current_page`) ทั้งที่ backend ส่ง `response.donates.meta.*` → pagination พังจริง (lastPage ค้าง 1)
+- หน้าเก่าคำนวณ `stats` เองจากหน้าปัจจุบัน แทนที่จะใช้ `response.stats` global → ตัวเลขเพี้ยน
+- route `/more` → `fetch_more_donates` **ไม่มี method จริง** ใน `DonateController` (dead/500) และ `DonationList.vue` ยังเรียกอยู่
+- `DonateController::index()` **ไม่ eager-load `donor`** แต่ `DonateResource` คืน `donor` เฉพาะเมื่อ `relationLoaded('donor')` → การ์ด admin ได้ `donor=null` เสมอ (avatar/email ไม่ขึ้น)
+- `DonateResource` อ่าน `privacy_setting` แต่ column จริงคือ `privacy_settings` → null เสมอ
+- `donates.approved_by` เป็น `tinyInteger` (max 127) แต่เก็บ `user_id` → **overflow เมื่อ user เกิน 127 คน**
+- `recieve`/`reject` ไม่เช็คสถานะก่อน → อนุมัติ/ปฏิเสธซ้ำได้ และทับ record ที่ปิดไปแล้ว
+
+**ไฟล์ที่เกี่ยวข้อง:**
+| ไฟล์ | บทบาท |
+|---|---|
+| `api/.../database/migrations/2025_10_26_070433_create_donates_table.php` | schema ปัจจุบัน (ไม่มี soft delete / reviewed_at) |
+| `api/.../app/Models/Donate.php` | model — เพิ่ม SoftDeletes + audit |
+| `api/.../app/Http/Controllers/Api/Earn/DonateController.php` | เพิ่ม CRUD + guard + eager load |
+| `api/.../app/Http/Resources/Earn/DonateResource.php` | แก้ field mismatch + เพิ่ม reviewed_at |
+| `api/.../routes/earn/donate.php` | เพิ่ม route CRUD + ลบ `/more` |
+| `ui/pages/nuxnan-admin/supports/index.vue` | หน้าหลัก (rebuild ให้มี table/CRUD) |
+| `ui/components/earn/donates/ApproveDonateCard.vue` | การ์ด (ปรับ event ให้รองรับ delete/edit) |
+| `ui/pages/PlearndAdmin/Donation/ApproveDonation.vue` + `DonationList.vue` | **ลบ** |
+| `ui/layouts/main.vue:627` | **ลบลิงก์ nav หน้าเก่า** |
+
+---
+
+#### Phase 0 — Backend: Migration + Model (รากฐาน, ไม่ break อะไร)
+
+**ขั้นที่ 0.1: สร้าง migration เพิ่ม soft delete + audit + แก้ approved_by**
+
+ไฟล์ใหม่: `php artisan make:migration add_audit_and_softdeletes_to_donates_table`
+
+```php
+public function up(): void
+{
+    Schema::table('donates', function (Blueprint $table) {
+        $table->softDeletes();                       // deleted_at
+        $table->timestamp('reviewed_at')->nullable(); // เวลาที่ admin อนุมัติ/ปฏิเสธ
+        $table->text('review_note')->nullable();       // เหตุผล/หมายเหตุของ admin
+    });
+    // แก้ approved_by tinyInteger -> unsignedBigInteger (กัน overflow user_id)
+    Schema::table('donates', function (Blueprint $table) {
+        $table->unsignedBigInteger('approved_by')->nullable()->change();
+    });
+}
+public function down(): void
+{
+    Schema::table('donates', function (Blueprint $table) {
+        $table->dropSoftDeletes();
+        $table->dropColumn(['reviewed_at', 'review_note']);
+        $table->tinyInteger('approved_by')->nullable()->change();
+    });
+}
+```
+> ต้องมี `doctrine/dbal` สำหรับ `->change()` (Laravel 12 อาจมีอยู่แล้ว — ถ้าไม่มีให้ `composer require doctrine/dbal`)
+> **ถามก่อนรัน** `php artisan migrate` บน DB จริง (มี data จริง) ตาม CLAUDE.md
+
+**ขั้นที่ 0.2: เพิ่ม SoftDeletes + fillable ใน `Donate.php`**
+
+```php
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Donate extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        // ...เดิม...
+        'reviewed_at',
+        'review_note',
+    ];
+
+    protected $casts = [
+        'transfer_date' => 'date',
+        'donation_date' => 'datetime',
+        'reviewed_at'   => 'datetime',
+    ];
+```
+**เหตุผล:** soft delete ปลอดภัยกับ financial record (กู้คืนได้), `reviewed_at`/`review_note` เป็น audit trail
+
+---
+
+#### Phase 1 — Backend: Hardening `index()` + แก้ Resource
+
+**ขั้นที่ 1.1: `DonateController::index()` — eager load donor + filter/sort + per_page guard**
+
+โค้ดปัจจุบัน (line 21-43):
+```php
+$query = Donate::latest();
+if ($request->has('status')) {
+    $query->where('status', $request->status);
+}
+$donates = $query->paginate($request->get('per_page', 15));
+```
+เปลี่ยนเป็น:
+```php
+$query = Donate::with('donor')->latest(); // ← กัน N+1 + ให้การ์ดเห็น donor
+
+if ($request->filled('status')) {
+    $query->where('status', (int) $request->status);
+}
+if ($search = $request->input('search')) {
+    $query->where(fn ($q) => $q
+        ->where('donor_name', 'like', "%{$search}%")
+        ->orWhere('id', $search)
+        ->orWhere('transaction_id', 'like', "%{$search}%"));
+}
+$perPage = min((int) $request->get('per_page', 15), 100); // guard ไม่ให้ดึงทีละมากเกิน
+$donates = $query->paginate($perPage)->withQueryString();
+```
+> `stats` คงเดิม (global count) — **ห้ามผูกกับ filter** เพราะการ์ดสรุปต้องเป็นยอดรวมทั้งระบบ
+
+**ขั้นที่ 1.2: แก้ `DonateResource` field mismatch + เพิ่ม audit**
+
+line 36 `'privacy_setting' => $this->privacy_setting,` → `'privacy_settings' => $this->privacy_settings,`
+เพิ่ม: `'reviewed_at' => $this->reviewed_at,`, `'review_note' => $this->review_note,`
+
+---
+
+#### Phase 2 — Backend: CRUD methods + Guards + Route cleanup
+
+**ขั้นที่ 2.1: เพิ่ม guard ใน `recieve()` / `reject()` (กันกดซ้ำ)**
+
+ปัจจุบัน (line 175-200) update ตรงๆ ไม่เช็คสถานะ เพิ่มหัว method:
+```php
+public function recieve(Donate $donate)
+{
+    if ($donate->status !== 0) {
+        return response()->json([
+            'success' => false,
+            'message' => 'รายการนี้ถูกดำเนินการไปแล้ว',
+        ], 422);
+    }
+    $donate->update([
+        'status'      => 1,
+        'approved_by' => auth()->id(),
+        'reviewed_at' => now(),
+    ]);
+    return response()->json(['success' => true, 'donate' => new DonateResource($donate->load('donor'))], 200);
+}
+```
+ทำแบบเดียวกันกับ `reject()` (status => 2)
+> คืน `DonateResource` (ไม่ใช่ raw model) เพื่อให้ frontend ได้ shape เดียวกับ list
+
+**ขั้นที่ 2.2: เพิ่ม `show()` — รายละเอียดรายการเดียว**
+```php
+public function show(Donate $donate)
+{
+    return response()->json([
+        'success' => true,
+        'donate'  => new DonateResource($donate->load(['donor', 'recipients'])),
+    ]);
+}
+```
+
+**ขั้นที่ 2.3: เพิ่ม `update()` — แก้ฟิลด์ admin**
+```php
+public function update(Request $request, Donate $donate)
+{
+    $validated = $request->validate([
+        'donor_name'  => 'sometimes|nullable|string|max:255',
+        'notes'       => 'sometimes|nullable|string|max:1000',
+        'review_note' => 'sometimes|nullable|string|max:1000',
+    ]);
+    $donate->update($validated);
+    return response()->json(['success' => true, 'donate' => new DonateResource($donate->fresh('donor'))]);
+}
+```
+
+**ขั้นที่ 2.4: เพิ่ม `destroy()` — soft delete**
+```php
+public function destroy(Donate $donate)
+{
+    $donate->delete(); // soft delete
+    return response()->json(['success' => true, 'message' => 'ลบรายการแล้ว']);
+}
+```
+
+**ขั้นที่ 2.5: เพิ่ม bulk approve/reject**
+```php
+public function bulkReview(Request $request)
+{
+    $data = $request->validate([
+        'ids'    => 'required|array|min:1',
+        'ids.*'  => 'integer|exists:donates,id',
+        'action' => 'required|in:approve,reject',
+    ]);
+    $status = $data['action'] === 'approve' ? 1 : 2;
+    $affected = Donate::whereIn('id', $data['ids'])
+        ->where('status', 0) // เฉพาะ pending เท่านั้น
+        ->update(['status' => $status, 'approved_by' => auth()->id(), 'reviewed_at' => now()]);
+    return response()->json(['success' => true, 'affected' => $affected]);
+}
+```
+
+**ขั้นที่ 2.6: routes (`routes/earn/donate.php`) — ลบ dead + เพิ่ม CRUD**
+```php
+Route::middleware([...])->prefix('/plearnd-admin/supports/donates')->group(function () {
+    Route::get('/', [DonateController::class, 'index'])->name('admin.support.donate.index');
+    Route::post('/bulk-review', [DonateController::class, 'bulkReview'])->name('admin.support.donate.bulk');
+    Route::get('/{donate}', [DonateController::class, 'show'])->name('admin.support.donate.show');
+    Route::patch('/{donate}', [DonateController::class, 'update'])->name('admin.support.donate.update');
+    Route::delete('/{donate}', [DonateController::class, 'destroy'])->name('admin.support.donate.destroy');
+    Route::patch('/{donate}/receive', [DonateController::class, 'recieve'])->name('admin.support.donate.receive'); // ชื่อใหม่
+    Route::patch('/{donate}/recieve', [DonateController::class, 'recieve']); // alias เดิม (deprecated, ลบรอบหน้า)
+    Route::patch('/{donate}/reject', [DonateController::class, 'reject'])->name('admin.support.donate.reject');
+});
+```
+> ⚠️ **ระวัง route ordering:** `/bulk-review` (literal) ต้องอยู่**ก่อน** `/{donate}` (wildcard) ไม่งั้น Laravel จับ "bulk-review" เป็น `{donate}` — วางตามลำดับด้านบนแล้ว
+> ลบบรรทัด `Route::get('/more', ... 'fetch_more_donates')` ทิ้ง (method ไม่มีจริง)
+
+---
+
+#### Phase 3 — Backend Tests
+
+ไฟล์ใหม่: `api/.../tests/Feature/AdminDonationManagementTest.php`
+| Test | Expected |
+|---|---|
+| admin GET index → stats global + donor loaded | 200, `donates.meta` มี, `stats.total` = ทั้งหมด |
+| index filter `status=0` → เฉพาะ pending แต่ stats ยัง global | 200 |
+| non-admin GET index | 403 |
+| GET show | 200, มี donor |
+| PATCH update notes/donor_name | 200, ค่าเปลี่ยน |
+| DELETE destroy → soft delete | 200, row ยังอยู่แต่ `deleted_at` ไม่ null |
+| PATCH receive บน pending | 200, status=1, reviewed_at set |
+| PATCH receive บน record ที่ approve แล้ว | 422 (กันกดซ้ำ) |
+| POST bulk-review approve 3 ids (มี 1 อันไม่ pending) | 200, affected=2 |
+
+รัน: `php artisan test --filter=AdminDonationManagementTest` + `./vendor/bin/pint`
+
+---
+
+#### Phase 4 — Frontend: Composable (single source of truth)
+
+ไฟล์ใหม่: `ui/composables/useAdminDonations.ts` — รวม state + API call ที่เดียว (card/table ใช้ร่วม)
+```ts
+export const useAdminDonations = () => {
+  const api = useApi()
+  const donations = ref([]); const stats = ref({ total:0, pending:0, approved:0, rejected:0 })
+  const page = ref(1); const lastPage = ref(1); const isLoading = ref(false)
+  const status = ref('all'); const search = ref('')
+
+  const fetch = async () => { /* GET index, อ่าน response.donates.meta.* + response.stats */ }
+  const receive = (id) => api.patch(`/api/plearnd-admin/supports/donates/${id}/receive`, {})
+  const reject  = (id) => api.patch(`/api/plearnd-admin/supports/donates/${id}/reject`, {})
+  const update  = (id, payload) => api.patch(`/api/plearnd-admin/supports/donates/${id}`, payload)
+  const destroy = (id) => api.delete(`/api/plearnd-admin/supports/donates/${id}`)
+  const bulk    = (ids, action) => api.post(`/api/plearnd-admin/supports/donates/bulk-review`, { ids, action })
+  // optimistic update helper: ปรับ status ใน list + ขยับ stats
+  return { donations, stats, page, lastPage, isLoading, status, search, fetch, receive, reject, update, destroy, bulk }
+}
+```
+**เหตุผล:** ตัดปัญหา state แยกคนละชุดระหว่าง view; ทุก mode อ่าน source เดียว; ใช้ `meta.*` ให้ตรง backend
+
+---
+
+#### Phase 5 — Frontend: Rebuild `nuxnan-admin/supports/index.vue`
+
+ทำให้ครบ (ใช้ `useAdminDonations` แทน local state เดิม):
+1. **View toggle `card`/`table`** — ย้าย table markup + slip modal จากหน้าเก่ามา (รวมถึง `getStatusInfo`, slip modal teleport)
+2. **slip modal** ระดับ page (ใช้กับ table) + การ์ดมี modal ในตัวอยู่แล้ว
+3. **stats** ใช้ `stats` จาก composable (backend global) — ลบ logic คำนวณเองทิ้ง
+4. **filter** ส่ง `status` ไป backend (มีอยู่แล้ว) + เพิ่มช่อง **search** (debounce 300ms)
+5. **detail drawer/modal** — กดการ์ด/แถว → เรียก `show` → โชว์รายละเอียด + ปุ่มแก้ไข
+6. **edit modal** — แก้ `donor_name`/`notes`/`review_note` → `update()`
+7. **delete** — ปุ่มลบ + ยืนยัน (Swal) → `destroy()` (optimistic remove)
+8. **bulk** (เฉพาะ table) — checkbox เลือกหลายแถว → ปุ่ม "อนุมัติที่เลือก/ปฏิเสธที่เลือก" → `bulk()`
+9. **guard ปุ่ม** — disable approve/reject เมื่อ `status !== 0`
+10. **pagination** — ใช้ `meta.*` (มีอยู่แล้ว) คงปุ่ม prev/next
+11. ลบ comment ล้าสมัย ("Backend filter not fully implemented") ออก
+12. ใช้ `ui-principles` skill (Vikinger aesthetic, dark mode, glassmorphism) ตอนจัด UI
+
+> ปรับ `ApproveDonateCard.vue`: เพิ่ม `@deleted`/`@edit` emit + ปุ่ม ⋯ (เมนู edit/delete) ให้ตรงกับ flow ใหม่; เปลี่ยน path `/recieve` → `/receive` (หรือเรียกผ่าน composable แทน hardcode)
+
+---
+
+#### Phase 6 — Cleanup (ทำหลัง Phase 5 ผ่าน smoke test)
+
+1. ลบ `ui/pages/PlearndAdmin/Donation/ApproveDonation.vue`
+2. ลบ `ui/pages/PlearndAdmin/Donation/DonationList.vue` (เรียก dead route)
+3. ลบโฟลเดอร์ `ui/pages/PlearndAdmin/Donation/` ถ้าว่าง
+4. ลบลิงก์ nav หน้าเก่าใน `ui/layouts/main.vue:625-634` (block "อนุมัติการสนับสนุน" → `/PlearndAdmin/Donation/ApproveDonation`) — คงไว้แต่ block "จัดการการสนับสนุน" → `/nuxnan-admin/supports` (line 645-654)
+5. (รอบถัดไป) ลบ route alias `/recieve` + พิจารณา rename method `recieve` → `receive` ใน controller
+
+---
+
+#### Phase 7 — Verify
+
+- [ ] `php artisan test --filter=AdminDonationManagementTest` ผ่านทั้งหมด
+- [ ] `./vendor/bin/pint` ผ่าน
+- [ ] frontend build ผ่าน (`npm run build` ใน `ui/`) + `vue-sfc-doctor` กับไฟล์ที่แก้
+- [ ] manual ที่ `http://localhost:3000/nuxnan-admin/supports`: card/table toggle, filter, search, pagination (เปลี่ยนหน้าได้จริง), stats ตรง, approve/reject (กดซ้ำ → 422), edit, delete, bulk
+- [ ] ยืนยัน `http://localhost:3000/PlearndAdmin/Donation/ApproveDonation` → 404 (ลบแล้ว) และ nav ไม่มีเมนูซ้ำ
+- [ ] ตรวจ donor avatar/email ขึ้นในการ์ด (พิสูจน์ว่า eager load ทำงาน)
+
+**ลำดับแนะนำ:** Phase 0→1→2→3 (backend ครบ+test เขียว) แล้วค่อย 4→5 (frontend) แล้วปิดท้าย 6→7 — ตัด PR เล็กพอ revert ได้ (แนะนำ ≥3 PR: backend, frontend, cleanup)
+
+**ความเสี่ยง/ข้อควรระวัง:**
+- `->change()` column type ต้องมี `doctrine/dbal` — เช็คก่อน
+- `bulkReview` route ต้องมาก่อน `/{donate}` (route ordering) — verify ด้วย `php artisan route:list | grep donate`
+- middleware 2 ตัว (`plearnd-admin`, `nuxnan-admin`) ต้อง protect ระดับเดียวกัน — ยืนยัน logic เทียบกันก่อนลบหน้าเก่า
+- ก่อนลบไฟล์ `git grep` ชื่อ component/หน้าอีกรอบ กันมี import ค้าง
+
+---
+
 ## Coordination Board
 
 - 2026-06-09 Codex: fixing lesson sidebar widget data accuracy on lesson detail pages. Files: `ui/components/learn/course/v2/CourseLessonsMenu.vue`, `ui/stores/course.ts`, `api/nuxnanravel/app/Http/Controllers/Api/Learn/Course/lessons/CourseLessonController.php`, `api/nuxnanravel/app/Http/Resources/Learn/Course/lessons/LessonResource.php`.
+- 2026-06-10 Codex: analysis + plan for donation approval admin pages consolidation. Files inspected: `ui/pages/PlearndAdmin/Donation/ApproveDonation.vue`, `ui/pages/nuxnan-admin/supports/index.vue`, `ui/components/earn/donates/ApproveDonateCard.vue`, `api/nuxnanravel/app/Http/Controllers/Api/Earn/DonateController.php`, `api/nuxnanravel/routes/earn/donate.php`, `api/nuxnanravel/app/Models/Donate.php`.
+- 2026-06-10 Claude (Opus): FINALIZED donation consolidation plan after re-verifying against code + user decisions (delete legacy pages, consolidate on `nuxnan-admin/supports`, add full admin CRUD). Detailed 7-phase plan written to Work Plan. Extra bugs found vs prior analysis: `index()` missing `with('donor')` eager load (donor always null in admin cards), `DonateResource` reads `privacy_setting` but column is `privacy_settings`, `donates.approved_by` is `tinyInteger` (overflows past 127 users), `recieve/reject` lack pending-status guard (double-approve possible). Status: planned, NOT implemented — user implements next per nuxnan-workflow.
 
 ## Decisions And Assumptions
 
@@ -243,6 +556,10 @@ _(empty — awaiting next analysis input)_
 ---
 
 ## Analysis Timeline
+
+- 2026-06-10 (plan finalized): Re-verified the donation admin duplication end-to-end against on-disk code and locked the implementation plan. Confirmed prior findings (legacy `ApproveDonation.vue` reads paginator at `response.donates.current_page` while backend serves `response.donates.meta.*`; legacy page recomputes `stats` from the current page instead of using backend global `stats`; `/more` route targets a non-existent `fetch_more_donates` and `DonationList.vue` still calls it). Found four additional bugs the earlier analysis missed: (1) `DonateController::index()` never eager-loads `donor`, and `DonateResource` only returns `donor` when `relationLoaded('donor')`, so admin cards always get `donor=null`; (2) `DonateResource` reads `privacy_setting` while the actual column is `privacy_settings`; (3) `donates.approved_by` is `tinyInteger` but stores a `user_id`, overflowing once user ids exceed 127; (4) `recieve()`/`reject()` mutate without a pending-status guard, allowing double approval. User decided to delete the legacy `PlearndAdmin/Donation/*` pages outright (no redirect), consolidate on `nuxnan-admin/supports`, and add full admin CRUD. Recorded a 7-phase plan (migration+model → index hardening+resource fix → CRUD methods+guards+route cleanup → feature tests → frontend composable → page rebuild with card/table+modals+bulk → cleanup+verify) in the Work Plan section. Not yet implemented; user implements next.
+
+- 2026-06-10: Fresh planning pass for the urgent donation approval admin issue. Re-verified `ui/pages/PlearndAdmin/Donation/ApproveDonation.vue` against `ui/pages/nuxnan-admin/supports/index.vue` and the shared backend endpoint `/api/plearnd-admin/supports/donates`. Findings: both pages already duplicate the same approve/reject flow and both reuse `ui/components/earn/donates/ApproveDonateCard.vue`; the legacy `PlearndAdmin` page computes summary stats from the currently loaded client list instead of backend global stats; it also reads paginator fields as `response.donates.current_page/last_page/total` while the newer admin page correctly reads `response.donates.meta.*`, so paging behavior is likely out of sync with the Laravel resource collection shape. Backend admin donation routes currently expose only list + approve + reject, so the requested CRUD expansion needs new API design first. Route `/api/plearnd-admin/supports/donates/more` is still declared in `api/nuxnanravel/routes/earn/donate.php`, but no visible `fetch_more_donates` method was found in the inspected controller body, so it should be treated as dead or incomplete surface until re-confirmed. Recommended implementation direction: consolidate on `nuxnan-admin/supports` as the single admin surface, then add missing table/pagination/CRUD capabilities there instead of maintaining two separate admin pages. Verification plan if implemented: smoke-test both admin URLs, verify API list/filter/pagination/action responses, and add Laravel feature coverage for admin donation management actions.
 
 - 2026-06-10: Re-inspected `ui/pages/PlearndAdmin/Donation/ApproveDonation.vue` after the user reported that the page still shows "ไม่พบรายการในหน้านี้" despite global donation counts being present. The current page now maintains two separate datasets (`infiniteDonates` for card mode, `pagedDonates` for table mode) and derives the rendered list from `viewMode`, while backend `stats` from `api/nuxnanravel/app/Http/Controllers/Api/Earn/DonateController.php::index()` still represent global counts across all donations. This means the UI can legitimately enter a mismatch state where the active-mode list is empty while the summary cards remain non-zero. Compared with `ui/pages/nuxnan-admin/supports/index.vue`, the PlearndAdmin page is significantly more complex and fragile because it mixes dual-state list management, watchers, per-mode pagination state, optimistic mutations across both lists, and special-case empty-state messaging. Recommended plan direction: either simplify this page back to a single-source-of-truth list flow, or deprecate/remove it in favor of the existing `nuxnan-admin` supports page if the duplicate surface is no longer needed.
 

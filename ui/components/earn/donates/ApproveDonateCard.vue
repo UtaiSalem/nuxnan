@@ -12,10 +12,10 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['approved', 'rejected'])
+const emit = defineEmits(['approved', 'rejected', 'edit', 'delete', 'view-slip'])
 
 const isLoading = ref(false)
-const showSlipModal = ref(false)
+const showMenu = ref(false)
 
 // Get full slip URL with API base
 const slipUrl = computed(() => {
@@ -30,11 +30,11 @@ const slipUrl = computed(() => {
 const statusInfo = computed(() => {
   switch (props.donate.status) {
     case 0:
-      return { text: 'รออนุมัติ', class: 'bg-yellow-100 text-yellow-800', icon: 'mdi:clock-outline' }
+      return { text: 'รออนุมัติ', class: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', icon: 'mdi:clock-outline' }
     case 1:
-      return { text: 'อนุมัติแล้ว', class: 'bg-green-100 text-green-800', icon: 'mdi:check-circle' }
+      return { text: 'อนุมัติแล้ว', class: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: 'mdi:check-circle' }
     case 2:
-      return { text: 'ปฏิเสธ', class: 'bg-red-100 text-red-800', icon: 'mdi:close-circle' }
+      return { text: 'ปฏิเสธ', class: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', icon: 'mdi:close-circle' }
     default:
       return { text: 'ไม่ทราบ', class: 'bg-gray-100 text-gray-800', icon: 'mdi:help-circle' }
   }
@@ -49,14 +49,13 @@ const handleApprove = async () => {
   
   try {
     isLoading.value = true
-    const response = await api.patch(`/api/plearnd-admin/supports/donates/${props.donate.id}/recieve`, {})
+    const response = await api.patch(`/api/plearnd-admin/supports/donates/${props.donate.id}/receive`, {})
     
     if (response.success) {
       emit('approved', props.donate.id)
     }
   } catch (error) {
     console.error('Failed to approve donation:', error)
-    alert('ไม่สามารถอนุมัติการสนับสนุนได้')
   } finally {
     isLoading.value = false
   }
@@ -64,9 +63,6 @@ const handleApprove = async () => {
 
 const handleReject = async () => {
   if (isLoading.value) return
-  
-  const confirmed = confirm('คุณแน่ใจหรือไม่ที่จะปฏิเสธการสนับสนุนนี้?')
-  if (!confirmed) return
   
   try {
     isLoading.value = true
@@ -77,7 +73,6 @@ const handleReject = async () => {
     }
   } catch (error) {
     console.error('Failed to reject donation:', error)
-    alert('ไม่สามารถปฏิเสธการสนับสนุนได้')
   } finally {
     isLoading.value = false
   }
@@ -85,138 +80,155 @@ const handleReject = async () => {
 </script>
 
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700 relative group">
     <!-- Header with Status -->
     <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <Icon icon="mdi:hand-coin" class="w-5 h-5 text-purple-500" />
-        <span class="font-semibold text-gray-900 dark:text-white">การสนับสนุน #{{ donate.id }}</span>
+        <span class="font-semibold text-gray-900 dark:text-white text-sm">#{{ donate.id }}</span>
       </div>
-      <span :class="[statusInfo.class, 'px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1']">
-        <Icon :icon="statusInfo.icon" class="w-4 h-4" />
-        {{ statusInfo.text }}
-      </span>
+      <div class="flex items-center gap-2">
+        <span :class="[statusInfo.class, 'px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 uppercase tracking-wider']">
+          <Icon :icon="statusInfo.icon" class="w-3 h-3" />
+          {{ statusInfo.text }}
+        </span>
+        
+        <!-- Action Menu Button -->
+        <div class="relative">
+          <button 
+            @click="showMenu = !showMenu"
+            class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500"
+          >
+            <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5" />
+          </button>
+          
+          <div 
+            v-if="showMenu"
+            v-click-outside="() => showMenu = false"
+            class="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-10 overflow-hidden"
+          >
+            <button 
+              @click="emit('edit', donate); showMenu = false"
+              class="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
+              แก้ไข
+            </button>
+            <button 
+              @click="emit('delete', donate.id); showMenu = false"
+              class="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-red-500 transition-colors"
+            >
+              <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
+              ลบรายการ
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     
     <!-- Body -->
     <div class="p-4 space-y-4">
       <!-- Donor Info -->
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+        <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center border-2 border-purple-100 dark:border-purple-900/30">
           <img 
             :src="donorAvatar" 
             :alt="donate.donor_name"
             class="w-full h-full object-cover"
           />
         </div>
-        <div>
-          <p class="font-medium text-gray-900 dark:text-white">
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-gray-900 dark:text-white truncate text-sm">
             {{ donate.donor_name || 'ไม่ประสงค์ออกนาม' }}
           </p>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
+          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
             {{ donate.donor?.email || donate.donor_email || '-' }}
           </p>
         </div>
       </div>
       
       <!-- Amount & Points -->
-      <div class="grid grid-cols-2 gap-4">
-        <div class="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 text-center">
-          <p class="text-xs text-blue-600 dark:text-blue-400 mb-1">จำนวนเงิน</p>
-          <p class="text-lg font-bold text-blue-700 dark:text-blue-300">{{ donate.amounts }}</p>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-blue-50/50 dark:bg-blue-900/20 rounded-xl p-2.5 border border-blue-100/50 dark:border-blue-900/30">
+          <p class="text-[10px] uppercase font-bold text-blue-500 mb-0.5">จำนวนเงิน</p>
+          <p class="text-base font-black text-blue-700 dark:text-blue-300">{{ donate.amounts }}</p>
         </div>
-        <div class="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-3 text-center">
-          <p class="text-xs text-purple-600 dark:text-purple-400 mb-1">แต้มทั้งหมด</p>
-          <p class="text-lg font-bold text-purple-700 dark:text-purple-300">{{ donate.total_points?.toLocaleString() || 0 }}</p>
+        <div class="bg-purple-50/50 dark:bg-purple-900/20 rounded-xl p-2.5 border border-purple-100/50 dark:border-purple-900/30">
+          <p class="text-[10px] uppercase font-bold text-purple-500 mb-0.5">แต้มที่จะได้รับ</p>
+          <p class="text-base font-black text-purple-700 dark:text-purple-300">{{ donate.total_points?.toLocaleString() || 0 }}</p>
         </div>
       </div>
       
       <!-- Transfer Info -->
-      <div class="text-sm space-y-2">
-        <div class="flex justify-between">
-          <span class="text-gray-500 dark:text-gray-400">วันที่โอน:</span>
-          <span class="text-gray-900 dark:text-white">{{ donate.transfer_date || '-' }}</span>
+      <div class="text-[11px] space-y-1.5 bg-gray-50/50 dark:bg-gray-900/20 p-3 rounded-xl border border-gray-100/50 dark:border-gray-700/50">
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400 font-medium">วันที่โอน</span>
+          <span class="text-gray-900 dark:text-white font-bold">{{ donate.transfer_date || '-' }}</span>
         </div>
-        <div class="flex justify-between">
-          <span class="text-gray-500 dark:text-gray-400">เวลา:</span>
-          <span class="text-gray-900 dark:text-white">{{ donate.transfer_time || '-' }}</span>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400 font-medium">เวลา</span>
+          <span class="text-gray-900 dark:text-white font-bold">{{ donate.transfer_time || '-' }}</span>
         </div>
-        <div class="flex justify-between">
-          <span class="text-gray-500 dark:text-gray-400">สร้างเมื่อ:</span>
-          <span class="text-gray-900 dark:text-white">{{ donate.diff_humans_created_at }}</span>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400 font-medium">สร้างเมื่อ</span>
+          <span class="text-gray-900 dark:text-white font-bold">{{ donate.diff_humans_created_at }}</span>
         </div>
       </div>
       
       <!-- Slip Image -->
-      <div v-if="slipUrl" class="mt-3">
-        <button 
-          @click="showSlipModal = true"
-          class="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 hover:border-purple-500 transition-colors"
+      <div v-if="slipUrl" class="mt-3 relative group/slip">
+        <div 
+          @click="emit('view-slip', slipUrl)"
+          class="cursor-pointer overflow-hidden rounded-xl aspect-[3/4] bg-gray-100 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 transition-transform duration-300 group-hover/slip:scale-[1.02]"
         >
           <img 
             :src="slipUrl" 
             alt="สลิปโอนเงิน" 
-            class="w-full h-40 object-contain rounded-lg"
+            class="w-full h-full object-cover"
           />
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">คลิกเพื่อดูขนาดใหญ่</p>
-        </button>
+          <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/slip:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
+             <Icon icon="fluent:zoom-in-24-regular" class="w-8 h-8 text-white" />
+          </div>
+        </div>
       </div>
-      <div v-else class="mt-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
-        <Icon icon="mdi:image-off" class="w-8 h-8 text-gray-400 mx-auto" />
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">ไม่มีสลิปโอนเงิน</p>
+      <div v-else class="mt-3 bg-gray-50 dark:bg-gray-900/30 rounded-xl p-8 border-2 border-dashed border-gray-100 dark:border-gray-700 text-center">
+        <Icon icon="fluent:image-off-24-regular" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
+        <p class="text-xs text-gray-400 font-medium">ไม่มีสลิปโอนเงิน</p>
       </div>
       
       <!-- Notes -->
-      <div v-if="donate.notes" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">หมายเหตุ:</p>
-        <p class="text-sm text-gray-900 dark:text-white">{{ donate.notes }}</p>
+      <div v-if="donate.notes || donate.review_note" class="space-y-2">
+          <div v-if="donate.notes" class="bg-gray-50/50 dark:bg-gray-700/30 rounded-lg p-2.5 border border-gray-100 dark:border-gray-700">
+            <p class="text-[10px] font-bold text-gray-400 uppercase mb-0.5">หมายเหตุ:</p>
+            <p class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{{ donate.notes }}</p>
+          </div>
+          <div v-if="donate.review_note" class="bg-indigo-50/50 dark:bg-indigo-900/20 rounded-lg p-2.5 border border-indigo-100/50 dark:border-indigo-900/30">
+            <p class="text-[10px] font-bold text-indigo-400 uppercase mb-0.5">หมายเหตุแอดมิน:</p>
+            <p class="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">{{ donate.review_note }}</p>
+          </div>
       </div>
     </div>
     
     <!-- Actions -->
-    <div v-if="donate.status === 0" class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex gap-2">
+    <div v-if="donate.status === 0" class="p-4 pt-0 flex gap-2">
       <button
         @click="handleApprove"
         :disabled="isLoading"
-        class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white font-medium rounded-lg transition-colors"
+        class="flex-1 h-10 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:from-emerald-300 disabled:to-green-400 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
       >
-        <Icon v-if="isLoading" icon="mdi:loading" class="w-5 h-5 animate-spin" />
-        <Icon v-else icon="mdi:check" class="w-5 h-5" />
+        <Icon v-if="isLoading" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
+        <Icon v-else icon="fluent:checkmark-circle-24-regular" class="w-5 h-5" />
         อนุมัติ
       </button>
       <button
         @click="handleReject"
         :disabled="isLoading"
-        class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-medium rounded-lg transition-colors"
+        class="flex-1 h-10 flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 disabled:from-rose-300 disabled:to-red-400 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-rose-500/20"
       >
-        <Icon v-if="isLoading" icon="mdi:loading" class="w-5 h-5 animate-spin" />
-        <Icon v-else icon="mdi:close" class="w-5 h-5" />
+        <Icon v-if="isLoading" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
+        <Icon v-else icon="fluent:dismiss-circle-24-regular" class="w-5 h-5" />
         ปฏิเสธ
       </button>
     </div>
-    
-    <!-- Slip Modal -->
-    <Teleport to="body">
-      <div 
-        v-if="showSlipModal" 
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-        @click="showSlipModal = false"
-      >
-        <div class="relative max-w-4xl max-h-[90vh]">
-          <button 
-            @click="showSlipModal = false"
-            class="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
-          >
-            <Icon icon="mdi:close" class="w-8 h-8" />
-          </button>
-          <img 
-            :src="slipUrl" 
-            alt="สลิปโอนเงิน" 
-            class="max-w-full max-h-[85vh] object-contain rounded-lg"
-            @click.stop
-          />
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>

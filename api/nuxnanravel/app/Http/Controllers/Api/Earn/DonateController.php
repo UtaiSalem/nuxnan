@@ -20,14 +20,21 @@ class DonateController extends \App\Http\Controllers\Controller
      */
     public function index(Request $request)
     {
-        $query = Donate::latest();
+        $query = Donate::with('donor')->latest();
 
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
+        if ($request->filled('status')) {
+            $query->where('status', (int) $request->status);
         }
 
-        $donates = $query->paginate($request->get('per_page', 15));
-        $donatesResource = DonateResource::collection($donates);
+        if ($search = $request->input('search')) {
+            $query->where(fn ($q) => $q
+                ->where('donor_name', 'like', "%{$search}%")
+                ->orWhere('id', $search)
+                ->orWhere('transaction_id', 'like', "%{$search}%"));
+        }
+
+        $perPage = min((int) $request->get('per_page', 15), 100);
+        $donates = $query->paginate($perPage)->withQueryString();
 
         $stats = [
             'total' => Donate::count(),
@@ -37,8 +44,66 @@ class DonateController extends \App\Http\Controllers\Controller
         ];
 
         return response()->json([
-            'donates' => $donatesResource,
+            'donates' => DonateResource::collection($donates)->response()->getData(true),
             'stats' => $stats,
+        ]);
+    }
+
+    public function show(Donate $donate)
+    {
+        return response()->json([
+            'success' => true,
+            'donate'  => new DonateResource($donate->load(['donor', 'recipients'])),
+        ]);
+    }
+
+    public function update(Request $request, Donate $donate)
+    {
+        $validated = $request->validate([
+            'donor_name'  => 'sometimes|nullable|string|max:255',
+            'notes'       => 'sometimes|nullable|string|max:1000',
+            'review_note' => 'sometimes|nullable|string|max:1000',
+        ]);
+
+        $donate->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'donate'  => new DonateResource($donate->fresh('donor')),
+        ]);
+    }
+
+    public function destroy(Donate $donate)
+    {
+        $donate->delete(); // soft delete
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ลบรายการแล้ว',
+        ]);
+    }
+
+    public function bulkReview(Request $request)
+    {
+        $data = $request->validate([
+            'ids'    => 'required|array|min:1',
+            'ids.*'  => 'integer|exists:donates,id',
+            'action' => 'required|in:approve,reject',
+        ]);
+
+        $status = $data['action'] === 'approve' ? 1 : 2;
+
+        $affected = Donate::whereIn('id', $data['ids'])
+            ->where('status', 0) // เฉพาะ pending เท่านั้น
+            ->update([
+                'status'      => $status,
+                'approved_by' => auth()->id(),
+                'reviewed_at' => now(),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'affected' => $affected,
         ]);
     }
 
@@ -174,28 +239,44 @@ class DonateController extends \App\Http\Controllers\Controller
     // recieve
     public function recieve(Donate $donate)
     {
+        if ($donate->status !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'รายการนี้ถูกดำเนินการไปแล้ว',
+            ], 422);
+        }
+
         $donate->update([
             'status' => 1,
-            'approved_by' => auth()->user()->id,
+            'approved_by' => auth()->id(),
+            'reviewed_at' => now(),
         ]);
 
         return response()->json([
             'success' => true,
-            'donate' => $donate,
+            'donate' => new DonateResource($donate->load('donor')),
         ], 200);
     }
 
     // cancel
     public function reject(Donate $donate)
     {
+        if ($donate->status !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'รายการนี้ถูกดำเนินการไปแล้ว',
+            ], 422);
+        }
+
         $donate->update([
             'status' => 2,
-            'approved_by' => auth()->user()->id,
+            'approved_by' => auth()->id(),
+            'reviewed_at' => now(),
         ]);
 
         return response()->json([
             'success' => true,
-            'donate' => $donate,
+            'donate' => new DonateResource($donate->load('donor')),
         ], 200);
     }
 
