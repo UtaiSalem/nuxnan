@@ -109,6 +109,7 @@ const previewIndex = ref(0) // Current preview image index
 
 // Topic Management
 const showTopicModal = ref(false)
+const topicModalRef = ref<any>(null)
 const editingTopic = ref(null)
 const isSubmittingTopic = ref(false)
 
@@ -128,9 +129,9 @@ const handleTopicSubmit = async (formData: any) => {
     // Prepare FormData for file upload
     const payload = new FormData()
     payload.append('title', formData.title)
-    payload.append('content', formData.content)
+    if (formData.content) payload.append('content', formData.content)
     if(formData.youtube_url) payload.append('youtube_url', formData.youtube_url)
-    payload.append('min_read', formData.min_read)
+    payload.append('min_read', String(formData.min_read || 0))
 
     // Append images
     if (formData.images && formData.images.length > 0) {
@@ -160,8 +161,9 @@ const handleTopicSubmit = async (formData: any) => {
             const response = await api.post(`/api/lessons/${props.lesson.id}/topics`, payload) as any
             swal.toast('เพิ่มหัวข้อเรียบร้อย', 'success')
             // Add new topic to local state immediately
-            if (response.newTopic) {
-                emit('topic-created', response.newTopic)
+            const createdTopic = response.topic || response.newTopic
+            if (createdTopic) {
+                emit('topic-created', createdTopic)
             } else {
                 emit('refresh')
             }
@@ -169,7 +171,15 @@ const handleTopicSubmit = async (formData: any) => {
         showTopicModal.value = false
     } catch (err: any) {
         console.error(err)
-        swal.error(err.data?.message || 'ไม่สามารถบันทึกข้อมูลได้')
+        if (err.status === 422 && err.data?.errors) {
+            // Show field-specific errors in modal
+            topicModalRef.value?.setErrors(err.data.errors)
+            // Show toast summary of the first error
+            const firstError = Object.values(err.data.errors).flat()[0]
+            swal.error(firstError as string || 'กรุณาตรวจสอบข้อมูลที่กรอก')
+        } else {
+            swal.error(err.data?.message || 'ไม่สามารถบันทึกข้อมูลได้')
+        }
     } finally {
         isSubmittingTopic.value = false
     }
@@ -993,6 +1003,7 @@ const publicationStatusColor = computed(() => {
 
     <!-- Topic Form Modal -->
     <TopicFormModal
+        ref="topicModalRef"
         :show="showTopicModal"
         :topic="editingTopic"
         :is-submitting="isSubmittingTopic"

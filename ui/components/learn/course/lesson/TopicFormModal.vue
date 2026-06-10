@@ -30,6 +30,8 @@ const form = reactive({
   min_read: 5
 })
 
+const errors = ref<Record<string, string[]>>({})
+
 // Image State
 const newImages = ref<File[]>([])
 const imageInput = ref<HTMLInputElement | null>(null)
@@ -49,6 +51,7 @@ const resetForm = () => {
   form.youtube_url = ''
   form.min_read = 5
   newImages.value = []
+  errors.value = {}
 }
 
 // Watch for topic changes to populate form
@@ -68,6 +71,8 @@ watch(() => props.show, (isShow) => {
         // defined reset logic if needed when closing?
         // usually better to reset when opening "Create" mode
         if (!props.topic) resetForm()
+    } else {
+        errors.value = {}
     }
 })
 
@@ -76,11 +81,18 @@ const closeModal = () => {
 }
 
 const handleSubmit = () => {
+  errors.value = {}
   emit('submit', {
     ...form,
     images: newImages.value
   })
 }
+
+defineExpose({
+  setErrors: (newErrors: Record<string, string[]>) => {
+    errors.value = newErrors
+  }
+})
 
 // Image Handling
 const triggerImageInput = () => {
@@ -142,7 +154,9 @@ const isEditMode = computed(() => !!props.topic)
               required
               placeholder="เช่น บทนำ, การติดตั้งเครื่องมือ" 
               class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              :class="{ 'border-red-500 ring-red-500': errors.title }"
             />
+            <p v-if="errors.title" class="mt-1 text-sm text-red-500">{{ errors.title[0] }}</p>
           </div>
 
           <!-- YouTube URL -->
@@ -155,14 +169,17 @@ const isEditMode = computed(() => !!props.topic)
                 type="url" 
                 placeholder="https://www.youtube.com/watch?v=..." 
                 class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                :class="{ 'border-red-500 ring-red-500': errors.youtube_url }"
               />
             </div>
+            <p v-if="errors.youtube_url" class="mt-1 text-sm text-red-500">{{ errors.youtube_url[0] }}</p>
           </div>
 
           <!-- Content Editor -->
           <div>
              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">เนื้อหาบทเรียน</label>
-             <RichTextEditor v-model="form.content" class="min-h-[200px]" />
+             <RichTextEditor v-model="form.content" class="min-h-[200px]" :class="{ 'ring-2 ring-red-500 rounded-lg': errors.content }" />
+             <p v-if="errors.content" class="mt-1 text-sm text-red-500">{{ errors.content[0] }}</p>
           </div>
 
           <!-- Min Read -->
@@ -173,7 +190,9 @@ const isEditMode = computed(() => !!props.topic)
               type="number" 
               min="1"
               class="w-32 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              :class="{ 'border-red-500 ring-red-500': errors.min_read }"
             />
+            <p v-if="errors.min_read" class="mt-1 text-sm text-red-500">{{ errors.min_read[0] }}</p>
           </div>
 
           <!-- Images Section -->

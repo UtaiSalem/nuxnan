@@ -26,21 +26,28 @@ class TopicController extends \App\Http\Controllers\Controller
         }
 
         $validatedData = $request->validate([
-            'title'         => ['required', 'string'],
-            'content'       => ['required', 'string'],
-            'youtube_url'   => ['nullable', 'string'],
-            'min_read'      => ['required', 'numeric'],
-            'images.*'      => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',   
+            'title'         => ['required', 'string', 'max:255'],
+            'content'       => ['nullable', 'string'],
+            'youtube_url'   => ['nullable', 'string', 'url:https'],
+            'min_read'      => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'images.*'      => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:10240'],
         ]);
 
-        $topic = $lesson->topics()->create([
-            'user_id'       => auth()->user()->id,
-            'course_id'     => $lesson->course_id,
-            'title'         => $validatedData['title'],
-            'content'       => ($validatedData['content'] ?? null) === "null" ? null : ($validatedData['content'] ?? null),
-            'youtube_url'   => ($validatedData['youtube_url'] ?? null) === "null" ? null : ($validatedData['youtube_url'] ?? null),
-            'min_read'      => $validatedData['min_read'],
-        ]);
+        $topic = DB::transaction(function () use ($lesson, $validatedData) {
+            $topic = $lesson->topics()->create([
+                'user_id'       => auth()->id(),
+                'academy_id'    => $lesson->course->academy_id,
+                'course_id'     => $lesson->course_id,
+                'title'         => $validatedData['title'],
+                'content'       => $validatedData['content'] ?? null,
+                'youtube_url'   => $validatedData['youtube_url'] ?? null,
+                'min_read'      => $validatedData['min_read'] ?? 0,
+            ]);
+
+            $lesson->increment('min_read', $topic->min_read);
+
+            return $topic;
+        });
 
         // a section to store images files
         if ($request->hasFile('images')) {
@@ -55,11 +62,9 @@ class TopicController extends \App\Http\Controllers\Controller
             }
         }
 
-        $lesson->increment('min_read', $topic->min_read);
-        
         return response()->json([
             'success' => true,
-            'newTopic' => new TopicResource(Topic::find($topic->id)),
+            'topic' => new TopicResource($topic->fresh()),
         ], 200);
     }
 
@@ -96,34 +101,38 @@ class TopicController extends \App\Http\Controllers\Controller
         // ]);
     }
 
-    public function update(Lesson $lesson, Topic $topic, Request $request,)
+    public function update(Lesson $lesson, Topic $topic, Request $request)
     {
         if (!$lesson->course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        $lesson->decrement('min_read', $topic->min_read);
-        // validate data
         $validatedData = $request->validate([
-            'title'         => ['required', 'string'],
-            'content'       => ['required', 'string'],
-            'youtube_url'   => ['nullable', 'string'],
-            'min_read'      => ['required', 'numeric'],
-            'images.*'      => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',    
+            'title'         => ['required', 'string', 'max:255'],
+            'content'       => ['nullable', 'string'],
+            'youtube_url'   => ['nullable', 'string', 'url:https'],
+            'min_read'      => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'images.*'      => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:10240'],
         ]);
 
-        $topic->update([
-            'title'         => $request->title,
-            'content'       => ($validatedData['content'] ?? null) === "null" ? null : ($validatedData['content'] ?? null),
-            'youtube_url'   => ($validatedData['youtube_url'] ?? null) === "null" ? null : ($validatedData['youtube_url'] ?? null),
-            'min_read'      => $request->min_read
-        ]);
+        DB::transaction(function () use ($lesson, $topic, $validatedData) {
+            $oldMinRead = $topic->min_read;
 
-        if($request->hasFile('images')) {
+            $topic->update([
+                'title'       => $validatedData['title'],
+                'content'     => $validatedData['content'] ?? null,
+                'youtube_url' => $validatedData['youtube_url'] ?? null,
+                'min_read'    => $validatedData['min_read'] ?? 0,
+            ]);
+
+            $lesson->increment('min_read', ($topic->min_read - $oldMinRead));
+        });
+
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
                 $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
-                $image_url = Storage::disk('public')->putFileAs('images/courses/lessons/topics', $image, $fileName);
+                Storage::disk('public')->putFileAs('images/courses/lessons/topics', $image, $fileName);
 
                 $topic->images()->create([
                     'filename' => $fileName
@@ -131,11 +140,9 @@ class TopicController extends \App\Http\Controllers\Controller
             }
         }
 
-        $lesson->increment('min_read', $topic->min_read);
-
         return response()->json([
             'success' => true,
-            'topic' => new TopicResource($topic),
+            'topic' => new TopicResource($topic->fresh()),
         ], 200);
     }
 
