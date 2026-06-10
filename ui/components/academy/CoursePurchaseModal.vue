@@ -28,7 +28,7 @@
               <!-- Step 1: Summary -->
               <div v-if="step === 1">
                 <DialogTitle as="h3" class="text-xl font-black text-slate-900 dark:text-white mb-4">
-                  ยืนยันการซื้อลิขสิทธิ์ต้นฉบับ
+                  ยืนยันการซื้อลิขสิทธิ์รายวิชาต้นฉบับ
                 </DialogTitle>
                 
                 <div class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 mb-6 flex gap-4">
@@ -196,7 +196,7 @@
                     ไปที่รายวิชาใหม่
                   </button>
                   <button @click="$emit('close')" class="w-full py-3 text-slate-500 font-bold hover:text-slate-700 transition-colors">
-                    {{ isQueued ? 'ตกลง' : 'กลับหน้า Marketplace' }}
+                    {{ isQueued ? 'ตกลง' : 'กลับหน้าตลาดรายวิชา' }}
                   </button>
                 </div>
               </div>
@@ -222,6 +222,7 @@ import { Icon } from '@iconify/vue'
 const props = defineProps<{
   course: any
   visible: boolean
+  academyId?: number | null
 }>()
 
 const emit = defineEmits(['close', 'success'])
@@ -279,7 +280,8 @@ const handlePurchase = async () => {
   error.value = ''
   try {
     const response = await api.post(`/api/courses/${props.course.id}/purchase`, {
-      payment_mode: paymentMode.value
+      payment_mode: paymentMode.value,
+      academy_id: props.academyId
     })
     
     newCourseId.value = response.new_course_id
@@ -297,9 +299,13 @@ const handlePurchase = async () => {
   }
 }
 
+const route = useRoute()
 const goToCourse = () => {
-  // Use Nuxt router to navigate
-  navigateTo(`/Learn/Courses/${newCourseId.value}/settings`)
+  if (props.academyId && route.params.name) {
+    navigateTo(`/academies/${route.params.name}/admin/courses/${newCourseId.value}/edit`)
+  } else {
+    navigateTo(`/Learn/Courses/${newCourseId.value}/settings`)
+  }
   emit('close')
 }
 

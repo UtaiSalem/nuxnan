@@ -1,7 +1,7 @@
 <template>
   <div class="group bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow flex flex-col">
     <!-- Cover -->
-    <div class="relative h-44 overflow-hidden shrink-0 cursor-pointer" @click="navigateTo(`/Learn/Courses/${course.id}`)">
+    <div class="relative h-44 overflow-hidden shrink-0 cursor-pointer" @click="academyAdminMode ? emit('view', course) : navigateTo(`/Learn/Courses/${course.id}`)">
       <img
         :src="course.cover || `${config.public.apiBase}/storage/images/courses/covers/default_cover.jpg`"
         :alt="course.name"
@@ -25,9 +25,9 @@
         <span v-if="semesterBadge" class="bg-indigo-500/80 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded font-bold w-fit uppercase">
           {{ semesterBadge }}
         </span>
-        <span v-if="isOwned" class="bg-green-500/80 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold flex items-center gap-1 w-fit">
+        <span v-if="isOwned || course.owned_by_academy" class="bg-green-500/80 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded uppercase font-bold flex items-center gap-1 w-fit">
           <Icon icon="mdi:check-circle" class="w-3 h-3" />
-          โคลนแล้ว
+          {{ course.owned_by_academy ? 'มีในคลังโรงเรียน' : 'โคลนแล้ว' }}
         </span>
       </div>
 
@@ -152,33 +152,47 @@
 
         <!-- Right: Membership status / action button -->
         <div class="shrink-0 flex flex-col items-end gap-1">
-          <NuxtLink
-            v-if="isOwner"
-            :to="`/Learn/Courses/${course.id}`"
-            class="flex items-center gap-1 px-2.5 py-1 bg-violet-500 hover:bg-violet-600 text-white text-[10px] font-bold rounded-full transition-colors"
-          >
-            <Icon icon="mdi:cog" class="w-3 h-3" /> จัดการวิชา
-          </NuxtLink>
-          <NuxtLink
-            v-else-if="isMember && memberStatus === 'active'"
-            :to="`/Learn/Courses/${course.id}`"
-            class="flex items-center gap-1 px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-full transition-colors"
-          >
-            <Icon icon="mdi:play-circle" class="w-3 h-3" /> เข้าสู่รายวิชา
-          </NuxtLink>
-          <span v-else-if="isMember && memberStatus === 'pending'" class="flex items-center gap-1 px-2.5 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold rounded-full">
-            <Icon icon="mdi:clock-outline" class="w-3 h-3" /> รออนุมัติ
-          </span>
-          <span v-else-if="isOwned" class="flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">
-            <Icon icon="mdi:check-circle" class="w-3 h-3" /> โคลนแล้ว
-          </span>
-          <NuxtLink
-            v-else
-            :to="`/Learn/Courses/${course.id}`"
-            class="flex items-center gap-1 px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-full transition-colors"
-          >
-            <Icon icon="mdi:arrow-right-circle" class="w-3 h-3" /> รายละเอียด
-          </NuxtLink>
+          <template v-if="academyAdminMode">
+            <span v-if="course.owned_by_academy" class="flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">
+              <Icon icon="mdi:check-circle" class="w-3 h-3" /> ในคลัง
+            </span>
+            <button
+              v-else
+              @click.stop="emit('purchase', course)"
+              class="flex items-center gap-1 px-3 py-1 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded-full transition-colors shadow-sm"
+            >
+              <Icon icon="mdi:cart-plus" class="w-3.5 h-3.5" /> ซื้อลิขสิทธิ์
+            </button>
+          </template>
+          <template v-else>
+            <NuxtLink
+              v-if="isOwner"
+              :to="`/Learn/Courses/${course.id}`"
+              class="flex items-center gap-1 px-2.5 py-1 bg-violet-500 hover:bg-violet-600 text-white text-[10px] font-bold rounded-full transition-colors"
+            >
+              <Icon icon="mdi:cog" class="w-3 h-3" /> จัดการวิชา
+            </NuxtLink>
+            <NuxtLink
+              v-else-if="isMember && memberStatus === 'active'"
+              :to="`/Learn/Courses/${course.id}`"
+              class="flex items-center gap-1 px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-full transition-colors"
+            >
+              <Icon icon="mdi:play-circle" class="w-3 h-3" /> เข้าสู่รายวิชา
+            </NuxtLink>
+            <span v-else-if="isMember && memberStatus === 'pending'" class="flex items-center gap-1 px-2.5 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold rounded-full">
+              <Icon icon="mdi:clock-outline" class="w-3 h-3" /> รออนุมัติ
+            </span>
+            <span v-else-if="isOwned" class="flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">
+              <Icon icon="mdi:check-circle" class="w-3 h-3" /> โคลนแล้ว
+            </span>
+            <NuxtLink
+              v-else
+              :to="`/Learn/Courses/${course.id}`"
+              class="flex items-center gap-1 px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-full transition-colors"
+            >
+              <Icon icon="mdi:arrow-right-circle" class="w-3 h-3" /> รายละเอียด
+            </NuxtLink>
+          </template>
         </div>
 
       </div>
@@ -193,7 +207,11 @@ import { Icon } from '@iconify/vue'
 const props = defineProps<{
   course: any
   index?: number
+  embedded?: boolean
+  academyAdminMode?: boolean
 }>()
+
+const emit = defineEmits(['purchase', 'view'])
 
 const config = useRuntimeConfig()
 const api = useApi()
