@@ -214,6 +214,10 @@ class AdminController extends Controller
             }
         }
 
+        if ($request->has('username')) {
+            $request->merge(['username' => User::normalizeUsername($request->username)]);
+        }
+
         if ($request->has('role') && $request->role) {
             $request->merge(['role' => strtoupper($request->role)]);
         }
@@ -224,15 +228,17 @@ class AdminController extends Controller
 
         // 2. Validate request
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'username' => 'required|string|max:191|alpha_dash|unique:users,username',
+            'username' => User::usernameRules(),
             'password' => 'required|string|min:8|confirmed',
             'phone_number' => 'nullable|string|max:20',
             'role' => 'nullable|string|exists:roles,name',
             'roles' => 'nullable|array',
             'roles.*' => 'exists:roles,name',
             'status' => 'nullable|in:active,inactive,suspended',
+        ], [
+            'username.unique' => 'ชื่อนี้มีผู้ใช้แล้ว ลองเพิ่มชื่อกลางหรือตัวเลข',
+            'username.regex' => 'ชื่อใช้ได้เฉพาะตัวอักษร ตัวเลข และเว้นวรรค',
         ]);
 
         if ($validator->fails()) {
@@ -247,12 +253,14 @@ class AdminController extends Controller
             return \DB::transaction(function () use ($request) {
                 // 3. Create user
                 $user = User::create([
-                    'name' => $request->name,
+                    'name' => $request->username,
                     'username' => $request->username,
                     'email' => $request->email,
                     'password' => Hash::make($request->password), // Model has 'hashed' cast, Hash::make is safe
                     'phone_number' => $request->phone_number,
                     'email_verified_at' => $request->status === 'active' ? now() : null,
+                    'personal_code' => User::generateReferralCode(),
+                    'reference_code' => User::generateReferenceCode(),
                 ]);
 
                 // 4. Assign roles
@@ -375,6 +383,10 @@ class AdminController extends Controller
             }
         }
 
+        if ($request->has('username')) {
+            $request->merge(['username' => User::normalizeUsername($request->username)]);
+        }
+
         if ($request->has('username') && $request->input('username') === $user->username) {
             $request->request->remove('username');
         }
@@ -384,7 +396,7 @@ class AdminController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'username' => ['sometimes', 'required', 'string', 'max:191', Rule::unique('users', 'username')->ignore($id)],
+            'username' => array_merge(['sometimes'], User::usernameRules($id)),
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', Rule::unique('users')->ignore($id)],
             'password' => 'sometimes|string|min:6',
@@ -392,6 +404,9 @@ class AdminController extends Controller
             'role' => 'nullable|string|exists:roles,name',
             'roles' => 'nullable|array',
             'roles.*' => 'exists:roles,name',
+        ], [
+            'username.unique' => 'ชื่อนี้มีผู้ใช้แล้ว ลองเพิ่มชื่อกลางหรือตัวเลข',
+            'username.regex' => 'ชื่อใช้ได้เฉพาะตัวอักษร ตัวเลข และเว้นวรรค',
         ]);
 
         if ($validator->fails()) {

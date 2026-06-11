@@ -101,15 +101,6 @@ class SocialAuthController extends Controller
      */
     protected function generateUniqueUsername(string $name): string
     {
-        $username = Str::slug($name, '');
-        $originalUsername = $username;
-        $count = 1;
-
-        while (User::where('username', $username)->exists()) {
-            $username = "{$originalUsername}{$count}";
-            $count++;
-        }
-
-        return $username;
+        return User::generateUniqueUsername($name);
     }
 }

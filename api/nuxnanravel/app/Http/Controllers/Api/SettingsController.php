@@ -102,10 +102,17 @@ class SettingsController extends Controller
     {
         $user = Auth::user();
 
+        if ($request->has('username')) {
+            $request->merge(['username' => User::normalizeUsername($request->username)]);
+        }
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'username' => 'sometimes|string|max:191|alpha_dash|unique:users,username,'.$user->id,
+            'username' => array_merge(['sometimes'], User::usernameRules($user->id)),
             'phone_number' => 'nullable|string|max:20',
+        ], [
+            'username.unique' => 'ชื่อนี้มีผู้ใช้แล้ว',
+            'username.regex' => 'ชื่อใช้ได้เฉพาะตัวอักษร ตัวเลข และเว้นวรรค',
         ]);
 
         $user->update($validated);

@@ -19,7 +19,6 @@ const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
 const form = reactive({
-  name: '',
   email: '',
   username: '',
   password: '',
@@ -49,20 +48,17 @@ const statuses = [
 const validateForm = () => {
   errors.value = {}
   
-  if (!form.name.trim()) {
-    errors.value.name = 'กรุณากรอกชื่อ'
-  }
-  
   if (!form.email.trim()) {
     errors.value.email = 'กรุณากรอกอีเมล'
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
     errors.value.email = 'รูปแบบอีเมลไม่ถูกต้อง'
   }
   
-  if (!form.username.trim()) {
-    errors.value.username = 'กรุณากรอก Username'
-  } else if (!/^[a-zA-Z0-9_-]+$/.test(form.username)) {
-    errors.value.username = 'Username ต้องเป็นตัวอักษรภาษาอังกฤษ ตัวเลข หรือ _ และ - เท่านั้น'
+  form.username = form.username.trim().replace(/\s+/g, ' ')
+  if (!form.username) {
+    errors.value.username = 'กรุณากรอกชื่อ-สกุล'
+  } else if (!/^[\u0E00-\u0E7Fa-zA-Z0-9]+(?: [\u0E00-\u0E7Fa-zA-Z0-9]+)*$/.test(form.username)) {
+    errors.value.username = 'ชื่อใช้ได้เฉพาะตัวอักษร ตัวเลข และเว้นวรรค'
   }
   
   if (!form.password) {
@@ -157,36 +153,20 @@ const handleSubmit = async () => {
 
     <!-- Form -->
     <form @submit.prevent="handleSubmit" class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
-      <!-- Name -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            ชื่อแสดงผล <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.name"
-            type="text"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            :class="{ 'border-red-500 ring-1 ring-red-500': errors.name }"
-            placeholder="ชื่อจริง-นามสกุล"
-          />
-          <p v-if="errors.name" class="mt-1 text-sm text-red-500">{{ errors.name }}</p>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Username <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.username"
-            type="text"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            :class="{ 'border-red-500 ring-1 ring-red-500': errors.username }"
-            placeholder="username"
-          />
-          <p class="mt-1 text-xs text-gray-400">รับเฉพาะภาษาอังกฤษ, ตัวเลข, - และ _</p>
-          <p v-if="errors.username" class="mt-1 text-sm text-red-500">{{ errors.username }}</p>
-        </div>
+      <!-- Name/Username -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          ชื่อ-สกุล <span class="text-red-500">*</span>
+        </label>
+        <input
+          v-model="form.username"
+          type="text"
+          class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          :class="{ 'border-red-500 ring-1 ring-red-500': errors.username }"
+          placeholder="เช่น สมชาย ใจดี"
+        />
+        <p class="mt-1 text-xs text-gray-400">ชื่อจริง-สกุล (ไทยได้ มีเว้นวรรคได้) ใช้เป็นชื่อเข้าระบบ ห้ามซ้ำ</p>
+        <p v-if="errors.username" class="mt-1 text-sm text-red-500">{{ errors.username }}</p>
       </div>
 
       <!-- Email & Phone -->

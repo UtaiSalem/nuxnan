@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Schema;
 // use App\Models\User; // Recursive import removed
 
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 // use Laravel\Sanctum\HasApiTokens;
@@ -350,6 +351,42 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         } while (User::where('reference_code', $referenceCode)->exists());
 
         return $referenceCode;
+    }
+
+    // ===== Username (ชื่อ-สกุล) rules: ไทย/อังกฤษ/ตัวเลข + เว้นวรรคได้ ห้ามอักขระพิเศษ =====
+    public const USERNAME_REGEX = '/^[\p{Thai}a-zA-Z0-9]+(?: [\p{Thai}a-zA-Z0-9]+)*$/u';
+
+    // trim หัวท้าย + ยุบช่องว่างซ้อนให้เหลือช่องเดียว (กันชื่อ "เกือบซ้ำ" หลุด unique)
+    public static function normalizeUsername(?string $raw): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', (string) $raw));
+    }
+
+    // ชุดกฎ validation กลาง — ทุก controller เรียกใช้ตัวนี้
+    public static function usernameRules($ignoreId = null): array
+    {
+        $unique = Rule::unique('users', 'username');
+        if ($ignoreId !== null) {
+            $unique = $unique->ignore($ignoreId);
+        }
+
+        return ['required', 'string', 'min:3', 'max:191', 'regex:'.self::USERNAME_REGEX, $unique];
+    }
+
+    // สร้าง username ที่ unique จากข้อความตั้งต้น (ใช้ตอนสมัครผ่าน OAuth ที่ผู้ใช้ไม่ได้พิมพ์ username เอง)
+    public static function generateUniqueUsername(?string $base): string
+    {
+        // เก็บเฉพาะ ไทย/อังกฤษ/ตัวเลข + เว้นวรรค (ตัดอักขระพิเศษจากชื่อ Google เช่น . ' -) แล้ว normalize
+        $clean = preg_replace('/[^\p{Thai}a-zA-Z0-9 ]/u', '', (string) $base);
+        $slug = self::normalizeUsername($clean) ?: 'user';
+
+        $username = $slug;
+        $i = 1;
+        while (self::where('username', $username)->exists()) {
+            $username = $slug.' '.(++$i);
+        }
+
+        return $username;
     }
 
     public function canAcceptReferral(): bool

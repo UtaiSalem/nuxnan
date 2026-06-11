@@ -28,7 +28,7 @@ class AuthService
             // Create user
             $user = User::create([
                 'email' => $data['email'],
-                // 'username' => $data['username'], // Removed: column does not exist
+                'username' => User::generateUniqueUsername($data['name'] ?? $data['email']),
                 'referral_code' => User::generateReferralCode(),
                 'referrer_code' => $data['referral_code'] ?? null,
                 'password' => Hash::make($data['password']),

@@ -87,6 +87,7 @@ class ProviderAuthController extends Controller
             if (!$user) {
                 $user = User::create([
                     'name' => $socialUser->getName(),
+                    'username' => User::generateUniqueUsername($socialUser->getName()),
                     'email' => $socialUser->getEmail(),
                     'password' => Hash::make(Str::random(24)),
                     'provider' => $provider,

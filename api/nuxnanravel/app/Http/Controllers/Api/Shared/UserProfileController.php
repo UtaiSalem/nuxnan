@@ -45,6 +45,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
         return User::where('id', $identifier)
             ->orWhere('reference_code', $identifier)
             ->orWhere('personal_code', $identifier)
+            ->orWhere('username', $identifier)
             ->orWhere('name', $identifier)
             ->first();
     }

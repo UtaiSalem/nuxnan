@@ -353,8 +353,14 @@ const handleSubmit = async () => {
   }
 
   // Username validation
+  form.username = form.username.trim().replace(/\s+/g, ' ')
+  const nameRegex = /^[\u0E00-\u0E7Fa-zA-Z0-9]+(?: [\u0E00-\u0E7Fa-zA-Z0-9]+)*$/
   if (form.username.length < 3) {
-    error.value = 'Username must be at least 3 characters'
+    error.value = 'ชื่อต้องมีอย่างน้อย 3 ตัวอักษร'
+    return
+  }
+  if (!nameRegex.test(form.username)) {
+    error.value = 'ชื่อใช้ได้เฉพาะตัวอักษร ตัวเลข และเว้นวรรค (ห้ามอักขระพิเศษ)'
     return
   }
 
@@ -378,7 +384,6 @@ const handleSubmit = async () => {
     // Register with the new JWT auth system including reference_code
     await authStore.register({
       username: form.username,
-      name: form.username,
       email: form.email,
       password: form.password,
       password_confirmation: form.password_confirmation,

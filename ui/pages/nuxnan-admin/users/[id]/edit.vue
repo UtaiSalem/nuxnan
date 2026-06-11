@@ -88,8 +88,8 @@ const validateForm = () => {
 
   if (originalUsername.value && !form.username.trim()) {
     errors.value.username = 'กรุณากรอกชื่อผู้ใช้'
-  } else if (form.username && !/^[a-zA-Z0-9_-]+$/.test(form.username)) {
-    errors.value.username = 'Username ต้องเป็นตัวอักษรภาษาอังกฤษ ตัวเลข หรือ _ และ - เท่านั้น'
+  } else if (form.username && !/^[\u0E00-\u0E7Fa-zA-Z0-9]+(?: [\u0E00-\u0E7Fa-zA-Z0-9]+)*$/.test(form.username)) {
+    errors.value.username = 'ชื่อใช้ได้เฉพาะตัวอักษร ตัวเลข และเว้นวรรค'
   }
 
   if (!form.email.trim()) {
@@ -212,9 +212,9 @@ onMounted(() => {
             type="text"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             :class="{ 'border-red-500 ring-1 ring-red-500': errors.username }"
-            placeholder="เช่น nuxnan_user"
+            placeholder="เช่น สมชาย ใจดี"
           />
-          <p class="mt-1 text-xs text-gray-400">รับเฉพาะภาษาอังกฤษ, ตัวเลข, - และ _</p>
+          <p class="mt-1 text-xs text-gray-400">ชื่อจริง-สกุล (ไทยได้ มีเว้นวรรคได้) ห้ามซ้ำ</p>
           <p v-if="errors.username" class="mt-1 text-sm text-red-500">{{ errors.username }}</p>
         </div>
 

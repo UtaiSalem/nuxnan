@@ -43,7 +43,7 @@ class AuthController extends Controller
         $user = User::where('email', $loginInput)
             ->orWhere('phone_number', $loginInput)
             ->orWhere('personal_code', $loginInput)
-            ->orWhere('name', $loginInput)
+            ->orWhere('username', $loginInput)
             ->first();
 
         // Check if user exists
@@ -98,12 +98,17 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         try {
+            $request->merge(['username' => User::normalizeUsername($request->username)]);
+
             $request->validate([
-                'name' => 'required|string|max:255',
+                'username' => User::usernameRules(),
                 'email' => 'required|string|email|max:255|unique:users',
                 'password' => 'required|string|min:8|confirmed',
                 'phone_number' => 'nullable|string|max:20',
                 'reference_code' => 'required|string',
+            ], [
+                'username.unique' => 'ชื่อนี้มีผู้ใช้แล้ว ลองเพิ่มชื่อกลางหรือตัวเลข',
+                'username.regex' => 'ชื่อใช้ได้เฉพาะตัวอักษร ตัวเลข และเว้นวรรค (ห้ามอักขระพิเศษ)',
             ]);
 
             $user = DB::transaction(function () use ($request) {
@@ -128,8 +133,8 @@ class AuthController extends Controller
                 }
 
                 $user = User::create([
-                    'name' => $request->name,
-                    'username' => $request->name,
+                    'name' => $request->username,
+                    'username' => $request->username,
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
                     'phone_number' => $request->phone_number,

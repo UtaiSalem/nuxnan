@@ -621,7 +621,7 @@ const handlePollDelete = () => {
   <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm overflow-hidden">
     <!-- Header -->
     <div class="p-4 flex items-start gap-3">
-      <NuxtLink :to="`/profile/${postAuthor.username}`">
+      <NuxtLink :to="`/profile/${postAuthor.reference_code || postAuthor.id}`">
         <img
           :src="postAuthorAvatar"
           :alt="postAuthor.name"
@@ -632,7 +632,7 @@ const handlePollDelete = () => {
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">
           <NuxtLink 
-            :to="`/profile/${postAuthor.username}`"
+            :to="`/profile/${postAuthor.reference_code || postAuthor.id}`"
             class="font-medium text-gray-900 dark:text-white hover:underline"
           >
             {{ postAuthor.name }}

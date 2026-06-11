@@ -16,11 +16,19 @@ nuxnan. Read it after `AGENTS.md`, `.agents/rules/project.md`, and
 
 ## Current Snapshot
 
-- Date: 2026-06-11
+- Date: 2026-06-12
 - Branch: main
-- Active Work: Cleanup — all queued items from prior sessions have been implemented and committed. Analysis file consolidated.
+- Active Work: (none — all queued items completed)
 
 ## Known Blockers
+...
+### ✅ Username/Name Refactor — Thai Support + Single Field (2026-06-12, current)
+- Centralized `USERNAME_REGEX` and `usernameRules()` in `User` model.
+- Supports Thai characters and single spaces in `username`.
+- Registration and Admin Create now use a single name field that populates both `name` and `username`.
+- Profile links in `CourseFeedPost.vue` switched to `reference_code` (URL-safe).
+- Multi-field login updated to use `username` (unique) instead of `name` (non-unique).
+- Backend tests (`RegisterTest`, `MultiFieldLoginTest`) updated and passing.
 
 - ⚠️ Production: ตรวจสอบว่า `topics.sort_order` migration ถูกรันแล้ว (ถ้ายังไม่ได้รัน → `php artisan migrate --force`)
 - ⚠️ Production: ตรวจสอบว่า migration `2026_06_10_074830` (approved_by → unsignedBigInteger) รันแล้ว
@@ -112,7 +120,7 @@ _(clear — no active multi-agent work)_
 ## Decisions And Assumptions
 
 - Role `STUDENT` (not `USER`) is the default general-user role.
-- `username` is treated as a primary identifier field in admin flows.
+- `username` = ชื่อ-สกุลแสดงผล (ไทย+เว้นวรรคได้), **unique + NOT NULL**; `name` ไม่ unique. ดีไซน์ใหม่ (2026-06-12): สมัคร/แอดมิน create ป้อนช่องเดียวบันทึก name+username, แก้ name ทีหลังได้, login/uniqueness ผูกที่ `username`. กติกากลางอยู่ที่ `User::usernameRules()`/`User::normalizeUsername()`. (เดิม: "username เป็น primary identifier + บังคับ ASCII alpha_dash" — ยกเลิกแล้ว)
 - Score schema uses `*_percentage` columns; legacy `*_total_score` consumers mapped through `CourseMemberResource`.
 - Avatar is an Eloquent accessor (not a DB column) — never include it in `select(...)` eager loads.
 - Notification copy must avoid 4-byte emoji while DB collation is `utf8mb3_unicode_ci`.
@@ -131,6 +139,13 @@ _(clear — no active multi-agent work)_
 ## Analysis Timeline
 
 _(consolidated 2026-06-11 — all prior entries merged into Completed Features above)_
+
+### 2026-06-12 - Username/name refactor — analysis + plan (plan-only)
+- Trigger: admin `users/create` บังคับ username เป็น ASCII (alpha_dash) แต่สมัครเองไม่บังคับ → ไม่สอดคล้อง
+- ตรวจโค้ดจริงพบ: `username` unique+NOT NULL (migration `2026_06_05_180308`); identifier จริงคือ `name`+codes; profile resolver/login/mention ใช้ `name` ไม่ใช่ `username`; register ยัด name→username ไม่เช็ค unique = bug ชื่อซ้ำพัง 500; alpha_dash กระจาย 4 จุด
+- ดีไซน์ที่เจ้าของยืนยัน: ป้อนช่องเดียว (ไทย+เว้นวรรคได้) → name+username, unique ที่ username, แก้ name ทีหลังได้, แอดมิน create ช่องเดียว
+- แผนเต็ม 10 ขั้น (+1 optional) อยู่ใน Work Plan → "Username = Thai display name (single field, unique)". เจ้าของโปรเจค implement เอง
+- ยังไม่แตะโค้ด feature; แก้เฉพาะไฟล์ `.agents/latest-analysis.md` นี้
 
 ### 2026-06-11 - Consolidated analysis file
 - Audited all queued items against git history; found all previously queued work items are committed.
