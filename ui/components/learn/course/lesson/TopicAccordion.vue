@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
+import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
 
 interface Props {
   topic: any
@@ -21,6 +22,14 @@ const emit = defineEmits<{
 }>()
 
 const isExpanded = ref(false)
+
+// Image gallery
+const showImageGallery = ref(false)
+const galleryStartIndex = ref(0)
+const openTopicImage = (index: number) => {
+  galleryStartIndex.value = index
+  showImageGallery.value = true
+}
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value
@@ -140,11 +149,12 @@ const handleImageError = (event: Event) => {
         <!-- Images Gallery -->
         <div v-if="topic.images && topic.images.length > 0" class="grid grid-cols-2 gap-2">
           <img
-            v-for="image in topic.images"
+            v-for="(image, index) in topic.images"
             :key="image.id"
             :src="image.full_url"
             :alt="topic.title"
             class="rounded-lg object-cover w-full h-48 border border-gray-200 dark:border-gray-700 hover:scale-105 transition-transform cursor-pointer"
+            @click="openTopicImage(index)"
             @error="handleImageError"
           />
         </div>
@@ -180,5 +190,14 @@ const handleImageError = (event: Event) => {
         </div>
       </div>
     </div>
+
+    <!-- Topic Image Gallery Modal -->
+    <ImageGalleryModal
+      :show="showImageGallery"
+      :images="topic.images || []"
+      :start-index="galleryStartIndex"
+      :title="topic.title"
+      @close="showImageGallery = false"
+    />
   </div>
 </template>

@@ -22,6 +22,17 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+const parseBooleanQuery = (value: unknown) => {
+  if (Array.isArray(value)) return value.some(parseBooleanQuery)
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value === 1
+  if (typeof value !== 'string') return false
+
+  const normalized = value.trim().toLowerCase()
+  return ['1', 'true', 'yes', 'on'].includes(normalized)
+}
+
 // ── Tab ────────────────────────────────────────────────────────────────────
 const activeTab = ref<'all' | 'my' | 'enrolled'>('enrolled')
 
@@ -39,7 +50,7 @@ const selectedEducationYear = ref('all')
 const sortBy = ref('latest')
 const selectedSemester = ref('all')
 const selectedYear = ref('all')
-const marketplaceOnly = ref(false)
+const marketplaceOnly = ref(parseBooleanQuery(route.query.marketplace_only))
 const enrollableOnly = ref(false)
 const isFree = ref(false)
 const isFilterDrawerOpen = ref(false)
@@ -66,6 +77,37 @@ const sortOptions = [
 
 const pagination = ref({ currentPage: 1, lastPage: 1, total: 0, perPage: 8 })
 const hasMorePages = computed(() => pagination.value.currentPage < pagination.value.lastPage)
+
+const academyMarketplaceContext = computed(() => {
+  const context = route.query.context
+  if (context !== 'academy-admin') return null
+
+  const academyName = typeof route.query.academy_name === 'string' ? route.query.academy_name : ''
+  const returnTo = typeof route.query.return_to === 'string' ? route.query.return_to : ''
+
+  return {
+    academyName,
+    returnTo: returnTo || '/academies',
+  }
+})
+
+const hydrateFiltersFromQuery = () => {
+  const tabParam = typeof route.query.tab === 'string' ? route.query.tab : ''
+  const marketplaceFromQuery = parseBooleanQuery(route.query.marketplace_only)
+  const searchFromQuery = typeof route.query.search === 'string' ? route.query.search : ''
+
+  if (tabParam === 'my' || tabParam === 'enrolled' || tabParam === 'all') {
+    activeTab.value = tabParam
+  } else if (marketplaceFromQuery) {
+    activeTab.value = 'all'
+  }
+
+  marketplaceOnly.value = marketplaceFromQuery
+
+  if (searchFromQuery) {
+    searchQuery.value = searchFromQuery
+  }
+}
 
 const fetchCourses = async (page = 1, append = false) => {
   page === 1 ? (isLoading.value = true) : (isLoadingMore.value = true)
@@ -217,7 +259,7 @@ const fetchFilterOptions = async () => {
   }
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── General Helpers ────────────────────────────────────────────────────────
 const getCoverUrl = (course: any) => {
   if (course.cover) {
     if (course.cover.startsWith('http')) return course.cover
@@ -246,11 +288,10 @@ const activeFiltersCount = computed(() => {
 usePageLayoutWidgets({ left: true, right: true })
 
 onMounted(() => {
+  hydrateFiltersFromQuery()
   fetchFilterOptions()
-  const tabParam = route.query.tab as string
-  if (tabParam === 'my') { activeTab.value = 'my'; fetchMyCourses() }
-  else if (tabParam === 'enrolled') { activeTab.value = 'enrolled'; fetchEnrolledCourses() }
-  else if (tabParam === 'all') { activeTab.value = 'all'; fetchCourses() }
+  if (activeTab.value === 'my') fetchMyCourses()
+  else if (activeTab.value === 'all') fetchCourses()
   else fetchEnrolledCourses()
 })
 
@@ -361,7 +402,7 @@ watch(() => authStore.user?.id, (id) => {
               <img :src="getCoverUrl(course)" :alt="course.name" class="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-100 dark:border-vikinger-dark-50" />
               <div class="flex-1 min-w-0">
                 <h4 class="text-xs font-bold text-gray-800 dark:text-white line-clamp-2 mb-1">{{ course.name }}</h4>
-                <p class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">{{ course.user?.name || 'Unknown' }}</p>
+                <p class="text-[10px] text-blue-50 font-bold uppercase tracking-wider">{{ course.user?.name || 'Unknown' }}</p>
               </div>
             </div>
             <div v-if="popularCourses.length === 0 && !isLoading" class="p-4 text-center text-gray-500 text-xs italic">ไม่มีข้อมูล</div>
@@ -372,6 +413,28 @@ watch(() => authStore.user?.id, (id) => {
 
     <!-- Main Content -->
     <div class="min-w-0">
+      <div
+        v-if="academyMarketplaceContext"
+        class="mb-5 rounded-2xl border border-violet-100 bg-violet-50/90 p-4 shadow-sm dark:border-vikinger-dark-100 dark:bg-vikinger-dark-200"
+      >
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p class="text-sm font-black text-violet-700 dark:text-vikinger-cyan">
+              ตลาด Master Copy สำหรับโรงเรียน {{ academyMarketplaceContext.academyName || 'นี้' }}
+            </p>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+              เลือกซื้อรายวิชาต้นฉบับ แล้วกลับไปจัดการคลังรายวิชาของโรงเรียนต่อได้ทันที
+            </p>
+          </div>
+          <NuxtLink
+            :to="academyMarketplaceContext.returnTo"
+            class="inline-flex items-center gap-2 self-start rounded-xl bg-white px-4 py-2 text-sm font-bold text-violet-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-vikinger-dark-100 dark:text-vikinger-cyan"
+          >
+            <Icon icon="fluent:arrow-left-24-regular" class="w-4 h-4" />
+            กลับหน้ารายวิชาโรงเรียน
+          </NuxtLink>
+        </div>
+      </div>
 
       <!-- Tab Navigation -->
       <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 p-1 flex gap-1 mb-5">

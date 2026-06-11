@@ -9,6 +9,7 @@ import TopicFormModal from './TopicFormModal.vue'
 import TopicOrderWidget from './TopicOrderWidget.vue'
 import LessonInteractionTabs from './LessonInteractionTabs.vue'
 import Swal from 'sweetalert2'
+import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
 
 interface Props {
   lesson: any
@@ -1012,6 +1013,15 @@ const publicationStatusColor = computed(() => {
       :youtube-url="lesson.youtube_url"
       :title="lesson.title"
       @close="closeVideoModal"
+    />
+
+    <!-- Lesson Image Gallery Modal -->
+    <ImageGalleryModal
+      :show="showImagePreview"
+      :images="lesson.images || []"
+      :start-index="previewIndex"
+      title="รูปภาพประกอบบทเรียน"
+      @close="closeImagePreview"
     />
   </article>
 </template>
