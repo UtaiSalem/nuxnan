@@ -15,7 +15,6 @@
       </div>
 
       <!-- Actions -->
-      <div class="flex justify-center mb-6">
       <div class="flex justify-center gap-4 mb-6">
           <NuxtLink to="/earn/advertise/create" class="flex items-center px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 shadow-md transition-colors">
               <Icon icon="mdi:plus-circle" class="mr-2 w-5 h-5"/>
@@ -26,9 +25,7 @@
               ให้การสนับสนุนทุนการเรียนรู้
           </NuxtLink>
       </div>
-      </div>
 
-      <!-- Ad Listing -->
       <!-- Skeleton Loader -->
       <div v-if="isLoading" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
            <div v-for="i in 6" :key="i" class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
@@ -46,15 +43,17 @@
            </div>
       </div>
 
+      <!-- Advert List -->
       <div v-else-if="adverts.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="(advert, index) in adverts" :key="advert.id" class="transform hover:-translate-y-1 transition-transform duration-200">
               <AdvertiseItemCard :advert="advert" :index="index" @click="handleAdClick" />
           </div>
       </div>
 
-      <div v-else class="text-center py-12 bg-white rounded-lg shadow">
-          <Icon icon="mdi:inbox-outline" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <p class="text-gray-500 text-lg">ไม่มีโฆษณาในขณะนี้</p>
+      <!-- Empty State -->
+      <div v-else class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900/50">
+          <Icon icon="mdi:inbox-outline" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+          <p class="text-gray-500 dark:text-gray-400 text-lg">ไม่มีโฆษณาในขณะนี้</p>
       </div>
 
       <!-- Load More -->
@@ -62,7 +61,7 @@
           <button 
             @click="loadMore" 
             :disabled="isLoadingMore"
-            class="px-6 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
+            class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
           >
               <Icon v-if="isLoadingMore" icon="svg-spinners:3-dots-fade" class="w-5 h-5 mr-2" />
               <span v-else>โหลดเพิ่มเติม</span>
@@ -82,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import AdvertiseItemCard from '@/components/widgets/advertises/AdvertiseItemCard.vue'
 import AdViewerModal from '@/components/widgets/advertises/AdViewerModal.vue'
@@ -99,16 +98,14 @@ useHead({
 
 usePageLayoutWidgets({ left: false, right: false })
 
-const adverts = ref([])
+const adverts = ref<any[]>([])
 const isLoading = ref(true)
 
-// Ad Viewer Logic
 const authStore = useAuthStore()
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 
-// Ad Viewer Logic
-const selectedAdvert = ref(null)
+const selectedAdvert = ref<any>(null)
 const isAdModalOpen = ref(false)
 
 const currentPage = ref(1)
@@ -117,79 +114,79 @@ const isLoadingMore = ref(false)
 
 async function fetchAdverts(page = 1) {
     if (page === 1) {
-        isLoading.value = true;
+        isLoading.value = true
     } else {
-        isLoadingMore.value = true;
+        isLoadingMore.value = true
     }
-    
+
     try {
-        const response = await $fetch<any>(`${apiBase}/api/advertises?page=${page}`);
-        if(response && response.adverts) {
-            const newAdverts = response.adverts.data || response.adverts;
+        const response = await $fetch<any>(`${apiBase}/api/advertises?page=${page}`)
+        if (response?.adverts) {
+            const newAdverts = response.adverts.data || response.adverts
             if (page === 1) {
-                adverts.value = newAdverts;
+                adverts.value = newAdverts
             } else {
-                adverts.value = [...adverts.value, ...newAdverts];
+                adverts.value = [...adverts.value, ...newAdverts]
             }
-            
+
             // Update pagination meta
-            const meta = response.adverts.meta || {};
-            currentPage.value = meta.current_page || page;
-            lastPage.value = meta.last_page || 1;
+            const meta = response.adverts.meta || {}
+            currentPage.value = meta.current_page || page
+            lastPage.value = meta.last_page || 1
         }
     } catch (error) {
-        console.error("Failed to fetch adverts", error);
+        console.error('Failed to fetch adverts', error)
     } finally {
-        isLoading.value = false;
-        isLoadingMore.value = false;
+        isLoading.value = false
+        isLoadingMore.value = false
     }
 }
 
 function loadMore() {
     if (currentPage.value < lastPage.value) {
-        fetchAdverts(currentPage.value + 1);
+        fetchAdverts(currentPage.value + 1)
     }
 }
 
-function handleAdClick(advert) {
-    if(!authStore.isAuthenticated) {
-         Swal.fire({
+function handleAdClick(advert: any) {
+    if (!advert) return
+
+    if (!authStore.isAuthenticated) {
+        Swal.fire({
             icon: 'warning',
             title: 'เข้าสู่ระบบ',
             text: 'กรุณาเข้าสู่ระบบเพื่อรับชมโฆษณา'
-        });
-        return;
+        })
+        return
     }
 
-    const pointsRequired = advert.duration * 20;
-    // user.value.points logic, authStore has `points` computed
+    const pointsRequired = advert.duration * 20
     if (authStore.points < pointsRequired) {
         Swal.fire({
             icon: 'error',
             title: 'คะแนนไม่เพียงพอ',
             text: `คุณต้องมีอย่างน้อย ${pointsRequired} PP เพื่อรับชมโฆษณานี้ (คุณมี ${authStore.points} PP)`
-        });
-        return;
+        })
+        return
     }
 
-    selectedAdvert.value = advert;
-    isAdModalOpen.value = true;
+    selectedAdvert.value = advert
+    isAdModalOpen.value = true
 }
 
 function handleAdClose() {
-    isAdModalOpen.value = false;
-    selectedAdvert.value = null;
+    isAdModalOpen.value = false
+    selectedAdvert.value = null
 }
 
-function handleAdCompleted(advert) {
-    // Refresh user data (if possible) and Update UI
-    const index = adverts.value.findIndex(a => a.id === advert.id);
+function handleAdCompleted(advert: any) {
+    const index = adverts.value.findIndex(a => a.id === advert.id)
     if (index !== -1) {
-        adverts.value[index].remaining_views--;
+        adverts.value[index] = { ...adverts.value[index], remaining_views: adverts.value[index].remaining_views - 1 }
     }
 }
 
 onMounted(() => {
-    fetchAdverts();
-});
+    fetchAdverts()
+})
 </script>
