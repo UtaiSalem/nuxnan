@@ -6,20 +6,24 @@ import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
 
 interface Props {
   topic: any
-  isCompleted?: boolean
+  status?: 'not_started' | 'in_progress' | 'completed'
   isAdmin?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isCompleted: false,
+  status: 'not_started',
   isAdmin: false
 })
 
 const emit = defineEmits<{
-  'toggleComplete': [topicId: number]
+  'complete': [topicId: number]
+  'expand': [topicId: number]
   'edit': [topic: any]
   'delete': [topic: any]
 }>()
+
+const isCompleted = computed(() => props.status === 'completed')
+const isInProgress = computed(() => props.status === 'in_progress')
 
 const isExpanded = ref(false)
 
@@ -33,11 +37,14 @@ const openTopicImage = (index: number) => {
 
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value
+  if (isExpanded.value) {
+    emit('expand', props.topic.id)
+  }
 }
 
 const handleCheckboxClick = (e: Event) => {
   e.stopPropagation()
-  emit('toggleComplete', props.topic.id)
+  emit('complete', props.topic.id)
 }
 
 const handleEditClick = (e: Event) => {
@@ -108,6 +115,18 @@ const handleImageError = (event: Event) => {
         >
           {{ topic.title }}
         </h4>
+
+        <!-- Requirement / Status Badge -->
+        <div v-if="!isAdmin && topic.min_read > 0" class="hidden md:flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"
+          :class="[
+            isCompleted 
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+              : (isInProgress ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' : 'bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-400')
+          ]"
+        >
+          <Icon :icon="isCompleted ? 'fluent:checkmark-12-filled' : 'fluent:clock-12-regular'" class="w-3 h-3" />
+          {{ isCompleted ? 'อ่านจบแล้ว' : `อ่าน ${topic.min_read} น.` }}
+        </div>
 
         <!-- Admin Actions -->
         <div v-if="isAdmin" class="flex items-center gap-1 ml-2" @click.stop>

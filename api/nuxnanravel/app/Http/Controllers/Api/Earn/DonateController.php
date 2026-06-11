@@ -236,14 +236,14 @@ class DonateController extends \App\Http\Controllers\Controller
         ]);
     }
 
-    // recieve
-    public function recieve(Donate $donate)
+    // receive
+    public function receive(Donate $donate)
     {
         if ($donate->status !== 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'รายการนี้ถูกดำเนินการไปแล้ว',
-            ], 422);
+            ], 409);
         }
 
         $donate->update([
@@ -258,14 +258,14 @@ class DonateController extends \App\Http\Controllers\Controller
         ], 200);
     }
 
-    // cancel
+    // reject
     public function reject(Donate $donate)
     {
         if ($donate->status !== 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'รายการนี้ถูกดำเนินการไปแล้ว',
-            ], 422);
+            ], 409);
         }
 
         $donate->update([
@@ -278,6 +278,7 @@ class DonateController extends \App\Http\Controllers\Controller
             'success' => true,
             'donate' => new DonateResource($donate->load('donor')),
         ], 200);
+    }
     }
 
     // get donate

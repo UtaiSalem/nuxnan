@@ -314,7 +314,7 @@ class UserAnswerQuestionController extends Controller
             : QuizConstants::STATUS_FAILED;
 
         if ($started_at) {
-            $courseQuizResult->duration += now()->diffInSeconds($started_at);
+            $courseQuizResult->duration += max(0, now()->timestamp - $started_at->timestamp);
         }
 
         $courseQuizResult->efficiency = $this->quizEfficiencyService->calculateEfficiency($courseQuizResult, $quiz);
@@ -346,7 +346,7 @@ class UserAnswerQuestionController extends Controller
             : QuizConstants::STATUS_FAILED;
 
         if ($started_at) {
-            $courseQuizResult->duration += now()->diffInSeconds($started_at);
+            $courseQuizResult->duration += max(0, now()->timestamp - $started_at->timestamp);
         }
 
         $courseQuizResult->efficiency = $this->quizEfficiencyService->calculateEfficiency($courseQuizResult, $quiz);

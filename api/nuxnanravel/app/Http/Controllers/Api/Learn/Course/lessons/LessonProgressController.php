@@ -2,31 +2,23 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons;
 
+use App\Enums\UsageEventType;
+use App\Http\Controllers\Controller;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
-use App\Models\CourseMember;
-use App\Services\AttendanceEligibilityService;
-use App\Services\CoursePointAccountService;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-
 use App\Services\ContentVisibilityService;
-
+use App\Services\CoursePointAccountService;
+use App\Services\LessonCompletionService;
+use App\Services\UsageEventService;
+use Illuminate\Http\Request;
 
 class LessonProgressController extends Controller
 {
-    /**
-     * @var CoursePointAccountService
-     */
-    protected $coursePointService;
-
-    protected ContentVisibilityService $visibility;
-
-    public function __construct(CoursePointAccountService $coursePointService, ContentVisibilityService $visibility)
-    {
-        $this->coursePointService = $coursePointService;
-        $this->visibility = $visibility;
-    }
+    public function __construct(
+        protected CoursePointAccountService $coursePointService,
+        protected ContentVisibilityService $visibility,
+        protected LessonCompletionService $lessonCompletionService
+    ) {}
 
     /**
      * Get progress for a lesson
@@ -36,7 +28,7 @@ class LessonProgressController extends Controller
         $user = $request->user();
 
         // Guard for students
-        if (!$lesson->course->isAdmin($user)) {
+        if (! $lesson->course->isAdmin($user)) {
             $this->visibility->assertVisibleOrFail($lesson, $user, 404);
         }
 
@@ -63,7 +55,7 @@ class LessonProgressController extends Controller
         $user = $request->user();
 
         // Guard for students
-        if (!$lesson->course->isAdmin($user)) {
+        if (! $lesson->course->isAdmin($user)) {
             $this->visibility->assertVisibleOrFail($lesson, $user, 403);
         }
 
@@ -73,7 +65,7 @@ class LessonProgressController extends Controller
             $progress->markAsStarted();
 
             // Fire gamification event
-            \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::LESSON_START->value, 'lesson', $lesson->id);
+            UsageEventService::fire($user, UsageEventType::LESSON_START->value, 'lesson', $lesson->id);
         }
 
         return response()->json([
@@ -94,49 +86,13 @@ class LessonProgressController extends Controller
         $user = $request->user();
 
         // Guard for students
-        if (!$lesson->course->isAdmin($user)) {
+        if (! $lesson->course->isAdmin($user)) {
             $this->visibility->assertVisibleOrFail($lesson, $user, 403);
         }
 
-        $progress = $lesson->getOrCreateProgress($user);
+        $result = $this->lessonCompletionService->completeLessonForUser($lesson, $user);
 
-        $wasAlreadyCompleted = $progress->isCompleted();
-
-        // If not started yet, mark as started first
-        if ($progress->status === LessonProgress::STATUS_NOT_STARTED) {
-            $progress->update(['started_at' => now()]);
-        }
-
-        $progress->markAsCompleted();
-
-        // Fire gamification event
-        \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::LESSON_COMPLETE->value, 'lesson', $lesson->id);
-
-        // Auto-unlock if there is a pending reading override and requirements are met
-        $member = CourseMember::where('user_id', $user->id)
-            ->where('course_id', $lesson->course_id)
-            ->first();
-
-        if ($member) {
-            $service = app(AttendanceEligibilityService::class);
-            $service->processReadingLessonUnlockIfCompleted($member);
-        }
-
-        // ✅ Grant reward if first time completion
-        $reward = ['rewarded' => false];
-        if (!$wasAlreadyCompleted) {
-            $reward = $this->coursePointService->grantLessonCompletionReward($lesson, $user);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'ยินดีด้วย! คุณเรียนบทเรียนนี้จบแล้ว',
-            'progress' => [
-                'status' => $progress->status,
-                'completed_at' => $progress->completed_at,
-            ],
-            'reward' => $reward,
-        ]);
+        return response()->json($result);
     }
 
     /**
@@ -147,7 +103,7 @@ class LessonProgressController extends Controller
         $user = $request->user();
 
         // Guard for students
-        if (!$lesson->course->isAdmin($user)) {
+        if (! $lesson->course->isAdmin($user)) {
             $this->visibility->assertVisibleOrFail($lesson, $user, 403);
         }
 
@@ -169,40 +125,10 @@ class LessonProgressController extends Controller
                 ],
             ]);
         } else {
-            // Complete
-            $wasAlreadyCompleted = $progress->isCompleted();
+            // Complete using service
+            $result = $this->lessonCompletionService->completeLessonForUser($lesson, $user);
 
-            if ($progress->status === LessonProgress::STATUS_NOT_STARTED) {
-                $progress->update(['started_at' => now()]);
-            }
-            $progress->markAsCompleted();
-
-            // Fire gamification event
-            \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::LESSON_COMPLETE->value, 'lesson', $lesson->id);
-
-            // Auto-unlock if there is a pending reading override and requirements are met
-            $member = CourseMember::where('user_id', $user->id)
-                ->where('course_id', $lesson->course_id)
-                ->first();
-
-            if ($member) {
-                $service = app(AttendanceEligibilityService::class);
-                $service->processReadingLessonUnlockIfCompleted($member);
-            }
-
-            // ✅ Grant reward
-            $reward = $this->coursePointService->grantLessonCompletionReward($lesson, $user);
-
-            return response()->json([
-                'success' => true,
-                'completed' => true,
-                'message' => 'ยินดีด้วย! คุณเรียนบทเรียนนี้จบแล้ว',
-                'progress' => [
-                    'status' => $progress->status,
-                    'completed_at' => $progress->completed_at,
-                ],
-                'reward' => $reward,
-            ]);
+            return response()->json($result);
         }
     }
 
@@ -218,7 +144,7 @@ class LessonProgressController extends Controller
         $user = $request->user();
 
         // Guard for students
-        if (!$lesson->course->isAdmin($user)) {
+        if (! $lesson->course->isAdmin($user)) {
             $this->visibility->assertVisibleOrFail($lesson, $user, 403);
         }
 
@@ -257,8 +183,8 @@ class LessonProgressController extends Controller
             return $lesson->progress->first()?->isCompleted();
         })->count();
 
-        $progressPercentage = $totalLessons > 0 
-            ? round(($completedLessons / $totalLessons) * 100) 
+        $progressPercentage = $totalLessons > 0
+            ? round(($completedLessons / $totalLessons) * 100)
             : 0;
 
         return response()->json([
@@ -268,6 +194,7 @@ class LessonProgressController extends Controller
             'progress_percentage' => $progressPercentage,
             'lessons' => $lessons->map(function ($lesson) {
                 $progress = $lesson->progress->first();
+
                 return [
                     'id' => $lesson->id,
                     'title' => $lesson->title,

@@ -44,8 +44,8 @@ export const useAdminDonations = () => {
         await fetch(page.value)
       }
       return response
-    } catch (err) {
-      console.error('Failed to receive donation:', id, err)
+    } catch (err: any) {
+      console.error(`[useAdminDonations] Failed to receive donation ${id}:`, err)
       throw err
     }
   }
@@ -57,8 +57,8 @@ export const useAdminDonations = () => {
         await fetch(page.value)
       }
       return response
-    } catch (err) {
-      console.error('Failed to reject donation:', id, err)
+    } catch (err: any) {
+      console.error(`[useAdminDonations] Failed to reject donation ${id}:`, err)
       throw err
     }
   }

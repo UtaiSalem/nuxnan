@@ -19,6 +19,7 @@ const selectedSlip = ref(null)
 const selectedDonation = ref(null)
 const showEditModal = ref(false)
 const selectedIds = ref([])
+const processingId = ref(null)
 
 const statusFilters = [
   { value: 'all', label: 'ทั้งหมด', color: 'bg-indigo-500' },
@@ -41,7 +42,9 @@ watch(status, () => {
 })
 
 const handleApprove = async (id) => {
+  if (processingId.value) return
   try {
+    processingId.value = id
     const response = await receive(id)
     if (response.success) {
       Swal.fire({
@@ -51,13 +54,20 @@ const handleApprove = async (id) => {
         timer: 1500,
         showConfirmButton: false
       })
+    } else {
+      Swal.fire('ไม่สำเร็จ', response.message || 'ไม่สามารถอนุมัติได้', 'warning')
     }
   } catch (err) {
-    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถอนุมัติได้', 'error')
+    console.error(err)
+    const msg = err.data?.message || err.message || 'ไม่สามารถอนุมัติได้'
+    Swal.fire('เกิดข้อผิดพลาด', msg, 'error')
+  } finally {
+    processingId.value = null
   }
 }
 
 const handleReject = async (id) => {
+  if (processingId.value) return
   const result = await Swal.fire({
     title: 'ยืนยันการปฏิเสธ?',
     text: "คุณแน่ใจหรือไม่ที่จะปฏิเสธการสนับสนุนนี้?",
@@ -70,12 +80,19 @@ const handleReject = async (id) => {
 
   if (result.isConfirmed) {
     try {
+      processingId.value = id
       const response = await reject(id)
       if (response.success) {
         Swal.fire('เรียบร้อย', 'ปฏิเสธการสนับสนุนแล้ว', 'success')
+      } else {
+        Swal.fire('ไม่สำเร็จ', response.message || 'ไม่สามารถปฏิเสธได้', 'warning')
       }
     } catch (err) {
-      Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถปฏิเสธได้', 'error')
+      console.error(err)
+      const msg = err.data?.message || err.message || 'ไม่สามารถปฏิเสธได้'
+      Swal.fire('เกิดข้อผิดพลาด', msg, 'error')
+    } finally {
+      processingId.value = null
     }
   }
 }
@@ -279,6 +296,7 @@ onMounted(() => {
           v-for="donate in donations"
           :key="donate.id"
           :donate="donate"
+          :loading="processingId === donate.id"
           @approved="handleApprove(donate.id)"
           @rejected="handleReject(donate.id)"
           @edit="openEditModal"
@@ -348,11 +366,23 @@ onMounted(() => {
                 <td class="p-5">
                   <div class="flex items-center justify-center gap-2">
                     <template v-if="donate.status === 0">
-                      <button @click="handleApprove(donate.id)" class="p-2.5 bg-green-100 text-green-600 rounded-xl hover:bg-green-500 hover:text-white transition-all shadow-sm" title="อนุมัติ">
-                        <Icon icon="fluent:checkmark-24-regular" class="w-5 h-5" />
+                      <button 
+                        @click="handleApprove(donate.id)" 
+                        :disabled="processingId === donate.id"
+                        class="p-2.5 bg-green-100 text-green-600 rounded-xl hover:bg-green-500 hover:text-white disabled:opacity-50 transition-all shadow-sm" 
+                        title="อนุมัติ"
+                      >
+                        <Icon v-if="processingId === donate.id" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
+                        <Icon v-else icon="fluent:checkmark-24-regular" class="w-5 h-5" />
                       </button>
-                      <button @click="handleReject(donate.id)" class="p-2.5 bg-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm" title="ปฏิเสธ">
-                        <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
+                      <button 
+                        @click="handleReject(donate.id)" 
+                        :disabled="processingId === donate.id"
+                        class="p-2.5 bg-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white disabled:opacity-50 transition-all shadow-sm" 
+                        title="ปฏิเสธ"
+                      >
+                        <Icon v-if="processingId === donate.id" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
+                        <Icon v-else icon="fluent:dismiss-24-regular" class="w-5 h-5" />
                       </button>
                     </template>
                     <button @click="openEditModal(donate)" class="p-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-indigo-500 hover:text-white transition-all shadow-sm" title="แก้ไข">

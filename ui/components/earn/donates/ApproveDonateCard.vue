@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 
-const api = useApi()
 const config = useRuntimeConfig()
 
 const props = defineProps({
@@ -10,11 +9,14 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['approved', 'rejected', 'edit', 'delete', 'view-slip'])
 
-const isLoading = ref(false)
 const showMenu = ref(false)
 
 // Get full slip URL with API base
@@ -44,38 +46,14 @@ const donorAvatar = computed(() => {
     return props.donate.donor?.avatar || `${config.public.apiBase}/storage/images/plearnd-logo.png`;
 })
 
-const handleApprove = async () => {
-  if (isLoading.value) return
-  
-  try {
-    isLoading.value = true
-    const response = await api.patch(`/api/plearnd-admin/supports/donates/${props.donate.id}/receive`, {})
-    
-    if (response.success) {
-      emit('approved', props.donate.id)
-    }
-  } catch (error) {
-    console.error('Failed to approve donation:', error)
-  } finally {
-    isLoading.value = false
-  }
+const handleApprove = () => {
+  if (props.loading) return
+  emit('approved', props.donate.id)
 }
 
-const handleReject = async () => {
-  if (isLoading.value) return
-  
-  try {
-    isLoading.value = true
-    const response = await api.patch(`/api/plearnd-admin/supports/donates/${props.donate.id}/reject`, {})
-    
-    if (response.success) {
-      emit('rejected', props.donate.id)
-    }
-  } catch (error) {
-    console.error('Failed to reject donation:', error)
-  } finally {
-    isLoading.value = false
-  }
+const handleReject = () => {
+  if (props.loading) return
+  emit('rejected', props.donate.id)
 }
 </script>
 
@@ -213,19 +191,19 @@ const handleReject = async () => {
     <div v-if="donate.status === 0" class="p-4 pt-0 flex gap-2">
       <button
         @click="handleApprove"
-        :disabled="isLoading"
+        :disabled="loading"
         class="flex-1 h-10 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:from-emerald-300 disabled:to-green-400 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
       >
-        <Icon v-if="isLoading" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
+        <Icon v-if="loading" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
         <Icon v-else icon="fluent:checkmark-circle-24-regular" class="w-5 h-5" />
         อนุมัติ
       </button>
       <button
         @click="handleReject"
-        :disabled="isLoading"
+        :disabled="loading"
         class="flex-1 h-10 flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 disabled:from-rose-300 disabled:to-red-400 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-rose-500/20"
       >
-        <Icon v-if="isLoading" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
+        <Icon v-if="loading" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
         <Icon v-else icon="fluent:dismiss-circle-24-regular" class="w-5 h-5" />
         ปฏิเสธ
       </button>

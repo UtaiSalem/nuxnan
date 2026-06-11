@@ -2,44 +2,37 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Topic;
-use App\Models\Course;
-use App\Models\Question;
-use App\Models\Assignment;
-use App\Models\LessonImage;
-use App\Models\LessonComment;
-use App\Models\LessonDislike;
-use App\Models\LessonBookmark;
-use App\Models\LessonProgress;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Lesson extends Model
 {
     use HasFactory;
 
     // Publication status
-    const STATUS_DRAFT     = 'draft';
+    const STATUS_DRAFT = 'draft';
+
     const STATUS_PUBLISHED = 'published';
-    const STATUS_ARCHIVED  = 'archived';
+
+    const STATUS_ARCHIVED = 'archived';
 
     // Access type
-    const ACCESS_FREE   = 'free';
+    const ACCESS_FREE = 'free';
+
     const ACCESS_POINTS = 'points';
-    const ACCESS_MONEY  = 'money';
+
+    const ACCESS_MONEY = 'money';
 
     protected $guarded = [];
 
     protected static function booted()
     {
         static::creating(function ($lesson) {
-            if (!$lesson->order) {
+            if (! $lesson->order) {
                 $lesson->order = static::where('course_id', $lesson->course_id)->max('order') + 1;
             }
         });
@@ -84,8 +77,8 @@ class Lesson extends Model
     }
 
     public function likes(): HasMany
-    { 
-        return $this->hasMany(LessonLike::class); 
+    {
+        return $this->hasMany(LessonLike::class);
     }
 
     public function dislikes(): HasMany
@@ -123,7 +116,7 @@ class Lesson extends Model
     {
         return $this->hasMany(LessonComment::class);
     }
-    
+
     public function getComments()
     {
         return $this->comments()->whereNull('parent_id')->latest()->limit(3)->get();
@@ -159,6 +152,7 @@ class Lesson extends Model
     public function isCompletedBy(User $user): bool
     {
         $progress = $this->userProgress($user);
+
         return $progress && $progress->isCompleted();
     }
 
@@ -167,10 +161,16 @@ class Lesson extends Model
      */
     public function canUserDoExercises(?User $user, bool $isCourseAdmin = false): bool
     {
-        if ($isCourseAdmin) return true;
-        if (!$this->require_completion_before_exercises) return true;
-        if (!$user) return false;
-        
+        if ($isCourseAdmin) {
+            return true;
+        }
+        if (! $this->require_completion_before_exercises) {
+            return true;
+        }
+        if (! $user) {
+            return false;
+        }
+
         return $this->isCompletedBy($user);
     }
 
@@ -185,13 +185,19 @@ class Lesson extends Model
     public function isAccessibleByUser(User $user, bool $isCourseAdmin = false): bool
     {
         // admin เห็นทุกอย่างเสมอ
-        if ($isCourseAdmin) return true;
+        if ($isCourseAdmin) {
+            return true;
+        }
 
         // draft/archived — ไม่อนุญาต
-        if ($this->publication_status !== self::STATUS_PUBLISHED) return false;
+        if ($this->publication_status !== self::STATUS_PUBLISHED) {
+            return false;
+        }
 
         // free lesson — อนุญาตทันที
-        if ($this->access_type === self::ACCESS_FREE) return true;
+        if ($this->access_type === self::ACCESS_FREE) {
+            return true;
+        }
 
         // points/money — ตรวจ access record
         return $this->accesses()
@@ -210,5 +216,26 @@ class Lesson extends Model
             ->where('status', LessonAccess::STATUS_ACTIVE)
             ->exists();
     }
-}
 
+    /**
+     * Check if all published topics in this lesson are completed by user
+     */
+    public function areAllTopicsCompletedBy(User $user): bool
+    {
+        $publishedTopicIds = $this->topics()
+            ->where('status', 'published')
+            ->pluck('id');
+
+        if ($publishedTopicIds->isEmpty()) {
+            return false;
+        }
+
+        $completedCount = TopicReadProgress::where('user_id', $user->id)
+            ->where('lesson_id', $this->id)
+            ->where('status', TopicReadProgress::STATUS_COMPLETED)
+            ->whereIn('topic_id', $publishedTopicIds)
+            ->count();
+
+        return $completedCount >= $publishedTopicIds->count();
+    }
+}

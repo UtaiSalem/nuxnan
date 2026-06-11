@@ -2,29 +2,22 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Course;
-use App\Models\Lesson;
-use App\Models\Academy;
-use App\Models\Question;
-use App\Models\Assignment;
-use App\Models\TopicImage;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Topic extends Model
 {
     use HasFactory;
-    
+
     protected $guarded = [];
 
     protected static function booted()
     {
         static::creating(function ($topic) {
-            if (!$topic->sort_order) {
+            if (! $topic->sort_order) {
                 $topic->sort_order = static::where('lesson_id', $topic->lesson_id)->max('sort_order') + 1;
             }
         });
@@ -65,4 +58,18 @@ class Topic extends Model
         return $this->morphMany(Question::class, 'questionable');
     }
 
+    public function readProgress(): HasMany
+    {
+        return $this->hasMany(TopicReadProgress::class);
+    }
+
+    public function userReadProgress(User $user): ?TopicReadProgress
+    {
+        return $this->readProgress()->where('user_id', $user->id)->first();
+    }
+
+    public function getRequiredReadSeconds(): int
+    {
+        return $this->min_read > 0 ? (int) $this->min_read * 60 : 30;
+    }
 }

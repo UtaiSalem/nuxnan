@@ -1,8 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Earn\DonateController;
-
+use Illuminate\Support\Facades\Route;
 
 // Public routes for creating donations (anonymous allowed)
 Route::get('/supports/donates/create', [DonateController::class, 'create'])->name('support.donate.create');
@@ -18,15 +17,14 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'pl
     Route::get('/{donate}', [DonateController::class, 'show'])->name('admin.support.donate.show');
     Route::patch('/{donate}', [DonateController::class, 'update'])->name('admin.support.donate.update');
     Route::delete('/{donate}', [DonateController::class, 'destroy'])->name('admin.support.donate.destroy');
-    Route::patch('/{donate}/receive', [DonateController::class, 'recieve'])->name('admin.support.donate.receive');
-    Route::patch('/{donate}/recieve', [DonateController::class, 'recieve']);
+    Route::patch('/{donate}/receive', [DonateController::class, 'receive'])->name('admin.support.donate.receive');
+    Route::patch('/{donate}/recieve', [DonateController::class, 'receive']);
     Route::patch('/{donate}/reject', [DonateController::class, 'reject'])->name('admin.support.donate.reject');
 });
 
-Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified',])->group(function () {
+Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->group(function () {
     Route::get('/donates/widget', [DonateController::class, 'widget'])->name('donates.widget');
     Route::get('/donates/{donate}/get-donate', [DonateController::class, 'getDonate'])->name('donate.get-donate');
     Route::get('/donates/history', [DonateController::class, 'history'])->name('donates.history');
     Route::get('/donates', [DonateController::class, 'allAvailableDonates'])->name('donates.list');
 });
-

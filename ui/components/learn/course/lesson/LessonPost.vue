@@ -103,10 +103,26 @@ const handleUnlock = async () => {
 // State
 const showFullContent = ref(false)
 const showTopics = ref(false)
-const completedTopics = ref<number[]>([]) // Track completed topic IDs
 const showVideoModal = ref(false) // Video modal state
 const showImagePreview = ref(false) // Image preview modal state
 const previewIndex = ref(0) // Current preview image index
+
+// Reading Progress
+const lessonIdRef = computed(() => props.lesson.id)
+const { 
+  summary, 
+  loadProgress, 
+  startReading, 
+  completeReading, 
+  isTopicCompleted, 
+  getTopicStatus 
+} = useTopicReadProgress(lessonIdRef)
+
+onMounted(async () => {
+  if (hasTopics.value && !props.isAdmin) {
+    await loadProgress()
+  }
+})
 
 // Topic Management
 const showTopicModal = ref(false)
@@ -300,8 +316,8 @@ const hasAssignments = computed(
 const hasQuestions = computed(() => props.lesson.questions && props.lesson.questions.length > 0)
 
 const progressPercentage = computed(() => {
-  if (!hasTopics.value) return 0
-  return Math.round((completedTopics.value.length / props.lesson.topics.length) * 100)
+  if (props.isAdmin) return 0
+  return summary.value.progress_percentage
 })
 
 // Estimated reading time (words per minute = 200)
@@ -424,12 +440,34 @@ const handleDelete = () => {
   emit('delete', props.lesson.id)
 }
 
-const handleTopicComplete = (topicId: number) => {
-  const index = completedTopics.value.indexOf(topicId)
-  if (index > -1) {
-    completedTopics.value.splice(index, 1)
-  } else {
-    completedTopics.value.push(topicId)
+// Handle topic expand → start reading
+const handleTopicExpand = async (topicId: number) => {
+  if (props.isAdmin) return
+  await startReading(topicId)
+}
+
+const handleTopicComplete = async (topicId: number) => {
+  if (props.isAdmin) return
+  
+  const result = await completeReading(topicId)
+  
+  if (result.code === 'topic_read_too_fast') {
+    swal.error(`${result.message} (เหลืออีก ${result.remaining_seconds} วินาที)`)
+    return
+  }
+  
+  if (!result.success) {
+    swal.error(result.message || 'ไม่สามารถบันทึกข้อมูลได้')
+    return
+  }
+
+  if (result.lesson_completed) {
+    emit('refresh')
+    if (result.reward?.rewarded) {
+      rewardResult.value = result.reward
+      showRewardToast.value = true
+      setTimeout(() => { showRewardToast.value = false }, 4000)
+    }
   }
 }
 
@@ -648,8 +686,8 @@ const publicationStatusColor = computed(() => {
           ></div>
         </div>
         <p v-if="hasTopics && !isAdmin" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          ความคืบหน้า: {{ progressPercentage }}% ({{ completedTopics.length }}/{{
-            lesson.topics.length
+          ความคืบหน้า: {{ summary.progress_percentage }}% ({{ summary.completed_topics }}/{{
+            summary.total_topics
           }}
           หัวข้อ)
         </p>
@@ -895,9 +933,10 @@ const publicationStatusColor = computed(() => {
                   v-for="topic in lesson.topics"
                   :key="topic.id"
                   :topic="topic"
-                  :is-completed="completedTopics.includes(topic.id)"
+                  :status="getTopicStatus(topic.id)"
                   :isAdmin="isAdmin"
-                  @toggle-complete="handleTopicComplete"
+                  @expand="handleTopicExpand"
+                  @complete="handleTopicComplete"
                   @edit="editTopic"
                   @delete="deleteTopic"
                 />
