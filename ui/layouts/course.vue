@@ -75,8 +75,8 @@ const navigation = [
   { name: 'กระดานข่าว', href: '/play/newsfeed', icon: 'fluent:feed-24-regular' },
   { name: 'โรงเรียน', href: '/academies', icon: 'mdi:school-outline' },
   { name: 'รายวิชา', href: '/Learn/Courses', icon: 'fluent-mdl2:publish-course' },
-  { name: 'สะสมแต้ม', href: '/earn/donates', icon: 'mdi:hand-coin-outline' },
-  { name: 'ดูสินค้า', href: '/earn/advertise', icon: 'eos-icons:product-subscriptions-outlined' },
+  { name: 'สะสมแต้ม', href: '/Earn/donates', icon: 'mdi:hand-coin-outline' },
+  { name: 'ดูสินค้า', href: '/Earn/Advertise', icon: 'eos-icons:product-subscriptions-outlined' },
 ]
 
 const isSettingsOpen = ref(false)

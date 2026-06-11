@@ -78,6 +78,8 @@ watch(() => props.show, (isShow) => {
     if (!isShow) {
         cleanupImagePreviews()
         errors.value = {}
+    } else if (!props.topic) {
+        resetForm()
     } else {
         errors.value = {}
     }

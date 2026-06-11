@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Earn;
 
 use App\Enums\ActivityType;
+use App\Http\Controllers\Controller;
 use App\Http\Resources\Earn\DonateResource;
 use App\Http\Resources\Play\ActivityResource;
 use App\Http\Resources\UserResource;
@@ -13,7 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
-class DonateController extends \App\Http\Controllers\Controller
+class DonateController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -53,15 +54,15 @@ class DonateController extends \App\Http\Controllers\Controller
     {
         return response()->json([
             'success' => true,
-            'donate'  => new DonateResource($donate->load(['donor', 'recipients'])),
+            'donate' => new DonateResource($donate->load(['donor', 'recipients'])),
         ]);
     }
 
     public function update(Request $request, Donate $donate)
     {
         $validated = $request->validate([
-            'donor_name'  => 'sometimes|nullable|string|max:255',
-            'notes'       => 'sometimes|nullable|string|max:1000',
+            'donor_name' => 'sometimes|nullable|string|max:255',
+            'notes' => 'sometimes|nullable|string|max:1000',
             'review_note' => 'sometimes|nullable|string|max:1000',
         ]);
 
@@ -69,7 +70,7 @@ class DonateController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'success' => true,
-            'donate'  => new DonateResource($donate->fresh('donor')),
+            'donate' => new DonateResource($donate->fresh('donor')),
         ]);
     }
 
@@ -86,8 +87,8 @@ class DonateController extends \App\Http\Controllers\Controller
     public function bulkReview(Request $request)
     {
         $data = $request->validate([
-            'ids'    => 'required|array|min:1',
-            'ids.*'  => 'integer|exists:donates,id',
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:donates,id',
             'action' => 'required|in:approve,reject',
         ]);
 
@@ -96,7 +97,7 @@ class DonateController extends \App\Http\Controllers\Controller
         $affected = Donate::whereIn('id', $data['ids'])
             ->where('status', 0) // เฉพาะ pending เท่านั้น
             ->update([
-                'status'      => $status,
+                'status' => $status,
                 'approved_by' => auth()->id(),
                 'reviewed_at' => now(),
             ]);
@@ -278,7 +279,6 @@ class DonateController extends \App\Http\Controllers\Controller
             'success' => true,
             'donate' => new DonateResource($donate->load('donor')),
         ], 200);
-    }
     }
 
     // get donate

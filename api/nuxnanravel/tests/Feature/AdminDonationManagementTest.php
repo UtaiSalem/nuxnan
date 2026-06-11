@@ -141,7 +141,7 @@ class AdminDonationManagementTest extends TestCase
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/plearnd-admin/supports/donates/{$donate->id}/receive");
 
-        $response->assertStatus(422);
+        $response->assertStatus(409);
     }
 
     public function test_admin_can_reject_donation()

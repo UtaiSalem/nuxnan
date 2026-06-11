@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import { useAuthStore } from '~/stores/auth'
@@ -13,6 +13,8 @@ definePageMeta({
 useHead({
   title: 'สะสมแต้ม - Nuxni'
 })
+
+usePageLayoutWidgets({ left: false, right: false })
 
 // Types
 interface DonorProfile {
@@ -109,11 +111,11 @@ const selectedDonate = ref<Donate | null>(null)
 const selectedDonateIndex = ref<number>(-1)
 const isShowingDonorModal = ref(false)
 const countdownSeconds = ref(10)
-const countdownInterval = ref<NodeJS.Timeout | null>(null)
+const countdownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const isProcessingDonate = ref(false)
 const lastClickTime = ref(0) // For double-click prevention
 const animatedPoints = ref(0) // Points animation counter (0 -> 240)
-const pointsAnimationInterval = ref<NodeJS.Timeout | null>(null)
+const pointsAnimationInterval = ref<ReturnType<typeof setInterval> | null>(null)
 
 // Helper function to parse points (handles both string and number)
 const parsePoints = (points: string | number | undefined | null): number => {
@@ -405,9 +407,14 @@ const goToCreateDonate = () => {
 onMounted(() => {
   fetchDonates()
 })
+
+onBeforeUnmount(() => {
+  cancelCountdown()
+})
 </script>
 
 <template>
+  <div>
   <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
     <div class="max-w-6xl mx-auto">
       <!-- Page Header -->
@@ -809,6 +816,7 @@ onMounted(() => {
       </div>
     </Transition>
   </Teleport>
+  </div>
 </template>
 
 <style scoped>

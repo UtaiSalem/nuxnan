@@ -23,7 +23,7 @@ const navigation = [
   },
   { 
     name: 'รายได้', 
-    href: '/earn/points', 
+    href: '/Earn/points',
     icon: 'fluent:wallet-24-regular', 
     activeIcon: 'fluent:wallet-24-filled' 
   },

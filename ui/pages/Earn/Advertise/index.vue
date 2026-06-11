@@ -97,6 +97,8 @@ useHead({
   title: 'ดูสินค้า - Nuxni'
 })
 
+usePageLayoutWidgets({ left: false, right: false })
+
 const adverts = ref([])
 const isLoading = ref(true)
 

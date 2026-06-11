@@ -10,6 +10,8 @@ useSeoMeta({
   title: 'สนับสนุนเว็บไซต์ - Plearnd',
 })
 
+usePageLayoutWidgets({ left: false, right: false })
+
 import { useAuthStore } from '~/stores/auth'
 
 const config = useRuntimeConfig()
@@ -850,7 +852,7 @@ watch(() => authStore.user, async (user) => {
                 <button
                   type="button"
                   @click="paymentMethod = 'points'"
-                  :disabled="(authStore.user?.points || 0) < pointsRequired"
+                  :disabled="(authStore.user?.pp || 0) < pointsRequired"
                   :class="[
                     'p-4 rounded-xl border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed',
                     paymentMethod === 'points'
@@ -865,7 +867,7 @@ watch(() => authStore.user, async (user) => {
                     <div>
                       <p class="font-medium text-gray-900 dark:text-white">แต้มสะสม</p>
                       <p class="text-xs text-purple-600 dark:text-purple-400 font-semibold">
-                        {{ (authStore.user?.points || 0).toLocaleString() }} แต้ม
+                        {{ (authStore.user?.pp || 0).toLocaleString() }} แต้ม
                       </p>
                     </div>
                   </div>

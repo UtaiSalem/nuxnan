@@ -6,17 +6,23 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-06-10)
+## สถานะปัจจุบัน (2026-06-11)
 
 ### งานที่เพิ่งเสร็จสิ้น — Verified & Tested
 
-- **Done:** Draft Visibility & Interaction Lockdown (Lesson/Assignment/Quiz)
-    - Centralized `ContentVisibilityService` with cascade rule (Assignment under draft Lesson/Topic = hidden).
-    - Read path: filter drafts in `CourseLessonController`, `CourseAssignmentController`, `CourseQuizController` index/show.
-    - Action path: `assertVisibleOrFail` guards in `LessonProgressController`, `LessonAnswerQuestionController`, `AssignmentAnswerController`, `CourseQuizResultController`, `UserAnswerQuestionController`.
-    - Testing: 15/15 tests passed (11 unit + 4 feature).
+- **Done:** Topic Reading Progress + Anti-Cheat + Auto-Complete Lesson (`060ce9fe`)
+- **Done:** Image Gallery Viewer + Marketplace Filters (`0997d945`)
+- **Done:** Academy Admin Embedded Marketplace Purchase (`d3959560` + `8ebedcf6`)
+- **Done:** Admin Support Donate Fix (duplicate PATCH + error handling) (`060ce9fe`)
+- **Done:** Topic Form Stale State Fix (uncommitted — `TopicFormModal.vue`)
+- **Done:** Carbon `diffInSeconds` bug fix in `TopicReadProgress` + `UserAnswerQuestionController`
+- **Done:** Analysis file consolidated — removed stale queued items
+
+### งานที่ค้าง (plan only)
+
+- **Earn white-screen route regression:** แผนเท่านั้น ต้อง browser smoke test ก่อน — อาจ resolved แล้วจาก `5821d1d3`
 - **TODO:** —
-- **Pending Commit:** — (committed)
+- **Pending Commit:** TopicFormModal.vue fix + analysis cleanup
 
 ---
 
@@ -24,6 +30,11 @@
 
 | วันที่ | งาน | สถานะ |
 |--------|------|-------|
+| 2026-06-11 | Topic Reading Progress + Anti-Cheat + Auto-Complete Lesson | ✅ Done |
+| 2026-06-11 | Image Gallery Viewer + Marketplace Filters | ✅ Done |
+| 2026-06-11 | Academy Admin Embedded Marketplace Purchase | ✅ Done |
+| 2026-06-11 | Admin Support Donate Fix + Topic Form Stale State Fix | ✅ Done |
+| 2026-06-11 | Analysis File Consolidation | ✅ Done |
 | 2026-06-10 | Draft Visibility & Interaction Lockdown (Lesson/Assignment/Quiz) | ✅ Done |
 | 2026-06-09 | Sort Order System (Topics, Course Groups, Academy Groups) | ✅ Done |
 | 2026-06-09 | Academy Group Reorder UI Implementation | ✅ Done |
