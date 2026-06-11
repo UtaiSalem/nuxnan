@@ -19,7 +19,12 @@ const handleResync = async () => {
       emit('resynced')
     }
   } catch (error: any) {
-    swal.error(error?.data?.message || 'ไม่สามารถรีซิงค์ข้อมูลได้')
+    // 404 = route not deployed / route cache stale on server
+    if (error?.status === 404) {
+      swal.error('ฟีเจอร์รีซิงค์ยังไม่พร้อมใช้งานบนเซิร์ฟเวอร์ กรุณาติดต่อผู้ดูแลระบบเพื่ออัปเดต Route Cache')
+    } else {
+      swal.error(error?.data?.message || error?.message || 'ไม่สามารถรีซิงค์ข้อมูลได้')
+    }
   } finally {
     isLoading.value = false
   }

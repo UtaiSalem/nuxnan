@@ -40,6 +40,79 @@ _(none — all queued items completed)_
 
 ## Work Plan
 
+### Queued: Gradebook score-breakdown resync 404 บน production (deploy drift)
+
+**สถานะ**: วินิจฉัยเสร็จ — เป็นปัญหา **deploy / route cache บน production** ไม่ใช่ bug ใน source ปัจจุบัน. ไม่มีโค้ด feature ต้องแก้ (มีเฉพาะ optional frontend hardening). ขั้นตอนแก้ทั้งหมดรันบนเซิร์ฟเวอร์จริงโดยเจ้าของ — ปรับ path/วิธี deploy ตามจริงของ server
+
+**ข้อเท็จจริงยืนยันแล้ว (source/local):**
+- `GET /api/courses/{course}/score-breakdown` + `POST /api/courses/{course}/score-breakdown/resync` อยู่ใน [`routes/learn/course.php:447-450`](api/nuxnanravel/routes/learn/course.php:447) ทั้งคู่ ถูกเพิ่ม **commit เดียวกัน** `749f89d7` (2026-06-06)
+- Controller `CourseScoreBreakdownController@resync` มีจริง (เพิ่มใน `749f89d7`, แก้ล่าสุด `69471536` 2026-06-07), มี permission check `edit_grades` → 403 ถ้าไม่มีสิทธิ์
+- `HEAD = origin/main` (unpushed = 0) → source ที่มี route นี้ถูก push ขึ้น remote แล้วแน่นอน; working tree clean
+- `route:list --path=score-breakdown` บนเครื่อง dev เห็นครบ 2 routes
+
+**สาเหตุที่เป็นไปได้ (เรียงตามโอกาส):**
+1. Production รัน revision **เก่ากว่า `749f89d7`** (ก่อน 2026-06-06) → ทั้ง GET และ POST ไม่มีในตาราง route
+2. Production มี **route cache ค้าง** (`bootstrap/cache/routes-*.php`) ที่ build ก่อน deploy commit นี้ → route ใหม่ไม่ถูกโหลดจนกว่าจะ `route:clear`/re-cache
+- หมายเหตุสำคัญ: GET กับ POST อยู่ commit เดียว + group เดียว → ถ้า prod "404 เฉพาะ POST แต่ GET ใช้ได้จริง" แทบเป็นไปไม่ได้จาก source (Laravel จะตอบ *MethodNotAllowed* ไม่ใช่ *route could not be found* ถ้าเป็นเรื่อง method). ดังนั้น error นี้แปลว่า router บน prod **ไม่มี block นี้ทั้งก้อน** → ต้องเช็คว่า GET บน prod ก็ fail ด้วยไหม (step 5) เพื่อยืนยัน
+
+**ขั้นที่ 1 — วินิจฉัยบน production (read-only ก่อน ห้ามแก้):**
+รันใน API root ของ prod (`/path/to/api/nuxnanravel`):
+```bash
+git rev-parse HEAD && git log -1 --format='%h %ci %s'   # เทียบ HEAD ต้อง >= 749f89d7 (2026-06-06)
+git merge-base --is-ancestor 749f89d7 HEAD && echo "HAS route commit" || echo "MISSING route commit"
+php artisan route:list --path=score-breakdown            # คาดหวัง 2 แถว (GET + POST resync)
+ls -la bootstrap/cache/routes-*.php 2>/dev/null && echo "route cache EXISTS" || echo "no route cache"
+```
+**ตัดสินใจ:**
+- ถ้า "MISSING route commit" → สาเหตุ = revision เก่า → ไปขั้นที่ 2A
+- ถ้ามี commit แล้วแต่ `route:list` ไม่เห็น 2 routes → สาเหตุ = route cache ค้าง → ไปขั้นที่ 2B
+- ถ้า `route:list` เห็นครบทั้งที่ prod ยัง 404 → ไม่ใช่ deploy drift → ไปขั้นที่ 4 (สอบเพิ่ม)
+
+**ขั้นที่ 2A — sync revision (กรณี revision เก่า):**
+```bash
+git fetch origin && git checkout main && git pull --ff-only origin main   # หรือ checkout SHA ที่ตั้งใจ deploy
+composer install --no-dev --optimize-autoloader
+```
+แล้วทำต่อขั้นที่ 2B (clear+rebuild cache)
+
+**ขั้นที่ 2B — clear + rebuild cache (ทำเสมอหลัง deploy):**
+```bash
+php artisan optimize:clear        # = route:clear + config:clear + cache:clear + view:clear
+php artisan migrate --force        # ถ้ามี migration ค้าง (ดู Known Blockers: topics.sort_order, approved_by)
+php artisan optimize               # rebuild route + config cache สำหรับ production
+```
+> ⚠️ การ `route:cache` **ต้องรันหลัง** code/route เป็นเวอร์ชันล่าสุดแล้วเท่านั้น มิฉะนั้น cache จะค้างซ้ำ
+> ⚠️ ถ้าใช้ PHP-FPM / Octane / queue worker ต้อง **restart** หลัง deploy: `sudo systemctl reload php8.4-fpm` / `php artisan octane:reload` / `php artisan queue:restart`
+
+**ขั้นที่ 3 — verify บน production:**
+```bash
+php artisan route:list --path=score-breakdown   # ต้องเห็น GET + POST resync
+# curl ทดสอบจริง (ใส่ JWT ของ admin ที่มีสิทธิ์ edit_grades):
+curl -i -X POST https://www.nuxnan.com/api/courses/21/score-breakdown/resync \
+  -H "Authorization: Bearer <JWT>" -H "Accept: application/json"
+# คาดหวัง 200 {success:true} หรือ 403 (ถ้าไม่มีสิทธิ์) — แต่ต้อง "ไม่ใช่ 404"
+```
+จากนั้นเปิด `https://www.nuxnan.com/Learn/Courses/21/gradebook` กดปุ่ม "รีซิงค์คะแนนทั้งหมด" → ต้องได้ toast สำเร็จ
+
+**ขั้นที่ 4 — ถ้ายัง 404 ทั้งที่ route:list เห็นครบ (สอบเพิ่ม):**
+- ตรวจ web server / reverse proxy (Nginx/Apache) ว่า `POST /api/*` ไม่ถูก block/redirect (เทียบกับ GET ที่ผ่าน)
+- ตรวจ base URL ฝั่ง frontend prod: `useApi()`/`runtimeConfig.apiBase` ชี้ไป origin เดียวกับ API ที่ deploy ใหม่หรือไม่ (อาจชี้ไป API คนละ host/เวอร์ชัน)
+- ตรวจ CDN/edge cache ของ response 404 เก่า (purge ถ้ามี)
+
+**ขั้นที่ 5 (optional) — frontend hardening ✅ (implemented + verified 2026-06-12):**
+- ไฟล์ [`ResyncButton.vue:21-23`](ui/components/learn/course/gradebook/ResyncButton.vue:21): เพิ่มการจับ 404 โดยเฉพาะ (`error?.status === 404`) ให้ขึ้นข้อความเข้าใจง่าย *"ฟีเจอร์รีซิงค์ยังไม่พร้อมใช้งานบนเซิร์ฟเวอร์ กรุณาติดต่อผู้ดูแลระบบเพื่ออัปเดต Route Cache"* แทนข้อความ error ดิบ
+- หน้า gradebook [`index.vue`](ui/pages/Learn/Courses/[id]/gradebook/index.vue): GET score-breakdown fail แทนที่จะ `console.error` เงียบ ๆ ตอนนี้แสดง toast error ให้ผู้ใช้รู้ตัว (`swal.error`)
+
+**ป้องกันไม่ให้เกิดซ้ำ (systemic):**
+- ใส่ `php artisan optimize:clear && php artisan migrate --force && php artisan optimize` เป็น **ขั้นมาตรฐานท้าย deploy script/hook** ทุกครั้ง (ดู Known Blockers ที่เตือนเรื่องนี้อยู่แล้ว)
+
+**หลังทำเสร็จ (production — ต้องรันบนเซิร์ฟเวอร์จริง):**
+- [ ] `route:list --path=score-breakdown` บน prod เห็น 2 routes
+- [ ] curl POST resync ได้ ≠ 404
+- [ ] ปุ่มบนหน้า gradebook ทำงาน (toast สำเร็จ)
+
+---
+
 ### Queued: Earn support/points white-screen route regression
 
 **สถานะ**: แผนเท่านั้น — ต้อง browser smoke test ก่อน implement
@@ -146,6 +219,22 @@ _(consolidated 2026-06-11 — all prior entries merged into Completed Features a
 - ดีไซน์ที่เจ้าของยืนยัน: ป้อนช่องเดียว (ไทย+เว้นวรรคได้) → name+username, unique ที่ username, แก้ name ทีหลังได้, แอดมิน create ช่องเดียว
 - แผนเต็ม 10 ขั้น (+1 optional) อยู่ใน Work Plan → "Username = Thai display name (single field, unique)". เจ้าของโปรเจค implement เอง
 - ยังไม่แตะโค้ด feature; แก้เฉพาะไฟล์ `.agents/latest-analysis.md` นี้
+
+### 2026-06-12 - External scores group targeting analysis (plan-only)
+- Trigger: review `/Learn/Courses/{id}/external-scores` against requirement that new external score topics must be targetable to a specific course group.
+- Frontend `ui/pages/Learn/Courses/[id]/external-scores.vue` uses `selectedGroupId` only for table filtering; create modal/form has no `group_id` field and explicitly tells admins scores will apply to every student in the course.
+- Backend `CourseExternalScoreController@store` validates only `title`, `description`, `category`, `max_score`, `scored_at` and hard-codes `group_id => null`, so newly created topics cannot be scoped to a group even though the DB/model support nullable `group_id`.
+- `tableView($groupId)` filters only visible member rows; it still loads all external score columns for the course. Current group selection is therefore a view filter, not topic scoping.
+- Risk: admins can filter to one group and save entries for visible rows only, but the topic itself remains course-wide and `CourseScoreService` still totals external scores at course level without using `group_id`.
+- Verification: read-only trace through page -> route -> controller -> model -> migration -> scoring service. No feature code changed.
+
+### 2026-06-12 - Gradebook resync route analysis (plan-only)
+- Trigger: production page `/Learn/Courses/{id}/gradebook` shows `The route api/courses/21/score-breakdown/resync could not be found.` when clicking "Resync ทั้งคอร์ส".
+- Frontend button `ui/components/learn/course/gradebook/ResyncButton.vue` posts to `/api/courses/${courseId}/score-breakdown/resync`; gradebook page uses the same score-breakdown family for the table data.
+- Backend source already defines both `GET /api/courses/{course}/score-breakdown` and `POST /api/courses/{course}/score-breakdown/resync` in `api/nuxnanravel/routes/learn/course.php`, backed by `CourseScoreBreakdownController@index` and `resync`.
+- Local verification via `php artisan route:list --path=score-breakdown` shows both routes are registered in the current codebase/environment, so the production error is likely deploy drift or stale route cache on the live server rather than a missing route in source.
+- Most likely production fix path: confirm deployed revision includes score-breakdown routes, then run `php artisan route:clear` and `php artisan route:cache` after deploy; if production still fails, compare the live branch/build against current source.
+- Refinement (2026-06-12, Claude): GET index + POST resync ถูกเพิ่ม **commit เดียวกัน** `749f89d7` (2026-06-06) และมีแค่ commit เดียวที่แตะ block นี้; `HEAD = origin/main` (unpushed 0). ดังนั้น prod ที่ตอบ "route could not be found" = router บน prod ไม่มี block นี้ทั้งก้อน (revision เก่า หรือ route cache ค้าง) ไม่ใช่ method mismatch. แผนแก้ละเอียดทีละขั้น (วินิจฉัย→sync→cache→verify→hardening→ป้องกันซ้ำ) เพิ่มไว้ใน Work Plan แล้ว.
 
 ### 2026-06-11 - Consolidated analysis file
 - Audited all queued items against git history; found all previously queued work items are committed.

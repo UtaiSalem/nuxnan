@@ -66,8 +66,11 @@ const fetchData = async (page = 1) => {
       courseTotalScore.value = res.course_total_score
       useLegacyGradebook.value = res.use_legacy_gradebook
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to fetch score breakdown:', err)
+    const swal = useSweetAlert()
+    const message = err?.data?.message || err?.message || 'ไม่สามารถโหลดข้อมูลคะแนนได้'
+    swal.error(message)
   } finally {
     isLoading.value = false
   }
