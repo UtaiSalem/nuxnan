@@ -288,27 +288,6 @@ export const useAttendanceStore = defineStore('attendance', () => {
         }
     };
 
-    const fetchMemberJoinStatus = async (attendanceId, memberId) => {
-        const cacheKey = `member_status_${attendanceId}_${memberId}`;
-        const api = useApi();
-
-        try {
-            const response = await api.get(`/attendances/${attendanceId}/member/${memberId}/join-status`);
-
-            if (response && response.success) {
-                return response.status;
-            } else {
-                throw new Error(response?.message || 'Failed to fetch member join status');
-            }
-        } catch (error) {
-            // Only log errors that are not 404 (to avoid console spam when attendance is deleted)
-            if (error.response?.status !== 404) {
-                console.error('Failed to fetch member join status:', error);
-            }
-            throw error;
-        }
-    };
-    
     const updateMemberStatusInAttendance = (attendanceId, memberId, status) => {
         // Update in all groups that might contain this attendance
         Object.keys(attendances.value).forEach(groupId => {
@@ -357,7 +336,6 @@ export const useAttendanceStore = defineStore('attendance', () => {
         updateAttendance,
         deleteAttendance,
         submitMemberAttendance,
-        fetchMemberJoinStatus,
         updateMemberStatusInAttendance,
     };
 });

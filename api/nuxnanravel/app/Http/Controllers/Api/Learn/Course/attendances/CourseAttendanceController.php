@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\attendances;
 
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\attendances\CourseAttendanceResource;
+use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Course;
+use App\Models\CourseAttendance;
 use App\Models\CourseGroup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use App\Models\CourseAttendance;
-use App\Http\Controllers\Controller;
-use App\Http\Resources\Learn\Course\info\CourseResource;
-use App\Http\Resources\Learn\Course\LessonResource;
-use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
-use App\Http\Resources\Learn\Course\attendances\CourseAttendanceResource;
 
 class CourseAttendanceController extends Controller
 {
@@ -22,22 +21,22 @@ class CourseAttendanceController extends Controller
     {
         $courseMemberOfAuth = $course->courseMembers()->where('user_id', auth()->id())->first();
         $isCourseAdmin = $course->isAdmin(auth()->user());
-        
+
         // Get attendances with optional group filter and eager load relationships
         $attendancesQuery = $course->courseAttendances()
             ->with(['group', 'instructor', 'attendanceDetails.courseMember.user']);
-        
+
         // If admin with group_id filter or non-admin student
         if ($request->has('group_id')) {
             // Admin filtering by specific group
             $attendancesQuery->where('group_id', $request->group_id);
-        } elseif (!$isCourseAdmin && $courseMemberOfAuth && $courseMemberOfAuth->group_id) {
+        } elseif (! $isCourseAdmin && $courseMemberOfAuth && $courseMemberOfAuth->group_id) {
             // Student: only show attendances from their own group
             $attendancesQuery->where('group_id', $courseMemberOfAuth->group_id);
         }
-        
+
         $attendances = $attendancesQuery->orderBy('date', 'desc')->get();
-        
+
         // Load course groups with members (use 'members' relationship which points to CourseMember)
         // For admin: load all groups, for student: only their group
         if ($isCourseAdmin) {
@@ -50,10 +49,10 @@ class CourseAttendanceController extends Controller
         }
 
         return response()->json([
-            'course'        => new CourseResource($course),
-            'groups'        => CourseGroupResource::collection($courseGroups),
-            'data'          => CourseAttendanceResource::collection($attendances),
-            'courseMemberOfAuth'  => $courseMemberOfAuth,
+            'course' => new CourseResource($course),
+            'groups' => CourseGroupResource::collection($courseGroups),
+            'data' => CourseAttendanceResource::collection($attendances),
+            'courseMemberOfAuth' => $courseMemberOfAuth,
             'isCourseAdmin' => $isCourseAdmin,
         ]);
     }
@@ -63,7 +62,7 @@ class CourseAttendanceController extends Controller
      */
     public function store(Course $course, CourseGroup $group, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -80,24 +79,24 @@ class CourseAttendanceController extends Controller
 
         $attendance = $course->courseAttendances()->create([
             'instructor_id' => auth()->id(),
-            'group_id'      => $group->id,
-            'date'          => $startAt->format('Y-m-d H:i:s'),
-            'start_at'      => $startAt->format('Y-m-d H:i:s'),
-            'finish_at'     => $finishAt->format('Y-m-d H:i:s'),
-            'late_time'     => $request->late_time,
-            'description'   => $request->description,
+            'group_id' => $group->id,
+            'date' => $startAt->format('Y-m-d H:i:s'),
+            'start_at' => $startAt->format('Y-m-d H:i:s'),
+            'finish_at' => $finishAt->format('Y-m-d H:i:s'),
+            'late_time' => $request->late_time,
+            'description' => $request->description,
         ]);
 
         return response()->json([
-            'success'       => true,
-            'attendance'    => new CourseAttendanceResource($attendance),
+            'success' => true,
+            'attendance' => new CourseAttendanceResource($attendance),
         ], 200);
     }
 
     // Update Attendance
     public function update(CourseAttendance $attendance, Request $request)
     {
-        if (!$attendance->course->isAdmin(auth()->user())) {
+        if (! $attendance->course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -113,32 +112,31 @@ class CourseAttendanceController extends Controller
         $finishAt = Carbon::parse($request->finish_at, 'Asia/Bangkok');
 
         $attendance->update([
-            'date'          => $startAt->format('Y-m-d H:i:s'),
-            'start_at'      => $startAt->format('Y-m-d H:i:s'),
-            'finish_at'     => $finishAt->format('Y-m-d H:i:s'),
-            'late_time'    => $request->late_time,
-            'description'   => $request->description,
+            'date' => $startAt->format('Y-m-d H:i:s'),
+            'start_at' => $startAt->format('Y-m-d H:i:s'),
+            'finish_at' => $finishAt->format('Y-m-d H:i:s'),
+            'late_time' => $request->late_time,
+            'description' => $request->description,
         ]);
 
         return response()->json([
-            'success'       => true,
-            'attendance'    => new CourseAttendanceResource($attendance),
+            'success' => true,
+            'attendance' => new CourseAttendanceResource($attendance),
         ], 200);
     }
-
 
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(CourseAttendance $attendance)
     {
-        if (!$attendance->course->isAdmin(auth()->user())) {
+        if (! $attendance->course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        //delete attendance details
+        // delete attendance details
         $attendance->details()->delete();
-        //delete attendance
+        // delete attendance
         $attendance->delete();
 
         return response()->json([
@@ -151,7 +149,7 @@ class CourseAttendanceController extends Controller
     {
         return response()->json([
             'success' => true,
-            'attendances'   => CourseAttendanceResource::collection($course->courseAttendances->where('group_id', $group->id))
+            'attendances' => CourseAttendanceResource::collection($course->courseAttendances->where('group_id', $group->id)),
         ], 200);
     }
 
@@ -163,22 +161,22 @@ class CourseAttendanceController extends Controller
     {
         // Get status from request - handle 0 as valid value
         $status = $request->input('status');
-        
+
         // Validate status value manually to handle 0 correctly
-        if (!in_array($status, [0, 1, 2, 3], true)) {
+        if (! in_array($status, [0, 1, 2, 3], true)) {
             return response()->json([
                 'success' => false,
                 'message' => 'สถานะไม่ถูกต้อง',
-                'errors' => ['status' => ['สถานะต้องเป็น 0, 1, 2 หรือ 3']]
+                'errors' => ['status' => ['สถานะต้องเป็น 0, 1, 2 หรือ 3']],
             ], 422);
         }
 
         // Check if user is course admin
         $course = $attendance->course;
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์แก้ไขสถานะการเข้าร่วม'
+                'message' => 'ไม่มีสิทธิ์แก้ไขสถานะการเข้าร่วม',
             ], 403);
         }
 
@@ -192,7 +190,7 @@ class CourseAttendanceController extends Controller
             if ($attendanceDetail) {
                 $attendanceDetail->delete();
             }
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'ตั้งสถานะเป็น "ขาด" สำเร็จ (ลบ record)',
@@ -201,7 +199,7 @@ class CourseAttendanceController extends Controller
         }
 
         // Status 1, 2, 3 = สร้างหรืออัพเดท record
-        if (!$attendanceDetail) {
+        if (! $attendanceDetail) {
             // Create new attendance detail
             $attendanceDetail = $attendance->details()->create([
                 'attendanceable_type' => 'App\\Models\\CourseMember',
@@ -227,7 +225,7 @@ class CourseAttendanceController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'อัพเดทสถานะเป็น "' . ($statusLabel[$status] ?? 'ไม่ทราบ') . '" สำเร็จ',
+            'message' => 'อัพเดทสถานะเป็น "'.($statusLabel[$status] ?? 'ไม่ทราบ').'" สำเร็จ',
             'status' => $status,
         ], 200);
     }
@@ -243,7 +241,7 @@ class CourseAttendanceController extends Controller
 
         $courseMember = $course->courseMembers()->where('user_id', auth()->id())->first();
 
-        if (!$courseMember) {
+        if (! $courseMember) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลสมาชิกในรายวิชานี้',
@@ -267,19 +265,19 @@ class CourseAttendanceController extends Controller
     public function studentCheckIn(CourseAttendance $attendance)
     {
         $now = Carbon::now('Asia/Bangkok');
-        
+
         // Get course member of authenticated user
         $courseMember = $attendance->course->courseMembers()
             ->where('user_id', auth()->id())
             ->first();
-        
-        if (!$courseMember) {
+
+        if (! $courseMember) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลสมาชิกในรายวิชานี้',
             ], 404);
         }
-        
+
         // Check if student is in the same group as the attendance
         if ($courseMember->group_id !== $attendance->group_id) {
             return response()->json([
@@ -287,13 +285,13 @@ class CourseAttendanceController extends Controller
                 'message' => 'คุณไม่ได้อยู่ในกลุ่มที่มีการเช็คชื่อนี้',
             ], 403);
         }
-        
+
         // Parse attendance times (stored as Bangkok timezone without timezone info)
         $startAt = Carbon::parse($attendance->start_at, 'Asia/Bangkok');
         $finishAt = Carbon::parse($attendance->finish_at, 'Asia/Bangkok');
         $lateTime = $attendance->late_time ?? 15; // Default 15 minutes
         $lateThreshold = $startAt->copy()->addMinutes($lateTime);
-        
+
         // Check if attendance session has ended
         if ($now->gt($finishAt)) {
             return response()->json([
@@ -302,7 +300,7 @@ class CourseAttendanceController extends Controller
                 'ended' => true,
             ], 400);
         }
-        
+
         // Check if attendance session hasn't started yet
         if ($now->lt($startAt)) {
             return response()->json([
@@ -311,12 +309,12 @@ class CourseAttendanceController extends Controller
                 'not_started' => true,
             ], 400);
         }
-        
+
         // Check if already checked in
         $existingDetail = $attendance->details()
             ->where('course_member_id', $courseMember->id)
             ->first();
-        
+
         if ($existingDetail && in_array($existingDetail->status, [1, 2])) {
             return response()->json([
                 'success' => false,
@@ -325,11 +323,11 @@ class CourseAttendanceController extends Controller
                 'status' => $existingDetail->status,
             ], 400);
         }
-        
+
         // Determine status based on time
         // If current time is after late threshold = late (2), otherwise = on time (1)
         $status = $now->gt($lateThreshold) ? 2 : 1;
-        
+
         // Create or update attendance detail
         if ($existingDetail) {
             $existingDetail->update([
@@ -348,9 +346,9 @@ class CourseAttendanceController extends Controller
                 'time_in' => $now->format('H:i:s'),
             ]);
         }
-        
+
         $statusLabel = $status === 1 ? 'มา' : 'สาย';
-        
+
         return response()->json([
             'success' => true,
             'message' => "รายงานตัวสำเร็จ - สถานะ: {$statusLabel}",
@@ -359,5 +357,4 @@ class CourseAttendanceController extends Controller
             'is_late' => $status === 2,
         ], 200);
     }
-
 }
