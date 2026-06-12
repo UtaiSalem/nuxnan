@@ -4,6 +4,7 @@ import { useApi } from '~/composables/useApi'
 import ContentLoader from '~/components/accessories/ContentLoader.vue'
 import AttendancesTable from '~/components/learn/course/AttendancesTable.vue'
 import StudentAttendanceTable from '~/components/learn/course/StudentAttendanceTable.vue'
+import AttendanceSimulatorShell from '~/components/learn/course/attendances/AttendanceSimulatorShell.vue'
 import Swal from 'sweetalert2'
 
 interface Props {
@@ -31,6 +32,22 @@ const editingAttendance = ref<any>(null)
 const selectedAttendance = ref<any>(null)
 const attendanceDetails = ref<any[]>([])
 const checkingIn = ref(false)
+
+// View mode toggle
+const viewMode = ref<'table' | 'simulator'>('table')
+const selectedSimulatorAttendanceId = ref<number | null>(null)
+
+// Switch to simulator view for a specific attendance
+const openSimulator = (attendance: any) => {
+  selectedSimulatorAttendanceId.value = attendance.id || attendance
+  viewMode.value = 'simulator'
+}
+
+// Switch back to table view
+const closeSimulator = () => {
+  viewMode.value = 'table'
+  selectedSimulatorAttendanceId.value = null
+}
 
 // Auto-refresh state
 const autoRefreshEnabled = ref(true)
@@ -748,50 +765,73 @@ onUnmounted(() => {
       </div>
     </div>
     
-    <!-- Loading with spinner -->
-    <ContentLoader v-if="loading" />
-    
-    <!-- Attendances Table for Admin -->
-    <AttendancesTable
-      v-else-if="isCourseAdmin && filteredAttendances.length > 0 && selectedGroupMembers.length > 0"
-      :attendances="filteredAttendances"
-      :group-members="selectedGroupMembers"
-      :is-course-admin="isCourseAdmin"
-      @create="showCreateModal = true"
-      @view-details="viewDetails"
-      @edit="openEditModal"
-      @delete="deleteAttendance"
-      @update-status="handleUpdateMemberStatus"
-    />
-    
-    <!-- Attendances Table for Student -->
-    <StudentAttendanceTable
-      v-else-if="!isCourseAdmin && studentAttendances.length > 0"
-      :attendances="studentAttendances"
-      :loading="loading"
-      @reload="fetchAttendances()"
-    />
-    
-    <!-- Empty State with illustration -->
-    <div v-else class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-12 text-center">
-      <div class="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center">
-        <Icon icon="fluent:calendar-empty-24-regular" class="w-20 h-20 text-blue-500 dark:text-blue-400" />
+    <!-- Simulator View (when active) -->
+    <template v-if="viewMode === 'simulator' && selectedSimulatorAttendanceId">
+      <div class="flex items-center gap-2 mb-2">
+        <button
+          @click="closeSimulator"
+          class="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          <Icon icon="heroicons:arrow-left-20-solid" class="w-4 h-4" />
+          <span>กลับไปตารางเช็คชื่อ</span>
+        </button>
+        <span class="text-xs text-gray-400 dark:text-gray-500">|</span>
+        <span class="text-xs text-gray-500 dark:text-gray-400">มุมมองห้องเรียนจำลอง</span>
       </div>
-      <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-        ยังไม่มีการเช็คชื่อ
-      </h3>
-      <p class="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-        {{ isCourseAdmin ? 'เริ่มต้นสร้างการเช็คชื่อเพื่อติดตามการเข้าเรียนของนักเรียน' : 'รอผู้สอนสร้างการเช็คชื่อ คุณจะได้รับการแจ้งเตือนเมื่อมีการเช็คชื่อใหม่' }}
-      </p>
-      <button
-        v-if="isCourseAdmin"
-        @click="showCreateModal = true"
-        class="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105"
-      >
-        <Icon icon="fluent:add-circle-24-filled" class="w-6 h-6" />
-        <span>สร้างการเช็คชื่อแรก</span>
-      </button>
-    </div>
+      <AttendanceSimulatorShell
+        :attendance-id="selectedSimulatorAttendanceId"
+        :is-course-admin="isCourseAdmin"
+      />
+    </template>
+
+    <!-- Table View (default) -->
+    <template v-else>
+      <!-- Loading with spinner -->
+      <ContentLoader v-if="loading" />
+      
+      <!-- Attendances Table for Admin -->
+      <AttendancesTable
+        v-else-if="isCourseAdmin && filteredAttendances.length > 0 && selectedGroupMembers.length > 0"
+        :attendances="filteredAttendances"
+        :group-members="selectedGroupMembers"
+        :is-course-admin="isCourseAdmin"
+        @create="showCreateModal = true"
+        @view-details="viewDetails"
+        @edit="openEditModal"
+        @delete="deleteAttendance"
+        @update-status="handleUpdateMemberStatus"
+        @open-simulator="openSimulator"
+      />
+      
+      <!-- Attendances Table for Student -->
+      <StudentAttendanceTable
+        v-else-if="!isCourseAdmin && studentAttendances.length > 0"
+        :attendances="studentAttendances"
+        :loading="loading"
+        @reload="fetchAttendances()"
+      />
+      
+      <!-- Empty State with illustration -->
+      <div v-else class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-12 text-center">
+        <div class="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center">
+          <Icon icon="fluent:calendar-empty-24-regular" class="w-20 h-20 text-blue-500 dark:text-blue-400" />
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          ยังไม่มีการเช็คชื่อ
+        </h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+          {{ isCourseAdmin ? 'เริ่มต้นสร้างการเช็คชื่อเพื่อติดตามการเข้าเรียนของนักเรียน' : 'รอผู้สอนสร้างการเช็คชื่อ คุณจะได้รับการแจ้งเตือนเมื่อมีการเช็คชื่อใหม่' }}
+        </p>
+        <button
+          v-if="isCourseAdmin"
+          @click="showCreateModal = true"
+          class="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105"
+        >
+          <Icon icon="fluent:add-circle-24-filled" class="w-6 h-6" />
+          <span>สร้างการเช็คชื่อแรก</span>
+        </button>
+      </div>
+    </template>
     
     <!-- Create Modal -->
     <DialogModal :show="showCreateModal" @close="showCreateModal = false">

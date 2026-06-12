@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
   isCourseAdmin: false
 })
 
-const emit = defineEmits(['create', 'view-details', 'edit', 'delete', 'update-status'])
+const emit = defineEmits(['create', 'view-details', 'edit', 'delete', 'update-status', 'open-simulator'])
 
 // Format date
 const formatDate = (dateString: string) => {
@@ -94,14 +94,24 @@ watch(() => props.attendances, () => {
               :key="attendance.id"
               class="px-3 py-4 border border-slate-300 dark:border-gray-600 min-w-[100px]"
             >
-              <button
-                @click="emit('view-details', attendance)"
-                class="flex flex-col justify-center items-center mx-auto text-sm font-bold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl px-3 py-2 transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md"
-              >
-                <span class="text-xs text-gray-500 dark:text-gray-400">#{{ index + 1 }}</span>
-                <span class="mt-1">{{ formatDate(attendance.date) }}</span>
-                <Icon icon="fluent:eye-24-regular" width="16" height="16" class="mt-1" />
-              </button>
+              <div class="flex flex-col items-center gap-1">
+                <button
+                  @click="emit('view-details', attendance)"
+                  class="flex flex-col justify-center items-center mx-auto text-sm font-bold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl px-3 py-2 transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md"
+                >
+                  <span class="text-xs text-gray-500 dark:text-gray-400">#{{ index + 1 }}</span>
+                  <span class="mt-1">{{ formatDate(attendance.date) }}</span>
+                  <Icon icon="fluent:eye-24-regular" width="16" height="16" class="mt-1" />
+                </button>
+                <button
+                  @click="emit('open-simulator', attendance)"
+                  class="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg px-2 py-1 transition-colors"
+                  title="ดูห้องเรียนจำลองของการเช็คชื่อครั้งนี้"
+                >
+                  <Icon icon="fluent:grid-24-regular" class="w-3.5 h-3.5" />
+                  <span>จำลอง</span>
+                </button>
+              </div>
             </th>
 
             <!-- Add new column -->
