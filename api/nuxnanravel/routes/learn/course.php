@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Learn\Course\assignments\AssignmentController;
 use App\Http\Controllers\Api\Learn\Course\assignments\AssignmentImageController;
 use App\Http\Controllers\Api\Learn\Course\assignments\CourseAssignmentController;
 use App\Http\Controllers\Api\Learn\Course\attendances\AttendanceDetailController;
+use App\Http\Controllers\Api\Learn\Course\attendances\AttendanceSimulatorController;
 use App\Http\Controllers\Api\Learn\Course\attendances\CourseAttendanceController;
 use App\Http\Controllers\Api\Learn\Course\CourseMarketplaceController;
 use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupController;
@@ -333,8 +334,8 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
     // Basic attendance info route
     Route::get('/attendances/{attendance}/basic-info', [AttendanceDetailController::class, 'index'])->name('attendances.basic.info');
 
-    Route::get('/attendances/{attendance}/member/{member}/join-status', [AttendanceDetailController::class, 'getMemberJoinStatus'])->name('attendances.member.join.status');
-
+    // Classroom seat simulator
+    Route::get('/attendances/{attendance}/simulator', [AttendanceSimulatorController::class, 'show'])->name('attendances.simulator');
 });
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
