@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import Swal from 'sweetalert2'
 import RadialProgress from '~/components/Common/RadialProgress.vue';
 import QuizDuplicateModal from '~/components/learn/course/quiz/QuizDuplicateModal.vue';
 import ExamEligibilityPanel from '~/components/learn/course/ExamEligibilityPanel.vue';
@@ -9,6 +8,7 @@ const route = useRoute()
 const courseId = route.params.id
 const quizId = route.params.quizId
 const api = useApi()
+const swal = useSweetAlert()
 
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
 
@@ -69,67 +69,59 @@ const filteredStudentResults = computed(() => {
 
 const startQuiz = async () => {
   if (!canTakeExam.value && eligibility.value) {
-    Swal.fire('ไม่มีสิทธิ์สอบ', 'กรุณาดำเนินการคืนสิทธิ์สอบก่อนเริ่มทำแบบทดสอบ', 'warning')
+    swal.warning('กรุณาดำเนินการคืนสิทธิ์สอบก่อนเริ่มทำแบบทดสอบ', 'ไม่มีสิทธิ์สอบ')
     return
   }
 
-  navigateTo(`/courses/${courseId}/quizzes/${quizId}/attempt`)
+  navigateTo(`/Learn/Courses/${courseId}/quizzes/${quizId}/attempt`)
 }
 
 const editQuiz = () => {
-  navigateTo(`/courses/${courseId}/quizzes/${quizId}/edit`)
+  navigateTo(`/Learn/Courses/${courseId}/quizzes/${quizId}/edit`)
 }
 
 const deleteQuiz = async () => {
-  const result = await Swal.fire({
-    title: 'ยืนยันการลบ?',
-    text: "คุณต้องการลบแบบทดสอบนี้ใช่หรือไม่ การกระทำนี้ไม่สามารถยกเลิกได้",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'ใช่, ลบเลย',
-    cancelButtonText: 'ยกเลิก'
-  })
+  const detail = [
+    quiz.value.questions_count ? `${quiz.value.questions_count} คำถาม` : null,
+    quiz.value.student_results?.length ? `${quiz.value.student_results.length} ผลคะแนน` : null,
+  ].filter(Boolean).join(' · ')
 
-  if (result.isConfirmed) {
-    try {
-      await api.delete(`/api/courses/${courseId}/quizzes/${quizId}`)
-      await Swal.fire('ลบสำเร็จ!', 'แบบทดสอบถูกลบแล้ว', 'success')
-      navigateTo(`/courses/${courseId}/quizzes`)
-    } catch (err) {
-      Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถลบแบบทดสอบได้', 'error')
-    }
+  const ok = await swal.confirmDelete(
+    `แบบทดสอบ "${quiz.value.title}"`,
+    `การลบจะลบ${detail || 'คำถาม คำตอบของนักเรียน และรูปภาพที่เกี่ยวข้อง'}ทั้งหมด<br>และจะคำนวณคะแนนรวมของรายวิชาใหม่`
+  )
+  if (!ok) return
+
+  swal.showLoading('กำลังลบแบบทดสอบ...')
+  try {
+    await api.delete(`/api/courses/${courseId}/quizzes/${quizId}`)
+    swal.close()
+    swal.toast('ลบแบบทดสอบเรียบร้อย', 'success')
+    navigateTo(`/Learn/Courses/${courseId}/quizzes`)
+  } catch (err: any) {
+    swal.close()
+    swal.error(err?.data?.msg || err?.data?.message || 'ไม่สามารถลบแบบทดสอบได้')
   }
 }
 
 
 const recalculateScores = async () => {
+  const confirmed = await swal.confirm(
+    'ระบบจะคำนวณผลคะแนนของนักเรียนทุกคนใหม่ตามเกณฑ์ปัจจุบัน หากมีการแก้ไขคะแนนหรือข้อสอบหลังจากนักเรียนสอบเสร็จ แนะนำให้กดปุ่มนี้',
+    'คำนวณคะแนนใหม่?',
+    { confirmText: 'ยืนยัน, คำนวณใหม่', cancelText: 'ยกเลิก', icon: 'question' }
+  )
+  if (!confirmed) return
+
+  swal.showLoading('กำลังคำนวณ...')
   try {
-    const result = await Swal.fire({
-      title: 'คำนวณคะแนนใหม่?',
-      text: "ระบบจะคำนวณผลคะแนนของนักเรียนทุกคนใหม่ตามเกณฑ์ปัจจุบัน หากมีการแก้ไขคะแนนหรือข้อสอบหลังจากนักเรียนสอบเสร็จ แนะนำให้กดปุ่มนี้",
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'ยืนยัน, คำนวณใหม่',
-      confirmButtonColor: '#f97316',
-      cancelButtonText: 'ยกเลิก'
-    })
-    
-    if (result.isConfirmed) {
-      Swal.fire({
-        title: 'กำลังคำนวณ...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-      })
-      
-      const res = await api.post(`/api/courses/${courseId}/quizzes/${quizId}/recalculate`)
-      
-      await Swal.fire('เรียบร้อย', res.message, 'success')
-      refresh()
-    }
-  } catch (err) {
-    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถคำนวณคะแนนได้', 'error')
+    const res = await api.post(`/api/courses/${courseId}/quizzes/${quizId}/recalculate`) as any
+    swal.close()
+    await swal.success(res?.message || 'คำนวณคะแนนเรียบร้อย', 'เรียบร้อย')
+    refresh()
+  } catch (err: any) {
+    swal.close()
+    swal.error(err?.data?.message || 'ไม่สามารถคำนวณคะแนนได้')
   }
 }
 
@@ -167,7 +159,7 @@ const getStatusBadge = computed(() => {
       <!-- Header / Nav -->
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <button 
-          @click="navigateTo(`/courses/${courseId}/quizzes`)"
+          @click="navigateTo(`/Learn/Courses/${courseId}/quizzes`)"
           class="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
@@ -512,7 +504,7 @@ const getStatusBadge = computed(() => {
       <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 text-gray-300 mx-auto mb-4" />
       <h3 class="text-xl font-semibold text-gray-900 dark:text-white">ไม่พบข้อมูลแบบทดสอบ</h3>
       <button 
-        @click="navigateTo(`/courses/${courseId}/quizzes`)"
+        @click="navigateTo(`/Learn/Courses/${courseId}/quizzes`)"
         class="mt-4 text-purple-600 hover:underline"
       >
         กลับไปหน้ารวม

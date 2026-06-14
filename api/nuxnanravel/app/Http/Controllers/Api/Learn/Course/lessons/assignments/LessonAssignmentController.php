@@ -84,6 +84,16 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
      */
     public function update(Lesson $lesson, Assignment $assignment, Request $request)
     {
+        // Ownership check: assignment must belong to this lesson (directly or via topic)
+        $assignmentLesson = $assignment->getLesson();
+        if ($assignment->assignmentable_type === \App\Models\Lesson::class) {
+            abort_if($assignment->assignmentable_id !== $lesson->id, 404);
+        } elseif ($assignmentLesson) {
+            abort_if($assignmentLesson->id !== $lesson->id, 404);
+        } else {
+            abort(404, 'Assignment does not belong to this lesson');
+        }
+
         $oldPoints = $assignment->points;
         $assignment->update([
             'title' => $request->title,

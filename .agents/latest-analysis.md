@@ -241,3 +241,21 @@ _(consolidated 2026-06-11 — all prior entries merged into Completed Features a
 - Remaining: Earn white-screen route regression (plan only, needs browser test — may already be resolved by `5821d1d3`).
 - Fixed TopicFormModal stale create state (watch on `props.show` now resets form in create mode).
 - Cleaned up stale/duplicate entries, removed detailed implementation plans for completed work.
+### 2026-06-15 - Course assignments delete UX + 500 analysis (plan-only)
+- Trigger: `/Learn/Courses/24/assignments` uses a plain browser delete confirmation and delete requests fail with `500` on `DELETE /api/courses/24/assignments/31`.
+- Frontend trace:
+  - [`ui/pages/Learn/Courses/[id]/assignments/index.vue`](ui/pages/Learn/Courses/[id]/assignments/index.vue) fetches course assignments and renders [`ui/components/learn/course/AssignmentsList.vue`](ui/components/learn/course/AssignmentsList.vue).
+  - [`AssignmentsList.vue`](ui/components/learn/course/AssignmentsList.vue) still uses `window.confirm()` and `alert()` for destructive actions, while lesson-level assignment delete in [`ui/components/learn/course/lesson/LessonInteractionTabs.vue`](ui/components/learn/course/lesson/LessonInteractionTabs.vue) already uses `useSweetAlert()`.
+  - [`ui/composables/useSweetAlert.ts`](ui/composables/useSweetAlert.ts) already provides `confirmDelete()` and toast/error helpers, so the UI can be upgraded without introducing a new modal system.
+- Backend trace:
+  - The failing route comes from `Route::resource('/assignments', CourseAssignmentController::class)` under `/courses/{course}` in [`api/nuxnanravel/routes/learn/course.php`](api/nuxnanravel/routes/learn/course.php).
+  - Local log on 2026-06-15 confirms the delete failure root cause: `CourseAssignmentController::destroy(): Argument #1 ($assignment) must be of type App\Models\Assignment, string given`.
+  - Current signature in [`api/nuxnanravel/app/Http/Controllers/Api/Learn/Course/assignments/CourseAssignmentController.php`](api/nuxnanravel/app/Http/Controllers/Api/Learn/Course/assignments/CourseAssignmentController.php) is incompatible with the resource route because Laravel passes `{course}` before `{assignment}`.
+- Plan direction:
+  - Fix the controller method signature and ownership guard for course-level assignment deletion.
+  - Replace native confirm/alert on the assignments page with `useSweetAlert().confirmDelete()` plus toast/error handling for a polished destructive flow.
+  - Standardize copy and behavior between course-level and lesson-level assignment delete paths to avoid inconsistent UX.
+- Verification plan:
+  - Retry delete from `/Learn/Courses/{id}/assignments` and confirm the API returns success and the list refreshes.
+  - Smoke-test lesson-level assignment delete to ensure no regression between the two delete entry points.
+  - Check `laravel.log` to confirm the previous `TypeError` no longer appears.

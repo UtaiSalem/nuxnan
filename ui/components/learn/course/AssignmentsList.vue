@@ -22,6 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const api = useApi()
+const swal = useSweetAlert()
 const isDeleting = ref(false)
 const showModal = ref(false)
 const editingAssignment = ref<any>(null)
@@ -48,17 +49,23 @@ const editAssignment = (assignment: any) => {
 }
 
 // Delete assignment
-const deleteAssignment = async (assignmentId: number) => {
-  if (!confirm('ยืนยันการลบภาระงานนี้หรือไม่?')) return
-  
+const deleteAssignment = async (assignment: any) => {
+  const ok = await swal.confirmDelete(
+    `ภาระงาน "${assignment.title}"`,
+    'การลบจะลบคำตอบและรูปภาพที่เกี่ยวข้องทั้งหมดด้วย'
+  )
+  if (!ok) return
+
   isDeleting.value = true
+  swal.showLoading('กำลังลบภาระงาน...')
   try {
-    const response = await api.delete(`/api/courses/${props.courseId}/assignments/${assignmentId}`)
-    if (response) { // API wrapper usually returns handling
-      emit('refresh')
-    }
+    await api.delete(`/api/courses/${props.courseId}/assignments/${assignment.id}`)
+    swal.close()
+    swal.toast('ลบภาระงานเรียบร้อย', 'success')
+    emit('refresh')
   } catch (err: any) {
-    alert(err.data?.msg || 'ไม่สามารถลบภาระงานได้')
+    swal.close()
+    swal.error(err?.data?.msg || err?.message || 'ไม่สามารถลบภาระงานได้')
   } finally {
     isDeleting.value = false
   }

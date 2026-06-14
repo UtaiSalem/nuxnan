@@ -167,6 +167,16 @@ class CourseAssignmentController extends Controller
 
     public function update(Course $course, Assignment $assignment, Request $request)
     {
+        // Ownership check: assignment must belong to this course (via Course/Lesson/Topic)
+        $lesson = $assignment->getLesson();
+        if ($assignment->assignmentable_type === Course::class) {
+            abort_if($assignment->assignmentable_id !== $course->id, 404);
+        } elseif ($lesson) {
+            abort_if($lesson->course_id !== $course->id, 404);
+        } else {
+            abort(404, 'Assignment does not belong to this course');
+        }
+
         if (!$course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
@@ -226,39 +236,64 @@ class CourseAssignmentController extends Controller
         ], 200);
     }
 
-    public function destroy(Assignment $assignment, CourseMediaService $mediaService)
+    public function destroy(Course $course, Assignment $assignment, CourseMediaService $mediaService)
     {
-        $course = $assignment->assignmentable;
-        if (!$course->isAdmin(auth()->user())) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-        }
-
-        // $answers = $assignment->answers;
-        foreach ( $assignment->answers as $answer) {            
-            foreach ($answer->images as $image) {
-                Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
+        try {
+            // Ownership check: assignment must belong to this course (via Course/Lesson/Topic)
+            $lesson = $assignment->getLesson();
+            if ($assignment->assignmentable_type === Course::class) {
+                abort_if($assignment->assignmentable_id !== $course->id, 404);
+            } elseif ($lesson) {
+                abort_if($lesson->course_id !== $course->id, 404);
+            } else {
+                abort(404, 'Assignment does not belong to this course');
             }
-            $answer->images()->delete();
+
+            if (!$course->isAdmin(auth()->user())) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+            }
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($assignment, $course, $mediaService) {
+                // Delete answer images
+                foreach ($assignment->answers as $answer) {            
+                    foreach ($answer->images as $image) {
+                        Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
+                    }
+                    $answer->images()->delete();
+                }
+
+                // Delete assignment images via media service
+                foreach ($assignment->images as $image) {
+                    $mediaService->deleteIfUnused(
+                        'images/courses/assignments/' . $image->image_url,
+                        \App\Models\AssignmentImage::class,
+                        'image_url',
+                        $image->image_url,
+                        $image->id
+                    );
+                }
+
+                // Only decrement total_score for Course-level assignments
+                // Lesson/Topic assignments have their own score tracking
+                if ($assignment->assignmentable_type === Course::class) {
+                    $course->decrement('total_score', $assignment->points);
+                }
+
+                $assignment->answers()->delete();
+                $assignment->images()->delete();
+                $assignment->delete();
+            });
+
+            return response()->json(['success' => true], 200);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['success' => false, 'msg' => $e->getMessage() ?: 'ไม่พบข้อมูล'], $e->getStatusCode());
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Assignment destroy failed: ' . $e->getMessage(), [
+                'course_id' => $course->id,
+                'assignment_id' => $assignment->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['success' => false, 'msg' => 'ลบไม่สำเร็จ: ' . $e->getMessage()], 500);
         }
-
-        foreach ($assignment->images as $image) {
-            $mediaService->deleteIfUnused(
-                'images/courses/assignments/' . $image->image_url,
-                \App\Models\AssignmentImage::class,
-                'image_url',
-                $image->image_url,
-                $image->id
-            );
-        }
-
-        $course = $assignment->assignmentable;
-        $course->decrement('total_score', $assignment->points);
-
-        // $answers->delete();
-        $assignment->answers()->delete();
-        $assignment->images()->delete();
-        $assignment->delete();
-
-        return response()->json(['success' => true], 200);
     }
 }

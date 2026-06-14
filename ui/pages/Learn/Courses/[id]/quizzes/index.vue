@@ -10,6 +10,7 @@ const course = inject<Ref<any>>('course')
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
 const route = useRoute()
 const api = useApi()
+const swal = useSweetAlert()
 
 // State
 const quizzes = ref<any[]>([])
@@ -62,15 +63,27 @@ const handleEdit = (quiz: any) => {
   navigateTo(`/Learn/Courses/${course?.value?.id}/quizzes/${quiz.id}/edit`)
 }
 
-const handleDelete = async (quizId: number) => {
-  if (!confirm('ยืนยันการลบแบบทดสอบนี้หรือไม่?')) return
-  
+const handleDelete = async (quiz: any) => {
+  const detail = [
+    quiz.questions_count ? `${quiz.questions_count} คำถาม` : null,
+    quiz.user_results_count ? `${quiz.user_results_count} ผลคะแนน` : null,
+  ].filter(Boolean).join(' · ')
+
+  const ok = await swal.confirmDelete(
+    `แบบทดสอบ "${quiz.title || quiz.name}"`,
+    `การลบจะลบ${detail || 'คำถาม คำตอบของนักเรียน และรูปภาพที่เกี่ยวข้อง'}ทั้งหมด<br>และจะคำนวณคะแนนรวมของรายวิชาใหม่`
+  )
+  if (!ok) return
+
+  swal.showLoading('กำลังลบแบบทดสอบ...')
   try {
-    await api.delete(`/api/courses/${course?.value?.id}/quizzes/${quizId}`)
-    await fetchQuizzes()
-  } catch (err) {
-    console.error('Error deleting quiz:', err)
-    alert('ไม่สามารถลบแบบทดสอบได้')
+    await api.delete(`/api/courses/${course?.value?.id}/quizzes/${quiz.id}`)
+    swal.close()
+    swal.toast('ลบแบบทดสอบเรียบร้อย', 'success')
+    quizzes.value = quizzes.value.filter((q: any) => q.id !== quiz.id)
+  } catch (err: any) {
+    swal.close()
+    swal.error(err?.data?.msg || err?.data?.message || 'ไม่สามารถลบแบบทดสอบได้')
   }
 }
 

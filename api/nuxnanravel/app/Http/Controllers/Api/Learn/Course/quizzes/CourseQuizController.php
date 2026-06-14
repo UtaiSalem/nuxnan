@@ -250,6 +250,8 @@ class CourseQuizController extends Controller
 
     public function edit(Course $course, CourseQuiz $quiz)
     {
+        abort_if($quiz->course_id !== $course->id, 404);
+
         return response()->json([
             'quiz' => new CourseQuizResource($quiz),
         ]);
@@ -260,6 +262,8 @@ class CourseQuizController extends Controller
         if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
+
+        abort_if($quiz->course_id !== $course->id, 404);
 
         // $quiz->update($request->all());
         $validated = $request->validate([
@@ -292,66 +296,96 @@ class CourseQuizController extends Controller
 
     public function destroy(Course $course, CourseQuiz $quiz)
     {
+        abort_if($quiz->course_id !== $course->id, 404);
+
         if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        $questions = $quiz->questions;
-        foreach ($questions as $question) {
-            if ($question->images) {
-                foreach ($question->images as $q_image) {
-                    Storage::disk('public')->delete('images/courses/quizzes/questions/'.$q_image->filename);
-                }
-                $question->images()->delete();
-            }
+        try {
+            DB::beginTransaction();
 
-            if ($question->options) {
+            $mediaService = app(\App\Services\CourseMediaService::class);
+            $scoreService = app(\App\Services\CourseScoreService::class);
+
+            $questions = $quiz->questions;
+            foreach ($questions as $question) {
+                // Delete question images
+                if ($question->images) {
+                    foreach ($question->images as $q_image) {
+                        $mediaService->deleteIfUnused(
+                            self::QUIZ_IMAGE_PATH . $q_image->filename,
+                            \App\Models\QuestionImage::class,
+                            'filename',
+                            $q_image->filename
+                        );
+                    }
+                    $question->images()->delete();
+                }
+
+                // Delete option images and options
                 foreach ($question->options as $q_option) {
                     if ($q_option->images) {
                         foreach ($q_option->images as $q_opt_image) {
-                            Storage::disk('public')->delete('images/courses/quizzes/questions/'.$q_opt_image->filename);
+                            $mediaService->deleteIfUnused(
+                                self::QUIZ_IMAGE_PATH . $q_opt_image->filename,
+                                \App\Models\QuestionImage::class,
+                                'filename',
+                                $q_opt_image->filename
+                            );
                         }
                         $q_option->images()->delete();
                     }
                 }
                 $question->options()->delete();
+
+                // Delete user answers for this question
+                $question->userAnswers()->delete();
+
+                // Delete the question itself
+                $question->delete();
             }
 
-            // $userAnswerQuestion
-            $userAnswerQuestion = $question->userAnswers;
-            foreach ($userAnswerQuestion as $answer) {
-                $answer->delete();
-            }
-            $course->decrement('total_score', $question->points);
-            $quiz->decrement('total_score', $question->points);
-            $quiz->decrement('total_questions');
+            // Handle user results and score recomputation
+            $memberIds = $quiz->userResults()->pluck('user_id')->unique();
+            $quiz->userResults()->delete();
 
-            $question->delete();
+            // Recompute scores for all affected members
+            if ($memberIds->isNotEmpty()) {
+                CourseMember::where('course_id', $course->id)
+                    ->whereIn('user_id', $memberIds)
+                    ->get()
+                    ->each(fn ($member) => $scoreService->recompute($member));
+            }
+
+            // Decrement course total score once
+            $course->decrement('total_score', $quiz->total_score);
+
+            // Finally delete the quiz
+            $quiz->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'msg' => 'ลบแบบทดสอบเรียบร้อย',
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Failed to delete quiz: '.$e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาดในการลบแบบทดสอบ: '.$e->getMessage(),
+            ], 500);
         }
-
-        $userResults = $quiz->userResults;
-
-        foreach ($userResults as $result) {
-            $courseMember = CourseMember::where('user_id', $result->user_id)->where('course_id', $result->course_id)->first();
-
-            $result->delete();
-
-            if ($courseMember) {
-                app(\App\Services\CourseScoreService::class)->recompute($courseMember);
-            }
-        }
-
-        $course->decrement('total_score', $quiz->total_score);
-
-        $quiz->delete();
-
-        return response()->json([
-            'success' => true,
-        ], 204);
     }
 
     public function calculateSumQuizsEfficiency(Course $course, CourseQuiz $quiz)
     {
+        abort_if($quiz->course_id !== $course->id, 404);
+
         $crsQuizsResult = CourseQuizResult::where('user_id', auth()->id())->where('course_id', $quiz->course_id)->get();
         $sumEfficiency = $crsQuizsResult->sum('efficiency');
 

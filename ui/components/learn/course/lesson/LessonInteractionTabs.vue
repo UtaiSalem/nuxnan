@@ -89,20 +89,23 @@ const openEditAssignment = (assignment: any) => {
 }
 
 const deleteAssignment = async (assignment: any) => {
-  const confirmed = await swal.confirm('ลบแบบฝึกหัด', `คุณแน่ใจหรือไม่ที่จะลบ "${assignment.title}"?`)
-  if (!confirmed) return
+  const ok = await swal.confirmDelete(
+    `แบบฝึกหัด "${assignment.title}"`,
+    'การลบจะลบคำตอบและรูปภาพที่เกี่ยวข้องทั้งหมดด้วย'
+  )
+  if (!ok) return
 
+  swal.showLoading('กำลังลบแบบฝึกหัด...')
   try {
-    const response = await api.delete(`/api/lessons/${props.lesson.id}/assignments/${assignment.id}`) as any
-    if (response) { 
-      const index = props.lesson.assignments.findIndex((a: any) => a.id === assignment.id)
-      if (index !== -1) {
-        props.lesson.assignments.splice(index, 1)
-        swal.toast('ลบแบบฝึกหัดสำเร็จ', 'success')
-      }
+    await api.delete(`/api/lessons/${props.lesson.id}/assignments/${assignment.id}`)
+    swal.close()
+    const index = props.lesson.assignments.findIndex((a: any) => a.id === assignment.id)
+    if (index !== -1) {
+      props.lesson.assignments.splice(index, 1)
     }
+    swal.toast('ลบแบบฝึกหัดสำเร็จ', 'success')
   } catch (error: any) {
-    console.error('Failed to delete assignment:', error)
+    swal.close()
     swal.error(error?.data?.message || 'ไม่สามารถลบแบบฝึกหัดได้')
   }
 }

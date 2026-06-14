@@ -58,6 +58,7 @@
         class="absolute bottom-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0"
       >
         <button
+          type="button"
           @click.stop="handleDuplicate"
           class="p-2.5 bg-white text-gray-700 rounded-xl hover:bg-purple-50 hover:text-purple-600 transition-colors shadow-lg"
           title="คัดลอก"
@@ -65,6 +66,7 @@
           <Icon icon="fluent:copy-24-filled" class="w-5 h-5" />
         </button>
         <button
+          type="button"
           @click.stop="handleEdit"
           class="p-2.5 bg-white text-gray-700 rounded-xl hover:bg-gray-50 hover:text-blue-600 transition-colors shadow-lg"
           title="แก้ไข"
@@ -72,6 +74,7 @@
           <Icon icon="fluent:edit-24-filled" class="w-5 h-5" />
         </button>
         <button
+          type="button"
           @click.stop="handleDelete"
           class="p-2.5 bg-white text-gray-700 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors shadow-lg"
           title="ลบ"
@@ -227,7 +230,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   edit: [quiz: any]
-  delete: [quizId: number]
+  delete: [quiz: any]
   start: [quiz: any]
   view: [quiz: any]
   duplicate: [quiz: any]
@@ -302,7 +305,7 @@ const isBarelyPassed = computed(() => {
 
 // Methods
 const handleEdit = () => emit('edit', props.quiz)
-const handleDelete = () => emit('delete', props.quiz.id)
+const handleDelete = () => emit('delete', props.quiz)
 const handleStart = () => emit('start', props.quiz)
 const handleView = () => emit('view', props.quiz)
 const handleDuplicate = () => emit('duplicate', props.quiz)

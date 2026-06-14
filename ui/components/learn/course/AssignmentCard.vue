@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'edit': [assignment: any]
-  'delete': [assignmentId: number]
+  'delete': [assignment: any]
   'click': [assignment: any]
   'refresh': []
 }>()
@@ -150,7 +150,7 @@ const handleGradedEditSubmit = () => {
             <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
           </button>
           <button 
-            @click.stop="emit('delete', assignment.id)"
+            @click.stop="emit('delete', assignment)"
             class="p-2 bg-white/90 dark:bg-gray-800/90 rounded-lg hover:bg-white dark:hover:bg-gray-800 text-red-600 shadow-lg backdrop-blur hover:scale-105 transition-all"
             title="ลบ"
           >
