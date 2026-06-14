@@ -7,10 +7,10 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "build": "npx --node-options=--max-old-space-size=8192 nuxt build",
-    "dev": "npx --node-options=--max-old-space-size=8192 nuxt dev",
-    "generate": "npx --node-options=--max-old-space-size=8192 nuxt generate",
-    "preview": "npx --node-options=--max-old-space-size=2048 nuxt preview",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 nuxt build",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 nuxt dev",
+    "generate": "cross-env NODE_OPTIONS=--max-old-space-size=8192 nuxt generate",
+    "preview": "cross-env NODE_OPTIONS=--max-old-space-size=2048 nuxt preview",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
@@ -91,6 +91,7 @@
     "@types/node": "^24.10.1",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-vue": "^10.6.2",
     "globals": "^16.5.0",
