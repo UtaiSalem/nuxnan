@@ -82,10 +82,6 @@ class AttendanceSimulatorController extends Controller
                     'id' => $attendance->group_id,
                     'name' => $attendance->group?->name,
                 ],
-                'instructor' => $attendance->instructor ? [
-                    'name' => $attendance->instructor->name,
-                    'avatar' => $attendance->instructor->avatar,
-                ] : null,
             ],
             'layout' => [
                 'cols' => $cols,

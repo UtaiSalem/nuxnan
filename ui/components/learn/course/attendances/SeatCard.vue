@@ -11,12 +11,14 @@ interface Props {
   isCourseAdmin: boolean
   serverTimeMs: number
   selected?: boolean
+  isMe?: boolean
   /** Seat shows as empty while the walk-in animation plays */
   walking?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selected: false,
+  isMe: false,
   walking: false,
 })
 
@@ -132,22 +134,35 @@ const handleImageError = (e: Event) => {
     </div>
 
     <!-- Name -->
-    <p
-      class="mt-0.5 text-[10px] font-semibold text-center leading-tight max-w-[72px] truncate px-0.5"
-      :class="ghost ? 'text-[#8C795F]' : 'text-[#4A3220]'"
-    >
-      {{ seat.name }}
-    </p>
+    <div class="relative mt-0.5 max-w-[72px] px-0.5">
+      <p
+        class="text-[10px] font-semibold text-center leading-tight truncate"
+        :class="ghost ? 'text-[#8C795F]' : 'text-[#4A3220]'"
+      >
+        {{ seat.name }}
+      </p>
+      <span
+        v-if="isMe"
+        class="absolute -top-1 -right-1 flex h-2 w-2"
+      >
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+      </span>
+    </div>
 
     <!-- Time-in -->
     <p v-if="seat.time_in && !ghost" class="text-[10px] font-mono" :class="timeTextClass">
       {{ seat.time_in }}
     </p>
 
-    <!-- Selected ring -->
+    <!-- Selected ring or isMe ring -->
     <span
-      v-if="selected"
-      class="absolute inset-0 rounded-xl ring-2 ring-vikinger-purple pointer-events-none"
+      v-if="selected || isMe"
+      class="absolute inset-0 rounded-xl pointer-events-none transition-all duration-300"
+      :class="[
+        selected ? 'ring-2 ring-vikinger-purple' : '',
+        isMe && !selected ? 'ring-2 ring-emerald-400 ring-offset-1 dark:ring-offset-slate-900 border-2 border-white dark:border-slate-800' : '',
+      ]"
     ></span>
   </button>
 </template>

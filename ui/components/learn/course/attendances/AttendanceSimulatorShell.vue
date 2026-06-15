@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
+import Swal from 'sweetalert2'
 import { useApi } from '~/composables/useApi'
 import {
   type SeatData,
@@ -38,11 +39,55 @@ const isPolling = ref(false)
 const selectedMemberId = ref<number | null>(null)
 const editingSeat = ref<SeatData | null>(null)
 const savingStatus = ref(false)
+const checkingIn = ref(false)
+let initialScrollDone = false
+
+function scrollToMySeat() {
+  if (initialScrollDone || props.isCourseAdmin || !authMemberId.value) return
+  nextTick(() => {
+    const el = document.querySelector(`[data-member-id="${authMemberId.value}"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+      initialScrollDone = true
+    }
+  })
+}
+
+const emit = defineEmits<{
+  (e: 'checked-in', res: any): void
+}>()
 
 // ─── Computed ─────────────────────────────────────────
 const seats = computed<SeatData[]>(() => simulatorData.value?.seats ?? [])
 const layout = computed(() => simulatorData.value?.layout ?? { cols: 4, rows: 5, total_seats: 20 })
 const attendanceInfo = computed(() => simulatorData.value?.attendance)
+
+const authMemberId = computed(() => simulatorData.value?.meta?.auth_member_id ?? null)
+const mySeat = computed<SeatData | null>(() => {
+  if (!authMemberId.value) return null
+  return seats.value.find(s => s.course_member_id === authMemberId.value) ?? null
+})
+
+const checkInState = computed(() => {
+  if (!attendanceInfo.value || !mySeat.value) return { canCheckIn: false, reason: 'no-data' }
+  const now = serverTimeMs.value
+  const start = new Date(attendanceInfo.value.start_at).getTime()
+  const finish = new Date(attendanceInfo.value.finish_at).getTime()
+  const lateDeadline = start + (attendanceInfo.value.late_time ?? 15) * 60000
+
+  // Already checked in / late / on leave
+  if (mySeat.value.status === 1 || mySeat.value.status === 2) {
+    return { canCheckIn: false, reason: 'already-checked-in', status: mySeat.value.status }
+  }
+  if (mySeat.value.status === 3) return { canCheckIn: false, reason: 'on-leave' }
+
+  // Session timing
+  if (now < start) return { canCheckIn: false, reason: 'not-started', countdown: start - now }
+  if (now > finish) return { canCheckIn: false, reason: 'ended' }
+
+  // Active window
+  return { canCheckIn: true, willBeLate: now > lateDeadline }
+})
 
 // Board content shown on the classroom blackboard — group name leads the title line
 const boardTitle = computed(() => {
@@ -127,6 +172,10 @@ async function fetchSimulator(silent = false) {
     if (data.meta.server_time) {
       serverOffset.value = parseServerTime(data.meta.server_time) - Date.now()
       serverTimeMs.value = Date.now() + serverOffset.value
+    }
+
+    if (!props.isCourseAdmin && authMemberId.value) {
+      scrollToMySeat()
     }
   } catch (err: any) {
     if (thisFetch !== fetchId) return
@@ -215,11 +264,48 @@ async function applyStatus(status: number) {
   }
 }
 
+async function handleSelfCheckIn() {
+  if (!checkInState.value.canCheckIn || checkingIn.value) return
+  const willBeLate = checkInState.value.willBeLate
+  
+  checkingIn.value = true
+  try {
+    const res = await api.post(`/api/attendances/${props.attendanceId}/check-in`)
+    await fetchSimulator(true)
+    
+    // Highlight my seat
+    selectedMemberId.value = authMemberId.value
+    emit('checked-in', res)
+
+    // Success toast
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: willBeLate ? 'warning' : 'success',
+      title: willBeLate ? 'รายงานตัวสาย' : 'รายงานตัวสำเร็จ',
+      text: willBeLate ? 'คุณเข้าเรียนสายกว่าเวลาที่กำหนด' : 'คุณเข้าเรียนตรงเวลา',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+  } catch (err: any) {
+    error.value = err?.message || 'รายงานตัวไม่สำเร็จ'
+  } finally {
+    checkingIn.value = false
+  }
+}
+
 function closeEditor() {
   editingSeat.value = null
 }
 
 // ─── Lifecycle ────────────────────────────────────────
+watch(authMemberId, (id) => {
+  if (id && selectedMemberId.value === null && !props.isCourseAdmin) {
+    selectedMemberId.value = id
+  }
+}, { immediate: true })
+
 onMounted(async () => {
   document.addEventListener('visibilitychange', onVisibilityChange)
   clockTimer.value = setInterval(() => {
@@ -298,16 +384,89 @@ onUnmounted(() => {
       :is-course-admin="isCourseAdmin"
       :server-time-ms="serverTimeMs"
       :selected-member-id="selectedMemberId"
+      :auth-member-id="authMemberId"
       :title="boardTitle"
       :subtitle="boardSubtitle"
       :clock="boardClock"
-      :teacher="attendanceInfo?.instructor ?? null"
       @select="handleSeatSelect"
     />
 
+    <!-- Student Action Panel: "My Seat" + Check-in -->
+    <div
+      v-if="!isCourseAdmin && mySeat"
+      class="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 p-4 shadow-sm animate-fade-in-up"
+    >
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl font-bold border border-emerald-100 dark:border-emerald-800 shadow-sm">
+            {{ mySeat.seat_number }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <h4 class="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>{{ mySeat.name }}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium">คุณ</span>
+            </h4>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span
+                class="w-2 h-2 rounded-full"
+                :class="[
+                  mySeat.status === 1 ? 'bg-emerald-500' :
+                  mySeat.status === 2 ? 'bg-amber-500' :
+                  mySeat.status === 3 ? 'bg-sky-500' : 'bg-red-500'
+                ]"
+              ></span>
+              <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                {{ 
+                  mySeat.status === 1 ? 'รายงานตัวแล้ว (ตรงเวลา)' :
+                  mySeat.status === 2 ? 'รายงานตัวแล้ว (สาย)' :
+                  mySeat.status === 3 ? 'ลา' : 'ยังไม่ได้รายงานตัว'
+                }}
+              </span>
+              <span v-if="mySeat.time_in" class="text-[10px] text-slate-400 dark:text-slate-500">
+                • {{ mySeat.time_in }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex-shrink-0">
+          <button
+            v-if="checkInState.canCheckIn"
+            :disabled="checkingIn"
+            @click="handleSelfCheckIn"
+            class="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+            :class="checkInState.willBeLate ? 'bg-gradient-to-r from-amber-500 to-orange-600' : 'bg-gradient-to-r from-emerald-500 to-teal-600'"
+          >
+            <Icon :icon="checkingIn ? 'svg-spinners:ring-resize' : 'fluent:presence-available-24-filled'" class="w-5 h-5" />
+            <span>{{ checkInState.willBeLate ? 'รายงานตัว (สาย)' : 'เข้าห้องเรียน / รายงานตัว' }}</span>
+          </button>
+          
+          <div v-else-if="checkInState.reason === 'already-checked-in'" class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-100 dark:border-emerald-800 font-bold text-sm">
+            <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
+            <span>คุณรายงานตัวเรียบร้อยแล้ว</span>
+          </div>
+
+          <div v-else-if="checkInState.reason === 'not-started'" class="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 rounded-lg border border-slate-100 dark:border-slate-700 font-bold text-sm">
+            <Icon icon="fluent:clock-24-regular" class="w-5 h-5" />
+            <span>เริ่มในอีก {{ fmtDuration(checkInState.countdown || 0) }}</span>
+          </div>
+
+          <div v-else-if="checkInState.reason === 'ended'" class="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-800 font-bold text-sm">
+            <Icon icon="fluent:calendar-cancel-24-filled" class="w-5 h-5" />
+            <span>จบคาบเรียนแล้ว</span>
+          </div>
+
+          <div v-else-if="checkInState.reason === 'on-leave'" class="flex items-center gap-2 px-4 py-2 bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 rounded-lg border border-sky-100 dark:border-sky-800 font-bold text-sm">
+            <Icon icon="fluent:document-text-24-filled" class="w-5 h-5" />
+            <span>คุณลาแล้ว</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Empty state -->
     <div
-      v-else-if="!loading"
+      v-if="!loading && !error && seats.length === 0"
       class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-12 text-center"
     >
       <Icon icon="fluent:people-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />

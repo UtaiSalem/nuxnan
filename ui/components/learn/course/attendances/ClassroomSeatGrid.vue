@@ -11,10 +11,10 @@ interface Props {
   isCourseAdmin: boolean
   serverTimeMs: number
   selectedMemberId: number | null
+  authMemberId?: number | null
   title?: string
   subtitle?: string
   clock?: { range: string; label: string; value: string; tone: string } | null
-  teacher?: { name: string; avatar: string | null } | null
 }
 
 const props = defineProps<Props>()
@@ -60,9 +60,6 @@ const rightSeats = computed(() => {
 })
 
 const { getAvatarUrl } = useAvatar()
-const teacherAvatar = computed(() =>
-  props.teacher ? getAvatarUrl({ avatar: props.teacher.avatar, name: props.teacher.name }) : '',
-)
 
 const emptyLeftSlots = computed(() =>
   Math.max(0, Math.ceil(props.totalSeats / 2) - leftSeats.value.length),
@@ -159,120 +156,6 @@ function startWalker(el: unknown, walker: Walker) {
   anim.onfinish = done
   anim.oncancel = done
 }
-
-// ─── Teacher: random wandering with stops beside desks ─
-const teacherRef = ref<HTMLElement | null>(null)
-const TEACHER_W = 56
-const TEACHER_FRONT_Y = -60
-const TEACHER_SPEED = 0.055 // px per ms
-
-let teacherActive = false
-let teacherStarted = false
-let teacherAnim: Animation | null = null
-let teacherTimer: ReturnType<typeof setTimeout> | null = null
-
-const rand = (min: number, max: number) => min + Math.random() * (max - min)
-
-function teacherWait(ms: number) {
-  return new Promise<void>((resolve) => {
-    teacherTimer = setTimeout(resolve, ms)
-  })
-}
-
-function teacherMoveTo(el: HTMLElement, x: number, y: number) {
-  const curX = parseFloat(el.style.left || '8')
-  const curY = parseFloat(el.style.top || `${TEACHER_FRONT_Y}`)
-  const dist = Math.hypot(x - curX, y - curY)
-  const duration = Math.max(300, dist / TEACHER_SPEED)
-
-  return new Promise<void>((resolve) => {
-    teacherAnim = el.animate(
-      [
-        { left: `${curX}px`, top: `${curY}px` },
-        { left: `${x}px`, top: `${y}px` },
-      ],
-      { duration, easing: 'linear', fill: 'forwards' },
-    )
-    const settle = () => {
-      el.style.left = `${x}px`
-      el.style.top = `${y}px`
-      resolve()
-    }
-    teacherAnim.onfinish = settle
-    teacherAnim.oncancel = () => resolve()
-  })
-}
-
-async function teacherLoop() {
-  const el = teacherRef.value
-  const floor = floorRef.value
-  if (!el || !floor || prefersReducedMotion()) return
-
-  el.style.left = '8px'
-  el.style.top = `${TEACHER_FRONT_Y}px`
-
-  while (teacherActive) {
-    const W = floor.clientWidth
-    const H = floor.clientHeight
-    const centerX = W / 2 - TEACHER_W / 2
-
-    // Walk across the front of the room
-    await teacherMoveTo(el, W - TEACHER_W - 8, TEACHER_FRONT_Y)
-    if (!teacherActive) return
-    await teacherWait(rand(600, 1600))
-
-    // Head to the aisle, then wander down with random stops beside desks
-    await teacherMoveTo(el, centerX, TEACHER_FRONT_Y)
-    if (!teacherActive) return
-
-    const stopCount = Math.random() < 0.5 ? 1 : 2
-    let lastY = 0
-    for (let i = 0; i < stopCount; i++) {
-      const y = rand(H * (0.15 + i * 0.3), H * (0.45 + i * 0.35))
-      if (y <= lastY) continue
-      await teacherMoveTo(el, centerX, y)
-      if (!teacherActive) return
-      lastY = y
-      await teacherWait(rand(1200, 3200)) // pause beside a desk
-      if (!teacherActive) return
-    }
-
-    // Sometimes continue to the back of the room
-    if (Math.random() < 0.5) {
-      await teacherMoveTo(el, centerX, H - 100)
-      if (!teacherActive) return
-      await teacherWait(rand(800, 2200))
-      if (!teacherActive) return
-    }
-
-    // Walk back to the front and start over
-    await teacherMoveTo(el, centerX, TEACHER_FRONT_Y)
-    if (!teacherActive) return
-    await teacherMoveTo(el, 8, TEACHER_FRONT_Y)
-    if (!teacherActive) return
-    await teacherWait(rand(600, 1600))
-  }
-}
-
-function maybeStartTeacher() {
-  if (teacherStarted || !props.teacher) return
-  nextTick(() => {
-    if (teacherStarted || !teacherRef.value || !floorRef.value) return
-    teacherStarted = true
-    teacherActive = true
-    teacherLoop()
-  })
-}
-
-watch(() => props.teacher, maybeStartTeacher)
-
-onMounted(maybeStartTeacher)
-
-onUnmounted(() => {
-  teacherActive = false
-  teacherAnim?.cancel()
-  if (teacherTimer) clearTimeout(teacherTimer)
-})
 </script>
 
 <template>
@@ -310,35 +193,11 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Front walkway space reserved for the teacher -->
-    <div v-if="teacher" class="h-14 mb-1"></div>
-
     <!-- Wooden floor with plank lines -->
     <div
       ref="floorRef"
       class="relative rounded-xl border-2 border-[#B98A52] bg-[#E9C58F] [background-image:repeating-linear-gradient(0deg,transparent,transparent_26px,#D9AE74_26px,#D9AE74_27px)] p-2 sm:p-4"
     >
-      <!-- Teacher wandering: front of room + down the aisle with random stops -->
-      <div
-        v-if="teacher"
-        ref="teacherRef"
-        class="absolute z-20 flex flex-col items-center w-14 pointer-events-none"
-        style="left: 8px; top: -60px;"
-        aria-hidden="true"
-      >
-        <div class="teacher-bob flex flex-col items-center">
-          <img
-            :src="teacherAvatar"
-            :alt="teacher.name"
-            class="w-8 h-8 rounded-full object-cover border-2 border-[#7A5230] bg-white"
-          />
-          <span class="w-7 h-3 rounded-t-lg bg-[#7A5230] -mt-1"></span>
-        </div>
-        <span class="text-[10px] font-semibold text-[#4A3220] max-w-[56px] truncate">
-          {{ teacher.name }}
-        </span>
-      </div>
-
       <!-- Students walking in from the back door to their desks -->
       <div
         v-for="wk in walkers"
@@ -375,6 +234,7 @@ onUnmounted(() => {
                 :is-course-admin="isCourseAdmin"
                 :server-time-ms="serverTimeMs"
                 :selected="seat.course_member_id === selectedMemberId"
+                :is-me="seat.course_member_id === authMemberId"
                 :walking="walkingIds.has(seat.course_member_id)"
                 @select="emit('select', seat.course_member_id)"
               />
@@ -412,6 +272,7 @@ onUnmounted(() => {
                 :is-course-admin="isCourseAdmin"
                 :server-time-ms="serverTimeMs"
                 :selected="seat.course_member_id === selectedMemberId"
+                :is-me="seat.course_member_id === authMemberId"
                 :walking="walkingIds.has(seat.course_member_id)"
                 @select="emit('select', seat.course_member_id)"
               />

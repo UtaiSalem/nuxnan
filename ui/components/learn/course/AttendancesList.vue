@@ -564,6 +564,32 @@ const studentAttendances = computed(() => {
     })
 })
 
+// Primary attendance = ตัวที่ active ตอนนี้ → ถัดมาคือตัวที่จะเริ่มในวันนี้ → ถัดมาคือล่าสุดในประวัติ
+const primaryStudentAttendance = computed(() => {
+  if (props.isCourseAdmin) return null
+  const now = Date.now()
+  const list = studentAttendances.value
+  
+  // 1) Active session
+  const active = list.find(a => {
+    const s = new Date(a.start_at).getTime()
+    const f = new Date(a.finish_at).getTime()
+    return now >= s && now <= f
+  })
+  if (active) return active
+  
+  // 2) Upcoming today (within the next 12 hours)
+  const upcoming = list
+    .filter(a => {
+      const startTime = new Date(a.start_at).getTime()
+      return startTime > now && startTime < now + 12 * 3600000
+    })
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())[0]
+  if (upcoming) return upcoming
+  
+  return null
+})
+
 // Watch for group changes and fetch attendances
 watch(selectedGroupId, (newGroupId, oldGroupId) => {
   if (newGroupId && props.isCourseAdmin) {
@@ -803,13 +829,48 @@ onUnmounted(() => {
         @open-simulator="openSimulator"
       />
       
-      <!-- Attendances Table for Student -->
-      <StudentAttendanceTable
-        v-else-if="!isCourseAdmin && studentAttendances.length > 0"
-        :attendances="studentAttendances"
-        :loading="loading"
-        @reload="fetchAttendances()"
-      />
+      <!-- Attendances for Student -->
+      <template v-else-if="!isCourseAdmin && studentAttendances.length > 0">
+        <!-- Hero: Simulator for primary attendance if available -->
+        <div v-if="primaryStudentAttendance" class="space-y-4 mb-8">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Icon icon="fluent:present-24-filled" class="w-6 h-6 text-emerald-500" />
+              การเข้าเรียนวันนี้
+            </h3>
+          </div>
+          <AttendanceSimulatorShell
+            :attendance-id="primaryStudentAttendance.id"
+            :is-course-admin="false"
+            @checked-in="fetchAttendances(null, true)"
+          />
+        </div>
+
+        <!-- History Table (Collapsible) -->
+        <div class="mt-4">
+          <details :open="!primaryStudentAttendance" class="group">
+            <summary class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm cursor-pointer list-none border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                  <Icon icon="fluent:history-24-regular" class="w-6 h-6 text-gray-500" />
+                </div>
+                <div>
+                  <h4 class="font-semibold text-gray-900 dark:text-white">ประวัติการเข้าเรียนทั้งหมด</h4>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ studentAttendances.length }} รายการ</p>
+                </div>
+              </div>
+              <Icon icon="fluent:chevron-down-24-regular" class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" />
+            </summary>
+            <div class="mt-4 animate-fade-in-up">
+              <StudentAttendanceTable
+                :attendances="studentAttendances"
+                :loading="loading"
+                @reload="fetchAttendances()"
+              />
+            </div>
+          </details>
+        </div>
+      </template>
       
       <!-- Empty State with illustration -->
       <div v-else class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-12 text-center">
