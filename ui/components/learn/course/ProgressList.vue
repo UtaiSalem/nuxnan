@@ -30,6 +30,48 @@ const groups = ref<any[]>([])
 const activeTab = ref<string | number>('all')
 const viewMode = ref<'grid' | 'table'>('table')
 
+// Reset Score State
+const resettingScore = ref<string | null>(null)
+const resetLessonScore = async (type: 'quiz' | 'assignment_grade' | 'assignment_full', lessonId: number) => {
+    if (!selectedMember.value) return
+    
+    const confirm = await swal.confirm(
+        'ยืนยันการรีเซ็ต?',
+        'การรีเซ็ตคะแนนจะไม่สามารถเรียกคืนได้ (ข้อมูลเดิมจะถูกบันทึกใน Audit Log)',
+        'warning'
+    )
+    
+    if (!confirm.isConfirmed) return
+
+    resettingScore.value = `${type}-${lessonId}`
+    try {
+        const response: any = await api.post(`/api/courses/${props.courseId}/members/${selectedMember.value.id}/lessons/${lessonId}/reset`, {
+            type,
+            reason: 'รีเซ็ตโดยผู้สอน'
+        })
+        
+        if (response.success) {
+            swal.success('รีเซ็ตเรียบร้อยแล้ว')
+            
+            // Refresh local data to reflect new scores and status
+            const memberIndex = members.value.findIndex(m => m.id === selectedMember.value.id)
+            if (memberIndex !== -1 && response.breakdown) {
+                // Update specific member's scores if needed or just fetch again
+                // For safety and correctness, we re-fetch the progress for the current page
+                await fetchProgress(pagination.value.current_page)
+            }
+            
+            // Re-fetch member details for the modal status update
+            await viewMemberDetails(selectedMember.value)
+        }
+    } catch (error: any) {
+        console.error('Error resetting score:', error)
+        swal.error(error.response?.data?.message || 'รีเซ็ตไม่สำเร็จ')
+    } finally {
+        resettingScore.value = null
+    }
+}
+
 // Pagination State
 const pagination = ref({
   current_page: 1,
@@ -785,13 +827,14 @@ watch(members, () => {
           <table ref="tableInner" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-300 sticky top-0 z-10">
                 <tr>
-                    <th scope="col" class="px-2 py-2.5 whitespace-nowrap">#</th>
+                    <th scope="col" class="w-12 min-w-[3rem] px-2 py-2.5 text-center whitespace-nowrap">#</th>
                     <th scope="col" class="px-2 py-2.5 whitespace-nowrap">เลขที่</th>
                     <th scope="col" class="px-2 py-2.5 whitespace-nowrap">รหัส</th>
                     <th scope="col" class="px-2 py-2.5 whitespace-nowrap">สมาชิก</th>
-                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">บทเรียน</th>
-                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">งาน</th>
-                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">ทดสอบ</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">งานบทเรียน</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">ทดสอบบทเรียน</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">งานรายวิชา</th>
+                    <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">ทดสอบรายวิชา</th>
                     <th scope="col" class="px-2 py-2.5 text-center whitespace-nowrap">ภายนอก</th>
                     <th scope="col" class="px-2 py-2.5 whitespace-nowrap">พิเศษ</th>
                     <th scope="col" class="px-2 py-2.5 whitespace-nowrap">รวม</th>
@@ -804,7 +847,7 @@ watch(members, () => {
             </thead>
             <tbody>
                 <tr v-for="(member, index) in members" :key="member.id" class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td class="px-2 py-2">{{ index + 1 }}</td>
+                    <td class="w-12 min-w-[3rem] px-2 py-2 text-center whitespace-nowrap tabular-nums">{{ index + 1 }}</td>
                     <td class="px-2 py-2 font-medium text-center text-gray-900 dark:text-white">
                         <div v-if="isCourseAdmin" class="flex items-center justify-center gap-0.5">
                             <button 
@@ -854,12 +897,21 @@ watch(members, () => {
                         </div>
                     </td>
                     <td class="px-2 py-2 text-center whitespace-nowrap">
-                        <span class="text-sm">{{ member.scores?.lesson_assignments || 0 }}</span>
-                        <span class="text-xs text-gray-400 mx-0.5">/</span>
-                        <span class="text-sm">{{ member.scores?.lesson_quizzes || 0 }}</span>
+                        <span class="text-sm font-medium">{{ member.scores?.lesson_assignments || 0 }}</span>
+                        <span class="text-xs text-gray-400">/{{ member.scores?.max_lesson_assignments || 0 }}</span>
                     </td>
-                    <td class="px-2 py-2 text-center">{{ member.scores?.course_assignments || 0 }}</td>
-                    <td class="px-2 py-2 text-center">{{ member.scores?.course_quizzes || 0 }}</td>
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
+                        <span class="text-sm font-medium">{{ member.scores?.lesson_quizzes || 0 }}</span>
+                        <span class="text-xs text-gray-400">/{{ member.scores?.max_lesson_quizzes || 0 }}</span>
+                    </td>
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
+                        <span class="text-sm font-medium">{{ member.scores?.course_assignments || 0 }}</span>
+                        <span class="text-xs text-gray-400">/{{ member.scores?.max_course_assignments || 0 }}</span>
+                    </td>
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
+                        <span class="text-sm font-medium">{{ member.scores?.course_quizzes || 0 }}</span>
+                        <span class="text-xs text-gray-400">/{{ member.scores?.max_course_quizzes || 0 }}</span>
+                    </td>
                     <td class="px-2 py-2 text-center text-indigo-600 font-medium">{{ member.scores?.external_score_points || 0 }}</td>
                     <td class="px-2 py-2">
                     <div v-if="isCourseAdmin" class="flex items-center gap-1">
@@ -1291,6 +1343,28 @@ watch(members, () => {
                       : 'ยังไม่ส่ง' 
                     }}
                   </span>
+
+                  <!-- Reset Buttons (Admin Only) -->
+                  <div v-if="isCourseAdmin && assignment.status !== 'not_submitted' && assignment.lesson_id" class="flex items-center gap-1 ml-1 border-l pl-2 dark:border-gray-600">
+                    <button 
+                      @click="resetLessonScore('assignment_grade', assignment.lesson_id)"
+                      :disabled="!!resettingScore"
+                      class="p-1.5 text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/20 rounded-md transition-colors"
+                      title="รีเซ็ตเฉพาะคะแนน (กลับเป็นรอตรวจ)"
+                    >
+                      <Icon v-if="resettingScore === `assignment_grade-${assignment.lesson_id}`" icon="fluent:spinner-24-regular" class="w-4 h-4 animate-spin" />
+                      <Icon v-else icon="fluent:arrow-undo-24-regular" class="w-4 h-4" />
+                    </button>
+                    <button 
+                      @click="resetLessonScore('assignment_full', assignment.lesson_id)"
+                      :disabled="!!resettingScore"
+                      class="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                      title="ล้างคำตอบทั้งหมด (นักเรียนต้องทำใหม่)"
+                    >
+                      <Icon v-if="resettingScore === `assignment_full-${assignment.lesson_id}`" icon="fluent:spinner-24-regular" class="w-4 h-4 animate-spin" />
+                      <Icon v-else icon="fluent:delete-24-regular" class="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1334,6 +1408,19 @@ watch(members, () => {
                   >
                     {{ quiz.completed ? (quiz.passed === false ? 'ไม่ผ่าน' : 'ผ่าน') : 'ยังไม่ได้ทำ' }}
                   </span>
+
+                  <!-- Reset Button (Admin Only) -->
+                  <div v-if="isCourseAdmin && quiz.completed && quiz.lesson_id" class="flex items-center gap-1 ml-1 border-l pl-2 dark:border-gray-600">
+                    <button 
+                      @click="resetLessonScore('quiz', quiz.lesson_id)"
+                      :disabled="!!resettingScore"
+                      class="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                      title="รีเซ็ตคะแนนแบบทดสอบ (นักเรียนต้องทำใหม่)"
+                    >
+                      <Icon v-if="resettingScore === `quiz-${quiz.lesson_id}`" icon="fluent:spinner-24-regular" class="w-4 h-4 animate-spin" />
+                      <Icon v-else icon="fluent:delete-24-regular" class="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

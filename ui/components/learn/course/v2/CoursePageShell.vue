@@ -73,6 +73,11 @@ const isTableLayout = computed(() => {
   return TABLE_ROUTES.some(r => name.toLowerCase() === r.toLowerCase())
 })
 
+const isTeacherProgressRoute = computed(() => {
+  const name = route.name?.toString() || ''
+  return props.isCourseAdmin && name.toLowerCase() === 'learn-courses-id-progress'
+})
+
 // Determine if we are on the main course info page
 const isCourseInfoRoute = computed(() => {
   const path = route.path
@@ -89,7 +94,7 @@ const isCourseBoardRoute = computed(() => {
 const shouldShowCourseInfoWidget = computed(() => isCourseInfoRoute.value || isCourseBoardRoute.value)
 
 usePageLayoutWidgets({
-  left: true,
+  left: computed(() => !isTeacherProgressRoute.value),
   right: computed(() => !isTableLayout.value),
   tableLayout: isTableLayout,
 })
