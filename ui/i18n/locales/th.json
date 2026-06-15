@@ -135,5 +135,11 @@
     "th": "ภาษาไทย",
     "en": "English",
     "selectLanguage": "เลือกภาษา"
+  },
+  "learn": {
+    "progress": {
+      "lesson_assignments_short": "งานบทเรียน",
+      "lesson_quizzes_short": "ทดสอบบทเรียน"
+    }
   }
 }

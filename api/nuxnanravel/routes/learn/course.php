@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupMemberController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseActivityController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseSettingController;
+use App\Http\Controllers\Api\Learn\Course\LessonScoreResetController;
 use App\Http\Controllers\Api\Learn\Course\lessons\assignments\LessonAssignmentController;
 use App\Http\Controllers\Api\Learn\Course\lessons\comments\LessonCommentController;
 use App\Http\Controllers\Api\Learn\Course\lessons\comments\LessonCommentReactionController;
@@ -277,6 +278,10 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/members')
 
     Route::patch('/{member}/order-number', [CourseMemberController::class, 'updateOrderNumber'])->name('course.member.order-number.update');
     Route::patch('/{member}/member-code', [CourseMemberController::class, 'updateMemberCode'])->name('course.member.member-code.update');
+
+    // Lesson Score Reset
+    Route::post('/{member}/lessons/{lesson}/reset', [LessonScoreResetController::class, 'resetMemberLesson'])->name('course.member.lesson.reset');
+    Route::post('/lessons/{lesson}/reset-all', [LessonScoreResetController::class, 'resetAllMembersLesson'])->name('course.lesson.reset-all');
 
     Route::post('/{member}/process-grades', [CourseMemberGradeProgressController::class, 'processGrades']);
     Route::patch('/{member}/edited-grade', [CourseMemberGradeProgressController::class, 'updateEditedGrade'])->name('course.member.edited-grade.update');

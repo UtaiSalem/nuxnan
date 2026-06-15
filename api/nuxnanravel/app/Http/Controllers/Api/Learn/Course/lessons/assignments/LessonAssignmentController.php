@@ -41,8 +41,8 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
         ]);
 
         // Update Course Total Score
-        if ($lesson->course && $request->points > 0) {
-            $lesson->course->increment('total_score', $request->points);
+        if ($lesson->course) {
+            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
         }
 
         if($request->hasFile('images')) {
@@ -105,12 +105,7 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
 
         // Update Course Total Score if points changed
         if ($lesson->course) {
-            $diff = $request->points - $oldPoints;
-            if ($diff > 0) {
-                $lesson->course->increment('total_score', $diff);
-            } elseif ($diff < 0) {
-                $lesson->course->decrement('total_score', abs($diff));
-            }
+            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
         }
 
         if($request->hasFile('images')) {
@@ -168,9 +163,9 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
         }
         $assignment->images()->delete();
 
-        // Decrement Course total score
+        // Sync Course total score
         if ($lesson->course) {
-            $lesson->course->decrement('total_score', $assignment->points);
+            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
         }
 
         $assignment->delete();

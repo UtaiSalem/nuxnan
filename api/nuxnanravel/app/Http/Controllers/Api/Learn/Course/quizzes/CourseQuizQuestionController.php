@@ -31,7 +31,7 @@ class CourseQuizQuestionController extends Controller
             'pp_fine'  => $request->pp_fine ?? 0,
         ]);
 
-        $course->increment('total_score', $request->points);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
         $quiz->increment('total_score', $request->points);
         $quiz->increment('total_questions');
 
@@ -97,7 +97,7 @@ class CourseQuizQuestionController extends Controller
 
     public function update(Course $course, CourseQuiz $quiz, Question $question, Request $request)
     {
-        $course->decrement('total_score', $question->points);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
         $quiz->decrement('total_score', $question->points);
 
         $validatedData = $request->validate([
@@ -114,7 +114,7 @@ class CourseQuizQuestionController extends Controller
             'pp_fine' => $request->pp_fine ?? 0,
         ]);
 
-        $course->increment('total_score', $request->points);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
         $quiz->increment('total_score', $request->points);     
 
         if($request->hasFile('images')) {
@@ -162,7 +162,7 @@ class CourseQuizQuestionController extends Controller
             $answer->delete();
         }
         
-        $course->decrement('total_score', $question->points);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
         $quiz->decrement('total_score', $question->points);
         $quiz->decrement('total_questions');
         

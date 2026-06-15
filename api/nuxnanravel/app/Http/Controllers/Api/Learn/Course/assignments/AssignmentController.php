@@ -46,7 +46,7 @@ class AssignmentController extends Controller
         }
 
         $course = $assignment->assignmentable;
-        $course->decrement('total_score', $assignment->points);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
 
         $assignment->answers()->delete();
         $assignment->images()->delete();

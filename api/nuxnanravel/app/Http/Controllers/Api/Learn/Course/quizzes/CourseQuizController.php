@@ -358,8 +358,8 @@ class CourseQuizController extends Controller
                     ->each(fn ($member) => $scoreService->recompute($member));
             }
 
-            // Decrement course total score once
-            $course->decrement('total_score', $quiz->total_score);
+            // Sync course total score
+            $scoreService->syncCourseTotalScore($course);
 
             // Finally delete the quiz
             $quiz->delete();
@@ -652,6 +652,6 @@ class CourseQuizController extends Controller
 
     private function updateCourseTotalScore(CourseQuiz $quiz, int $score): void
     {
-        $quiz->course->increment('total_score', $score);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($quiz->course);
     }
 }

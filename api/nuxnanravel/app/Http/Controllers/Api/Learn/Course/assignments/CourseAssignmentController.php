@@ -144,7 +144,7 @@ class CourseAssignmentController extends Controller
             'status'            => $validated['status'],
         ]);
 
-        $course->increment('total_score', $validated['points']);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
         $course->increment('assignments');
 
         if($request->hasFile('images')) {
@@ -181,8 +181,6 @@ class CourseAssignmentController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        $course->decrement('total_score', $assignment->points);
-
         $validated = $request->validate([
             'title' => 'required|string',
             'description' => 'nullable|string',
@@ -216,7 +214,7 @@ class CourseAssignmentController extends Controller
             'status'                => $validated['status'],
         ]);
         
-        $course->increment('total_score', $validated['points']);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
             
         if($request->hasFile('images')) {
             $images = $request->file('images');
@@ -273,10 +271,10 @@ class CourseAssignmentController extends Controller
                     );
                 }
 
-                // Only decrement total_score for Course-level assignments
+                // Only sync total_score for Course-level assignments
                 // Lesson/Topic assignments have their own score tracking
                 if ($assignment->assignmentable_type === Course::class) {
-                    $course->decrement('total_score', $assignment->points);
+                    app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
                 }
 
                 $assignment->answers()->delete();

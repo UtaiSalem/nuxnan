@@ -30,7 +30,9 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
             'explanation' => $request->explanation,
         ]);
 
-        $lesson->course->increment('total_score', $request->points);
+        if ($lesson->course) {
+            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
+        }
 
         if ($request->filled('options')) {
             foreach ($request->options as $index => $optionData) {
@@ -213,7 +215,7 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
 
             // 3. Update Course Score (Safely)
             if ($lesson->course) {
-                $lesson->course->decrement('total_score', $question->points);
+                app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
             }
 
             // 4. Delete the Question itself

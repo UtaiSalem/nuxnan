@@ -30,6 +30,8 @@ class LearningResultsExport implements FromArray, WithHeadings, WithTitle, Shoul
                 $item['member']['member_code'] ?? '-',
                 $memberName,
                 $item['attendance_rate'],
+                $scores['lesson_assignments'] ?? 0,
+                $scores['lesson_quizzes'] ?? 0,
                 $scores['course_assignments'] ?? 0,
                 $scores['course_quizzes'] ?? 0,
                 $scores['bonus_points'] ?? 0,
@@ -45,16 +47,20 @@ class LearningResultsExport implements FromArray, WithHeadings, WithTitle, Shoul
     {
         // Get max scores from first row for header labels
         $first = $this->data[0]['scores'] ?? [];
+        $maxLA = $first['max_lesson_assignments'] ?? 0;
+        $maxLQ = $first['max_lesson_quizzes'] ?? 0;
         $maxCA = $first['max_course_assignments'] ?? 0;
         $maxCQ = $first['max_course_quizzes'] ?? 0;
-        $maxTotal = $maxCA + $maxCQ;
+        $maxTotal = $first['max_total'] ?? ($maxLA + $maxLQ + $maxCA + $maxCQ);
 
         return [
             'รหัสนักศึกษา',
             'ชื่อ-นามสกุล',
             'การเข้าเรียน (%)',
-            'งาน (' . $maxCA . ')',
-            'แบบทดสอบ (' . $maxCQ . ')',
+            'งานบทเรียน (' . $maxLA . ')',
+            'ทดสอบบทเรียน (' . $maxLQ . ')',
+            'งานรายวิชา (' . $maxCA . ')',
+            'ทดสอบรายวิชา (' . $maxCQ . ')',
             'คะแนนพิเศษ',
             'คะแนนรวม (' . $maxTotal . ')',
             'ร้อยละ',

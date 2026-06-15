@@ -15,6 +15,12 @@ class ScoreBreakdown
     public float $externalEarned = 0;
     public float $externalMax = 0;
     public float $bonus = 0; // signed
+    public int $lessonsCompleted = 0;
+    public int $totalLessons = 0;
+    public int $assignmentsCompleted = 0;
+    public int $totalAssignments = 0;
+    public int $quizzesCompleted = 0;
+    public int $totalQuizzes = 0;
     public array $missingSources = []; // ['quiz_ids'=>[], 'assignment_ids'=>[], 'lesson_ids'=>[]]
 
     public function totalEarned(): float

@@ -6,8 +6,11 @@ import RadialProgress from "vue3-radial-progress";
 import AssignmentSubmissionForm from '~/components/learn/course/AssignmentSubmissionForm.vue';
 import ImageGalleryModal from '~/components/ImageGalleryModal.vue';
 import ReadingUnlockPanel from '~/components/learn/course/ReadingUnlockPanel.vue';
-import { inject } from 'vue';
+import { inject, onUnmounted } from 'vue';
 import { stripHtml } from '~/utils/textUtils';
+
+const { $echo } = useNuxtApp();
+const authStore = useAuthStore();
 
 // Image Gallery State
 const showGallery = ref(false);
@@ -127,7 +130,28 @@ const fetchData = async () => {
     }
 };
 
-onMounted(fetchData);
+onMounted(() => {
+    fetchData();
+    fetchEligibilityStatus();
+    
+    // Listen for score resets via Echo
+    if ($echo && authStore.user) {
+        $echo.private(`user.${authStore.user.id}`)
+            .listen('.lesson.score.reset', (e) => {
+                if (Number(e.courseId) === Number(props.courseId)) {
+                    swal.toast('ข้อมูลคะแนนมีการเปลี่ยนแปลง (รีเซ็ตโดยผู้สอน)', 'info');
+                    fetchData();
+                    fetchEligibilityStatus();
+                }
+            });
+    }
+});
+
+onUnmounted(() => {
+    if ($echo && authStore.user) {
+        $echo.leave(`user.${authStore.user.id}`);
+    }
+});
 
 const sourceBadge = computed(() => {
     const s = data.value?.member?.identity_source;

@@ -194,7 +194,7 @@ class QuestionController extends Controller
             $quiz->increment('total_questions');
 
             $course = $quiz->course;
-            $course->increment('total_score', $question->points);
+            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
         }
 
         if($question->images){

@@ -16,41 +16,41 @@ class CourseScoreService
     protected array $courseStructureCache = [];
 
     /**
-     * Compute a detailed breakdown of a member's score across all sources.
-     * Note: This does not write to the database.
+     * Get course structural data (cached).
      */
-    public function computeBreakdown(CourseMember $member): ScoreBreakdown
+    public function getCourseStructure(int $courseId): array
     {
-        $breakdown = new ScoreBreakdown;
-        $userId = $member->user_id;
-        $courseId = $member->course_id;
-
         if (! isset($this->courseStructureCache[$courseId])) {
             $cache = [];
 
             // 1. Quizzes
             $courseQuizzes = DB::table('course_quizzes')->where('course_id', $courseId)->get(['id', 'total_score']);
-            $cache['quizMax'] = $courseQuizzes->sum('total_score');
+            $cache['quizMax'] = (float) $courseQuizzes->sum('total_score');
             $cache['quizIds'] = $courseQuizzes->pluck('id')->toArray();
+            $cache['quizCount'] = count($cache['quizIds']);
 
             // 2. Course Assignments
             $courseAssignments = DB::table('assignments')
                 ->where('assignmentable_id', $courseId)
                 ->where('assignmentable_type', Course::class)
                 ->get(['id', 'points']);
-            $cache['courseAssignmentMax'] = $courseAssignments->sum('points');
+            $cache['courseAssignmentMax'] = (float) $courseAssignments->sum('points');
             $cache['courseAssignIds'] = $courseAssignments->pluck('id')->toArray();
+            $cache['courseAssignCount'] = count($cache['courseAssignIds']);
 
             // 3. Lessons
             $lessonIds = DB::table('lessons')->where('course_id', $courseId)->pluck('id')->toArray();
+            $cache['lessonIds'] = $lessonIds;
+            $cache['lessonCount'] = count($lessonIds);
 
             // 3.1 Lesson Assignments
             $lessonAssignments = DB::table('assignments')
                 ->whereIn('assignmentable_id', $lessonIds)
                 ->where('assignmentable_type', 'App\Models\Lesson')
                 ->get(['id', 'points']);
-            $cache['lessonAssignmentMax'] = $lessonAssignments->sum('points');
+            $cache['lessonAssignmentMax'] = (float) $lessonAssignments->sum('points');
             $cache['lessonAssignIds'] = $lessonAssignments->pluck('id')->toArray();
+            $cache['lessonAssignCount'] = count($cache['lessonAssignIds']);
 
             // 3.2 Lesson Questions
             $lessonQuestions = DB::table('questions')
@@ -61,23 +61,38 @@ class CourseScoreService
             foreach ($lessonQuestions as $q) {
                 $lessonQuestionMax += ($q->points !== null ? $q->points : 1);
             }
-            $cache['lessonQuestionMax'] = $lessonQuestionMax;
+            $cache['lessonQuestionMax'] = (float) $lessonQuestionMax;
             $cache['lessonQuestionIds'] = $lessonQuestions->pluck('id')->toArray();
+            $cache['lessonQuestionCount'] = count($cache['lessonQuestionIds']);
 
             // 4. External Scores
             $externalScores = DB::table('course_external_scores')
                 ->where('course_id', $courseId)
                 ->get(['id', 'max_score']);
-            $cache['externalMax'] = $externalScores->sum('max_score');
+            $cache['externalMax'] = (float) $externalScores->sum('max_score');
             $cache['externalScoreIds'] = $externalScores->pluck('id')->toArray();
 
             $this->courseStructureCache[$courseId] = $cache;
         }
 
-        $struct = $this->courseStructureCache[$courseId];
+        return $this->courseStructureCache[$courseId];
+    }
+
+    /**
+     * Compute a detailed breakdown of a member's score across all sources.
+     * Note: This does not write to the database.
+     */
+    public function computeBreakdown(CourseMember $member): ScoreBreakdown
+    {
+        $breakdown = new ScoreBreakdown;
+        $userId = $member->user_id;
+        $courseId = $member->course_id;
+
+        $struct = $this->getCourseStructure($courseId);
 
         // 1. Quizzes
         $breakdown->courseQuizMax = $struct['quizMax'];
+        $breakdown->totalQuizzes = $struct['quizCount'];
         $quizIds = $struct['quizIds'];
 
         $completedQuizIds = [];
@@ -87,8 +102,9 @@ class CourseScoreService
                 ->where('user_id', $userId)
                 ->get(['score', 'quiz_id']);
 
-            $breakdown->courseQuizEarned = $quizResults->sum('score');
+            $breakdown->courseQuizEarned = (float) $quizResults->sum('score');
             $completedQuizIds = $quizResults->pluck('quiz_id')->toArray();
+            $breakdown->quizzesCompleted = count($completedQuizIds);
         }
         $breakdown->missingSources['quiz_ids'] = array_values(array_diff($quizIds, $completedQuizIds));
 
@@ -106,12 +122,21 @@ class CourseScoreService
                 })
                 ->get(['assignment_id', 'points']);
 
-            $breakdown->courseAssignmentEarned = $assignResults->sum('points');
+            $breakdown->courseAssignmentEarned = (float) $assignResults->sum('points');
             $completedCourseAssignIds = $assignResults->pluck('assignment_id')->toArray();
         }
         $breakdown->missingSources['course_assignment_ids'] = array_values(array_diff($courseAssignIds, $completedCourseAssignIds));
 
         // 3. Lesson Sources (Assignments & Questions)
+        $breakdown->totalLessons = $struct['lessonCount'];
+        
+        // Lesson Progress (Status only)
+        $breakdown->lessonsCompleted = DB::table('lesson_progress')
+            ->whereIn('lesson_id', $struct['lessonIds'])
+            ->where('user_id', $userId)
+            ->where('status', 'completed')
+            ->count();
+
         // 3.1 Lesson Assignments
         $breakdown->lessonAssignmentMax = $struct['lessonAssignmentMax'];
         $lessonAssignIds = $struct['lessonAssignIds'];
@@ -126,16 +151,19 @@ class CourseScoreService
                 })
                 ->get(['assignment_id', 'points']);
 
-            $breakdown->lessonAssignmentEarned = $lessonAssignResults->sum('points');
+            $breakdown->lessonAssignmentEarned = (float) $lessonAssignResults->sum('points');
             $completedLessonAssignIds = $lessonAssignResults->pluck('assignment_id')->toArray();
         }
         $breakdown->missingSources['lesson_assignment_ids'] = array_values(array_diff($lessonAssignIds, $completedLessonAssignIds));
+
+        // Total Assignments Completed
+        $breakdown->totalAssignments = $struct['courseAssignCount'] + $struct['lessonAssignCount'];
+        $breakdown->assignmentsCompleted = count($completedCourseAssignIds) + count($completedLessonAssignIds);
 
         // 3.2 Lesson Questions
         $breakdown->lessonQuestionMax = $struct['lessonQuestionMax'];
         $lessonQuestionIds = $struct['lessonQuestionIds'];
 
-        $completedLessonQuestionIds = [];
         if (! empty($lessonQuestionIds)) {
             $lessonQuestionResults = DB::table('lesson_answer_questions')
                 ->where('user_id', $userId)
@@ -143,7 +171,7 @@ class CourseScoreService
                 ->where('is_correct', true)
                 ->get(['question_id', 'points']);
 
-            $breakdown->lessonQuestionEarned = $lessonQuestionResults->sum('points');
+            $breakdown->lessonQuestionEarned = (float) $lessonQuestionResults->sum('points');
         }
 
         // 4. External Scores
@@ -151,7 +179,7 @@ class CourseScoreService
         $externalScoreIds = $struct['externalScoreIds'];
 
         if (! empty($externalScoreIds)) {
-            $breakdown->externalEarned = DB::table('course_external_score_entries')
+            $breakdown->externalEarned = (float) DB::table('course_external_score_entries')
                 ->whereIn('external_score_id', $externalScoreIds)
                 ->where('course_member_id', $member->id)
                 ->sum('score');
@@ -160,9 +188,120 @@ class CourseScoreService
         // 5. Bonus
         $breakdown->bonus = (float) ($member->bonus_points ?? 0);
 
-        // Bonus penalty clamp -100% is handled in percentage() but we don't cap bonus points directly.
-
         return $breakdown;
+    }
+
+    /**
+     * Compute breakdown for multiple members efficiently.
+     * @return array<int, ScoreBreakdown> Map of member ID to ScoreBreakdown
+     */
+    public function computeBulkBreakdown(Course $course, $members): array
+    {
+        $userIds = $members->pluck('user_id')->unique()->toArray();
+        $memberIds = $members->pluck('id')->toArray();
+        $courseId = $course->id;
+
+        $struct = $this->getCourseStructure($courseId);
+
+        // 1. Bulk fetch all relevant data
+        $assignmentScoresByUser = DB::table('assignment_answers')
+            ->whereIn('user_id', $userIds)
+            ->whereIn('assignment_id', array_merge($struct['courseAssignIds'], $struct['lessonAssignIds']))
+            ->where(function ($q) {
+                $q->where('status', 'graded')->orWhereNotNull('points');
+            })
+            ->select('user_id', 'assignment_id', 'points')
+            ->get()
+            ->groupBy('user_id');
+
+        $quizResultsByUser = DB::table('course_quiz_results')
+            ->whereIn('user_id', $userIds)
+            ->where('course_id', $courseId)
+            ->select('user_id', 'quiz_id', 'score')
+            ->get()
+            ->groupBy('user_id');
+
+        $questionScoresByUser = DB::table('lesson_answer_questions')
+            ->whereIn('user_id', $userIds)
+            ->whereIn('question_id', $struct['lessonQuestionIds'])
+            ->where('is_correct', true)
+            ->select('user_id', 'question_id', 'points')
+            ->get()
+            ->groupBy('user_id');
+
+        $lessonProgressCountsByUser = DB::table('lesson_progress')
+            ->whereIn('user_id', $userIds)
+            ->whereIn('lesson_id', $struct['lessonIds'])
+            ->where('status', 'completed')
+            ->select('user_id', 'lesson_id')
+            ->get()
+            ->groupBy('user_id');
+
+        $externalScoresByMember = DB::table('course_external_score_entries')
+            ->whereIn('course_member_id', $memberIds)
+            ->whereIn('external_score_id', $struct['externalScoreIds'])
+            ->select('course_member_id', 'score')
+            ->get()
+            ->groupBy('course_member_id');
+
+        // 2. Assemble results
+        $results = [];
+        foreach ($members as $member) {
+            $userId = $member->user_id;
+            $mId = $member->id;
+            $breakdown = new ScoreBreakdown;
+            
+            // Common
+            $breakdown->bonus = (float) ($member->bonus_points ?? 0);
+            $breakdown->totalQuizzes = $struct['quizCount'];
+            $breakdown->totalLessons = $struct['lessonCount'];
+            $breakdown->totalAssignments = $struct['courseAssignCount'] + $struct['lessonAssignCount'];
+
+            // Quiz
+            $breakdown->courseQuizMax = $struct['quizMax'];
+            $userQuizzes = $quizResultsByUser[$userId] ?? collect([]);
+            $breakdown->courseQuizEarned = (float) $userQuizzes->sum('score');
+            $completedQuizIds = $userQuizzes->pluck('quiz_id')->toArray();
+            $breakdown->quizzesCompleted = count($completedQuizIds);
+            $breakdown->missingSources['quiz_ids'] = array_values(array_diff($struct['quizIds'], $completedQuizIds));
+
+            // Assignments
+            $userAssignments = $assignmentScoresByUser[$userId] ?? collect([]);
+            
+            // Course Assignments
+            $breakdown->courseAssignmentMax = $struct['courseAssignmentMax'];
+            $courseAssignResults = $userAssignments->whereIn('assignment_id', $struct['courseAssignIds']);
+            $breakdown->courseAssignmentEarned = (float) $courseAssignResults->sum('points');
+            $completedCourseAssignIds = $courseAssignResults->pluck('assignment_id')->toArray();
+            $breakdown->missingSources['course_assignment_ids'] = array_values(array_diff($struct['courseAssignIds'], $completedCourseAssignIds));
+
+            // Lesson Assignments
+            $breakdown->lessonAssignmentMax = $struct['lessonAssignmentMax'];
+            $lessonAssignResults = $userAssignments->whereIn('assignment_id', $struct['lessonAssignIds']);
+            $breakdown->lessonAssignmentEarned = (float) $lessonAssignResults->sum('points');
+            $completedLessonAssignIds = $lessonAssignResults->pluck('assignment_id')->toArray();
+            $breakdown->missingSources['lesson_assignment_ids'] = array_values(array_diff($struct['lessonAssignIds'], $completedLessonAssignIds));
+
+            $breakdown->assignmentsCompleted = count($completedCourseAssignIds) + count($completedLessonAssignIds);
+
+            // Questions
+            $breakdown->lessonQuestionMax = $struct['lessonQuestionMax'];
+            $userQuestions = $questionScoresByUser[$userId] ?? collect([]);
+            $breakdown->lessonQuestionEarned = (float) $userQuestions->sum('points');
+
+            // Lesson Progress
+            $userLessonProgress = $lessonProgressCountsByUser[$userId] ?? collect([]);
+            $breakdown->lessonsCompleted = $userLessonProgress->count();
+
+            // External
+            $breakdown->externalMax = $struct['externalMax'];
+            $userExternal = $externalScoresByMember[$mId] ?? collect([]);
+            $breakdown->externalEarned = (float) $userExternal->sum('score');
+
+            $results[$mId] = $breakdown;
+        }
+
+        return $results;
     }
 
     /**
@@ -287,7 +426,7 @@ class CourseScoreService
         $internalTotal = $this->calculateInternalTotalScore($course);
         $externalTotal = CourseExternalScore::where('course_id', $course->id)->sum('max_score');
 
-        $newTotal = $internalTotal + $externalTotal;
+        $newTotal = max(0, $internalTotal + $externalTotal);
         $course->update(['total_score' => $newTotal]);
 
         return $newTotal;

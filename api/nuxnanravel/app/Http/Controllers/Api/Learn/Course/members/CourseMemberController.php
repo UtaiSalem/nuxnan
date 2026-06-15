@@ -811,15 +811,18 @@ class CourseMemberController extends Controller
 
     public function memberProgress(Course $course, CourseMember $course_member)
     {
-        $course_member->load('course');
+        $course_member->load('course', 'user');
         $userId = $course_member->user_id;
 
-        // Get all lessons with completion status
-        $lessons = $this->orderedCourseLessons($course)->get()->map(function ($lesson) use ($userId) {
-            $progress = \App\Models\LessonProgress::where('lesson_id', $lesson->id)
-                ->where('user_id', $userId)
-                ->first();
+        // 1. Lessons Progress (Bulk)
+        $lessonIds = $course->courseLessons()->pluck('id');
+        $allLessonProgress = \App\Models\LessonProgress::whereIn('lesson_id', $lessonIds)
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('lesson_id');
 
+        $lessons = $this->orderedCourseLessons($course)->get()->map(function ($lesson) use ($allLessonProgress) {
+            $progress = $allLessonProgress->get($lesson->id);
             $completed = $progress && $progress->status === 'completed';
 
             return [
@@ -831,30 +834,30 @@ class CourseMemberController extends Controller
             ];
         });
 
-        // Get all assignments with submission status and scores
+        // 2. Assignments (Bulk)
         $courseAssignments = $course->courseAssignments;
-        $lessonAssignments = $this->orderedCourseLessons($course)->with('assignments')->get()->flatMap->assignments;
+        $lessonAssignments = $course->courseLessons()->with('assignments')->get()->flatMap(function($lesson) {
+            return $lesson->assignments->map(function($a) use ($lesson) {
+                $a->lesson_id = $lesson->id;
+                return $a;
+            });
+        });
         $allAssignments = $courseAssignments->merge($lessonAssignments);
+        $allAssignmentIds = $allAssignments->pluck('id');
+
+        $allAssignmentAnswers = \App\Models\AssignmentAnswer::whereIn('assignment_id', $allAssignmentIds)
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('assignment_id');
 
         $assignments = $allAssignments->filter(function ($assignment) use ($course_member) {
-            if ($assignment->status !== 1) {
-                return false;
-            }
+            if ($assignment->status !== 1) return false;
             if (! empty($assignment->target_groups)) {
-                if (! $course_member->group_id) {
-                    return false;
-                }
-                if (! in_array($course_member->group_id, $assignment->target_groups)) {
-                    return false;
-                }
+                if (! $course_member->group_id || ! in_array($course_member->group_id, $assignment->target_groups)) return false;
             }
-
             return true;
-        })->map(function ($assignment) use ($userId) {
-            $answer = \App\Models\AssignmentAnswer::where('assignment_id', $assignment->id)
-                ->where('user_id', $userId)
-                ->first();
-
+        })->map(function ($assignment) use ($allAssignmentAnswers) {
+            $answer = $allAssignmentAnswers->get($assignment->id);
             $actualStatus = 'not_submitted';
             $statusLabel = 'ยังไม่ส่ง';
             $progressPercentage = 0;
@@ -866,7 +869,7 @@ class CourseMemberController extends Controller
                     $progressPercentage = 100;
                 } elseif ($answer->status === 'in_review') {
                     $actualStatus = 'in_review';
-                    $statusLabel = 'รอกาตรวจ';
+                    $statusLabel = 'กำลังตรวจ';
                     $progressPercentage = 50;
                 } else {
                     $actualStatus = 'submitted';
@@ -877,6 +880,7 @@ class CourseMemberController extends Controller
 
             return [
                 'id' => $assignment->id,
+                'lesson_id' => $assignment->lesson_id ?? null,
                 'title' => $assignment->title ?? $assignment->name ?? 'งานที่ '.$assignment->id,
                 'max_score' => $assignment->points ?? $assignment->max_score ?? 100,
                 'score' => $answer ? $answer->points : null,
@@ -889,43 +893,23 @@ class CourseMemberController extends Controller
             ];
         })->values();
 
-        // Get quiz data for THE SELECTED member
+        // 3. Quizzes (Bulk: Course Quizzes + Lesson Quizzes)
         $courseQuizzes = $course->courseQuizzes()->with('questions')->get();
+        $allQuizResults = \App\Models\CourseQuizResult::whereIn('quiz_id', $courseQuizzes->pluck('id'))
+            ->where('user_id', $userId)
+            ->where('course_id', $course->id)
+            ->get()
+            ->groupBy('quiz_id');
 
         $quizzes = $courseQuizzes->filter(function ($quiz) {
             return $quiz->is_active;
-        })->map(function ($quiz) use ($userId, $course) {
-            $result = \App\Models\CourseQuizResult::where('quiz_id', $quiz->id)
-                ->where('user_id', $userId)
-                ->where('course_id', $course->id)
-                ->orderBy('score', 'desc')
-                ->first();
-
-            $attemptCount = \App\Models\CourseQuizResult::where('quiz_id', $quiz->id)
-                ->where('user_id', $userId)
-                ->where('course_id', $course->id)
-                ->count();
-
-            $maxScore = $quiz->total_score;
-            if (! $maxScore || $maxScore == 0) {
-                $maxScore = $quiz->questions->sum('points');
-            }
-            if (! $maxScore || $maxScore == 0) {
-                $maxScore = $quiz->questions->count() ?: 10;
-            }
-
-            $percentage = $result && $maxScore > 0
-                ? ($result->score / $maxScore) * 100
-                : 0;
-
-            $passed = $result !== null
-                ? ($quiz->passing_score ? round($percentage, 2) >= $quiz->passing_score : true)
-                : null;
-
-            $statusLabel = 'ยังไม่ทำ';
-            if ($result) {
-                $statusLabel = $passed ? 'ผ่าน' : 'ไม่ผ่าน';
-            }
+        })->map(function ($quiz) use ($allQuizResults) {
+            $userResults = $allQuizResults->get($quiz->id) ?? collect([]);
+            $result = $userResults->sortByDesc('score')->first();
+            $attemptCount = $userResults->count();
+            $maxScore = $quiz->total_score ?: $quiz->questions->sum('points') ?: ($quiz->questions->count() ?: 10);
+            $percentage = $result && $maxScore > 0 ? ($result->score / $maxScore) * 100 : 0;
+            $passed = $result !== null ? ($quiz->passing_score ? round($percentage, 2) >= $quiz->passing_score : true) : null;
 
             return [
                 'id' => $quiz->id,
@@ -937,17 +921,40 @@ class CourseMemberController extends Controller
                 'completed_at' => $result ? $result->created_at : null,
                 'passed' => $passed,
                 'progress_percentage' => $result ? ($passed ? 100 : 50) : 0,
-                'status_label' => $statusLabel,
+                'status_label' => $result ? ($passed ? 'ผ่าน' : 'ไม่ผ่าน') : 'ยังไม่ทำ',
             ];
         })->values();
 
-        // Calculate overall progress
-        $totalItems = count($lessons) + count($assignments) + count($quizzes);
-        $completedItems = collect($lessons)->where('completed', true)->count() +
-                          collect($assignments)->where('status', 'graded')->count() +
-                          collect($quizzes)->where('passed', true)->count();
+        // Lesson quizzes (questions inside lessons)
+        $lessonsWithQuestions = $course->courseLessons()->whereHas('questions')->get();
+        $lessonQuizList = $lessonsWithQuestions->map(function($lesson) use ($userId) {
+            $questions = $lesson->questions;
+            $questionIds = $questions->pluck('id');
+            $answers = \App\Models\LessonAnswerQuestion::whereIn('question_id', $questionIds)
+                ->where('user_id', $userId)
+                ->get();
+            
+            $completed = $answers->count() > 0;
+            $earned = $answers->where('is_correct', true)->sum('points');
+            $max = $questions->sum(function($q) { return $q->points ?? 1; });
 
-        $overallPercentage = $totalItems > 0 ? round(($completedItems / $totalItems) * 100) : 0;
+            return [
+                'id' => $lesson->id,
+                'lesson_id' => $lesson->id,
+                'is_lesson_quiz' => true,
+                'title' => 'แบบทดสอบ: ' . $lesson->title,
+                'max_score' => $max,
+                'score' => $completed ? $earned : null,
+                'completed' => $completed,
+                'attempt_count' => $completed ? 1 : 0,
+                'status_label' => $completed ? 'ทำแล้ว' : 'ยังไม่เริ่ม',
+                'progress_percentage' => $completed ? 100 : 0,
+            ];
+        });
+
+        // 4. Summary & Grade (Canonical)
+        $scoreService = app(\App\Services\CourseScoreService::class);
+        $scoreData = $scoreService->calculateGradeData($course_member);
 
         return response()->json([
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
@@ -956,12 +963,13 @@ class CourseMemberController extends Controller
             'groups' => CourseGroupResource::collection($course->courseGroups),
             'member' => new CourseMemberResource($course_member),
             'assignments' => $assignments,
-            'quizzes' => $quizzes,
+            'quizzes' => $quizzes->concat($lessonQuizList),
             'courseMemberOfAuth' => $course_member,
             'overall_progress' => [
-                'progress_percentage' => $overallPercentage,
-                'status_label' => $overallPercentage >= 100 ? 'เสร็จสมบูรณ์' : ($overallPercentage > 0 ? 'กำลังดำเนินการ' : 'ยังไม่ได้เริ่ม'),
+                'progress_percentage' => $scoreData['score_percentage'],
+                'status_label' => $scoreData['score_percentage'] >= 100 ? 'เสร็จสมบูรณ์' : ($scoreData['score_percentage'] > 0 ? 'กำลังดำเนินการ' : 'ยังไม่ได้เริ่ม'),
             ],
+            'scores' => $scoreData,
         ]);
     }
 

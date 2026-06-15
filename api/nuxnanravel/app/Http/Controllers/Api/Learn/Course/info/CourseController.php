@@ -930,65 +930,8 @@ class CourseController extends Controller
 
         $courseMembers = $query->paginate($request->get('per_page', 20));
 
-        // 1. Fetch course structure data (cached per request - these don't change per page)
-        $courseAssignments = $course->courseAssignments()->select('id', 'assignmentable_type', 'assignmentable_id', 'points')->get();
-        $courseQuizzes = $course->courseQuizzes()->select('id', 'course_id', 'total_score')->get();
-        $lessons = $course->courseLessons()->select('id', 'course_id')->with([
-            'assignments:id,assignmentable_type,assignmentable_id,points',
-            'questions:id,questionable_type,questionable_id,points,correct_option_id',
-        ])->get();
-
-        $lessonAssignments = $lessons->flatMap->assignments;
-        $lessonQuestions = $lessons->flatMap->questions;
-
-        $courseAssignmentIds = $courseAssignments->pluck('id');
-        $lessonAssignmentIds = $lessonAssignments->pluck('id');
-        $lessonQuestionIds = $lessonQuestions->pluck('id');
-        $allAssignmentIds = $courseAssignmentIds->merge($lessonAssignmentIds);
-
         // 2. Fetch only data for current page members using DB aggregates where possible
-        $memberUserIds = $courseMembers->pluck('user_id');
         $memberIds = $courseMembers->pluck('id');
-
-        // Use DB-level aggregation for scores instead of loading all models
-        // Assignment scores - aggregate at DB level
-        $assignmentScoresByUser = \App\Models\AssignmentAnswer::whereIn('assignment_id', $allAssignmentIds)
-            ->whereIn('user_id', $memberUserIds)
-            ->where(function ($q) {
-                $q->where('status', 'graded')
-                    ->orWhereNotNull('points');
-            })
-            ->select('user_id', 'assignment_id', 'points')
-            ->get()
-            ->groupBy('user_id');
-
-        // Quiz results - only select needed columns
-        $allQuizResults = \App\Models\CourseQuizResult::where('course_id', $course->id)
-            ->whereIn('user_id', $memberUserIds)
-            ->select('user_id', 'quiz_id', 'score')
-            ->get()
-            ->groupBy('user_id');
-
-        // Question answers - use LessonAnswerQuestion instead of UserAnswerQuestion
-        $allQuestionAnswers = \App\Models\LessonAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
-            ->whereIn('user_id', $memberUserIds)
-            ->where('is_correct', true)
-            ->select('user_id', 'question_id', 'points')
-            ->get()
-            ->groupBy('user_id');
-
-        // Lesson Progress - count only
-        $lessonIds = $lessons->pluck('id');
-        $lessonProgressCounts = \App\Models\LessonProgress::whereIn('lesson_id', $lessonIds)
-            ->whereIn('user_id', $memberUserIds)
-            ->where('status', 'completed')
-            ->selectRaw('user_id, COUNT(*) as completed_count')
-            ->groupBy('user_id')
-            ->pluck('completed_count', 'user_id');
-
-        $totalLessons = $lessons->count();
-        $totalAssignments = $courseAssignments->count() + $lessonAssignments->count();
-        $totalQuizzes = $courseQuizzes->count();
 
         // Attendance data - pre-compute per group
         $allCourseAttendances = $course->courseAttendances()->select('id', 'course_id', 'group_id')->get();
@@ -1011,44 +954,14 @@ class CourseController extends Controller
             ->get()
             ->groupBy('course_member_id');
 
-        // Compute max totals (once, outside loop)
-        $maxLessonAssignments = $lessonAssignments->sum('points');
-        $maxLessonQuizzes = $lessonQuestions->sum('points');
-        $maxCourseAssignments = $courseAssignments->sum('points');
-        $maxCourseQuizzes = $courseQuizzes->sum('total_score');
-
-        // ใช้ total_score จากตาราง courses
-        $totalScoreCap = (float) ($course->total_score ?? ($maxCourseAssignments + $maxLessonAssignments + $maxCourseQuizzes + $maxLessonQuizzes));
+        $scoreService = app(\App\Services\CourseScoreService::class);
+        $bulkBreakdowns = $scoreService->computeBulkBreakdown($course, $courseMembers);
 
         $courseMembersProgress = [];
         foreach ($courseMembers as $member) {
-            $userId = $member->user_id;
             $memberId = $member->id;
-
-            // Calculate Scores using pre-grouped data
-            $userAssignments = $assignmentScoresByUser[$userId] ?? collect([]);
-            $courseAssignScore = $userAssignments->whereIn('assignment_id', $courseAssignmentIds)->sum('points');
-            $lessonAssignScore = $userAssignments->whereIn('assignment_id', $lessonAssignmentIds)->sum('points');
-
-            $courseQuizScore = isset($allQuizResults[$userId])
-                ? $allQuizResults[$userId]->sum('score')
-                : 0;
-
-            // Lesson test score using pre-built lookup
-            $lessonTestScore = isset($allQuestionAnswers[$userId])
-                ? $allQuestionAnswers[$userId]->sum('points')
-                : 0;
-
-            // Progress counts
-            $lessonsCompleted = $lessonProgressCounts[$userId] ?? 0;
-            $assignmentsCompleted = $userAssignments->unique('assignment_id')->count();
-            $quizzesCompleted = isset($allQuizResults[$userId])
-                ? $allQuizResults[$userId]->unique('quiz_id')->count()
-                : 0;
-
-            $lessonsProgressPct = ($totalLessons > 0) ? round(($lessonsCompleted / $totalLessons) * 100) : 0;
-            $assignmentsProgressPct = ($totalAssignments > 0) ? round(($assignmentsCompleted / $totalAssignments) * 100) : 0;
-            $quizzesProgressPct = ($totalQuizzes > 0) ? round(($quizzesCompleted / $totalQuizzes) * 100) : 0;
+            $breakdown = $bulkBreakdowns[$memberId] ?? new \App\DataTransferObjects\ScoreBreakdown;
+            $percentage = $breakdown->percentage();
 
             // Attendance - using pre-computed maps
             $memberGroupId = $member->group_id;
@@ -1064,51 +977,44 @@ class CourseController extends Controller
 
             $attendanceRate = ($totalGroupAttendanceSessions > 0) ? round(($attendancePresent / $totalGroupAttendanceSessions) * 100) : 0;
 
-            // Calculate totals and grade
-            $achievedScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore;
-            $rawTotal = $achievedScore + (float) ($member->external_score_points ?? 0) + (float) ($member->bonus_points ?? 0);
-
-            $percentage = ($totalScoreCap > 0) ? ($rawTotal / $totalScoreCap) * 100 : 0;
-            $percentage = min(100, max(0, $percentage));
             $realtimeGrade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
-
             $finalGrade = $member->edited_grade ?? $realtimeGrade;
             $finalGradeName = \App\Models\CourseMember::getGradeNameFromGrade($finalGrade);
 
             $courseMembersProgress[] = [
                 'member' => $member,
-                'lessons_completed' => $lessonsCompleted,
-                'total_lessons' => $totalLessons,
-                'lessons_progress' => $lessonsProgressPct,
-                'assignments_completed' => $assignmentsCompleted,
-                'total_assignments' => $totalAssignments,
-                'assignments_progress' => $assignmentsProgressPct,
-                'quizzes_completed' => $quizzesCompleted,
-                'total_quizzes' => $totalQuizzes,
-                'quizzes_progress' => $quizzesProgressPct,
+                'lessons_completed' => $breakdown->lessonsCompleted,
+                'total_lessons' => $breakdown->totalLessons,
+                'lessons_progress' => ($breakdown->totalLessons > 0) ? round(($breakdown->lessonsCompleted / $breakdown->totalLessons) * 100) : 0,
+                'assignments_completed' => $breakdown->assignmentsCompleted,
+                'total_assignments' => $breakdown->totalAssignments,
+                'assignments_progress' => ($breakdown->totalAssignments > 0) ? round(($breakdown->assignmentsCompleted / $breakdown->totalAssignments) * 100) : 0,
+                'quizzes_completed' => $breakdown->quizzesCompleted,
+                'total_quizzes' => $breakdown->totalQuizzes,
+                'quizzes_progress' => ($breakdown->totalQuizzes > 0) ? round(($breakdown->quizzesCompleted / $breakdown->totalQuizzes) * 100) : 0,
                 'attendance_present' => $attendancePresent,
                 'total_attendance' => $totalGroupAttendanceSessions,
                 'attendance_rate' => $attendanceRate,
                 'overall_progress' => round($percentage),
                 'scores' => [
-                    'lesson_assignments' => $lessonAssignScore,
-                    'lesson_quizzes' => $lessonTestScore,
-                    'course_assignments' => $courseAssignScore,
-                    'course_quizzes' => $courseQuizScore,
-                    'external_score_points' => (float) ($member->external_score_points ?? 0),
-                    'bonus_points' => (float) ($member->bonus_points ?? 0),
+                    'lesson_assignments' => $breakdown->lessonAssignmentEarned,
+                    'lesson_quizzes' => $breakdown->lessonQuestionEarned,
+                    'course_assignments' => $breakdown->courseAssignmentEarned,
+                    'course_quizzes' => $breakdown->courseQuizEarned,
+                    'external_score_points' => $breakdown->externalEarned,
+                    'bonus_points' => $breakdown->bonus,
                     'edited_grade' => $member->edited_grade,
-                    'total_score' => $rawTotal,
+                    'total_score' => $breakdown->totalEarned(),
                     'score_percentage' => round($percentage),
                     'db_achieved_score' => $member->achieved_score,
                     'grade_progress' => $finalGrade,
                     'calculated_grade' => $realtimeGrade,
                     'grade_name' => $finalGradeName,
-                    'max_lesson_assignments' => $maxLessonAssignments,
-                    'max_lesson_quizzes' => $maxLessonQuizzes,
-                    'max_course_assignments' => $maxCourseAssignments,
-                    'max_course_quizzes' => $maxCourseQuizzes,
-                    'max_total' => $totalScoreCap,
+                    'max_lesson_assignments' => $breakdown->lessonAssignmentMax,
+                    'max_lesson_quizzes' => $breakdown->lessonQuestionMax,
+                    'max_course_assignments' => $breakdown->courseAssignmentMax,
+                    'max_course_quizzes' => $breakdown->courseQuizMax,
+                    'max_total' => $breakdown->totalMax(),
                 ],
             ];
         }
@@ -1201,7 +1107,15 @@ class CourseController extends Controller
         $maxCourseQuiz = $courseQuizzes->sum('total_score');
         $maxLessonQuiz = $lessonQuestions->sum('points');
 
-        $totalScoreCap = (float) ($course->total_score ?? ($maxCourseAssign + $maxLessonAssign + $maxCourseQuiz + $maxLessonQuiz));
+        // Read Guard: Fallback if stored total_score is invalid (<= 0)
+        $computedCap = $maxCourseAssign + $maxLessonAssign + $maxCourseQuiz + $maxLessonQuiz;
+        $storedCap = (float) ($course->total_score ?? 0);
+        
+        if ($storedCap <= 0) {
+            $totalScoreCap = $computedCap;
+        } else {
+            $totalScoreCap = $storedCap;
+        }
 
         // Calculate scores for each member
         $membersWithScores = [];
@@ -1608,39 +1522,15 @@ class CourseController extends Controller
         $computedMaxTotal2 = $courseAssignments->sum('points') + $lessonAssignments->sum('points')
             + $courseQuizzes->sum('total_score') + $lessonQuestions->sum('points');
 
+        $scoreService = app(\App\Services\CourseScoreService::class);
+        $bulkBreakdowns = $scoreService->computeBulkBreakdown($course, $courseMembers);
+
         $exportData = [];
         foreach ($courseMembers as $member) {
-            $userId = $member->user_id;
-
-            $courseAssignScore = isset($allAssignmentAnswers[$userId])
-                ? $allAssignmentAnswers[$userId]->whereIn('assignment_id', $courseAssignmentIds)->sum('points')
-                : 0;
-
-            $lessonAssignScore = isset($allAssignmentAnswers[$userId])
-                ? $allAssignmentAnswers[$userId]->whereIn('assignment_id', $lessonAssignmentIds)->sum('points')
-                : 0;
-
-            $courseQuizScore = isset($allQuizResults[$userId])
-                ? $allQuizResults[$userId]->sum('score')
-                : 0;
-
-            $lessonTestScore = isset($allQuestionAnswers[$userId])
-                ? $allQuestionAnswers[$userId]->sum('points')
-                : 0;
-
-            $lessonsCompleted = isset($allLessonProgress[$userId]) ? $allLessonProgress[$userId]->count() : 0;
-            $assignmentsCompleted = isset($allAssignmentAnswers[$userId])
-                ? $allAssignmentAnswers[$userId]->unique('assignment_id')->count()
-                : 0;
-            $quizzesCompleted = isset($allQuizResults[$userId])
-                ? $allQuizResults[$userId]->unique('quiz_id')->count()
-                : 0;
-
-            $lessonsProgressPct = ($totalLessons > 0) ? round(($lessonsCompleted / $totalLessons) * 100) : 0;
-            $assignmentsProgressPct = ($totalAssignments > 0) ? round(($assignmentsCompleted / $totalAssignments) * 100) : 0;
-            $quizzesProgressPct = ($totalQuizzes > 0) ? round(($quizzesCompleted / $totalQuizzes) * 100) : 0;
-
             $memberId = $member->id;
+            $breakdown = $bulkBreakdowns[$memberId] ?? new \App\DataTransferObjects\ScoreBreakdown;
+            $percentage = $breakdown->percentage();
+
             $memberGroupId = $member->group_id;
             $groupAttendanceSessions = isset($attendancesByGroup[$memberGroupId]) ? $attendancesByGroup[$memberGroupId] : collect([]);
             $totalGroupAttendanceSessions = $groupAttendanceSessions->count();
@@ -1651,9 +1541,6 @@ class CourseController extends Controller
             $attendancePresent = $memberGroupAttendance->whereIn('status', [1, 2])->pluck('course_attendance_id')->unique()->count();
             $attendanceRate = ($totalGroupAttendanceSessions > 0) ? round(($attendancePresent / $totalGroupAttendanceSessions) * 100) : 0;
 
-            $rawTotal = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore + ($member->bonus_points ?? 0);
-            $percentage = ($computedMaxTotal2 > 0) ? ($rawTotal / $computedMaxTotal2) * 100 : 0;
-            $percentage = min(100, max(0, $percentage));
             $realtimeGrade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
             $finalGrade = $member->edited_grade ?? $realtimeGrade;
             $finalGradeName = \App\Models\CourseMember::getGradeNameFromGrade($finalGrade);
@@ -1661,24 +1548,24 @@ class CourseController extends Controller
             $exportData[] = [
                 'member' => $member,
                 'attendance_rate' => $attendanceRate,
-                'lessons_progress' => $lessonsProgressPct,
-                'assignments_progress' => $assignmentsProgressPct,
-                'quizzes_progress' => $quizzesProgressPct,
+                'lessons_progress' => ($breakdown->totalLessons > 0) ? round(($breakdown->lessonsCompleted / $breakdown->totalLessons) * 100) : 0,
+                'assignments_progress' => ($breakdown->totalAssignments > 0) ? round(($breakdown->assignmentsCompleted / $breakdown->totalAssignments) * 100) : 0,
+                'quizzes_progress' => ($breakdown->totalQuizzes > 0) ? round(($breakdown->quizzesCompleted / $breakdown->totalQuizzes) * 100) : 0,
                 'scores' => [
-                    'lesson_assignments' => $lessonAssignScore,
-                    'lesson_quizzes' => $lessonTestScore,
-                    'course_assignments' => $courseAssignScore,
-                    'course_quizzes' => $courseQuizScore,
-                    'bonus_points' => $member->bonus_points ?? 0,
-                    'total_score' => $rawTotal,
+                    'lesson_assignments' => $breakdown->lessonAssignmentEarned,
+                    'lesson_quizzes' => $breakdown->lessonQuestionEarned,
+                    'course_assignments' => $breakdown->courseAssignmentEarned,
+                    'course_quizzes' => $breakdown->courseQuizEarned,
+                    'bonus_points' => $breakdown->bonus,
+                    'total_score' => $breakdown->totalEarned(),
                     'percentage' => (int) round($percentage),
                     'grade_progress' => $finalGrade,
                     'grade_name' => $finalGradeName,
-                    'max_lesson_assignments' => $lessonAssignments->sum('points'),
-                    'max_lesson_quizzes' => $lessonQuestions->sum('points'),
-                    'max_course_assignments' => $courseAssignments->sum('points'),
-                    'max_course_quizzes' => $courseQuizzes->sum('total_score'),
-                    'max_total' => $computedMaxTotal2,
+                    'max_lesson_assignments' => $breakdown->lessonAssignmentMax,
+                    'max_lesson_quizzes' => $breakdown->lessonQuestionMax,
+                    'max_course_assignments' => $breakdown->courseAssignmentMax,
+                    'max_course_quizzes' => $breakdown->courseQuizMax,
+                    'max_total' => $breakdown->totalMax(),
                 ],
             ];
         }

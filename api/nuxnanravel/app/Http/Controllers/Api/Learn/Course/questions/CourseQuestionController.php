@@ -20,7 +20,7 @@ class CourseQuestionController extends Controller
             'points' => $request->points,
         ]);
 
-        $course->increment('total_score', $request->points);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
 
         if($request->hasFile('images')) {
             $images = $request->file('images');
@@ -61,7 +61,7 @@ class CourseQuestionController extends Controller
             }
             $question->options()->delete();
         }
-        $course->decrement('total_score', $question->points);
+        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
         $question->delete();
     }
 }
