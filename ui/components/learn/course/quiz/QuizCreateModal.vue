@@ -22,8 +22,8 @@ const errors = ref<string[]>([])
 const form = reactive({
   title: '',
   description: '',
-  start_date: new Date(),
-  end_date: new Date(Date.now() + 60 * 60 * 1000),
+  start_date: null as Date | null,
+  end_date: null as Date | null,
   time_limit: 60,
   passing_score: 50,
   is_active: true,
@@ -189,8 +189,8 @@ const handleSubmit = async () => {
       passing_score: form.passing_score,
       is_active: form.is_active,
       shuffle_questions: form.shuffle_questions,
-      start_date: form.start_date,
-      end_date: form.end_date,
+      start_date: form.start_date ? form.start_date.toISOString() : null,
+      end_date: form.end_date ? form.end_date.toISOString() : null,
     }
 
     const res = await api.post(`/api/courses/${props.courseId}/quizzes`, payload) as any
@@ -198,7 +198,7 @@ const handleSubmit = async () => {
     if (res.success || res.quiz) {
       Swal.fire({
         icon: 'success',
-        title: 'สร้างแบบทดสอบสำเร็จ',
+        title: form.is_active ? 'สร้างแบบทดสอบสำเร็จ — เผยแพร่แล้ว' : 'สร้างแบบทดสอบสำเร็จ — ฉบับร่าง',
         timer: 1500,
         showConfirmButton: false
       })

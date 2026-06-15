@@ -969,15 +969,13 @@ class CourseController extends Controller
             ->get()
             ->groupBy('user_id');
 
-        // Question answers - pre-join question data to avoid N+1
-        $allQuestionAnswers = \App\Models\UserAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
+        // Question answers - use LessonAnswerQuestion instead of UserAnswerQuestion
+        $allQuestionAnswers = \App\Models\LessonAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
             ->whereIn('user_id', $memberUserIds)
-            ->select('user_id', 'question_id', 'answer_id')
+            ->where('is_correct', true)
+            ->select('user_id', 'question_id', 'points')
             ->get()
             ->groupBy('user_id');
-
-        // Build a lookup for question correct answers (faster than loading relations)
-        $questionLookup = $lessonQuestions->keyBy('id');
 
         // Lesson Progress - count only
         $lessonIds = $lessons->pluck('id');
@@ -1036,16 +1034,10 @@ class CourseController extends Controller
                 ? $allQuizResults[$userId]->sum('score')
                 : 0;
 
-            // Lesson test score using pre-built lookup (no relation loading)
-            $lessonTestScore = 0;
-            if (isset($allQuestionAnswers[$userId])) {
-                foreach ($allQuestionAnswers[$userId] as $ans) {
-                    $question = $questionLookup[$ans->question_id] ?? null;
-                    if ($question && $ans->answer_id == $question->correct_option_id) {
-                        $lessonTestScore += $question->points ?? 1;
-                    }
-                }
-            }
+            // Lesson test score using pre-built lookup
+            $lessonTestScore = isset($allQuestionAnswers[$userId])
+                ? $allQuestionAnswers[$userId]->sum('points')
+                : 0;
 
             // Progress counts
             $lessonsCompleted = $lessonProgressCounts[$userId] ?? 0;
@@ -1196,10 +1188,10 @@ class CourseController extends Controller
             ->get()
             ->groupBy('user_id');
 
-        // Get lesson question answers
-        $allQuestionAnswers = \App\Models\UserAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
+        // Get lesson question answers from lesson quiz table
+        $allQuestionAnswers = \App\Models\LessonAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
             ->whereIn('user_id', $memberUserIds)
-            ->with('question')
+            ->where('is_correct', true)
             ->get()
             ->groupBy('user_id');
 
@@ -1233,14 +1225,9 @@ class CourseController extends Controller
                 ? $allQuizResults[$userId]->sum('score')
                 : 0;
 
-            $lessonTestScore = 0;
-            if (isset($allQuestionAnswers[$userId])) {
-                foreach ($allQuestionAnswers[$userId] as $ans) {
-                    if ($ans->question && $ans->answer_id == $ans->question->correct_option_id) {
-                        $lessonTestScore += $ans->question->points ?? 1;
-                    }
-                }
-            }
+            $lessonTestScore = isset($allQuestionAnswers[$userId])
+                ? $allQuestionAnswers[$userId]->sum('points')
+                : 0;
 
             $achievedScore = $courseAssignScore + $lessonAssignScore + $courseQuizScore + $lessonTestScore;
             $totalScore = $achievedScore + (float) ($member->external_score_points ?? 0) + (float) ($member->bonus_points ?? 0);
@@ -1592,9 +1579,9 @@ class CourseController extends Controller
             ->get()
             ->groupBy('user_id');
 
-        $allQuestionAnswers = \App\Models\UserAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
+        $allQuestionAnswers = \App\Models\LessonAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
             ->whereIn('user_id', $memberUserIds)
-            ->with('question')
+            ->where('is_correct', true)
             ->get()
             ->groupBy('user_id');
 
@@ -1637,14 +1624,9 @@ class CourseController extends Controller
                 ? $allQuizResults[$userId]->sum('score')
                 : 0;
 
-            $lessonTestScore = 0;
-            if (isset($allQuestionAnswers[$userId])) {
-                foreach ($allQuestionAnswers[$userId] as $ans) {
-                    if ($ans->question && $ans->answer_id == $ans->question->correct_option_id) {
-                        $lessonTestScore += $ans->question->points ?? 1;
-                    }
-                }
-            }
+            $lessonTestScore = isset($allQuestionAnswers[$userId])
+                ? $allQuestionAnswers[$userId]->sum('points')
+                : 0;
 
             $lessonsCompleted = isset($allLessonProgress[$userId]) ? $allLessonProgress[$userId]->count() : 0;
             $assignmentsCompleted = isset($allAssignmentAnswers[$userId])

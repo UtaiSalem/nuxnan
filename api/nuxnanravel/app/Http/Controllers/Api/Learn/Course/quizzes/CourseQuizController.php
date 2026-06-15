@@ -87,8 +87,8 @@ class CourseQuizController extends Controller
         ]);
 
         $validated['user_id'] = auth()->id();
-        $validated['is_active'] = $validated['is_active'] ? 1 : 0;
-        $validated['shuffle_questions'] = $validated['shuffle_questions'] ? 1 : 0;
+        $validated['is_active'] = $request->boolean('is_active') ? 1 : 0;
+        $validated['shuffle_questions'] = $request->boolean('shuffle_questions') ? 1 : 0;
         $validated['start_date'] = $validated['start_date'] ? Carbon::parse($validated['start_date'])->setTimezone('Asia/Bangkok') : null;
         $validated['end_date'] = $validated['end_date'] ? Carbon::parse($validated['end_date'])->setTimezone('Asia/Bangkok') : null;
         try {
@@ -279,8 +279,8 @@ class CourseQuizController extends Controller
         ]);
 
         $validated['user_id'] = auth()->id();
-        $validated['is_active'] = $validated['is_active'] ? 1 : 0;
-        $validated['shuffle_questions'] = $validated['shuffle_questions'] ? 1 : 0;
+        $validated['is_active'] = $request->boolean('is_active') ? 1 : 0;
+        $validated['shuffle_questions'] = $request->boolean('shuffle_questions') ? 1 : 0;
         $validated['start_date'] = $validated['start_date'] ? Carbon::parse($validated['start_date']) : null;
         $validated['end_date'] = $validated['end_date'] ? Carbon::parse($validated['end_date']) : null;
 

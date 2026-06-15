@@ -259,3 +259,21 @@ _(consolidated 2026-06-11 — all prior entries merged into Completed Features a
   - Retry delete from `/Learn/Courses/{id}/assignments` and confirm the API returns success and the list refreshes.
   - Smoke-test lesson-level assignment delete to ensure no regression between the two delete entry points.
   - Check `laravel.log` to confirm the previous `TypeError` no longer appears.
+
+### 2026-06-15 - Lesson rich text dark mode analysis (plan-only)
+- Trigger: analyze dark-mode rendering issues for lesson content.
+- Scope is frontend-only. Lesson and topic bodies are rendered in `ui/components/learn/course/lesson/LessonPost.vue` and `TopicAccordion.vue`, both using the root `ui/components/RichTextViewer.vue`.
+- Current root `RichTextViewer.vue` renders `v-html` with only lightweight newline handling and no shared `useRichText().sanitizeHtml()` path. If pasted/stored HTML contains inline `style="color:..."`, those inline colors can override `dark:prose-invert` and keep text dark on dark backgrounds.
+- There is a second `ui/components/Common/RichTextViewer.vue` with DOMPurify, richer media/table handling, and explicit dark-aware utilities; this creates inconsistent rich-text rendering paths.
+- Plan direction: consolidate lesson/topic rendering onto the safer common viewer or port its sanitizer/style-normalization into the root viewer, then add dark-specific overrides for rich text elements and verify lesson/topic pages in dark mode.
+- Verification plan: run frontend build/type check if practical, then browser smoke a course lesson with paragraphs, headings, links, lists, tables, code, images, and pasted colored text in light and dark modes.
+
+### 2026-06-15 - Lesson quiz score visibility and summary analysis (plan-only)
+- Trigger: student lesson-level quiz answers are not visible as saved scores in the lesson quiz UI and do not appear correctly in learning result summaries.
+- Scope is lesson quizzes only, not course quizzes under `/courses/{course}/quizzes`.
+- Frontend lesson quiz flow is `ui/components/learn/course/lesson/LessonInteractionTabs.vue` -> `LessonQuizSection.vue`, posting to `POST /api/lessons/{lesson}/questions/{question}/answer`.
+- Backend endpoint `LessonAnswerQuestionController@store` writes to `lesson_answer_questions` with `points` and `is_correct`, then calls `CourseScoreService::recompute($courseMember)`, so per-answer persistence exists.
+- UI issue: `LessonQuizSection.vue` intentionally does not restore persisted `question.user_answer` into `selectedAnswers`/`answerResults`, so returning students see progress only, not their previous answer/score/result state.
+- Summary/report issue: several `CourseController` progress/export calculations still load lesson question scores from `UserAnswerQuestion` instead of `LessonAnswerQuestion`, while the canonical score service already uses `lesson_answer_questions`.
+- Plan direction: restore persisted answer state in the lesson quiz UI, switch legacy progress/export summary queries to `LessonAnswerQuestion`, and keep `CourseScoreService` as the canonical score source for member totals.
+- Verification plan: create/answer a lesson question as a student, reload the lesson and confirm score/result remains visible, then verify `/api/courses/{course}/progress`, `/api/courses/{course}/members/{member}/progress`, and score breakdown/learning result summary include lesson quiz points.

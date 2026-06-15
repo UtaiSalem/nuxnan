@@ -34,10 +34,10 @@ const errors = ref<string[]>([])
 const form = reactive({
   title: '',
   description: '',
-  start_date: new Date(),
-  end_date: new Date(Date.now() + 60 * 60 * 1000), // Default 1 hour later
-  time_limit: 60, // Minutes
-  passing_score: 50, // Percent
+  start_date: null as Date | null,
+  end_date: null as Date | null,
+  time_limit: 60,
+  passing_score: 50,
   is_active: true,
   shuffle_questions: false
 })
@@ -204,8 +204,8 @@ const handleSubmit = async () => {
         passing_score: form.passing_score,
         is_active: form.is_active,
         shuffle_questions: form.shuffle_questions,
-        start_date: form.start_date,
-        end_date: form.end_date,
+        start_date: form.start_date ? form.start_date.toISOString() : null,
+        end_date: form.end_date ? form.end_date.toISOString() : null,
     }
 
     const res = await api.post(`/api/courses/${courseId}/quizzes`, payload)
@@ -213,7 +213,7 @@ const handleSubmit = async () => {
     if (res.success) {
       Swal.fire({
         icon: 'success',
-        title: 'สร้างแบบทดสอบสำเร็จ',
+        title: form.is_active ? 'สร้างแบบทดสอบสำเร็จ — เผยแพร่แล้ว' : 'สร้างแบบทดสอบสำเร็จ — ฉบับร่าง',
         timer: 1500,
         showConfirmButton: false
       })
@@ -509,7 +509,7 @@ const handleSubmit = async () => {
         </button>
       </div>
     </div>
-
+
 
     <!-- Mobile Save Button (Sticky Bottom) -->
     <div class="fixed bottom-16 sm:bottom-0 left-0 right-0 px-4 pt-3 pb-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 lg:hidden z-40" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">

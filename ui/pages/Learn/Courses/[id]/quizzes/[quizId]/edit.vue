@@ -31,21 +31,42 @@ const activeTab = ref('settings')
 const isLoading = ref(false)
 const isSaving = ref(false)
 const errors = ref<string[]>([])
+const hasAttemptedSubmit = ref(false)
 
 // Form Data
 const form = reactive({
-  title: '',
-  description: '',
-  start_date: new Date(),
-  end_date: new Date(),
-  time_limit: 60,
-  passing_score: 50,
-  is_active: true,
-  shuffle_questions: false
+    title: '',
+    description: '',
+    start_date: null as Date | null,
+    end_date: null as Date | null,
+    time_limit: 60,
+    passing_score: 50,
+    is_active: true,
+    shuffle_questions: false
 })
+
+// Snapshot of original values for dirty check
+const originalForm = ref<typeof form | null>(null)
 
 const quiz = ref<any>(null)
 const questions = ref<any[]>([])
+
+const snapshotForm = () => {
+    originalForm.value = { ...toRaw(form) }
+}
+
+const isDirty = computed(() => {
+    if (!originalForm.value) return false
+    const orig = originalForm.value
+    return form.title !== orig.title ||
+        form.description !== orig.description ||
+        form.time_limit !== orig.time_limit ||
+        form.passing_score !== orig.passing_score ||
+        form.is_active !== orig.is_active ||
+        form.shuffle_questions !== orig.shuffle_questions ||
+        form.start_date?.getTime() !== orig.start_date?.getTime() ||
+        form.end_date?.getTime() !== orig.end_date?.getTime()
+})
 
 // Fetch Data
 const fetchData = async () => {
@@ -53,12 +74,12 @@ const fetchData = async () => {
     try {
         const res = await api.get(`/api/courses/${courseId}/quizzes/${quizId}`)
         quiz.value = res.quiz
-        
+
         // Populate Form
         form.title = quiz.value.title || ''
         form.description = quiz.value.description || ''
-        form.start_date = new Date(quiz.value.start_date)
-        form.end_date = new Date(quiz.value.end_date)
+        form.start_date = quiz.value.start_date ? new Date(quiz.value.start_date) : null
+        form.end_date = quiz.value.end_date ? new Date(quiz.value.end_date) : null
         form.time_limit = quiz.value.time_limit
         form.passing_score = quiz.value.passing_score
         form.is_active = !!quiz.value.is_active
@@ -66,9 +87,13 @@ const fetchData = async () => {
 
         // Questions
         questions.value = quiz.value.questions || []
+
+        // Take snapshot after populating
+        snapshotForm()
+        hasAttemptedSubmit.value = false
     } catch (err) {
         console.error(err)
-        Swal.fire('Error', 'Failed to load quiz data', 'error')
+        Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลแบบทดสอบได้', 'error')
     } finally {
         isLoading.value = false
     }
@@ -78,19 +103,44 @@ onMounted(() => {
     fetchData()
 })
 
-// Validation
-const isFormValid = computed(() => {
-  return (form.title || '').trim() !== '' && 
-         form.time_limit > 0 && 
-         form.passing_score >= 0 && 
-         form.passing_score <= 100 &&
-         (!form.start_date || !form.end_date || new Date(form.end_date) > new Date(form.start_date))
+// Validation with per-field errors
+const validationErrors = computed(() => {
+    const errs: string[] = []
+    if ((form.title || '').trim() === '') errs.push('กรุณากรอกชื่อแบบทดสอบ')
+    if (!form.time_limit || form.time_limit <= 0) errs.push('เวลาต้องมากกว่า 0 นาที')
+    if (form.passing_score < 0 || form.passing_score > 100) errs.push('เกณฑ์ผ่านต้องอยู่ระหว่าง 0-100%')
+    if (form.start_date && form.end_date && new Date(form.end_date) <= new Date(form.start_date)) errs.push('วันสิ้นสุดต้องอยู่หลังวันเริ่มต้น')
+    return errs
 })
+
+const isFormValid = computed(() => validationErrors.value.length === 0)
 
 // Update Settings
 const handleUpdate = async () => {
-  if (!isFormValid.value || isSaving.value) return
-  
+  hasAttemptedSubmit.value = true
+
+  if (!isFormValid.value) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'กรุณาตรวจสอบข้อมูล',
+      html: validationErrors.value.map(e => `• ${e}`).join('<br>'),
+    })
+    return
+  }
+
+  if (!isDirty.value) {
+    Swal.fire({
+      icon: 'info',
+      title: 'ไม่มีการเปลี่ยนแปลง',
+      text: 'ข้อมูลยังเหมือนเดิม ไม่จำเป็นต้องบันทึก',
+      timer: 2500,
+      showConfirmButton: false
+    })
+    return
+  }
+
+  if (isSaving.value) return
+
   isSaving.value = true
   errors.value = []
 
@@ -102,18 +152,20 @@ const handleUpdate = async () => {
         passing_score: form.passing_score,
         is_active: form.is_active,
         shuffle_questions: form.shuffle_questions,
-        start_date: form.start_date,
-        end_date: form.end_date,
+        start_date: form.start_date ? form.start_date.toISOString() : null,
+        end_date: form.end_date ? form.end_date.toISOString() : null,
     }
 
     const res = await api.put(`/api/courses/${courseId}/quizzes/${quizId}`, payload)
-    
+
     // Refresh data
     quiz.value = res.quiz || res.data?.quiz
+    snapshotForm()
+    hasAttemptedSubmit.value = false
     Swal.fire({
         icon: 'success',
-        title: 'บันทึกสำเร็จ',
-        timer: 1500,
+        title: form.is_active ? 'บันทึกสำเร็จ — เผยแพร่แล้ว' : 'บันทึกสำเร็จ — ปิดเผยแพร่แล้ว',
+        timer: 2000,
         showConfirmButton: false
     })
   } catch (err: any) {
@@ -121,12 +173,12 @@ const handleUpdate = async () => {
     if (err.data?.errors) {
       errors.value = Object.values(err.data.errors).flat() as string[]
     } else {
-      errors.value = ['เกิดข้อผิดพลาดในการบันทึก']
+      errors.value = [err.data?.message || 'เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง']
     }
     Swal.fire({
       icon: 'error',
-      title: 'เกิดข้อผิดพลาด',
-      text: errors.value[0]
+      title: 'บันทึกไม่สำเร็จ',
+      html: errors.value.map(e => `• ${e}`).join('<br>'),
     })
   } finally {
     isSaving.value = false
@@ -497,7 +549,8 @@ const deleteQuestion = async (qId: number) => {
             <div class="grid gap-6">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อแบบทดสอบ <span class="text-red-500">*</span></label>
-                <input v-model="form.title" type="text" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                <input v-model="form.title" type="text" :class="['w-full px-4 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent', hasAttemptedSubmit && !form.title.trim() ? 'border-red-500' : 'border-gray-300 dark:border-gray-600']" />
+                <p v-if="hasAttemptedSubmit && !form.title.trim()" class="mt-1 text-xs text-red-500">กรุณากรอกชื่อแบบทดสอบ</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำอธิบาย</label>
@@ -515,14 +568,16 @@ const deleteQuestion = async (qId: number) => {
                 </h3>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">เวลา (นาที) <span class="text-red-500">*</span></label>
-                    <input v-model.number="form.time_limit" type="number" min="1" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                    <input v-model.number="form.time_limit" type="number" min="1" :class="['w-full px-4 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent', hasAttemptedSubmit && (!form.time_limit || form.time_limit <= 0) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600']" />
+                    <p v-if="hasAttemptedSubmit && (!form.time_limit || form.time_limit <= 0)" class="mt-1 text-xs text-red-500">เวลาต้องมากกว่า 0 นาที</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">เกณฑ์ผ่าน (%) <span class="text-red-500">*</span></label>
                     <div class="relative">
-                        <input v-model.number="form.passing_score" type="number" min="0" max="100" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-8" />
+                        <input v-model.number="form.passing_score" type="number" min="0" max="100" :class="['w-full px-4 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-8', hasAttemptedSubmit && (form.passing_score < 0 || form.passing_score > 100) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600']" />
                         <span class="absolute right-3 top-2.5 text-gray-500">%</span>
                     </div>
+                    <p v-if="hasAttemptedSubmit && (form.passing_score < 0 || form.passing_score > 100)" class="mt-1 text-xs text-red-500">เกณฑ์ผ่านต้องอยู่ระหว่าง 0-100%</p>
                 </div>
             </div>
             <div class="space-y-4">
@@ -537,6 +592,7 @@ const deleteQuestion = async (qId: number) => {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">สิ้นสุด</label>
                     <VueDatePicker v-model="form.end_date" :format="'dd/MM/yyyy HH:mm'" auto-apply :teleport="true" />
+                    <p v-if="hasAttemptedSubmit && form.start_date && form.end_date && new Date(form.end_date) <= new Date(form.start_date)" class="mt-1 text-xs text-red-500">วันสิ้นสุดต้องอยู่หลังวันเริ่มต้น</p>
                 </div>
             </div>
             </div>
@@ -568,10 +624,10 @@ const deleteQuestion = async (qId: number) => {
                 >
                   ยกเลิก
                 </button>
-                <button 
+                <button
                   @click="handleUpdate"
                   class="px-6 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
-                  :disabled="!isFormValid || isSaving"
+                  :disabled="isSaving"
                 >
                   <span v-if="isSaving">กำลังบันทึก...</span>
                   <span v-else>บันทึกการเปลี่ยนแปลง</span>
@@ -646,7 +702,7 @@ const deleteQuestion = async (qId: number) => {
     <div class="fixed bottom-16 sm:bottom-0 left-0 right-0 px-4 pt-3 pb-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 lg:hidden z-40" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));">
       <div class="max-w-4xl mx-auto flex items-center gap-3">
         <button @click="$router.back()" class="flex-1 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-[48px]">ยกเลิก</button>
-        <button @click="handleUpdate" :disabled="!isFormValid || isSaving" class="flex-1 px-4 py-3 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors min-h-[48px]">{{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}</button>
+        <button @click="handleUpdate" :disabled="isSaving" class="flex-1 px-4 py-3 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors min-h-[48px]">{{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}</button>
       </div>
     </div>
 

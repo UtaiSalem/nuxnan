@@ -38,30 +38,54 @@ const submitting = ref<Record<number, boolean>>({})
 
 // Initialize and sync questions
 watch(() => props.questions, (newVal) => {
-    // Deep clone to break reference
     if (newVal) {
         localQuestions.value = JSON.parse(JSON.stringify(newVal))
         
-        // Restore state from persisted user_answer
-        // REFINED LOGIC: We do NOT restore selectedAnswers or answerResults to UI.
-        // We only use the data for Progress Bar calculation (handled in computed).
-        // So we keep the UI clean for re-attempts.
+        // Restore persisted answers
+        newVal.forEach(q => {
+            if (q.user_answer) {
+                // Restore result feedback (ถูก/ผิด)
+                answerResults.value[q.id] = {
+                    is_correct: !!q.user_answer.is_correct,
+                    points: q.user_answer.points || 0,
+                    message: q.user_answer.is_correct ? 'ถูกต้อง!' : 'ยังไม่ถูกต้อง'
+                }
+                // Restore selected answer เฉพาะข้อที่ถูก (ข้อผิดให้ลองใหม่ได้)
+                if (q.user_answer.is_correct) {
+                    selectedAnswers.value[q.id] = q.user_answer.answer_id
+                }
+            }
+        })
     }
 }, { immediate: true, deep: true })
+
+const answeredCount = computed(() => {
+    const ids = new Set(Object.keys(answerResults.value).map(Number))
+    props.questions?.forEach(q => { if (q.user_answer) ids.add(q.id) })
+    return ids.size
+})
+
+const earnedPoints = computed(() => {
+    let total = 0
+    // From current session
+    Object.values(answerResults.value).forEach((r: any) => { if (r.is_correct) total += (r.points || 0) })
+    // From persisted (not yet in session answerResults)
+    props.questions?.forEach(q => {
+        if (q.user_answer?.is_correct && !answerResults.value[q.id]) {
+            total += (q.user_answer.points || 0)
+        }
+    })
+    return total
+})
+
+const totalPoints = computed(() => {
+    return props.questions?.reduce((sum, q) => sum + (q.points || 1), 0) || 0
+})
 
 // Progress Value
 const progressPercentage = computed(() => {
     if (!props.questions || props.questions.length === 0) return 0
-    // Count questions that have a result (answered) OR persisted answer
-    // We combine current session results with persisted data
-    const answeredIds = new Set(Object.keys(answerResults.value).map(Number))
-    if (props.questions) {
-        props.questions.forEach(q => {
-            if (q.user_answer) answeredIds.add(q.id)
-        })
-    }
-    const answeredCount = answeredIds.size
-    return Math.round((answeredCount / props.questions.length) * 100)
+    return Math.round((answeredCount.value / props.questions.length) * 100)
 })
 
 const selectOption = (questionId: number, optionId: number) => {
@@ -193,6 +217,29 @@ const closeLightbox = () => {
       </div>
       <div v-if="!isCreator && hasQuestions" class="text-right text-sm text-gray-500 dark:text-gray-400">
         ความคืบหน้า: {{ progressPercentage }}%
+      </div>
+    </div>
+
+    <!-- Score Summary (Student Only, showing when there's progress) -->
+    <div v-if="!isCreator && hasQuestions && answeredCount > 0"
+         class="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 
+                rounded-xl p-4 border border-orange-200 dark:border-orange-800 mb-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <Icon icon="fluent:trophy-24-filled" class="w-8 h-8 text-orange-500" />
+          <div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">คะแนนที่ได้</p>
+            <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">
+              {{ earnedPoints }} <span class="text-sm font-normal text-gray-500">/ {{ totalPoints }}</span>
+            </p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-sm text-gray-600 dark:text-gray-400">ตอบแล้ว</p>
+          <p class="text-lg font-bold text-gray-900 dark:text-white">
+            {{ answeredCount }} <span class="text-sm font-normal text-gray-500">/ {{ questions.length }} ข้อ</span>
+          </p>
+        </div>
       </div>
     </div>
 
