@@ -51,10 +51,8 @@ type SeatSpriteRefs = {
   pulse?: Phaser.Tweens.Tween | null
 }
 
-type PolygonPoint = {
-  x: number
-  y: number
-}
+type PolygonPoint = Phaser.Types.Math.Vector2Like
+type PolyArg = Phaser.Math.Vector2[]
 
 export class AttendanceRoomScene extends Phaser.Scene {
   private handlers: AttendanceSceneHandlers
@@ -477,13 +475,13 @@ export class AttendanceRoomScene extends Phaser.Scene {
       { x: 0, y: deskDepth },
     ]
     desk.fillStyle(tone.left, 1)
-    desk.fillPoints(leftFace, true)
+    desk.fillPoints(leftFace as PolyArg, true)
     desk.fillStyle(tone.right, 1)
-    desk.fillPoints(rightFace, true)
+    desk.fillPoints(rightFace as PolyArg, true)
     desk.fillStyle(tone.top, 1)
-    desk.fillPoints(topFace, true)
+    desk.fillPoints(topFace as PolyArg, true)
     desk.lineStyle(1.5, tone.stroke, 1)
-    desk.strokePoints(topFace, true)
+    desk.strokePoints(topFace as PolyArg, true)
 
     const shadow = this.add.ellipse(0, deskTopH + 24, deskTopW, 10, 0x5e8c34, seat.status === ATTENDANCE_STATUS.ABSENT ? 0.18 : 0.28)
     shadow.setName('shadow')
@@ -613,13 +611,13 @@ export class AttendanceRoomScene extends Phaser.Scene {
         { x: 0, y: deskDepth },
       ]
       desk.fillStyle(tone.left, 1)
-      desk.fillPoints(leftFace, true)
+      desk.fillPoints(leftFace as PolyArg, true)
       desk.fillStyle(tone.right, 1)
-      desk.fillPoints(rightFace, true)
+      desk.fillPoints(rightFace as PolyArg, true)
       desk.fillStyle(tone.top, 1)
-      desk.fillPoints(topFace, true)
+      desk.fillPoints(topFace as PolyArg, true)
       desk.lineStyle(1.5, tone.stroke, 1)
-      desk.strokePoints(topFace, true)
+      desk.strokePoints(topFace as PolyArg, true)
 
       body.setFillStyle(tone.shirt, seat.status === ATTENDANCE_STATUS.LEAVE ? 0.55 : 1)
       avatar.setStrokeStyle(3, tone.ring, 1)
