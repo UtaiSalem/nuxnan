@@ -6,23 +6,28 @@
 
 ---
 
-## สถานะปัจจุบัน (2026-06-11)
+## สถานะปัจจุบัน (2026-06-16)
 
 ### งานที่เพิ่งเสร็จสิ้น — Verified & Tested
 
+- **Done:** Phaser classroom v5/v6.1 refinement (board depth + floor junction + teacher patrol safety + responsive patrol) (`dbcf903e`)
+- **Done:** Phaser classroom renderer + grid zoning refinement (`907dedc0`)
+- **Done:** Student self check-in + simulator UI (`03db0ee0`)
+- **Done:** Earn white-screen — fixed in `5821d1d3` (NuxtLayout hoisted to app-level, Earn pages migrated to Teleport slots)
+- **Done:** Topic Form Stale State Fix — already in history, no uncommitted diff
 - **Done:** Topic Reading Progress + Anti-Cheat + Auto-Complete Lesson (`060ce9fe`)
 - **Done:** Image Gallery Viewer + Marketplace Filters (`0997d945`)
 - **Done:** Academy Admin Embedded Marketplace Purchase (`d3959560` + `8ebedcf6`)
-- **Done:** Admin Support Donate Fix (duplicate PATCH + error handling) (`060ce9fe`)
-- **Done:** Topic Form Stale State Fix (uncommitted — `TopicFormModal.vue`)
-- **Done:** Carbon `diffInSeconds` bug fix in `TopicReadProgress` + `UserAnswerQuestionController`
-- **Done:** Analysis file consolidated — removed stale queued items
 
-### งานที่ค้าง (plan only)
+### งานที่ค้าง
 
-- **Earn white-screen route regression:** แผนเท่านั้น ต้อง browser smoke test ก่อน — อาจ resolved แล้วจาก `5821d1d3`
-- **TODO:** —
-- **Pending Commit:** TopicFormModal.vue fix + analysis cleanup
+- **Phaser remaining phases (out of v5/v6.1 plan):**
+  - Phase N — TypeScript `PolygonPoint` → `Vector2Like` cleanup (pre-existing error, ~10 min)
+  - Phase M — Full-name tooltip on seat hover
+  - Phase L — Body anatomy upgrade (shoulders, larger torso)
+  - Phase O — Tablet teacher patrol variation (currently desktop-only inspect)
+  - Phase T2 — Replace nested onComplete chain with `tweens.chain()` builder (largest commit)
+- **Smoke test:** Earn pages on real browser (3 viewports) — fix likely correct but never verified live
 
 ---
 
@@ -30,6 +35,8 @@
 
 | วันที่ | งาน | สถานะ |
 |--------|------|-------|
+| 2026-06-16 | Phaser classroom v5/v6.1 refinement (board + floor + patrol safety + responsive) | ✅ Done |
+| 2026-06-13 | Phaser classroom renderer + grid zoning + self check-in | ✅ Done |
 | 2026-06-11 | Topic Reading Progress + Anti-Cheat + Auto-Complete Lesson | ✅ Done |
 | 2026-06-11 | Image Gallery Viewer + Marketplace Filters | ✅ Done |
 | 2026-06-11 | Academy Admin Embedded Marketplace Purchase | ✅ Done |
