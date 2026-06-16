@@ -76,7 +76,14 @@ async function initPhaser() {
           const { width: w } = containerRef.value!.getBoundingClientRect()
           resizeGame(Math.round(w), h)
         },
-        getAvatarUrl: (user) => getAvatarUrl(user),
+        getAvatarUrl: (user) => {
+          const url = getAvatarUrl(user)
+          // Do not pass ui-avatars.com to Phaser due to their current CORS bug
+          if (url && url.includes('ui-avatars.com')) {
+            return null as any
+          }
+          return url
+        },
       },
     )
   } catch (error) {
