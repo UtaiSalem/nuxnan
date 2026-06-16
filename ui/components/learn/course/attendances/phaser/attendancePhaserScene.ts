@@ -930,20 +930,25 @@ export class AttendanceRoomScene extends Phaser.Scene {
     const step = () => {
       if (isStale()) return
 
-      // T5/T6: Responsive & Reduced Motion
-      // tablet/mobile or reduced -> front-only. Full patrol only on desktop.
-      const isDesktop = this.scale.width >= 1024
-      const inspectRow = !isReduced && isDesktop && Math.random() < 0.4
-      
+      // T5/T6/O: Responsive & Reduced Motion
+      // desktop -> full patrol (40% inspect, any aisle)
+      // tablet  -> 20% inspect but only first aisle
+      // mobile  -> front-only
+      const w = this.scale.width
+      const inspectChance = isReduced ? 0 : w >= 1024 ? 0.4 : w >= 768 ? 0.2 : 0
+      const inspectRow = Math.random() < inspectChance
+
       // Reduced motion: 3x slower travel
       const speedMult = isReduced ? 3 : 1
 
       if (inspectRow) {
-        // T1: Pick a real aisle center between zones
+        // T1/O: Pick aisle — desktop random, tablet first aisle only
         const aisleXs = this.computeAisleXs(geom)
-        const aisleX = aisleXs.length > 0
-          ? aisleXs[Math.floor(Math.random() * aisleXs.length)]
-          : this.gridCenterX
+        const aisleX = aisleXs.length === 0
+          ? this.gridCenterX
+          : w >= 1024
+            ? aisleXs[Math.floor(Math.random() * aisleXs.length)]
+            : aisleXs[0]
         const row = Math.floor(rand(0, Math.max(1, geom.rows)))
         const targetY = geom.floorY + (row + 0.5) * geom.rowGap
 
