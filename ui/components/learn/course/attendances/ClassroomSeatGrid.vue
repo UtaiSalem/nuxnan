@@ -36,42 +36,48 @@ const clockToneClass = computed(() => {
   }
 })
 
-// Tailwind needs literal class names — map half-width column count explicitly.
-// Big groups (10 logical cols) wrap down to fewer visual columns on small screens.
-const halfGridClass = computed(() => {
-  if (props.cols >= 10) return 'grid-cols-3 sm:grid-cols-4 xl:grid-cols-5'
-  if (props.cols >= 6) return 'grid-cols-3'
-  return 'grid-cols-2'
+// Responsive zoning shared with the Phaser renderer so both surfaces stay
+// in lockstep when the viewport changes.
+const { zoning } = useClassroomLayout()
+
+type ZoneSlice = { seats: SeatData[]; empty: number; cols: number }
+const zoneSlices = computed<ZoneSlice[]>(() => {
+  const { zones, totalCols } = zoning.value
+  const rows = Math.ceil(props.totalSeats / totalCols)
+  return zones.map((zoneCols, zoneIdx) => {
+    const offset = zones.slice(0, zoneIdx).reduce((a, b) => a + b, 0)
+    const seats = props.seats.filter((_, i) => {
+      const c = i % totalCols
+      return c >= offset && c < offset + zoneCols
+    })
+    return { seats, empty: Math.max(0, rows * zoneCols - seats.length), cols: zoneCols }
+  })
 })
 
-/**
- * Split seats into left and right halves for the grid with center aisle.
- * Left half = cols/2 columns, right half = cols/2 columns.
- * We fill left-to-right, top-to-bottom within each half.
- */
-const leftSeats = computed(() => {
-  const half = Math.floor(props.cols / 2)
-  return props.seats.filter((_, i) => i % props.cols < half)
-})
+// Map zone cols → literal Tailwind class (Tailwind needs static class names).
+function zoneGridClass(cols: number) {
+  switch (cols) {
+    case 1: return 'grid-cols-1'
+    case 2: return 'grid-cols-2'
+    case 3: return 'grid-cols-3'
+    default: return 'grid-cols-2'
+  }
+}
 
-const rightSeats = computed(() => {
-  const half = Math.floor(props.cols / 2)
-  return props.seats.filter((_, i) => i % props.cols >= half)
-})
+// Wrapper grid template (3-zone vs 2-zone).
+const wrapperGridClass = computed(() =>
+  zoning.value.zones.length === 3
+    ? 'grid grid-cols-[1fr_auto_1fr_auto_1fr]'
+    : 'grid grid-cols-[1fr_auto_1fr]',
+)
 
 const { getAvatarUrl } = useAvatar()
-
-const emptyLeftSlots = computed(() =>
-  Math.max(0, Math.ceil(props.totalSeats / 2) - leftSeats.value.length),
-)
-const emptyRightSlots = computed(() =>
-  Math.max(0, Math.ceil(props.totalSeats / 2) - rightSeats.value.length),
-)
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const floorRef = ref<HTMLElement | null>(null)
+const doorRef = ref<HTMLElement | null>(null)
 
 // ─── Student walk-in animation ────────────────────────
 // When a seat newly enters the "arriving" state, a small figure walks in
@@ -124,7 +130,8 @@ function startWalker(el: unknown, walker: Walker) {
   const node = el as HTMLElement | null
   if (!node || startedWalks.has(walker.id)) return
   const floor = floorRef.value
-  if (!floor) return
+  const door = doorRef.value
+  if (!floor || !door) return
 
   const seatEl = floor.querySelector<HTMLElement>(`[data-member-id="${walker.id}"]`)
   if (!seatEl) {
@@ -135,8 +142,10 @@ function startWalker(el: unknown, walker: Walker) {
 
   const floorRect = floor.getBoundingClientRect()
   const seatRect = seatEl.getBoundingClientRect()
-  const doorX = floorRect.width / 2 - WALKER_W / 2
-  const doorY = floorRect.height - 64
+  const doorRect = door.getBoundingClientRect()
+
+  const doorX = doorRect.left - floorRect.left + doorRect.width / 2 - WALKER_W / 2
+  const doorY = doorRect.top - floorRect.top
   const seatX = seatRect.left - floorRect.left + seatRect.width / 2 - WALKER_W / 2
   const seatY = seatRect.top - floorRect.top
 
@@ -160,11 +169,19 @@ function startWalker(el: unknown, walker: Walker) {
 
 <template>
   <!-- Farm-game classroom scene: grass + wooden floor (colors fixed in both modes) -->
-  <div class="rounded-vikinger overflow-hidden bg-[#7CC74E] p-3 sm:p-5">
+  <div class="rounded-vikinger overflow-hidden bg-[#7CC74E] p-3 sm:p-5 relative">
+    <!-- Top wall behind the blackboard -->
+    <div class="absolute inset-x-0 top-0 h-28 sm:h-32 bg-gradient-to-b from-[#6B4A2B] via-[#8B5E3C] to-[#A47148] pointer-events-none" aria-hidden="true"></div>
+
     <!-- Blackboard with session info + summary -->
-    <div class="flex justify-center mb-4 sm:mb-5">
-      <div class="w-full sm:w-4/5 bg-[#9A6B3F] rounded-xl p-1.5 shadow-md">
-        <div class="bg-[#2F5D46] rounded-lg px-3 py-2.5 sm:px-5 sm:py-3 text-center space-y-1">
+    <div class="relative flex justify-center mb-4 sm:mb-5">
+      <!-- Hanging brackets above the board -->
+      <span class="absolute -top-1 left-[22%] w-1.5 h-3 bg-[#4A5568] rounded-sm shadow-sm" aria-hidden="true"></span>
+      <span class="absolute -top-1 right-[22%] w-1.5 h-3 bg-[#4A5568] rounded-sm shadow-sm" aria-hidden="true"></span>
+      <div class="w-full sm:w-4/5 bg-gradient-to-b from-[#A87547] to-[#7A5230] rounded-xl p-1.5 shadow-lg ring-1 ring-black/20">
+        <div class="bg-gradient-to-b from-[#2F5D46] to-[#264D3B] rounded-lg px-3 py-2.5 sm:px-5 sm:py-3 text-center space-y-1 relative overflow-hidden">
+          <!-- Chalk dust overlay -->
+          <span class="absolute inset-0 opacity-[0.06] bg-[radial-gradient(circle_at_20%_30%,white,transparent_40%),radial-gradient(circle_at_80%_70%,white,transparent_35%)] pointer-events-none" aria-hidden="true"></span>
           <p class="text-[#EAF5EC] text-sm sm:text-base font-semibold truncate">
             {{ title || 'เช็คชื่อ' }}
           </p>
@@ -193,97 +210,99 @@ function startWalker(el: unknown, walker: Walker) {
       </div>
     </div>
 
-    <!-- Wooden floor with plank lines -->
+    <!-- Wooden floor with plank lines, side walls + skirting + ambient lighting -->
     <div
       ref="floorRef"
-      class="relative rounded-xl border-2 border-[#B98A52] bg-[#E9C58F] [background-image:repeating-linear-gradient(0deg,transparent,transparent_26px,#D9AE74_26px,#D9AE74_27px)] p-2 sm:p-4"
+      class="relative rounded-xl border-l-4 border-r-4 border-t-4 border-b-2 border-[#8B5E3C] bg-[#E9C58F] [background-image:repeating-linear-gradient(0deg,transparent,transparent_26px,#D9AE74_26px,#D9AE74_27px)] p-2 sm:p-4 max-w-2xl mx-auto shadow-[inset_0_8px_24px_rgba(0,0,0,0.18)]"
     >
-      <!-- Students walking in from the back door to their desks -->
-      <div
-        v-for="wk in walkers"
-        :key="'walker-' + wk.id"
-        :ref="el => startWalker(el, wk)"
-        class="absolute z-30 flex flex-col items-center w-12 pointer-events-none"
-        aria-hidden="true"
-      >
-        <div class="teacher-bob flex flex-col items-center">
-          <img
-            :src="walkerAvatar(wk)"
-            :alt="wk.name"
-            class="w-7 h-7 rounded-full object-cover border-2 border-emerald-400 ring-2 ring-emerald-300/60 bg-white"
-          />
-          <span class="w-6 h-2.5 rounded-t-lg bg-emerald-600 -mt-1"></span>
+      <!-- Ambient light from the blackboard -->
+      <span class="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.22),transparent_70%)] pointer-events-none rounded-t-xl" aria-hidden="true"></span>
+      <!-- Skirting board where floor meets walls -->
+      <span class="absolute inset-x-0 top-0 h-1.5 bg-[#6B4A2B] pointer-events-none" aria-hidden="true"></span>
+      <div>
+        <!-- Students walking in from the back door to their desks -->
+        <div
+          v-for="wk in walkers"
+          :key="'walker-' + wk.id"
+          :ref="el => startWalker(el, wk)"
+          class="absolute z-[15] flex flex-col items-center w-12 pointer-events-none"
+          aria-hidden="true"
+        >
+          <div class="teacher-bob flex flex-col items-center">
+            <img
+              :src="walkerAvatar(wk)"
+              :alt="wk.name"
+              class="w-7 h-7 rounded-full object-cover border-2 border-emerald-400 ring-2 ring-emerald-300/60 bg-white"
+            />
+            <span class="w-6 h-2.5 rounded-t-lg bg-emerald-600 -mt-1"></span>
+          </div>
+          <span class="text-[10px] font-semibold text-[#4A3220] max-w-[48px] truncate">
+            {{ wk.name }}
+          </span>
         </div>
-        <span class="text-[10px] font-semibold text-[#4A3220] max-w-[48px] truncate">
-          {{ wk.name }}
-        </span>
-      </div>
 
-      <div class="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-4">
-        <!-- Left half of classroom -->
-        <div class="grid gap-1.5 sm:gap-2" :class="halfGridClass">
-          <div
-            v-for="seat in leftSeats"
-            :key="seat.course_member_id"
-            class="flex justify-center"
-            :data-member-id="seat.course_member_id"
-          >
-            <div class="w-full max-w-[88px]">
-              <SeatCard
-                :seat="seat"
-                :is-course-admin="isCourseAdmin"
-                :server-time-ms="serverTimeMs"
-                :selected="seat.course_member_id === selectedMemberId"
-                :is-me="seat.course_member_id === authMemberId"
-                :walking="walkingIds.has(seat.course_member_id)"
-                @select="emit('select', seat.course_member_id)"
-              />
+        <!-- Responsive seat grid: zones + aisles built from useClassroomLayout() -->
+        <div :class="wrapperGridClass" class="gap-x-1.5 sm:gap-x-3">
+          <template v-for="(zone, zIdx) in zoneSlices" :key="'zone-' + zIdx">
+            <div class="grid gap-1.5 sm:gap-2 content-start" :class="zoneGridClass(zone.cols)">
+              <div
+                v-for="seat in zone.seats"
+                :key="seat.course_member_id"
+                class="flex justify-center"
+                :data-member-id="seat.course_member_id"
+              >
+                <div class="w-full max-w-[88px]">
+                  <SeatCard
+                    :seat="seat"
+                    :is-course-admin="isCourseAdmin"
+                    :server-time-ms="serverTimeMs"
+                    :selected="seat.course_member_id === selectedMemberId"
+                    :is-me="seat.course_member_id === authMemberId"
+                    :walking="walkingIds.has(seat.course_member_id)"
+                    @select="emit('select', seat.course_member_id)"
+                  />
+                </div>
+              </div>
+              <div
+                v-for="n in zone.empty"
+                :key="'empty-' + zIdx + '-' + n"
+                class="flex justify-center"
+              >
+                <div class="w-full max-w-[88px] h-[84px] rounded-xl border-2 border-dashed border-[#B98A52]/50"></div>
+              </div>
             </div>
-          </div>
-          <div
-            v-for="n in emptyLeftSlots"
-            :key="'empty-l-' + n"
-            class="flex justify-center"
-          >
-            <div class="w-full max-w-[88px] h-[84px] rounded-xl border-2 border-dashed border-[#B98A52]/50"></div>
-          </div>
-        </div>
 
-        <!-- Center aisle (wide enough for the teacher to walk through) -->
-        <div class="w-8 sm:w-12 rounded-lg bg-[#F2D8AC] border-x border-[#E3C089] relative" aria-hidden="true">
-          <div class="absolute inset-y-2 left-1/2 -translate-x-1/2 border-l-2 border-dashed border-[#E3C089]"></div>
-          <!-- Back door at the end of the aisle -->
-          <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-8 h-10 bg-[#9A6B3F] border-2 border-[#7A5230] rounded-t-lg">
-            <span class="absolute right-1 top-1/2 w-1 h-1 rounded-full bg-[#E9C58F]"></span>
-          </div>
-        </div>
-
-        <!-- Right half of classroom -->
-        <div class="grid gap-1.5 sm:gap-2" :class="halfGridClass">
-          <div
-            v-for="seat in rightSeats"
-            :key="seat.course_member_id"
-            class="flex justify-center"
-            :data-member-id="seat.course_member_id"
-          >
-            <div class="w-full max-w-[88px]">
-              <SeatCard
-                :seat="seat"
-                :is-course-admin="isCourseAdmin"
-                :server-time-ms="serverTimeMs"
-                :selected="seat.course_member_id === selectedMemberId"
-                :is-me="seat.course_member_id === authMemberId"
-                :walking="walkingIds.has(seat.course_member_id)"
-                @select="emit('select', seat.course_member_id)"
-              />
+            <!-- Aisle between this zone and the next -->
+            <div
+              v-if="zIdx < zoneSlices.length - 1"
+              class="w-4 sm:w-8 rounded-lg bg-[#F2D8AC]/60 border-x border-[#E3C089]/50 relative"
+              aria-hidden="true"
+            >
+              <div class="absolute inset-y-2 left-1/2 -translate-x-1/2 border-l-2 border-dashed border-[#E3C089]/50"></div>
             </div>
-          </div>
+          </template>
+        </div>
+
+        <!-- Door (centered below the full grid so zone count does not shift it) -->
+        <div ref="doorRef" class="relative mt-10 mb-2 flex justify-center">
+          <!-- Layer 1: wooden door frame (decorative) -->
           <div
-            v-for="n in emptyRightSlots"
-            :key="'empty-r-' + n"
-            class="flex justify-center"
+            class="absolute left-1/2 -translate-x-1/2 bottom-0 w-28 sm:w-36 h-20 sm:h-24 bg-gradient-to-b from-[#9A6B3F] to-[#7A5230] border-x-4 border-t-4 border-[#5C3D24] rounded-t-2xl shadow-2xl shadow-black/40 z-[10] pointer-events-none"
+            aria-hidden="true"
           >
-            <div class="w-full max-w-[88px] h-[84px] rounded-xl border-2 border-dashed border-[#B98A52]/50"></div>
+            <span class="absolute inset-x-2 top-2 h-3 bg-[#6B4A2B]/50 rounded-sm"></span>
+            <span class="door-knob absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-yellow-300 shadow-[0_0_4px_rgba(253,224,71,0.8)]"></span>
+          </div>
+
+          <!-- Layer 2: interactive content (button / state chip) -->
+          <div class="relative z-[20] pt-2">
+            <Transition name="door-content" mode="out-in">
+              <slot name="door">
+                <div class="px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm text-[10px] font-bold text-[#7A5230] shadow-sm">
+                  ประตูห้องเรียน
+                </div>
+              </slot>
+            </Transition>
           </div>
         </div>
       </div>
@@ -301,9 +320,33 @@ function startWalker(el: unknown, walker: Walker) {
   to { transform: translateY(-3px); }
 }
 
+.door-knob {
+  animation: door-knob-breath 4s ease-in-out infinite;
+}
+
+@keyframes door-knob-breath {
+  0%, 100% { opacity: 0.85; transform: translateY(-50%) scale(1); }
+  50% { opacity: 1; transform: translateY(-50%) scale(1.2); }
+}
+
+.door-content-enter-active,
+.door-content-leave-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.door-content-enter-from,
+.door-content-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .teacher-bob {
+  .teacher-bob,
+  .door-knob {
     animation: none;
+  }
+  .door-content-enter-active,
+  .door-content-leave-active {
+    transition: none;
   }
 }
 </style>

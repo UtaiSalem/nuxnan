@@ -4,6 +4,8 @@ import AttendancesList from '~/components/learn/course/AttendancesList.vue'
 // Inject course data from parent
 const course = inject<Ref<any>>('course')
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
+
+usePageLayoutWidgets({ right: false })
 </script>
 
 <template>
