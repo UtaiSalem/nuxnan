@@ -485,7 +485,10 @@ export class AttendanceRoomScene extends Phaser.Scene {
 
     const shadow = this.add.ellipse(0, deskTopH + 24, deskTopW, 10, 0x5e8c34, seat.status === ATTENDANCE_STATUS.ABSENT ? 0.18 : 0.28)
     shadow.setName('shadow')
-    const body = this.add.rectangle(0, -18, 16, 10, tone.shirt, seat.status === ATTENDANCE_STATUS.LEAVE ? 0.55 : 1)
+    const isLeave = seat.status === ATTENDANCE_STATUS.LEAVE
+    const shoulders = this.add.rectangle(0, -12, 26, 4, tone.stroke, isLeave ? 0.45 : 0.85)
+    shoulders.setName('shoulders')
+    const body = this.add.rectangle(0, -14, 22, 14, tone.shirt, isLeave ? 0.45 : 1)
     body.setName('body')
 
     const { circle: avatar } = this.drawAvatar(container, 0, -28, { avatar: seat.avatar, name: seat.name }, avatarRadius)
@@ -517,7 +520,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
         }).setOrigin(0.5)
       : null
 
-    container.add([shadow, body, avatar, desk, seatBadge, seatNum, nameText])
+    container.add([shadow, shoulders, body, avatar, desk, seatBadge, seatNum, nameText])
     if (timeText) container.add(timeText)
 
     container.setData('memberId', seat.course_member_id)
@@ -583,6 +586,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
       // container.add() call.
       const desk = container.getByName('desk') as Phaser.GameObjects.Graphics
       const body = container.getByName('body') as Phaser.GameObjects.Rectangle
+      const shoulders = container.getByName('shoulders') as Phaser.GameObjects.Rectangle | null
       const avatar = container.getByName('avatar') as Phaser.GameObjects.Arc
       const seatBadge = container.getByName('seatBadge') as Phaser.GameObjects.Arc
       if (!desk || !body || !avatar || !seatBadge) return
@@ -619,7 +623,9 @@ export class AttendanceRoomScene extends Phaser.Scene {
       desk.lineStyle(1.5, tone.stroke, 1)
       desk.strokePoints(topFace as PolyArg, true)
 
-      body.setFillStyle(tone.shirt, seat.status === ATTENDANCE_STATUS.LEAVE ? 0.55 : 1)
+      const isLeave = seat.status === ATTENDANCE_STATUS.LEAVE
+      body.setFillStyle(tone.shirt, isLeave ? 0.45 : 1)
+      shoulders?.setFillStyle(tone.stroke, isLeave ? 0.45 : 0.85)
       avatar.setStrokeStyle(3, tone.ring, 1)
       seatBadge.setFillStyle(tone.badge, 1)
 
