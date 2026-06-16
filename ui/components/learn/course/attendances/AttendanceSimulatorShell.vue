@@ -41,7 +41,9 @@ const selectedMemberId = ref<number | null>(null)
 const editingSeat = ref<SeatData | null>(null)
 const savingStatus = ref(false)
 const checkingIn = ref(false)
-const phaserFailed = ref(false)
+// Default to the DOM-based farm-game classroom (cleaner, smoother).
+// Phaser scene kept as opt-in fallback path.
+const phaserFailed = ref(true)
 const phaserSceneReady = ref(false)
 let initialScrollDone = false
 
@@ -429,77 +431,32 @@ onUnmounted(() => {
           :title="boardTitle"
           :subtitle="boardSubtitle"
           :clock="boardClock"
+          :teacher="teacherInfo"
+          :door-state="!isCourseAdmin && mySeat ? doorState : null"
           @select="handleSeatSelect"
+          @door-click="handleSelfCheckIn"
         >
       <template #door>
-        <div v-if="!isCourseAdmin && mySeat" class="flex flex-col items-center gap-3">
-          <!-- Compact Seat Indicator -->
-          <div
-            class="flex items-center gap-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm transition-all"
-            :class="{ 'ring-2 ring-emerald-500 scale-105': selectedMemberId === authMemberId }"
-          >
-            <span
-              class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white shadow-sm"
-              :class="mySeat.status === 1 || mySeat.status === 2 ? 'bg-emerald-500' : 'bg-slate-400'"
-            >
-              {{ mySeat.seat_number }}
-            </span>
-            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
-              {{ mySeat.name }}
-            </span>
-          </div>
-
-          <!-- Action Button -->
-          <button
-            v-if="checkInState.canCheckIn"
-            :disabled="checkingIn"
-            @click="handleSelfCheckIn"
-            class="px-6 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
-            :class="checkInState.willBeLate ? 'bg-gradient-to-r from-amber-500 to-orange-600' : 'bg-gradient-to-r from-emerald-500 to-teal-600'"
-          >
-            <Icon
-              :icon="checkingIn ? 'svg-spinners:ring-resize' : 'fluent:presence-available-24-filled'"
-              class="w-5 h-5"
-            />
-            <span>{{ checkInState.willBeLate ? 'รายงานตัว (สาย)' : 'เช็คชื่อเข้าห้องเรียน' }}</span>
-          </button>
-
-          <div
-            v-else-if="checkInState.reason === 'already-checked-in'"
-            class="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-full font-bold text-sm shadow-md"
-          >
-            <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
-            <span>คุณเช็คชื่อเรียบร้อยแล้ว</span>
-          </div>
-
-          <!-- Other states: not-started, ended, etc. (Small text/icons) -->
-          <div
-            v-else
-            class="text-xs font-bold px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shadow-sm"
-          >
-            <div class="flex items-center gap-2">
-              <Icon
-                :icon="
-                  checkInState.reason === 'not-started' ? 'fluent:clock-24-regular' :
-                  checkInState.reason === 'ended' ? 'fluent:calendar-cancel-24-filled' : 'fluent:document-text-24-filled'
-                "
-                class="w-4 h-4"
-              />
-              <span>{{
-                checkInState.reason === 'not-started' ? `เริ่มใน ${fmtDuration(checkInState.countdown || 0)}` :
-                checkInState.reason === 'ended' ? 'จบคาบเรียนแล้ว' :
-                checkInState.reason === 'on-leave' ? 'คุณลาแล้ว' : 'ไม่สามารถเช็คชื่อได้'
-              }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Decorative door for Admin or if no seat (stays at the bottom of the grid) -->
+        <!-- "My seat" indicator badge below the door (when student) -->
         <div
-          v-else
-          class="w-16 h-12 bg-[#9A6B3F] border-2 border-[#7A5230] rounded-t-lg relative opacity-60"
+          v-if="!isCourseAdmin && mySeat"
+          class="flex items-center gap-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm transition-all"
+          :class="{ 'ring-2 ring-emerald-500 scale-105': selectedMemberId === authMemberId }"
         >
-          <span class="absolute right-2 top-1/2 w-1.5 h-1.5 rounded-full bg-[#E9C58F]"></span>
+          <span
+            class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white shadow-sm"
+            :class="mySeat.status === 1 || mySeat.status === 2 ? 'bg-emerald-500' : 'bg-slate-400'"
+          >
+            {{ mySeat.seat_number }}
+          </span>
+          <span class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
+            {{ mySeat.name }}
+          </span>
+          <Icon
+            v-if="checkingIn"
+            icon="svg-spinners:ring-resize"
+            class="w-4 h-4 text-emerald-600"
+          />
         </div>
       </template>
         </ClassroomSeatGrid>

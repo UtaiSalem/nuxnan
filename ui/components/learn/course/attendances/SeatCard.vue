@@ -113,7 +113,7 @@ const handleImageError = (e: Event) => {
     <!-- "ที่นั่งของฉัน" floating badge -->
     <span
       v-if="isMe"
-      class="absolute -top-3 left-1/2 -translate-x-1/2 z-30 px-1.5 py-0.5 rounded-full bg-vikinger-purple text-white text-[9px] font-bold whitespace-nowrap shadow-md hidden sm:inline-block"
+      class="absolute -top-3 left-1/2 -translate-x-1/2 z-30 px-2 py-0.5 rounded-full bg-vikinger-purple text-white text-[10px] font-bold whitespace-nowrap shadow-md hidden sm:inline-block"
     >
       ที่นั่งของฉัน
     </span>
@@ -123,23 +123,23 @@ const handleImageError = (e: Event) => {
         <img
           :src="avatarUrl"
           :alt="seat.name"
-          class="relative z-10 w-7 h-7 rounded-full object-cover border-2 transition-all duration-300"
+          class="relative z-10 w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full object-cover border-2 transition-all duration-300 shadow-sm"
           :class="[avatarRingClass, seat.status === ATTENDANCE_STATUS.LEAVE ? 'opacity-60' : '']"
           @error="handleImageError"
         />
         <span
-          class="w-6 h-2.5 rounded-t-lg -mt-1"
+          class="w-6 sm:w-7 lg:w-8 h-2.5 sm:h-2.5 lg:h-3 rounded-t-lg -mt-1 sm:-mt-1 lg:-mt-1.5"
           :class="[shirtClass, seat.status === ATTENDANCE_STATUS.LEAVE ? 'opacity-60' : '']"
         ></span>
       </template>
       <template v-else>
-        <span class="w-7 h-7 rounded-full border-2 border-dashed border-[#8C795F]/70"></span>
-        <span class="w-6 h-2.5 -mt-1"></span>
+        <span class="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-dashed border-[#8C795F]/70"></span>
+        <span class="w-6 sm:w-7 lg:w-8 h-2.5 sm:h-2.5 lg:h-3 -mt-1 sm:-mt-1 lg:-mt-1.5"></span>
       </template>
     </div>
 
     <!-- Isometric wooden desk with seat number on the front -->
-    <div class="relative w-full max-w-[72px] -mt-1.5">
+    <div class="relative w-full max-w-[72px] sm:max-w-[80px] lg:max-w-[96px] -mt-1.5 sm:-mt-2">
       <svg viewBox="0 0 80 56" class="w-full" aria-hidden="true">
         <ellipse cx="40" cy="50" rx="38" ry="6" fill="#5e8c34" :opacity="ghost ? 0.2 : 0.3" />
         <path d="M0,18 L40,36 L40,50 L0,32 Z" :fill="deskColors.left" />
@@ -147,7 +147,7 @@ const handleImageError = (e: Event) => {
         <path d="M0,18 L40,0 L80,18 L40,36 Z" :fill="deskColors.top" :stroke="deskColors.stroke" stroke-width="1.5" />
       </svg>
       <span
-        class="absolute left-1/2 top-[30%] -translate-x-1/2 -translate-y-1/2 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white border border-white/80 shadow-sm"
+        class="absolute left-1/2 top-[30%] -translate-x-1/2 -translate-y-1/2 z-20 w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-[11px] lg:text-xs font-extrabold text-white border-2 border-white/90 shadow-md"
         :class="badgeClass"
       >
         {{ seat.seat_number }}
@@ -155,10 +155,10 @@ const handleImageError = (e: Event) => {
     </div>
 
     <!-- Name -->
-    <div class="relative mt-0.5 max-w-[72px] px-0.5">
+    <div class="relative mt-0.5 max-w-[80px] sm:max-w-[88px] lg:max-w-[100px] px-0.5">
       <p
-        class="text-[10px] font-semibold text-center leading-tight truncate"
-        :class="ghost ? 'text-[#8C795F]' : 'text-[#4A3220]'"
+        class="text-[10px] sm:text-[11px] lg:text-xs font-bold text-center leading-tight truncate"
+        :class="ghost ? 'text-[#8C795F]' : 'text-[#3A2613]'"
       >
         {{ seat.name }}
       </p>
@@ -172,7 +172,7 @@ const handleImageError = (e: Event) => {
     </div>
 
     <!-- Time-in -->
-    <p v-if="seat.time_in && !ghost" class="text-[10px] font-mono" :class="timeTextClass">
+    <p v-if="seat.time_in && !ghost" class="text-[10px] sm:text-[11px] font-mono font-semibold mt-0.5" :class="timeTextClass">
       {{ seat.time_in }}
     </p>
 

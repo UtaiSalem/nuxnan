@@ -40,7 +40,7 @@ function computeLayout(width: number): RoomLayout {
 const FLOOR_TOP = 112 // Reduced from 160 as wall height decreased
 const FLOOR_SIDE = 42
 const FLOOR_BOTTOM = 40 // Reduced from 118 to tighten layout
-const BOARD_HEIGHT = 92
+const BOARD_HEIGHT = 112
 const FRONT_WALKWAY = 72 // reserved strip between board and first desk row for the teacher
 const DOOR_AREA = 110
 const TEACHER_W = 56
@@ -51,10 +51,8 @@ type SeatSpriteRefs = {
   pulse?: Phaser.Tweens.Tween | null
 }
 
-type PolygonPoint = {
-  x: number
-  y: number
-}
+type PolygonPoint = Phaser.Types.Math.Vector2Like
+type PolyArg = Phaser.Math.Vector2[]
 
 export class AttendanceRoomScene extends Phaser.Scene {
   private handlers: AttendanceSceneHandlers
@@ -67,9 +65,13 @@ export class AttendanceRoomScene extends Phaser.Scene {
   private layout: RoomLayout = computeLayout(640)
   private gridCenterX = 0
   private teacherSprite?: Phaser.GameObjects.Container
+  private teacherPersonRef?: Phaser.GameObjects.Container
+  private teacherEyes: Phaser.GameObjects.Arc[] = []
   private teacherLoopActive = false
   private teacherPatrolToken = 0
+  private teacherShutdownHooked = false
   private teacherSeatGeometry: { zoneStarts: number[]; deskCellW: number; zoneGap: number; floorY: number; rowGap: number; rows: number; aisleWidth: number } | null = null
+  private hoverTooltip?: Phaser.GameObjects.Container
 
   constructor(handlers: AttendanceSceneHandlers = {}) {
     super({ key: 'AttendanceRoomScene' })
@@ -80,6 +82,10 @@ export class AttendanceRoomScene extends Phaser.Scene {
     this.emitHeightChange()
     this.renderRoom()
     this.handlers.onSceneReady?.()
+
+    // T4: Safety - stop patrol on shutdown
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopTeacherPatrol())
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.stopTeacherPatrol())
   }
 
   setSceneData(next: Partial<AttendanceSceneState>) {
@@ -138,6 +144,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
 
   private updateDynamicParts(isFullRender = false) {
     if (isFullRender) {
+      this.hoverTooltip = undefined
       this.dynamicLayer?.removeAll(true)
       this.seatRefs.clear()
       const width = this.scale.width || this.cameras.main.width
@@ -167,48 +174,74 @@ export class AttendanceRoomScene extends Phaser.Scene {
   }
 
   private boardTitleText?: Phaser.GameObjects.Text
+  private boardDateText?: Phaser.GameObjects.Text
   private boardSubText?: Phaser.GameObjects.Text
   private boardSummaryText?: Phaser.GameObjects.Text
 
   private drawBoard(width: number) {
-    const boardWidth = Math.min(width - 80, 640)
+    const boardWidth = Math.min(width - 96, 700)
     const boardX = width / 2
-    const boardY = 58 // Adjusted for smaller wall
+    const boardY = 58
+
+    const hangerY = boardY - BOARD_HEIGHT / 2 - 6
+    const bracketOffset = Math.min(boardWidth * 0.28, 182)
+    const hangers = this.add.graphics()
+    hangers.fillStyle(0x4a5568, 1)
+    hangers.fillRoundedRect(boardX - bracketOffset, hangerY, 6, 14, 2)
+    hangers.fillRoundedRect(boardX + bracketOffset - 6, hangerY, 6, 14, 2)
+    this.staticLayer?.add(hangers)
 
     const frame = this.add.graphics()
-    frame.fillStyle(0x8f6438, 1)
+    frame.fillGradientStyle(0xa87547, 0xa87547, 0x7a5230, 0x7a5230, 1)
     frame.fillRoundedRect(boardX - boardWidth / 2, boardY - BOARD_HEIGHT / 2, boardWidth, BOARD_HEIGHT, 16)
-    frame.fillStyle(0x2f5d46, 1)
+    frame.lineStyle(2, 0x000000, 0.18)
+    frame.strokeRoundedRect(boardX - boardWidth / 2, boardY - BOARD_HEIGHT / 2, boardWidth, BOARD_HEIGHT, 16)
+    frame.fillGradientStyle(0x2f5d46, 0x2f5d46, 0x264d3b, 0x264d3b, 1)
     frame.fillRoundedRect(boardX - boardWidth / 2 + 8, boardY - BOARD_HEIGHT / 2 + 8, boardWidth - 16, BOARD_HEIGHT - 16, 12)
     this.staticLayer?.add(frame)
 
-    this.boardTitleText = this.add.text(boardX, boardY - 18, '', {
+    this.boardTitleText = this.add.text(boardX, boardY - 26, '', {
       fontFamily: 'Tahoma, sans-serif',
-      fontSize: width < 640 ? '16px' : '20px',
+      fontSize: width < 640 ? '15px' : '18px',
       color: '#EAF5EC',
       fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: boardWidth - 72, useAdvancedWrap: true },
+      maxLines: 1,
     }).setOrigin(0.5)
 
-    this.boardSubText = this.add.text(boardX, boardY + 8, '', {
+    this.boardDateText = this.add.text(boardX, boardY - 5, '', {
       fontFamily: 'Tahoma, sans-serif',
-      fontSize: width < 640 ? '11px' : '13px',
+      fontSize: width < 640 ? '11px' : '12px',
       color: '#BFE0C9',
+      align: 'center',
     }).setOrigin(0.5)
 
-    this.boardSummaryText = this.add.text(boardX, boardY + 28, '', {
+    this.boardSubText = this.add.text(boardX, boardY + 16, '', {
+      fontFamily: 'Tahoma, sans-serif',
+      fontSize: width < 640 ? '10px' : '12px',
+      color: '#BFE0C9',
+      align: 'center',
+      wordWrap: { width: boardWidth - 64, useAdvancedWrap: true },
+      maxLines: 1,
+    }).setOrigin(0.5)
+
+    this.boardSummaryText = this.add.text(boardX, boardY + 38, '', {
       fontFamily: 'Tahoma, sans-serif',
       fontSize: width < 640 ? '10px' : '12px',
       color: '#BFE0C9',
       fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: boardWidth - 56, useAdvancedWrap: true },
     }).setOrigin(0.5)
 
-    this.staticLayer?.add([this.boardTitleText, this.boardSubText, this.boardSummaryText])
+    this.staticLayer?.add([this.boardTitleText, this.boardDateText, this.boardSubText, this.boardSummaryText])
     
     // D3: Board chalk dust
     for (let i = 0; i < 6; i++) {
       const dustX = boardX + (Math.random() - 0.5) * boardWidth * 0.8
       const dustY = boardY + (Math.random() - 0.5) * BOARD_HEIGHT * 0.6
-      const dust = this.add.circle(dustX, dustY, 1 + Math.random() * 2, 0xffffff, 0.06)
+      const dust = this.add.circle(dustX, dustY, 1 + Math.random() * 2, 0xffffff, 0.05)
       this.staticLayer?.add(dust)
     }
 
@@ -216,7 +249,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
   }
 
   private drawLighting(width: number) {
-    const boardWidth = Math.min(width - 80, 640)
+    const boardWidth = Math.min(width - 96, 700)
     const boardX = width / 2
     const boardY = 58
     
@@ -224,15 +257,15 @@ export class AttendanceRoomScene extends Phaser.Scene {
     // D2: Lighting cone from board (fades out)
     cone.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 0.05, 0.05, 0, 0)
     cone.fillTriangle(
-      boardX - boardWidth / 2 - 40, boardY,
-      boardX + boardWidth / 2 + 40, boardY,
-      boardX, boardY + 480
+      boardX - boardWidth / 2 - 32, boardY + 10,
+      boardX + boardWidth / 2 + 32, boardY + 10,
+      boardX, boardY + 420
     )
     this.staticLayer?.add(cone)
   }
 
   private updateBoardTexts() {
-    if (!this.boardTitleText || !this.boardSubText || !this.boardSummaryText) return
+    if (!this.boardTitleText || !this.boardDateText || !this.boardSubText || !this.boardSummaryText) return
 
     const summary = buildSummary(this.sceneData.seats)
     const title = this.sceneData.attendance
@@ -241,7 +274,12 @@ export class AttendanceRoomScene extends Phaser.Scene {
           .join(' · ')
       : 'ห้องเรียนจำลอง'
 
-    this.boardTitleText.setText(title)
+    this.boardTitleText.setText(this.truncateLabel(title, 56))
+    this.boardDateText.setText(
+      this.sceneData.attendance?.start_at
+        ? new Date(this.sceneData.attendance.start_at).toLocaleDateString('th-TH', { dateStyle: 'medium' })
+        : '',
+    )
     
     const clockText = this.sceneData.clock
       ? `${this.sceneData.clock.range}   ${this.sceneData.clock.label}${this.sceneData.clock.value ? ` ${this.sceneData.clock.value}` : ''}`
@@ -270,6 +308,16 @@ export class AttendanceRoomScene extends Phaser.Scene {
       floor.lineBetween(floorX + 6, y, floorX + floorW - 6, y)
     }
     this.staticLayer?.add(floor)
+
+    const skirting = this.add.graphics()
+    skirting.fillStyle(0x6b4a2b, 1)
+    skirting.fillRect(floorX + 8, floorY + 6, floorW - 16, 6)
+    this.staticLayer?.add(skirting)
+
+    const topGlow = this.add.graphics()
+    topGlow.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 0.16, 0.16, 0, 0)
+    topGlow.fillEllipse(floorX + floorW / 2, floorY + 14, floorW * 0.88, 56)
+    this.staticLayer?.add(topGlow)
   }
 
   private drawSeats(width: number, height: number) {
@@ -344,8 +392,10 @@ export class AttendanceRoomScene extends Phaser.Scene {
   private createEmptySeat(x: number, y: number, deskCellW: number, num: number) {
     const container = this.add.container(x, y)
     const deskTopW = Math.min(78, deskCellW - 8)
-    const deskTopH = 18
     const deskDepth = 16
+
+    const avatarGhost = this.add.circle(0, -28, 13, 0xffffff, 0)
+    avatarGhost.setStrokeStyle(2, 0x8c795f, 0.5)
 
     const desk = this.add.graphics()
     const topFace: PolygonPoint[] = [
@@ -370,7 +420,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5).setAlpha(0.3)
 
-    container.add([desk, seatNum])
+    container.add([avatarGhost, desk, seatNum])
     return container
   }
 
@@ -381,14 +431,16 @@ export class AttendanceRoomScene extends Phaser.Scene {
       const zoneEnd = zoneStarts[z] + zones[z] * deskCellW + (zones[z] - 1) * zoneGap
       const x = zoneEnd + 2
       const aisle = this.add.graphics()
-      // D1: Increased opacity and subtle border
-      aisle.fillStyle(0xf2d8ac, 0.88)
+      aisle.fillStyle(0xf2d8ac, 0.68)
       aisle.fillRoundedRect(x, floorY - 10, aisleWidth - 4, aisleHeight, 10)
-      aisle.lineStyle(2, 0xe3c089, 0.8)
+      aisle.lineStyle(1.5, 0xe3c089, 0.55)
       aisle.strokeRoundedRect(x, floorY - 10, aisleWidth - 4, aisleHeight, 10)
-      
-      aisle.lineStyle(2, 0xe3c089, 0.4)
-      aisle.lineBetween(x + (aisleWidth - 4) / 2, floorY - 2, x + (aisleWidth - 4) / 2, floorY + aisleHeight - 10)
+
+      aisle.lineStyle(2, 0xe3c089, 0.5)
+      const centerX = x + (aisleWidth - 4) / 2
+      for (let yy = floorY - 2; yy < floorY + aisleHeight - 10; yy += 16) {
+        aisle.lineBetween(centerX, yy, centerX, Math.min(yy + 8, floorY + aisleHeight - 10))
+      }
       this.staticLayer?.add(aisle)
     }
   }
@@ -425,17 +477,20 @@ export class AttendanceRoomScene extends Phaser.Scene {
       { x: 0, y: deskDepth },
     ]
     desk.fillStyle(tone.left, 1)
-    desk.fillPoints(leftFace, true)
+    desk.fillPoints(leftFace as PolyArg, true)
     desk.fillStyle(tone.right, 1)
-    desk.fillPoints(rightFace, true)
+    desk.fillPoints(rightFace as PolyArg, true)
     desk.fillStyle(tone.top, 1)
-    desk.fillPoints(topFace, true)
+    desk.fillPoints(topFace as PolyArg, true)
     desk.lineStyle(1.5, tone.stroke, 1)
-    desk.strokePoints(topFace, true)
+    desk.strokePoints(topFace as PolyArg, true)
 
-    const shadow = this.add.ellipse(0, deskTopH + 24, deskTopW, 10, 0x5e8c34, 0.25)
+    const shadow = this.add.ellipse(0, deskTopH + 24, deskTopW, 10, 0x5e8c34, seat.status === ATTENDANCE_STATUS.ABSENT ? 0.18 : 0.28)
     shadow.setName('shadow')
-    const body = this.add.rectangle(0, -18, 16, 10, tone.shirt, seat.status === ATTENDANCE_STATUS.LEAVE ? 0.55 : 1)
+    const isLeave = seat.status === ATTENDANCE_STATUS.LEAVE
+    const shoulders = this.add.rectangle(0, -12, 26, 4, tone.stroke, isLeave ? 0.45 : 0.85)
+    shoulders.setName('shoulders')
+    const body = this.add.rectangle(0, -14, 22, 14, tone.shirt, isLeave ? 0.45 : 1)
     body.setName('body')
 
     const { circle: avatar } = this.drawAvatar(container, 0, -28, { avatar: seat.avatar, name: seat.name }, avatarRadius)
@@ -452,13 +507,12 @@ export class AttendanceRoomScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5)
 
-    const nameText = this.add.text(0, 42, seat.name, {
+    const nameText = this.add.text(0, 42, this.truncateLabel(seat.name, deskCellW < 74 ? 10 : 14), {
       fontFamily: 'Tahoma, sans-serif',
       fontSize: '10px',
-      color: '#4A3220',
+      color: seat.status === ATTENDANCE_STATUS.ABSENT ? '#8C795F' : '#4A3220',
       fontStyle: isMe ? 'bold' : 'normal',
     }).setOrigin(0.5)
-    nameText.setWordWrapWidth(deskCellW)
 
     const timeText = seat.time_in
       ? this.add.text(0, 56, seat.time_in, {
@@ -468,7 +522,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
         }).setOrigin(0.5)
       : null
 
-    container.add([shadow, body, avatar, desk, seatBadge, seatNum, nameText])
+    container.add([shadow, shoulders, body, avatar, desk, seatBadge, seatNum, nameText])
     if (timeText) container.add(timeText)
 
     container.setData('memberId', seat.course_member_id)
@@ -499,7 +553,11 @@ export class AttendanceRoomScene extends Phaser.Scene {
       Phaser.Geom.Rectangle.Contains,
     )
     container.on('pointerdown', () => this.handlers.onSeatSelect?.(seat.course_member_id))
+    const nameLimit = deskCellW < 74 ? 10 : 14
+    const fullName = (seat.name || '').trim()
+    const isTruncated = fullName.length > nameLimit
     container.on('pointerover', () => {
+      if (isTruncated) this.showNameTooltip(x, y, fullName)
       if (!this.sceneData.isCourseAdmin && !isMe) return
       this.tweens.add({
         targets: container,
@@ -509,6 +567,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
       })
     })
     container.on('pointerout', () => {
+      this.hideNameTooltip()
       this.tweens.add({
         targets: container,
         y,
@@ -534,6 +593,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
       // container.add() call.
       const desk = container.getByName('desk') as Phaser.GameObjects.Graphics
       const body = container.getByName('body') as Phaser.GameObjects.Rectangle
+      const shoulders = container.getByName('shoulders') as Phaser.GameObjects.Rectangle | null
       const avatar = container.getByName('avatar') as Phaser.GameObjects.Arc
       const seatBadge = container.getByName('seatBadge') as Phaser.GameObjects.Arc
       if (!desk || !body || !avatar || !seatBadge) return
@@ -562,15 +622,17 @@ export class AttendanceRoomScene extends Phaser.Scene {
         { x: 0, y: deskDepth },
       ]
       desk.fillStyle(tone.left, 1)
-      desk.fillPoints(leftFace, true)
+      desk.fillPoints(leftFace as PolyArg, true)
       desk.fillStyle(tone.right, 1)
-      desk.fillPoints(rightFace, true)
+      desk.fillPoints(rightFace as PolyArg, true)
       desk.fillStyle(tone.top, 1)
-      desk.fillPoints(topFace, true)
+      desk.fillPoints(topFace as PolyArg, true)
       desk.lineStyle(1.5, tone.stroke, 1)
-      desk.strokePoints(topFace, true)
+      desk.strokePoints(topFace as PolyArg, true)
 
-      body.setFillStyle(tone.shirt, seat.status === ATTENDANCE_STATUS.LEAVE ? 0.55 : 1)
+      const isLeave = seat.status === ATTENDANCE_STATUS.LEAVE
+      body.setFillStyle(tone.shirt, isLeave ? 0.45 : 1)
+      shoulders?.setFillStyle(tone.stroke, isLeave ? 0.45 : 0.85)
       avatar.setStrokeStyle(3, tone.ring, 1)
       seatBadge.setFillStyle(tone.badge, 1)
 
@@ -634,6 +696,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
     }
 
     this.doorContainer = door
+    door.setDepth(1) // Above floor, below sprites
     this.dynamicLayer?.add(door)
   }
 
@@ -699,6 +762,14 @@ export class AttendanceRoomScene extends Phaser.Scene {
   // Hidden on narrow viewports to avoid clutter.
 
   private drawTeacher(width: number) {
+    // T0: Safety Pre-flight - stop patrol + destroy old sprite to prevent orphans
+    this.stopTeacherPatrol()
+    if (this.teacherSprite) {
+      this.teacherSprite.destroy()
+      this.teacherSprite = undefined
+      this.teacherPersonRef = undefined
+    }
+
     // Invalidate any in-flight patrol from the previous render pass.
     this.teacherPatrolToken++
     this.teacherLoopActive = false
@@ -724,6 +795,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
 
     // Body: gradient-ish two-tone rect (shirt + collar)
     const person = this.add.container(0, 0)
+    person.setName('person')
     const body = this.add.rectangle(0, 18, 28, 16, SHIRT, 1)
     body.setStrokeStyle(1.5, SHIRT_DARK, 1)
     const collar = this.add.rectangle(0, 11, 14, 4, SHIRT_DARK, 1)
@@ -732,6 +804,12 @@ export class AttendanceRoomScene extends Phaser.Scene {
     // Head: white circle with a brown ring (matches original `border-2 border-[#7A5230] bg-white`)
     const { circle: head } = this.drawAvatar(person, 0, -4, { avatar: this.sceneData.teacher.avatar, name: this.sceneData.teacher.name }, HEAD_R)
     head.setStrokeStyle(2.5, BORDER, 1)
+
+    // T3: Eyes (Visual Polish) — two dots that stay on the head
+    const leftEye = this.add.circle(-5, -6, 2, 0x5C3D24, 1)
+    const rightEye = this.add.circle(5, -6, 2, 0x5C3D24, 1)
+    person.add([leftEye, rightEye])
+    this.teacherEyes = [leftEye, rightEye]
 
     // Name label below the body (truncated)
     const fullName = this.sceneData.teacher.name
@@ -754,19 +832,27 @@ export class AttendanceRoomScene extends Phaser.Scene {
     teacher.setDepth(5)
 
     this.teacherSprite = teacher
+    this.teacherPersonRef = person
     this.dynamicLayer?.add(teacher)
 
-    if (this.prefersReducedMotion()) return
+    // T4: ensure patrol stops cleanly when scene shuts down (hook once)
+    if (!this.teacherShutdownHooked) {
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopTeacherPatrol())
+      this.events.once(Phaser.Scenes.Events.DESTROY, () => this.stopTeacherPatrol())
+      this.teacherShutdownHooked = true
+    }
 
-    // Walking bob — matches the original 0.45s alternate translateY animation.
-    this.tweens.add({
-      targets: person,
-      y: -3,
-      duration: 450,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.InOut',
-    })
+    if (!this.prefersReducedMotion()) {
+      // Walking bob — matches the original 0.45s alternate translateY animation.
+      this.tweens.add({
+        targets: person,
+        y: -3,
+        duration: 450,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.InOut',
+      })
+    }
 
     this.teacherLoopActive = true
     this.startTeacherPatrol(geom)
@@ -796,10 +882,41 @@ export class AttendanceRoomScene extends Phaser.Scene {
     })
   }
 
+  // T4: Stop any in-flight patrol — invalidate token + kill tweens on the sprite.
+  private stopTeacherPatrol() {
+    this.teacherLoopActive = false
+    this.teacherPatrolToken++
+    if (this.teacherSprite) {
+      this.tweens.killTweensOf(this.teacherSprite)
+      if (this.teacherPersonRef) this.tweens.killTweensOf(this.teacherPersonRef)
+    }
+  }
+
+  // T1: Compute X positions of aisle centers between zones (real aisles, not grid center).
+  private computeAisleXs(geom: NonNullable<AttendanceRoomScene['teacherSeatGeometry']>): number[] {
+    const xs: number[] = []
+    const zoneCount = geom.zoneStarts.length
+    for (let z = 0; z < zoneCount - 1; z++) {
+      const zoneCols = this.layout.zones[z]
+      const zoneEnd = geom.zoneStarts[z] + zoneCols * geom.deskCellW + (zoneCols - 1) * geom.zoneGap
+      xs.push(zoneEnd + geom.aisleWidth / 2)
+    }
+    return xs
+  }
+
+  private faceTeacher(towardX: number) {
+    if (!this.teacherPersonRef || !this.teacherSprite) return
+    const facing = towardX >= this.teacherSprite.x ? 1 : -1
+    this.teacherPersonRef.setScale(facing, 1)
+  }
+
   private startTeacherPatrol(geom: NonNullable<AttendanceRoomScene['teacherSeatGeometry']>) {
     if (!this.teacherSprite) return
     const rand = (min: number, max: number) => min + Math.random() * (max - min)
     const teacher = this.teacherSprite
+    const isReduced = this.prefersReducedMotion()
+    const myToken = this.teacherPatrolToken
+
     // Walk mid-way through the reserved front walkway (between board and row 1).
     const frontY = FLOOR_TOP + 28 + FRONT_WALKWAY / 2
     const lastZoneIdx = geom.zoneStarts.length - 1
@@ -807,48 +924,63 @@ export class AttendanceRoomScene extends Phaser.Scene {
     const leftEdge = geom.zoneStarts[0] + 12
     const rightEdge =
       geom.zoneStarts[lastZoneIdx] + lastZoneCols * geom.deskCellW + (lastZoneCols - 1) * geom.zoneGap - 12
-    const myToken = this.teacherPatrolToken
 
-    const isStale = () => myToken !== this.teacherPatrolToken || !this.teacherLoopActive || !this.teacherSprite || !this.scene
+    const isStale = () => myToken !== this.teacherPatrolToken || !this.teacherLoopActive || !this.teacherSprite || !this.sys.isActive()
 
     const step = () => {
       if (isStale()) return
 
-      // Pick a target: 60% walk across the front, 40% inspect a row in an aisle.
-      const inspectRow = Math.random() < 0.4
+      // T5/T6/O: Responsive & Reduced Motion
+      // desktop -> full patrol (40% inspect, any aisle)
+      // tablet  -> 20% inspect but only first aisle
+      // mobile  -> front-only
+      const w = this.scale.width
+      const inspectChance = isReduced ? 0 : w >= 1024 ? 0.4 : w >= 768 ? 0.2 : 0
+      const inspectRow = Math.random() < inspectChance
+
+      // Reduced motion: 3x slower travel
+      const speedMult = isReduced ? 3 : 1
+
       if (inspectRow) {
-        // Pick aisle (between zones) by random — gridCenterX as fallback.
-        const aisleX = this.gridCenterX
+        // T1/O: Pick aisle — desktop random, tablet first aisle only
+        const aisleXs = this.computeAisleXs(geom)
+        const aisleX = aisleXs.length === 0
+          ? this.gridCenterX
+          : w >= 1024
+            ? aisleXs[Math.floor(Math.random() * aisleXs.length)]
+            : aisleXs[0]
         const row = Math.floor(rand(0, Math.max(1, geom.rows)))
-        const targetY = geom.floorY + row * geom.rowGap + 24
+        const targetY = geom.floorY + (row + 0.5) * geom.rowGap
+
+        this.faceTeacher(aisleX)
 
         this.tweens.add({
           targets: teacher,
           x: aisleX,
           y: frontY,
-          duration: 900,
+          duration: 900 * speedMult,
           ease: 'Sine.InOut',
           onComplete: () => {
+            if (isStale()) return
             this.tweens.add({
               targets: teacher,
               y: targetY,
-              duration: 1400,
+              duration: 1400 * speedMult,
               ease: 'Sine.InOut',
               onComplete: () => {
+                if (isStale()) return
+                // T8: Use delay on the return tween for stability
                 this.tweens.add({
                   targets: teacher,
-                  y: targetY,
-                  duration: rand(1200, 2600),
-                  onComplete: () => {
-                    this.tweens.add({
-                      targets: teacher,
-                      x: this.gridCenterX,
-                      y: frontY,
-                      duration: 1400,
-                      ease: 'Sine.InOut',
-                      onComplete: step,
-                    })
+                  x: this.gridCenterX,
+                  y: frontY,
+                  delay: rand(1200, 2600) * speedMult,
+                  duration: 1400 * speedMult,
+                  ease: 'Sine.InOut',
+                  onStart: () => {
+                    this.faceTeacher(this.gridCenterX)
                   },
+                  onComplete: step,
                 })
               },
             })
@@ -856,17 +988,22 @@ export class AttendanceRoomScene extends Phaser.Scene {
         })
       } else {
         const targetX = rand(leftEdge, rightEdge)
+        this.faceTeacher(targetX)
+
         this.tweens.add({
           targets: teacher,
           x: targetX,
           y: frontY,
-          duration: rand(2200, 3600),
+          duration: rand(2200, 3600) * speedMult,
           ease: 'Sine.InOut',
           onComplete: () => {
+            if (isStale()) return
+            // T8: Pause via delay
             this.tweens.add({
               targets: teacher,
               x: targetX,
-              duration: rand(500, 1500),
+              delay: rand(500, 1500) * speedMult,
+              duration: 1, // dummy duration
               onComplete: step,
             })
           },
@@ -920,15 +1057,29 @@ export class AttendanceRoomScene extends Phaser.Scene {
     const doorY = floorY + floorH - 24
 
     const walker = this.add.container(doorX, doorY)
-    const { circle: avatar } = this.drawAvatar(walker, 0, 0, { avatar: seat.avatar, name: seat.name }, 11)
+    const person = this.add.container(0, 0)
+    person.setName('person')
+    walker.add(person)
+
+    const { circle: avatar } = this.drawAvatar(person, 0, 0, { avatar: seat.avatar, name: seat.name }, 11)
     avatar.setStrokeStyle(2, 0x10b981, 1)
     const body = this.add.rectangle(0, 14, 14, 8, 0x059669, 1)
-    walker.add(body)
-    walker.sendToBack(body)
+    person.add(body)
+    person.sendToBack(body)
     
     walker.setDepth(20) // Well above everything
     walker.setAlpha(0)
     this.dynamicLayer?.add(walker)
+
+    // Walking bob for walker
+    this.tweens.add({
+      targets: person,
+      y: -2,
+      duration: 300,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.InOut'
+    })
 
     // Trail effect
     const trail = this.add.graphics()
@@ -955,6 +1106,10 @@ export class AttendanceRoomScene extends Phaser.Scene {
           x: seatX, 
           duration: 900, 
           ease: 'Sine.InOut',
+          onStart: () => {
+              // T2/T7: Flip toward movement
+              person.setScale(seatX > doorX ? 1 : -1, 1)
+          },
           onUpdate: () => {
             if (!trail.active) return
             trail.clear()
@@ -1069,6 +1224,49 @@ export class AttendanceRoomScene extends Phaser.Scene {
   private getInitials(name: string) {
     const words = name.trim().split(/\s+/).filter(Boolean)
     return words.slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?'
+  }
+
+  private truncateLabel(value: string | null | undefined, max: number) {
+    const normalized = (value || '').trim()
+    if (!normalized) return ''
+    return normalized.length > max ? `${normalized.slice(0, Math.max(0, max - 1))}…` : normalized
+  }
+
+  private showNameTooltip(seatX: number, seatY: number, fullName: string) {
+    this.hideNameTooltip()
+    const sceneWidth = this.scale.width
+    const label = this.add.text(0, 0, fullName, {
+      fontFamily: 'Tahoma, sans-serif',
+      fontSize: '11px',
+      color: '#ffffff',
+      padding: { x: 8, y: 4 },
+    }).setOrigin(0.5)
+    const bgWidth = label.width + 8
+    const bgHeight = label.height + 4
+    const bg = this.add.graphics()
+    bg.fillStyle(0x1a1a1a, 0.92)
+    bg.fillRoundedRect(-bgWidth / 2, -bgHeight / 2, bgWidth, bgHeight, 6)
+
+    const tip = this.add.container(0, 0, [bg, label])
+    const clampedX = Math.max(bgWidth / 2 + 8, Math.min(sceneWidth - bgWidth / 2 - 8, seatX))
+    tip.setPosition(clampedX, seatY - 60)
+    tip.setDepth(50)
+    tip.setAlpha(0)
+    this.dynamicLayer?.add(tip)
+    this.tweens.add({ targets: tip, alpha: 1, duration: 120 })
+    this.hoverTooltip = tip
+  }
+
+  private hideNameTooltip() {
+    if (!this.hoverTooltip) return
+    const tip = this.hoverTooltip
+    this.hoverTooltip = undefined
+    this.tweens.add({
+      targets: tip,
+      alpha: 0,
+      duration: 100,
+      onComplete: () => tip.destroy(),
+    })
   }
 
   /**
