@@ -76,6 +76,18 @@ const timeTextClass = computed(() => {
   }
 })
 
+// Soft colored glow under the desk that signals attendance status at a glance.
+const seatGlowClass = computed(() => {
+  if (props.walking) return ''
+  if (arriving.value) return 'drop-shadow-[0_0_10px_rgba(16,185,129,0.55)]'
+  switch (props.seat.status) {
+    case ATTENDANCE_STATUS.PRESENT: return 'drop-shadow-[0_4px_6px_rgba(16,185,129,0.30)]'
+    case ATTENDANCE_STATUS.LATE: return 'drop-shadow-[0_4px_6px_rgba(245,158,11,0.30)]'
+    case ATTENDANCE_STATUS.LEAVE: return 'drop-shadow-[0_4px_6px_rgba(56,189,248,0.30)]'
+    default: return 'drop-shadow-[0_2px_3px_rgba(0,0,0,0.15)]'
+  }
+})
+
 const { getAvatarUrl } = useAvatar()
 const avatarUrl = computed(() => getAvatarUrl({ avatar: props.seat.avatar, name: props.seat.name }))
 
@@ -92,10 +104,19 @@ const handleImageError = (e: Event) => {
     :class="[
       arriving ? 'z-10 scale-105' : 'z-0',
       isCourseAdmin ? 'hover:-translate-y-0.5' : '',
+      seatGlowClass,
+      isMe ? 'me-pulse' : '',
     ]"
     :aria-label="`ที่นั่ง ${seat.seat_number} ${seat.name}`"
     @click="emit('select')"
   >
+    <!-- "ที่นั่งของฉัน" floating badge -->
+    <span
+      v-if="isMe"
+      class="absolute -top-3 left-1/2 -translate-x-1/2 z-30 px-1.5 py-0.5 rounded-full bg-vikinger-purple text-white text-[9px] font-bold whitespace-nowrap shadow-md hidden sm:inline-block"
+    >
+      ที่นั่งของฉัน
+    </span>
     <!-- Student (head + shirt) sitting behind the desk -->
     <div class="relative flex flex-col items-center">
       <template v-if="!ghost">
@@ -161,8 +182,25 @@ const handleImageError = (e: Event) => {
       class="absolute inset-0 rounded-xl pointer-events-none transition-all duration-300"
       :class="[
         selected ? 'ring-2 ring-vikinger-purple' : '',
-        isMe && !selected ? 'ring-2 ring-emerald-400 ring-offset-1 dark:ring-offset-slate-900 border-2 border-white dark:border-slate-800' : '',
+        isMe && !selected ? 'ring-4 ring-vikinger-purple/60 ring-offset-2 ring-offset-[#E9C58F]' : '',
       ]"
     ></span>
   </button>
 </template>
+
+<style scoped>
+.me-pulse {
+  animation: me-pulse 3s ease-in-out infinite;
+}
+
+@keyframes me-pulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .me-pulse {
+    animation: none;
+  }
+}
+</style>

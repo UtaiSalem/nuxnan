@@ -78,6 +78,11 @@ const isTeacherProgressRoute = computed(() => {
   return props.isCourseAdmin && name.toLowerCase() === 'learn-courses-id-progress'
 })
 
+const isAttendancesRoute = computed(() => {
+  const name = route.name?.toString() || ''
+  return name.toLowerCase() === 'learn-courses-id-attendances'
+})
+
 // Determine if we are on the main course info page
 const isCourseInfoRoute = computed(() => {
   const path = route.path
@@ -94,7 +99,7 @@ const isCourseBoardRoute = computed(() => {
 const shouldShowCourseInfoWidget = computed(() => isCourseInfoRoute.value || isCourseBoardRoute.value)
 
 usePageLayoutWidgets({
-  left: computed(() => !isTeacherProgressRoute.value),
+  left: computed(() => !isTeacherProgressRoute.value && !isAttendancesRoute.value),
   right: computed(() => !isTableLayout.value),
   tableLayout: isTableLayout,
 })
@@ -145,7 +150,7 @@ usePageLayoutWidgets({
       />
 
       <!-- Default left widgets (non-feed pages) -->
-      <template v-if="!isCourseBoardRoute">
+      <template v-if="!isCourseBoardRoute && !isAttendancesRoute">
         <CourseInstructorWidget v-if="course" :course="course" :owner="course.user" />
 
         <CourseInfoWidget

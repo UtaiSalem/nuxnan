@@ -26,6 +26,7 @@ class AttendanceSimulatorController extends Controller
         $course = $attendance->course;
         $isCourseAdmin = $course->isAdmin($user);
         $authMember = $course->courseMembers()->where('user_id', $user->id)->first();
+        $attendance->loadMissing('instructor:id,name,profile_photo_path');
 
         // Authorize
         if (! $isCourseAdmin && (! $authMember || $authMember->group_id !== $attendance->group_id)) {
@@ -82,6 +83,10 @@ class AttendanceSimulatorController extends Controller
                     'id' => $attendance->group_id,
                     'name' => $attendance->group?->name,
                 ],
+                'instructor' => $attendance->instructor ? [
+                    'name' => $attendance->instructor->name,
+                    'avatar' => $attendance->instructor->avatar,
+                ] : null,
             ],
             'layout' => [
                 'cols' => $cols,

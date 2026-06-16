@@ -586,8 +586,13 @@ const primaryStudentAttendance = computed(() => {
     })
     .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())[0]
   if (upcoming) return upcoming
-  
-  return null
+
+  // 3) Most recent past session — keeps the classroom view visible even when
+  //    no session is active, so students can see the seating chart and history.
+  const mostRecent = [...list].sort(
+    (a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime(),
+  )[0]
+  return mostRecent ?? null
 })
 
 // Watch for group changes and fetch attendances
