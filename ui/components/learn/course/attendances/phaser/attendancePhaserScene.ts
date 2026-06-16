@@ -71,6 +71,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
   private teacherPatrolToken = 0
   private teacherShutdownHooked = false
   private teacherSeatGeometry: { zoneStarts: number[]; deskCellW: number; zoneGap: number; floorY: number; rowGap: number; rows: number; aisleWidth: number } | null = null
+  private hoverTooltip?: Phaser.GameObjects.Container
 
   constructor(handlers: AttendanceSceneHandlers = {}) {
     super({ key: 'AttendanceRoomScene' })
@@ -143,6 +144,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
 
   private updateDynamicParts(isFullRender = false) {
     if (isFullRender) {
+      this.hoverTooltip = undefined
       this.dynamicLayer?.removeAll(true)
       this.seatRefs.clear()
       const width = this.scale.width || this.cameras.main.width
@@ -551,7 +553,11 @@ export class AttendanceRoomScene extends Phaser.Scene {
       Phaser.Geom.Rectangle.Contains,
     )
     container.on('pointerdown', () => this.handlers.onSeatSelect?.(seat.course_member_id))
+    const nameLimit = deskCellW < 74 ? 10 : 14
+    const fullName = (seat.name || '').trim()
+    const isTruncated = fullName.length > nameLimit
     container.on('pointerover', () => {
+      if (isTruncated) this.showNameTooltip(x, y, fullName)
       if (!this.sceneData.isCourseAdmin && !isMe) return
       this.tweens.add({
         targets: container,
@@ -561,6 +567,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
       })
     })
     container.on('pointerout', () => {
+      this.hideNameTooltip()
       this.tweens.add({
         targets: container,
         y,
@@ -1218,6 +1225,43 @@ export class AttendanceRoomScene extends Phaser.Scene {
     const normalized = (value || '').trim()
     if (!normalized) return ''
     return normalized.length > max ? `${normalized.slice(0, Math.max(0, max - 1))}…` : normalized
+  }
+
+  private showNameTooltip(seatX: number, seatY: number, fullName: string) {
+    this.hideNameTooltip()
+    const sceneWidth = this.scale.width
+    const label = this.add.text(0, 0, fullName, {
+      fontFamily: 'Tahoma, sans-serif',
+      fontSize: '11px',
+      color: '#ffffff',
+      padding: { x: 8, y: 4 },
+    }).setOrigin(0.5)
+    const bgWidth = label.width + 8
+    const bgHeight = label.height + 4
+    const bg = this.add.graphics()
+    bg.fillStyle(0x1a1a1a, 0.92)
+    bg.fillRoundedRect(-bgWidth / 2, -bgHeight / 2, bgWidth, bgHeight, 6)
+
+    const tip = this.add.container(0, 0, [bg, label])
+    const clampedX = Math.max(bgWidth / 2 + 8, Math.min(sceneWidth - bgWidth / 2 - 8, seatX))
+    tip.setPosition(clampedX, seatY - 60)
+    tip.setDepth(50)
+    tip.setAlpha(0)
+    this.dynamicLayer?.add(tip)
+    this.tweens.add({ targets: tip, alpha: 1, duration: 120 })
+    this.hoverTooltip = tip
+  }
+
+  private hideNameTooltip() {
+    if (!this.hoverTooltip) return
+    const tip = this.hoverTooltip
+    this.hoverTooltip = undefined
+    this.tweens.add({
+      targets: tip,
+      alpha: 0,
+      duration: 100,
+      onComplete: () => tip.destroy(),
+    })
   }
 
   /**
