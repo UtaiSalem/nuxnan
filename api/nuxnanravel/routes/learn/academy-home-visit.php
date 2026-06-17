@@ -2,14 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Learn\Student\HomeVisit\HomeVisitAuthController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\StudentController;
+use App\Http\Controllers\Api\Learn\Student\Master\StudentController;
 use App\Http\Controllers\Api\Learn\Student\HomeVisit\TeacherController;
 use App\Http\Controllers\Api\Learn\Student\HomeVisit\AdminController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\StudentAcademicInfoController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\StudentAddressController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\StudentContactController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\StudentHealthController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\StudentGuardianController;
+use App\Http\Controllers\Api\Learn\Student\Master\AcademicInfoController;
+use App\Http\Controllers\Api\Learn\Student\Master\AddressController;
+use App\Http\Controllers\Api\Learn\Student\Master\ContactController;
+use App\Http\Controllers\Api\Learn\Student\Master\HealthController;
+use App\Http\Controllers\Api\Learn\Student\Master\GuardianController;
 use App\Http\Controllers\Api\Learn\Student\HomeVisit\ZoneController;
 
 /*
@@ -73,44 +73,44 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
             
             // Student Academic Info Routes
             Route::prefix('{student}/academic-info')->name('academic-info.')->group(function () {
-                Route::get('/', [StudentAcademicInfoController::class, 'index'])->name('index');
-                Route::post('/', [StudentAcademicInfoController::class, 'store'])->name('store');
-                Route::get('/{academicInfo}', [StudentAcademicInfoController::class, 'show'])->name('show');
-                Route::put('/{academicInfo}', [StudentAcademicInfoController::class, 'update'])->name('update');
-                Route::delete('/{academicInfo}', [StudentAcademicInfoController::class, 'destroy'])->name('destroy');
-                Route::put('/{academicInfo}/set-current', [StudentAcademicInfoController::class, 'setCurrent'])->name('set-current');
+                Route::get('/', [AcademicInfoController::class, 'index'])->name('index');
+                Route::post('/', [AcademicInfoController::class, 'store'])->name('store');
+                Route::get('/{academicInfo}', [AcademicInfoController::class, 'show'])->name('show');
+                Route::put('/{academicInfo}', [AcademicInfoController::class, 'update'])->name('update');
+                Route::delete('/{academicInfo}', [AcademicInfoController::class, 'destroy'])->name('destroy');
+                Route::put('/{academicInfo}/set-current', [AcademicInfoController::class, 'setCurrent'])->name('set-current');
             });
 
             // Student Address Routes
             Route::prefix('{student}/addresses')->name('addresses.')->group(function () {
-                Route::get('/', [StudentAddressController::class, 'index'])->name('index');
-                Route::post('/', [StudentAddressController::class, 'store'])->name('store');
-                Route::put('/{address}', [StudentAddressController::class, 'update'])->name('update');
-                Route::delete('/{address}', [StudentAddressController::class, 'destroy'])->name('destroy');
-                Route::put('/{address}/set-current', [StudentAddressController::class, 'setCurrent'])->name('set-current');
+                Route::get('/', [AddressController::class, 'index'])->name('index');
+                Route::post('/', [AddressController::class, 'store'])->name('store');
+                Route::put('/{address}', [AddressController::class, 'update'])->name('update');
+                Route::delete('/{address}', [AddressController::class, 'destroy'])->name('destroy');
+                Route::put('/{address}/set-current', [AddressController::class, 'setCurrent'])->name('set-current');
             });
 
             // Student Contact Routes
             Route::prefix('{student}/contacts')->name('contacts.')->group(function () {
-                Route::get('/', [StudentContactController::class, 'index'])->name('index');
-                Route::post('/', [StudentContactController::class, 'store'])->name('store');
-                Route::put('/{contact}', [StudentContactController::class, 'update'])->name('update');
-                Route::delete('/{contact}', [StudentContactController::class, 'destroy'])->name('destroy');
-                Route::put('/{contact}/set-primary', [StudentContactController::class, 'setPrimary'])->name('set-primary');
+                Route::get('/', [ContactController::class, 'index'])->name('index');
+                Route::post('/', [ContactController::class, 'store'])->name('store');
+                Route::put('/{contact}', [ContactController::class, 'update'])->name('update');
+                Route::delete('/{contact}', [ContactController::class, 'destroy'])->name('destroy');
+                Route::put('/{contact}/set-primary', [ContactController::class, 'setPrimary'])->name('set-primary');
             });
 
             // Student Health Routes
             Route::prefix('{student}/health')->name('health.')->group(function () {
-                Route::get('/', [StudentHealthController::class, 'show'])->name('show');
-                Route::post('/', [StudentHealthController::class, 'store'])->name('store');
-                Route::put('/{health}', [StudentHealthController::class, 'update'])->name('update');
+                Route::get('/', [HealthController::class, 'show'])->name('show');
+                Route::post('/', [HealthController::class, 'store'])->name('store');
+                Route::put('/{health}', [HealthController::class, 'update'])->name('update');
             });
 
             // Student Guardian Routes
             Route::prefix('{student}/guardian')->name('guardian.')->group(function () {
-                Route::get('/', [StudentGuardianController::class, 'show'])->name('show');
-                Route::post('/', [StudentGuardianController::class, 'store'])->name('store');
-                Route::put('/', [StudentGuardianController::class, 'update'])->name('update');
+                Route::get('/', [GuardianController::class, 'show'])->name('show');
+                Route::post('/', [GuardianController::class, 'store'])->name('store');
+                Route::put('/', [GuardianController::class, 'update'])->name('update');
             });
         });
 
@@ -129,36 +129,36 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
             
             // Teacher Access to Student Sub-routes
             Route::prefix('{student}/academic-info')->name('academic-info.')->group(function () {
-                Route::get('/', [StudentAcademicInfoController::class, 'index'])->name('index');
-                Route::post('/', [StudentAcademicInfoController::class, 'store'])->name('store');
-                Route::put('/{academicInfo}', [StudentAcademicInfoController::class, 'update'])->name('update');
-                Route::delete('/{academicInfo}', [StudentAcademicInfoController::class, 'destroy'])->name('destroy');
+                Route::get('/', [AcademicInfoController::class, 'index'])->name('index');
+                Route::post('/', [AcademicInfoController::class, 'store'])->name('store');
+                Route::put('/{academicInfo}', [AcademicInfoController::class, 'update'])->name('update');
+                Route::delete('/{academicInfo}', [AcademicInfoController::class, 'destroy'])->name('destroy');
             });
             
             Route::prefix('{student}/addresses')->name('addresses.')->group(function () {
-                Route::get('/', [StudentAddressController::class, 'index'])->name('index');
-                Route::post('/', [StudentAddressController::class, 'store'])->name('store');
-                Route::put('/{address}', [StudentAddressController::class, 'update'])->name('update');
-                Route::delete('/{address}', [StudentAddressController::class, 'destroy'])->name('destroy');
+                Route::get('/', [AddressController::class, 'index'])->name('index');
+                Route::post('/', [AddressController::class, 'store'])->name('store');
+                Route::put('/{address}', [AddressController::class, 'update'])->name('update');
+                Route::delete('/{address}', [AddressController::class, 'destroy'])->name('destroy');
             });
             
             Route::prefix('{student}/contacts')->name('contacts.')->group(function () {
-                Route::get('/', [StudentContactController::class, 'index'])->name('index');
-                Route::post('/', [StudentContactController::class, 'store'])->name('store');
-                Route::put('/{contact}', [StudentContactController::class, 'update'])->name('update');
-                Route::delete('/{contact}', [StudentContactController::class, 'destroy'])->name('destroy');
+                Route::get('/', [ContactController::class, 'index'])->name('index');
+                Route::post('/', [ContactController::class, 'store'])->name('store');
+                Route::put('/{contact}', [ContactController::class, 'update'])->name('update');
+                Route::delete('/{contact}', [ContactController::class, 'destroy'])->name('destroy');
             });
             
             Route::prefix('{student}/health')->name('health.')->group(function () {
-                Route::get('/', [StudentHealthController::class, 'show'])->name('show');
-                Route::post('/', [StudentHealthController::class, 'store'])->name('store');
-                Route::put('/{health}', [StudentHealthController::class, 'update'])->name('update');
+                Route::get('/', [HealthController::class, 'show'])->name('show');
+                Route::post('/', [HealthController::class, 'store'])->name('store');
+                Route::put('/{health}', [HealthController::class, 'update'])->name('update');
             });
             
             Route::prefix('{student}/guardian')->name('guardian.')->group(function () {
-                Route::get('/', [StudentGuardianController::class, 'show'])->name('show');
-                Route::post('/', [StudentGuardianController::class, 'store'])->name('store');
-                Route::put('/', [StudentGuardianController::class, 'update'])->name('update');
+                Route::get('/', [GuardianController::class, 'show'])->name('show');
+                Route::post('/', [GuardianController::class, 'store'])->name('store');
+                Route::put('/', [GuardianController::class, 'update'])->name('update');
             });
         });
 

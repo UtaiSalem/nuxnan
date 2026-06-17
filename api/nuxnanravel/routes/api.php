@@ -210,7 +210,23 @@ require __DIR__ . '/learn/student-profile.php';
 // Academy Store Management Routes (School Store System)
 require __DIR__ . '/learn/academy-store.php';
 
+// Student Master Profile Routes
+Route::middleware(['auth:api'])->prefix('student')->group(function () {
+    Route::get('/me', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'myProfile']);
+    Route::prefix('requests')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'listRequests']);
+        Route::patch('/{id}/approve', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'approveRequest']);
+        Route::patch('/{id}/reject', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'rejectRequest']);
+    });
+    
+    Route::prefix('master')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'index']);
+        Route::get('/{student}', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'show']);
+    });
+});
+
 // Legacy routes (deprecated - kept for backward compatibility)
+// GUARD: Do NOT add new routes here. Use /learn/academy-home-visit.php or unified master profile instead.
 // TODO: Remove these in future version after frontend migration is complete
 require __DIR__ . '/homevisit/homevisit.php';
 require __DIR__ . '/studentcard/studentcard.php';

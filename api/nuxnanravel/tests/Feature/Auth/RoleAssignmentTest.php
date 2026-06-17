@@ -29,11 +29,12 @@ class RoleAssignmentTest extends TestCase
 
     public function test_new_user_is_assigned_student_role()
     {
-        $response = $this->postJson('/api/register', [
-            'username' => 'studentuser',
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Student User',
             'email' => 'student@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'reference_code' => 'TESTREF123',
         ]);
 
         $response->assertStatus(200);
