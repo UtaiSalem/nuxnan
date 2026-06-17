@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
+namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\Student;
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
-class StudentGuardianController extends Controller
+class GuardianController extends Controller
 {
     /**
      * Get student guardian data

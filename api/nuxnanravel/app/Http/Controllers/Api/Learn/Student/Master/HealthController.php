@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
+namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\Student;
@@ -10,7 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
-class StudentHealthController extends Controller
+class HealthController extends Controller
 {
     /**
      * Show student health information

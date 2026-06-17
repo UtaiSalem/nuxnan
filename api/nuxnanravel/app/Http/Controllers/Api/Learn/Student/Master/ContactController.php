@@ -1,14 +1,17 @@
 <?php
 
-namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
+namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\StudentContact;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Traits\HandlesStudentUpdates;
 
-class StudentContactController extends Controller
+class ContactController extends Controller
 {
+    use HandlesStudentUpdates;
     public function index($studentId)
     {
         try {
