@@ -82,6 +82,7 @@ onMounted(async () => {
         fetchMyCourses(),
         fetchTodaySchedule(),
         fetchStats(),
+        fetchPendingAssignments(),
         fetchUpcomingMeetings(),
       ])
     }
@@ -91,6 +92,19 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
+
+const fetchPendingAssignments = async () => {
+  if (!academyId.value) return
+  
+  try {
+    const response: any = await schoolApi.getTeacherPendingAssignments(academyId.value)
+    if (response.success) {
+      pendingAssignments.value = response.data || []
+    }
+  } catch (err) {
+    console.error('Failed to fetch pending assignments:', err)
+  }
+}
 
 const fetchMyCourses = async () => {
   if (!academyId.value) return

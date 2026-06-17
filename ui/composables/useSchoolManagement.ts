@@ -306,6 +306,21 @@ export const useSchoolManagement = () => {
   const getDashboardStats = (academyId: number) => 
     api.call(`/api/academies/${academyId}/analytics/dashboard-stats`)
 
+  const getStudentDashboardStats = (academyId: number) => 
+    api.call(`/api/academies/${academyId}/analytics/student-stats`)
+
+  const getTeacherPendingAssignments = (academyId: number) => 
+    api.call(`/api/academies/${academyId}/analytics/teacher-pending-assignments`)
+
+  // Audit Logs
+  const getSchoolAuditLogs = (academyId: number, params?: Record<string, any>) => 
+    api.call(`/api/academies/${academyId}/audit-logs`, { params })
+
+  const getEntityAuditLogs = (academyId: number, entityType: string, entityId: number) => 
+    api.call(`/api/academies/${academyId}/audit-logs/entity`, { 
+      params: { entity_type: entityType, entity_id: entityId } 
+    })
+
   const getAtRiskStudents = (academyId: number, params?: Record<string, any>) => 
     api.call(`/api/academies/${academyId}/analytics/at-risk`, { params })
 
@@ -509,6 +524,10 @@ export const useSchoolManagement = () => {
     getUserDashboardLayout,
     updateUserDashboardLayout,
     getDashboardStats,
+    getStudentDashboardStats,
+    getTeacherPendingAssignments,
+    getSchoolAuditLogs,
+    getEntityAuditLogs,
     getAtRiskStudents,
     getAnalyticsOverview,
     getKPIs,

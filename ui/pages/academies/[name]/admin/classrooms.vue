@@ -39,6 +39,7 @@ const pagination = ref({
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showStudentsModal = ref(false)
+const modalActiveTab = ref<'students' | 'history'>('students')
 const showAddStudentsModal = ref(false)
 const showTransferModal = ref(false)
 const selectedClassroom = ref<any>(null)
@@ -997,11 +998,14 @@ const getGradeColor = (grade: string) => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">นักเรียนในห้อง</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedClassroom?.name }} ({{ classroomStudents.length }}/{{ selectedClassroom?.capacity || 40 }} คน)</p>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ modalActiveTab === 'students' ? 'นักเรียนในห้อง' : 'ประวัติการแก้ไข' }}
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedClassroom?.name }}</p>
             </div>
             <div class="flex items-center gap-2">
               <button
+                v-if="modalActiveTab === 'students'"
                 @click="openAddStudentsModal"
                 class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
               >
@@ -1013,71 +1017,107 @@ const getGradeColor = (grade: string) => {
               </button>
             </div>
           </div>
+
+          <!-- Modal Tabs -->
+          <div v-if="isAdmin" class="flex border-b border-gray-100 dark:border-gray-700 px-5">
+            <button
+              @click="modalActiveTab = 'students'"
+              :class="[
+                'px-4 py-3 text-sm font-medium transition-colors relative',
+                modalActiveTab === 'students' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+              ]"
+            >
+              รายชื่อนักเรียน
+              <div v-if="modalActiveTab === 'students'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full"></div>
+            </button>
+            <button
+              @click="modalActiveTab = 'history'"
+              :class="[
+                'px-4 py-3 text-sm font-medium transition-colors relative',
+                modalActiveTab === 'history' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+              ]"
+            >
+              ประวัติการแก้ไข
+              <div v-if="modalActiveTab === 'history'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full"></div>
+            </button>
+          </div>
           
           <div class="flex-1 overflow-y-auto p-5">
-            <div v-if="isLoadingStudents" class="flex items-center justify-center py-12">
-              <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent"></div>
-            </div>
-            
-            <div v-else-if="classroomStudents.length === 0" class="text-center py-12">
-              <Icon name="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p class="text-gray-500 dark:text-gray-400">ยังไม่มีนักเรียนในห้องนี้</p>
-            </div>
-            
-            <div v-else>
-              <table class="w-full">
-                <thead>
-                  <tr class="text-left text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                    <th class="pb-3 font-medium">เลขที่</th>
-                    <th class="pb-3 font-medium">ชื่อ-นามสกุล</th>
-                    <th class="pb-3 font-medium hidden sm:table-cell">รหัสนักเรียน</th>
-                    <th class="pb-3 font-medium text-right">การดำเนินการ</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                  <tr v-for="(student, index) in classroomStudents" :key="student.id" class="text-gray-900 dark:text-white">
-                    <td class="py-3">
-                      <input
-                        type="text"
-                        :value="student.student_number || (index + 1)"
-                        @blur="updateStudentNumber(student.id, ($event.target as HTMLInputElement).value)"
-                        class="w-16 px-2 py-1 text-center border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
-                      />
-                    </td>
-                    <td class="py-3">
-                      <div class="flex items-center gap-3">
-                        <img
-                          :src="student.user?.profile_photo_url || '/images/default-avatar.png'"
-                          :alt="student.user?.name"
-                          class="w-8 h-8 rounded-full object-cover"
+            <div v-if="modalActiveTab === 'students'">
+              <div v-if="isLoadingStudents" class="flex items-center justify-center py-12">
+                <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent"></div>
+              </div>
+              
+              <div v-else-if="classroomStudents.length === 0" class="text-center py-12">
+                <Icon name="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                <p class="text-gray-500 dark:text-gray-400">ยังไม่มีนักเรียนในห้องนี้</p>
+              </div>
+              
+              <div v-else>
+                <table class="w-full">
+                  <thead>
+                    <tr class="text-left text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                      <th class="pb-3 font-medium">เลขที่</th>
+                      <th class="pb-3 font-medium">ชื่อ-นามสกุล</th>
+                      <th class="pb-3 font-medium hidden sm:table-cell">รหัสนักเรียน</th>
+                      <th class="pb-3 font-medium text-right">การดำเนินการ</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tr v-for="(student, index) in classroomStudents" :key="student.id" class="text-gray-900 dark:text-white">
+                      <td class="py-3">
+                        <input
+                          type="text"
+                          :value="student.student_number || (index + 1)"
+                          @blur="updateStudentNumber(student.id, ($event.target as HTMLInputElement).value)"
+                          class="w-16 px-2 py-1 text-center border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
                         />
-                        <span class="font-medium">{{ student.user?.name }}</span>
-                      </div>
-                    </td>
-                    <td class="py-3 hidden sm:table-cell text-gray-500 dark:text-gray-400">
-                      {{ student.student_id || '-' }}
-                    </td>
-                    <td class="py-3">
-                      <div class="flex items-center justify-end gap-2">
-                        <button
-                          @click="openTransferModal(student.id)"
-                          class="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                          title="ย้ายห้อง"
-                        >
-                          <Icon name="fluent:arrow-swap-24-regular" class="w-4 h-4" />
-                        </button>
-                        <button
-                          @click="removeStudent(student.id)"
-                          class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                          title="นำออก"
-                        >
-                          <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                      </td>
+                      <td class="py-3">
+                        <div class="flex items-center gap-3">
+                          <img
+                            :src="student.user?.profile_photo_url || '/images/default-avatar.png'"
+                            :alt="student.user?.name"
+                            class="w-8 h-8 rounded-full object-cover"
+                          />
+                          <span class="font-medium">{{ student.user?.name }}</span>
+                        </div>
+                      </td>
+                      <td class="py-3 hidden sm:table-cell text-gray-500 dark:text-gray-400">
+                        {{ student.student_id || '-' }}
+                      </td>
+                      <td class="py-3">
+                        <div class="flex items-center justify-end gap-2">
+                          <button
+                            @click="openTransferModal(student.id)"
+                            class="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                            title="ย้ายห้อง"
+                          >
+                            <Icon name="fluent:arrow-swap-24-regular" class="w-4 h-4" />
+                          </button>
+                          <button
+                            @click="removeStudent(student.id)"
+                            class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            title="นำออก"
+                          >
+                            <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- History Tab -->
+            <div v-else-if="modalActiveTab === 'history'">
+              <SchoolAuditLogTab 
+                v-if="academyId && selectedClassroom"
+                :academy-id="academyId" 
+                entity-type="Classroom" 
+                :entity-id="selectedClassroom.id" 
+              />
             </div>
           </div>
         </div>

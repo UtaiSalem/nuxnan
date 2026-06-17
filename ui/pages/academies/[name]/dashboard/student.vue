@@ -45,6 +45,8 @@ const stats = ref({
   attendanceRate: 0,
 })
 
+const schoolApi = useSchoolManagement()
+
 // Fetch data
 onMounted(async () => {
   try {
@@ -59,6 +61,7 @@ onMounted(async () => {
       
       // Fetch student dashboard data
       await Promise.all([
+        fetchStats(),
         fetchEnrolledCourses(),
         fetchUpcomingAssignments(),
         fetchAnnouncements(),
@@ -71,6 +74,23 @@ onMounted(async () => {
   }
 })
 
+const fetchStats = async () => {
+  if (!academyId.value) return
+  
+  try {
+    const response: any = await schoolApi.getStudentDashboardStats(academyId.value)
+    if (response.success) {
+      const dashboardStats = response.data || {}
+      stats.value.enrolledCourses = dashboardStats.enrolled_courses || 0
+      stats.value.completedLessons = dashboardStats.completed_lessons || 0
+      stats.value.totalPoints = dashboardStats.total_points || 0
+      stats.value.attendanceRate = dashboardStats.attendance_rate || 0
+    }
+  } catch (err) {
+    console.error('Failed to fetch student stats:', err)
+  }
+}
+
 const fetchEnrolledCourses = async () => {
   if (!academyId.value) return
   
@@ -80,7 +100,6 @@ const fetchEnrolledCourses = async () => {
     if (response.success) {
       // Filter to enrolled courses only
       enrolledCourses.value = (response.courses || []).slice(0, 6)
-      stats.value.enrolledCourses = enrolledCourses.value.length
     }
   } catch (err) {
     console.error('Failed to fetch courses:', err)
@@ -88,7 +107,24 @@ const fetchEnrolledCourses = async () => {
 }
 
 const fetchUpcomingAssignments = async () => {
-  // TODO: Implement when assignment API is ready
+  try {
+    const response: any = await api.get('/api/assignments', { 
+      params: { 
+        status: 'pending',
+        per_page: 5
+      } 
+    })
+    if (response.success) {
+      upcomingAssignments.value = (response.data || []).map((asm: any) => ({
+        id: asm.id,
+        title: asm.title,
+        course: asm.course?.title || 'วิชาทั่วไป',
+        dueDate: asm.due_date ? new Date(asm.due_date).toLocaleDateString('th-TH') : 'ไม่มีกำหนด'
+      }))
+    }
+  } catch (err) {
+    console.error('Failed to fetch assignments:', err)
+  }
 }
 
 const fetchAnnouncements = async () => {

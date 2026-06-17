@@ -13,13 +13,14 @@ use Illuminate\Support\Str;
 use App\Models\ClassroomMember;
 use App\Models\ClassroomGroup;
 use App\Models\ClassroomInvitation;
+use App\Traits\Auditable;
 
 /**
  * Classroom Model - ห้องเรียน
  */
 class Classroom extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $fillable = [
         'academy_id',

@@ -29,6 +29,89 @@ class AnalyticsController extends Controller
     // ==================== ANALYTICS SNAPSHOTS ====================
 
     /**
+     * Get pending assignments for teachers
+     */
+    public function teacherPendingAssignments(Request $request, Academy $academy): JsonResponse
+    {
+        $user = Auth::user();
+        $isFullAdmin = $academy->user_id === $user->id;
+
+        $query = \App\Models\Assignment::whereHas('course', function ($q) use ($academy) {
+            $q->where('academy_id', $academy->id);
+        })->with(['course', 'answers' => function($q) {
+            $q->whereNull('points')->orWhere('status', 'submitted');
+        }]);
+
+        if (! $isFullAdmin) {
+            $query->where('teacher_id', $user->id);
+        }
+
+        $assignments = $query->get()
+            ->filter(function($assignment) {
+                return $assignment->answers->count() > 0;
+            })
+            ->map(function($assignment) {
+                return [
+                    'id' => $assignment->id,
+                    'title' => $assignment->title,
+                    'course' => $assignment->course->title,
+                    'pending' => $assignment->answers->count(),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $assignments,
+        ]);
+    }
+
+    /**
+     * Get dashboard stats for students
+     */
+    public function studentStats(Request $request, Academy $academy): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Enrolled courses count
+        $enrolledCoursesCount = $academy->courses()->whereHas('members', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        })->count();
+
+        // Completed lessons count
+        $completedLessonsCount = \App\Models\LessonProgress::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->whereHas('lesson.course', function ($q) use ($academy) {
+                $q->where('academy_id', $academy->id);
+            })->count();
+
+        // Attendance rate
+        $attendanceStats = \Illuminate\Support\Facades\DB::table('school_attendance_records')
+            ->select(
+                \Illuminate\Support\Facades\DB::raw('COUNT(*) as total'),
+                \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present")
+            )
+            ->where('academy_id', $academy->id)
+            ->where('student_id', $user->id)
+            ->first();
+
+        $attendanceRate = 0;
+        if ($attendanceStats && $attendanceStats->total > 0) {
+            $attendanceRate = round(($attendanceStats->present / $attendanceStats->total) * 100);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'enrolled_courses' => $enrolledCoursesCount,
+                'completed_lessons' => $completedLessonsCount,
+                'total_points' => $user->total_points,
+                'attendance_rate' => $attendanceRate,
+            ],
+        ]);
+    }
+
+    /**
      * Get dashboard stats for teachers/admins
      */
     public function dashboardStats(Request $request, Academy $academy): JsonResponse
@@ -53,23 +136,21 @@ class AnalyticsController extends Controller
 
         $classesCount = $classesToday->count();
 
-        // Pending grading (simplified: count submissions not graded)
-        // This depends on the LMS structure. Assuming CourseAssignmentSubmission model.
-        $pendingGrading = 0;
-        if (class_exists('\App\Models\Learn\Course\CourseAssignmentSubmission')) {
-            $pendingGrading = \App\Models\Learn\Course\CourseAssignmentSubmission::whereHas('assignment.course', function ($q) use ($academy) {
-                $q->where('academy_id', $academy->id);
-            })
-                ->whereNull('grade')
-                ->whereNull('graded_at');
+        // Pending grading
+        $pendingGrading = \App\Models\AssignmentAnswer::whereHas('assignment.course', function ($q) use ($academy) {
+            $q->where('academy_id', $academy->id);
+        })
+            ->where(function($q) {
+                $q->whereNull('points')
+                  ->orWhere('status', 'submitted');
+            });
 
-            if (! $isFullAdmin) {
-                $pendingGrading->whereHas('assignment', function ($q) use ($user) {
-                    $q->where('teacher_id', $user->id);
-                });
-            }
-            $pendingGrading = $pendingGrading->count();
+        if (! $isFullAdmin) {
+            $pendingGrading->whereHas('assignment', function ($q) use ($user) {
+                $q->where('teacher_id', $user->id);
+            });
         }
+        $pendingGradingCount = $pendingGrading->count();
 
         return response()->json([
             'success' => true,
@@ -77,7 +158,7 @@ class AnalyticsController extends Controller
                 'total_students' => $totalStudents,
                 'total_courses' => $totalCourses,
                 'classes_today' => $classesCount,
-                'pending_grading' => $pendingGrading,
+                'pending_grading' => $pendingGradingCount,
             ],
         ]);
     }

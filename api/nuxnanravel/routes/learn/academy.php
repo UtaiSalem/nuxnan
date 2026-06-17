@@ -715,6 +715,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::prefix('/{academy}/analytics')->group(function () {
         // Overview & Snapshots
         Route::get('/dashboard-stats', [AnalyticsController::class, 'dashboardStats'])->name('api.academy.analytics.dashboardStats');
+        Route::get('/student-stats', [AnalyticsController::class, 'studentStats'])->name('api.academy.analytics.studentStats');
+        Route::get('/teacher-pending-assignments', [AnalyticsController::class, 'teacherPendingAssignments'])->name('api.academy.analytics.teacherPendingAssignments');
         Route::get('/at-risk', [AnalyticsController::class, 'getAtRiskStudents'])->name('api.academy.analytics.atRisk');
         Route::get('/overview', [AnalyticsController::class, 'overview'])->name('api.academy.analytics.overview');
         Route::get('/snapshots', [AnalyticsController::class, 'getSnapshots'])->name('api.academy.analytics.snapshots');
@@ -763,5 +765,13 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/{attendance}/scan-student', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'scanStudent'])->name('api.academy.schoolAttendance.scanStudent');
         Route::post('/{attendance}/records', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'storeRecords'])->name('api.academy.schoolAttendance.storeRecords');
         Route::post('/{attendance}/close', [\App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController::class, 'close'])->name('api.academy.schoolAttendance.close');
+    });
+
+    // ============================================
+    // Audit Log Routes (ประวัติการแก้ไข)
+    // ============================================
+    Route::prefix('{academy}/audit-logs')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\AuditLogController::class, 'index'])->name('api.academy.audit-logs.index');
+        Route::get('/entity', [\App\Http\Controllers\Api\AuditLogController::class, 'getEntityLogs'])->name('api.academy.audit-logs.entity');
     });
 });

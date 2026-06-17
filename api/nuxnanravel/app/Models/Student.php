@@ -9,13 +9,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Academy;
 use App\Models\User;
+use App\Traits\Auditable;
 
 /**
  * Student Model - Core Entity for New Normalized Structure
  */
 class Student extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $guarded = [];
 
