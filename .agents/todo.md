@@ -24,3 +24,10 @@
 - [ ] 3.1: Manual verification — boot dev server, navigate, test table→simulator toggle
 - [ ] 3.2: Check admin status update works from simulator sidebar
 - [ ] 3.3: Test student check-in flow
+
+## Student Master Profile UI (Nuxt)
+- [x] Phase 11: Unified Data Store — `useStudentMasterStore.ts`
+- [x] Phase 12: Admin List & Search — Refactor `pages/admin/students/index.vue`
+- [x] Phase 13: Admin Detail View — Refactor `pages/admin/students/[id].vue`
+- [x] Phase 14: Student Self-Service — Refactor `pages/student/profile.vue`
+- [x] Phase 15: Approval Dashboard — New page `pages/admin/students/requests.vue`
