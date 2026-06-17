@@ -11,9 +11,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /**
  * Student Guardian Model
  */
+use App\Traits\Auditable;
+
 class StudentGuardian extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $fillable = [
         'academy_id',

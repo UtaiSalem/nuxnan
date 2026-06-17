@@ -9,9 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Student Academic Information Model
  */
+use App\Traits\Auditable;
+
 class StudentAcademicInfo extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $table = 'student_academic_info';
 

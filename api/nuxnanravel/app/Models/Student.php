@@ -141,11 +141,7 @@ class Student extends Model
     {
         return $this->hasOne(StudentAcademicInfo::class)
                     ->where('is_current', true)
-                    ->orWhere(function($query) {
-                        $query->orderBy('academic_year', 'desc')
-                              ->orderBy('created_at', 'desc')
-                              ->limit(1);
-                    });
+                    ->latestOfMany('academic_year');
     }
 
     // Legacy support - for backward compatibility
@@ -221,15 +217,29 @@ class Student extends Model
         return $this->hasMany(StudentHomeVisit::class);
     }
 
+    public function studentCard(): HasOne
+    {
+        return $this->hasOne(StudentCard::class);
+    }
+
     /**
-     * Get the corresponding student card
+     * Get the corresponding student card (Legacy)
      * Use manual query to avoid collation issues
      */
-    public function getStudentCardAttribute()
+    public function getLegacyStudentCardAttribute()
     {
         return StudentCard::where('student_number', $this->student_id)
             ->orWhere('national_id', $this->citizen_id)
             ->first();
+    }
+
+    /**
+     * Get the corresponding student card
+     * TODO: Remove this accessor after migration to relation is complete
+     */
+    public function getStudentCardAttribute()
+    {
+        return $this->getRelationValue('studentCard') ?: $this->legacy_student_card;
     }
 
     public function profileImage(): HasOne

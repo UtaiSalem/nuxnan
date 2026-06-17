@@ -9,9 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Student Contact Model
  */
+use App\Traits\Auditable;
+
 class StudentContact extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $fillable = [
         'academy_id',

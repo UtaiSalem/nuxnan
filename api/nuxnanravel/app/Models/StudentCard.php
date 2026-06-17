@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StudentCard extends Model
 {
+    use Auditable;
+
     protected $fillable = [
+        'student_id',
         'academy_id',
         'order_no',
         'full_name_thai',
@@ -32,11 +36,10 @@ class StudentCard extends Model
 
     /**
      * Get the corresponding student from normalized database
-     * Use manual query to avoid collation issues
      */
     public function getStudentAttribute()
     {
-        return Student::where('student_id', $this->student_number)
+        return $this->getRelationValue('student') ?: Student::where('student_id', $this->student_number)
             ->orWhere('citizen_id', $this->national_id)
             ->first();
     }
@@ -60,6 +63,11 @@ class StudentCard extends Model
     public function academy(): BelongsTo
     {
         return $this->belongsTo(Academy::class);
+    }
+
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class);
     }
 
     /**
