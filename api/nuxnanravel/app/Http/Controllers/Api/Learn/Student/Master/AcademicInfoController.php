@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api\Learn\Student\Master;
 use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\StudentAcademicInfo;
+use App\Traits\HandlesStudentUpdates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AcademicInfoController extends Controller
 {
+    use HandlesStudentUpdates;
+
     /**
      * แสดงข้อมูลประวัติการศึกษาทั้งหมดของนักเรียน
      */
@@ -63,7 +66,7 @@ class AcademicInfoController extends Controller
     /**
      * อัพเดทข้อมูลประวัติการศึกษารายการเดียว
      */
-    public function update(Request $request, Student $student, StudentAcademicInfo $academicInfo = null)
+    public function update(Request $request, Student $student, ?StudentAcademicInfo $academicInfo = null)
     {
         $validated = $request->validate([
             'current_grade' => 'nullable|string|max:10',
@@ -114,30 +117,36 @@ class AcademicInfoController extends Controller
                 $validated['enrollment_date'] = $student->enrollment_date->format('Y-m-d');
             }
 
-            // อัพเดทข้อมูล
-            $academicInfo->fill($validated);
-            
             // สร้าง classroom_full อัตโนมัติถ้าไม่ได้กรอกมา
             if (empty($validated['classroom_full']) && !empty($validated['current_grade']) && !empty($validated['current_class'])) {
-                $academicInfo->classroom_full = $validated['current_grade'] . '/' . $validated['current_class'];
+                $validated['classroom_full'] = $validated['current_grade'] . '/' . $validated['current_class'];
             }
 
-            // หากตั้งเป็น current ให้ปรับปรุงข้อมูลอื่นๆ
-            if (!empty($validated['is_current'])) {
-                // Unset current flag from other records
+            // For new records (no id yet), staff bypass approval and persist; owner queues approval.
+            if (!$academicInfo->exists) {
+                $academicInfo->fill($validated)->save();
+                $result = ['updated' => $validated, 'pending' => []];
+            } else {
+                // Route through approval flow: academic is in default blacklist → owner edits queued.
+                $result = $this->processFieldUpdates($student, $academicInfo, 'StudentAcademicInfo', 'academic', $validated);
+            }
+
+            // หากตั้งเป็น current ให้ปรับปรุงข้อมูลอื่นๆ (apply only if not pending)
+            if (array_key_exists('is_current', $result['updated'] ?? []) && !empty($result['updated']['is_current'])) {
                 $student->academicInfos()
                        ->where('id', '!=', $academicInfo->id ?? 0)
                        ->update(['is_current' => false]);
             }
 
-            $academicInfo->save();
-
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'บันทึกข้อมูลประวัติการศึกษาเรียบร้อยแล้ว',
+                'message' => empty($result['pending'])
+                    ? 'บันทึกข้อมูลประวัติการศึกษาเรียบร้อยแล้ว'
+                    : 'ส่งคำขอแก้ไขประวัติการศึกษารอการอนุมัติแล้ว',
                 'data' => $academicInfo->fresh(),
+                'pending_fields' => $result['pending'] ?? [],
             ]);
 
         } catch (\Exception $e) {

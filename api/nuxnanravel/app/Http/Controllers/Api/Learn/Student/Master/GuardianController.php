@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\StudentGuardian;
 use App\Models\GuardianContact;
+use App\Traits\HandlesStudentUpdates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -13,6 +14,8 @@ use Illuminate\Validation\ValidationException;
 
 class GuardianController extends Controller
 {
+    use HandlesStudentUpdates;
+
     /**
      * Get student guardian data
      */
@@ -222,8 +225,8 @@ class GuardianController extends Controller
             
             DB::beginTransaction();
 
-            // Update guardian
-            $guardian->update([
+            // Route through approval flow: per-field decision (direct update vs change request).
+            $guardianFields = [
                 'guardian_type' => $validatedData['guardian']['guardian_type'],
                 'citizen_id' => $validatedData['guardian']['citizen_id'] ?? null,
                 'title_prefix' => $validatedData['guardian']['title_prefix'] ?? null,
@@ -235,7 +238,8 @@ class GuardianController extends Controller
                 'relationship' => $validatedData['guardian']['relationship'] ?? null,
                 'is_primary_contact' => $validatedData['guardian']['is_primary_contact'] ?? false,
                 'is_emergency_contact' => $validatedData['guardian']['is_emergency_contact'] ?? false,
-            ]);
+            ];
+            $guardianResult = $this->processFieldUpdates($student, $guardian, 'StudentGuardian', 'guardian', $guardianFields);
 
             // Get or create primary contact
             $contact = $guardian->contacts->where('is_primary', true)->first() 
@@ -265,9 +269,12 @@ class GuardianController extends Controller
                 'success' => true,
                 'data' => [
                     'guardian' => $guardian->fresh(),
-                    'contact' => $contact->fresh()
+                    'contact' => $contact->fresh(),
                 ],
-                'message' => 'อัปเดตข้อมูลผู้ปกครองสำเร็จ'
+                'pending_fields' => $guardianResult['pending'] ?? [],
+                'message' => empty($guardianResult['pending'])
+                    ? 'อัปเดตข้อมูลผู้ปกครองสำเร็จ'
+                    : 'ส่งคำขอแก้ไขข้อมูลผู้ปกครองรอการอนุมัติแล้ว',
             ]);
 
         } catch (ValidationException $e) {

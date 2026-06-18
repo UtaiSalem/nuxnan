@@ -17,12 +17,17 @@ class StudentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Student::query();
-
-        // Filter by Academy
-        if ($request->has('academy_id')) {
-            $query->where('academy_id', $request->academy_id);
+        // Enforce academy scope at the route layer: require academy_id and authorize.
+        $academyId = $request->input('academy_id');
+        if (!$academyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'academy_id is required to list students'
+            ], 422);
         }
+        $this->authorize('viewAny', [Student::class, $academyId]);
+
+        $query = Student::query()->where('academy_id', $academyId);
 
         // Filter by Class Level
         if ($request->has('class_level')) {
@@ -62,6 +67,8 @@ class StudentController extends Controller
      */
     public function show(Student $student)
     {
+        $this->authorize('view', $student);
+
         $student->load([
             'currentAcademicInfo',
             'academicInfos' => fn($q) => $q->orderBy('academic_year', 'desc'),
@@ -98,16 +105,22 @@ class StudentController extends Controller
      */
     public function listRequests(Request $request)
     {
-        $query = \App\Models\StudentChangeRequest::with(['student', 'requester']);
+        $academyId = $request->input('academy_id');
+        if (!$academyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'academy_id is required'
+            ], 422);
+        }
+        $this->authorize('approveRequests', [Student::class, $academyId]);
+
+        $query = \App\Models\StudentChangeRequest::with(['student', 'requester'])
+            ->where('academy_id', $academyId);
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
         } else {
             $query->where('status', 'pending');
-        }
-
-        if ($request->has('academy_id')) {
-            $query->where('academy_id', $request->academy_id);
         }
 
         return response()->json([
@@ -122,11 +135,7 @@ class StudentController extends Controller
     public function approveRequest(Request $request, $id)
     {
         $changeRequest = \App\Models\StudentChangeRequest::findOrFail($id);
-        
-        // Authorization
-        if (!auth()->user() || !auth()->user()->academyMembers()->where('academy_id', $changeRequest->academy_id)->whereIn('role', ['admin', 'director'])->exists()) {
-            abort(403, 'Unauthorized to approve requests for this academy');
-        }
+        $this->authorize('approveRequests', [Student::class, $changeRequest->academy_id]);
 
         if ($changeRequest->status !== 'pending') {
             return response()->json(['error' => 'คำขอนี้ถูกดำเนินการไปแล้ว'], 400);
@@ -172,11 +181,7 @@ class StudentController extends Controller
     public function rejectRequest(Request $request, $id)
     {
         $changeRequest = \App\Models\StudentChangeRequest::findOrFail($id);
-        
-        // Authorization
-        if (!auth()->user() || !auth()->user()->academyMembers()->where('academy_id', $changeRequest->academy_id)->whereIn('role', ['admin', 'director'])->exists()) {
-            abort(403, 'Unauthorized to reject requests for this academy');
-        }
+        $this->authorize('approveRequests', [Student::class, $changeRequest->academy_id]);
 
         if ($changeRequest->status !== 'pending') {
             return response()->json(['error' => 'คำขอนี้ถูกดำเนินการไปแล้ว'], 400);
@@ -435,11 +440,6 @@ class StudentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-}
-            'message' => 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Student\Master;
 use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\StudentHealthInfo;
+use App\Traits\HandlesStudentUpdates;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Validator;
 
 class HealthController extends Controller
 {
+    use HandlesStudentUpdates;
+
     /**
      * Show student health information
      */
@@ -147,12 +150,16 @@ class HealthController extends Controller
                 'rh_factor' => $request->rh_factor
             ];
 
-            $health->update($healthData);
+            // Health is in default blacklist → owner edits get queued for approval.
+            $result = $this->processFieldUpdates($student, $health, 'StudentHealthInfo', 'health', $healthData);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'อัปเดตข้อมูลสุขภาพเรียบร้อยแล้ว',
-                'data' => $health->fresh()
+                'message' => empty($result['pending'])
+                    ? 'อัปเดตข้อมูลสุขภาพเรียบร้อยแล้ว'
+                    : 'ส่งคำขอแก้ไขข้อมูลสุขภาพรอการอนุมัติแล้ว',
+                'data' => $health->fresh(),
+                'pending_fields' => $result['pending'],
             ]);
 
         } catch (\Exception $e) {

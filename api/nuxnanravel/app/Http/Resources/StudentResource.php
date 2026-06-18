@@ -30,10 +30,17 @@ class StudentResource extends JsonResource
             }
         }
 
-        // Mask citizen ID if not full access
+        // Mask citizen ID if not full access. Format keeps Thai national-id grouping: 1-XXXX-XXXXX-XX-X
         $citizenId = $this->citizen_id;
-        if (!$hasFullAccess && $citizenId && strlen($citizenId) >= 13) {
-            $citizenId = substr($citizenId, 0, 3) . 'XXXXXXX' . substr($citizenId, -3);
+        if (!$hasFullAccess && $citizenId) {
+            $digits = preg_replace('/\D/', '', $citizenId);
+            if (strlen($digits) === 13) {
+                $citizenId = $digits[0] . '-XXXX-XXXXX-XX-' . substr($digits, -1);
+            } elseif (strlen($digits) >= 4) {
+                $citizenId = str_repeat('X', max(0, strlen($digits) - 4)) . substr($digits, -4);
+            } else {
+                $citizenId = null;
+            }
         }
 
         return [
