@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import FeedPost from '~/components/play/feed/FeedPost.vue'
+import AcademyActionGuide from '~/components/academy/AcademyActionGuide.vue'
 
 definePageMeta({
   layout: 'main',
@@ -854,6 +855,17 @@ onMounted(() => {
   if (user.value) {
     fetchAcademy()
   }
+  const hash = route.hash.replace('#', '')
+  if (tabs.some(t => t.id === hash)) {
+    switchTab(hash)
+  }
+})
+
+watch(() => route.hash, (newHash) => {
+  const hash = newHash.replace('#', '')
+  if (tabs.some(t => t.id === hash)) {
+    switchTab(hash)
+  }
 })
 </script>
 
@@ -1021,6 +1033,13 @@ onMounted(() => {
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Content -->
         <div class="lg:col-span-2">
+          <AcademyActionGuide
+            :academy="academy"
+            :is-pending="academy?.memberStatus === 1 || academy?.memberStatus === 'pending'"
+            @join="requestMembership"
+            class="mb-4 md:mb-6"
+          />
+
           <!-- Loading Tab Content -->
           <div v-if="isLoadingTab" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
             <Icon icon="svg-spinners:ring-resize" class="w-8 h-8 text-vikinger-purple mx-auto" />
