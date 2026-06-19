@@ -407,12 +407,19 @@ class AcademyController extends Controller
     }
 
     public function getAuthMemberedAcademies(\App\Models\User $user){
+        if (auth()->id() !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access.'
+            ], 403);
+        }
+
         try {
-            // Get academies where user is a member with approved status (status = 2) or legacy strings
+            // Get academies where user is a member with pending or approved status
             // Status: 1 = Pending, 2 = Approved, 3 = Rejected, 4 = Invited, 5 = Suspended
             $memberships = AcademyMember::where('user_id', $user->id)
                 ->where(function($q) {
-                    $q->whereIn('status', [2, 'accepted', 'approved']);
+                    $q->whereIn('status', [1, 2, 'pending', 'accepted', 'approved']);
                 })
                 ->get(['academy_id', 'status', 'role']);
 

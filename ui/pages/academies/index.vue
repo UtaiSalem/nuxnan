@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
@@ -18,13 +18,14 @@ useHead({
 const api = useApi()
 const config = useRuntimeConfig()
 const { user } = storeToRefs(useAuthStore())
+const route = useRoute()
 
 // State
 const allAcademies = ref<any[]>([])
 const myAcademies = ref<any[]>([])
 const isLoading = ref(true)
 const searchQuery = ref('')
-const currentView = ref<'all' | 'my'>('all')
+const currentView = ref<'all' | 'my'>(route.query.view === 'my' ? 'my' : 'all')
 const page = ref(1)
 const hasMore = ref(false)
 
@@ -130,6 +131,17 @@ onMounted(() => {
   if (user.value) {
     fetchAllAcademies()
     fetchMyAcademies()
+    if (route.query.view === 'my') {
+      switchView('my')
+    }
+  }
+})
+
+watch(() => route.query.view, (newVal) => {
+  if (newVal === 'my') {
+    switchView('my')
+  } else {
+    currentView.value = 'all'
   }
 })
 </script>
