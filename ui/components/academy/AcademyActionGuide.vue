@@ -14,11 +14,11 @@ const emit = defineEmits<{
 }>()
 
 const academyId = computed(() => props.academy?.id ?? null)
-const encodedName = computed(() => props.academy?.name ? encodeURIComponent(props.academy.name) : '')
+const academyName = computed(() => props.academy?.name ?? '')
 
 const role = useAcademyRole(academyId)
 const { visibleDestinations, primaryCta, pendingHint } = useAcademyNavigation(
-  encodedName,
+  academyName,
   role,
   { isPending: () => !!props.isPending }
 )
