@@ -1,152 +1,31 @@
 /**
  * Composable for fetching the current user's own student profile.
  *
- * Calls /api/academies/{academy}/students/me/profile
- * which resolves the student record from the authenticated user.
+ * Calls /api/academies/{academy}/students/me/profile which resolves
+ * the student record from the authenticated user.
  *
- * Returns the exact same shape as useStudentProfile so the same
- * ProfileViewCards components can be reused.
+ * Returns the same shape as useStudentProfile so ProfileViewCards
+ * components can be reused. Types live in useStudentProfile.ts —
+ * this file imports them to avoid duplicate auto-imports.
  */
 import { ref, computed, type Ref } from 'vue'
 import { useApi } from './useApi'
+import type { StudentProfileData } from './useStudentProfile'
+import { ACCESS_LEVEL_LABELS } from './useStudentProfile'
 
-// ============================================================================
-// Types (re-exported from useStudentProfile for convenience)
-// ============================================================================
-
-export interface StudentProfile {
-  id: number
-  student_id: string
-  citizen_id: string | null
-  title_prefix_th: string | null
-  first_name_th: string
-  last_name_th: string
-  middle_name_th: string | null
-  title_prefix_en: string | null
-  first_name_en: string | null
-  last_name_en: string | null
-  middle_name_en: string | null
-  nickname: string | null
-  date_of_birth: string | null
-  age: number | null
-  gender: number | null
-  gender_text: string
-  nationality: string | null
-  religion: string | null
-  profile_image: string | null
-  blood_type: string | null
-  status: string
-  enrollment_date: string | null
-  class_level: string | null
-  class_section: string | null
-}
-
-export interface ClassroomInfo {
-  id: number
-  name: string | null
-  grade_level: string | null
-  section: string | null
-  academic_year: string | null
-  student_number: string | null
-}
-
-export interface AcademicInfo {
-  id: number
-  academic_year: string | null
-  current_grade: string | null
-  education_level: number | null
-  current_class: string | null
-  school_name: string | null
-  study_status: string | null
-  is_current: boolean
-  enrollment_date: string | null
-  graduation_date: string | null
-}
-
-export interface StudentAddress {
-  id: number
-  address_type: string
-  house_number: string | null
-  village_number: string | null
-  village_name: string | null
-  alley: string | null
-  road: string | null
-  subdistrict: string | null
-  district: string | null
-  province: string | null
-  postal_code: string | null
-  is_current: boolean
-}
-
-export interface StudentContact {
-  id: number
-  contact_type: string
-  contact_value: string
-  is_primary: boolean
-}
-
-export interface StudentGuardian {
-  id: number
-  guardian_type: string
-  title_prefix: string | null
-  first_name: string | null
-  last_name: string | null
-  relationship: string | null
-  occupation: string | null
-  is_primary_contact: boolean
-  is_emergency_contact: boolean
-  status: string | null
-  citizen_id?: string | null
-  monthly_income?: number | null
-  workplace?: string | null
-}
-
-export interface StudentHealthInfo {
-  height_cm: number | null
-  weight_kg: number | null
-  blood_type: string | null
-  rh_factor: string | null
-  allergies: string | null
-  chronic_diseases: string | null
-  medications: string | null
-  last_checkup_date: string | null
-}
-
-export interface AcademyInfo {
-  id: number
-  name: string
-  logo: string | null
-}
-
-export interface MyStudentProfileData {
-  student: StudentProfile
-  classroom: ClassroomInfo | null
-  academic_info: AcademicInfo[]
-  addresses: StudentAddress[]
-  contacts: StudentContact[]
-  guardians: StudentGuardian[]
-  health_info: StudentHealthInfo | null
-  access_level: string
-  academy: AcademyInfo
-}
+export type MyStudentProfileData = StudentProfileData
 
 export const STUDENT_NOT_LINKED_CODE = 'STUDENT_NOT_LINKED'
-
-// ============================================================================
-// Composable
-// ============================================================================
 
 export const useMyStudentProfile = (academyName: Ref<string> | string) => {
   const api = useApi()
 
-  // State
   const profileData = ref<MyStudentProfileData | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   /** True when the backend returned STUDENT_NOT_LINKED */
   const isUnlinked = ref(false)
 
-  // Computed
   const student = computed(() => profileData.value?.student ?? null)
   const classroom = computed(() => profileData.value?.classroom ?? null)
   const academicInfo = computed(() => profileData.value?.academic_info ?? [])
@@ -198,17 +77,9 @@ export const useMyStudentProfile = (academyName: Ref<string> | string) => {
 
   const accessLevelLabel = computed(() => {
     if (!accessLevel.value) return ''
-    const labels: Record<string, string> = {
-      self: 'นักเรียน (ตัวเอง)',
-      parent: 'ผู้ปกครอง',
-      homeroom: 'ครูประจำชั้น',
-      teacher: 'ครูผู้สอน',
-      admin: 'ผู้บริหาร',
-    }
-    return labels[accessLevel.value] || accessLevel.value
+    return ACCESS_LEVEL_LABELS[accessLevel.value] || accessLevel.value
   })
 
-  // Actions
   const fetchProfile = async () => {
     const acadName = typeof academyName === 'string' ? academyName : academyName.value
 
@@ -231,7 +102,6 @@ export const useMyStudentProfile = (academyName: Ref<string> | string) => {
       }
     } catch (err: any) {
       if (err?.data?.code === STUDENT_NOT_LINKED_CODE) {
-        // User is authenticated but has no linked student record
         isUnlinked.value = true
         error.value = 'บัญชีของคุณยังไม่ได้เชื่อมกับข้อมูลนักเรียนในโรงเรียนนี้'
       } else if (err?.status === 404) {
@@ -245,13 +115,11 @@ export const useMyStudentProfile = (academyName: Ref<string> | string) => {
   }
 
   return {
-    // State
     profileData,
     isLoading,
     error,
     isUnlinked,
 
-    // Computed
     student,
     classroom,
     academicInfo,
@@ -270,7 +138,6 @@ export const useMyStudentProfile = (academyName: Ref<string> | string) => {
     primaryContact,
     primaryGuardian,
 
-    // Actions
     fetchProfile,
   }
 }
