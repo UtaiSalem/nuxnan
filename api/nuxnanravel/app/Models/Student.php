@@ -2,21 +2,19 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Academy;
-use App\Models\User;
-use App\Traits\Auditable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Student Model - Core Entity for New Normalized Structure
  */
 class Student extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $guarded = [];
 
@@ -41,8 +39,8 @@ class Student extends Model
     public function classrooms(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Classroom::class, 'classroom_students', 'student_id', 'classroom_id')
-                     ->withPivot('student_number', 'status', 'academic_year_id', 'enrolled_at', 'left_at')
-                     ->withTimestamps();
+            ->withPivot('student_number', 'status', 'academic_year_id', 'enrolled_at', 'left_at')
+            ->withTimestamps();
     }
 
     /**
@@ -91,7 +89,7 @@ class Student extends Model
         'status',
         'enrollment_date',
         'class_level',
-        'class_section'
+        'class_section',
     ];
 
     protected $casts = [
@@ -99,32 +97,33 @@ class Student extends Model
         'enrollment_date' => 'date:Y-m-d',
         'gender' => 'integer',
     ];
-    
+
     // Gender constants
     const GENDER_FEMALE = 0;
+
     const GENDER_MALE = 1;
-    
+
     // Gender accessor - แปลงเป็นข้อความสำหรับแสดงผล
     public function getGenderTextAttribute(): string
     {
-        return match($this->gender) {
+        return match ($this->gender) {
             self::GENDER_FEMALE => 'หญิง',
             self::GENDER_MALE => 'ชาย',
             default => 'ไม่ระบุ'
         };
     }
-    
+
     // Gender scope สำหรับ query
     public function scopeByGender($query, $gender)
     {
         return $query->where('gender', $gender);
     }
-    
+
     public function scopeFemale($query)
     {
         return $query->where('gender', self::GENDER_FEMALE);
     }
-    
+
     public function scopeMale($query)
     {
         return $query->where('gender', self::GENDER_MALE);
@@ -140,8 +139,8 @@ class Student extends Model
     public function currentAcademicInfo(): HasOne
     {
         return $this->hasOne(StudentAcademicInfo::class)
-                    ->where('is_current', true)
-                    ->latestOfMany('academic_year');
+            ->where('is_current', true)
+            ->latestOfMany('academic_year');
     }
 
     // Legacy support - for backward compatibility
@@ -219,6 +218,17 @@ class Student extends Model
 
     public function studentCard(): HasOne
     {
+        // Schema guard: column may not exist yet in some environments
+        $hasColumn = \Cache::remember('has_col:sc.student_id', 3600, function () {
+            return \Schema::hasColumn('student_cards', 'student_id');
+        });
+
+        if (! $hasColumn) {
+            // Return relation that never matches; accessor will fall back to legacy
+            return $this->hasOne(StudentCard::class, 'student_id', 'id')
+                ->whereRaw('1=0');
+        }
+
         return $this->hasOne(StudentCard::class);
     }
 
@@ -245,8 +255,8 @@ class Student extends Model
     public function profileImage(): HasOne
     {
         return $this->hasOne(StudentDocument::class)
-                    ->where('document_type', 'profile_image')
-                    ->where('is_verified', true);
+            ->where('document_type', 'profile_image')
+            ->where('is_verified', true);
     }
 
     // Accessors
@@ -256,9 +266,9 @@ class Student extends Model
             $this->title_prefix_th,
             $this->first_name_th,
             $this->middle_name_th,
-            $this->last_name_th
+            $this->last_name_th,
         ]);
-        
+
         return implode(' ', $parts);
     }
 
@@ -268,9 +278,9 @@ class Student extends Model
             $this->title_prefix_en,
             $this->first_name_en,
             $this->middle_name_en,
-            $this->last_name_en
+            $this->last_name_en,
         ]);
-        
+
         return implode(' ', $parts);
     }
 
@@ -297,10 +307,10 @@ class Student extends Model
     public function getAcademicHistoryAttribute(): array
     {
         return $this->academicInfos()
-                    ->orderBy('academic_year', 'desc')
-                    ->orderBy('created_at', 'desc')
-                    ->get()
-                    ->toArray();
+            ->orderBy('academic_year', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->toArray();
     }
 
     // Scopes
@@ -311,35 +321,35 @@ class Student extends Model
 
     public function scopeByGrade($query, $grade)
     {
-        return $query->whereHas('currentAcademicInfo', function($q) use ($grade) {
+        return $query->whereHas('currentAcademicInfo', function ($q) use ($grade) {
             $q->where('current_grade', $grade);
         });
     }
 
     public function scopeByClass($query, $grade, $class)
     {
-        return $query->whereHas('currentAcademicInfo', function($q) use ($grade, $class) {
+        return $query->whereHas('currentAcademicInfo', function ($q) use ($grade, $class) {
             $q->where('current_grade', $grade)
-              ->where('current_class', $class);
+                ->where('current_class', $class);
         });
     }
 
     public function scopeByAcademicYear($query, $year)
     {
-        return $query->whereHas('currentAcademicInfo', function($q) use ($year) {
+        return $query->whereHas('currentAcademicInfo', function ($q) use ($year) {
             $q->where('academic_year', $year);
         });
     }
 
     public function scopeSearch($query, $search)
     {
-        return $query->where(function($q) use ($search) {
+        return $query->where(function ($q) use ($search) {
             $q->where('student_id', 'LIKE', "%{$search}%")
-              ->orWhere('citizen_id', 'LIKE', "%{$search}%")
-              ->orWhere('first_name_th', 'LIKE', "%{$search}%")
-              ->orWhere('last_name_th', 'LIKE', "%{$search}%")
-              ->orWhere('first_name_en', 'LIKE', "%{$search}%")
-              ->orWhere('last_name_en', 'LIKE', "%{$search}%");
+                ->orWhere('citizen_id', 'LIKE', "%{$search}%")
+                ->orWhere('first_name_th', 'LIKE', "%{$search}%")
+                ->orWhere('last_name_th', 'LIKE', "%{$search}%")
+                ->orWhere('first_name_en', 'LIKE', "%{$search}%")
+                ->orWhere('last_name_en', 'LIKE', "%{$search}%");
         });
     }
 
@@ -360,25 +370,25 @@ class Student extends Model
     public function hasProfileImage(): bool
     {
         return $this->documents()
-                    ->where('document_type', 'profile_image')
-                    ->where('is_verified', true)
-                    ->exists();
+            ->where('document_type', 'profile_image')
+            ->where('is_verified', true)
+            ->exists();
     }
 
     public function getMainContactNumber(): ?string
     {
         $contact = $this->contacts()
-                       ->whereIn('contact_type', ['mobile', 'phone'])
-                       ->where('is_primary', true)
-                       ->first();
-        
+            ->whereIn('contact_type', ['mobile', 'phone'])
+            ->where('is_primary', true)
+            ->first();
+
         return $contact?->contact_value;
     }
 
     public function getEmergencyContact(): ?StudentGuardian
     {
         return $this->guardians()
-                   ->where('is_emergency_contact', true)
-                   ->first();
+            ->where('is_emergency_contact', true)
+            ->first();
     }
 }

@@ -690,10 +690,18 @@ class ClassroomController extends Controller
             ]);
         }
 
+        $studentCard = null;
+        try {
+            $studentCard = $student->studentCard;
+        } catch (\Throwable $e) {
+            \Log::warning('student card load failed', ['student_id' => $student->id, 'err' => $e->getMessage()]);
+            $studentCard = $student->legacy_student_card;
+        }
+
         return response()->json([
             'success' => true,
             'student' => $student,
-            'studentCard' => $student->studentCard,
+            'studentCard' => $studentCard,
         ]);
     }
 }
