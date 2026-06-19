@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Auth;
 class StudentProfileController extends Controller
 {
     /**
-     * Get student profile with all related data
-     * 
+     * Get a student profile by academy and student ID.
+     *
      * Access control:
      * - Student themselves (via user_id match)
      * - Parent/Guardian (via student_guardians with user_id)
@@ -26,11 +26,7 @@ class StudentProfileController extends Controller
     {
         $user = Auth::user();
 
-        // Find the academy 
-        $academy = Academy::where('id', $academyId)
-            ->orWhere('name', $academyId)
-            ->first();
-
+        $academy = $this->findAcademy($academyId);
         if (!$academy) {
             return response()->json([
                 'success' => false,
@@ -38,7 +34,6 @@ class StudentProfileController extends Controller
             ], 404);
         }
 
-        // Find the student
         $student = Student::where('id', $studentId)
             ->where('academy_id', $academy->id)
             ->first();
@@ -50,7 +45,6 @@ class StudentProfileController extends Controller
             ], 404);
         }
 
-        // Check authorization
         $accessLevel = $this->checkAccess($user, $student, $academy);
         if (!$accessLevel) {
             return response()->json([
@@ -59,7 +53,146 @@ class StudentProfileController extends Controller
             ], 403);
         }
 
-        // Load relationships based on access level
+        return $this->buildProfileResponse($student, $academy, $accessLevel);
+    }
+
+    /**
+     * Get the current authenticated user's own student profile.
+     *
+     * Route: GET /api/academies/{academy}/students/me/profile
+     *
+     * No explicit access check needed — access is implicitly "self".
+     * Returns 404 with code STUDENT_NOT_LINKED when the user has no linked
+     * student record in this academy (e.g. parent, teacher, or pending member).
+     */
+    public function myProfile(Request $request, $academyId)
+    {
+        $user = Auth::user();
+
+        $academy = $this->findAcademy($academyId);
+        if (!$academy) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบสถาบันการศึกษา'
+            ], 404);
+        }
+
+        $student = Student::where('academy_id', $academy->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'บัญชีของคุณยังไม่ได้เชื่อมกับข้อมูลนักเรียนในโรงเรียนนี้ กรุณาติดต่อครูประจำชั้น',
+                'code' => 'STUDENT_NOT_LINKED'
+            ], 404);
+        }
+
+        return $this->buildProfileResponse($student, $academy, 'self');
+    }
+
+    /**
+     * Get student profile summary (lightweight version for lists/cards)
+     */
+    public function summary(Request $request, $academyId, $studentId)
+    {
+        $user = Auth::user();
+
+        $academy = $this->findAcademy($academyId);
+        if (!$academy) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบสถาบัน'], 404);
+        }
+
+        $student = Student::where('id', $studentId)
+            ->where('academy_id', $academy->id)
+            ->first();
+
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบนักเรียน'], 404);
+        }
+
+        $accessLevel = $this->checkAccess($user, $student, $academy);
+        if (!$accessLevel) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $student->id,
+                'student_id' => $student->student_id,
+                'full_name' => trim("{$student->title_prefix_th} {$student->first_name_th} {$student->last_name_th}"),
+                'nickname' => $student->nickname,
+                'class_level' => $student->class_level,
+                'class_section' => $student->class_section,
+                'profile_image' => $student->profile_image,
+                'gender' => $student->gender,
+                'status' => $student->status,
+            ],
+        ]);
+    }
+
+    /**
+     * Summary for the current authenticated user's own student record.
+     */
+    public function mySummary(Request $request, $academyId)
+    {
+        $user = Auth::user();
+
+        $academy = $this->findAcademy($academyId);
+        if (!$academy) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบสถาบัน'], 404);
+        }
+
+        $student = Student::where('academy_id', $academy->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบข้อมูลนักเรียนที่เชื่อมโยง',
+                'code' => 'STUDENT_NOT_LINKED'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $student->id,
+                'student_id' => $student->student_id,
+                'full_name' => trim("{$student->title_prefix_th} {$student->first_name_th} {$student->last_name_th}"),
+                'nickname' => $student->nickname,
+                'class_level' => $student->class_level,
+                'class_section' => $student->class_section,
+                'profile_image' => $student->profile_image,
+                'gender' => $student->gender,
+                'status' => $student->status,
+            ],
+        ]);
+    }
+
+    // =========================================================================
+    // Private Helpers
+    // =========================================================================
+
+    /**
+     * Find academy by ID or name.
+     */
+    private function findAcademy($academyId): ?Academy
+    {
+        return Academy::where('id', $academyId)
+            ->orWhere('name', $academyId)
+            ->first();
+    }
+
+    /**
+     * Build the full profile response for a given student, academy, and access level.
+     */
+    private function buildProfileResponse(Student $student, Academy $academy, string $accessLevel)
+    {
+        // Load relationships
         $student->load([
             'academicInfos' => function ($query) {
                 $query->orderBy('is_current', 'desc')
@@ -73,7 +206,7 @@ class StudentProfileController extends Controller
             'currentEnrollment',
         ]);
 
-        // Get classroom info
+        // Classroom info
         $classroomInfo = null;
         if ($student->activeClassroom->isNotEmpty()) {
             $classroom = $student->activeClassroom->first();
@@ -87,7 +220,7 @@ class StudentProfileController extends Controller
             ];
         }
 
-        // Build response data 
+        // Profile data
         $profileData = [
             'id' => $student->id,
             'student_id' => $student->student_id,
@@ -115,7 +248,7 @@ class StudentProfileController extends Controller
             'class_section' => $student->class_section,
         ];
 
-        $response = [
+        return response()->json([
             'success' => true,
             'data' => [
                 'student' => $profileData,
@@ -171,14 +304,11 @@ class StudentProfileController extends Controller
                         'is_emergency_contact' => $guardian->is_emergency_contact,
                         'status' => $guardian->status,
                     ];
-
-                    // Show sensitive info only for higher access levels
                     if (in_array($accessLevel, ['self', 'parent', 'admin', 'homeroom'])) {
                         $data['citizen_id'] = $guardian->citizen_id;
                         $data['monthly_income'] = $guardian->monthly_income;
                         $data['workplace'] = $guardian->workplace;
                     }
-
                     return $data;
                 }),
                 'health_info' => $student->healthInfo ? [
@@ -198,58 +328,12 @@ class StudentProfileController extends Controller
                     'logo' => $academy->logo,
                 ],
             ],
-        ];
-
-        return response()->json($response);
-    }
-
-    /**
-     * Get student profile summary (lightweight version for lists/cards)
-     */
-    public function summary(Request $request, $academyId, $studentId)
-    {
-        $user = Auth::user();
-
-        $academy = Academy::where('id', $academyId)
-            ->orWhere('name', $academyId)
-            ->first();
-
-        if (!$academy) {
-            return response()->json(['success' => false, 'message' => 'ไม่พบสถาบัน'], 404);
-        }
-
-        $student = Student::where('id', $studentId)
-            ->where('academy_id', $academy->id)
-            ->first();
-
-        if (!$student) {
-            return response()->json(['success' => false, 'message' => 'ไม่พบนักเรียน'], 404);
-        }
-
-        $accessLevel = $this->checkAccess($user, $student, $academy);
-        if (!$accessLevel) {
-            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'id' => $student->id,
-                'student_id' => $student->student_id,
-                'full_name' => trim("{$student->title_prefix_th} {$student->first_name_th} {$student->last_name_th}"),
-                'nickname' => $student->nickname,
-                'class_level' => $student->class_level,
-                'class_section' => $student->class_section,
-                'profile_image' => $student->profile_image,
-                'gender' => $student->gender,
-                'status' => $student->status,
-            ],
         ]);
     }
 
     /**
-     * Check user's access level to student data
-     * Returns access level string or null if no access
+     * Check user's access level to student data.
+     * Returns access level string or null if no access.
      */
     private function checkAccess($user, Student $student, Academy $academy): ?string
     {
@@ -294,13 +378,10 @@ class StudentProfileController extends Controller
                 return 'homeroom';
             }
 
-            // 5. School teacher (same academy)
             return 'teacher';
         }
 
-        // 6. Parent - check if user is linked as guardian
-        // Note: Currently guardians don't have user_id linkage
-        // This will work once guardian-user linking is implemented
+        // 5. Parent - check if user is linked as guardian
         $isParent = $student->guardians()
             ->where(function ($q) use ($user) {
                 $q->where('citizen_id', $user->citizen_id ?? '__none__');
@@ -311,16 +392,16 @@ class StudentProfileController extends Controller
             return 'parent';
         }
 
-        // 7. Regular academy member (student role) - limited access
+        // 6. Regular academy member (student role) - limited access
         if ($academyMember->role === 'student') {
-            return null; // Students can't view other students' profiles
+            return null;
         }
 
         return null;
     }
 
     /**
-     * Mask citizen ID based on access level
+     * Mask citizen ID based on access level.
      */
     private function maskCitizenId(?string $citizenId, string $accessLevel): ?string
     {
@@ -328,12 +409,10 @@ class StudentProfileController extends Controller
             return null;
         }
 
-        // Full access for self, parent, admin, homeroom
         if (in_array($accessLevel, ['self', 'parent', 'admin', 'homeroom'])) {
             return $citizenId;
         }
 
-        // Masked for teachers
         $digits = preg_replace('/\D/', '', $citizenId);
         if (strlen($digits) !== 13) {
             return '***-****-*****-**-*';
