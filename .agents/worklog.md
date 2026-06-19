@@ -6,6 +6,17 @@
 
 ---
 
+## สถานะปัจจุบัน (2026-06-20)
+
+### งานที่เพิ่งเสร็จสิ้น — Verified & Tested
+
+- **Done:** Academy Student Self Profile & Student Card recovery (Work Plan v2 core path: Phase 1, 2, 3, 5, 7):
+  - **Defensive Relation Guard:** Added column check inside `Student::studentCard()` relation and try-catch guard in `ClassroomController::getMyStudentCard` to prevent SQL/Eloquent 500 errors on missing schema columns.
+  - **Double-Encoding Fix:** Fixed double-encoding issue on Thai academy names in `AcademyActionGuide.vue`.
+  - **DB Migration & Backfill:** Migrated `2026_06_18_013941_add_student_id_to_student_cards_table.php` and backfilled student card link relations for 1930 records (100% matched, 0 orphans).
+  - **SFC Vue Refactoring:** Split 7 inline-template components from `ProfileViewCards.vue` into standalone SFC Vue components under `ui/components/learn/student/profile-cards/` to eliminate runtime compilation warnings.
+  - **Tests & Build Verification:** Ran targeted PHPUnit test suites (`StudentCardLinkTest`, `StudentMasterPolicyTest` - both passed 100%) and compiled full frontend production builds (`npm run build` - compiled clean with Vite & Nitro).
+
 ## สถานะปัจจุบัน (2026-06-16)
 
 ### งานที่เพิ่งเสร็จสิ้น — Verified & Tested
