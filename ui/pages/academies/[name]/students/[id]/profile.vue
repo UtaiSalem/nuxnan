@@ -7,15 +7,13 @@
  * Displays complete student profile information.
  * Accessible by: student (self), parents, teachers, admins
  */
-import {
-  ProfileHeader,
-  PersonalInfoCard,
-  AcademicInfoViewCard,
-  AddressViewCard,
-  ContactViewCard,
-  GuardianViewCard,
-  HealthInfoViewCard,
-} from '~/components/learn/student/ProfileViewCards.vue'
+import ProfileHeader from '~/components/learn/student/profile-cards/ProfileHeader.vue'
+import PersonalInfoCard from '~/components/learn/student/profile-cards/PersonalInfoCard.vue'
+import AcademicInfoViewCard from '~/components/learn/student/profile-cards/AcademicInfoViewCard.vue'
+import AddressViewCard from '~/components/learn/student/profile-cards/AddressViewCard.vue'
+import ContactViewCard from '~/components/learn/student/profile-cards/ContactViewCard.vue'
+import GuardianViewCard from '~/components/learn/student/profile-cards/GuardianViewCard.vue'
+import HealthInfoViewCard from '~/components/learn/student/profile-cards/HealthInfoViewCard.vue'
 
 definePageMeta({
   middleware: ['auth'],
