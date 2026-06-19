@@ -143,6 +143,12 @@ const fetchAnnouncements = async () => {
 // Quick actions for student
 const quickActions = computed(() => [
   {
+    title: 'โปรไฟล์ของฉัน',
+    icon: 'fluent:person-info-24-regular',
+    to: `/academies/${academyName.value}/my-profile`,
+    color: 'bg-indigo-500',
+  },
+  {
     title: 'หน้ารวมวิชา',
     icon: 'fluent:book-24-regular',
     to: `/academies/${academyName.value}`,
