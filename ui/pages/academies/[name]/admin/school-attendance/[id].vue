@@ -129,7 +129,7 @@ const manualRecords = ref<ManualRecord[]>([])
 
 onMounted(async () => {
   try {
-    const res: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+    const res: any = await api.get(`/api/academies/${academyName.value}`)
     if (res.success) {
       academyId.value = res.academy.id
       await Promise.all([loadSession(), loadStudents()])

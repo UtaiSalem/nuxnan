@@ -22,7 +22,7 @@ const error = ref<string | null>(null)
 onMounted(async () => {
   try {
     // First get academy info
-    const academyResponse: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+    const academyResponse: any = await api.get(`/api/academies/${academyName.value}`)
     
     if (!academyResponse.success) {
       error.value = 'ไม่พบโรงเรียน'

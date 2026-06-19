@@ -21,7 +21,7 @@ const dateFrom = ref('')
 const dateTo = ref('')
 
 onMounted(async () => {
-  const res: any = await useApi().get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+  const res: any = await useApi().get(`/api/academies/${academyName.value}`)
   if (res?.success) {
     academyId.value = res.academy.id
     await loadHistory()

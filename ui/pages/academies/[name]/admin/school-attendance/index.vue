@@ -41,7 +41,7 @@ const stats = computed(() => ({
 
 onMounted(async () => {
   try {
-    const res: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+    const res: any = await api.get(`/api/academies/${academyName.value}`)
     if (res.success) {
       academy.value = res.academy
       academyId.value = res.academy.id

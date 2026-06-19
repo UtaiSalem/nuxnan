@@ -133,7 +133,7 @@ onMounted(() => {
       <!-- View Full Card Button - ปิดไว้ชั่วคราว -->
       <!-- <div class="px-4 pb-4">
         <NuxtLink
-          :to="`/academies/${encodeURIComponent(academyName)}/my-card`"
+          :to="`/academies/${academyName}/my-card`"
           class="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
         >
           <Icon icon="fluent:open-24-regular" class="w-4 h-4" />
@@ -152,7 +152,7 @@ onMounted(() => {
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">กรุณาติดต่อเจ้าหน้าที่เพื่อออกบัตร</p>
         <!-- ปิดไว้ชั่วคราว
         <NuxtLink
-          :to="`/academies/${encodeURIComponent(academyName)}/my-card`"
+          :to="`/academies/${academyName}/my-card`"
           class="inline-flex items-center gap-1.5 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
         >
           <Icon icon="fluent:arrow-right-24-regular" class="w-4 h-4" />

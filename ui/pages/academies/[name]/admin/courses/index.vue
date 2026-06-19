@@ -76,7 +76,7 @@ const fetchCourses = async (append = false) => {
 
     // เรียกด้วย academy "name" ให้ตรงกับ route binding {academy:name} → controller index
     // (index คืน { courses: [...], pagination: {...} } โดยไม่มี key success)
-    const response: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}/courses?${params}`)
+    const response: any = await api.get(`/api/academies/${academyName.value}/courses?${params}`)
 
     const raw = response.courses
     const newCourses = Array.isArray(raw) ? raw : (raw?.data || [])
@@ -216,7 +216,7 @@ const getStatusLabel = (status: string | number) => {
 
 onMounted(async () => {
   try {
-    const response: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+    const response: any = await api.get(`/api/academies/${academyName.value}`)
     if (response.success) {
       academyId.value = response.academy.id
       await fetchCourses()

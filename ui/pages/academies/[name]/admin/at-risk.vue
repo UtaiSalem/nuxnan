@@ -23,7 +23,7 @@ const threshold = ref(80)
 
 onMounted(async () => {
   try {
-    const response: any = await useApi().get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+    const response: any = await useApi().get(`/api/academies/${academyName.value}`)
     if (response.success) {
       academyId.value = response.academy.id
       await fetchAtRiskStudents()

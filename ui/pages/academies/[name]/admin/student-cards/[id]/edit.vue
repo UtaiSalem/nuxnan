@@ -48,7 +48,7 @@ const photoPreview = ref<string | null>(null)
 
 onMounted(async () => {
   try {
-    const response: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+    const response: any = await api.get(`/api/academies/${academyName.value}`)
     if (response.success) {
       academy.value = response.academy
       academyId.value = response.academy.id

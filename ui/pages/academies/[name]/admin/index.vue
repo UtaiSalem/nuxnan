@@ -34,7 +34,7 @@ const { can } = useAcademyRole(academyId)
 onMounted(async () => {
   try {
     // Get academy ID first
-    const response: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+    const response: any = await api.get(`/api/academies/${academyName.value}`)
     if (response.success) {
       academyId.value = response.academy.id
       

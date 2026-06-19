@@ -86,7 +86,7 @@ const academyName = computed(() => route.params.name as string)
 
 // Check if current route is a child route (e.g., /admin, /dashboard)
 const isChildRoute = computed(() => {
-  const basePath = `/academies/${encodeURIComponent(academyName.value)}`
+  const basePath = `/academies/${academyName.value}`
   const decodedBasePath = `/academies/${academyName.value}`
   return route.path !== basePath && route.path !== decodedBasePath && 
          (route.path.startsWith(basePath + '/') || route.path.startsWith(decodedBasePath + '/'))
@@ -156,7 +156,7 @@ const fetchAcademy = async () => {
   error.value = null
   
   try {
-    const response: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+    const response: any = await api.get(`/api/academies/${academyName.value}`)
     
     if (response.success) {
       academy.value = JSON.parse(JSON.stringify(response.academy))

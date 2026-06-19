@@ -51,7 +51,7 @@ const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
 
 onMounted(async () => {
   try {
-    const response: any = await api.get(`/api/academies/${encodeURIComponent(academyName.value)}`)
+    const response: any = await api.get(`/api/academies/${academyName.value}`)
     if (response.success) {
       academyId.value = response.academy.id
       await fetchMyRole()
