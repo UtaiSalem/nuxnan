@@ -10,12 +10,17 @@
 
 ### งานที่เพิ่งเสร็จสิ้น — Verified & Tested
 
-- **Done:** Academy Student Self Profile & Student Card recovery (Work Plan v2 core path: Phase 1, 2, 3, 5, 7):
-  - **Defensive Relation Guard:** Added column check inside `Student::studentCard()` relation and try-catch guard in `ClassroomController::getMyStudentCard` to prevent SQL/Eloquent 500 errors on missing schema columns.
-  - **Double-Encoding Fix:** Fixed double-encoding issue on Thai academy names in `AcademyActionGuide.vue`.
-  - **DB Migration & Backfill:** Migrated `2026_06_18_013941_add_student_id_to_student_cards_table.php` and backfilled student card link relations for 1930 records (100% matched, 0 orphans).
-  - **SFC Vue Refactoring:** Split 7 inline-template components from `ProfileViewCards.vue` into standalone SFC Vue components under `ui/components/learn/student/profile-cards/` to eliminate runtime compilation warnings.
-  - **Tests & Build Verification:** Ran targeted PHPUnit test suites (`StudentCardLinkTest`, `StudentMasterPolicyTest` - both passed 100%) and compiled full frontend production builds (`npm run build` - compiled clean with Vite & Nitro).
+- **Done:** Academy Student Self Profile & Student Card recovery (Work Plan v2 — Phase 1–3, 5, 7 + Phase 2 codemod follow-up):
+  - **Defensive Relation Guard (Phase 1):** Added column check inside `Student::studentCard()` relation and try-catch guard in `ClassroomController::getMyStudentCard` to prevent SQL/Eloquent 500 errors on missing schema columns.
+  - **Double-Encoding Fix (Phase 2):** Initial commit fixed `AcademyActionGuide.vue`. Follow-up codemod (`d4a53625`) removed `encodeURIComponent(academyName)` from **59 files / 62 occurrences** across pages, layouts, and `StudentCardWidget`. ofetch handles UTF-8 path encoding automatically — manual wrapper was producing `%25`-prefixed double-encoded URLs that broke Laravel route-model binding on Thai academy names.
+  - **DB Migration & Backfill (Phase 3):** Migrated `2026_06_18_013941_add_student_id_to_student_cards_table.php` and backfilled `student_id` for **1930/1930** student card records (100% matched, 0 orphans).
+  - **SFC Vue Refactoring (Phase 5):** Split 7 inline-template components from `ProfileViewCards.vue` into standalone SFCs under `ui/components/learn/student/profile-cards/` to eliminate runtime compilation warnings.
+  - **Smoke Test Verification (Phase 7):** Manual browser testing across 7 flows (parent route, my-profile, my-card, student dashboard, admin/courses with query string, sidebar NuxtLink, attendance check-in) — all passed. No `%25E0` in network traffic, no 500/404, console clean.
+  - **Backend Tests:** PHPUnit suites `StudentCardLinkTest`, `StudentMasterPolicyTest` — 100% pass.
+
+### Follow-ups (optional, not blocking)
+- **Phase 4 (cleanup):** Remove `Schema::hasColumn` guard from `Student::studentCard()` after migration deployed to all environments for >1 sprint.
+- **Backfill command hardening:** `StudentsBackfillCardLink` uses `->get()` instead of `chunkById` — fine for current 1930 rows but should be hardened before next backfill on a larger dataset.
 
 ## สถานะปัจจุบัน (2026-06-16)
 
