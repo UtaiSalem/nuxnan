@@ -269,3 +269,31 @@
   - Detailed the remaining 491 null-year `student_academic_info` orphan records as intentionally bypassed due to lack of active enrollment data to infer from.
 - Verification:
   - Documentation matches the results of the grep searches and Phase 9 log inspection.
+
+## 2026-06-21 - Phase 7.2 Notification UI closeout and cycle closure
+
+- Branch: current working tree (uncommitted)
+- Task: verify and close the pending notification UI/filter work that was left in the working tree, then close the current delivery cycle
+- Files touched:
+  - `api/nuxnanravel/app/Http/Controllers/Api/Play/NotificationController.php`
+  - `api/nuxnanravel/tests/Feature/NotificationControllerTest.php`
+  - `ui/composables/useNotifications.ts`
+  - `ui/pages/notifications.vue`
+  - `.agents/worklog.md`
+  - `.agents/latest-analysis.md`
+- Done:
+  - confirmed the remaining actionable work in the current cycle was the Phase 7.2 notification UI/filter follow-up, not the older historical backlog entries in this file
+  - kept multi-type notification filtering in `NotificationController@index` using `types[]` while preserving legacy single `type` support
+  - finalized frontend grouped tabs for grade, certificate, enrollment, and rollover notifications using shared labels/colors/time helpers from `useNotifications`
+  - verified the new `NotificationControllerTest` coverage and synced the closeout note into agent documentation
+  - closed the current working cycle with no additional actionable pending items left in this working tree beyond previously documented historical backlog and the already-known `491` orphan academic-info rows outside this notification scope
+- Verification:
+  - `api/nuxnanravel`: `vendor\bin\pint app\Http\Controllers\Api\Play\NotificationController.php tests\Feature\NotificationControllerTest.php`
+    - Result: passed
+  - `api/nuxnanravel`: `php artisan test tests\Feature\NotificationControllerTest.php tests\Feature\EnrollmentNotificationListenerTest.php`
+    - Result: `9 passed (36 assertions)`
+  - `ui`: targeted parse check on `pages/notifications.vue`
+    - Result: `frontend notification files parse ok`
+- Remaining:
+  - no new actionable items remain for this cycle in the current working tree
+  - historical backlog entries elsewhere in this file should be treated as separate future work unless explicitly reopened

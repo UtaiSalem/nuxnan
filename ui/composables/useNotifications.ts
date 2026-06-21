@@ -27,9 +27,23 @@ export interface NotificationsResponse {
   unread_count: number
 }
 
+export const ENROLLMENT_NOTIFICATION_TYPES = [
+  'student_enrolled',
+  'student_transferred',
+  'student_promoted',
+  'student_repeated',
+  'student_graduated',
+  'student_dropped',
+] as const
+
+export const ROLLOVER_NOTIFICATION_TYPES = [
+  'rollover_committed',
+  'rollover_undone',
+] as const
+
 export const useNotifications = () => {
   const api = useApi()
-  
+
   // State
   const notifications = ref<ApiNotification[]>([])
   const unreadCount = ref(0)
@@ -46,6 +60,14 @@ export const useNotifications = () => {
     eligibility_unlocked: 'ปลดล็อคสิทธิ์สอบ',
     remediation_opened: 'เปิดซ่อมเสริม',
     remediation_completed: 'ผ่านซ่อมเสริม',
+    student_enrolled: 'ลงทะเบียนเข้าเรียน',
+    student_transferred: 'ย้ายห้องเรียน',
+    student_promoted: 'เลื่อนชั้น',
+    student_repeated: 'ซ้ำชั้น',
+    student_graduated: 'จบการศึกษา',
+    student_dropped: 'พ้นสภาพ',
+    rollover_committed: 'ยืนยัน rollover',
+    rollover_undone: 'ยกเลิก rollover',
     general: 'ทั่วไป',
     course: 'รายวิชา',
     assignment: 'งาน',
@@ -71,7 +93,7 @@ export const useNotifications = () => {
   const fetchRecent = async (limit: number = 10): Promise<void> => {
     isLoading.value = true
     error.value = null
-    
+
     try {
       const res: any = await api.get(`/api/notifications/recent?limit=${limit}`)
       if (res.success) {
@@ -79,7 +101,7 @@ export const useNotifications = () => {
         unreadCount.value = res.data.unread_count || 0
       }
     } catch (err: any) {
-      error.value = err.message || 'ไม่สามารถโหลดการแจ้งเตือน'
+      error.value = err.message || 'ไม่สามารถโหลดการแจ้งเตือนได้'
       console.error('Failed to fetch notifications:', err)
     } finally {
       isLoading.value = false
@@ -106,8 +128,7 @@ export const useNotifications = () => {
   const markAsRead = async (notificationId: number): Promise<void> => {
     try {
       await api.post(`/api/notifications/${notificationId}/read`)
-      
-      // Update local state
+
       const notification = notifications.value.find(n => n.id === notificationId)
       if (notification && !notification.read_status) {
         notification.read_status = true
@@ -124,8 +145,7 @@ export const useNotifications = () => {
   const markAllAsRead = async (): Promise<void> => {
     try {
       await api.post('/api/notifications/mark-all-read')
-      
-      // Update local state
+
       notifications.value.forEach(n => {
         n.read_status = true
       })
@@ -141,8 +161,7 @@ export const useNotifications = () => {
   const deleteNotification = async (notificationId: number): Promise<void> => {
     try {
       await api.delete(`/api/notifications/${notificationId}`)
-      
-      // Update local state
+
       const index = notifications.value.findIndex(n => n.id === notificationId)
       if (index !== -1) {
         const notification = notifications.value[index]
@@ -185,11 +204,11 @@ export const useNotifications = () => {
     if (diffMins < 60) return `${diffMins} นาทีที่แล้ว`
     if (diffHours < 24) return `${diffHours} ชั่วโมงที่แล้ว`
     if (diffDays < 7) return `${diffDays} วันที่แล้ว`
-    
-    return date.toLocaleDateString('th-TH', { 
-      day: 'numeric', 
+
+    return date.toLocaleDateString('th-TH', {
+      day: 'numeric',
       month: 'short',
-      year: diffDays > 365 ? 'numeric' : undefined
+      year: diffDays > 365 ? 'numeric' : undefined,
     })
   }
 
@@ -197,12 +216,10 @@ export const useNotifications = () => {
    * Navigate to notification action
    */
   const handleNavigateTo = async (notification: ApiNotification): Promise<void> => {
-    // Mark as read first
     if (!notification.read_status) {
       await markAsRead(notification.id)
     }
-    
-    // Navigate if action_url exists
+
     if (notification.action_url) {
       await navigateTo(notification.action_url as any)
     }
@@ -220,27 +237,22 @@ export const useNotifications = () => {
       const channelName = `App.Models.User.${authStore.user.id}`
       echo.private(channelName)
         .notification((notification: any) => {
-          // Increment unread count
           unreadCount.value++
-          
-          // Prepend to notifications list
+
           notifications.value.unshift({
-             ...notification,
-             read_status: false,
-             created_at: new Date().toISOString()
+            ...notification,
+            read_status: false,
+            created_at: new Date().toISOString(),
           })
         })
     }
   }
 
   return {
-    // State
     notifications,
     unreadCount,
     isLoading,
     error,
-    
-    // Actions
     fetchRecent,
     fetchUnreadCount,
     markAsRead,
@@ -248,8 +260,6 @@ export const useNotifications = () => {
     deleteNotification,
     navigateTo: handleNavigateTo,
     initEcho,
-    
-    // Helpers
     getTypeLabel,
     getColorClass,
     formatRelativeTime,

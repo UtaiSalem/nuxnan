@@ -6932,3 +6932,27 @@ async function load() {
   - Detailed the remaining 491 null-year `student_academic_info` orphan records as intentionally bypassed due to lack of active enrollment data to infer from.
 - Verification:
   - Read-back check successfully performed. No codebase functionality is affected as this was a documentation, inventory, and task closing phase.
+
+## 2026-06-21 Phase 7.2 closeout - notification UI and current cycle closure
+
+- Scope verified:
+  - `api/nuxnanravel/app/Http/Controllers/Api/Play/NotificationController.php`
+  - `api/nuxnanravel/tests/Feature/NotificationControllerTest.php`
+  - `ui/composables/useNotifications.ts`
+  - `ui/pages/notifications.vue`
+- Findings:
+  - the only actionable unfinished work still present in the current working tree was the Phase 7.2 notification UI/filter follow-up already described earlier in this file
+  - older "remaining" notes elsewhere in `worklog.md` / `latest-analysis.md` are historical backlog and not blockers for closing this delivery cycle unless explicitly reopened
+- Finalized behavior:
+  - notification page now supports grouped category tabs for grade, certificate, enrollment, and rollover notifications
+  - frontend uses shared notification labels/color classes/relative time helpers from `useNotifications`
+  - backend `NotificationController@index` supports multi-select `types[]` filtering while preserving the older single `type` param for compatibility
+- Verification:
+  - `api/nuxnanravel`: `vendor\bin\pint app\Http\Controllers\Api\Play\NotificationController.php tests\Feature\NotificationControllerTest.php`
+  - `api/nuxnanravel`: `php artisan test tests\Feature\NotificationControllerTest.php tests\Feature\EnrollmentNotificationListenerTest.php`
+    - Result: `9 passed (36 assertions)`
+  - `ui`: targeted parse check on `pages/notifications.vue`
+    - Result: `frontend notification files parse ok`
+- Closure note:
+  - current delivery cycle can be considered closed from an implementation/verification standpoint
+  - no additional actionable pending items remain in this working tree outside previously documented out-of-scope backlog and the known `491` orphan `student_academic_info` rows from Phase 9
