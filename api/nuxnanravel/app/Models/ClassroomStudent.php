@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * ClassroomStudent Model - นักเรียนในห้องเรียน (Pivot Table)
- * 
+ *
  * เป็น Source of Truth สำหรับการสังกัดห้องเรียนของนักเรียน
  * รองรับ Historical Data — เก็บประวัติห้องเรียนข้ามปีการศึกษาได้
  */
@@ -26,6 +26,8 @@ class ClassroomStudent extends Model
         'enrolled_at',
         'left_at',
         'leave_reason',
+        'rollover_batch_id',
+        'created_by_user_id',
     ];
 
     protected $casts = [
@@ -36,9 +38,28 @@ class ClassroomStudent extends Model
 
     // Status Constants
     const STATUS_ACTIVE = 'active';
-    const STATUS_TRANSFERRED = 'transferred';
-    const STATUS_GRADUATED = 'graduated';
-    const STATUS_DROPPED = 'dropped';
+
+    const STATUS_TRANSFERRED = 'transferred';      // ย้ายห้องในปีเดียวกัน
+
+    const STATUS_PROMOTED = 'promoted';            // เลื่อนชั้นข้ามปี (Phase 2.4)
+
+    const STATUS_GRADUATED = 'graduated';          // จบการศึกษา
+
+    const STATUS_DROPPED = 'dropped';              // ลาออก/พ้นสภาพ
+
+    const STATUS_REPEATING = 'repeating';          // ซ้ำชั้น
+
+    const STATUS_SUPERSEDED = 'superseded';        // ปิดโดย repair (active row ซ้อน)
+
+    public static array $statuses = [
+        self::STATUS_ACTIVE,
+        self::STATUS_TRANSFERRED,
+        self::STATUS_PROMOTED,
+        self::STATUS_GRADUATED,
+        self::STATUS_DROPPED,
+        self::STATUS_REPEATING,
+        self::STATUS_SUPERSEDED,
+    ];
 
     // Relationships
     public function classroom(): BelongsTo
@@ -90,12 +111,21 @@ class ClassroomStudent extends Model
     // Accessors
     public function getStatusTextAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_ACTIVE => 'กำลังศึกษา',
-            self::STATUS_TRANSFERRED => 'ย้ายออก',
+            self::STATUS_TRANSFERRED => 'ย้ายห้อง',
+            self::STATUS_PROMOTED => 'เลื่อนชั้น',
             self::STATUS_GRADUATED => 'จบการศึกษา',
             self::STATUS_DROPPED => 'พ้นสภาพ',
+            self::STATUS_REPEATING => 'ซ้ำชั้น',
+            self::STATUS_SUPERSEDED => 'ปิดโดยระบบ',
             default => 'ไม่ระบุ'
         };
+    }
+
+    // Created by (audit)
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by_user_id');
     }
 }
