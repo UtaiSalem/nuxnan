@@ -112,6 +112,7 @@
 
 | วันที่ | งาน | สถานะ |
 |--------|------|-------|
+| 2026-06-21 | Phase 10 — Compatibility Inventory & Closure Documentation | ✅ Done |
 | 2026-06-21 | Phase N — Polish + A11y + Mobile UX (Skeletons, EmptyState, Drawer, Swipe, FocusTrap, Keyboard Nav) | ✅ Done |
 | 2026-06-20 | Phase I — Academy group profile page (Cover + Tabs + Gating + Composer) | ✅ Done |
 | 2026-06-16 | Phaser classroom v5/v6.1 refinement (board + floor + patrol safety + responsive) | ✅ Done |
@@ -251,3 +252,20 @@
   - DB inspection after the run still shows `student_academic_info.academic_year IS NULL = 491` rows and all 491 rows have `is_current = true`.
   - Those 491 rows are not backed by active `classroom_students` records and also have no usable classroom/year snapshot to infer safely, so the current Phase 9.2 command intentionally leaves them untouched.
   - Enrollment-backed repair/backfill is clean; remaining null-year rows need a separate legacy/orphan cleanup strategy if the team wants full normalization of `student_academic_info`.
+
+## 2026-06-21 - Phase 10 Compatibility Inventory & Closure Documentation
+
+- Branch: current working tree (uncommitted)
+- Task: Complete Phase 10: build a comprehensive compatibility field inventory and write closure documentation
+- Files touched:
+  - [enrollment-rollover-repair.md](file:///C:/wamp64/www/nuxnan/.agents/enrollment-rollover-repair.md)
+  - [worklog.md](file:///C:/wamp64/www/nuxnan/.agents/worklog.md)
+  - [latest-analysis.md](file:///C:/wamp64/www/nuxnan/.agents/latest-analysis.md)
+- Done:
+  - Documented nuxnan student enrollment source of truth architecture, highlighting `classroom_students` as the absolute source of truth.
+  - Performed a detailed reads/writes inventory on the compatibility fields `students.class_level` and `students.class_section` across the codebase.
+  - Categorized usages into `Keep` (sync hooks, rollover rollback snapshots, pending intake checks, profile display, and front-end rendering) and `Defer` (member list query filtering and sorting, and student card distinct lists).
+  - Summarized the Phase 9 Artisan command sequence and outcomes.
+  - Detailed the remaining 491 null-year `student_academic_info` orphan records as intentionally bypassed due to lack of active enrollment data to infer from.
+- Verification:
+  - Documentation matches the results of the grep searches and Phase 9 log inspection.

@@ -6870,3 +6870,65 @@ async function load() {
   - `api/nuxnanravel`: `vendor\bin\pint app\Console\Commands\EnrollmentRepairDirtyData.php tests\Feature\EnrollmentRepairDirtyDataTest.php`
   - `api/nuxnanravel`: `php artisan test tests/Feature/EnrollmentRepairDirtyDataTest.php`
     - Result: `6 passed (30 assertions)`
+
+## 2026-06-21 Phase 10 planning note - Cleanup + docs
+
+- Request type: plan-only. No implementation performed in this pass.
+- Current status check:
+  - enrollment rollout is effectively at `9/10` for the current sequence: Phase 7 notifications done, Phase 8 audit/history done, Phase 9 repair/backfill/report done.
+  - current working tree already contains uncommitted changes for:
+    - notification filter/UI files
+    - Phase 9 repair/backfill commands + tests
+    - `.agents/worklog.md`
+    - `.agents/latest-analysis.md`
+- Key findings for Phase 10:
+  - the older checklist item "remove legacy paths that write `students.class_level` directly" is too broad for the current repo state; `class_level` is still an active backward-compatibility snapshot used by student profile/card flows, home-visit flows, academy member filters, and rollover intake fallback paths.
+  - there is no top-level `docs/` directory yet, so documentation placement needs to be decided explicitly instead of assuming `docs/academic-year-rollover.md` already fits an existing structure.
+  - no obvious `MEMORY.md` / `project_enrollment_rollover.md` target exists in the workspace root or `.agents`, so memory capture should likely be folded into `.agents/worklog.md` plus a dedicated markdown doc unless the team wants a new memory convention created.
+  - residual normalization risk after Phase 9 is now concentrated in the `491` legacy/orphan `student_academic_info.academic_year IS NULL` rows; this is the main cleanup item that still needs documentation and a clear non-goal boundary for the current PR.
+  - notification UI work in the tree (`NotificationController`, `useNotifications`, `notifications.vue`) is already aligned with Phase 7.2 and should be treated as part of the same release narrative, not reopened in Phase 10 unless QA finds regressions.
+- Recommended Phase 10 scope:
+  - 10.1 cleanup = targeted grep/audit pass for enrollment snapshot writes, keeping only intentional backward-compatibility writes in `StudentEnrollmentService` and documented fallback readers; remove only truly redundant or conflicting direct writes if found.
+  - 10.2 docs = add one durable enrollment rollover/repair document covering:
+    - source of truth (`classroom_students`)
+    - meaning of `students.class_level` / `class_section` as snapshot compatibility fields
+    - Phase 9 commands, dry-run/real-run flow, and report location
+    - explicit note that 491 orphan academic-info rows remain intentionally untouched
+    - rollback/undo window and audit trail summary
+  - 10.3 worklog sync = update `.agents/worklog.md` with final phase-closure summary, touched files, verification already run, and the residual orphan-row risk.
+  - 10.4 release notes / operator notes = capture the exact post-Phase-9 dry-run expected results (`repair=0`, `patched_null_year=0`, `skipped_existing=1929`) so future operators can compare health quickly.
+- Likely files for Phase 10 implementation:
+  - `.agents/worklog.md`
+  - `.agents/latest-analysis.md`
+  - new documentation file under either `docs/` or `.agents/` after choosing a canonical location
+  - optional read-only grep follow-up across `api/nuxnanravel/app` and `ui/` for direct `class_level` writes/usages
+- Suggested execution order:
+  1. inventory direct writes to `students.class_level` / `class_section` and label each as keep/remove/defer
+  2. decide canonical doc location (`docs/` new folder vs `.agents/` operational note)
+  3. write the rollover/repair doc with command examples and residual-risk section
+  4. sync `.agents/worklog.md` and `.agents/latest-analysis.md`
+  5. optional final read-only verification: re-open `repair-report.md` and ensure counts in docs match the recorded run
+- Risks / cautions:
+  - removing `class_level` writes too early can break old readers that still build image paths, labels, or filters from `students` instead of active enrollment joins.
+  - documenting the 491 residual rows poorly could make the Phase 9 run look incomplete when it is actually intentionally scoped.
+  - creating a brand-new memory convention in Phase 10 may add churn; prefer reusing existing repo conventions unless the team explicitly wants a new memory file.
+- Verification plan for actual Phase 10 implementation:
+  - read-back check for all docs/worklog changes
+  - if any cleanup code change happens, rerun only the touched enrollment/notification tests plus Pint on edited PHP files
+
+## 2026-06-21 Phase 10 implementation - Compatibility Inventory & Closure Documentation
+
+- Branch: current working tree (uncommitted)
+- Task: Complete Phase 10: build a comprehensive compatibility field inventory and write closure documentation
+- Files touched:
+  - [enrollment-rollover-repair.md](file:///C:/wamp64/www/nuxnan/.agents/enrollment-rollover-repair.md)
+  - [worklog.md](file:///C:/wamp64/www/nuxnan/.agents/worklog.md)
+  - [latest-analysis.md](file:///C:/wamp64/www/nuxnan/.agents/latest-analysis.md)
+- Done:
+  - Created nuxnan student enrollment source of truth architecture, highlighting `classroom_students` as the absolute source of truth and `students.class_level`/`students.class_section` as snapshot compatibility columns.
+  - Performed a detailed reads/writes inventory on the compatibility fields `students.class_level` and `students.class_section` across the codebase.
+  - Categorized usages into `Keep` (sync hooks, rollover rollback snapshots, pending intake checks, profile display, and front-end rendering) and `Defer` (member list query filtering and sorting, and student card distinct lists).
+  - Summarized the Phase 9 Artisan command sequence and outcomes.
+  - Detailed the remaining 491 null-year `student_academic_info` orphan records as intentionally bypassed due to lack of active enrollment data to infer from.
+- Verification:
+  - Read-back check successfully performed. No codebase functionality is affected as this was a documentation, inventory, and task closing phase.
