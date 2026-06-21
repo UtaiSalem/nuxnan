@@ -31,6 +31,11 @@ class Notification extends Model
     public const TYPE_COURSE_MEMBER_REMOVED = 'course_member_removed';
     public const TYPE_COURSE_SELF_LEFT = 'course_self_left';
     public const TYPE_COURSE_REMOVAL_REFUNDED = 'course_removal_refunded';
+    
+    // Group notification types
+    public const TYPE_GROUP_MEMBER_ADDED = 'group_member_added';
+    public const TYPE_GROUP_ADMIN_ADDED = 'group_admin_added';
+    public const TYPE_GROUP_POST_CREATED = 'group_post_created';
 
     // Other types
     public const TYPE_GENERAL = 'general';
@@ -103,6 +108,9 @@ class Notification extends Model
             self::TYPE_ASSIGNMENT => 'heroicons:clipboard-document-list',
             self::TYPE_QUIZ => 'heroicons:question-mark-circle',
             self::TYPE_COURSE => 'heroicons:book-open',
+            self::TYPE_GROUP_MEMBER_ADDED => 'heroicons:user-group',
+            self::TYPE_GROUP_ADMIN_ADDED => 'heroicons:star',
+            self::TYPE_GROUP_POST_CREATED => 'heroicons:document-text',
             default => 'heroicons:bell',
         };
     }
@@ -121,6 +129,9 @@ class Notification extends Model
             self::TYPE_ELIGIBILITY_UNLOCKED => 'cyan',
             self::TYPE_REMEDIATION_OPENED => 'orange',
             self::TYPE_REMEDIATION_COMPLETED => 'teal',
+            self::TYPE_GROUP_MEMBER_ADDED => 'purple',
+            self::TYPE_GROUP_ADMIN_ADDED => 'yellow',
+            self::TYPE_GROUP_POST_CREATED => 'blue',
             default => 'gray',
         };
     }

@@ -1,8 +1,26 @@
 <script setup>
 import { Icon } from '@iconify/vue'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { usePosts } from '~/composables/usePosts'
+
+const modalContainerRef = ref(null)
+
+useFocusTrap(modalContainerRef, computed(() => props.show))
+
+const handleKeydown = (e) => {
+  if (e.key === 'Escape' && props.show) {
+    closeModal()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 
 const props = defineProps({
   show: {
@@ -25,6 +43,30 @@ const props = defineProps({
   contextName: {
     type: String,
     default: ''
+  },
+  postedAsGroupId: {
+    type: Number,
+    default: null
+  },
+  lockedGroupId: {
+    type: Number,
+    default: null
+  },
+  isAcademyAdmin: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const selectedGroupId = ref(props.postedAsGroupId ?? props.lockedGroupId ?? null)
+
+watch(() => props.postedAsGroupId, (v) => {
+  selectedGroupId.value = v ?? props.lockedGroupId ?? null
+})
+
+watch(() => props.lockedGroupId, (v) => {
+  if (v != null) {
+    selectedGroupId.value = v
   }
 })
 
@@ -67,6 +109,27 @@ const createAcademyPost = async (content, options) => {
   if (options.privacy_settings !== undefined) {
     formData.append('privacy_settings', String(options.privacy_settings))
   }
+
+  if (selectedGroupId.value) {
+    formData.append('posted_as_group_id', String(selectedGroupId.value))
+  }
+
+  if (options.post_type) {
+    formData.append('post_type', options.post_type)
+  }
+  if (options.target_audience && options.target_audience.length > 0) {
+    options.target_audience.forEach((aud) => {
+      formData.append('target_audience[]', aud)
+    })
+  }
+  if (options.reward_points !== undefined) {
+    formData.append('reward_points', String(options.reward_points))
+  }
+  if (options.embed_data) {
+    Object.keys(options.embed_data).forEach((key) => {
+      formData.append(`embed_data[${key}]`, options.embed_data[key])
+    })
+  }
   
   return await api.post(`/api/academies/${props.contextId}/posts`, formData)
 }
@@ -94,6 +157,21 @@ const isSubmitting = ref(false)
 const selectedImages = ref([])
 const imageInput = ref(null)
 const textareaRef = ref(null)
+
+const canSetType = computed(() => props.isAcademyAdmin === true)
+const postType = ref('regular')
+const targetAudience = ref([])
+const rewardPoints = ref(0)
+
+// Attendance inputs
+const attendanceLabel = ref('')
+const attendanceCurrent = ref('')
+const attendanceTotal = ref('')
+
+// Event inputs
+const eventDate = ref('')
+const eventLocation = ref('')
+const eventRequiresRegister = ref(false)
 
 // Auto-resize textarea
 const autoResize = () => {
@@ -324,6 +402,30 @@ const createPost = async () => {
       options.scheduled_at = scheduledDate.value
     }
     
+    // Construct embed_data based on post type
+    let embed_data = null
+    if (postType.value === 'attendance') {
+      embed_data = {
+        label: attendanceLabel.value || 'เข้าร่วมกิจกรรม',
+        current: Number(attendanceCurrent.value || 0),
+        total: Number(attendanceTotal.value || 0)
+      }
+    } else if (postType.value === 'event') {
+      embed_data = {
+        event_title: postText.value.split('\n')[0] || 'กิจกรรม',
+        event_date: eventDate.value || new Date().toISOString(),
+        location: eventLocation.value || '',
+        requires_register: eventRequiresRegister.value
+      }
+    }
+
+    if (props.context === 'academy') {
+      options.post_type = postType.value
+      options.target_audience = targetAudience.value
+      options.reward_points = rewardPoints.value
+      options.embed_data = embed_data
+    }
+
     let response
     
     // Handle different contexts
@@ -371,6 +473,17 @@ const resetForm = () => {
   showTagFriends.value = false
   showScheduler.value = false
   showPrivacyOptions.value = false
+  selectedGroupId.value = props.postedAsGroupId ?? props.lockedGroupId ?? null
+  
+  postType.value = 'regular'
+  targetAudience.value = []
+  rewardPoints.value = 0
+  attendanceLabel.value = ''
+  attendanceCurrent.value = ''
+  attendanceTotal.value = ''
+  eventDate.value = ''
+  eventLocation.value = ''
+  eventRequiresRegister.value = false
   
   // Reset poll
   activeTab.value = 'status'
@@ -468,7 +581,7 @@ const removeTaggedFriend = (friendId) => {
         class="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-10 md:pt-16 overflow-y-auto backdrop-blur-sm"
         @click.self="closeModal"
       >
-        <div class="w-full max-w-2xl mx-4 mb-10 modal-content">
+        <div ref="modalContainerRef" class="w-full max-w-2xl mx-4 mb-10 modal-content" role="dialog" aria-modal="true" aria-labelledby="create-post-title">
           <div class="bg-white dark:bg-vikinger-dark-300 rounded-2xl shadow-2xl overflow-hidden">
             <!-- Header with gradient -->
             <div class="relative">
@@ -478,7 +591,7 @@ const removeTaggedFriend = (friendId) => {
                   <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-vikinger-purple to-vikinger-cyan flex items-center justify-center shadow-sm">
                     <Icon :icon="context === 'academy' ? 'fluent:building-24-filled' : context === 'course' ? 'fluent:book-24-filled' : 'fluent:compose-24-filled'" class="w-5 h-5 text-white" />
                   </div>
-                  <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ modalTitle }}</h2>
+                  <h2 id="create-post-title" class="text-lg font-bold text-gray-800 dark:text-white">{{ modalTitle }}</h2>
                 </div>
                 <button @click="closeModal" class="p-2 hover:bg-white/60 dark:hover:bg-vikinger-dark-200 rounded-xl transition-colors">
                   <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors" />
@@ -500,7 +613,19 @@ const removeTaggedFriend = (friendId) => {
                 </div>
                 <div class="flex-1">
                   <div class="font-bold text-gray-800 dark:text-white leading-tight">{{ authStore.user?.name }}</div>
-                  <div class="flex items-center gap-1.5 mt-0.5">
+                  
+                  <!-- Mounted identity selector inside modal header -->
+                  <div v-if="context === 'academy'" class="mt-1">
+                    <AcademyGroupsPostAsSelector
+                      v-model="selectedGroupId"
+                      :academy-id="contextId"
+                      :locked-group-id="lockedGroupId"
+                      :user="authStore.user"
+                      variant="full"
+                    />
+                  </div>
+
+                  <div class="flex items-center gap-1.5 mt-1.5">
                     <button @click="showPrivacyOptions = !showPrivacyOptions" class="flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-vikinger-purple uppercase tracking-wider transition-colors">
                       <Icon :icon="currentPrivacy.icon" class="w-2.5 h-2.5" />
                       <span>{{ currentPrivacy.label }}</span>
@@ -729,6 +854,106 @@ const removeTaggedFriend = (friendId) => {
                     <button @click="showScheduler = false; scheduledDate = ''"><Icon icon="mdi:close" class="w-5 h-5 text-gray-500" /></button>
                   </div>
                   <input v-model="scheduledDate" type="datetime-local" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-vikinger-dark-50/30 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white text-sm" />
+                </div>
+
+                <!-- Post Type Picker (for Academy Admins) -->
+                <div v-if="canSetType && context === 'academy'" class="mb-4 p-4 bg-gray-50 dark:bg-vikinger-dark-200 rounded-xl border border-gray-200/60 dark:border-gray-700/60">
+                  <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2.5 uppercase tracking-wider">ประเภทโพสต์</label>
+                  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <button
+                      v-for="t in [
+                        { key: 'regular',      label: 'โพสต์ทั่วไป',  icon: 'fluent:chat-bubble-left-24-regular' },
+                        { key: 'announcement', label: 'ประกาศ',       icon: 'fluent:megaphone-24-regular' },
+                        { key: 'event',        label: 'กิจกรรม',      icon: 'fluent:calendar-ltr-24-regular' },
+                        { key: 'director',     label: 'ฝ่ายบริหาร',  icon: 'fluent:ribbon-star-24-regular' },
+                        { key: 'attendance',   label: 'สรุปเข้าร่วม', icon: 'fluent:board-24-regular' },
+                        { key: 'achievement',  label: 'ผลงาน',        icon: 'fluent:trophy-24-regular' },
+                      ]"
+                      :key="t.key"
+                      type="button"
+                      :class="[
+                        'p-2.5 rounded-lg border flex items-center gap-2 text-xs font-bold transition-all duration-300 hover:scale-[1.02]',
+                        postType === t.key
+                          ? 'border-vikinger-purple bg-vikinger-purple/10 text-vikinger-purple dark:text-vikinger-cyan'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 bg-white dark:bg-vikinger-dark-100'
+                      ]"
+                      @click="postType = t.key"
+                    >
+                      <Icon :icon="t.icon" class="w-4 h-4" />
+                      {{ t.label }}
+                    </button>
+                  </div>
+
+                  <!-- Attendance inputs if selected -->
+                  <div v-if="postType === 'attendance'" class="mt-4 space-y-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div class="grid grid-cols-1 gap-2.5">
+                      <div>
+                        <label class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1">หัวข้อกิจกรรมเข้าร่วม</label>
+                        <input v-model="attendanceLabel" type="text" placeholder="เช่น เข้าร่วมกิจกรรมหน้าเสาธง" class="w-full px-3 py-2 bg-white dark:bg-vikinger-dark-100 border border-gray-200 dark:border-gray-700 rounded-lg text-sm outline-none focus:ring-1 focus:ring-vikinger-purple" />
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1">จำนวนที่เข้าร่วม (คน)</label>
+                          <input v-model.number="attendanceCurrent" type="number" min="0" class="w-full px-3 py-2 bg-white dark:bg-vikinger-dark-100 border border-gray-200 dark:border-gray-700 rounded-lg text-sm outline-none focus:ring-1 focus:ring-vikinger-purple" />
+                        </div>
+                        <div>
+                          <label class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1">จำนวนทั้งหมด (คน)</label>
+                          <input v-model.number="attendanceTotal" type="number" min="1" class="w-full px-3 py-2 bg-white dark:bg-vikinger-dark-100 border border-gray-200 dark:border-gray-700 rounded-lg text-sm outline-none focus:ring-1 focus:ring-vikinger-purple" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Event inputs if selected -->
+                  <div v-if="postType === 'event'" class="mt-4 space-y-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div class="grid grid-cols-1 gap-2.5">
+                      <div>
+                        <label class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1">วันที่จัดกิจกรรม</label>
+                        <input v-model="eventDate" type="datetime-local" class="w-full px-3 py-2 bg-white dark:bg-vikinger-dark-100 border border-gray-200 dark:border-gray-700 rounded-lg text-sm outline-none focus:ring-1 focus:ring-vikinger-purple" />
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 mb-1">สถานที่จัดงาน</label>
+                        <input v-model="eventLocation" type="text" placeholder="เช่น หอประชุมใหญ่" class="w-full px-3 py-2 bg-white dark:bg-vikinger-dark-100 border border-gray-200 dark:border-gray-700 rounded-lg text-sm outline-none focus:ring-1 focus:ring-vikinger-purple" />
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <input v-model="eventRequiresRegister" id="event-req-reg" type="checkbox" class="w-4 h-4 rounded text-vikinger-purple outline-none" />
+                        <label for="event-req-reg" class="text-xs text-gray-600 dark:text-gray-400 cursor-pointer">ต้องลงทะเบียนเข้าร่วม</label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Advanced settings details disclosure -->
+                  <details class="mt-4 text-xs group">
+                    <summary class="cursor-pointer font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1 select-none hover:text-vikinger-purple transition-colors">
+                      <Icon icon="fluent:settings-24-regular" class="w-4 h-4 transition-transform group-open:rotate-45" />
+                      <span>ตั้งค่าเพิ่มเติมสำหรับโพสต์</span>
+                    </summary>
+                    <div class="mt-3 space-y-4 p-3 bg-white dark:bg-vikinger-dark-100 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <!-- target audience -->
+                      <div>
+                        <label class="block font-bold mb-1.5 text-gray-500">กลุ่มเป้าหมาย (หากข้ามจะเห็นทุกคน)</label>
+                        <div class="flex flex-wrap gap-4">
+                          <label v-for="a in [
+                            { key: 'student', label: 'นักเรียน' },
+                            { key: 'teacher', label: 'ครู' },
+                            { key: 'parent', label: 'ผู้ปกครอง' },
+                            { key: 'all', label: 'ทุกคน' }
+                          ]" :key="a.key" class="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" :value="a.key" v-model="targetAudience" class="w-4 h-4 rounded text-vikinger-purple" />
+                            <span class="text-gray-600 dark:text-gray-400 font-semibold">{{ a.label }}</span>
+                          </label>
+                        </div>
+                      </div>
+                      <!-- reward points -->
+                      <div>
+                        <label class="block font-bold mb-1.5 text-gray-500">แต้มรางวัลจูงใจ (0-999 PP)</label>
+                        <div class="flex items-center gap-2">
+                          <input v-model.number="rewardPoints" type="number" min="0" max="999" class="w-24 px-3 py-1.5 bg-gray-50 dark:bg-vikinger-dark-200 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-1 focus:ring-vikinger-purple font-bold text-sm" />
+                          <span class="text-gray-400 text-[11px] font-semibold">แต้มที่จะแจกให้ผู้ที่เข้ามาอ่านโพสต์นี้</span>
+                        </div>
+                      </div>
+                    </div>
+                  </details>
                 </div>
 
                 <!-- Action Buttons -->

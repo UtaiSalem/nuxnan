@@ -17,6 +17,15 @@ class AcademyPostResource extends JsonResource
     {
         return [
             'id'                => $this->id,
+            'posted_as_group_id' => $this->posted_as_group_id,
+            'posted_as_group'    => $this->whenLoaded('postedAsGroup', function () {
+                return [
+                    'id'        => $this->postedAsGroup->id,
+                    'name'      => $this->postedAsGroup->name,
+                    'type'      => $this->postedAsGroup->type,
+                    'type_meta' => \App\Constants\AcademyGroupTypes::get($this->postedAsGroup->type),
+                ];
+            }),
             'academy'           => $this->academy ? new AcademyResource($this->academy) : null,
             'author'            => $this->user ? new UserResource($this->user) : null,       
             'content'           => $this->content,
@@ -44,7 +53,11 @@ class AcademyPostResource extends JsonResource
             'tags'              => $this->tags,
             'sentiment'         => $this->sentiment,
             'engagement_rate'   => $this->engagement_rate,
-            'post_type'         => $this->post_type,
+            'post_type'       => $this->post_type ?? 'regular',
+            'target_audience' => $this->target_audience,
+            'reward_points'   => $this->reward_points,
+            'embed_data'      => $this->embed_data,
+            'is_pinned'       => $this->is_pinned,
             'source_platform'   => $this->source_platform,
             'updated_at'        => $this->updated_at,
             'created_at'        => $this->created_at,

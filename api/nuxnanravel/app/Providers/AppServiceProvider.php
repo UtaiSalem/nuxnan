@@ -38,5 +38,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('enrollment.commit', [\App\Policies\EnrollmentPolicy::class, 'commitRollover']);
         Gate::define('enrollment.undo', [\App\Policies\EnrollmentPolicy::class, 'undoRollover']);
         Gate::define('enrollment.viewBatches', [\App\Policies\EnrollmentPolicy::class, 'viewBatches']);
+
+        // Register Gamification Observers
+        \App\Models\AcademyPost::observe(\App\Observers\AcademyPostObserver::class);
+        \App\Models\AcademyPostLike::observe(\App\Observers\AcademyPostLikeObserver::class);
+        \App\Models\AcademyPostComment::observe(\App\Observers\AcademyPostCommentObserver::class);
+        \App\Models\CourseMember::observe(\App\Observers\CourseMemberObserver::class);
+        \App\Models\EventRegistration::observe(\App\Observers\EventRegistrationObserver::class);
+        \App\Models\AssignmentAnswer::observe(\App\Observers\AssignmentAnswerObserver::class);
     }
 }

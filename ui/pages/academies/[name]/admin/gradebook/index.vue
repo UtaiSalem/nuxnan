@@ -174,6 +174,13 @@ const menuItems = computed(() => [
     to: `/academies/${academyName.value}/admin/gradebook/transcripts`,
     color: 'bg-cyan-500',
   },
+  {
+    title: 'Year Rollover Wizard',
+    description: 'เลื่อนชั้นรายปีแบบมี preview, commit gate และ undo 24 ชั่วโมง',
+    icon: 'fluent:arrow-sync-circle-24-filled',
+    to: `/academies/${academyName.value}/admin/gradebook/rollover`,
+    color: 'bg-rose-500',
+  },
 ])
 </script>
 

@@ -165,7 +165,7 @@ onUnmounted(() => {
               frameborder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowfullscreen
-              sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin"
+              sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation"
               @load="handleIframeLoad"
             />
           </template>

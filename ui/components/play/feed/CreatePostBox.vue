@@ -8,7 +8,7 @@
  * - contextId: number - the ID of the academy/course if context is not 'newsfeed'
  * - contextName: string - the name of the context (e.g., academy name) for display
  */
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import CreatePostTrigger from './CreatePostTrigger.vue'
 import CreatePostModal from './CreatePostModal.vue'
 
@@ -25,6 +25,18 @@ const props = defineProps({
   contextName: {
     type: String,
     default: ''
+  },
+  postedAsGroupId: {
+    type: Number,
+    default: null
+  },
+  lockedGroupId: {
+    type: Number,
+    default: null
+  },
+  isAcademyAdmin: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -32,6 +44,18 @@ const emit = defineEmits(['post-created'])
 
 const showModal = ref(false)
 const initialTab = ref('status')
+const internalPostedAsGroupId = ref(props.postedAsGroupId ?? props.lockedGroupId ?? null)
+
+// Sync with props
+watch(() => props.postedAsGroupId, (v) => {
+  internalPostedAsGroupId.value = v ?? props.lockedGroupId ?? null
+})
+
+watch(() => props.lockedGroupId, (v) => {
+  if (v != null) {
+    internalPostedAsGroupId.value = v
+  }
+})
 
 const openModal = (tab = 'status') => {
   initialTab.value = tab
@@ -51,7 +75,13 @@ const handlePostCreated = (activity) => {
 <template>
   <div class="contents">
     <!-- Trigger Box -->
-    <CreatePostTrigger @open-modal="openModal" />
+    <CreatePostTrigger 
+      :context="context"
+      :context-id="contextId"
+      :locked-group-id="lockedGroupId"
+      v-model:posted-as-group-id="internalPostedAsGroupId"
+      @open-modal="openModal" 
+    />
     
     <!-- Post/Poll Modal (Teleported to body) -->
     <CreatePostModal 
@@ -60,6 +90,9 @@ const handlePostCreated = (activity) => {
       :context="context"
       :context-id="contextId"
       :context-name="contextName"
+      :posted-as-group-id="internalPostedAsGroupId"
+      :locked-group-id="lockedGroupId"
+      :is-academy-admin="isAcademyAdmin"
       @close="closeModal" 
       @post-created="handlePostCreated" 
     />

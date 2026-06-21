@@ -80,7 +80,7 @@
         :src="post.video" 
         allowfullscreen 
         class="w-full h-full"
-        sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin"
+        sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation"
       ></iframe>
     </div>
 

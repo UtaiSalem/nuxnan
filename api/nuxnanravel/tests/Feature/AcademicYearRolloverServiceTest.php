@@ -11,6 +11,7 @@ use App\Models\Student;
 use App\Models\StudentAcademicInfo;
 use App\Models\User;
 use App\Services\AcademicYearRolloverService;
+use App\Services\Rollover\RolloverPlan;
 use App\Services\StudentEnrollmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -208,6 +209,37 @@ class AcademicYearRolloverServiceTest extends TestCase
 
         $this->expectException(ValidationException::class);
         $this->service->planRollover($this->academy, $this->year2568, $this->year2569, $userMapping);
+    }
+
+    public function test_rollover_plan_from_array_round_trip_matches_to_array(): void
+    {
+        $plan = new RolloverPlan(
+            academyId: $this->academy->id,
+            fromYearId: $this->year2568->id,
+            toYearId: $this->year2569->id,
+            entries: [
+                [
+                    'student_id' => $this->studentActive1->id,
+                    'action' => 'promote',
+                    'from_classroom_id' => $this->class1_1_2568->id,
+                    'to_classroom_id' => $this->class2_1_2569->id,
+                    'reason' => 'เน€เธฅเธทเนเธญเธเธเธฑเนเธ',
+                ],
+            ],
+            summary: [
+                'promote' => 1,
+                'graduate' => 0,
+                'repeat' => 0,
+                'drop' => 0,
+                'new_intake' => 0,
+                'skip' => 0,
+            ],
+            warnings: ['warning-1'],
+        );
+
+        $rebuilt = RolloverPlan::fromArray($plan->toArray());
+
+        $this->assertEquals($plan->toArray(), $rebuilt->toArray());
     }
 
     public function test_commit_rollover_commits_all_types_correctly(): void

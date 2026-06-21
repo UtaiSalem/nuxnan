@@ -1,7 +1,9 @@
 <script setup>
 import { Icon } from '@iconify/vue'
 import { ref, computed, watch, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
+import { getAcademyGroupTypeMeta, GROUP_TYPE_COLOR_CLASSES } from '~/constants/academyGroupTypes'
 import ShareModal from '~/components/share/ShareModal.vue'
 import EditPostModal from '~/components/play/feed/EditPostModal.vue'
 import ImageLightbox from '~/components/play/feed/ImageLightbox.vue'
@@ -256,6 +258,84 @@ const postAuthor = computed(() => {
   }
   // For regular posts/activities
   return postData.value.author || postData.value.user || {}
+})
+
+const route = useRoute()
+
+// Group that this post is "in the name of" - null when posted as user
+const groupAuthor = computed(() => {
+  const g = postData.value?.posted_as_group ?? postData.value?.activityable?.posted_as_group ?? null
+  if (!g || !g.id) return null
+  return {
+    id: g.id,
+    name: g.name,
+    type: g.type,
+    typeMeta: g.type_meta || getAcademyGroupTypeMeta(g.type) || null,
+  }
+})
+
+const isGroupPost = computed(() => groupAuthor.value !== null)
+
+const isDirector = computed(() => postData.value?.post_type === 'director')
+
+const audienceLabel = computed(() => {
+  const arr = postData.value?.target_audience || []
+  if (!arr.length || arr.includes('all')) return null
+  const map = {
+    student: 'นักเรียน',
+    teacher: 'ครู',
+    parent: 'ผู้ปกครอง',
+    staff: 'บุคลากร',
+  }
+  return arr.map(a => map[a] || a).join(' · ')
+})
+
+const eventData = computed(() => {
+  if (postData.value?.post_type !== 'event') return null
+  const d = postData.value?.embed_data || {}
+  if (!d.event_date) return null
+  const date = new Date(d.event_date)
+  
+  const formatTime = (iso) => {
+    if (!iso) return ''
+    return new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+  }
+  
+  return {
+    ...d,
+    dateObj: date,
+    day: String(date.getDate()).padStart(2, '0'),
+    monthShort: ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][date.getMonth()],
+    timeRange: d.event_end
+      ? `${formatTime(d.event_date)} - ${formatTime(d.event_end)}`
+      : formatTime(d.event_date),
+  }
+})
+
+const isEvent = computed(() => eventData.value !== null)
+
+const progressData = computed(() => {
+  if (postData.value?.post_type !== 'attendance') return null
+  const d = postData.value?.embed_data
+  if (!d?.current || !d?.total) return null
+  const pct = Math.round((d.current / d.total) * 100)
+  return { ...d, pct }
+})
+
+const academyName = computed(() => {
+  if (route.params.name) return String(route.params.name)
+  if (props.post.academy?.name) return props.post.academy.name
+  if (props.post.activityable?.academy?.name) return props.post.activityable.academy.name
+  return ''
+})
+
+const groupLink = computed(() => {
+  if (!groupAuthor.value) return ''
+  const name = academyName.value
+  if (name) {
+    return `/academies/${name}/groups/${groupAuthor.value.id}`
+  }
+  return `/groups/${groupAuthor.value.id}`
 })
 
 // Action by (for activities, this is the person who performed the action)
@@ -638,6 +718,33 @@ const addComment = async () => {
     swal.error(errorMsg)
   } finally {
     isCommenting.value = false
+  }
+}
+
+const isRegisteringEvent = ref(false)
+
+const onRegisterEvent = async () => {
+  if (!eventData.value?.event_id) return
+  if (isRegisteringEvent.value) return
+  isRegisteringEvent.value = true
+  try {
+    const name = academyName.value
+    await api.call(`/api/academies/${name}/events/${eventData.value.event_id}/register`, {
+      method: 'POST',
+    })
+    
+    // Update registration status optimistically
+    if (postData.value && postData.value.embed_data) {
+      // Re-fetch post data or just toggle registration to show registered
+      postData.value.embed_data.requires_register = false
+    }
+    
+    swal.success('ลงทะเบียนเข้าร่วมกิจกรรมสำเร็จ')
+  } catch (error) {
+    const errorMsg = error?.data?.message || 'ไม่สามารถลงทะเบียนกิจกรรมได้'
+    swal.error(errorMsg)
+  } finally {
+    isRegisteringEvent.value = false
   }
 }
 
@@ -2141,6 +2248,8 @@ const handlePollUpdate = (updatedPoll) => {
               :src="currentUserAvatar" 
               class="w-8 h-8 rounded-full object-cover flex-shrink-0" 
               alt="Your avatar"
+              loading="lazy"
+              decoding="async"
               @error="(e) => e.target.src = '/images/default-avatar.png'"
             />
             <div class="flex-1 relative">
@@ -2181,6 +2290,8 @@ const handlePollUpdate = (updatedPoll) => {
                 :src="getCommentAvatar(comment)" 
                 class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" 
                 :alt="comment.user?.username"
+                loading="lazy"
+                decoding="async"
                 @error="(e) => e.target.src = '/images/default-avatar.png'"
               />
               <div class="flex-1">
@@ -2274,28 +2385,66 @@ const handlePollUpdate = (updatedPoll) => {
          Shows: Author with inline action badge
          ======================================== -->
     <template v-else>
+      <div v-if="isDirector" class="h-1 bg-gradient-to-r from-vikinger-purple via-vikinger-cyan to-vikinger-purple -mx-4 -mt-4 mb-3 md:-mx-5 md:-mt-5"></div>
       <!-- Post Header -->
       <div class="flex items-start justify-between mb-3 sm:mb-4">
         <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <!-- Avatar with badge -->
           <div class="relative flex-shrink-0">
-            <img :src="postAuthorAvatar"
+            <!-- Group Post Avatar -->
+            <NuxtLink
+              v-if="isGroupPost"
+              :to="groupLink"
+              :class="[
+                'w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-md border border-white/10 flex-shrink-0 ring-2 ring-vikinger-purple/20 hover:ring-vikinger-purple transition-all duration-300',
+                GROUP_TYPE_COLOR_CLASSES[getAcademyGroupTypeMeta(groupAuthor.type).color].gradient
+              ]"
+            >
+              <Icon
+                :icon="getAcademyGroupTypeMeta(groupAuthor.type).icon"
+                class="w-5 h-5 sm:w-6 sm:h-6 text-white"
+              />
+            </NuxtLink>
+            <!-- Regular User Avatar -->
+            <img v-else
+                 :src="postAuthorAvatar"
                  :alt="`Avatar of ${postAuthor?.name || postAuthor?.username || 'User'}`"
                  class="w-10 h-10 sm:w-12 sm:h-12 aspect-square rounded-full object-cover ring-2 ring-vikinger-purple/30 group-hover:ring-vikinger-purple transition-all duration-300"
                  loading="lazy"
                  @error="(e) => e.target.src = '/images/default-avatar.png'" />
 
             <!-- Post Type Badge -->
-            <div v-if="postTypeBadge && !isNested" :class="[postTypeBadge.color, 'absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center shadow-sm']">
+            <div v-if="!isGroupPost && postTypeBadge && !isNested" :class="[postTypeBadge.color, 'absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center shadow-sm']">
               <Icon :icon="postTypeBadge.icon" class="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
             </div>
           </div>
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <NuxtLink :to="`/profile/${postAuthor?.id}`" class="font-bold text-sm sm:text-base text-gray-800 dark:text-white hover:text-vikinger-purple cursor-pointer transition-colors truncate max-w-[120px] sm:max-w-none">
+              <!-- Group Post Header Name -->
+              <template v-if="isGroupPost">
+                <NuxtLink :to="groupLink" class="font-bold text-sm sm:text-base text-gray-800 dark:text-white hover:text-vikinger-purple cursor-pointer transition-colors truncate max-w-[120px] sm:max-w-none flex items-center gap-1.5">
+                  {{ groupAuthor.name }}
+                  <Icon icon="heroicons:check-badge-solid" class="w-4 h-4 text-vikinger-cyan flex-shrink-0" />
+                  <span
+                    v-if="groupAuthor.typeMeta"
+                    :class="[
+                      'text-[10px] px-1.5 py-0.5 rounded-full font-bold',
+                      GROUP_TYPE_COLOR_CLASSES[groupAuthor.typeMeta.color].badge,
+                    ]"
+                  >
+                    {{ groupAuthor.typeMeta.label }}
+                  </span>
+                </NuxtLink>
+              </template>
+              <!-- Regular User Name -->
+              <NuxtLink v-else :to="`/profile/${postAuthor?.id}`" class="font-bold text-sm sm:text-base text-gray-800 dark:text-white hover:text-vikinger-purple cursor-pointer transition-colors truncate max-w-[120px] sm:max-w-none">
                 {{ postAuthor?.username || 'Unknown User' }}
               </NuxtLink>
-              <Icon v-if="postAuthor?.verified" icon="fluent:checkmark-circle-20-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
+              <Icon v-if="!isGroupPost && postAuthor?.verified" icon="fluent:checkmark-circle-20-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
+              
+              <span v-if="isDirector" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-vikinger-purple/15 text-vikinger-purple flex-shrink-0">
+                ฝ่ายบริหาร
+              </span>
               
               <!-- Feeling/Activity Display (hidden on xs, shown on sm+) -->
               <span v-if="feelingDisplay" class="hidden sm:inline text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
@@ -2332,6 +2481,10 @@ const handlePollUpdate = (updatedPoll) => {
               </div>
             </div>
             <div class="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              <span v-if="isGroupPost" class="font-medium text-gray-700 dark:text-gray-300">
+                โดย <NuxtLink :to="`/profile/${postAuthor?.id}`" class="hover:underline text-vikinger-purple">{{ postAuthor?.name || postAuthor?.username || 'ผู้ใช้' }}</NuxtLink>
+              </span>
+              <span v-if="isGroupPost" class="text-gray-300 dark:text-gray-700 font-light">•</span>
               <span class="flex items-center gap-1">
                 <Icon :icon="privacyIcon" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 {{ createdTime }}
@@ -2494,8 +2647,10 @@ const handlePollUpdate = (updatedPoll) => {
           <div v-if="images.length === 1" @click="openImage(0)" class="cursor-pointer">
             <img 
               :src="images[0].url || images[0]" 
-              :class="['w-full object-cover hover:scale-[1.02] transition-transform duration-300', isNested ? 'max-h-64' : 'max-h-[500px]']" 
+              :class="['w-full object-cover hover:scale-[1.02] transition-transform duration-300 motion-reduce:transition-none motion-reduce:hover:scale-100', isNested ? 'max-h-64' : 'max-h-[500px]']" 
               alt="Post image" 
+              loading="lazy"
+              decoding="async"
             />
           </div>
           
@@ -2505,8 +2660,10 @@ const handlePollUpdate = (updatedPoll) => {
               v-for="(image, index) in images" 
               :key="index" 
               :src="image.url || image" 
-              :class="['w-full object-cover cursor-pointer hover:opacity-90 transition-opacity', isNested ? 'h-32' : 'h-64']" 
+              :class="['w-full object-cover cursor-pointer hover:opacity-90 transition-opacity motion-reduce:transition-none', isNested ? 'h-32' : 'h-64']" 
               alt="Post image"
+              loading="lazy"
+              decoding="async"
               @click="openImage(index)"
             />
           </div>
@@ -2517,8 +2674,10 @@ const handlePollUpdate = (updatedPoll) => {
               v-for="(image, index) in images.slice(0, 4)" 
               :key="index" 
               :src="image.url || image" 
-              :class="['w-full object-cover cursor-pointer hover:opacity-90 transition-opacity', isNested ? 'h-24' : 'h-40', { 'brightness-50': index === 3 && images.length > 4 }]" 
+              :class="['w-full object-cover cursor-pointer hover:opacity-90 transition-opacity motion-reduce:transition-none', isNested ? 'h-24' : 'h-40', { 'brightness-50': index === 3 && images.length > 4 }]" 
               alt="Post image"
+              loading="lazy"
+              decoding="async"
               @click="openImage(index)"
             />
             <div v-if="images.length > 4" class="absolute bottom-2 right-2 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium">
@@ -2547,6 +2706,84 @@ const handlePollUpdate = (updatedPoll) => {
             @update="handlePollUpdate"
           />
         </div>
+
+        <!-- Target Audience Display -->
+        <div
+          v-if="audienceLabel"
+          class="mt-3 inline-flex items-center gap-1.5 text-xs text-gray-500 bg-gray-100/50 dark:bg-vikinger-dark-200/50 px-2.5 py-1 rounded-full border border-gray-200/40 dark:border-gray-700/40"
+        >
+          <Icon icon="heroicons:user-group" class="w-4 h-4 text-vikinger-cyan" />
+          <span>กลุ่มเป้าหมาย: {{ audienceLabel }}</span>
+        </div>
+
+        <!-- Event Variant Detail Card -->
+        <div
+          v-if="isEvent && eventData"
+          class="mt-4 flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-vikinger-dark-200 border border-gray-200 dark:border-gray-700/60 shadow-sm"
+        >
+          <!-- Date Chip -->
+          <div class="w-14 text-center rounded-lg overflow-hidden shadow-sm flex-shrink-0 border border-vikinger-purple/20">
+            <div class="bg-gradient-to-b from-vikinger-purple to-purple-600 text-white font-bold text-lg py-1 leading-none">{{ eventData.day }}</div>
+            <div class="bg-white text-gray-700 text-xs font-bold py-1 leading-none">{{ eventData.monthShort }}</div>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <!-- Time & Location info row -->
+            <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-600 dark:text-gray-400 mb-2.5">
+              <span class="inline-flex items-center gap-1">
+                <Icon icon="heroicons:clock" class="w-4 h-4 text-vikinger-purple" />
+                {{ eventData.timeRange }}
+              </span>
+              <span v-if="eventData.location" class="inline-flex items-center gap-1">
+                <Icon icon="heroicons:map-pin" class="w-4 h-4 text-vikinger-cyan" />
+                {{ eventData.location }}
+              </span>
+            </div>
+
+            <!-- Register Button -->
+            <button
+              v-if="eventData.requires_register"
+              type="button"
+              :disabled="isRegisteringEvent"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-vikinger-purple to-purple-600 text-white text-xs font-semibold hover:from-vikinger-purple/90 hover:to-purple-600/90 shadow-sm transition-all duration-300 disabled:opacity-50"
+              @click="onRegisterEvent"
+            >
+              <Icon v-if="!isRegisteringEvent" icon="heroicons:pencil-square" class="w-3.5 h-3.5" />
+              <Icon v-else icon="svg-spinners:ring-resize" class="w-3.5 h-3.5" />
+              ลงทะเบียน
+            </button>
+            <span
+              v-else
+              class="inline-flex items-center gap-1 text-xs font-semibold text-green-500 bg-green-500/10 px-2 py-1 rounded-md"
+            >
+              <Icon icon="heroicons:check-circle-solid" class="w-4 h-4" />
+              ลงทะเบียนแล้ว
+            </span>
+          </div>
+        </div>
+
+        <!-- Attendance Progress Variant Card -->
+        <div
+          v-if="progressData"
+          class="mt-4 p-4 rounded-xl bg-gray-50 dark:bg-vikinger-dark-200 border border-gray-200 dark:border-gray-700/60 shadow-sm"
+        >
+          <div class="flex justify-between items-baseline mb-2.5">
+            <span class="text-xs font-bold text-gray-600 dark:text-gray-400">
+              {{ progressData.label || 'การเข้าร่วม' }}
+            </span>
+            <span class="text-sm font-extrabold text-gray-900 dark:text-white">
+              {{ progressData.current.toLocaleString() }}
+              <span class="text-xs font-medium text-gray-400">/ {{ progressData.total.toLocaleString() }} คน</span>
+            </span>
+          </div>
+          <div class="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-500"
+              :style="{ width: `${progressData.pct}%` }"
+            ></div>
+          </div>
+          <div class="text-right text-[10px] font-bold text-gray-400 mt-1.5">{{ progressData.pct }}% ของทั้งหมด</div>
+        </div>
       </div>
 
       <!-- Modern Post Stats & Actions Combined (Inline Style) -->
@@ -2568,6 +2805,14 @@ const handlePollUpdate = (updatedPoll) => {
         
         <!-- Right Side: Action Buttons (Modern Inline Style) -->
         <div v-if="!isNested" class="flex items-center gap-1">
+          <!-- Reward Chip -->
+          <span
+            v-if="postData?.reward_points && postData.reward_points > 0"
+            class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 mr-2"
+          >
+            <Icon icon="heroicons:sparkles-solid" class="w-3.5 h-3.5" />
+            +{{ postData.reward_points }} แต้ม
+          </span>
           <!-- Like -->
           <button 
             @click="handleLike"
@@ -2706,6 +2951,8 @@ const handlePollUpdate = (updatedPoll) => {
             <img :src="getCommentAvatar(comment)" 
                  class="w-8 h-8 flex-shrink-0 aspect-square rounded-full object-cover" 
                  :alt="comment.user?.username || comment.author?.username"
+                 loading="lazy"
+                 decoding="async"
                  @error="(e) => e.target.src = '/images/default-avatar.png'" />
             <div class="flex-1 min-w-0">
               <div class="bg-gray-100 dark:bg-vikinger-dark-200 rounded-2xl px-3 py-2">
@@ -2793,6 +3040,8 @@ const handlePollUpdate = (updatedPoll) => {
                   :src="currentUserAvatar" 
                   class="w-8 h-8 rounded-full object-cover flex-shrink-0"
                   alt="You"
+                  loading="lazy"
+                  decoding="async"
                   @error="(e) => e.target.src = '/images/default-avatar.png'"
                 />
                 <div class="flex-1 flex gap-2">
@@ -2844,6 +3093,8 @@ const handlePollUpdate = (updatedPoll) => {
                       :src="getCommentAvatar(reply)" 
                       class="w-8 h-8 flex-shrink-0 rounded-full object-cover"
                       :alt="reply.user?.username"
+                      loading="lazy"
+                      decoding="async"
                       @error="(e) => e.target.src = '/images/default-avatar.png'"
                     />
                     <div class="flex-1">

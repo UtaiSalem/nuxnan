@@ -18,6 +18,26 @@ class AcademyGroup extends Model
         'settings' => 'array',
     ];
 
+    protected $appends = ['type_meta'];
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
+    /**
+     * Get Type metadata (label, icon, color)
+     */
+    public function getTypeMetaAttribute(): ?array
+    {
+        return $this->type ? \App\Constants\AcademyGroupTypes::get($this->type) : null;
+    }
+
     protected static function booted()
     {
         static::creating(function ($group) {

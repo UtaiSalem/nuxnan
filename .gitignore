@@ -55,6 +55,7 @@
 /api/nuxnanravel/Homestead.json
 /api/nuxnanravel/Homestead.yaml
 /api/nuxnanravel/*.log
+/api/nuxnanravel/*.sql
 /api/nuxnanravel/database/database.sqlite
 /api/nuxnanravel/test_*.php
 /api/nuxnanravel/routes/debug/

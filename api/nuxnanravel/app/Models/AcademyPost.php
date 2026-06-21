@@ -10,6 +10,7 @@ use App\Models\AcademyPostComment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
@@ -21,6 +22,12 @@ class AcademyPost extends Model
 
     protected $appends = ['academy_post_url'];
 
+    protected $casts = [
+        'target_audience' => 'array',
+        'embed_data'      => 'array',
+        'is_pinned'       => 'boolean',
+    ];
+
     public function academy()
     {
         return $this->belongsTo(Academy::class);
@@ -29,6 +36,11 @@ class AcademyPost extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function postedAsGroup(): BelongsTo
+    {
+        return $this->belongsTo(AcademyGroup::class, 'posted_as_group_id');
     }
 
     public function activity(): MorphOne
