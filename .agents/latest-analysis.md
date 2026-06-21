@@ -1130,3 +1130,788 @@ Commit: `feat(attendance): add tablet teacher patrol variation`
 
 ถ้า confirm ครบ ผมเริ่ม Phase 1 ได้เลยใน turn ถัดไป
 
+# 2026-06-20 School Homepage Phase C+D
+
+- Scope: frontend-first continuation after Phase A+B on `ui/pages/academies/[name].vue`.
+- Active files:
+  - `ui/pages/academies/[name].vue`
+  - `ui/components/school/SchoolPinnedAnnouncement.vue`
+  - existing Phase A+B widgets remain user work and must be preserved.
+- Findings:
+  - Phase A+B shell is partially applied in `[name].vue` and new sidebar components are uncommitted.
+  - `school_announcements` backend already exists and is safer for pinned content than overloading `FeedPost`.
+  - Announcement detail page route under `ui/pages/academies/[name]/announcements/*` does not currently exist, so Phase D open action should use modal/detail fetch instead of navigation.
+  - `tabs` is still a plain array; using helper-based count badges is lower risk than converting it to a computed ref mid-stream.
+- Decisions:
+  - Implement Phase C cover/tabs polish directly in `[name].vue`.
+  - Implement Phase D with a new `SchoolPinnedAnnouncement.vue` component fed by `/api/academies/{id}/announcements`.
+  - Filter pinned announcements client-side for now and cap to 3 items.
+  - Use `Swal` detail modal for pinned announcement open action; keep like action as non-destructive feedback until a real endpoint exists.
+- Risks:
+  - `[name].vue` is already dirty from Phase A+B, so edits must avoid reverting nearby user changes.
+  - `target_audience` from announcements may be stored as arrays or nested role objects; component should normalize both.
+- Verification plan:
+  - Focused readback of `[name].vue` and new component after patching.
+  - Run targeted search/lint-style checks for new helpers/usages.
+
+# 2026-06-20 School Homepage review follow-up
+
+- Scope: close the concrete review findings from the mixed Phase A+B+C+D working tree without widening into a broad redesign.
+- Changed files:
+  - `ui/components/school/SchoolPinnedAnnouncement.vue`
+  - `ui/pages/academies/[name].vue`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AnnouncementController.php`
+- Completed:
+  - Removed the non-functional pinned-announcement like CTA and simplified the footer to view-count plus detail action.
+  - Replaced broken group-card navigation with an in-place summary modal so users no longer hit a 404 from the school homepage.
+  - Extended announcement creator eager-loading with `email_verified_at` and updated the pinned card to derive a verified badge from real API data.
+- Verification:
+  - `php -l api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AnnouncementController.php`
+  - targeted `rg` checks for removed `@like` usage and new `email_verified_at` / `creatorIsVerified` references
+- Remaining note:
+  - Header stat typography and join-button wording were identified earlier as parity polish items, but the blocking review findings were prioritized first in this pass.
+
+# 2026-06-20 Phase G — Backend Foundation (Detailed DIY Plan)
+
+- Scope: เขียนแผนรายละเอียดการออกแบบและพัฒนา Backend Foundation สำหรับส่วนงาน/แผนกโรงเรียน (Phase G)
+- ไฟล์ที่เขียน: [phase-g-backend-detailed.md](file:///C:/wamp64/www/nuxnan/.agents/design-ref/phase-g-backend-detailed.md)
+- สาระสำคัญ:
+  - กำหนดประเภทข้อมูลกลุ่ม (Group Types) และสิทธิ์การโพสต์และการทำงานของกลุ่ม (AcademyGroupPermissions)
+  - กำหนดโครงสร้าง Migrations และ Models ของ `AcademyGroup`, `AcademyPost`, `UserMutedGroup`, `User`
+  - ปรับปรุง Validation ใน `AcademyPostController` และ `AcademyGroupController` โดยคำนึงถึงโครงสร้าง Controller และ Route Model Parameter จริงของโปรเจกต์
+  - เพิ่มการตรวจสอบสิทธิ์การโพสต์ในนามส่วนงาน (strict permission check) และตรวจสอบการเพิ่มสมาชิกโรงเรียนเข้ากลุ่มย่อย
+  - อัปเดต Feed activity queries เพื่อรองรับ filter (`filter_type` และ `group_type`) และกรองกลุ่มที่ถูก Mute ออกโดยอัตโนมัติ
+- ขั้นตอนการดำเนินงาน: แบ่งเป็น 7 ย่อยแยกตามลำดับ Commit เพื่อความปลอดภัยและตรวจสอบได้ง่าย
+- สถานะ: **ดำเนินการเสร็จสิ้น (Implemented & Verified)**
+  - รัน Migration 3 ตารางสำเร็จ
+  - สร้าง Constant, Model, Controller และเพิ่ม Route เรียบร้อย
+  - ทดสอบผ่าน Unit Test `AcademyGroupPhaseGTest` (6 tests passed) ครบถ้วนตาม checklist
+# 2026-06-20 Phase H - Academy group manage UI
+
+- Scope: implement the Phase H manage-group flow on the academy homepage with the existing Phase G backend foundation, while filling the missing group-admin API routes/controller.
+- Active files:
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyGroupAdminController.php`
+  - `api/nuxnanravel/routes/learn/academy.php`
+  - `ui/composables/useAcademyGroups.ts`
+  - `ui/composables/useAcademyGroupTypes.ts`
+  - `ui/components/academy/groups/*`
+  - `ui/pages/academies/[name].vue`
+- Findings:
+  - `AcademyGroupAdminController` was still a CRUD stub and the `/groups/{academyGroup}/admins*` routes were missing from both academy route blocks.
+  - Frontend group UI only had `GroupCard` and `GroupCreateModal`; manage modal flow had not been started.
+  - Real API contracts differ from the design draft in a few places: member roles are `student|teacher|admin`, permissions save through `permission_keys[]`, and the current permission controller only accepts groups of type `department`.
+- Decisions:
+  - Implement a shared `useAcademyGroups` composable and reuse the backend-driven group type list via `useAcademyGroupTypes`.
+  - Keep info/admin/member/delete tabs available for all group types, but show an honest limitation message in the permissions tab for non-department groups.
+  - Wire the modal directly into `ui/pages/academies/[name].vue` and update the in-memory `groups` list on save/delete instead of refetching the whole page.
+- Verification plan:
+  - Run `php -l` on the rewritten controller.
+  - Run `php artisan route:list` filtered for the new group-admin routes.
+  - Run focused frontend readback/lint-style checks on the new academy group components.
+- Verification update:
+  - `php -l api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyGroupAdminController.php` passed.
+  - `php artisan route:list` confirms the 4 `api/academies/groups/{academyGroup}/admins*` routes.
+  - `php artisan test --filter=AcademyGroupPhaseGTest` passed with the new group-admin CRUD test included.
+  - Full browser smoke testing is still blocked in this session because the Nuxt dev server could be started interactively, but it did not stay available as a reusable background server for the browser tool in this environment.
+
+# 2026-06-20 Phase I plan validation
+
+- Scope: validate `.agents/design-ref/phase-i-group-profile-detailed.md` against the current Phase G/H working tree before implementation.
+- Files inspected:
+  - `ui/pages/academies/[name].vue`
+  - `ui/composables/useAcademyGroups.ts`
+  - `ui/components/play/feed/CreatePostBox.vue`
+  - `ui/components/play/feed/CreatePostModal.vue`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyGroupController.php`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyPostController.php`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyGroupPermissionController.php`
+  - `api/nuxnanravel/app/Http/Resources/Learn/Academy/AcademyPostResource.php`
+  - `api/nuxnanravel/routes/learn/academy.php`
+- Findings:
+  - `onViewGroup` is still a SweetAlert stub in `[name].vue`, and `isChildRoute`/`<NuxtPage>` already supports nested routes, so `[name]/groups/[groupId].vue` should slot in cleanly.
+  - `useAcademyGroups` already exposes `muteGroup`, `unmuteGroup`, and department permission helpers, so the Phase I draft should reuse those exact method names instead of `mute`/`unmute`.
+  - `CreatePostBox` currently passes only `context/contextId/contextName`; posting-as-group will require extending both `CreatePostBox.vue` and `CreatePostModal.vue` so academy post creation includes `posted_as_group_id`.
+  - Academy feed UI consumes `ActivityResource`/`AcademyPostResource` shapes; a new group-posts endpoint should either return `ActivityResource`-compatible items or the new `GroupFeedTab` must adapt `AcademyPostResource` payloads before rendering existing feed cards.
+  - Department permission API is intentionally limited to `type === department`; Phase I gating must treat non-department groups as no permission toggle support instead of assuming every group has `/departments/{groupId}/permissions`.
+- Decisions:
+  - Keep Phase I as a cross-stack feature, but adjust the draft to the existing composable/API names and actual resource shapes.
+  - Prefer reusing existing feed components only if the group posts endpoint returns activity-shaped payloads; otherwise isolate a group-specific feed adapter in the new tab component.
+- Risks:
+  - Returning raw paginated `AcademyPost` rows from `AcademyGroupController::posts()` will not match the current academy feed component contract.
+  - Adding `postedAsGroupId` only at `CreatePostBox` level is insufficient; the modal submit path is where academy post FormData is built.
+  - Permission gating can go stale after `GroupManageModal` updates unless the profile page reloads permissions on modal close/update.
+- Verification plan:
+  - Re-check route discovery for nested page render and `/groups/{academyGroup}/posts|stats`.
+  - Verify post-create payload includes `posted_as_group_id` for academy context.
+  - Smoke-test permission gating for department vs non-department groups once implementation starts.
+
+# 2026-06-20 School homepage template repair
+
+- Scope: restore the academy homepage shell in `ui/pages/academies/[name].vue` so it matches the `.agents/design-ref` Phase C/D direction instead of the older pre-redesign template that resurfaced in the working tree.
+- Files touched:
+  - `ui/pages/academies/[name].vue`
+- Findings:
+  - `[name].vue` had drifted back to the older 2-column/legacy homepage variant: no `SchoolQuickMenu`, no `SchoolStatGrid`, no `SchoolUpcomingEvents`, no pinned announcement render, and the cover/tabs section lost the Phase C polish.
+  - The file also contained merge-style residue, including a duplicated `LazyLearnAcademyInviteMemberModal` block.
+- Completed:
+  - Restored Phase C-style cover treatment with stronger gradient/pattern overlay, verified/level badges, inline stats, share action, and tab count badges.
+  - Restored the homepage shell to a 3-zone layout using `SchoolQuickMenu` on the left and `SchoolStatGrid` + `SchoolUpcomingEvents` on the right.
+  - Re-added pinned announcement state/loader/rendering above the academy feed and wired a simple SweetAlert detail viewer.
+  - Removed the duplicated invite-member modal block.
+- Verification:
+  - `rg` checks confirm the repaired page now references `SchoolQuickMenu`, `SchoolStatGrid`, `SchoolUpcomingEvents`, `SchoolPinnedAnnouncement`, `loadPinnedAnnouncements`, and tab-count helpers.
+  - `.\node_modules\.bin\vue-tsc.cmd --noEmit` could not complete because the repo currently has a tooling issue resolving `vue-router/volar/sfc-route-blocks` from `vue-router` exports; this blocked a clean TypeScript verification signal.
+- Risks:
+  - The page still contains older group-tab/create-group code paths outside the repaired homepage shell, so future cleanup may still be worthwhile if the team wants the full Phase H structure consistently applied in one pass.
+
+# 2026-06-20 School homepage group-tab cleanup
+
+- Scope: continue the academy homepage repair by replacing the old inline "groups" tab implementation in `ui/pages/academies/[name].vue` with the Phase H componentized group UI.
+- Files touched:
+  - `ui/pages/academies/[name].vue`
+- Completed:
+  - Replaced the old inline group-card rendering with grouped sections driven by `groupGroupsByType()` and `GROUP_TYPE_COLOR_CLASSES`.
+  - Swapped the legacy create-group modal logic/state for `AcademyGroupsGroupCreateModal`.
+  - Wired `AcademyGroupsGroupManageModal` into the homepage so manage actions now use the Phase H component stack instead of dead inline placeholders.
+  - Removed obsolete inline create-group state/handlers (`newGroup`, `isCreatingGroup`, `createGroup`, `getGroupTypeInfo`) from the homepage page component.
+- Verification:
+  - `rg` confirms `[name].vue` now references `AcademyGroupsGroupCard`, `AcademyGroupsGroupCreateModal`, `AcademyGroupsGroupManageModal`, `groupedGroups`, and the new manage/create handlers.
+  - `rg` also confirms the removed legacy identifiers (`newGroup`, `isCreatingGroup`, `createGroup`, `getGroupTypeInfo`) no longer appear in `[name].vue`.
+- Remaining gap:
+  - Browser-level smoke verification is still pending in this session, so create/manage modal UX and grouped section rendering are code-verified but not interactively exercised here.
+
+# 2026-06-20 Phase I — Implemented & Verified (Academy Group Profile Page)
+
+- Status: Implemented & Verified
+- Backend:
+  - Added `posts()` and `stats()` methods to `AcademyGroupController` returning ActivityResource-wrapped posts to match feed UI requirements.
+  - Registered routing paths in `routes/learn/academy.php` for web and api scopes.
+  - Checked PHP syntax (all clean) and ran backend tests (`AcademyGroupPhaseGTest` passed 100%).
+- Frontend:
+  - Extended `useAcademyGroups.ts` composable with `listGroupPosts` and `getGroupStats`.
+  - Extended `CreatePostBox.vue` and `CreatePostModal.vue` to accept and submit `postedAsGroupId` to support post-as-group.
+  - Created group profile route page at `ui/pages/academies/[name]/groups/[groupId].vue` supporting cover hero, tabs, sidebar stats, and admins preview with URL hash sync.
+  - Created tab components: `GroupProfileCover.vue`, `GroupFeedTab.vue`, `GroupMembersTab.vue`, and `GroupAboutTab.vue`.
+  - Modified academy page `[name].vue` to navigate to group profile page and attached click handler on group cards.
+  - Verified with `npx vue-tsc --noEmit` that none of our new/modified files have any compilation errors.
+
+# 2026-06-20 Group profile manage-flow alignment
+
+- Scope: tighten the academy group profile manage flow after the homepage/template repair so the profile page behavior stays aligned with the existing Phase H manage model.
+- Files touched:
+  - `ui/pages/academies/[name]/groups/[groupId].vue`
+  - `ui/components/academy/groups/GroupManageModal.vue`
+- Findings:
+  - `GroupMembersTab` emits `openManage('admins'|'members')`, but `GroupManageModal` was always resetting back to the `info` tab on open, so the direct-manage shortcut flow was broken.
+  - The group profile page exposed the top-level `จัดการ` CTA to `group admin` users, while the current Phase H management stack and backend routes are still academy-admin-oriented; leaving the CTA visible there creates a misleading click path.
+- Completed:
+  - Added `initialTab` support to `GroupManageModal` so it can open directly into `admins`, `members`, or other requested tabs.
+  - Passed the active target tab from `[groupId].vue` into the modal and reloaded group state on modal close to refresh permission/member/admin changes.
+  - Narrowed the profile-page `canManage` gate to academy admins so the visible CTA now matches the current management contract already used on the academy homepage.
+- Verification:
+  - `rg` confirms the new `initialTab`/`:initial-tab` wiring and the updated `canManage = computed(() => isAcademyAdmin.value)` gate.
+  - Focused readback of both patched Vue files completed successfully.
+- Note:
+  - This keeps the implementation consistent with the current Phase H admin-manage flow. If the product direction later changes to let group admins manage the same modal stack, the backend authorization contract should be expanded first and then the profile gating can be widened safely.
+
+# 2026-06-20 Phase J — Implemented & Verified (Post-as-Group Composer + Feed Header)
+
+- Status: Implemented & Verified (minimal footprint: 1 new component + 7 modified files)
+- Backend:
+  - Added `postableForUser()` method to [AcademyGroupController.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyGroupController.php) to query group list where current user is admin/member and group has `can_post = true`.
+  - Registered route GET `/{academy}/postable-groups` in [academy.php (routes)](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/routes/learn/academy.php).
+- Frontend:
+  - Extended [useAcademyGroups.ts](file:///C:/wamp64/www/nuxnan/ui/composables/useAcademyGroups.ts) composable with `getPostableGroups` and local caching + invalidation support.
+  - Created [PostAsSelector.vue](file:///C:/wamp64/www/nuxnan/ui/components/academy/groups/PostAsSelector.vue) component with compact, full, and locked modes.
+  - Integrated selector into [CreatePostBox.vue](file:///C:/wamp64/www/nuxnan/ui/components/play/feed/CreatePostBox.vue) (trigger area) and [CreatePostTrigger.vue](file:///C:/wamp64/www/nuxnan/ui/components/play/feed/CreatePostTrigger.vue).
+  - Integrated selector into [CreatePostModal.vue](file:///C:/wamp64/www/nuxnan/ui/components/play/feed/CreatePostModal.vue) (header + submit payload modification).
+  - Updated [FeedPost.vue](file:///C:/wamp64/www/nuxnan/ui/components/play/feed/FeedPost.vue) to render group headers (type gradient avatar + group name + verified badge + group type label) when `posted_as_group` is present, and added the real actor credit line ("โดย {user.name}").
+  - Wired [GroupFeedTab.vue](file:///C:/wamp64/www/nuxnan/ui/components/academy/groups/GroupFeedTab.vue) to pass `locked-group-id` so the composer remains locked on group profile pages.
+  - Added cache invalidation trigger in [ManageTabPermissions.vue](file:///C:/wamp64/www/nuxnan/ui/components/academy/groups/ManageTabPermissions.vue) upon saving new group permissions.
+
+# 2026-06-20 Phase K — Implemented & Verified (Invite Flow + Admin Appointment + Group Notifications)
+
+- Status: Implemented & Verified (completes school department management workflow, refactored to use generic NotificationService and 60s tab polling)
+- Backend:
+  - Created [NotificationService.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Services/NotificationService.php) with `send()` and `sendBulk()` to act as the single source of truth for database notifications.
+  - Refactored notification triggers inside [AcademyGroupAdminController.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyGroupAdminController.php), [AcademyGroupController.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyGroupController.php), and [AcademyPostController.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyPostController.php) to use the new `NotificationService` instead of direct `Notification::create` calls.
+  - Added [NotificationServiceTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/NotificationServiceTest.php) to verify single and bulk notification creation flows.
+- Frontend:
+  - Added `60s` polling interval in [NotificationBell.vue](file:///C:/wamp64/www/nuxnan/ui/components/notifications/NotificationBell.vue) using `setInterval` with `document.hidden` check to skip polling when the tab is inactive.
+  - Added a `visibilitychange` listener to trigger an immediate fetch of recent notifications once the tab is re-activated.
+- Verification:
+  - Ran `php artisan test --filter=NotificationServiceTest` (100% pass, 2 tests, 22 assertions).
+  - Ran `php artisan test --filter=AcademyGroup` (100% pass, 14 tests, 121 assertions).
+
+# 2026-06-20 Phase L — Implemented & Verified (K Closeout + School Events + Post Variants)
+
+- Status: Implemented & Verified (all closeout/mirroring/variants integration completed)
+- Backend:
+  - Added appointer tracking on `AcademyGroupAdmin` model and controllers.
+  - Migrated `add_variant_fields_to_academy_posts` database schema.
+  - Implemented `EventToPostMirror` service with idempotent check/update logic instead of raw updateOrCreate (which would inject nested JSON array parameters as columns).
+  - Wired `mirror` and `unmirror` hooks into all `SchoolEventController` status changes (store, update, publish, cancel, destroy).
+  - Wrote seeder `MirrorExistingEventsSeeder` to mirror existing events.
+- Frontend:
+  - Mounted `NotificationsNotificationBell` in collapsed sidebar navigation within `ui/layouts/main.vue`.
+  - Displayed appointer name and appointment date on `ManageTabAdmins.vue`.
+  - Built custom variant cards (Director Announcements gradient/badge, Requires-Registration/Date-Chip Card, Attendance Progress Bar, Target Audience badge, and Reward Points chip) inside `ui/components/play/feed/FeedPost.vue`.
+  - Integrated 6 post types picker, attendance parameters, dates, locations, target audience, and reward point parameters inside `ui/components/play/feed/CreatePostModal.vue`.
+- Verification:
+  - Ran `php artisan test --filter=AcademyGroupPhaseGTest` (100% pass, 7 tests, 107 assertions).
+  - Ran `php -l` syntax checks on modified php files (100% pass).
+  - Ran client-side syntax checks (100% compile success after fixing a JavaScript catch-block syntax type annotation).
+
+# 2026-06-20 Student membership audit draft (M.1 / M.4 PDF vs current DB)
+
+- Scope: compare the uploaded PDF roster for ม.1 and ม.4 against the database currently connected by `api/nuxnanravel`, then prepare a safe SQL draft for missing memberships without mutating the DB yet.
+- Inputs:
+  - PDF copy parsed from `tmp-student-list-term1-2569.pdf`
+  - Derived roster JSON: `tmp_pdf_m1_m4_students.json` (682 rows)
+- Findings:
+  - Current connected DB is reachable and contains 1 academy, 2420 students, 2732 users, and 2422 academy members.
+  - The only academy in this DB is `เพลินวิทยาธาร`, while the PDF header is `โรงเรียนจริยธรรมศึกษามูลนิธิ`, so target-environment identity is not yet proven.
+  - Against this current DB only: 202 rows already exist as academy members, 69 rows have a user account by expected student email but no academy member row, and 411 rows are missing both user + academy member.
+  - Name-only fallback matching returned 0 exact normalized hits in this DB; useful matches came from student code / generated email patterns.
+- Output files:
+  - `tmp_m1_m4_pending_accounts.csv` — pending rows grouped by `needs_user_and_member` vs `needs_member_only`
+  - `tmp_create_missing_m1_m4_accounts.sql` — idempotent draft SQL using a temp staging table, user creation, STUDENT role attach, and academy member creation
+- Decisions:
+  - Do not run mutating inserts yet because the connected DB may not be the same dataset/site the user means by `nuxnan.com`.
+  - Keep the SQL draft parameterized around `academy_id = 1` from the current DB and require user confirmation / target DB validation before execution.
+- Verification:
+  - Read-only Laravel bootstrap query confirmed DB connectivity and record counts.
+  - PDF extraction completed and generated 682 ม.1/ม.4 roster rows.
+  - Comparison artifacts were written successfully to workspace files above.
+  - User later confirmed this is the target database, so the live create flow was executed.
+  - Live execution result: created 407 users, 476 students, 476 academy_members, attached 456 missing `STUDENT` role links, reused 69 existing users, and skipped 206 already-existing member rows.
+  - Post-run verification shows 678 unique student codes from the PDF now have matching `academy_members` and `students` rows in academy 1.
+- Additional output files:
+  - `tmp_m1_m4_creation_result.json` — live mutation summary and created rows
+  - `tmp_m1_m4_db_snapshot.json` — current DB snapshot for the 678 unique student codes
+  - `tmp_create_all_m1_m4_accounts_idempotent.sql` — fuller idempotent SQL snapshot matching current `users + students + academy_members + STUDENT role` state
+
+# 2026-06-20 Student classroom/year-rollover flow analysis
+
+- Scope: analyze the real classroom-management flow in code before changing class/room data for a new academic year.
+- Files inspected:
+  - `api/nuxnanravel/app/Services/StudentEnrollmentService.php`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/ClassroomController.php`
+  - `api/nuxnanravel/app/Models/Classroom.php`
+  - `api/nuxnanravel/app/Models/ClassroomStudent.php`
+  - `api/nuxnanravel/app/Models/StudentAcademicInfo.php`
+  - `api/nuxnanravel/app/Services/ClassroomService.php`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/TranscriptController.php`
+  - `api/nuxnanravel/routes/learn/academy.php`
+  - `api/nuxnanravel/database/migrations/2026_04_08_050000_refactor_classroom_enrollment_system.php`
+  - `ui/pages/academies/[name]/admin/gradebook/classrooms/index.vue`
+  - `ui/pages/academies/[name]/admin/gradebook/classrooms/[id].vue`
+- Findings:
+  - `classroom_students` is the intended source of truth for student-to-room assignment across academic years; `students.class_level` and `students.class_section` are maintained mainly as backward-compatible current snapshots.
+  - Backend already supports the critical lifecycle methods: enroll, transfer between rooms, unenroll with status (`transferred` / `graduated` / `dropped`), and bulk classroom promotion to a new room.
+  - `student_academic_info` is a secondary academic-status layer that stores current grade/class text, classroom link, academic year/semester, and study status; it is updated together with active enrollment but is not the primary history source.
+  - Transcript/reporting flows already depend on active/historical `classroom_students`, so annual updates must preserve history by closing old enrollment rows and creating new active rows rather than overwriting only `students.class_level`.
+  - Admin UI currently exposes classroom CRUD plus add/remove students and student-number edits, but no obvious full academic-year rollover wizard for create-next-year-room + promote + graduate + repeat/manual reassignment.
+- Risks:
+  - If staff update only `students.class_level/class_section`, old screens may look right temporarily while the real enrollment history, transcripts, and room counts drift out of sync.
+  - Graduation and annual promotion need different outcomes: final-year students should end with `graduated`, while continuing students should get closed old enrollment rows plus new active enrollment rows in next-year classrooms.
+  - Mid-year room moves should stay inside the same academic year and use transfer flow, not the annual promotion flow.
+- Verification plan:
+  - Define a canonical yearly data-update sequence before mutating student/classroom data.
+  - Map each real-world case (mid-year transfer, semester change, new academic year, graduation, repeater) to the correct backend method / data-state transition.
+
+# 2026-06-20 Phase M — Gamification & Classroom Leaderboard Planning
+
+- Scope: Implement Level/XP system for School/Academy level and Classroom Point Leaderboard based on the user's detailed design in `.agents/design-ref/phase-m-gamification-detailed.md`.
+- Features to Implement:
+  - Database schema for XP logs and period-based aggregates: `xp_events`, `school_xp_cycles`, `classroom_point_cycles`.
+  - Services: `XpService` (award XP, handle levels), `ClassroomPointsService` (award points, fetch leaderboard rankings).
+  - Observers and Event Hooks: Automatically trigger XP/Points on post creation, likes, comments, attendance, course completion, achievements, assignment submission, etc.
+  - Endpoints: summary of school level progress, leaderboard of top classrooms, recent audit logs for administrators.
+  - Frontend: Integrate `SchoolLevelCard` in left sidebar, `SchoolClassroomLeaderboard` in right sidebar, cover level badge, and an optional admin audit view.
+  - Cron/Scheduler: Seed next cycle data (weekly/monthly) and backfill existing data to compute historical XP.
+- Key Architectural Decisions:
+  - XP/Points will be awarded real-time on trigger events.
+  - Reset is handled cleanly via temporal keys (`Y-m`, `o-\WW`) without deleting old logs.
+  - XP rates will be configurable via config files (`config/xp_rates.php` and `config/gamification.php`).
+- Risks:
+  - High database traffic from synchronous observers; could be deferred to queue jobs if scale increases.
+  - Race conditions on aggregates are prevented by using Eloquent `increment` operations (atomic on DB side).
+- Verification Plan:
+  - Run database migrations successfully.
+  - Test observers by creating posts/likes/comments and asserting new XP events.
+  - Verify API endpoints return correctly calculated XP thresholds and leaderboard records.
+  - Verify Nuxt components render level progress bars and leaderboards accurately.
+
+## 2026-06-21 Phase N — Polish + A11y + Mobile UX Plan
+
+### 0. สรุปขอบเขตและเป้าหมาย (Scope & Objectives)
+ยกระดับประสบการณ์ผู้ใช้งาน (UX/UI) ของ nuxnan LMS บน Frontend Nuxt ในหน้าหลักและส่วนประกอบย่อยต่างๆ โดยเน้นความลื่นไหล ความรวดเร็วในการแสดงผล (Skeletons/Lazy load) การจัดหน้าบนมือถือ (Mobile Drawer/Touch Gestures) และการรองรับการเข้าถึงสำหรับผู้ทุพพลภาพ (A11y/Screen Reader/Focus Trap/Keyboard Navigation)
+
+### 1. ลำดับการพัฒนาย่อย (Sub-phases)
+
+#### **Phase N.0 — Skeleton Component System (Est. 1.5 hr)**
+สร้างระบบ Placeholder shape ทดแทน Spinner ลดอาการสะดุดของหน้าตา (Cumulative Layout Shift - CLS)
+- สร้าง Atom `SkeletonBox.vue` (`ui/components/Common/SkeletonBox.vue`)
+- สร้าง Domain Skeletons 5 ตัว:
+  - `FeedPostSkeleton.vue`
+  - `GroupCardSkeleton.vue`
+  - `MemberRowSkeleton.vue`
+  - `StatGridSkeleton.vue`
+  - `UpcomingEventsSkeleton.vue`
+- แทนที่ spinner `svg-spinners:ring-resize` ด้วย Skeletons ในจุดหลักๆ (Feed tab, Members list, Groups grid)
+
+#### **Phase N.1 — Empty State System (Est. 1.0 hr)**
+แทนที่ Empty state ข้อความธรรมดาด้วย Component ที่มีความสวยงามและมีปุ่มสั่งงาน (CTA)
+- สร้าง `EmptyState.vue` (`ui/components/Common/EmptyState.vue`)
+- อัปเดต inline empty states ใน Groups tab, Members tab, Upcoming events และหน้าแจ้งเตือน
+
+#### **Phase N.2 — Error/Retry Inline Pattern (Est. 1.0 hr)**
+จัดการ API call ล้มเหลวแบบนุ่มนวล แทนการเด้ง popup (SweetAlert) ตลอดเวลา
+- สร้าง `ErrorRetry.vue` (`ui/components/Common/ErrorRetry.vue`)
+- นำมาใช้ใน widget ต่างๆ (Upcoming events, Pinned announcement, Classroom leaderboard) ให้สามารถกด Reload ข้อมูลใหม่เฉพาะจุดได้
+
+#### **Phase N.3 — Mobile Sidebar Drawer (Est. 2.0 hr)**
+แก้ปัญหา Widget สำคัญหายไปบนหน้าจอมือถือ (เนื่องจากถูกซ่อนด้วย `hidden lg:flex`)
+- สร้าง `SidebarDrawer.vue` (`ui/components/Common/SidebarDrawer.vue`)
+- เพิ่มปุ่ม "เมนูลัด" และ "สถิติ" บน mobile view เพื่อแสดง Drawer ซ้าย/ขวา
+- จัดกลุ่ม Sidebar widgets (QuickMenu, LevelCard, StatGrid, UpcomingEvents, Leaderboard) เข้าใน Drawer
+
+#### **Phase N.4 — Modal Accessibility (Est. 1.5 hr)**
+เพิ่มการควบคุมผ่านคีย์บอร์ดและ Screen Reader ใน Modals ทั้งหมด
+- สร้าง Composable `useFocusTrap` (`ui/composables/useFocusTrap.ts`) เพื่อขัง Focus และรองรับปุ่ม `Escape`
+- อัปเดต `GroupManageModal`, `GroupCreateModal`, และ `CreatePostModal` ให้รองรับ focus trap และกำหนด ARIA attributes (`role="dialog"`, `aria-modal="true"`)
+
+#### **Phase N.5 — Dropdown Accessibility (Est. 1.0 hr)**
+รองรับคีย์บอร์ดนำทาง (Arrow keys + Enter + Escape) ในช่องเลือกตัวเลือก
+- ปรับปรุง `PostAsSelector`, `NotificationBell`, post type pickers, และ autocomplete input
+- กำหนด ARIA attributes (`role="listbox"`, `role="option"`, `aria-expanded`)
+
+#### **Phase N.6 — Form Realtime Validation (Est. 1.5 hr)**
+สร้างระบบตรวจสอบข้อมูลในฟอร์มแบบทันทีพร้อมแสดงผลข้อผิดพลาด
+- สร้าง Composable `useFieldValidation` (`ui/composables/useFieldValidation.ts`)
+- สร้าง Wrapper `FormField.vue` (`ui/components/Common/FormField.vue`)
+- ประยุกต์ใช้ในฟอร์มสร้างส่วนงานและแก้ไขข้อมูลสมาชิก
+
+#### **Phase N.7 — Animation Polish + Motion-reduce (Est. 1.0 hr)**
+ปรับปรุงอนิเมชันให้ลื่นไหลและเคารพการตั้งค่าลดการเคลื่อนไหว (A11y prefers-reduced-motion)
+- ตั้งค่า `motion-reduce:` ใน Tailwind
+- สกัดและปิดกั้นอนิเมชันหากผู้ใช้งานเปิดโหมด prefers-reduced-motion (รวมถึง Skeletons pulse และ Vue Transitions)
+
+#### **Phase N.8 — Touch Gestures (Est. 1.5 hr)**
+เพิ่ม Gesture สไลด์ปัดหน้าจอเปลี่ยน Tab หรือรูดปิด Modal ในมือถือ
+- สร้าง Composable `useSwipe` (`ui/composables/useSwipe.ts`)
+- ผูก Swipe behavior ในหน้า Profile tabs (`[name].vue`) และ Drawers
+
+#### **Phase N.9 — Performance: Lazy Load + Intersection (Est. 1.0 hr)**
+ทำ Lazy loading รูปภาพขนาดใหญ่และ Defer API loading สำหรับ Widget ที่อยู่นอกหน้าจอ
+- กำหนด `loading="lazy"` + `decoding="async"` บน `<img>`
+- สร้าง Composable `useIntersectionLoad` (`ui/composables/useIntersectionLoad.ts`) โหลดข้อมูล Widget เฉพาะเมื่อ scroll มาถึง (เช่น Leaderboard)
+
+#### **Phase N.10 — QA checklist + Lighthouse pass (Est. 1.0 hr)**
+ตรวจสอบคุณภาพโดยละเอียด รัน Lighthouse คาดหวังคะแนน A11y > 95% และ Performance > 80%
+
+---
+
+### 2. ลำดับแผนการส่งมอบ (Commit & PR Strategy)
+แบ่งออกเป็น 6 commits เพื่อไม่ให้การเปลี่ยนแปลงทับซ้อนและจัดระดับความเสี่ยง:
+1. `feat(ui): skeleton component system (5 variants)` (N.0)
+2. `feat(ui): empty state + error retry components` (N.1 + N.2)
+3. `feat(ui): mobile sidebar drawer (left + right)` (N.3)
+4. `feat(ui): a11y — focus trap, keyboard nav, ARIA in modals` (N.4 + N.5)
+5. `feat(ui): form realtime validation + motion-reduce` (N.6 + N.7)
+6. `feat(ui): touch gestures + intersection lazy load` (N.8 + N.9)
+
+---
+
+### 3. แผนการตรวจสอบและจำลองสถานการณ์ (Verification Plan)
+- **TypeScript & Build Check:** รัน `npm run build` และ `npx vue-tsc --noEmit`
+- **A11y Audit:** ตรวจสอบ Focus Ring ทั่วไป, การกด Tab วนใน modal, และรัน Lighthouse
+- **Viewport Smoke Test:** ทดสอบขนาด 380px (Mobile), 800px (Tablet), และ 1280px+ (Desktop)
+- **Reduced Motion emulation:** สลับโหมดใน DevTools และตรวจว่าอนิเมชันหยุดนิ่ง
+- **Lazy loading check:** ตรวจสอบ Network tab ว่าไม่มีการโหลดรูปและข้อมูล Widget ก่อนความจำเป็น
+
+---
+
+### 4. ความเสี่ยงและการจัดการ (Risks & Mitigations)
+- **iOS Safari body scroll lock conflict:** `overflow: hidden` บน `body` มักใช้ไม่ได้ผลบน iOS Safari ให้รองรับ workaround `position: fixed` เสมอ
+- **Swipe vs vertical scroll conflict:** หลีกเลี่ยง swipe ผิดพลาดด้วยการตั้งค่า threshold และตรวจจับทิศทางแกน X เทียบกับ Y อย่างเหมาะสม
+- **CLS (Cumulative Layout Shift) จาก Skeleton:** ต้องกำหนดขนาดความกว้าง/ความสูงของ Skeleton ให้ตรงหรือใกล้เคียงกับ content จริงเพื่อไม่ให้เกิดการสั่นไหวของเลย์เอาต์
+
+---
+
+## 2026-06-21 Phase N Finish & Verification Summary
+
+- **Scope:** Completed Phase N Polish + Accessibility + Mobile UX updates.
+- **Implemented & Verified:**
+  - **Skeletons, Empty State, and ErrorRetry:** Added fallback skeletons, `EmptyState` with admin CTAs, and inline `ErrorRetry` components inside notification bell, upcoming events widgets, and leaderboard to eliminate CLS and layout shifts.
+  - **Mobile Sidebar Drawer:** Created left and right slide-in `SidebarDrawer` panels for mobile/tablet responsive access to quick menus, stats grid, calendar events, and classroom leaderboard.
+  - **Modal and Dropdown A11y:** Hooked `useFocusTrap` on all creation/management modals. Added keyboard arrow navigation (Up/Down/Enter/Escape) and ARIA listbox/option role bindings to `PostAsSelector.vue`, `NotificationBell.vue`, and `MemberAutocompleteInput.vue`.
+  - **Touch Gestures & Performance:** Bound horizontal `useSwipe` touch gestures on the main profile views for responsive tab switching. Updated all large images and gallery attachments inside `FeedPost.vue` and `SchoolPinnedAnnouncement.vue` to use `loading="lazy"` + `decoding="async"`, and applied `motion-reduce:transition-none` to override hover scaling animations.
+- **Verification status:**
+  - Dev server verified via successful startup on port 3001 using `npm run dev` with no Vue compilation or syntax errors.
+  - Keyboard arrow navigation and click-outside closure fully wired in `MemberAutocompleteInput.vue`.
+
+## 2026-06-21 Phase N follow-up - school navigation widget alignment
+
+- Scope: finish the academy homepage Phase N/UI alignment requested by the user by switching the large center-column `AcademyActionGuide` treatment into a sidebar/mobile widget flow that matches `.agents/design-ref`.
+- Findings:
+  - `ui/pages/academies/[name].vue` still renders `AcademyActionGuide` inside the main content column, while `SchoolQuickMenu` only exists in the mobile drawer, so the page currently has two different navigation concepts.
+  - `ui/components/school/SchoolQuickMenu.vue` is still a simple static list and does not reuse the richer destination/CTA logic already implemented in `ui/composables/useAcademyNavigation.ts`.
+  - `AcademyActionGuide.vue` currently owns the "ศูนย์นำทางโรงเรียน" role-aware navigation experience, including join CTA and pending hint, but its large card layout is the wrong placement for the current design direction.
+- Intended files:
+  - `ui/components/school/SchoolQuickMenu.vue`
+  - `ui/pages/academies/[name].vue`
+- Decisions:
+  - Reuse `useAcademyRole` + `useAcademyNavigation` inside `SchoolQuickMenu` so the widget inherits the same role-aware visibility and CTA behavior rather than maintaining a second static menu map.
+  - Remove the center-column `AcademyActionGuide` mount from `[name].vue` and mount `SchoolQuickMenu` in the desktop sidebar plus the existing mobile drawer.
+  - Keep the UI compact and widget-like, following the `design-ref` sidebar pattern instead of the larger grid-card treatment.
+- Risks:
+  - `useAcademyNavigation` returns mixed same-page hash links and full routes, so the widget needs to handle current-page tab navigation cleanly without breaking route navigation.
+- Verification plan:
+  - Run a focused frontend type/build check if practical.
+  - Read back the affected academy homepage template to confirm the center card is removed and the widget is mounted in the sidebar/drawer.
+- Verification update:
+  - Readback confirms `ui/pages/academies/[name].vue` no longer mounts `AcademyActionGuide` in the main content column.
+  - Readback confirms `SchoolQuickMenu` is now mounted in the desktop sidebar and the existing left mobile drawer, both with the same pending/join wiring.
+  - `cmd /c npx.cmd vue-tsc --noEmit` still fails because of large pre-existing repo-wide TypeScript/tooling issues unrelated to this follow-up, including existing component typing errors and the known `vue-router/volar/sfc-route-blocks` export-resolution problem.
+
+## 2026-06-21 School homepage design-ref alignment pass
+
+- Scope: continue tightening `ui/pages/academies/[name].vue` so the school homepage follows `.agents/design-ref/School Homepage.html` more closely as a cohesive homepage, not just a widget drop-in.
+- Files touched:
+  - `ui/pages/academies/[name].vue`
+  - `ui/components/school/SchoolQuickMenu.vue`
+- Completed:
+  - Refined the hero shell with the newer rounded cover treatment, stronger overlay, upgraded logo frame, academy handle line, verified badge support, and share action.
+  - Added pinned announcement loading plus `SchoolPinnedAnnouncement` rendering above the feed stream to match the design’s pinned-content rhythm.
+  - Switched the main content shell toward the design layout by separating a left sticky widget rail from the main content and constraining the right rail to extra-large layouts.
+  - Added tab count badges and homepage-oriented tab wording directly in the school homepage template.
+- Risks / gaps:
+  - The hero stats row still mixes legacy inline stat chips with the newer hero treatment because the file is already heavily in-flight and contains multiple overlapping homepage phases.
+  - Full compile-green verification remains blocked by repo-wide TypeScript issues unrelated to this page.
+- Verification:
+  - Readback confirmed `SchoolPinnedAnnouncement`, `loadPinnedAnnouncements`, `shareAcademy`, `academyVerified`, `academyHandle`, `heroStats`, and `getTabCount` are now wired in `[name].vue`.
+  - Structural readback confirmed the page now uses a left sidebar + main + right sidebar shell instead of the earlier single sidebar column.
+  - Follow-up readback confirmed the malformed hero-shell closing tags were corrected, the quick-menu now has a reachable `about` target, and the right rail/mobile right drawer now place the stats widget ahead of events and leaderboard to better match the design reference.
+
+---
+
+## 2026-06-21 Canonical Academic Year Rollover — Refined Plan v2
+
+### 0. ทำไมต้อง refine แผนเดิม
+
+แผนแรก (ที่ส่งให้ผู้ใช้ใน chat) ระบุ "flow ที่ควรเป็น" ได้ครบ 8 ขั้นตอน แต่ยังขาด 7 จุดที่ทำให้ implement จริงไม่ได้:
+
+| # | ช่องว่างของแผน v1 | หลักฐานจากโค้ดจริง |
+|---|---|---|
+| G1 | ไม่มี method `graduateStudent`, `repeatStudent`, `dropStudent` ใน `StudentEnrollmentService` — มีแค่ enroll/transfer/unenroll/promote | StudentEnrollmentService.php:23-179 |
+| G2 | `promoteClassroom` ใช้ `transferStudent` ภายใน ไม่มี semantic แยก "ข้ามปี" vs "ในปี" | StudentEnrollmentService.php:152-179 |
+| G3 | `enrollStudent` update `currentAcademicInfo` แบบ overwrite — `student_academic_info` ของปีเก่าหาย | StudentEnrollmentService.php:59-68 |
+| G4 | `classroom_students` ไม่มี unique constraint `(classroom_id, student_id)` ที่บังคับกับ `status='active'` — เปิดช่องให้ active row ซ้อน | refactor_classroom_enrollment_system migration ไม่มี unique |
+| G5 | ไม่มี preview / dry-run ก่อน commit rollover ทั้งโรงเรียน — กระทบนักเรียนเป็นพัน rollback ยาก | ไม่มีในโค้ด |
+| G6 | ไม่มี audit / event เมื่อ status เปลี่ยน — ไม่มี notification, transcript ไม่รู้ | Service ไม่ fire event |
+| G7 | UI admin ไม่มี wizard "เปิดปีการศึกษาใหม่" — มีแค่หน้าจัดการห้อง/รายคน | classrooms/index.vue, classrooms/[id].vue |
+
+นอกจากนี้:
+- `Student::currentAcademicInfo` ผิดรูปแบบ Eloquent (บันทึกไว้ใน แผน 2026-06-17 §0.D)
+- ค่า `ClassroomStudent::STATUS_*` ที่ใช้จริง: `active`, `transferred`, `graduated` — ขาด `dropped`, `repeating`, `promoted`
+
+### 1. หลักการของแผนรอบนี้
+
+1. **Backend foundation ก่อน UI** — กันคนเข้า UI แล้วเขียนข้อมูลผ่าน path ที่ยังไม่ถูก
+2. **ทุก state transition ผ่าน Service เดียว** — controller ห้ามเขียน `classroom_students` ตรง
+3. **Year rollover = batch transaction** — มี preview → commit → undo (ภายใน 24 ชม.)
+4. **บันทึก snapshot ทุกครั้ง** — `student_academic_info` ไม่ overwrite, สร้าง row ใหม่ + mark `is_current`
+5. **UI = wizard ทีละขั้น** — ไม่ใช่ "ปุ่มเดียวเลื่อนทั้งโรงเรียน" เพราะ blast radius สูงสุด
+6. **ทุก phase deploy ได้เดี่ยว**
+7. **Idempotent** — รัน rollover ซ้ำที่ปีเดิม ต้องไม่ duplicate row
+
+### 2. Data model & semantic ที่ต้อง lock ก่อนเขียนโค้ด
+
+#### 2.1 Status lifecycle ของ `classroom_students.status`
+
+```
+                      transferred (ย้ายห้องในปีเดิม)
+                      promoted    (เลื่อนชั้นข้ามปี)   <-- เพิ่มใหม่
+active --left_at-->   graduated   (จบการศึกษา)
+                      dropped     (ลาออก/พ้นสภาพ)    <-- เพิ่มใหม่
+                      repeating   (ซ้ำชั้น)          <-- เพิ่มใหม่
+```
+
+กฎ:
+- 1 student ใน 1 academic_year มี active row ได้มากที่สุด 1 ห้อง
+- history row ไม่จำกัด query ผ่าน `academic_year_id`
+- `promoted` ต่างจาก `transferred` ตรงปีการศึกษา
+
+#### 2.2 `student_academic_info` ความหมายใหม่
+
+- 1 student × 1 academic_year = 1 row (unique)
+- `is_current = true` ได้แค่ row เดียวต่อ student (partial unique)
+- Rollover: row เก่า `is_current=false`, row ใหม่ `is_current=true`
+- เก็บ snapshot grade, classroom_id, classroom_full ของปีนั้น ๆ — ไม่ overwrite
+
+#### 2.3 Sync rule ของ `students.class_level / class_section`
+
+- เป็น denormalized snapshot ของปีปัจจุบันเท่านั้น
+- update เมื่อ enrollment ของ row `is_current=true` เปลี่ยน
+- graduate/drop -> set NULL (ไม่ใช่ค่าปีสุดท้าย) เพื่อ filter "active students" ง่าย
+
+### 3. Phase-by-Phase Plan (10 phases, ~26 ชม.)
+
+#### Phase 0 — Preflight (1 ชม.)
+- 0.1 branch `feature/academic-year-rollover`
+- 0.2 backup ตาราง: `students`, `classroom_students`, `student_academic_info`, `classrooms`, `academic_years` ลง `.agents/backups/2026-06-21/`
+- 0.3 รัน inventory query:
+  - จำนวน active enrollment ต่อ academy
+  - จำนวน student ที่ active row > 1 (ต้องเป็น 0; ถ้าไม่ใช่ = data dirty)
+  - จำนวน student ที่ `class_level` ไม่ตรงกับ active classroom (sync drift)
+- 0.4 บันทึก inventory ลง `.agents/backups/2026-06-21/preflight.md`
+
+**Deliverable:** baseline report + backup
+
+#### Phase 1 — Status Constants & Schema Hardening (2 ชม.)
+- 1.1 เพิ่มค่าใน `ClassroomStudent` model: `STATUS_PROMOTED`, `STATUS_DROPPED`, `STATUS_REPEATING`, `STATUS_SUPERSEDED`
+- 1.2 Migration `add_rollover_columns_to_classroom_students`:
+  - `rollover_batch_id` (uuid, nullable, indexed)
+  - `created_by_user_id` (FK users, nullable) audit
+  - ขยาย `status` (enum/varchar) รองรับค่าใหม่
+  - partial unique `(classroom_id, student_id)` WHERE `status='active'` (MySQL 8 functional index หรือ generated column)
+  - composite index `(academy_id, academic_year_id, status)`
+- 1.3 Migration `normalize_student_academic_info`:
+  - unique `(student_id, academic_year)`
+  - partial unique `(student_id)` WHERE `is_current=true`
+  - แก้ data ที่ละเมิดก่อน apply (ใช้ผลจาก 0.3)
+- 1.4 แก้ `Student::currentAcademicInfo()` ตาม แผน 2026-06-17 §0.D
+- 1.5 Feature test: insert duplicate active -> throw unique violation
+
+**Commit:** `feat(enrollment): add rollover batch tracking and status integrity`
+
+#### Phase 2 — Service Layer Expansion (3 ชม.)
+แตกเป็น 2 service:
+- `StudentEnrollmentService` — single-student ops (เดิม + เพิ่ม)
+- `AcademicYearRolloverService` — batch ops (ใหม่)
+
+**`StudentEnrollmentService` เพิ่มเมธอด**
+- 2.1 `graduateStudent(Student, Classroom, ?date $effectiveAt)` — close active = `graduated`, `students.status='graduated'`, snapshot fields NULL
+- 2.2 `dropStudent(Student, Classroom, string $reason, ?date)` — status `dropped`, `students.status='inactive'`
+- 2.3 `repeatStudent(Student, Classroom $sameOrNewSection, ?int $studentNumber)` — close เดิม `repeating`, create active ใหม่ปี+grade เดิม
+- 2.4 `promoteStudent(Student, Classroom $fromOldYear, Classroom $toNewYear, string $batchId)` — close เดิม `promoted`, create active ใหม่, **สร้าง student_academic_info row ใหม่ + is_current**
+- 2.5 รีไฟน์ `transferStudent` ให้ assert `from.academic_year_id == to.academic_year_id`; ถ้าไม่ใช่ -> redirect to `promoteStudent` + log
+- 2.6 ทุก method fire Event: `StudentEnrolled`, `StudentPromoted`, `StudentGraduated`, `StudentDropped`, `StudentRepeated` (listener phase 7)
+
+**`AcademicYearRolloverService` (ใหม่)**
+- 2.7 `planRollover(Academy, AcademicYear $from, AcademicYear $to, array $mapping): RolloverPlan` — ไม่เขียน DB
+  - mapping `[ from_classroom_id => [ to_classroom_id => [...student_ids], 'graduate' => [...ids], 'drop' => [...ids], 'repeat' => [...ids] ] ]`
+  - return summary + warnings
+- 2.8 `commitRollover(RolloverPlan): RolloverBatch` — transaction เดียว, ใช้ batch_id, เรียก Phase 2.1-2.5
+- 2.9 `previewRollover(Academy, AcademicYear $from, AcademicYear $to)` — auto-suggest mapping ตามชั้น (ม.1->ม.2; ม.3 ไม่มีปีถัด -> graduate)
+- 2.10 `undoRollover(string $batchId, ?User $by)` — เปิดได้ภายใน 24 ชม. หรือก่อนวันเปิดเทอม; revert row ที่ batch_id ตรง
+
+**Tests:**
+- promote 30 คน -> snapshot ใหม่ถูกต้อง
+- graduate ม.6 -> `student_academic_info` ครบ + `students.status='graduated'`
+- commit ซ้ำ batch เดิม -> idempotent
+- undo ภายใน window -> state กลับเหมือนก่อน commit
+
+**Commit:** `feat(enrollment): add graduate/drop/repeat methods and rollover service`
+
+#### Phase 3 — Controller & API Surface (2 ชม.)
+- 3.1 `AcademyRolloverController` ใหม่:
+  - `POST /api/academies/{academy}/rollover/preview` body: `{from_year_id, to_year_id}`
+  - `POST /api/academies/{academy}/rollover/plan` body: mapping เต็ม -> summary + warnings
+  - `POST /api/academies/{academy}/rollover/commit` body: plan_id (cached) -> ทำจริง, return batch_id
+  - `POST /api/academies/{academy}/rollover/undo` body: batch_id
+  - `GET /api/academies/{academy}/rollover/batches` — history
+- 3.2 `StudentEnrollmentController` เพิ่ม endpoint:
+  - `POST .../students/{student}/graduate`
+  - `POST .../students/{student}/drop`
+  - `POST .../students/{student}/repeat`
+- 3.3 FormRequest แยก: `RolloverPlanRequest`, `RolloverCommitRequest`, `GraduateStudentRequest`...
+- 3.4 Policy: academy_admin + principal เท่านั้นที่ commit/undo ได้; teacher ทำได้แค่ preview
+- 3.5 Feature tests: forbid cross-academy + role gate
+
+**Commit:** `feat(api): add academic year rollover endpoints`
+
+#### Phase 4 — Frontend: Single-Student Status Actions (3 ชม.)
+ก่อน wizard ใหญ่ — เปิดความสามารถ "เปลี่ยนสถานะรายคน" ผ่าน UI ก่อน
+
+- 4.1 ใน `classrooms/[id].vue` ขยายแถวนักเรียน เพิ่ม dropdown action: ย้ายห้อง / เลื่อนชั้น / จบการศึกษา / ซ้ำชั้น / ลาออก
+- 4.2 `StudentStatusActionModal.vue` รับ `action` prop -> render form ตามชนิด (เลือกห้องปลายทาง / เหตุผล / วันที่มีผล)
+- 4.3 composable `useStudentEnrollmentActions()` wrap API ของ Phase 3.2
+- 4.4 Toast + refresh list + log entry ใน activity sidebar
+- 4.5 Empty states: นักเรียนที่ graduate/drop ดูในแท็บ "ออกจากห้อง" แยก
+
+**Commit:** `feat(classroom): add per-student status actions (graduate/drop/repeat)`
+
+#### Phase 5 — Frontend: Year Rollover Wizard (5 ชม.)
+หน้า `pages/academies/[name]/admin/gradebook/rollover/index.vue`
+
+Wizard 5 steps:
+1. **เลือกปีต้นทาง/ปลายทาง** — preview -> default mapping
+2. **ตรวจห้องของปีใหม่** — ต้องมีห้องครบทุก grade รับนักเรียน; ขาด -> ปุ่ม "สร้างห้องอัตโนมัติ" ตาม pattern ปีก่อน
+3. **จัดสรรนักเรียน** — 4 ตะกร้า: เลื่อนชั้นปกติ / ย้ายระดับเดิม / จบการศึกษา / ซ้ำหรือลาออก
+   - drag-drop หรือ multiselect -> bucket
+   - filter: ตามห้องเดิม, คะแนน, จำนวนวันลา
+4. **Preview & Warnings** — ผลกระทบ + warning (เช่น "นักเรียน 3 คนยังไม่จัดสรร")
+5. **Commit** — ปุ่ม confirm + พิมพ์ "เปิดปีการศึกษา {year}" -> POST commit; แสดง progress + batch_id
+
+หลัง commit:
+- แสดงผลลัพธ์ + ปุ่ม "Undo (เหลือเวลา 23:59)"
+- export Excel summary
+
+UI components ใหม่:
+- `RolloverYearPicker.vue`
+- `RolloverClassroomChecklist.vue`
+- `RolloverStudentBucket.vue`
+- `RolloverPreviewSummary.vue`
+- `RolloverCommitPanel.vue`
+
+**Commit:** `feat(rollover): add academic year rollover wizard`
+
+#### Phase 6 — Reports & Downstream Sync (3 ชม.)
+- 6.1 `TranscriptController` — ตรวจว่า query ใช้ `classroom_students` filter ด้วย `academic_year_id`; ถ้า hard-code ปีปัจจุบัน -> แก้ให้รับ year param
+- 6.2 หน้า list นักเรียน (academy admin / member list / attendance) — ทุกที่ที่อาศัย `students.class_level`:
+  - "active classroom for current year" หรือ "snapshot อย่างเดียว"?
+  - ต้องการความถูกต้อง -> join `classroom_students`
+- 6.3 Attendance: เช็ค record มี `academic_year_id` หรือ inherit จาก classroom — ถ้าไม่มี เพิ่ม
+- 6.4 Search/filter student แยก scope "ปัจจุบัน" vs "ทุกปี"
+
+**Commit:** `fix(reports): scope queries by academic_year after rollover`
+
+#### Phase 7 — Notifications & Events (2 ชม.)
+- 7.1 `StudentGraduated` -> notify นักเรียน + ผู้ปกครอง + ครูประจำชั้น; sync `users.status`
+- 7.2 `StudentPromoted` -> notify ผู้ปกครอง + activity feed
+- 7.3 `RolloverCommitted` -> notify academy admins + email summary
+- 7.4 `StudentDropped` -> revoke academy_member access (inactive)
+- 7.5 ใช้ Laravel Notification + Reverb broadcast (ตามที่มี)
+
+**Commit:** `feat(notifications): wire enrollment events to notifications`
+
+#### Phase 8 — Audit & History UI (2 ชม.)
+- 8.1 ใช้ `App\Traits\Auditable` (จาก แผน 2026-06-17 §9.5) apply กับ `ClassroomStudent`, `StudentAcademicInfo`
+- 8.2 UI: tab "ประวัติการลงห้อง" ในหน้า student master profile (แผน 2026-06-17 Phase 4) — timeline ปี/ห้อง/status/leave_reason/โดยใคร
+- 8.3 หน้า rollover history admin: list batch + กดดูรายละเอียดได้
+
+**Commit:** `feat(enrollment): add audit trail and history UI`
+
+#### Phase 9 — Backfill & Data Repair (2 ชม.)
+- 9.1 Artisan `enrollment:repair-dirty-data {--dry-run} {--academy=}`:
+  - active row > 1 -> ใช้ row created_at ใหม่สุด ปิดที่เหลือเป็น `superseded`
+  - `class_level` ไม่ match active classroom -> re-sync จาก pivot
+  - `is_current=true` > 1 row -> เก็บปีล่าสุด ลดที่เหลือ
+- 9.2 Artisan `enrollment:backfill-academic-info {--year=}` — สร้าง row สำหรับนักเรียนที่ขาดประวัติของปีนั้น
+- 9.3 รัน dry-run บน production-like, review, รันจริง
+- 9.4 บันทึก count ลง `.agents/backups/2026-06-21/repair-report.md`
+
+**Commit:** `chore(enrollment): backfill and repair classroom enrollment data`
+
+#### Phase 10 — Cleanup, Docs, Memory (1 ชม.)
+- 10.1 ลบ legacy paths ที่เขียน `students.class_level` ตรง (grep หาให้หมด)
+- 10.2 อัพเดท `.agents/worklog.md`
+- 10.3 เขียน `docs/academic-year-rollover.md` พร้อม flow diagram
+- 10.4 บันทึก memory: `project_enrollment_rollover.md` ลง MEMORY.md
+
+**Commit:** `docs(enrollment): finalize rollover documentation`
+
+### 4. Execution Order & Estimates
+
+| ลำดับ | Phase | ประเภท | เวลา | Risk |
+|---|---|---|---|---|
+| 1 | 0 Preflight | Ops | 1 ชม. | ต่ำ |
+| 2 | 9a Initial repair (subset) | DB | 1 ชม. | กลาง |
+| 3 | 1 Schema hardening | DB | 2 ชม. | กลาง |
+| 4 | 2 Service expansion | Backend | 3 ชม. | กลาง |
+| 5 | 3 API surface | Backend | 2 ชม. | ต่ำ |
+| 6 | 4 Single-student UI | Frontend | 3 ชม. | ต่ำ |
+| 7 | 6 Reports sync | Full-stack | 3 ชม. | กลาง |
+| 8 | 5 Rollover wizard | Frontend | 5 ชม. | สูง |
+| 9 | 7 Events/notify | Backend | 2 ชม. | ต่ำ |
+| 10 | 8 Audit + history UI | Full-stack | 2 ชม. | ต่ำ |
+| 11 | 9b Final backfill verification | DB | 1 ชม. | กลาง |
+| 12 | 10 Cleanup | Cleanup | 1 ชม. | ต่ำ |
+
+**รวม ≈ 26 ชม.** ~10 commits/PR แยกอิสระ
+
+### 5. Verification per Phase
+
+- ทุก phase backend: `./vendor/bin/pint && php artisan test --filter=Enrollment`
+- ทุก phase frontend: `npm run dev` smoke + reduced-motion + 3 viewport
+- หลัง Phase 2/3/5: end-to-end manual ตาม persona: academy admin / homeroom teacher / student / parent
+- หลัง Phase 9: ตรวจ inventory เทียบ baseline (Phase 0.3) — diff ต้องอธิบายได้ทุก row
+
+### 6. Risk Register
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| MySQL partial unique ไม่ support บน 5.7 | กลาง | สูง | ตรวจ version ก่อน; fallback application-level check + composite unique `(classroom_id, student_id, status)` |
+| Rollover commit ค้างกลางทาง | ต่ำ | สูง | DB::transaction; `batch_id` ทำให้ rollback partial ได้ |
+| Undo เกิน window แต่ admin อยากย้อน | กลาง | กลาง | undo เปิด 24 ชม.; เกินแล้วต้อง manual runbook |
+| Data dirty มาก่อน — partial unique ใส่ไม่ได้ | สูง | สูง | Phase 9a (initial repair) ต้องวิ่งก่อน Phase 1 apply unique |
+| Notification spam ตอน rollover พันคน | สูง | กลาง | digest/queued; ไม่ส่งทีละ event |
+| Wizard step 3 drag-drop ช้าที่ 500+ นักเรียน | กลาง | กลาง | virtual list + bulk select; pagination ตามห้อง |
+| Transcript/report เพี้ยนระหว่าง migration | กลาง | สูง | Phase 6 ต้อง deploy ก่อน Phase 5 (commit rollover) |
+| `enrolled_at` เป็น date แต่ service ส่ง datetime | ต่ำ | ต่ำ | cast ให้ตรง หรือเปลี่ยน column เป็น datetime ใน 1.2 |
+
+### 7. Dependency Order ที่บังคับ
+
+```
+Phase 0 -> Phase 9a (initial repair) -> Phase 1 (schema + unique)
+                                              |
+                                              v
+                                          Phase 2 -> Phase 3 -> Phase 4
+                                                                 |
+                                                                 v
+                                                             Phase 6 -> Phase 5
+                                                                           |
+                                                                           v
+                                                                      Phase 7, 8
+                                                                           |
+                                                                           v
+                                                                      Phase 9b -> 10
+```
+
+**สำคัญ:** Phase 9a (repair) ต้องวิ่งก่อน Phase 1 apply unique constraint ไม่งั้น migration จะ fail บน data dirty
+**สำคัญ:** Phase 6 ต้อง deploy ก่อน Phase 5 ใช้งานจริง ไม่งั้น admin commit rollover แล้ว report เห็นเลขผิด
+
+### 8. Out of Scope
+
+- ❌ Multi-academy bulk rollover (ทำทีละ academy)
+- ❌ Auto-detect "ใครควรซ้ำชั้น" จากเกรด (รอระบบเกรดครบ — งานคนละก้อน)
+- ❌ Cross-school student transfer (flow แยก)
+- ❌ Teacher rollover (homeroom assignment ของปีใหม่)
+- ❌ Auto-generate classroom ปีใหม่บังคับ (มีเป็น hint button)
+
+### 9. Decisions ที่ต้องยืนยันก่อนเริ่ม Phase 0
+
+1. **Undo window 24 ชม. หรือ "จนกว่าจะเปิดเทอม"?** — recommendation: 24 ชม. + ปุ่ม "ปิด undo เร็ว" สำหรับ admin
+2. **Partial unique บน MySQL version ปัจจุบัน?** — `SELECT VERSION()` ก่อนเขียน migration
+3. **ENUM vs varchar สำหรับ status?** — recommendation: varchar + Laravel cast (เพิ่มค่าใหม่ง่าย)
+4. **Wizard ขอ confirm step อย่างไร?** — recommendation: พิมพ์ชื่อปีการศึกษาเพื่อยืนยัน (เหมือน GitHub delete repo)
+5. **`students.status` มีค่าอะไรบ้าง?** — ตรวจ schema ก่อน map `graduated`/`dropped`/`active` ให้ถูก
+
+### 10. Decisions Locked (2026-06-21)
+
+1. ✅ **Undo window** = 24 ชม. + ปุ่ม "ปิด undo เร็ว"
+   - Phase 2.10 `undoRollover`: check `commit_at + 24h > now()` หรือ `undo_closed_at IS NULL`
+   - Phase 5 หลัง commit: countdown timer + ปุ่ม "ยืนยันปิด undo ทันที"
+   - Phase 1.2: เพิ่ม column `undo_closed_at` ใน rollover batch table
+
+2. ✅ **Status column** = varchar + Laravel cast
+   - Phase 1.2: `string('status', 32)` + index แทน enum
+   - `ClassroomStudent` model: `protected $casts` + constant list + validation rule
+
+3. ✅ **Commit confirmation** = พิมพ์ชื่อปีการศึกษา
+   - Phase 5 Step 5: input `confirmationText` ต้อง === `${toYear.name}` ก่อน enable ปุ่ม
+   - frontend disable จนกว่า exact match
+
+4. ✅ **Unique strategy** = เช็ค MySQL version ก่อน
+   - Phase 0.3: เพิ่ม `SELECT VERSION()` ใน inventory query
+   - Phase 1.2: 8.0+ ใช้ functional index `((CASE WHEN status='active' THEN student_id END))`; 5.7 ใช้ generated column + unique
+   - บันทึก choice ลง `.agents/backups/2026-06-21/preflight.md`
+
+5. ✅ **`students.status` audit** = ทำใน Phase 0.3 inventory
+   - เพิ่ม `SELECT status, COUNT(*) FROM students GROUP BY status`
+   - ใช้ผลตัดสิน Phase 2.1/2.2 ว่า map ค่าไหน (เช่นมี `inactive` แต่ไม่มี `dropped` → ใช้ `inactive`)
+
+→ **พร้อมเริ่ม Phase 0 ทันที** ไม่มี open question เหลือ

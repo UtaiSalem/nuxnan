@@ -17,6 +17,10 @@
 !/CLAUDE.md
 !/.agents/
 !/.agents/**
+# DB snapshots may contain PII — keep local only
+/.agents/backups/**/*.jsonl
+/.agents/backups/**/*.sql
+/.agents/backups/**/*.csv
 !/api/
 !/ui/
 
