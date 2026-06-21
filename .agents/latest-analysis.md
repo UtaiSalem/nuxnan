@@ -2371,7 +2371,533 @@ Plain PHP classes, ไม่มี broadcast/queue spec — เก็บไว�
 - [ ] ไม่กระทบ ClassroomController paths (smoke check 3 endpoints เดิม)
 - [ ] Worklog อัพเดท
 
-ตัดสินใจรอยืนยันก่อนเริ่ม:
-1. **E4 enum students.status** — ใช้ `'graduated'`/`'inactive'` ของเดิมตาม recommendation (ไม่ขยาย enum) — OK?
-2. **Same-classroom re-enroll** — Phase 2 ยอมรับ history loss สำหรับเคสนี้; แก้จริงต้องเปลี่ยน UNIQUE → partial unique = Phase ถัดไป — OK?
-3. **Lock strategy** — single-academy SELECT FOR UPDATE ที่ batch row เป็นจุดเริ่มต้น; multi-academy concurrency เลื่อนทีหลัง — OK?
+### 12. Decisions Confirmed (2026-06-21)
+
+1. **E4 enum `students.status`** — ใช้ `'graduated'` / `'inactive'` ของเดิมตามแผน (ไม่ขยาย enum) — **[ยืนยันแล้ว - OK]**
+2. **Same-classroom re-enroll** — ยอมรับ history loss สำหรับ Phase 2 ไปก่อน; ปลด UNIQUE -> partial unique ในเฟสถัดไป — **[ยืนยันแล้ว - OK]**
+3. **Lock strategy** — ใช้ `SELECT FOR UPDATE` ที่ระดับ batch row ในการเริ่มต้น; concurrency แบบ multi-academy เลื่อนไปเฟสอื่น — **[ยืนยันแล้ว - OK]**
+
+แผนงาน Phase 2 มีการยืนยันครบถ้วนแล้วและเริ่มรันโค้ดตามลำดับ 2.A ถึง 2.I ต่อไปนี้
+
+
+---
+
+## 2026-06-21 Phase 3 — Controller & API Surface (Detailed Plan)
+
+### 0. State at start of Phase 3
+
+จาก Phase 2 ที่เสร็จแล้ว:
+- `StudentEnrollmentService` มี method: `enrollStudent`, `transferStudent`, `graduateStudent`, `dropStudent`, `repeatStudent`, `promoteStudent`, `unenrollStudent` (deprecated), `promoteClassroom` (deprecated)
+- `AcademicYearRolloverService` มี: `previewRollover`, `planRollover`, `commitRollover`, `undoRollover`, `closeUndoWindow`
+- `RolloverBatch` model + `RolloverPlan` value object พร้อม
+- 8 Event classes พร้อม (ยังไม่มี listener)
+- Concurrency lock: `lockForUpdate()` ที่ `academic_years` + batch row
+- Decision §10 lock ครบ: undo 24h, varchar status, confirm พิมพ์ชื่อปี, MySQL 8 functional index, students.status audit ใน Preflight
+
+Caller ที่มีอยู่:
+- `ClassroomController::transferStudent` (line 481) → ห่อ `transferStudent` service
+- `ClassroomController::promoteClassroom` (line 537) → ห่อ deprecated `promoteClassroom` service
+- ไม่มี endpoint สำหรับ graduate/drop/repeat/promote per-student
+- ไม่มี endpoint rollover (preview/plan/commit/undo) เลย
+
+### 1. หลักการ Phase 3
+
+1. **Routes ใหม่ทั้งหมด academy-scoped** — `/api/academies/{academy}/...` กัน cross-school leak ระดับ route
+2. **Policy แยก class** — ไม่ฝังใน controller; reusable
+3. **FormRequest ทุก write endpoint** — validation + authorization ใน 1 ที่
+4. **API Resource** สำหรับ response shape (RolloverBatch, RolloverPlan, ClassroomStudent)
+5. **Plan caching** — `planRollover` คืน plan_id; client เอามาส่งใน `commit` (ไม่ resend mapping ใหญ่ๆ ซ้ำ)
+6. **Idempotency key** สำหรับ commit — กัน double-click ฝั่ง client
+7. **ไม่ refactor legacy** — `ClassroomController::transferStudent/promoteClassroom` คงไว้ก่อน, mark deprecated; Phase 5 frontend ค่อยย้าย
+8. **Test ทุก endpoint** — happy path + 403 + 422 + cross-academy
+
+### 2. Route map (ใหม่)
+
+ใน `routes/learn/academy.php` ส่วนใหม่ใต้ comment `// === Phase 3: enrollment lifecycle + rollover ===`:
+
+```php
+Route::middleware(['auth:api'])->prefix('academies/{academy}')->group(function () {
+    // Per-student lifecycle (academy-scoped)
+    Route::post('students/{student}/graduate', [StudentLifecycleController::class, 'graduate'])
+        ->name('api.academy.students.graduate');
+    Route::post('students/{student}/drop', [StudentLifecycleController::class, 'drop'])
+        ->name('api.academy.students.drop');
+    Route::post('students/{student}/repeat', [StudentLifecycleController::class, 'repeat'])
+        ->name('api.academy.students.repeat');
+    Route::post('students/{student}/promote', [StudentLifecycleController::class, 'promote'])
+        ->name('api.academy.students.promote');
+    Route::post('students/{student}/transfer', [StudentLifecycleController::class, 'transfer'])
+        ->name('api.academy.students.transfer'); // alias สำหรับ same-year transfer (เลิกใช้ legacy /classrooms/transfer-student)
+    Route::get('students/{student}/enrollment-history',
+        [StudentLifecycleController::class, 'history'])
+        ->name('api.academy.students.enrollmentHistory');
+
+    // Rollover wizard endpoints
+    Route::prefix('rollover')->name('api.academy.rollover.')->group(function () {
+        Route::post('preview', [RolloverController::class, 'preview'])->name('preview');
+        Route::post('plan', [RolloverController::class, 'plan'])->name('plan');
+        Route::post('commit', [RolloverController::class, 'commit'])->name('commit');
+        Route::post('{batch}/undo', [RolloverController::class, 'undo'])->name('undo');
+        Route::post('{batch}/close-undo', [RolloverController::class, 'closeUndo'])->name('closeUndo');
+        Route::get('batches', [RolloverController::class, 'index'])->name('index');
+        Route::get('batches/{batch}', [RolloverController::class, 'show'])->name('show');
+    });
+});
+```
+
+Route-model binding:
+- `{academy}` → Academy by id (หรือ name ถ้าใช้ scope binding เดิม)
+- `{student}` → Student by id, scoped by `{academy}` — เพิ่ม `Route::scopeBindings()` หรือ implicit binding รุ่น Laravel 12
+- `{batch}` → RolloverBatch by uuid, scoped by `{academy}` (ตรวจ academy_id ใน controller method `getRouteKeyName`)
+
+### 3. Controllers
+
+#### 3.1 `Api/Learn/Academy/StudentLifecycleController`
+
+```php
+public function graduate(GraduateStudentRequest $req, Academy $academy, Student $student): JsonResponse {
+    $closed = $this->enroll->graduateStudent(
+        $student,
+        null, // service หา active เอง
+        $req->input('reason', 'จบการศึกษา'),
+        $req->date('effective_at') ?? today(),
+        null, // batchId
+        $req->user()->id,
+    );
+    return response()->json([
+        'success' => true,
+        'closed_enrollment' => $closed ? new ClassroomStudentResource($closed) : null,
+        'student' => new StudentSummaryResource($student->fresh()),
+    ]);
+}
+```
+similar สำหรับ drop, repeat, promote, transfer
+
+`history`:
+```php
+public function history(Academy $academy, Student $student): JsonResponse {
+    $rows = $this->enroll->getStudentHistory($student);
+    return ClassroomStudentResource::collection($rows)->response();
+}
+```
+
+#### 3.2 `Api/Learn/Academy/RolloverController`
+
+```php
+public function preview(PreviewRolloverRequest $req, Academy $academy): JsonResponse {
+    $from = AcademicYear::where('academy_id', $academy->id)->findOrFail($req->integer('from_year_id'));
+    $to = AcademicYear::where('academy_id', $academy->id)->findOrFail($req->integer('to_year_id'));
+    return response()->json($this->rollover->previewRollover($academy, $from, $to));
+}
+
+public function plan(PlanRolloverRequest $req, Academy $academy): JsonResponse {
+    $from = AcademicYear::findOrFail($req->integer('from_year_id'));
+    $to = AcademicYear::findOrFail($req->integer('to_year_id'));
+    $plan = $this->rollover->planRollover($academy, $from, $to, $req->input('mapping'));
+
+    // Cache plan for commit step (15 min TTL, scoped per user)
+    $planId = (string) Str::uuid();
+    Cache::put("rollover_plan:{$planId}:user:{$req->user()->id}", $plan->toArray(), 900);
+
+    return response()->json([
+        'plan_id' => $planId,
+        'summary' => $plan->summary,
+        'warnings' => $plan->warnings,
+    ]);
+}
+
+public function commit(CommitRolloverRequest $req, Academy $academy): JsonResponse {
+    $cached = Cache::get("rollover_plan:{$req->input('plan_id')}:user:{$req->user()->id}");
+    abort_if(! $cached, 410, 'Plan expired or not found. Please re-run plan step.');
+
+    // Confirm field check (Decision §10.3 — พิมพ์ชื่อปีการศึกษา)
+    $toYear = AcademicYear::findOrFail($cached['toYearId']);
+    abort_unless(
+        $req->input('confirm_text') === $toYear->name,
+        422,
+        'Confirmation text does not match destination academic year name.'
+    );
+
+    $plan = RolloverPlan::fromArray($cached);
+    $batch = $this->rollover->commitRollover($plan, $req->user());
+    Cache::forget("rollover_plan:{$req->input('plan_id')}:user:{$req->user()->id}");
+
+    return response()->json([
+        'batch' => new RolloverBatchResource($batch),
+    ], 201);
+}
+
+public function undo(UndoRolloverRequest $req, Academy $academy, RolloverBatch $batch): JsonResponse {
+    abort_unless($batch->academy_id === $academy->id, 404);
+    try {
+        $undone = $this->rollover->undoRollover($batch->id, $req->user());
+        return response()->json(['batch' => new RolloverBatchResource($undone)]);
+    } catch (RolloverNotUndoable $e) {
+        return response()->json(['error' => 'cannot_undo', 'message' => $e->getMessage()], 409);
+    }
+}
+
+public function closeUndo(Request $req, Academy $academy, RolloverBatch $batch): JsonResponse {
+    abort_unless($batch->academy_id === $academy->id, 404);
+    $this->rollover->closeUndoWindow($batch->id, $req->user());
+    return response()->json(['batch' => new RolloverBatchResource($batch->fresh())]);
+}
+
+public function index(Academy $academy): JsonResponse {
+    $batches = RolloverBatch::where('academy_id', $academy->id)
+        ->with(['fromYear', 'toYear', 'committedBy:id,name'])
+        ->latest('committed_at')->paginate(20);
+    return RolloverBatchResource::collection($batches)->response();
+}
+
+public function show(Academy $academy, RolloverBatch $batch): JsonResponse {
+    abort_unless($batch->academy_id === $academy->id, 404);
+    return response()->json(['batch' => new RolloverBatchResource($batch->load(['fromYear', 'toYear', 'committedBy', 'undoneBy']))]);
+}
+```
+
+### 4. FormRequests
+
+ที่ `app/Http/Requests/Academy/Enrollment/`:
+
+#### `GraduateStudentRequest`
+```php
+public function authorize(): bool {
+    return Gate::allows('enrollmentLifecycle', [$this->route('academy'), $this->route('student')]);
+}
+public function rules(): array {
+    return [
+        'reason' => 'nullable|string|max:255',
+        'effective_at' => 'nullable|date|before_or_equal:today',
+    ];
+}
+```
+
+#### `DropStudentRequest`
+```php
+public function rules(): array {
+    return [
+        'reason' => 'required|string|max:255', // drop ต้องมีเหตุผล
+        'effective_at' => 'nullable|date|before_or_equal:today',
+    ];
+}
+```
+
+#### `RepeatStudentRequest`
+```php
+public function rules(): array {
+    return [
+        'new_classroom_id' => 'required|integer|exists:classrooms,id',
+        'student_number' => 'nullable|integer|min:1',
+        'reason' => 'nullable|string|max:255',
+    ];
+}
+```
+
+#### `PromoteStudentRequest` / `TransferStudentRequest`
+```php
+public function rules(): array {
+    return [
+        'from_classroom_id' => 'required|integer|exists:classrooms,id',
+        'to_classroom_id' => 'required|integer|exists:classrooms,id|different:from_classroom_id',
+        'reason' => 'nullable|string|max:255',
+        'student_number' => 'nullable|integer|min:1',
+    ];
+}
+```
+
+#### `PreviewRolloverRequest`
+```php
+public function rules(): array {
+    return [
+        'from_year_id' => 'required|integer|exists:academic_years,id',
+        'to_year_id' => 'required|integer|exists:academic_years,id|different:from_year_id',
+    ];
+}
+```
+
+#### `PlanRolloverRequest`
+```php
+public function rules(): array {
+    return [
+        'from_year_id' => 'required|integer|exists:academic_years,id',
+        'to_year_id' => 'required|integer|exists:academic_years,id|different:from_year_id',
+        'mapping' => 'required|array|min:1',
+        'mapping.*.student_id' => 'required|integer|exists:students,id',
+        'mapping.*.action' => 'required|in:promote,graduate,drop,repeat,new_intake,skip',
+        'mapping.*.from_classroom_id' => 'nullable|integer|exists:classrooms,id',
+        'mapping.*.to_classroom_id' => 'nullable|integer|exists:classrooms,id',
+        'mapping.*.reason' => 'nullable|string|max:255',
+    ];
+}
+```
+
+#### `CommitRolloverRequest`
+```php
+public function rules(): array {
+    return [
+        'plan_id' => 'required|string|uuid',
+        'confirm_text' => 'required|string', // ต้องตรงกับ destination year name (check ใน controller)
+    ];
+}
+```
+
+#### `UndoRolloverRequest`
+```php
+public function rules(): array {
+    return [
+        'reason' => 'nullable|string|max:500',
+    ];
+}
+```
+
+### 5. Policy
+
+`app/Policies/EnrollmentPolicy.php`:
+
+```php
+class EnrollmentPolicy {
+    /**
+     * Per-student lifecycle (graduate/drop/repeat/promote/transfer)
+     * ใครก็ได้ที่เป็น academy admin หรือ teacher ที่ดูแล classroom
+     */
+    public function lifecycle(User $user, Academy $academy, Student $student): bool {
+        if ($student->academy_id !== $academy->id) return false;
+
+        // Academy admin: ทำได้ทุกคน
+        if ($academy->admins()->where('user_id', $user->id)->exists()) return true;
+
+        // Homeroom teacher ของห้องที่นักเรียน active อยู่
+        $teaching = ClassroomStudent::where('student_id', $student->id)
+            ->where('status', 'active')
+            ->whereHas('classroom', fn ($q) => $q->where('homeroom_teacher_id', $user->id))
+            ->exists();
+        return $teaching;
+    }
+
+    /**
+     * Rollover commit/undo: เฉพาะ principal หรือ academy admin
+     * Teacher preview/plan ได้ แต่ commit ไม่ได้
+     */
+    public function previewRollover(User $user, Academy $academy): bool {
+        return $this->isAcademyStaff($user, $academy);
+    }
+    public function planRollover(User $user, Academy $academy): bool {
+        return $this->isAcademyStaff($user, $academy);
+    }
+    public function commitRollover(User $user, Academy $academy): bool {
+        return $this->isAcademyAdmin($user, $academy);
+    }
+    public function undoRollover(User $user, Academy $academy, RolloverBatch $batch): bool {
+        if ($batch->academy_id !== $academy->id) return false;
+        return $this->isAcademyAdmin($user, $academy);
+    }
+    public function viewBatches(User $user, Academy $academy): bool {
+        return $this->isAcademyStaff($user, $academy);
+    }
+
+    private function isAcademyAdmin(User $user, Academy $academy): bool {
+        return $academy->admins()->where('user_id', $user->id)->exists()
+            || $academy->user_id === $user->id; // owner
+    }
+    private function isAcademyStaff(User $user, Academy $academy): bool {
+        return $this->isAcademyAdmin($user, $academy)
+            || $academy->teachers()->where('user_id', $user->id)->exists();
+    }
+}
+```
+
+Register ใน `AuthServiceProvider`:
+```php
+Gate::define('enrollment.lifecycle', [EnrollmentPolicy::class, 'lifecycle']);
+Gate::define('enrollment.preview', [EnrollmentPolicy::class, 'previewRollover']);
+Gate::define('enrollment.plan', [EnrollmentPolicy::class, 'planRollover']);
+Gate::define('enrollment.commit', [EnrollmentPolicy::class, 'commitRollover']);
+Gate::define('enrollment.undo', [EnrollmentPolicy::class, 'undoRollover']);
+Gate::define('enrollment.viewBatches', [EnrollmentPolicy::class, 'viewBatches']);
+```
+
+### 6. API Resources
+
+#### `ClassroomStudentResource`
+```php
+public function toArray($req): array {
+    return [
+        'id' => $this->id,
+        'student_id' => $this->student_id,
+        'classroom_id' => $this->classroom_id,
+        'academy_id' => $this->academy_id,
+        'academic_year_id' => $this->academic_year_id,
+        'student_number' => $this->student_number,
+        'status' => $this->status,
+        'status_text' => $this->status_text,
+        'enrolled_at' => $this->enrolled_at?->toDateString(),
+        'left_at' => $this->left_at?->toDateString(),
+        'leave_reason' => $this->leave_reason,
+        'rollover_batch_id' => $this->rollover_batch_id,
+        'created_by' => $this->whenLoaded('createdBy', fn () => [
+            'id' => $this->createdBy->id,
+            'name' => $this->createdBy->name,
+        ]),
+        'classroom' => $this->whenLoaded('classroom', fn () => [
+            'id' => $this->classroom->id,
+            'display_name' => $this->classroom->name,
+            'grade_level' => $this->classroom->grade_level,
+            'section' => $this->classroom->section,
+        ]),
+    ];
+}
+```
+
+#### `RolloverBatchResource`
+```php
+public function toArray($req): array {
+    return [
+        'id' => $this->id,
+        'academy_id' => $this->academy_id,
+        'from_year' => $this->whenLoaded('fromYear', fn () => ['id' => $this->fromYear->id, 'name' => $this->fromYear->name]),
+        'to_year' => $this->whenLoaded('toYear', fn () => ['id' => $this->toYear->id, 'name' => $this->toYear->name]),
+        'status' => $this->status,
+        'committed_at' => $this->committed_at?->toIso8601String(),
+        'committed_by' => $this->whenLoaded('committedBy', fn () => ['id' => $this->committedBy->id, 'name' => $this->committedBy->name]),
+        'undo_closed_at' => $this->undo_closed_at?->toIso8601String(),
+        'undone_at' => $this->undone_at?->toIso8601String(),
+        'is_undoable' => $this->isUndoable(),
+        'undo_expires_at' => $this->committed_at?->addDay()->toIso8601String(),
+        'totals' => $this->totals,
+        'plan_summary' => $this->when($req->user()->can('enrollment.commit', $this->academy), $this->plan_summary),
+    ];
+}
+```
+
+#### `StudentSummaryResource`
+- เฉพาะ field ที่ทุก role ดูได้: id, student_id, name, status, class_level, class_section, academy_id
+
+### 7. Tests
+
+`tests/Feature/Api/Academy/RolloverControllerTest.php`:
+
+| # | Test |
+|---|---|
+| C1 | preview as academy admin → 200 + suggested mapping shape |
+| C2 | preview as student → 403 |
+| C3 | preview cross-academy → 404 |
+| C4 | plan as academy admin → 200 + plan_id cached |
+| C5 | plan with invalid mapping (student not in academy) → 422 |
+| C6 | commit without correct confirm_text → 422 |
+| C7 | commit with expired plan_id → 410 |
+| C8 | commit happy path → 201 + batch created + 3 students transitioned |
+| C9 | undo within 24h → 200 + state restored |
+| C10 | undo after closeUndo → 409 |
+| C11 | undo cross-academy → 404 |
+| C12 | index batches → pagination + only own academy |
+| C13 | show batch ของ academy อื่น → 404 |
+
+`tests/Feature/Api/Academy/StudentLifecycleControllerTest.php`:
+
+| # | Test |
+|---|---|
+| L1 | graduate as homeroom teacher → 200 + students.status=graduated |
+| L2 | graduate as random user → 403 |
+| L3 | drop without reason → 422 |
+| L4 | drop with reason → 200 + students.status=inactive |
+| L5 | transfer same-year → 200 + 2 rows updated |
+| L6 | transfer cross-year → 422 (service throws InvalidArgumentException → controller returns 422) |
+| L7 | promote different year → 200 |
+| L8 | repeat same classroom → 422 |
+| L9 | history → list of all enrollment rows desc by created_at |
+| L10 | cross-academy student → 404 |
+
+### 8. ลำดับ Commits Phase 3 (5 commits)
+
+| # | Subject | ไฟล์หลัก | LOC |
+|---|---|---|---|
+| 3.A | feat(api): policies + gate registration for enrollment lifecycle | EnrollmentPolicy.php, AuthServiceProvider.php, tests | ~150 |
+| 3.B | feat(api): FormRequests + API Resources for enrollment | Requests/Academy/Enrollment/*, Resources/Enrollment/* | ~250 |
+| 3.C | feat(api): StudentLifecycleController + routes + tests | StudentLifecycleController.php, routes/learn/academy.php, tests/...LifecycleControllerTest.php | ~250 |
+| 3.D | feat(api): RolloverController preview+plan+index endpoints + tests | RolloverController.php (partial), tests/...RolloverControllerTest.php (C1-C5, C12) | ~200 |
+| 3.E | feat(api): RolloverController commit+undo+closeUndo + RolloverPlan::fromArray + tests | RolloverController.php (complete), RolloverPlan.php (add fromArray) | ~250 |
+
+**รวม ~1100 LOC ~2.5 ชม.**
+
+แยก 3.D และ 3.E เพราะ commit/undo มี complexity สูงกว่า (plan caching, confirm_text gate, idempotency)
+
+### 9. Verification per commit
+
+ทุก commit:
+1. `./vendor/bin/pint`
+2. `./vendor/bin/phpunit tests/Feature/Api/Academy/RolloverControllerTest.php tests/Feature/Api/Academy/StudentLifecycleControllerTest.php`
+3. `./vendor/bin/phpunit tests/Feature/StudentEnrollmentServiceTest.php tests/Feature/AcademicYearRolloverServiceTest.php` (regression)
+4. Manual smoke ผ่าน Postman/curl บน live DB:
+   - `POST /api/academies/1/rollover/preview {from_year_id:1, to_year_id:NEW}` (ต้องสร้าง year 2569 ก่อน manual)
+   - `POST /api/academies/1/students/{test_id}/graduate {reason:'ทดสอบ'}` → undo manual
+
+### 10. Edge cases
+
+| # | Case | จุดที่ต้องจัดการ |
+|---|---|---|
+| EC1 | `confirm_text` มีช่องว่างนำ/ตาม | trim ก่อน strict compare |
+| EC2 | plan_id หมดอายุระหว่าง commit | 410 + ส่ง suggestion "re-run plan" |
+| EC3 | student ถูกลบระหว่าง preview กับ commit | service จะ throw ModelNotFoundException → controller catch → 422 พร้อม student_id |
+| EC4 | preview + commit ใช้ year ที่ปิดแล้ว (deleted_at != null ถ้ามี) | exists rule + soft-delete scope |
+| EC5 | RolloverBatch route binding ผ่าน uuid → ต้อง override getRouteKeyName | model: `public function getRouteKeyName(): string { return 'id'; }` |
+| EC6 | concurrent commit ของ academy เดียวกัน | service มี `lockForUpdate` ที่ academic_years; controller ไม่ต้องทำซ้ำ |
+| EC7 | undo หลัง 23:59 (race window สั้นๆ) | service มี `lockForUpdate` ที่ batch + check `isUndoable()` ใน lock — atomic |
+| EC8 | StudentLifecycleController::transfer ที่เรียก cross-year service → service throws InvalidArgumentException | controller try/catch → 422 พร้อม hint "ใช้ promote แทน" |
+
+### 11. Out of scope Phase 3
+
+- ❌ Frontend wizard (Phase 5)
+- ❌ ลบ legacy `ClassroomController::transferStudent/promoteClassroom` (Phase 6)
+- ❌ Notification listeners (Phase 7)
+- ❌ Audit log (Phase 8)
+- ❌ Report sync (Phase 6 ทำพร้อมกัน)
+- ❌ Bulk preview optimization สำหรับ 10K+ students (performance Phase ต่อไป)
+
+### 12. Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Cache::put ใช้ file driver ใน WAMP → plan ลืมระหว่าง 15 นาที | กลาง | กลาง | ใช้ `cache:remember` + ปรับ TTL ถ้า user feedback; ฝั่ง frontend แสดง countdown |
+| Policy method ใช้ `academy->admins()` ที่ relation อาจไม่มี | กลาง | สูง | ตรวจ Academy model มี `admins()` relation; ถ้าไม่มีต้องเพิ่มก่อน Phase 3.A |
+| Route scope binding `{academy}/students/{student}` ไม่ scope auto | ต่ำ | สูง | ใช้ `->scopeBindings()` หรือ middleware ตรวจ academy_id |
+| RolloverPlan::fromArray ไม่ symmetric กับ toArray | กลาง | สูง | 3.E ต้องเขียน round-trip test |
+| confirm_text เปลี่ยน formatting (full-width digit ไทย vs arabic) | กลาง | กลาง | trim + ใช้ Str::ascii ก่อน compare |
+
+### 13. Decisions ที่รอยืนยันก่อนเริ่ม Phase 3
+
+1. **Cache driver สำหรับ plan_id** — Laravel default (file ใน WAMP); หรือใช้ DB-cache ที่มีอยู่แล้ว? recommendation: file driver + 15 min TTL พอ
+2. **Policy: homeroom teacher ทำ graduate/drop ได้ไหม?** — recommendation: graduate/drop เฉพาะ academy admin; teacher ทำได้แค่ transfer ในห้อง
+3. **Confirm text comparison** — strict equality vs normalized (trim+ascii)? recommendation: trim เท่านั้น (preserve Thai numerals)
+4. **Endpoint base path** — `/api/academies/{academy}/students/{student}/graduate` (REST-y) vs `/api/academies/{academy}/enrollment/students/{student}/graduate` (nested)? recommendation: เลือกแบบแรก ตรงไปตรงมา
+
+### 14. Definition of Done — Phase 3
+
+- [ ] 5 commits land
+- [ ] 23 endpoint tests ผ่าน (C1-C13 + L1-L10)
+- [ ] regression Phase 2 tests ผ่าน
+- [ ] pint clean
+- [ ] manual smoke: preview → plan → commit → undo flow ผ่านบน WAMP
+- [ ] worklog อัพเดท
+- [ ] commit message ระบุ Phase 3.{A-E}
+
+### 15. Decisions Locked (2026-06-21)
+
+1. ✅ **Cache driver** = Laravel default (file ใน WAMP), TTL 15 นาที
+   - กระทบ 3.D plan endpoint: `Cache::put("rollover_plan:{$uuid}:user:{$userId}", $plan->toArray(), 900)`
+   - ฝั่ง wizard แสดง countdown timer 15 นาที
+
+2. ✅ **Homeroom teacher graduate/drop ได้** (ปรับจาก recommendation)
+   - EnrollmentPolicy::lifecycle: teacher ครอบคลุม graduate/drop/repeat/transfer (ไม่จำกัดเฉพาะ transfer)
+   - rollover commit/undo ยังคงเฉพาะ academy admin
+   - เหตุผล: ครูประจำชั้นรู้สถานการณ์นักเรียนจริง ไม่ต้องผ่าน admin ทุกครั้ง
+
+3. ✅ **Confirm text comparison** = `trim()` เท่านั้น
+   - `trim($req->input('confirm_text')) === $toYear->name`
+   - ไม่ normalize ascii → preserve Thai numerals + Thai characters เป็นค่าจริง
+
+4. ✅ **Endpoint base path** = `/api/academies/{academy}/students/{student}/{action}` (REST-y ตรง)
+   - ไม่ nest `/enrollment/`
+   - rollover ใช้ `/api/academies/{academy}/rollover/{action}` แบบกลุ่ม
+
+→ **พร้อมเริ่ม Phase 3.A ทันที**
