@@ -5172,3 +5172,853 @@ async function loadAvailableClassrooms() {
 
 5. **Drawer history scroll behavior**
    - **Recommendation:** scrollable list inside drawer (overflow-y-auto + max-height)
+
+---
+
+## 2026-06-21 Phase 5 — Academic Year Rollover Wizard (Detailed Plan)
+
+### 0. State at start of Phase 5
+
+จาก Phase 0–4 commit แล้ว 10 commits:
+- ✅ Backend API ครบ (Phase 3): preview/plan/commit/undo/closeUndo + 6 per-student lifecycle endpoints
+- ✅ Plan caching pattern: `rollover_plan:{uuid}:user:{user_id}` TTL 15 นาที
+- ✅ FormRequests + Policy + Resources พร้อม
+- ✅ FE composable + DTO + components (Phase 4): StatusBadge, ActionMenu, StatusActionModal, HistoryDrawer + classroom page integration
+- ✅ `useStudentEnrollmentActions` ยังไม่มี method สำหรับ rollover endpoint — Phase 5 จะเพิ่ม `useRolloverActions`
+- ✅ Decision §15 lock ครบ — confirm พิมพ์ชื่อปี, undo 24 ชม., file cache, trim only
+
+Endpoints available (verified):
+| Endpoint | Source |
+|---|---|
+| `GET /api/academies/{academy}/academic-years` | gradebook routes line 45 |
+| `POST /api/academies/{academy}/academic-years` | line 46 |
+| `GET /api/academies/{academy}/academic-years/current` | line 47 |
+| `GET /api/academies/{academy}/classrooms` | line 56 |
+| `POST /api/academies/{academy}/classrooms` | line 57 |
+| `POST /api/academies/{academy}/rollover/preview` | Phase 3.D |
+| `POST /api/academies/{academy}/rollover/plan` | Phase 3.D |
+| `POST /api/academies/{academy}/rollover/commit` | Phase 3.E |
+| `GET /api/academies/{academy}/rollover/batches` | Phase 3.D |
+| `POST /api/academies/{academy}/rollover/batches/{batch}/undo` | Phase 3.E |
+| `POST /api/academies/{academy}/rollover/batches/{batch}/close-undo` | Phase 3.E |
+
+Preflight (Phase 0 finding) reminds:
+- ปัจจุบันมี **1 academic_year (2568)** + 51 classrooms
+- มี **476 pending intake students** ยังไม่ enroll (ม.1 = 360, ม.4 = 116) → wizard ต้อง surface
+- Active enrollments 1929 จะถูก rollover ครั้งใหญ่ครั้งแรก
+
+### 1. หลักการ Phase 5
+
+1. **Wizard 5 steps** — ตามแผน master §3 Phase 5, ทุก step navigable forward/backward (ยกเว้น commit ที่ irreversible)
+2. **State centralized ใน 1 page** — ไม่ใช้ Pinia store เพราะ wizard scope ภายในหน้าเดียว; ใช้ `provide/inject` ถ้า step component ลึก
+3. **Auto-save mapping state ใน sessionStorage** — กัน accidental refresh ทำให้เริ่มใหม่
+4. **Plan caching client-side แสดง countdown 15 นาที** — sync กับ backend TTL
+5. **Commit irreversible UX** — confirm ขั้นพิมพ์ชื่อปี + button disabled จนกว่า exact match
+6. **Post-commit screen แสดง undo button + countdown 24 ชม.** — auto refresh isUndoable status ทุก 60 วินาที
+7. **Component แยกตาม step** — แต่ละ step เป็น SFC แยก, ลด LOC ต่อไฟล์
+8. **A11y พื้นฐาน** — keyboard nav step navigator + announce success/error ผ่าน aria-live
+9. **ไม่ใช้ Pinia** — wizard state อายุสั้น, ไม่ shared
+10. **ไม่กระทบหน้าอื่น** — Phase 5 ทำหน้าใหม่ทั้งหมด ไม่แตะ Phase 4
+
+### 2. โครงสร้างไฟล์
+
+```
+ui/
+├── composables/
+│   └── useRolloverActions.ts                          (5.A)
+├── types/
+│   └── enrollment.ts                                  (5.A — extend with rollover DTOs)
+├── components/
+│   └── academy/
+│       └── rollover/
+│           ├── RolloverStepIndicator.vue              (5.B) — header step nav
+│           ├── RolloverYearPicker.vue                 (5.C step 1)
+│           ├── RolloverClassroomChecklist.vue         (5.C step 2)
+│           ├── RolloverStudentBucket.vue              (5.D step 3 — drag/drop or multiselect)
+│           ├── RolloverPreviewSummary.vue             (5.E step 4)
+│           ├── RolloverCommitPanel.vue                (5.F step 5)
+│           └── RolloverUndoBanner.vue                 (5.G post-commit)
+└── pages/
+    └── academies/[name]/admin/gradebook/rollover/
+        └── index.vue                                  (5.H — wizard shell)
+```
+
+### 3. Sub-phase commits (8 commits, ~5 ชม.)
+
+| # | Subject | ไฟล์หลัก | LOC | เวลา |
+|---|---|---|---|---|
+| 5.A | feat(ui): rollover composable + extend types | useRolloverActions.ts, types/enrollment.ts | ~180 | 30 นาที |
+| 5.B | feat(ui): rollover step indicator | RolloverStepIndicator.vue | ~80 | 15 นาที |
+| 5.C | feat(ui): step 1+2 — year picker + classroom checklist | RolloverYearPicker.vue, RolloverClassroomChecklist.vue | ~280 | 45 นาที |
+| 5.D | feat(ui): step 3 — student bucket assignment | RolloverStudentBucket.vue | ~350 | 60 นาที |
+| 5.E | feat(ui): step 4 — preview summary | RolloverPreviewSummary.vue | ~150 | 30 นาที |
+| 5.F | feat(ui): step 5 — commit panel with confirm gate | RolloverCommitPanel.vue | ~180 | 30 นาที |
+| 5.G | feat(ui): post-commit undo banner | RolloverUndoBanner.vue | ~120 | 20 นาที |
+| 5.H | feat(ui): rollover wizard page integration + sessionStorage | pages/.../rollover/index.vue | ~350 | 50 นาที |
+
+**รวม ~1690 LOC, ~5 ชม.**
+
+### 4. `useRolloverActions` (5.A) composable spec
+
+```typescript
+// ui/composables/useRolloverActions.ts
+import type {
+  ClassroomOptionDTO,
+  RolloverBatchDTO,
+  RolloverEntry,
+  RolloverPlanResponse,
+  RolloverPreviewResponse,
+  MaybeEnrollmentAcademyId,
+} from '~/types/enrollment'
+
+export function useRolloverActions(academyId: MaybeEnrollmentAcademyId) {
+  const api = useApi()
+  const isLoading = ref(false)
+  const lastError = ref<ApiError | null>(null)
+
+  // helpers
+  function url(path: string): string { /* ... */ }
+
+  async function preview(fromYearId: number, toYearId: number): Promise<RolloverPreviewResponse>
+  async function plan(fromYearId: number, toYearId: number, mapping: RolloverEntry[]): Promise<RolloverPlanResponse>
+  async function commit(planId: string, confirmText: string): Promise<{ batch: RolloverBatchDTO }>
+  async function undo(batchId: string, reason?: string): Promise<{ batch: RolloverBatchDTO }>
+  async function closeUndo(batchId: string): Promise<{ batch: RolloverBatchDTO }>
+  async function listBatches(page?: number): Promise<{ data: RolloverBatchDTO[]; meta: { /* pagination */ } }>
+  async function fetchBatch(batchId: string): Promise<{ batch: RolloverBatchDTO }>
+
+  // utility
+  async function fetchAcademicYears(): Promise<AcademicYearDTO[]>
+  async function fetchClassroomsByYear(yearId: number): Promise<ClassroomOptionDTO[]>
+
+  return { preview, plan, commit, undo, closeUndo, listBatches, fetchBatch,
+           fetchAcademicYears, fetchClassroomsByYear, isLoading, lastError }
+}
+```
+
+### 5. Types extension (5.A)
+
+เพิ่มใน `types/enrollment.ts`:
+
+```typescript
+export interface AcademicYearDTO {
+  id: number
+  academy_id: number
+  name: string
+  start_date: string | null
+  end_date: string | null
+  is_current: boolean
+}
+
+export interface RolloverEntry {
+  student_id: number
+  action: 'promote' | 'graduate' | 'drop' | 'repeat' | 'new_intake' | 'skip'
+  from_classroom_id?: number | null
+  to_classroom_id?: number | null
+  reason?: string
+}
+
+export interface RolloverSuggestedEntry extends RolloverEntry {
+  student?: StudentSummaryDTO
+  from_classroom?: ClassroomOptionDTO
+  to_classroom?: ClassroomOptionDTO
+  suggested_reason?: string
+}
+
+export interface RolloverPreviewResponse {
+  success: boolean
+  preview: {
+    suggested_mapping: RolloverSuggestedEntry[]
+    missing_targets: Array<{ grade_level: string; section: string }>
+    totals: {
+      promote: number; graduate: number; repeat: number;
+      drop: number; new_intake: number; skip: number
+    }
+    warnings: string[]
+  }
+}
+
+export interface RolloverPlanResponse {
+  success: boolean
+  plan_id: string
+  expires_in_seconds: number
+  summary: Record<string, any>
+  warnings: string[]
+  entries_count: number
+}
+
+export interface RolloverBatchDTO {
+  id: string
+  academy_id: number
+  from_year: { id: number; name: string } | null
+  to_year: { id: number; name: string } | null
+  status: 'committed' | 'undone'
+  committed_at: string | null
+  committed_by: { id: number; name: string } | null
+  undo_closed_at: string | null
+  undone_at: string | null
+  undone_by: { id: number; name: string } | null
+  is_undoable: boolean
+  undo_expires_at: string | null
+  totals: Record<string, number> | null
+  plan_summary: Record<string, any> | null
+  notes: string | null
+}
+```
+
+### 6. Step-by-step UI spec
+
+#### Step 1 — Year Picker (`RolloverYearPicker.vue`, 5.C)
+
+```vue
+<template>
+  <div class="space-y-6">
+    <div>
+      <h2 class="text-lg font-semibold mb-1">เลือกปีการศึกษา</h2>
+      <p class="text-sm text-zinc-500">ระบบจะนำนักเรียนจาก "ปีต้นทาง" มาเข้าห้องของ "ปีปลายทาง"</p>
+    </div>
+
+    <!-- From year (existing years) -->
+    <select v-model="fromYearId" class="form-input">
+      <option v-for="y in academicYears" :key="y.id" :value="y.id">
+        {{ y.name }} {{ y.is_current ? '(ปัจจุบัน)' : '' }}
+      </option>
+    </select>
+
+    <!-- To year: existing OR create new -->
+    <div class="space-y-2">
+      <label class="flex items-center gap-2">
+        <input type="radio" v-model="toMode" value="existing" />
+        <span>เลือกปีที่มีอยู่</span>
+      </label>
+      <select v-if="toMode === 'existing'" v-model="toYearId" class="form-input">
+        <option v-for="y in academicYears.filter(y => y.id !== fromYearId)" :key="y.id" :value="y.id">
+          {{ y.name }}
+        </option>
+      </select>
+
+      <label class="flex items-center gap-2 mt-3">
+        <input type="radio" v-model="toMode" value="create" />
+        <span>สร้างปีใหม่</span>
+      </label>
+      <div v-if="toMode === 'create'" class="space-y-2 ml-6">
+        <input v-model="newYear.name" placeholder="เช่น 2569" class="form-input" />
+        <div class="grid grid-cols-2 gap-2">
+          <input v-model="newYear.start_date" type="date" class="form-input" />
+          <input v-model="newYear.end_date" type="date" class="form-input" />
+        </div>
+        <button @click="createNewYear" :disabled="isCreating" class="btn-primary">
+          สร้างปี {{ newYear.name }}
+        </button>
+      </div>
+    </div>
+
+    <div class="flex justify-end">
+      <button @click="emit('next')" :disabled="!canNext" class="btn-primary">
+        ถัดไป →
+      </button>
+    </div>
+  </div>
+</template>
+```
+
+#### Step 2 — Classroom Checklist (`RolloverClassroomChecklist.vue`, 5.C)
+
+ตรวจห้องของปีปลายทาง:
+- แสดง grade_level ที่ต้องการ (จาก preview suggested mapping)
+- ถ้าขาดห้องไหน → แสดง warning + ปุ่ม "สร้างห้องอัตโนมัติ" (clone จากปี source แต่เปลี่ยน academic_year_id)
+- ปุ่ม "ถัดไป" enabled เมื่อทุก grade_level ที่ต้องการมีห้องครบ
+
+```vue
+<div v-for="grade in requiredGrades" :key="grade.level"
+     class="flex items-center justify-between p-3 rounded border">
+  <span>{{ grade.label }} — {{ grade.studentCount }} นักเรียน</span>
+  <div v-if="grade.classrooms.length > 0" class="flex gap-1">
+    <StudentStatusBadge v-for="c in grade.classrooms" :key="c.id" status="active" :status-text="c.display_name" />
+  </div>
+  <button v-else @click="autoCreate(grade)" class="btn-secondary text-sm">
+    สร้างห้องอัตโนมัติ ({{ grade.suggestedSections }})
+  </button>
+</div>
+```
+
+#### Step 3 — Student Bucket Assignment (`RolloverStudentBucket.vue`, 5.D)
+
+- รับ `suggestedMapping` จาก preview
+- แสดง 5 buckets:
+  - 🎓 **จบการศึกษา** (graduate)
+  - ⬆️ **เลื่อนชั้น** (promote) — แสดงห้องต่อชั้น
+  - 🔄 **ซ้ำชั้น** (repeat)
+  - ❌ **ลาออก** (drop)
+  - 🆕 **นักเรียนใหม่รอเข้า** (new_intake) — แสดง 476 pending intake
+- แต่ละ entry คลิกได้ → popup เลือก action + target
+- Search bar + filter by current classroom
+- Virtualized list ถ้า > 500 entries (ใช้ `@tanstack/vue-virtual` ถ้าไม่มีติดตั้ง → fallback pagination 100/page)
+- Counter ด้านบน: "จัดสรรแล้ว X / Y คน" — ห้ามไป step 4 ถ้ายังไม่ครบ 100%
+
+```vue
+<template>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Left: filter + unassigned list -->
+    <div class="lg:col-span-1 space-y-2">
+      <input v-model="search" placeholder="ค้นหา..." class="form-input" />
+      <select v-model="filterFromClassroom" class="form-input">
+        <option :value="null">ทุกห้องต้นทาง</option>
+        <option v-for="c in fromClassrooms" :key="c.id" :value="c.id">
+          {{ c.display_name }}
+        </option>
+      </select>
+      <div class="rounded border max-h-[60vh] overflow-y-auto divide-y">
+        <div v-for="entry in filteredEntries" :key="entry.student_id"
+             :class="['p-2 cursor-pointer hover:bg-zinc-50', selected.has(entry.student_id) ? 'bg-indigo-50' : '']"
+             @click="toggleSelect(entry.student_id)">
+          <div class="text-sm">{{ entry.student?.first_name_th }} {{ entry.student?.last_name_th }}</div>
+          <div class="text-xs text-zinc-500">{{ entry.from_classroom?.display_name ?? '(ใหม่)' }}</div>
+        </div>
+      </div>
+      <div class="text-xs text-zinc-500">เลือก {{ selected.size }} คน</div>
+    </div>
+
+    <!-- Right: 5 buckets -->
+    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <RolloverBucketCard v-for="bucket in buckets" :key="bucket.action"
+        :bucket="bucket" :selected-count="selected.size"
+        @assign="assignSelectedTo(bucket.action, $event)" />
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="mt-6 flex items-center justify-between border-t pt-4">
+    <div class="text-sm">
+      จัดสรรแล้ว {{ assignedCount }} / {{ totalCount }} คน
+      <span v-if="unassignedCount > 0" class="text-amber-600">
+        (เหลือ {{ unassignedCount }} คน)
+      </span>
+    </div>
+    <div class="flex gap-2">
+      <button @click="emit('back')" class="btn-secondary">← ย้อนกลับ</button>
+      <button @click="emit('next')" :disabled="unassignedCount > 0" class="btn-primary">ถัดไป →</button>
+    </div>
+  </div>
+</template>
+```
+
+#### Step 4 — Preview Summary (`RolloverPreviewSummary.vue`, 5.E)
+
+- เรียก `plan` API ส่ง mapping ที่จัดสรรแล้ว
+- รับ `plan_id` + summary + warnings + entries_count
+- แสดง:
+  - Totals card 5 ตัว (promoted/graduated/dropped/repeating/new_intake)
+  - Warnings list (ถ้ามี)
+  - Sample 10 entries จากแต่ละ bucket (collapsible)
+  - "plan_id หมดอายุใน 14:59" countdown
+- ปุ่ม "ย้อนกลับ" / "ดำเนินการ commit →"
+
+#### Step 5 — Commit Panel (`RolloverCommitPanel.vue`, 5.F)
+
+- แสดงสรุปสุดท้าย + คำเตือนสีแดง
+- Input: **พิมพ์ชื่อปีปลายทางเพื่อยืนยัน**
+- Button disabled จนกว่า input ตรงเป๊ะกับ `toYear.name`
+- Submit → `commit(planId, confirmText)` → ได้ batch_id
+- Loading state — ห้ามปิด page ระหว่าง commit
+- Success → emit `committed(batch)` parent นำไป step 6 (undo banner)
+- Error 422 confirm_text mismatch → toast.error + ไม่ปิด page
+- Error 410 plan expired → toast.error + redirect step 4 ให้ re-plan
+
+#### Step 6 — Undo Banner (`RolloverUndoBanner.vue`, 5.G)
+
+หลัง commit สำเร็จ — banner กลางหน้า:
+
+```vue
+<div class="rounded-lg bg-green-50 border border-green-200 p-6">
+  <div class="flex items-center gap-3">
+    <Icon icon="mdi:check-circle" class="w-8 h-8 text-green-600" />
+    <div>
+      <h2 class="text-lg font-semibold">เลื่อนชั้นสำเร็จ</h2>
+      <p class="text-sm text-zinc-600">batch_id: {{ batch.id }}</p>
+    </div>
+  </div>
+
+  <div class="mt-4 grid grid-cols-5 gap-3">
+    <div v-for="(count, key) in batch.totals" :key="key"
+         class="rounded bg-white border p-3 text-center">
+      <div class="text-2xl font-semibold">{{ count }}</div>
+      <div class="text-xs text-zinc-500">{{ labelMap[key] }}</div>
+    </div>
+  </div>
+
+  <div v-if="isUndoable" class="mt-4 p-3 rounded bg-amber-50 border border-amber-200">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="font-medium">สามารถยกเลิก rollover นี้ได้</div>
+        <div class="text-sm text-zinc-600">เหลือเวลา {{ countdown }}</div>
+      </div>
+      <div class="flex gap-2">
+        <button @click="onUndo" class="btn-danger">↩ ยกเลิก rollover</button>
+        <button @click="onCloseUndo" class="btn-secondary">ปิด undo ทันที</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 flex gap-2">
+    <button @click="exportExcel" class="btn-secondary">📊 Export Excel</button>
+    <NuxtLink :to="`/academies/${academyName}/admin/gradebook/rollover/history`" class="btn-secondary">
+      ดูประวัติ rollover
+    </NuxtLink>
+  </div>
+</div>
+```
+
+- Countdown timer update ทุก 1 วินาที
+- Auto-fetch batch status ทุก 60 วินาทีตรวจ `isUndoable` (อาจถูกปิดจากที่อื่น)
+- Export Excel: client-side CSV download จาก `batch.plan_summary` (สำหรับ Phase 5 พื้นฐาน — Phase ถัดไปทำ server-side XLSX)
+
+#### Wizard Page Shell (`pages/.../rollover/index.vue`, 5.H)
+
+```vue
+<script setup lang="ts">
+const route = useRoute()
+const academyName = computed(() => route.params.name as string)
+const academyId = ref<number | null>(null)
+const { isAdmin, fetchMyRole } = useAcademyRole(academyId)
+
+const step = ref<1 | 2 | 3 | 4 | 5 | 6>(1)
+const wizardState = reactive({
+  fromYearId: null as number | null,
+  toYearId: null as number | null,
+  toYearName: '' as string,
+  mapping: [] as RolloverEntry[],
+  planId: null as string | null,
+  planExpiresAt: null as Date | null,
+  batch: null as RolloverBatchDTO | null,
+})
+
+// Persist to sessionStorage
+watch(wizardState, (val) => {
+  sessionStorage.setItem(`rollover-wizard-${academyId.value}`, JSON.stringify(val))
+}, { deep: true })
+
+onMounted(async () => {
+  // Restore from sessionStorage
+  const cached = sessionStorage.getItem(`rollover-wizard-${academyId.value}`)
+  if (cached) Object.assign(wizardState, JSON.parse(cached))
+
+  // Auth check
+  await fetchAcademy()
+  await fetchMyRole()
+  if (!isAdmin.value) {
+    navigateTo(`/academies/${academyName.value}`)
+    return
+  }
+})
+
+function clearWizard() {
+  Object.assign(wizardState, { fromYearId: null, toYearId: null, toYearName: '',
+    mapping: [], planId: null, planExpiresAt: null, batch: null })
+  sessionStorage.removeItem(`rollover-wizard-${academyId.value}`)
+  step.value = 1
+}
+</script>
+
+<template>
+  <div class="max-w-6xl mx-auto p-4 space-y-6">
+    <h1 class="text-2xl font-bold">เลื่อนชั้นประจำปี</h1>
+    <RolloverStepIndicator :current="step" :total="6" />
+
+    <RolloverYearPicker v-if="step === 1" v-model="wizardState" @next="step = 2" />
+    <RolloverClassroomChecklist v-else-if="step === 2" v-model="wizardState" @back="step = 1" @next="step = 3" />
+    <RolloverStudentBucket v-else-if="step === 3" v-model="wizardState" @back="step = 2" @next="step = 4" />
+    <RolloverPreviewSummary v-else-if="step === 4" v-model="wizardState" @back="step = 3" @next="step = 5" />
+    <RolloverCommitPanel v-else-if="step === 5" v-model="wizardState"
+                         @back="step = 4" @committed="(b) => { wizardState.batch = b; step = 6 }" />
+    <RolloverUndoBanner v-else-if="step === 6" :batch="wizardState.batch!"
+                       @new-rollover="clearWizard" />
+  </div>
+</template>
+```
+
+### 7. Edge cases
+
+| # | Case | จัดการ |
+|---|---|---|
+| E1 | User refresh ระหว่าง step 3 | sessionStorage restore — ถ้าหมดอายุ plan_id ให้กลับ step 3 |
+| E2 | Plan_id หมดอายุระหว่าง step 4→5 | 5.F catch 410 → toast.error + redirect step 4 |
+| E3 | สร้าง year ใหม่แล้ว fail (duplicate name) | 5.C catch 422 → display under input |
+| E4 | "สร้างห้องอัตโนมัติ" ใน 5.C — clone ห้องของปีต้นทาง แต่ทุก field ต้องการรหัส unique | สร้างใหม่ ไม่ clone — generate `classroom_code` ใหม่ |
+| E5 | Mapping ส่งซ้ำ student_id 2 entries | Step 3 UI ป้องกัน (selected.has) + backend FormRequest ป้องกันด้วย |
+| E6 | นักเรียน 2000+ render slow ใน Step 3 | virtualized list หรือ pagination ในห้อง |
+| E7 | Commit timeout (30s+) | server-side: lockForUpdate + transaction; client-side: ขยาย timeout เป็น 120s ใน api call |
+| E8 | Undo banner หน้ารีเฟรช | wizardState ใน sessionStorage มี batch_id → restore step 6 |
+| E9 | User กดปุ่ม "เลื่อนชั้น" ผ่าน step 5 ในระหว่างกำลัง commit | disable button + spinner; ห้าม close page |
+| E10 | new_intake bucket แสดง 476 คน — assign ไป classroom ใหม่ | mapping entry: `{ student_id, action: 'new_intake', to_classroom_id }` |
+
+### 8. Verification per commit
+
+ทุก commit:
+1. TS check: `npx vue-tsc --noEmit 2>&1 | grep -E 'rollover/'` — clean
+2. SFC tag balance (skill `pre-commit-vue`)
+3. SSR check: `npm run dev` ไม่ crash + open หน้า /academies/<name>/admin/gradebook/rollover
+4. Manual smoke (commit 5.F + 5.G): preview → plan → commit (test student 1-2 คน) → undo
+
+End-to-end smoke หลัง 5.H ครบ:
+1. login admin
+2. open wizard
+3. step 1: from=2568, to=create year 2569
+4. step 2: auto-create classrooms ม.2/1, ม.5/1, etc.
+5. step 3: assign 2 test students (1 promote, 1 graduate)
+6. step 4: review summary
+7. step 5: type "2569" → commit → 201
+8. step 6: see batch + undo button
+9. click undo → state restored
+10. verify ใน DB ผ่าน tinker
+
+### 9. Out of scope ของ Phase 5
+
+- ❌ Rollover history page (`/admin/gradebook/rollover/history`) — Phase 6 หรือแยก
+- ❌ Bulk preview optimization >5000 students (Phase performance)
+- ❌ Server-side XLSX export — ใช้ client CSV ก่อน
+- ❌ Concurrent rollover detection UI (multiple admins) — backend lock ทำงาน
+- ❌ Visual drag-drop (`@vueuse/integrations` sortable) — ใช้ multiselect + button assign แทน
+- ❌ Diff view ก่อน/หลัง commit แต่ละ classroom
+
+### 10. Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Wizard state ใน sessionStorage ใหญ่ (1929 entries) | กลาง | กลาง | serialize เฉพาะ entries สรุป + recreate full data จาก API |
+| Step 3 ช้าที่ 1929+ students | สูง | กลาง | virtualized list หรือ filter ก่อน + pagination 100 per page |
+| Commit timeout 30s | กลาง | สูง | api call ขยาย timeout 120s + แสดง progress |
+| Network drop ระหว่าง commit | กลาง | สูง | client retry 1 ครั้ง + ตรวจ batch หลัง retry |
+| Undo button race condition | ต่ำ | สูง | backend lockForUpdate (มีแล้ว) + frontend disable หลังคลิก |
+| Auto-create classroom สร้าง duplicate | กลาง | กลาง | check existing ก่อน create; ใช้ classroom_code unique |
+| SSR crash จาก reactive deep watch | ต่ำ | สูง | wizardState เป็น `reactive` + sessionStorage check `import.meta.client` |
+| Plan cache file driver บน WAMP ไม่ persist | ต่ำ | กลาง | backend ทำงาน OK; ถ้าพังเปลี่ยน driver ใน .env |
+
+### 11. Definition of Done — Phase 5
+
+- [ ] 8 commits land บน branch
+- [ ] หน้า /academies/<name>/admin/gradebook/rollover เปิดได้
+- [ ] 5-step wizard navigable forward+back ก่อน commit
+- [ ] commit irreversible — confirm text gate ทำงาน
+- [ ] post-commit undo banner + countdown 24 ชม.
+- [ ] sessionStorage persist + restore
+- [ ] TS clean สำหรับไฟล์ใหม่ 8 ไฟล์
+- [ ] SSR ไม่ crash
+- [ ] E2E manual smoke ผ่าน 10 steps
+- [ ] commit message ระบุ Phase 5.{A-H}
+
+### 12. Decisions ที่รอยืนยันก่อนเริ่ม
+
+1. **Drag-drop vs multiselect+button** สำหรับ Step 3 assignment
+   - Drag-drop: UX สวย + เห็นภาพ
+   - Multiselect + assign button: ง่ายกว่า + รองรับเยอะคนเร็วกว่า
+   - **Recommendation:** multiselect + button (รองรับ 2000+ คนได้)
+
+2. **Virtualized list library**
+   - `@tanstack/vue-virtual` — เพิ่ม dep
+   - Native pagination — ง่ายกว่า
+   - **Recommendation:** **pagination 100/page** ก่อน — ลด complexity; ถ้าผู้ใช้บ่นค่อย switch
+
+3. **Auto-create classroom UX** ใน Step 2
+   - Single click → create ทั้งหมดที่ขาด
+   - Per-row "create" button → ยืดหยุ่นกว่า
+   - **Recommendation:** **per-row** ก่อน + "create all" button รวมด้านบน
+
+4. **Plan expires countdown แสดงที่ไหน**
+   - Step 4 (preview) เท่านั้น
+   - Step 4+5 (preview + commit)
+   - **Recommendation:** **step 4 + 5** — เตือนตลอด
+
+5. **Export Excel ใน step 6**
+   - Client CSV ใน Phase 5 (มี totals + plan_summary)
+   - Server XLSX — รอ Phase ถัดไป
+   - **Recommendation:** **client CSV** พื้นฐาน
+
+6. **Wizard state สำหรับ "post-undo"** — หลัง undo สำเร็จควรกลับไปหน้าไหน
+   - Step 1 (เริ่มใหม่)
+   - History page
+   - **Recommendation:** **clear state + redirect step 1** พร้อม toast "rollover ถูกยกเลิกแล้ว"
+
+7. **A11y: Step indicator keyboard nav?**
+   - Arrow left/right เปลี่ยน step
+   - แค่ click
+   - **Recommendation:** **click only** ใน Phase 5; arrow nav เป็น nice-to-have
+### 9. Implementation update (Codex)
+
+- Implemented Phase 5 frontend scaffold under `ui/components/academy/rollover/` and `ui/pages/academies/[name]/admin/gradebook/rollover/index.vue`.
+- Added `useRolloverActions` and extended `ui/types/enrollment.ts` with rollover DTOs for preview, plan, commit, undo, and batch views.
+- Added gradebook home entry card in `ui/pages/academies/[name]/admin/gradebook/index.vue`.
+
+Delivered view states:
+1. Step 1 `RolloverYearPicker`
+2. Step 2 `RolloverClassroomChecklist`
+3. Step 3 `RolloverStudentBucket`
+4. Step 4 `RolloverPreviewSummary`
+5. Step 5 `RolloverCommitPanel`
+6. Step 6 `RolloverUndoBanner`
+
+Confirmed design choices now reflected in code:
+- Multiselect + button for Step 3.
+- Pagination fixed at 100/page.
+- Per-row create plus create-all in Step 2.
+- Plan countdown visible in Step 4 and Step 5.
+- Export kept client-side as CSV.
+- Undo success clears state and returns to Step 1.
+- Step indicator remains click/view-state only.
+
+Implementation notes:
+- Wizard state is centralized in the page and persisted with `sessionStorage`.
+- Step 2 refreshes preview after classroom creation so `missing_targets` stays backend-synced.
+- Commit gate uses trim-only matching against destination year name.
+- Post-commit state refreshes batch status every 60 seconds and keeps a live 24-hour countdown.
+- Current create-all behavior creates one default section (`/1`) per missing grade level; multi-section bootstrap remains a follow-up if needed.
+
+Verification status:
+- Read-through and route wiring completed for the new rollover files.
+- Full `vue-tsc --noEmit` on `ui/` still fails because of many pre-existing repo-wide TypeScript issues outside Phase 5 scope plus an existing `vue-router/volar` package export problem.
+- No clean repo-wide TS signal yet for this phase; live smoke test on the new route is still recommended.
+
+---
+
+## 2026-06-21 Phase 5.B — Rollover Step Indicator (Detailed Plan)
+
+### 0. State at start of 5.B
+
+จาก 5.A เสร็จแล้ว:
+- ✅ `useRolloverActions` composable + 9 methods + `withLoading` wrapper
+- ✅ DTO types ครบ (AcademicYearDTO, RolloverPreviewDTO, RolloverPlanResponse, RolloverBatchDTO, ROLLOVER_ACTIONS)
+- ✅ TS clean
+
+Decision §12 lock (จาก Phase 5 plan §12):
+- ✅ multiselect+button (Step 3)
+- ✅ pagination 100/page
+- ✅ per-row + create all
+- ✅ Plan countdown step 4+5
+- ✅ Client CSV export
+- ✅ Post-undo: clear + redirect step 1 + toast
+- ✅ Step nav: click only
+
+### 1. หลักการ 5.B
+
+1. **Component เดี่ยว standalone** — ใช้กับ wizard page 5.H, ไม่มี side effect
+2. **Click-only nav** (Decision §12.7) — emit `select(step)`; parent อนุญาตหรือไม่ตามเงื่อนไข
+3. **Locked steps** — parent ส่ง `unlockedThrough: number` เพื่อกัน user click step ที่ยังไม่ผ่าน
+4. **6 visual states** — pending / current / completed / locked (ไม่ click) / disabled / clickable
+5. **A11y** — aria-current="step", aria-disabled, role="navigation"
+6. **Mobile responsive** — vertical stack < md, horizontal ≥ md
+
+### 2. โครงสร้างไฟล์ + commit (5.B = 1 commit)
+
+```
+ui/components/academy/rollover/
+└── RolloverStepIndicator.vue       (80 LOC)
+```
+
+**1 commit, ~80 LOC, ~15 นาที**
+
+### 3. Component spec
+
+#### Props
+```typescript
+interface Props {
+  current: number                                   // 1..6
+  unlockedThrough?: number                          // default = current (no jump-ahead)
+  steps?: Array<{ label: string; icon?: string }>   // default 6 standard steps
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  unlockedThrough: undefined,
+  steps: () => defaultSteps,
+})
+```
+
+#### Default steps
+```typescript
+const defaultSteps = [
+  { label: 'เลือกปี', icon: 'mdi:calendar' },
+  { label: 'ตรวจห้อง', icon: 'mdi:home-group' },
+  { label: 'จัดสรรนักเรียน', icon: 'mdi:account-multiple' },
+  { label: 'ตรวจสรุป', icon: 'mdi:eye' },
+  { label: 'ยืนยันบันทึก', icon: 'mdi:check-bold' },
+  { label: 'เสร็จสมบูรณ์', icon: 'mdi:party-popper' },
+]
+```
+
+#### Emits
+```typescript
+const emit = defineEmits<{ select: [step: number] }>()
+```
+
+#### Computed
+```typescript
+const unlocked = computed(() => props.unlockedThrough ?? props.current)
+
+function stateOf(idx: number): 'completed' | 'current' | 'unlocked' | 'locked' {
+  const n = idx + 1
+  if (n < props.current) return 'completed'
+  if (n === props.current) return 'current'
+  if (n <= unlocked.value) return 'unlocked'
+  return 'locked'
+}
+
+function onClick(idx: number) {
+  const n = idx + 1
+  if (n > unlocked.value) return       // locked → no-op
+  if (n === props.current) return      // already there
+  emit('select', n)
+}
+```
+
+#### Template (desktop horizontal + mobile vertical)
+
+```vue
+<template>
+  <nav class="w-full" role="navigation" aria-label="ขั้นตอนการเลื่อนชั้น">
+    <!-- Desktop -->
+    <ol class="hidden md:flex items-center w-full">
+      <li v-for="(step, idx) in steps" :key="idx" class="flex-1 flex items-center">
+        <button
+          type="button"
+          :disabled="stateOf(idx) === 'locked'"
+          :aria-current="stateOf(idx) === 'current' ? 'step' : undefined"
+          :class="[
+            'group flex flex-col items-center gap-1 px-2 py-1 transition',
+            stateOf(idx) === 'locked'
+              ? 'cursor-not-allowed opacity-50'
+              : 'cursor-pointer hover:opacity-80'
+          ]"
+          @click="onClick(idx)"
+        >
+          <span
+            :class="[
+              'flex h-9 w-9 items-center justify-center rounded-full border-2 transition',
+              stateOf(idx) === 'completed'
+                ? 'bg-emerald-500 border-emerald-500 text-white'
+                : stateOf(idx) === 'current'
+                ? 'bg-indigo-500 border-indigo-500 text-white shadow-md ring-4 ring-indigo-500/20'
+                : stateOf(idx) === 'unlocked'
+                ? 'bg-white border-zinc-300 text-zinc-600 dark:bg-zinc-800 dark:border-zinc-600 dark:text-zinc-300'
+                : 'bg-zinc-100 border-zinc-200 text-zinc-400 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-600',
+            ]"
+          >
+            <Icon
+              v-if="stateOf(idx) === 'completed'"
+              icon="mdi:check"
+              class="h-5 w-5"
+            />
+            <Icon
+              v-else-if="step.icon"
+              :icon="step.icon"
+              class="h-5 w-5"
+            />
+            <span v-else>{{ idx + 1 }}</span>
+          </span>
+          <span
+            :class="[
+              'text-xs font-medium whitespace-nowrap',
+              stateOf(idx) === 'current'
+                ? 'text-indigo-600 dark:text-indigo-400'
+                : stateOf(idx) === 'completed'
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-zinc-500 dark:text-zinc-400',
+            ]"
+          >
+            {{ idx + 1 }}. {{ step.label }}
+          </span>
+        </button>
+
+        <!-- Connector line (except after last) -->
+        <span
+          v-if="idx < steps.length - 1"
+          :class="[
+            'h-0.5 flex-1 mx-1 transition',
+            (idx + 1) < current
+              ? 'bg-emerald-400'
+              : 'bg-zinc-200 dark:bg-zinc-700',
+          ]"
+        />
+      </li>
+    </ol>
+
+    <!-- Mobile vertical compact -->
+    <ol class="md:hidden flex flex-col gap-2">
+      <li
+        v-for="(step, idx) in steps"
+        :key="`m-${idx}`"
+        class="flex items-center gap-3"
+      >
+        <button
+          type="button"
+          :disabled="stateOf(idx) === 'locked'"
+          :aria-current="stateOf(idx) === 'current' ? 'step' : undefined"
+          :class="[
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs',
+            stateOf(idx) === 'completed'
+              ? 'bg-emerald-500 border-emerald-500 text-white'
+              : stateOf(idx) === 'current'
+              ? 'bg-indigo-500 border-indigo-500 text-white'
+              : 'bg-white border-zinc-300 text-zinc-500',
+            stateOf(idx) === 'locked' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+          ]"
+          @click="onClick(idx)"
+        >
+          {{ idx + 1 }}
+        </button>
+        <span
+          :class="[
+            'text-sm',
+            stateOf(idx) === 'current' ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-zinc-600 dark:text-zinc-300',
+          ]"
+        >
+          {{ step.label }}
+        </span>
+      </li>
+    </ol>
+  </nav>
+</template>
+```
+
+### 4. Implementation update
+
+- Plan refinement applied before coding: wire the parent page in the same commit so the new step-indicator props/events do not leave a temporary API mismatch.
+- Implemented `ui/components/academy/rollover/RolloverStepIndicator.vue` with typed props `current`, `unlockedThrough`, optional `steps`, emit `select(step)`, and four visual states: completed, current, unlocked, locked.
+- Added a defensive unlock calculation with `Math.max(current, unlockedThrough ?? current)` so invalid parent input cannot lock a step behind the current one.
+- Updated `ui/pages/academies/[name]/admin/gradebook/rollover/index.vue` to pass `:current="state.step"`, `:unlocked-through="state.step"`, and a backward-only `handleStepSelect` handler for click-only navigation without jump-ahead.
+
+### 4. Verification
+
+1. `vue-tsc --noEmit --pretty false` on `ui/` still stops on the pre-existing `vue-router/volar/sfc-route-blocks` package export issue before reaching a clean project-wide signal.
+2. Read-back verification confirms the wizard shell now passes `:current`, `:unlocked-through`, and `@select="handleStepSelect"` to the step indicator.
+3. Manual browser smoke is still pending for this route.
+
+### 5. Edge cases
+
+| # | Case | จัดการ |
+|---|---|---|
+| E1 | `unlockedThrough < current` | ทำไม่ได้ — `unlocked` คำนวณเป็น `unlockedThrough ?? current` กัน |
+| E2 | `current > steps.length` | parent บั๊ก — Phase 5.H validate; component ไม่ crash, แสดงทุก step เป็น completed |
+| E3 | mobile portrait ≥ 6 step list ยาว | scrollable container ใน parent ถ้าจำเป็น |
+| E4 | dark mode | Tailwind dark: variants ครบ |
+| E5 | keyboard Tab — focus indicator | `:disabled` + browser default focus ring; ไม่ต้อง custom ring |
+
+### 6. Out of scope ของ 5.B
+
+- ❌ Arrow key navigation (Decision §12.7 — click only)
+- ❌ Animated transitions ระหว่าง state change (CSS transition พื้นฐานพอ)
+- ❌ Vertical mode (desktop) — mobile-only vertical
+- ❌ Custom step labels per-academy
+
+### 7. Definition of Done — 5.B
+
+- [ ] 1 commit lands
+- [ ] `RolloverStepIndicator.vue` มี props: current, unlockedThrough, steps; emit: select
+- [ ] 4 visual states render ถูก (completed/current/unlocked/locked)
+- [ ] desktop horizontal + mobile vertical responsive
+- [ ] TS clean สำหรับไฟล์ใหม่
+- [ ] commit message ระบุ Phase 5.B
+
+### 8. Decisions ที่รอยืนยัน
+
+ไม่มี — ทุกอย่าง lock จาก Decision §12 ของ Phase 5 plan แล้ว
+
+→ **พร้อมลงมือ 5.B ทันที**

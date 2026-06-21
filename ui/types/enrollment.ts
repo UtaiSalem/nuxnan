@@ -145,6 +145,121 @@ export type EnrollmentActionPayload<TAction extends EnrollmentAction = Enrollmen
 
 export type MaybeEnrollmentAcademyId = number | string | null | undefined | Ref<number | string | null | undefined>
 
+export interface AcademicYearDTO {
+  id: number
+  name: string
+  start_date: string | null
+  end_date: string | null
+  is_current: boolean
+  semesters?: Array<Record<string, any>>
+}
+
+export const ROLLOVER_ACTIONS = [
+  'promote',
+  'graduate',
+  'drop',
+  'repeat',
+  'new_intake',
+  'skip',
+] as const
+
+export type RolloverAction = typeof ROLLOVER_ACTIONS[number]
+
+export interface RolloverPreviewEntryDTO {
+  student_id: number
+  student_name: string
+  from_classroom_id: number | null
+  from_classroom_name: string | null
+  to_classroom_id: number | null
+  to_classroom_name: string | null
+  action: RolloverAction
+  reason: string | null
+}
+
+/**
+ * Minimal entry shape accepted by POST /rollover/plan — matches
+ * PlanRolloverRequest rules in Phase 3.B (no joined name fields).
+ */
+export interface RolloverPlanRequestEntry {
+  student_id: number
+  action: RolloverAction
+  from_classroom_id?: number | null
+  to_classroom_id?: number | null
+  reason?: string | null
+}
+
+export interface RolloverSummaryDTO {
+  promote: number
+  graduate: number
+  repeat: number
+  drop: number
+  new_intake: number
+  skip: number
+}
+
+export interface RolloverPreviewDTO {
+  entries: RolloverPreviewEntryDTO[]
+  missing_targets: string[]
+  totals: RolloverSummaryDTO
+  warnings: string[]
+}
+
+export interface RolloverPreviewResponse {
+  success: boolean
+  preview: RolloverPreviewDTO
+}
+
+export interface RolloverPlanResponse {
+  success: boolean
+  plan_id: string
+  expires_in_seconds: number
+  summary: RolloverSummaryDTO
+  warnings: string[]
+  entries_count: number
+}
+
+export interface RolloverYearRefDTO {
+  id: number
+  name: string
+}
+
+export interface RolloverUserRefDTO {
+  id: number | null
+  name: string | null
+}
+
+export interface RolloverBatchDTO {
+  id: string
+  academy_id: number
+  from_year?: RolloverYearRefDTO | null
+  to_year?: RolloverYearRefDTO | null
+  status: string
+  committed_at: string | null
+  committed_by?: RolloverUserRefDTO | null
+  undo_closed_at: string | null
+  undone_at: string | null
+  undone_by?: RolloverUserRefDTO | null
+  is_undoable: boolean
+  undo_expires_at: string | null
+  totals: Partial<RolloverSummaryDTO> | Record<string, number>
+  plan_summary?: {
+    totals?: Partial<RolloverSummaryDTO>
+    entries?: RolloverPreviewEntryDTO[]
+  } | null
+  notes?: string | null
+}
+
+export interface RolloverBatchResponse {
+  success: boolean
+  batch: RolloverBatchDTO
+}
+
+export interface RolloverPaginatedResponse {
+  data: RolloverBatchDTO[]
+  links?: Record<string, any>
+  meta?: Record<string, any>
+}
+
 const ENROLLMENT_STATUS_STYLES: Record<string, EnrollmentStatusStyle> = {
   [ENROLLMENT_STATUS.ACTIVE]: {
     label: 'กำลังศึกษา',
