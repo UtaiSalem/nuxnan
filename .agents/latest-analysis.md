@@ -4714,3 +4714,461 @@ End-to-end manual flow (หลัง 4.C):
 
 5. **Toast library** — PrimeVue Toast หรือ custom
    - **Recommendation:** PrimeVue Toast (มีในโปรเจคแล้วน่าจะใช่)
+## 2026-06-21 Phase 4.A implementation note
+
+- Scope confirmed: start Phase 4.A only (`composable + DTO types + status badge`) after user approved all five decisions in Phase 4 section 16.
+- Confirmed decisions to carry forward:
+  - universal action modal
+  - split active/inactive tabs
+  - history as drawer
+  - repeat target filter = same grade + other classroom + grouped by academic year
+  - toast direction = PrimeVue Toast
+- Codebase findings before edits:
+  - Backend lifecycle endpoints are live at `/api/academies/{academy}/students/{student}/{graduate|drop|repeat|promote|transfer}` plus `/enrollment-history-v2`.
+  - Lifecycle response contract comes from `App\Http\Resources\Learn\Academy\Enrollment\ClassroomStudentResource` and `StudentSummaryResource`.
+  - Frontend already has a project-wide `useToast()` wrapper backed by `ui/stores/notification.ts`, so 4.A should avoid coupling composable logic to any toast implementation yet.
+  - `ui/pages/academies/[name]/admin/gradebook/classrooms/[id].vue` is still heavily `any`-based and mixes assumptions about `classroom.classroom_students` rows, while `ClassroomController::show()` explicitly assembles `classroom.students`; Phase 4.C will need a careful adapter or page refresh strategy.
+  - `ui/package.json` currently has no Vitest setup/script, so Phase 4.A verification should prioritize focused type checks and read-back validation instead of assuming runnable unit tests.
+- Intended files for 4.A:
+  - `ui/types/enrollment.ts`
+  - `ui/composables/useStudentEnrollmentActions.ts`
+  - `ui/components/academy/enrollment/StudentStatusBadge.vue`
+- Additional risk added:
+  - Classroom detail payload shape drift between existing page expectations and lifecycle DTOs may cause friction during 4.C integration if not normalized in page state.
+- Verification plan for 4.A:
+  - targeted read-back of new files
+  - focused `vue-tsc` check if practical, while treating unrelated repo-wide errors as pre-existing
+
+---
+
+## 2026-06-21 Phase 4.B — Action Menu + Modal + History Drawer (Detailed Plan, revised)
+
+### 0. Convention findings (จาก codebase audit)
+
+**ต่างจากแผน Phase 4 §16 เดิม:**
+
+| Item | แผนเดิม | จริงในโปรเจค |
+|---|---|---|
+| Modal | PrimeVue Dialog | **`@headlessui/vue` Dialog** (5+ ไฟล์ใช้, รวม `QuestionFormModal.vue`) |
+| Toast | PrimeVue Toast | **`useToast()` composable** wrap `useNotificationStore` — signature: `success(message, title?, duration?)` |
+| Drawer | PrimeVue Sidebar | **`<SidebarDrawer>`** component อยู่ที่ `components/Common/SidebarDrawer.vue` พร้อมใช้ (props: `open`, `side`, `title` + ESC + body scroll lock + iOS compat) |
+| Confirm | SweetAlert | `useSweetAlert()` composable มีอยู่ (ใช้สำหรับ destructive confirm ถ้าต้องการ) |
+| Dropdown menu | PrimeVue Menu | ตรวจในโปรเจคไม่มี dropdown menu pattern ชัด — สร้าง custom button group หรือ Headless UI Menu |
+
+**Action:**
+- ใช้ `@headlessui/vue` + `<SidebarDrawer>` + `useToast` + Tailwind ตามที่โปรเจคใช้จริง
+- ไม่ import PrimeVue components ใน Phase 4 (กัน inconsistency)
+- Dropdown menu: ใช้ `@headlessui/vue` `Menu` (PopoverMenu pattern) เพราะมีอยู่แล้วใน deps
+
+### 1. หลักการ Phase 4.B
+
+1. **Match convention โปรเจค** (Headless UI + Tailwind + useToast + SidebarDrawer)
+2. **3 component files แยก**:
+   - `StudentActionMenu.vue` — dropdown ของ 5 actions (Headless UI Menu)
+   - `StudentStatusActionModal.vue` — universal modal (Headless UI Dialog)
+   - `EnrollmentHistoryDrawer.vue` — wrap `<SidebarDrawer>` ของโปรเจค
+3. **Composable ที่มีจาก 4.A ถูกใช้ตรงๆ** (`useStudentEnrollmentActions`)
+4. **Error display per-field** — ใช้ `fieldErrors` จาก composable (มีอยู่แล้ว) แสดงใต้ input
+5. **A11y** — Headless UI ดูแล focus trap + ESC ให้
+6. **Composition over inheritance** — modal รับ `availableClassrooms` prop, ไม่ fetch เอง (parent หน้า [id].vue manage)
+
+### 2. โครงสร้าง 3 components
+
+```
+ui/components/academy/enrollment/
+├── StudentStatusBadge.vue              (Phase 4.A — exists)
+├── StudentActionMenu.vue               (4.B.1)
+├── StudentStatusActionModal.vue        (4.B.2)
+└── EnrollmentHistoryDrawer.vue         (4.B.3)
+```
+
+### 3. `StudentActionMenu.vue` spec
+
+```vue
+<script setup lang="ts">
+import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue'
+import { Icon } from '@iconify/vue'
+import type { ClassroomStudentDTO, EnrollmentAction, StudentSummaryDTO } from '~/types/enrollment'
+
+interface Props {
+  student: StudentSummaryDTO
+  enrollment: ClassroomStudentDTO | null
+}
+defineProps<Props>()
+const emit = defineEmits<{ select: [action: EnrollmentAction] }>()
+
+const items: Array<{ action: EnrollmentAction; label: string; icon: string; tone?: 'danger' }> = [
+  { action: 'transfer',  label: 'ย้ายห้อง (ในปีนี้)',     icon: 'mdi:arrow-right-bold' },
+  { action: 'promote',   label: 'เลื่อนชั้น (ปีถัดไป)',   icon: 'mdi:arrow-up-bold' },
+  { action: 'graduate',  label: 'จบการศึกษา',             icon: 'mdi:school' },
+  { action: 'repeat',    label: 'ซ้ำชั้น',                icon: 'mdi:refresh' },
+  { action: 'drop',      label: 'ลาออก / พ้นสภาพ',        icon: 'mdi:close-circle', tone: 'danger' },
+]
+</script>
+
+<template>
+  <Menu as="div" class="relative inline-block text-left">
+    <MenuButton
+      class="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+      aria-label="จัดการสถานะนักเรียน"
+    >
+      <Icon icon="mdi:dots-vertical" class="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+    </MenuButton>
+
+    <transition
+      enter-active-class="transition duration-100 ease-out"
+      enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100"
+      leave-active-class="transition duration-75 ease-in"
+      leave-from-class="opacity-100 scale-100"
+      leave-to-class="opacity-0 scale-95"
+    >
+      <MenuItems
+        class="absolute right-0 z-30 mt-1 w-56 origin-top-right rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg focus:outline-none"
+      >
+        <div class="py-1">
+          <MenuItem v-for="item in items" :key="item.action" v-slot="{ active }">
+            <button
+              :class="[
+                'flex w-full items-center gap-2 px-3 py-2 text-sm transition',
+                active ? 'bg-zinc-100 dark:bg-zinc-800' : '',
+                item.tone === 'danger' ? 'text-red-600 dark:text-red-400' : 'text-zinc-700 dark:text-zinc-200',
+              ]"
+              @click="emit('select', item.action)"
+            >
+              <Icon :icon="item.icon" class="w-4 h-4" />
+              <span>{{ item.label }}</span>
+            </button>
+          </MenuItem>
+        </div>
+      </MenuItems>
+    </transition>
+  </Menu>
+</template>
+```
+
+### 4. `StudentStatusActionModal.vue` spec
+
+**Action-form mapping:**
+
+| action | fields | required |
+|---|---|---|
+| graduate | reason, effective_at | — |
+| drop | reason*, effective_at | reason |
+| repeat | new_classroom_id*, student_number, reason | new_classroom_id |
+| promote | from_classroom_id (auto), to_classroom_id*, reason, student_number | to_classroom_id |
+| transfer | from_classroom_id (auto), to_classroom_id*, reason | to_classroom_id |
+
+**Props:**
+```ts
+interface Props {
+  open: boolean
+  action: EnrollmentAction | null
+  student: StudentSummaryDTO | null
+  enrollment: ClassroomStudentDTO | null      // current active
+  availableClassrooms: EnrollmentClassroomSummaryDTO[]  // pre-fetched by parent
+  isLoading: boolean                          // from useStudentEnrollmentActions
+  fieldErrors: EnrollmentFieldErrors          // from composable
+}
+defineEmits<{
+  'update:open': [v: boolean]
+  submit: [payload: EnrollmentActionPayload<EnrollmentAction>]
+}>()
+```
+
+**Skeleton:**
+```vue
+<template>
+  <TransitionRoot :show="open" as="template">
+    <Dialog @close="emit('update:open', false)" class="relative z-50">
+      <TransitionChild
+        enter="ease-out duration-200" enter-from="opacity-0" enter-to="opacity-100"
+        leave="ease-in duration-150" leave-from="opacity-100" leave-to="opacity-0"
+      >
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+      </TransitionChild>
+
+      <div class="fixed inset-0 flex items-center justify-center p-4">
+        <TransitionChild
+          enter="ease-out duration-200" enter-from="opacity-0 scale-95"
+          enter-to="opacity-100 scale-100"
+          leave="ease-in duration-150" leave-from="opacity-100 scale-100"
+          leave-to="opacity-0 scale-95"
+        >
+          <DialogPanel class="w-full max-w-md rounded-xl bg-white dark:bg-zinc-900 p-6 shadow-xl">
+            <DialogTitle class="text-lg font-semibold mb-4">
+              {{ titleMap[action ?? ''] }}
+            </DialogTitle>
+
+            <!-- Student summary chip -->
+            <div class="mb-4 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+              <div class="font-medium text-sm">{{ student?.first_name_th }} {{ student?.last_name_th }}</div>
+              <div class="text-xs text-zinc-500 mt-0.5">
+                รหัส {{ student?.student_id }} ·
+                {{ enrollment?.classroom?.display_name ?? 'ไม่มีห้อง' }}
+              </div>
+            </div>
+
+            <!-- Dynamic form by action -->
+            <form @submit.prevent="onSubmit" class="space-y-3">
+              <!-- graduate/drop: reason + effective_at -->
+              <template v-if="action === 'graduate' || action === 'drop'">
+                <FormField
+                  label="เหตุผล"
+                  :required="action === 'drop'"
+                  :error="fieldErrors.reason"
+                >
+                  <input v-model="form.reason" type="text" maxlength="255"
+                    class="form-input"
+                    :placeholder="action === 'graduate' ? 'จบการศึกษา (default)' : 'ระบุเหตุผล'"
+                  />
+                </FormField>
+
+                <FormField label="วันที่มีผล (optional)" :error="fieldErrors.effective_at">
+                  <input v-model="form.effective_at" type="date" :max="todayIso" class="form-input" />
+                </FormField>
+              </template>
+
+              <!-- repeat -->
+              <template v-else-if="action === 'repeat'">
+                <FormField label="ห้องใหม่ (ระดับเดียวกัน)" required :error="fieldErrors.new_classroom_id">
+                  <select v-model="form.new_classroom_id" class="form-input">
+                    <option :value="null">-- เลือกห้อง --</option>
+                    <option v-for="c in sameGradeClassrooms" :key="c.id" :value="c.id">
+                      {{ c.display_name }}
+                    </option>
+                  </select>
+                  <p v-if="!sameGradeClassrooms.length" class="text-xs text-amber-600 mt-1">
+                    ไม่มีห้องระดับเดียวกันในระบบ
+                  </p>
+                </FormField>
+
+                <FormField label="เลขที่ใหม่ (optional)" :error="fieldErrors.student_number">
+                  <input v-model.number="form.student_number" type="number" min="1" class="form-input" />
+                </FormField>
+
+                <FormField label="เหตุผล (optional)" :error="fieldErrors.reason">
+                  <input v-model="form.reason" type="text" maxlength="255" class="form-input" />
+                </FormField>
+              </template>
+
+              <!-- promote/transfer -->
+              <template v-else-if="action === 'promote' || action === 'transfer'">
+                <FormField label="ห้องปลายทาง" required :error="fieldErrors.to_classroom_id">
+                  <select v-model="form.to_classroom_id" class="form-input">
+                    <option :value="null">-- เลือกห้อง --</option>
+                    <option v-for="c in targetClassrooms" :key="c.id" :value="c.id">
+                      {{ c.display_name }}
+                    </option>
+                  </select>
+                </FormField>
+
+                <FormField label="เหตุผล (optional)" :error="fieldErrors.reason">
+                  <input v-model="form.reason" type="text" maxlength="255" class="form-input" />
+                </FormField>
+              </template>
+
+              <!-- Footer -->
+              <div class="flex justify-end gap-2 pt-2 mt-2 border-t border-zinc-200 dark:border-zinc-700">
+                <button type="button" :disabled="isLoading"
+                  class="btn-secondary" @click="emit('update:open', false)">
+                  ยกเลิก
+                </button>
+                <button type="submit" :disabled="isLoading || !canSubmit"
+                  :class="['btn-primary', action === 'drop' ? 'btn-danger' : '']">
+                  <Icon v-if="isLoading" icon="mdi:loading" class="w-4 h-4 animate-spin mr-1" />
+                  {{ confirmLabel }}
+                </button>
+              </div>
+            </form>
+          </DialogPanel>
+        </TransitionChild>
+      </div>
+    </Dialog>
+  </TransitionRoot>
+</template>
+```
+
+**Logic:**
+- `form` rebuilds เมื่อ `action` หรือ `open` เปลี่ยน
+- `sameGradeClassrooms` filter จาก `availableClassrooms` ที่ `grade_level === enrollment.classroom.grade_level && id !== enrollment.classroom_id`
+- `targetClassrooms`:
+  - `promote`: ทุก classroom ที่ `id !== enrollment.classroom_id` (cross-year) — สามารถ group label ด้วย "ปี YYYY"
+  - `transfer`: filter `grade_level === enrollment.classroom.grade_level && id !== enrollment.classroom_id` (same year same grade)
+- `canSubmit` enforce required field
+- `onSubmit` emit `submit(payload)` parent จัดการเรียก composable
+- `titleMap`: `{ graduate: 'จบการศึกษา', drop: 'ลาออก / พ้นสภาพ', ... }`
+- `confirmLabel`: `{ graduate: 'ยืนยันจบการศึกษา', drop: 'ยืนยันการพ้นสภาพ', ... }`
+- `FormField` ใช้ component ที่มีอยู่ `components/Common/FormField.vue` (ดูใน untracked list)
+
+**Decision: ใช้ `FormField` ของโปรเจค** (อยู่ใน untracked แต่ตั้งใจเก็บใน FE — ตรวจ shape ก่อนใช้)
+
+### 5. `EnrollmentHistoryDrawer.vue` spec
+
+```vue
+<script setup lang="ts">
+import { computed, watch } from 'vue'
+import SidebarDrawer from '~/components/Common/SidebarDrawer.vue'
+import StudentStatusBadge from './StudentStatusBadge.vue'
+import { useStudentEnrollmentActions } from '~/composables/useStudentEnrollmentActions'
+import type { ClassroomStudentDTO, MaybeEnrollmentAcademyId, StudentSummaryDTO } from '~/types/enrollment'
+
+interface Props {
+  open: boolean
+  academyId: MaybeEnrollmentAcademyId
+  student: StudentSummaryDTO | null
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<{ 'update:open': [v: boolean] }>()
+
+const { fetchHistory, isLoading } = useStudentEnrollmentActions(toRef(props, 'academyId'))
+const rows = ref<ClassroomStudentDTO[]>([])
+const error = ref<string | null>(null)
+
+async function load() {
+  if (!props.student) return
+  error.value = null
+  try {
+    rows.value = await fetchHistory(props.student.id)
+  } catch (e: any) {
+    error.value = e?.data?.message ?? 'โหลดประวัติไม่สำเร็จ'
+    rows.value = []
+  }
+}
+
+watch(() => [props.open, props.student?.id], ([open]) => { if (open) load() })
+</script>
+
+<template>
+  <SidebarDrawer
+    :open="open"
+    side="right"
+    :title="`ประวัติการลงห้อง — ${student?.first_name_th ?? ''} ${student?.last_name_th ?? ''}`"
+    @update:open="emit('update:open', $event)"
+  >
+    <div class="p-4 space-y-3">
+      <div v-if="isLoading" class="text-sm text-zinc-500">กำลังโหลด...</div>
+      <div v-else-if="error" class="text-sm text-red-600">{{ error }}</div>
+      <div v-else-if="!rows.length" class="text-sm text-zinc-500">ยังไม่มีประวัติการลงห้อง</div>
+
+      <ol v-else class="relative border-l-2 border-zinc-200 dark:border-zinc-700 ml-3 space-y-4">
+        <li v-for="row in rows" :key="row.id" class="ml-4 relative">
+          <span
+            class="absolute -left-[1.4rem] top-1 w-3 h-3 rounded-full ring-2 ring-white dark:ring-zinc-900"
+            :class="row.status === 'active' ? 'bg-green-500' : 'bg-zinc-400'"
+          />
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-medium text-sm">
+              {{ row.classroom?.display_name ?? 'ห้องที่ไม่มีอยู่แล้ว' }}
+            </span>
+            <StudentStatusBadge :status="row.status" :status-text="row.status_text" />
+          </div>
+          <div class="text-xs text-zinc-500 mt-0.5">
+            <span>{{ row.enrolled_at ?? '?' }}</span>
+            <span class="mx-1">→</span>
+            <span>{{ row.left_at ?? 'ปัจจุบัน' }}</span>
+          </div>
+          <div v-if="row.leave_reason" class="text-xs text-zinc-600 dark:text-zinc-300 mt-1 italic">
+            {{ row.leave_reason }}
+          </div>
+        </li>
+      </ol>
+    </div>
+  </SidebarDrawer>
+</template>
+```
+
+### 6. Required `availableClassrooms` source
+
+Parent หน้า [classrooms/[id].vue](ui/pages/academies/[name]/admin/gradebook/classrooms/[id].vue) ต้อง fetch list ของ classrooms ใน academy:
+
+```ts
+const availableClassrooms = ref<EnrollmentClassroomSummaryDTO[]>([])
+
+async function loadAvailableClassrooms() {
+  const res = await api.get<any>(`/api/academies/${academyId.value}/classrooms`)
+  availableClassrooms.value = (res.data ?? []).map((c: any) => ({
+    id: c.id,
+    display_name: c.name,
+    grade_level: c.grade_level,
+    section: c.section,
+  }))
+}
+```
+
+**Verify endpoint exists:** `/api/academies/{academy}/classrooms` ใน `ClassroomController::index` — ถ้าไม่มีต้อง derive จาก existing state ของหน้า
+
+### 7. ลำดับ commit Phase 4.B (1 commit)
+
+| # | Subject | ไฟล์ | LOC |
+|---|---|---|---|
+| 4.B | feat(ui): student action menu + universal status modal + history drawer | StudentActionMenu.vue, StudentStatusActionModal.vue, EnrollmentHistoryDrawer.vue | ~500 |
+
+ไม่แยก 3 sub-commits เพราะ component ขนาดเล็ก-กลาง + integrate ใน 4.C จะ verify จริงจัง
+
+### 8. Verification per commit
+
+1. `npx vue-tsc --noEmit 2>&1 | grep -E '(StudentActionMenu|StudentStatusActionModal|EnrollmentHistoryDrawer)'` — ต้อง clean
+2. Visual smoke ใน 4.C (component standalone ไม่เปิดได้นอกหน้าจริง)
+3. SSR check: `npm run dev` ต้องไม่ crash — Headless UI ปลอดภัยกับ SSR แต่ check ตาม memory [[feedback_ssr_ipc_crash]]
+4. Pre-commit Vue SFC check (skill `pre-commit-vue`)
+
+### 9. Edge cases
+
+| # | Case | จัดการ |
+|---|---|---|
+| E1 | `availableClassrooms` ว่าง (ห้องยังไม่ถูกสร้างปีใหม่) | modal แสดง "ไม่มีห้องเป้าหมาย" + disable submit |
+| E2 | enrollment เป็น `null` (นักเรียนใหม่ยังไม่อยู่ห้อง) | actions graduate/drop/repeat ใช้ไม่ได้ — UI แสดง action ที่เป็นไปได้เท่านั้น; promote/transfer ต้องการ enrollment เพื่อรู้ `grade_level` |
+| E3 | user double-submit | `isLoading` disable submit ปุ่ม + close button |
+| E4 | API 422 multiple field errors | composable แปลง errors → display ใต้ field |
+| E5 | API 403 (cross-class teacher) | parent catch → toast.error ด้วย `getErrorMessage()` |
+| E6 | API 404 (cross-academy student) | parent catch → toast.error |
+| E7 | dark mode | Tailwind dark: variants ครบทุก color |
+| E8 | mobile <480px | modal `max-w-md` + scroll inside if content tall |
+| E9 | SidebarDrawer + Dialog z-index ชน | Dialog z-50 อยู่บนสุดเสมอ; Drawer ของโปรเจคใช้ z สูง check |
+
+### 10. Out of scope ของ 4.B
+
+- ❌ Page integration (Phase 4.C)
+- ❌ Tabs split (Phase 4.C)
+- ❌ Refresh logic after action (Phase 4.C)
+- ❌ Bulk select (single student only)
+- ❌ Loading skeleton สำหรับ history (รอบหน้า)
+
+### 11. Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| `FormField` component ของโปรเจคยังไม่ commit (untracked) | กลาง | กลาง | ตรวจก่อน 4.B; ถ้าไม่ commit → ใช้ Tailwind inline label+input pattern |
+| `/api/academies/{id}/classrooms` endpoint ไม่มี / shape ต่าง | กลาง | กลาง | ตรวจ `ClassroomController` ก่อน 4.C; fallback เปลี่ยน path |
+| SSR crash จาก Headless UI Transition | ต่ำ | สูง | Headless UI v1.7+ SSR-safe; ถ้าเกิด ห่อ `<ClientOnly>` |
+| Drawer + Dialog focus trap ขัดกัน | กลาง | ต่ำ | เปิด Drawer หลัง Modal ปิด เท่านั้น |
+| dropdown menu position ผิด on mobile | ต่ำ | ต่ำ | use `right-0` + scroll container check |
+
+### 12. Definition of Done — Phase 4.B
+
+- [ ] 3 components ใหม่
+- [ ] TS check clean สำหรับไฟล์ใหม่
+- [ ] Vue SFC check ผ่าน (skill `pre-commit-vue`)
+- [ ] ไม่ใช้ PrimeVue Dialog/Sidebar/Toast ใน Phase 4 ไฟล์ใหม่ (consistency)
+- [ ] commit message ระบุ Phase 4.B
+- [ ] Phase 4.A composable + types ถูกใช้จริงในทั้ง 3 components
+
+### 13. Decisions ที่รอยืนยัน
+
+1. **`FormField` component**: ใช้ของโปรเจค (untracked) หรือ inline Tailwind?
+   - **Recommendation:** **inline Tailwind** ใน 4.B (กัน dependency กับ untracked) — refactor ใช้ FormField ทีหลังถ้า commit แล้ว
+
+2. **`/api/academies/{academy}/classrooms` endpoint** vs derive จาก state
+   - **Recommendation:** ใช้ endpoint (มีอยู่แล้วใน `ClassroomController` ตามที่ Phase 0 audit) — verify path ก่อน 4.C
+
+3. **Repeat: same year only หรือ next year ก็ได้?**
+   - Backend `repeatStudent` ไม่บังคับ same year — แค่ same grade + different id
+   - **Recommendation:** UI filter `same grade + ทุกปี` แสดง bracket "ปี YYYY"
+
+4. **Modal submit แสดง confirm dialog ซ้อนสำหรับ destructive (drop)?**
+   - **Recommendation:** **ไม่** — confirm step คือ submit button เอง; ปุ่ม drop สีแดงเพียงพอ
+
+5. **Drawer history scroll behavior**
+   - **Recommendation:** scrollable list inside drawer (overflow-y-auto + max-height)
