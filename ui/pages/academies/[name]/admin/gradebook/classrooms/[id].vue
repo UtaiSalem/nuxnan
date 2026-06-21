@@ -15,6 +15,7 @@ import type {
   EnrollmentActionPayload,
   StudentSummaryDTO,
 } from '~/types/enrollment'
+import { ENROLLMENT_STATUS } from '~/types/enrollment'
 
 definePageMeta({
   layout: false
@@ -34,7 +35,11 @@ const isLoading = ref(true)
 const isSaving = ref(false)
 
 // Students
-const students = ref<any[]>([])
+const students = ref<ClassroomStudentDTO[]>([])
+const inactiveStudents = ref<ClassroomStudentDTO[]>([])
+const activeTab = ref<'active' | 'inactive'>('active')
+const isStudentsLoading = ref(false)
+const isInactiveLoading = ref(false)
 const availableStudents = ref<any[]>([])
 const searchQuery = ref('')
 
@@ -71,14 +76,41 @@ const {
 } = useStudentEnrollmentActions(academyId)
 
 const filteredStudents = computed(() => {
-  if (!searchQuery.value) return students.value
+  const source = activeTab.value === 'active' ? students.value : inactiveStudents.value
+  if (!searchQuery.value) return source
   
   const query = searchQuery.value.toLowerCase()
-  return students.value.filter((s: any) => 
+  return source.filter((s: any) => 
     s.student?.student_id?.toLowerCase().includes(query) ||
     s.student?.first_name_th?.toLowerCase().includes(query) ||
     s.student?.last_name_th?.toLowerCase().includes(query)
   )
+})
+
+const isInactiveTab = computed(() => activeTab.value === 'inactive')
+
+const visibleStudentCount = computed(() => {
+  return isInactiveTab.value ? inactiveStudents.value.length : students.value.length
+})
+
+const studentCountLabel = computed(() => {
+  return isInactiveTab.value ? 'รายการออกจากห้อง' : 'นักเรียน'
+})
+
+const searchPlaceholder = computed(() => {
+  return isInactiveTab.value
+    ? 'ค้นหานักเรียนที่ออกจากห้อง...'
+    : 'ค้นหานักเรียน...'
+})
+
+const emptyStateTitle = computed(() => {
+  return isInactiveTab.value ? 'ยังไม่มีรายการออกจากห้อง' : 'ยังไม่มีนักเรียน'
+})
+
+const emptyStateDescription = computed(() => {
+  return isInactiveTab.value
+    ? 'เมื่อนักเรียนย้ายออก จบการศึกษา หรือเปลี่ยนสถานะ รายการจะปรากฏที่แท็บนี้'
+    : 'เพิ่มนักเรียนเข้าห้องเรียน'
 })
 
 const filteredAvailable = computed(() => {
@@ -117,7 +149,7 @@ onMounted(async () => {
 })
 
 const fetchData = async () => {
-  await Promise.all([fetchClassroom(), fetchAvailableClassrooms()])
+  await Promise.all([fetchClassroom(), fetchAvailableClassrooms(), fetchActiveStudents()])
 }
 
 const fetchAvailableClassrooms = async () => {
@@ -143,10 +175,58 @@ const fetchClassroom = async () => {
     const res: any = await api.get(`/api/academies/${academyId.value}/classrooms/${classroomId.value}`)
     if (res.success) {
       classroom.value = res.classroom
-      students.value = res.classroom.classroom_students || []
     }
   } catch (err) {
     console.error('Failed to fetch classroom:', err)
+  }
+}
+
+const fetchEnrollments = async (statuses: string[]) => {
+  const res: any = await api.get(
+    `/api/academies/${academyId.value}/classrooms/${classroomId.value}/enrollments`,
+    {
+      query: {
+        status: statuses,
+      },
+    },
+  )
+
+  return (res?.data ?? []) as ClassroomStudentDTO[]
+}
+
+const fetchActiveStudents = async () => {
+  isStudentsLoading.value = true
+  try {
+    students.value = await fetchEnrollments([ENROLLMENT_STATUS.ACTIVE])
+  } catch (err) {
+    console.error('Failed to fetch active students:', err)
+    students.value = []
+  } finally {
+    isStudentsLoading.value = false
+  }
+}
+
+const inactiveStatuses = [
+  ENROLLMENT_STATUS.TRANSFERRED,
+  ENROLLMENT_STATUS.PROMOTED,
+  ENROLLMENT_STATUS.GRADUATED,
+  ENROLLMENT_STATUS.DROPPED,
+  ENROLLMENT_STATUS.REPEATING,
+  ENROLLMENT_STATUS.SUPERSEDED,
+] as const
+
+const fetchInactiveStudents = async () => {
+  if (isInactiveLoading.value) return
+
+  isInactiveLoading.value = true
+  try {
+    const rows = await fetchEnrollments([...inactiveStatuses])
+    inactiveStudents.value = rows.slice(0, 200)
+  } catch (err) {
+    console.error('Failed to fetch inactive students:', err)
+    inactiveStudents.value = []
+  } finally {
+    isInactiveLoading.value = false
   }
 }
 
@@ -182,7 +262,7 @@ const addStudents = async () => {
     })
     
     showAddModal.value = false
-    await fetchClassroom()
+    await fetchActiveStudents()
   } catch (err: any) {
     console.error('Failed to add students:', err)
     alert(err.message || 'เกิดข้อผิดพลาด')
@@ -196,7 +276,10 @@ const removeStudent = async (studentId: number) => {
   
   try {
     await api.delete(`/api/academies/${academyId.value}/classrooms/${classroomId.value}/students/${studentId}`)
-    await fetchClassroom()
+    await fetchActiveStudents()
+    if (activeTab.value === 'inactive' || inactiveStudents.value.length > 0) {
+      await fetchInactiveStudents()
+    }
   } catch (err) {
     console.error('Failed to remove student:', err)
     alert('ไม่สามารถลบได้')
@@ -284,7 +367,10 @@ const onActionSubmit = async (
     )
     toast.success('อัปเดทสถานะนักเรียนเรียบร้อย', 'สำเร็จ', 3000)
     showActionModal.value = false
-    await fetchClassroom()
+    await fetchActiveStudents()
+    if (activeTab.value === 'inactive' || inactiveStudents.value.length > 0) {
+      await fetchInactiveStudents()
+    }
   } catch (err) {
     toast.error(getActionErrorMessage('ไม่สามารถดำเนินการได้'), 'ผิดพลาด', 5000)
   }
@@ -294,6 +380,12 @@ const openHistory = (cs: any) => {
   historyStudent.value = buildStudentDTO(cs)
   historyOpen.value = true
 }
+
+watch(activeTab, async (tab) => {
+  if (tab === 'inactive' && inactiveStudents.value.length === 0) {
+    await fetchInactiveStudents()
+  }
+})
 </script>
 
 <template>
@@ -316,11 +408,11 @@ const openHistory = (cs: any) => {
             </h1>
           </div>
           <p class="text-gray-600 dark:text-gray-400">
-            ระดับชั้น {{ classroom?.grade_level }} | {{ students.length }} นักเรียน
+            ระดับชั้น {{ classroom?.grade_level }} | {{ visibleStudentCount }} {{ studentCountLabel }}
           </p>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div v-if="!isInactiveTab" class="flex items-center gap-3">
           <button
             @click="openAddModal"
             class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
@@ -359,24 +451,59 @@ const openHistory = (cs: any) => {
         </div>
       </div>
 
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+        <div class="flex flex-wrap gap-2">
+          <button
+            @click="activeTab = 'active'"
+            :class="[
+              'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors',
+              activeTab === 'active'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600',
+            ]"
+          >
+            <span>กำลังศึกษา</span>
+            <span class="rounded-full bg-white/80 px-2 py-0.5 text-xs dark:bg-black/20">{{ students.length }}</span>
+          </button>
+          <button
+            @click="activeTab = 'inactive'"
+            :class="[
+              'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors',
+              activeTab === 'inactive'
+                ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600',
+            ]"
+          >
+            <span>ออกจากห้อง</span>
+            <span class="rounded-full bg-white/80 px-2 py-0.5 text-xs dark:bg-black/20">{{ inactiveStudents.length }}</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Search -->
       <div class="relative">
         <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="ค้นหานักเรียน..."
+          :placeholder="searchPlaceholder"
           class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         />
       </div>
 
       <!-- Students List -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div v-if="filteredStudents.length === 0" class="p-12 text-center">
+        <div v-if="isStudentsLoading || (activeTab === 'inactive' && isInactiveLoading)" class="p-12 text-center">
+          <Icon icon="fluent:spinner-ios-20-filled" class="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
+          <p class="text-sm text-gray-600 dark:text-gray-400">กำลังโหลดข้อมูลนักเรียน...</p>
+        </div>
+
+        <div v-else-if="filteredStudents.length === 0" class="p-12 text-center">
           <Icon icon="fluent:people-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีนักเรียน</h3>
-          <p class="text-gray-600 dark:text-gray-400 mb-6">เพิ่มนักเรียนเข้าห้องเรียน</p>
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ emptyStateTitle }}</h3>
+          <p class="text-gray-600 dark:text-gray-400 mb-6">{{ emptyStateDescription }}</p>
           <button
+            v-if="activeTab === 'active'"
             @click="openAddModal"
             class="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
           >
@@ -388,7 +515,7 @@ const openHistory = (cs: any) => {
         <table v-else class="w-full">
           <thead class="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th v-if="activeTab === 'active'" class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 เลขที่
               </th>
               <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -400,6 +527,12 @@ const openHistory = (cs: any) => {
               <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 สถานะ
               </th>
+              <th v-if="activeTab === 'inactive'" class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                วันที่ออก
+              </th>
+              <th v-if="activeTab === 'inactive'" class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                เหตุผล
+              </th>
               <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 จัดการ
               </th>
@@ -407,7 +540,7 @@ const openHistory = (cs: any) => {
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
             <tr v-for="(cs, index) in filteredStudents" :key="cs.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td v-if="activeTab === 'active'" class="px-6 py-4 whitespace-nowrap">
                 <input
                   type="number"
                   :value="cs.student_number || index + 1"
@@ -444,6 +577,12 @@ const openHistory = (cs: any) => {
               <td class="px-6 py-4 whitespace-nowrap">
                 <StudentStatusBadge :status="cs.status" :status-text="cs.status_text" />
               </td>
+              <td v-if="activeTab === 'inactive'" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                {{ cs.left_at || '-' }}
+              </td>
+              <td v-if="activeTab === 'inactive'" class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                {{ cs.leave_reason || '-' }}
+              </td>
               <td class="px-6 py-4 whitespace-nowrap text-right">
                 <div class="inline-flex items-center gap-1">
                   <button
@@ -453,12 +592,13 @@ const openHistory = (cs: any) => {
                   >
                     <Icon icon="mdi:history" class="w-5 h-5" />
                   </button>
-                  <StudentActionMenu
+                  <StudentActionMenu v-if="activeTab === 'active'"
                     :student="buildStudentDTO(cs)"
                     :enrollment="buildEnrollmentDTO(cs)"
                     @select="(action) => onActionSelect(cs, action)"
                   />
                   <button
+                    v-if="activeTab === 'active'"
                     @click="removeStudent(cs.student_id)"
                     class="p-1.5 rounded-md text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/30 transition"
                     aria-label="ลบนักเรียนออกจากห้อง (legacy)"

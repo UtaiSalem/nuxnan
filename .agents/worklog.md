@@ -140,3 +140,35 @@
 | 2026-05-25 | Exam Retake Flow Phase 1 | ✅ Done |
 | 2026-05-24 | Lesson Drag-and-Drop Reordering | ✅ Done |
 | 2026-05-24 | Remediation & Unified Eligibility | ✅ Done |
+
+## 2026-06-21 - Phase 6 reports sync continuation
+
+- Branch: current working tree (uncommitted)
+- Task: continue Phase 6 from `.agents/latest-analysis.md`, focusing on Phase 6.D classroom inactive tab polish and documentation sync
+- Files touched:
+  - `.agents/latest-analysis.md`
+  - `ui/pages/academies/[name]/admin/gradebook/classrooms/[id].vue`
+  - backend files from Phase 6.A-6.C remain in-progress in the same working tree:
+    - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/ClassroomController.php`
+    - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyMemberController.php`
+    - `api/nuxnanravel/routes/learn/academy.php`
+    - `api/nuxnanravel/tests/Feature/Api/Academy/ClassroomEnrollmentListTest.php`
+    - `api/nuxnanravel/tests/Feature/Api/Academy/AcademyMemberFilterOptionsTest.php`
+    - `api/nuxnanravel/tests/Feature/Api/Academy/SchoolAttendanceRosterScopeTest.php`
+- Done:
+  - completed the Phase 6.D frontend wiring to use the new enrollments endpoint for active and inactive rows
+  - added lazy inactive-tab loading, read-only inactive presentation, tab-aware search placeholder, tab-aware empty state, and header summary count tied to the selected tab
+  - hid add/action/delete affordances while viewing the inactive tab
+  - recorded Phase 6.D completion details in `.agents/latest-analysis.md`
+- Verification run:
+  - `api/nuxnanravel`: reran `vendor\bin\pint` on touched Phase 6 backend files and new tests
+  - `api/nuxnanravel`: reran `php artisan test tests/Feature/Api/Academy/ClassroomEnrollmentListTest.php tests/Feature/Api/Academy/AcademyMemberFilterOptionsTest.php tests/Feature/Api/Academy/SchoolAttendanceRosterScopeTest.php`
+  - `api/nuxnanravel`: result `11 passed (41 assertions)`
+  - `ui`: Vue SFC parse check passed via `@vue/compiler-sfc` on `pages/academies/[name]/admin/gradebook/classrooms/[id].vue`
+  - `ui`: `cmd /c npx vue-tsc --noEmit --pretty false` did not complete because the workspace currently has a dependency/plugin issue: `vue-router/volar/sfc-route-blocks` export resolution failure
+- Remaining:
+  - manual browser smoke for the inactive tab was not run in this pass
+- Risks / notes:
+  - frontend behavior depends on the new backend enrollments endpoint from Phase 6.A
+  - the inactive tab intentionally limits the client list to 200 rows for now
+  - `vue-tsc` is not a reliable gate until the workspace plugin/export mismatch is fixed

@@ -338,6 +338,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     Route::prefix('{academy}/classrooms/{classroom}')->group(function () {
+        Route::get('enrollments', [ClassroomController::class, 'listEnrollments'])->name('api.academy.classrooms.enrollments');
         Route::get('/', [ClassroomController::class, 'show'])->name('api.academy.classrooms.show');
         Route::patch('/', [ClassroomController::class, 'update'])->name('api.academy.classrooms.update');
         Route::delete('/', [ClassroomController::class, 'destroy'])->name('api.academy.classrooms.destroy');

@@ -1,0 +1,146 @@
+<?php
+
+namespace Tests\Feature\Api\Academy;
+
+use App\Models\Academy;
+use App\Models\AcademyMember;
+use App\Models\Classroom;
+use App\Models\ClassroomStudent;
+use App\Models\Learn\Academy\SchoolAttendance;
+use App\Models\Learn\Academy\SchoolAttendanceRecord;
+use App\Models\Student;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class SchoolAttendanceRosterScopeTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $owner;
+
+    private Academy $academy;
+
+    private Classroom $classroom;
+
+    private SchoolAttendance $attendance;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->owner = User::factory()->create();
+
+        $this->academy = Academy::create([
+            'user_id' => $this->owner->id,
+            'name' => 'Attendance Scope Academy',
+            'slug' => 'attendance-scope-academy',
+        ]);
+
+        $this->classroom = Classroom::create([
+            'academy_id' => $this->academy->id,
+            'grade_level' => 'ม.1',
+            'section' => '1',
+            'name' => 'ม.1/1',
+            'capacity' => 40,
+            'is_active' => true,
+            'status' => 'active',
+        ]);
+
+        $this->attendance = SchoolAttendance::create([
+            'academy_id' => $this->academy->id,
+            'date' => '2026-06-21',
+            'title' => 'เช็คชื่อหน้าเสาธง',
+            'status' => 'open',
+            'created_by' => $this->owner->id,
+        ]);
+    }
+
+    public function test_show_enriches_active_student_with_classroom_info(): void
+    {
+        [$user, $student] = $this->makeMemberedStudent('ATD001', 'สมศรี');
+
+        ClassroomStudent::create([
+            'academy_id' => $this->academy->id,
+            'classroom_id' => $this->classroom->id,
+            'student_id' => $student->id,
+            'student_number' => 12,
+            'status' => ClassroomStudent::STATUS_ACTIVE,
+            'enrolled_at' => '2026-05-20',
+        ]);
+
+        SchoolAttendanceRecord::create([
+            'attendance_id' => $this->attendance->id,
+            'academy_id' => $this->academy->id,
+            'student_id' => $user->id,
+            'status' => 'present',
+            'check_in_method' => 'manual',
+            'checked_in_at' => now(),
+            'recorded_by' => $this->owner->id,
+        ]);
+
+        $response = $this->actingAs($this->owner, 'api')
+            ->getJson("/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.records.0.student_number', 12)
+            ->assertJsonPath('data.records.0.classroom_name', 'ม.1/1');
+    }
+
+    public function test_show_does_not_enrich_transferred_student_with_stale_classroom_info(): void
+    {
+        [$user, $student] = $this->makeMemberedStudent('ATD002', 'สมหมาย');
+
+        ClassroomStudent::create([
+            'academy_id' => $this->academy->id,
+            'classroom_id' => $this->classroom->id,
+            'student_id' => $student->id,
+            'student_number' => 44,
+            'status' => ClassroomStudent::STATUS_TRANSFERRED,
+            'enrolled_at' => '2026-05-20',
+            'left_at' => '2026-06-10',
+        ]);
+
+        SchoolAttendanceRecord::create([
+            'attendance_id' => $this->attendance->id,
+            'academy_id' => $this->academy->id,
+            'student_id' => $user->id,
+            'status' => 'present',
+            'check_in_method' => 'manual',
+            'checked_in_at' => now(),
+            'recorded_by' => $this->owner->id,
+        ]);
+
+        $response = $this->actingAs($this->owner, 'api')
+            ->getJson("/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.records.0.student_number', null)
+            ->assertJsonPath('data.records.0.classroom_name', null);
+    }
+
+    private function makeMemberedStudent(string $studentId, string $firstName): array
+    {
+        $user = User::factory()->create();
+
+        $student = Student::create([
+            'academy_id' => $this->academy->id,
+            'user_id' => $user->id,
+            'first_name_th' => $firstName,
+            'last_name_th' => 'ตัวอย่าง',
+            'student_id' => $studentId,
+            'citizen_id' => str_pad((string) random_int(1, 9999999999999), 13, '0', STR_PAD_LEFT),
+            'status' => 'active',
+        ]);
+
+        AcademyMember::create([
+            'academy_id' => $this->academy->id,
+            'user_id' => $user->id,
+            'student_id' => $student->id,
+            'role' => 'student',
+            'status' => 2,
+        ]);
+
+        return [$user, $student];
+    }
+}

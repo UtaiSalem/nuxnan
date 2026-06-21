@@ -6022,3 +6022,370 @@ function onClick(idx: number) {
 ไม่มี — ทุกอย่าง lock จาก Decision §12 ของ Phase 5 plan แล้ว
 
 → **พร้อมลงมือ 5.B ทันที**
+
+---
+
+## 2026-06-21 Phase 6 — Reports & Downstream Sync (Detailed Plan)
+
+### 0. State at start of Phase 6
+
+จาก Phase 0–5 commit ครบ 11 commits, branch `feature/academic-year-rollover`:
+- ✅ Backend service + API + UI ทำงาน end-to-end (graduate/drop/repeat/promote/transfer + rollover wizard 6 steps)
+- ✅ 106 backend tests + TS clean
+
+ที่ค้างจาก Phase 4.C (deferred):
+- ❌ Tab "ออกจากห้อง" — ขาด backend endpoint ดึง non-active enrollments ของห้องเดียว
+
+จาก master plan §3 Phase 6:
+- 6.1 Transcript scope by `academic_year_id`
+- 6.2 หน้า list นักเรียนทุกที่ที่อาศัย `students.class_level` ตรวจ + ปรับ
+- 6.3 Attendance scope by year
+- 6.4 Search/filter student แยก "ปัจจุบัน" vs "ทุกปี"
+
+### 1. Codebase audit findings (จาก grep)
+
+**A. Transcript** [TranscriptController.php](api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/TranscriptController.php):
+- ✅ มี `academic_year_id` filter (line 60, 66) — รับ query param แล้ว
+- ✅ `->where('academic_year_id', $academicYearId)` ที่ classroom_students (line 228)
+- ⚠️ Fallback ใช้ `$student->class_level` (line 231) เมื่อหา classroom_students ไม่เจอ — ไม่ scope ปี แต่เป็น snapshot ปัจจุบัน
+- **Action:** OK as-is; document fallback semantics
+
+**B. AcademyMember** [AcademyMemberController.php](api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyMemberController.php):
+- ⚠️ Line 215, 221, 260, 262, 266, 267, 271, 276 — ใช้ `students.class_level` ใน list/grouping (legacy fallback)
+- ⚠️ Line 522, 524 — `class_level` filter query param
+- **Action:** เปลี่ยน source → join `classroom_students` ของ active year + use `classrooms.grade_level/section`; fallback to legacy ถ้าไม่มี
+
+**C. Classroom** [ClassroomController.php](api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/ClassroomController.php):
+- Line 81, 100 — `profile_image_url` path uses `class_level/class_section` for filesystem — ของ storage layout, ไม่กระทบ rollover semantics
+- **Action:** ไม่แตะ (เป็น path convention ของ image storage)
+
+**D. SchoolAttendance** [SchoolAttendanceController.php](api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/SchoolAttendanceController.php):
+- Line 534, 563 — query `classroom_students` ดู `student_id, classroom_id, student_number`
+- ไม่ scope `status='active'` หรือ year ตามที่ตรวจ
+- **Action:** เพิ่ม `where('status', 'active')` ที่ทุกที่ที่ select จาก classroom_students สำหรับ attendance ปัจจุบัน
+
+**E. StudentCard** [StudentCardController.php](api/nuxnanravel/app/Http/Controllers/Api/Learn/Student/Card/StudentCardController.php):
+- Line 267 — path uses `class_level/class_section` for image storage
+- **Action:** ไม่แตะ (storage path เท่านั้น)
+
+### 2. หลักการ Phase 6
+
+1. **Backward compatible** — ไม่ลบ endpoint เก่า; เพิ่ม opt-in scoping
+2. **New endpoint สำหรับ inactive classroom students** — แก้ deferred จาก 4.C
+3. **Legacy `class_level` fallback คงไว้** — Phase 9a backfill ก่อนค่อยพิจารณาลบ
+4. **Year scope = optional query param** — ถ้าไม่ส่ง = ใช้ current year
+5. **ทุก endpoint ที่เปลี่ยน scoping ต้องมี test** — กัน regression
+6. **Frontend tab "ออกจากห้อง" ใช้ component เดิม** — แค่เปลี่ยน data source
+
+### 3. Sub-phase commits (5 commits, ~3 ชม.)
+
+| # | Subject | ไฟล์หลัก | LOC | เวลา |
+|---|---|---|---|---|
+| 6.A | feat(api): expose inactive classroom enrollments + scope ClassroomController members | ClassroomController.php, routes, test | ~150 | 45น |
+| 6.B | fix(member): scope class_level grouping by active classroom_students | AcademyMemberController.php + test | ~120 | 45น |
+| 6.C | fix(attendance): scope queries to active classroom_students rows | SchoolAttendanceController.php + test | ~80 | 30น |
+| 6.D | feat(ui): inactive students tab in classroom detail (fulfill 4.C defer) | classroom [id].vue + composable+tests | ~150 | 30น |
+| 6.E | docs(rollover): close Phase 6 + downstream sync notes | latest-analysis.md + worklog | ~50 | 15น |
+
+**รวม ~550 LOC, ~3 ชม.**
+
+### 4. Sub-phase specs
+
+#### 6.A — Backend: inactive classroom enrollments
+
+**New endpoint:**
+```
+GET /api/academies/{academy}/classrooms/{classroom}/enrollments
+  ?status[]=active&status[]=transferred&status[]=...
+  &academic_year_id=...
+```
+
+```php
+// app/Http/Controllers/Api/Learn/Academy/ClassroomController.php
+public function listEnrollments(Request $req, Academy $academy, Classroom $classroom): JsonResponse
+{
+    abort_unless($classroom->academy_id === $academy->id, 404);
+
+    $statuses = $req->input('status', [ClassroomStudent::STATUS_ACTIVE]);
+    if (!is_array($statuses)) $statuses = [$statuses];
+
+    $rows = ClassroomStudent::where('classroom_id', $classroom->id)
+        ->whereIn('status', $statuses)
+        ->with(['student:id,student_id,first_name_th,last_name_th,nickname,status,class_level,class_section,academy_id'])
+        ->orderBy('left_at', 'desc')
+        ->orderBy('student_number')
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => ClassroomStudentResource::collection($rows->load('createdBy')),
+    ]);
+}
+```
+
+**Route:**
+```php
+Route::get('{academy}/classrooms/{classroom}/enrollments',
+    [ClassroomController::class, 'listEnrollments'])
+    ->name('api.academy.classrooms.enrollments');
+```
+
+**Tests** (`tests/Feature/Api/Academy/ClassroomEnrollmentListTest.php`):
+- T1: GET without status → returns active only (default)
+- T2: GET ?status[]=transferred → returns transferred only
+- T3: GET ?status[]=active&status[]=graduated → returns both
+- T4: cross-academy classroom → 404
+- T5: requires auth → 401 unauthenticated
+- T6: shape includes student summary + status_text via Resource
+
+**Commit:** `feat(api): list classroom enrollments by status (incl. inactive)`
+
+#### 6.B — Backend: AcademyMember class_level grouping refactor
+
+**Problem:** AcademyMemberController groupings use `students.class_level` directly → ไม่สะท้อน active classroom ปีปัจจุบัน
+
+**Fix:** เปลี่ยน primary query → join active classroom_students; fallback legacy
+
+```php
+// AcademyMemberController.php:215-230 area
+$currentYearId = AcademicYear::where('academy_id', $academyId)
+    ->where('is_current', true)
+    ->value('id');
+
+if ($currentYearId) {
+    $items = DB::table('students AS s')
+        ->join('classroom_students AS cs', function ($j) use ($currentYearId) {
+            $j->on('cs.student_id', '=', 's.id')
+              ->where('cs.status', 'active')
+              ->where('cs.academic_year_id', $currentYearId);
+        })
+        ->join('classrooms AS c', 'c.id', '=', 'cs.classroom_id')
+        ->where('s.academy_id', $academyId)
+        ->select('c.grade_level AS class_level', 'c.section AS class_section', DB::raw('COUNT(*) AS student_count'))
+        ->groupBy('c.grade_level', 'c.section')
+        ->orderBy('c.grade_level')
+        ->orderBy('c.section')
+        ->get();
+} else {
+    // legacy fallback — already exists
+}
+```
+
+**Tests** (extend existing AcademyMemberController test):
+- T1: when current year exists → grouping ใช้ active classroom_students
+- T2: when no current year → fallback to legacy
+- T3: count matches actual active enrollments
+
+**Commit:** `fix(member): scope class_level grouping to active enrollments`
+
+#### 6.C — Backend: SchoolAttendance scope active
+
+**Problem:** queries on `classroom_students` ไม่ filter `status`
+
+**Fix:** ทุก call ที่ query classroom_students ต้องมี `->where('status', 'active')`
+
+```php
+// SchoolAttendanceController.php:534, 563
+->where('classroom_students.status', 'active')
+```
+
+**Tests:**
+- T1: นักเรียนที่ transferred → ไม่ปรากฏใน attendance roster
+- T2: นักเรียน active → ปรากฏปกติ
+
+**Commit:** `fix(attendance): scope rosters to active classroom enrollments`
+
+#### 6.D — Frontend: inactive students tab
+
+ขยาย `[id].vue` ของ classroom detail page:
+
+```vue
+<!-- Add tab nav at top of students section -->
+<div class="border-b border-zinc-200 dark:border-zinc-700">
+  <nav class="flex gap-4 -mb-px">
+    <button @click="activeTab = 'active'"
+      :class="['px-4 py-2 text-sm border-b-2 transition',
+        activeTab === 'active' ? 'border-indigo-500 text-indigo-600 font-medium' : 'border-transparent text-zinc-500']">
+      กำลังศึกษา ({{ activeStudents.length }})
+    </button>
+    <button @click="activeTab = 'left'"
+      :class="['px-4 py-2 text-sm border-b-2 transition',
+        activeTab === 'left' ? 'border-indigo-500 text-indigo-600 font-medium' : 'border-transparent text-zinc-500']">
+      ออกจากห้อง ({{ leftStudents.length }})
+    </button>
+  </nav>
+</div>
+
+<!-- Conditional table render -->
+<div v-if="activeTab === 'active'"> <!-- existing table --> </div>
+<div v-else> <!-- left students table (read-only, no actions, no edit student_number) --> </div>
+```
+
+**Script additions:**
+```ts
+const activeTab = ref<'active' | 'left'>('active')
+const leftStudents = ref<ClassroomStudentDTO[]>([])
+
+async function fetchLeftStudents() {
+  const res: any = await api.get(
+    `/api/academies/${academyId.value}/classrooms/${classroomId.value}/enrollments`,
+    { query: { 'status[]': ['transferred', 'promoted', 'graduated', 'dropped', 'repeating', 'superseded'] } }
+  )
+  leftStudents.value = res?.data ?? []
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'left' && leftStudents.value.length === 0) fetchLeftStudents()
+})
+```
+
+**Left students table:**
+- คอลัมน์: รหัส | ชื่อ-นามสกุล | สถานะ (badge) | วันออก | เหตุผล | ประวัติ (drawer)
+- ไม่มี action menu (read-only)
+- คลิก row → เปิด history drawer
+
+**Tests:** ไม่มี FE test infra; manual smoke
+
+**Commit:** `feat(ui): add inactive students tab in classroom detail (Phase 4.C defer)`
+
+#### 6.E — Docs + worklog
+
+- อัพเดท `.agents/worklog.md` เพิ่ม entry "Phase 6 Reports sync"
+- อัพเดท `.agents/latest-analysis.md` ปิด Phase 6 deferred items
+- บันทึก memory ถ้ามีจุดสำคัญ — ตัวอย่าง: "class_level เป็น snapshot, source of truth = classroom_students active row"
+
+**Commit:** `docs(rollover): close Phase 6 reports sync + downstream notes`
+
+### 5. Verification
+
+ทุก backend commit:
+1. `./vendor/bin/pint`
+2. `./vendor/bin/phpunit tests/Feature/Api/Academy/ClassroomEnrollmentListTest.php` (6.A)
+3. Regression: ทุก existing enrollment test ผ่าน
+
+หลัง 6.D:
+1. `npx vue-tsc --noEmit | grep -E 'classrooms/\[id\]'` clean
+2. SSR check: `npm run dev` ไม่ crash
+3. Manual: เปิด tab "ออกจากห้อง" → list ปรากฏ + คลิก row → drawer
+
+End-to-end smoke (หลัง 6.A-D):
+1. Wizard rollover → graduate 1 test student
+2. กลับมาหน้า classroom เดิม
+3. tab "กำลังศึกษา" → student หายไป
+4. tab "ออกจากห้อง" → student ปรากฏพร้อม badge "จบการศึกษา" + วันออก
+5. คลิก row → drawer แสดง history (active → graduated)
+
+### 6. Edge cases
+
+| # | Case | จัดการ |
+|---|---|---|
+| E1 | inactive list ยาว 500+ rows | order by left_at desc + limit 200 (pagination เพิ่มทีหลัง) |
+| E2 | นักเรียนถูก undo rollover → ย้ายจาก tab "ออกจากห้อง" กลับ "กำลังศึกษา" | refresh ทั้ง 2 tab หลัง action |
+| E3 | AcademyMember grouping `is_current=null` (academy ไม่มี current year) | fallback legacy ที่มีอยู่ |
+| E4 | SchoolAttendance: นักเรียนที่ graduate กลางเทอม | attendance หลังวัน left_at ไม่ควรนับเขา → ใช้ `left_at IS NULL OR left_at > attendance_date` (เพิ่ม Phase ถัดไป ถ้าจำเป็น) |
+| E5 | Endpoint 6.A returns Resource ที่ Phase 3.B สร้างไว้ — relations ต้อง eager load | `with(['student', 'createdBy'])` |
+| E6 | Frontend tab switch ขณะ loading | disable tab buttons ระหว่าง fetch |
+
+### 7. Out of scope ของ Phase 6
+
+- ❌ Pagination ใน enrollment list endpoint (เพิ่มถ้า > 200 rows)
+- ❌ Attendance สำหรับ student ที่ left_at กลางเทอม (edge case ใหญ่)
+- ❌ Report filter UI ที่อื่น (member page) — เปลี่ยนเฉพาะ backend grouping
+- ❌ Rollover history page (Phase 7 หรือแยก)
+- ❌ Export inactive list to Excel
+- ❌ Bulk restore ของ left students
+
+### 8. Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| AcademyMember refactor ผิด → group count ต่างจากที่ผู้ใช้คุ้นเคย | กลาง | สูง | test เปรียบเทียบก่อน/หลังด้วย count(*); fallback legacy ถ้าไม่มี current year |
+| SchoolAttendance ตัด transferred students → roster หาย | กลาง | กลาง | test ก่อน + ถาม user ก่อน deploy production |
+| inactive list ยาวเกิน 200 | กลาง | กลาง | limit + ดูจริงก่อน paginate |
+| Frontend tab loading state crash | ต่ำ | ต่ำ | watch + try/catch ใน fetchLeftStudents |
+| ClassroomStudentResource ที่ Phase 3.B ส่งออกไม่ include `student` relation default | สูง | กลาง | controller eager load ก่อนส่งเข้า Resource |
+
+### 9. Definition of Done — Phase 6
+
+- [ ] 5 commits land
+- [ ] new endpoint `/classrooms/{classroom}/enrollments` ทำงาน
+- [ ] 6 tests ใหม่ (6.A T1-T6) + 3 tests แก้ไข (6.B) + 2 tests (6.C)
+- [ ] Regression 106 + ใหม่ = ~117 backend tests ผ่าน
+- [ ] inactive tab ทำงานบนหน้า classroom detail
+- [ ] SSR clean
+- [ ] commit message ระบุ Phase 6.{A-E}
+- [ ] Worklog อัพเดท
+
+### 10. Decisions ที่รอยืนยัน
+
+1. **Endpoint shape** สำหรับ inactive — `/classrooms/{classroom}/enrollments` พร้อม `?status[]=...` หรือ `/classrooms/{classroom}/inactive-students`?
+   - **Recommendation:** **flexible endpoint** `/enrollments?status[]=...` — รองรับ filter combinations
+
+2. **AcademyMember legacy fallback** — เก็บไว้กี่ sprint
+   - **Recommendation:** เก็บไว้ until Phase 9a backfill เสร็จ; รอบ Phase 10 ลบ
+
+3. **Attendance edge case (student left กลางเทอม)** — handle ตอนนี้หรือเลื่อน
+   - **Recommendation:** เลื่อน — case rare + edge งานใหญ่; เป็น P2 follow-up
+
+4. **Inactive tab pagination** — paginate เลยหรือ wait & see
+   - **Recommendation:** **limit 200 ก่อน**; paginate ถ้าผู้ใช้บ่น
+
+5. **Show legacy delete button ใน inactive tab?**
+   - **Recommendation:** **ไม่แสดง** — inactive = read-only (history)
+
+### 11. 2026-06-21 Implementation update — Phase 6.A in progress
+
+- เริ่มลงมือ Phase 6.A ตาม recommendation ทั้ง 5 ข้อแล้ว
+- Implementation ที่ทำจริงรอบนี้:
+  - เพิ่ม endpoint `GET /api/academies/{academy}/classrooms/{classroom}/enrollments`
+  - default filter = `status[]=active`
+  - รองรับ `status[]` หลายค่า และ `academic_year_id`
+  - validate `status.*` ด้วย `ClassroomStudent::$statuses`
+  - validate `academic_year_id` ให้ belong กับ academy เดียวกัน
+  - eager load `student`, `classroom`, `createdBy` ให้ตรง `ClassroomStudentResource`
+- Test plan รอบนี้ขยายจาก draft เดิมเล็กน้อย:
+  - คง 6 เคสหลักเดิม (auth, default active, single status, multi status, cross-academy 404, resource shape)
+  - เพิ่ม 1 เคส `academic_year_id` filter เพื่อ lock contract ตั้งแต่ Phase 6.A
+
+### 12. 2026-06-21 Implementation update — Phase 6.B completed
+
+- `AcademyMemberController::getFilterOptions()` now prefers active `classroom_students` rows in the academy's current academic year
+- Current-year branch derives `class_levels`, `class_sections`, and `classrooms` from active enrollments instead of `students.class_level`
+- Legacy fallback remains intact when the academy has no `is_current=true` academic year or no active enrollment rows in that year
+- Added regression test file `tests/Feature/Api/Academy/AcademyMemberFilterOptionsTest.php`
+  - case 1: current-year active enrollment overrides stale `students.class_level/class_section`
+  - case 2: no current year still falls back to legacy snapshot behavior
+
+### 13. 2026-06-21 Implementation update — Phase 6.C verified
+
+- `SchoolAttendanceController` already had `where('status', ClassroomStudent::STATUS_ACTIVE)` in both classroom-info helper queries at audit time of implementation
+- No controller logic change was needed in this pass; Phase 6.C landed as regression coverage
+- Added `tests/Feature/Api/Academy/SchoolAttendanceRosterScopeTest.php`
+  - case 1: active enrollment enriches `student_number` and `classroom_name`
+  - case 2: transferred enrollment does not leak stale classroom info into the attendance roster
+
+### 14. 2026-06-21 Implementation update — Phase 6.D completed
+
+- Updated `ui/pages/academies/[name]/admin/gradebook/classrooms/[id].vue` to load classroom enrollments from the new backend endpoint instead of relying on the embedded classroom payload
+- Added an inactive tab (`ออกจากห้อง`) that lazily fetches non-active statuses (`transferred`, `promoted`, `graduated`, `dropped`, `repeating`, `superseded`) and keeps the first 200 rows client-side for now
+- Reused the existing enrollment history drawer so clicking student rows or the history button opens the same timeline view for active and inactive records
+- Kept the inactive tab read-only by hiding add/action/delete controls there, while leaving the active tab behavior unchanged
+- Polished the tab-aware UX:
+  - header summary count now follows the selected tab
+  - search placeholder changes by tab
+  - empty state copy explains inactive-history behavior
+- Verification:
+  - `ui`: `node -e "const fs=require('fs'); const { parse }=require('./node_modules/@vue/compiler-sfc'); ..."` → `SFC parse ok`
+  - `ui`: `cmd /c npx vue-tsc --noEmit --pretty false` is still blocked by an existing workspace dependency issue: `vue-router/volar/sfc-route-blocks` export resolution failure
+
+### 15. 2026-06-21 Close-out update — Phase 6.E completed
+
+- Updated `.agents/latest-analysis.md` and `.agents/worklog.md` to capture the final Phase 6 implementation state, verification, and remaining workspace limitations
+- Re-ran focused backend verification after the frontend/documentation close-out:
+  - `vendor\bin\pint app/Http/Controllers/Api/Learn/Academy/ClassroomController.php app/Http/Controllers/Api/Learn/Academy/AcademyMemberController.php tests/Feature/Api/Academy/ClassroomEnrollmentListTest.php tests/Feature/Api/Academy/AcademyMemberFilterOptionsTest.php tests/Feature/Api/Academy/SchoolAttendanceRosterScopeTest.php`
+  - `php artisan test tests/Feature/Api/Academy/ClassroomEnrollmentListTest.php tests/Feature/Api/Academy/AcademyMemberFilterOptionsTest.php tests/Feature/Api/Academy/SchoolAttendanceRosterScopeTest.php`
+  - Result: `11 passed (41 assertions)`
+- Phase 6 is complete at implementation level for 6.A through 6.E
+- Known non-code limitation at close-out:
+  - frontend typecheck remains blocked by the existing `vue-router/volar/sfc-route-blocks` export-resolution issue in this workspace
+  - manual browser smoke / SSR live check was not run in this pass
