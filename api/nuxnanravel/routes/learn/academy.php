@@ -33,9 +33,11 @@ use App\Http\Controllers\Api\Learn\Academy\ParentDashboardController;
 use App\Http\Controllers\Api\Learn\Academy\PaymentController;
 use App\Http\Controllers\Api\Learn\Academy\PayrollController;
 use App\Http\Controllers\Api\Learn\Academy\ReportController;
+use App\Http\Controllers\Api\Learn\Academy\RolloverController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolEventController;
 use App\Http\Controllers\Api\Learn\Academy\StaffAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\StaffController;
+use App\Http\Controllers\Api\Learn\Academy\StudentLifecycleController;
 use App\Http\Controllers\Api\Learn\Academy\TuitionFeeController;
 use Illuminate\Support\Facades\Route;
 
@@ -346,6 +348,35 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::post('{academy}/classrooms/transfer-student', [ClassroomController::class, 'transferStudent'])->name('api.academy.classrooms.transferStudent');
     Route::post('{academy}/classrooms/promote', [ClassroomController::class, 'promoteClassroom'])->name('api.academy.classrooms.promote');
     Route::get('{academy}/students/{student}/enrollment-history', [ClassroomController::class, 'getStudentEnrollmentHistory'])->name('api.academy.students.enrollmentHistory');
+
+    Route::scopeBindings()->group(function () {
+        Route::post('{academy}/students/{student}/graduate', [StudentLifecycleController::class, 'graduate'])
+            ->name('api.academy.students.graduate');
+        Route::post('{academy}/students/{student}/drop', [StudentLifecycleController::class, 'drop'])
+            ->name('api.academy.students.drop');
+        Route::post('{academy}/students/{student}/repeat', [StudentLifecycleController::class, 'repeat'])
+            ->name('api.academy.students.repeat');
+        Route::post('{academy}/students/{student}/promote', [StudentLifecycleController::class, 'promote'])
+            ->name('api.academy.students.promote');
+        Route::post('{academy}/students/{student}/transfer', [StudentLifecycleController::class, 'transfer'])
+            ->name('api.academy.students.transfer');
+        Route::get('{academy}/students/{student}/enrollment-history-v2', [StudentLifecycleController::class, 'history'])
+            ->name('api.academy.students.enrollmentHistoryV2');
+    });
+
+    // === Phase 3.D/E: Rollover wizard ===
+    Route::prefix('{academy}/rollover')->name('api.academy.rollover.')->group(function () {
+        Route::post('preview', [RolloverController::class, 'preview'])->name('preview');
+        Route::post('plan', [RolloverController::class, 'plan'])->name('plan');
+        Route::post('commit', [RolloverController::class, 'commit'])->name('commit');
+        Route::get('batches', [RolloverController::class, 'index'])->name('index');
+
+        Route::scopeBindings()->group(function () {
+            Route::get('batches/{batch}', [RolloverController::class, 'show'])->name('show');
+            Route::post('batches/{batch}/undo', [RolloverController::class, 'undo'])->name('undo');
+            Route::post('batches/{batch}/close-undo', [RolloverController::class, 'closeUndo'])->name('closeUndo');
+        });
+    });
 
     // Invitation accept/decline (token-based, not classroom-scoped)
     Route::post('classrooms/invitations/{token}/accept', [ClassroomInvitationController::class, 'accept'])->name('api.academy.classrooms.invitations.accept');

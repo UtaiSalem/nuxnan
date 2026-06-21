@@ -2,26 +2,19 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Course;
-use App\Models\AcademyPost;
-use App\Models\AcademyAdmin;
-use App\Models\AcademyMember;
-use App\Models\Student;
 // use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use App\Models\AcademySetting;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Traits\Auditable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Cache;
 
 class Academy extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
     // use HasUlids;
 
     protected static function boot()
@@ -42,7 +35,7 @@ class Academy extends Model
             return $this->academySetting()->first();
         });
     }
-    
+
     /**
      * Mass-assignable attributes.
      *
@@ -77,8 +70,6 @@ class Academy extends Model
 
     /**
      * Get the academySetting associated with the Academy
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
     public function academySetting(): HasOne
     {
@@ -87,11 +78,15 @@ class Academy extends Model
 
     public function isAdmin($user)
     {
-        if (!$user) return false;
-        
-        if ($user->isSuperAdmin()) return true;
+        if (! $user) {
+            return false;
+        }
 
-        return $this->user_id === $user->id || 
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $this->user_id === $user->id ||
                $this->owner_id === $user->id ||
                $this->academyAdmins()->where('user_id', $user->id)->exists();
     }
@@ -150,18 +145,15 @@ class Academy extends Model
     public function member_status($id)
     {
         // Check if user is authenticated
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return null;
         }
-        
+
         return auth()->user()->memberAcademies()->where('academy_id', $id)->pluck('status')->first();
     }
 
-  
     /**
      * Get all of the academyPost for the Academy
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function posts(): HasMany
     {
@@ -172,7 +164,7 @@ class Academy extends Model
     {
         $path = $this->cover;
 
-        if (!$path) {
+        if (! $path) {
             return null;
         }
 
@@ -182,7 +174,7 @@ class Academy extends Model
 
         // Clean up path
         $cleanPath = preg_replace('#^/?(storage/)?#', '', $path);
-        
+
         // If it was just a filename (old behavior), prepend the old directory structure?
         // Old structure was 'storage/images/academies/covers/'.
         // If it's a new upload, where does it go?
@@ -190,34 +182,44 @@ class Academy extends Model
         // But wait, the old accessor did: asset('storage/images/academies/covers/' . $this->cover);
         // This implies $this->cover is JUST THE FILENAME.
         // So we should construct the full path correctly.
-        
+
         // Check if $cleanPath already looks like a full path (e.g. contains '/')
         if (strpos($cleanPath, '/') !== false) {
-             return url('storage/' . $cleanPath);
+            return url('storage/'.$cleanPath);
         }
-        
+
         // Otherwise assume it's just a filename in the legacy folder
-        return url('storage/images/academies/covers/' . $cleanPath);
+        return url('storage/images/academies/covers/'.$cleanPath);
     }
 
     public function getLogoUrlAttribute()
     {
         $path = $this->logo;
 
-        if (!$path) {
+        if (! $path) {
             return null;
         }
 
         if (filter_var($path, FILTER_VALIDATE_URL)) {
             return $path;
         }
-        
+
         $cleanPath = preg_replace('#^/?(storage/)?#', '', $path);
 
         if (strpos($cleanPath, '/') !== false) {
-             return url('storage/' . $cleanPath);
+            return url('storage/'.$cleanPath);
         }
 
-        return url('storage/images/academies/logos/' . $cleanPath);
+        return url('storage/images/academies/logos/'.$cleanPath);
+    }
+
+    public function rolloverBatches(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\RolloverBatch::class);
+    }
+
+    public function batches(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\RolloverBatch::class);
     }
 }

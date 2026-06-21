@@ -35,6 +35,18 @@ final class RolloverPlan implements Arrayable, JsonSerializable
         ];
     }
 
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            academyId: (int) $data['academy_id'],
+            fromYearId: (int) $data['from_academic_year_id'],
+            toYearId: (int) $data['to_academic_year_id'],
+            entries: $data['entries'] ?? [],
+            summary: $data['summary'] ?? [],
+            warnings: $data['warnings'] ?? [],
+        );
+    }
+
     public function jsonSerialize(): mixed
     {
         return $this->toArray();
