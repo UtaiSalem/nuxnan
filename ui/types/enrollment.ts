@@ -38,6 +38,16 @@ export interface EnrollmentClassroomSummaryDTO {
   section: string | null
 }
 
+/**
+ * Classroom option shown in lifecycle modal dropdowns. Adds academic-year
+ * context so promote/transfer/repeat selects can group by year and display
+ * a "ปี YYYY" bracket per the Phase 4.B plan.
+ */
+export interface ClassroomOptionDTO extends EnrollmentClassroomSummaryDTO {
+  academic_year_id: number | null
+  academic_year_name: string | null
+}
+
 export interface EnrollmentCreatedByDTO {
   id: number | null
   name: string | null
