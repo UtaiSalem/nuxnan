@@ -6487,6 +6487,25 @@ End-to-end smoke (หลัง 6.A-D):
 
 ## 2026-06-21 Phase 7 (verified) + Phase 8 — Audit & History UI (Detailed Plan)
 
+### 2026-06-21 Implementation update - Phase 8.1 Apply Auditable + Tests
+
+- Status: implemented and verified.
+- Backend changes:
+  - Added `use Auditable` trait to `ClassroomStudent` and `RolloverBatch` models.
+  - Overrode `getAuditModule()` in both models to return `'enrollment'`.
+  - Overrode `getAuditHiddenAttributes()` in `RolloverBatch` to exclude/redact the large `plan_summary` attribute.
+  - Updated `AuditLogService` to support model-specific hidden fields via `getAuditHiddenAttributes()`.
+  - Updated `AuditLogService::detectModule()` to respect `getAuditModule()` if defined on the model.
+- Verification:
+  - Created a new feature test `tests/Feature/EnrollmentAuditTest.php` containing 4 cases:
+    - `test_classroom_student_creation_audits_correctly`
+    - `test_classroom_student_graduation_audits_correctly`
+    - `test_classroom_student_transfer_audits_correctly`
+    - `test_rollover_batch_creation_and_update_audits_correctly`
+  - Ran `php artisan test tests/Feature/EnrollmentAuditTest.php` -> `4 passed (21 assertions)`
+  - Ran regression tests: `EnrollmentNotificationListenerTest`, `StudentEnrollmentServiceTest`, `AcademicYearRolloverServiceTest` -> `31 passed (111 assertions)`
+  - Ran Pint formatter on modified files.
+
 ### 0. Phase 7 status — DONE (verified, uncommitted)
 
 ตรวจ working tree พบ Phase 7 ทำเสร็จครบและ verified:
@@ -6743,3 +6762,49 @@ async function load() {
 
 4. **plan_summary ใน audit** — exclude หรือ keep
    - **Recommendation:** **exclude** (มี before-snapshot = PII + ใหญ่)
+## 2026-06-21 Phase 8.2 - Enrollment History UI enrichment
+
+- Scope implemented:
+  - Enriched `ClassroomStudentResource` with loaded `academic_year` shape `{ id, name }`.
+  - Updated `StudentLifecycleController` history/success responses to eager-load `academicYear` alongside `classroom`, `createdBy`, `student`.
+  - Extended `ui/types/enrollment.ts` with `EnrollmentAcademicYearDTO` and optional `academic_year` on `ClassroomStudentDTO`.
+  - Rebuilt `ui/components/academy/enrollment/EnrollmentHistoryDrawer.vue` into a richer timeline card UI showing:
+    - summary header
+    - current classroom/current academic year
+    - per-entry status badge
+    - date range
+    - classroom/year block
+    - actor via `created_by`
+    - leave reason when present
+- Intentional decision:
+  - Did not create a new student master profile page because the repo still uses the classroom detail drawer as the real entry point for enrollment history.
+  - Kept `useStudentEnrollmentActions` endpoint contract unchanged; only expanded response shape.
+- Verification:
+  - `api/nuxnanravel`: `vendor\bin\pint app\Http\Controllers\Api\Learn\Academy\StudentLifecycleController.php app\Http\Resources\Learn\Academy\Enrollment\ClassroomStudentResource.php tests\Feature\Academy\Enrollment\ResourceShapeTest.php tests\Feature\Api\Academy\StudentLifecycleControllerTest.php`
+  - `api/nuxnanravel`: `php artisan test tests/Feature/Academy/Enrollment/ResourceShapeTest.php tests/Feature/Api/Academy/StudentLifecycleControllerTest.php`
+    - Result: `22 passed (70 assertions)`
+  - `ui`: targeted parse check with `@vue/compiler-sfc` on `components/academy/enrollment/EnrollmentHistoryDrawer.vue` plus DTO presence check in `types/enrollment.ts`
+    - Result: `frontend enrollment history files parse ok`
+
+## 2026-06-21 Phase 9 planning note - Backfill & Data Repair
+
+- Request type: plan-only. No implementation performed in this pass.
+- Planning focus:
+  - Phase 9.1 `enrollment:repair-dirty-data` should repair three invariant classes before any further hardening:
+    - duplicate active `classroom_students` rows per student/year -> keep latest row, mark older rows `superseded`
+    - `students.class_level` / `class_section` drift from active enrollment snapshot -> re-sync from pivot source of truth
+    - duplicate `student_academic_info.is_current=true` rows -> keep latest academic year row as current
+  - Phase 9.2 `enrollment:backfill-academic-info` should create missing `student_academic_info` rows from active `classroom_students` + linked `academic_years`/`classrooms`, not from legacy student snapshot fields unless fallback is unavoidable
+- Relevant code confirmed during planning:
+  - `app/Services/StudentEnrollmentService.php`
+  - `app/Services/AcademicYearRolloverService.php`
+  - `app/Models/ClassroomStudent.php`
+  - `app/Models/StudentAcademicInfo.php`
+  - `app/Console/Commands/StudentsBackfillCardLink.php` as existing artisan backfill pattern
+- Key decisions for implementation:
+  - use dry-run by default in validation workflow and emit a machine-readable summary plus a human repair report
+  - chunk large scans (`chunkById`) instead of loading whole tables
+  - keep Phase 9 scoped to data repair/backfill only; do not silently change service semantics in the same command PR
+- Verification plan when implementing:
+  - add focused feature tests for each repair rule and for missing-academic-info backfill creation
+  - run targeted enrollment test suites plus dry-run and real-run checks on production-like data snapshot

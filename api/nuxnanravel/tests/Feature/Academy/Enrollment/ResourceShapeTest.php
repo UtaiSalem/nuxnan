@@ -136,13 +136,14 @@ class ResourceShapeTest extends TestCase
     public function test_classroom_student_resource_contains_core_shape_and_status_text(): void
     {
         $resource = new ClassroomStudentResource(
-            $this->enrollment->load(['createdBy', 'classroom', 'student'])
+            $this->enrollment->load(['academicYear', 'createdBy', 'classroom', 'student'])
         );
 
         $data = $resource->resolve($this->makeRequestFor($this->owner));
 
         $this->assertSame(ClassroomStudent::STATUS_ACTIVE, $data['status']);
         $this->assertSame('กำลังศึกษา', $data['status_text']);
+        $this->assertSame('2568', $data['academic_year']['name']);
         $this->assertSame('ม.1/1', $data['classroom']['display_name']);
         $this->assertSame('สายไหม', $data['student']['first_name_th']);
     }
@@ -152,6 +153,7 @@ class ResourceShapeTest extends TestCase
         $data = (new ClassroomStudentResource($this->enrollment))
             ->resolve($this->makeRequestFor($this->owner));
 
+        $this->assertArrayNotHasKey('academic_year', $data);
         $this->assertArrayNotHasKey('classroom', $data);
         $this->assertArrayNotHasKey('student', $data);
         $this->assertArrayNotHasKey('created_by', $data);

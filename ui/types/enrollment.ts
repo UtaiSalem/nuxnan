@@ -53,6 +53,11 @@ export interface EnrollmentCreatedByDTO {
   name: string | null
 }
 
+export interface EnrollmentAcademicYearDTO {
+  id: number | null
+  name: string | null
+}
+
 export interface StudentSummaryDTO {
   id: number
   student_id: string
@@ -71,6 +76,7 @@ export interface ClassroomStudentDTO {
   classroom_id: number
   academy_id: number
   academic_year_id: number | null
+  academic_year?: EnrollmentAcademicYearDTO
   student_number: number | null
   status: EnrollmentStatus | string
   status_text: string | null

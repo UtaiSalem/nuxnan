@@ -147,7 +147,7 @@ class StudentLifecycleController extends Controller
 
         $history = $this->enrollmentService
             ->getStudentHistory($student)
-            ->load(['classroom', 'createdBy', 'student']);
+            ->load(['academicYear', 'classroom', 'createdBy', 'student']);
 
         return response()->json([
             'success' => true,
@@ -166,10 +166,10 @@ class StudentLifecycleController extends Controller
         return response()->json([
             'success' => true,
             'closed_enrollment' => $closedEnrollment
-                ? (new ClassroomStudentResource($closedEnrollment->loadMissing(['classroom', 'createdBy', 'student'])))->resolve($request)
+                ? (new ClassroomStudentResource($closedEnrollment->loadMissing(['academicYear', 'classroom', 'createdBy', 'student'])))->resolve($request)
                 : null,
             'new_enrollment' => $newEnrollment
-                ? (new ClassroomStudentResource($newEnrollment->loadMissing(['classroom', 'createdBy', 'student'])))->resolve($request)
+                ? (new ClassroomStudentResource($newEnrollment->loadMissing(['academicYear', 'classroom', 'createdBy', 'student'])))->resolve($request)
                 : null,
             'student' => (new StudentSummaryResource($student))->resolve($request),
         ]);

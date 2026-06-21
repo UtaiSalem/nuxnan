@@ -21,15 +21,15 @@ class AuditLogService
         ?array $metadata = null
     ): AuditLog {
         $request = Request::instance();
-        
+
         return AuditLog::create([
             'user_id' => Auth::id(),
             'action' => $action,
             'entity_type' => $entity ? get_class($entity) : null,
             'entity_id' => $entity?->id,
             'module' => $module ?? $this->detectModule($entity),
-            'old_values' => $oldValues ? $this->sanitizeValues($oldValues) : null,
-            'new_values' => $newValues ? $this->sanitizeValues($newValues) : null,
+            'old_values' => $oldValues ? $this->sanitizeValues($oldValues, $entity) : null,
+            'new_values' => $newValues ? $this->sanitizeValues($newValues, $entity) : null,
             'metadata' => $metadata,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
@@ -105,7 +105,7 @@ class AuditLogService
     public function logLogin(?int $userId = null, bool $success = true, ?array $metadata = null): AuditLog
     {
         $request = Request::instance();
-        
+
         return AuditLog::create([
             'user_id' => $userId ?? Auth::id(),
             'action' => $success ? AuditLog::ACTION_LOGIN : AuditLog::ACTION_LOGIN_FAILED,
@@ -125,7 +125,7 @@ class AuditLogService
     public function logLogout(?int $userId = null, ?array $metadata = null): AuditLog
     {
         $request = Request::instance();
-        
+
         return AuditLog::create([
             'user_id' => $userId ?? Auth::id(),
             'action' => AuditLog::ACTION_LOGOUT,
@@ -207,8 +207,12 @@ class AuditLogService
      */
     protected function detectModule(?Model $entity): ?string
     {
-        if (!$entity) {
+        if (! $entity) {
             return null;
+        }
+
+        if (method_exists($entity, 'getAuditModule') && ($module = $entity->getAuditModule())) {
+            return $module;
         }
 
         $className = class_basename($entity);
@@ -218,7 +222,7 @@ class AuditLogService
             'User' => 'users',
             'Role' => 'users',
             'Permission' => 'users',
-            
+
             // Academy & Learning
             'Academy' => 'academies',
             'AcademyMember' => 'academies',
@@ -228,43 +232,43 @@ class AuditLogService
             'Topic' => 'lessons',
             'Assignment' => 'assignments',
             'Quiz' => 'quizzes',
-            
+
             // Students
             'Student' => 'students',
             'StudentGuardian' => 'students',
             'StudentHealthInfo' => 'students',
             'StudentHomeVisit' => 'students',
-            
+
             // Staff
             'StaffProfile' => 'staff',
             'StaffAttendance' => 'staff',
             'LeaveRequest' => 'staff',
-            
+
             // Finance
             'TuitionFee' => 'finance',
             'Payment' => 'finance',
             'Expense' => 'finance',
             'Scholarship' => 'finance',
-            
+
             // Gamification
             'PointsTransaction' => 'points',
             'WalletTransaction' => 'wallet',
             'Achievement' => 'achievements',
             'Reward' => 'rewards',
-            
+
             // Communication
             'Post' => 'posts',
             'Message' => 'messages',
             'Notification' => 'notifications',
         ];
 
-        return $moduleMap[$className] ?? strtolower($className . 's');
+        return $moduleMap[$className] ?? strtolower($className.'s');
     }
 
     /**
      * Sanitize values to remove sensitive data.
      */
-    protected function sanitizeValues(array $values): array
+    protected function sanitizeValues(array $values, ?Model $entity = null): array
     {
         $sensitiveFields = [
             'password',
@@ -278,6 +282,10 @@ class AuditLogService
             'cvv',
             'pin',
         ];
+
+        if ($entity && method_exists($entity, 'getAuditHiddenAttributes')) {
+            $sensitiveFields = array_merge($sensitiveFields, $entity->getAuditHiddenAttributes());
+        }
 
         foreach ($sensitiveFields as $field) {
             if (isset($values[$field])) {

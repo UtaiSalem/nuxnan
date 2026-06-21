@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RolloverBatch extends Model
 {
+    use Auditable;
+
     protected $table = 'rollover_batches';
 
     protected $keyType = 'string';
@@ -74,5 +77,23 @@ class RolloverBatch extends Model
     public function classroomStudents(): HasMany
     {
         return $this->hasMany(ClassroomStudent::class, 'rollover_batch_id');
+    }
+
+    /**
+     * Get the audit module name for this model.
+     */
+    public function getAuditModule(): ?string
+    {
+        return 'enrollment';
+    }
+
+    /**
+     * Get attributes that should be hidden from audit logs.
+     */
+    public function getAuditHiddenAttributes(): array
+    {
+        return [
+            'plan_summary',
+        ];
     }
 }

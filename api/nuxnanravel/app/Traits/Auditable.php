@@ -7,9 +7,9 @@ use App\Services\AuditLogService;
 
 /**
  * Trait Auditable
- * 
+ *
  * Add this trait to any model that should be automatically audited.
- * 
+ *
  * Usage:
  * class User extends Model
  * {
@@ -35,11 +35,11 @@ trait Auditable
             if (static::shouldAudit('updated')) {
                 $oldValues = $model->getOriginal();
                 $changedAttributes = $model->getChanges();
-                
+
                 // Only log if there are actual changes (excluding timestamps)
                 $significantChanges = array_diff_key($changedAttributes, array_flip(['updated_at']));
-                
-                if (!empty($significantChanges)) {
+
+                if (! empty($significantChanges)) {
                     app(AuditLogService::class)->logUpdate($model, $oldValues);
                 }
             }
@@ -70,7 +70,7 @@ trait Auditable
 
         // Check if the specific action is excluded
         if (property_exists(static::class, 'auditExclude')) {
-            return !in_array($action, static::$auditExclude);
+            return ! in_array($action, static::$auditExclude);
         }
 
         // Check if only specific actions should be audited
@@ -123,7 +123,7 @@ trait Auditable
     public static function withoutAuditing(callable $callback)
     {
         static::disableAuditing();
-        
+
         try {
             return $callback();
         } finally {
@@ -134,7 +134,7 @@ trait Auditable
     /**
      * Get attributes that should be hidden from audit logs.
      */
-    protected function getAuditHiddenAttributes(): array
+    public function getAuditHiddenAttributes(): array
     {
         if (property_exists($this, 'auditHidden')) {
             return $this->auditHidden;

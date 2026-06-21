@@ -336,7 +336,8 @@ class StudentLifecycleControllerTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonCount(2, 'data');
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.academic_year.name', '2568');
 
         $classroomNames = collect($response->json('data'))
             ->pluck('classroom.display_name')

@@ -18,6 +18,10 @@ class ClassroomStudentResource extends JsonResource
             'classroom_id' => $this->classroom_id,
             'academy_id' => $this->academy_id,
             'academic_year_id' => $this->academic_year_id,
+            'academic_year' => $this->whenLoaded('academicYear', fn () => [
+                'id' => $this->academicYear?->id,
+                'name' => $this->academicYear?->name,
+            ]),
             'student_number' => $this->student_number,
             'status' => $this->status,
             'status_text' => $this->status_text,
