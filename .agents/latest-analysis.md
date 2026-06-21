@@ -1915,3 +1915,463 @@ Phase 0 -> Phase 9a (initial repair) -> Phase 1 (schema + unique)
    - ใช้ผลตัดสิน Phase 2.1/2.2 ว่า map ค่าไหน (เช่นมี `inactive` แต่ไม่มี `dropped` → ใช้ `inactive`)
 
 → **พร้อมเริ่ม Phase 0 ทันที** ไม่มี open question เหลือ
+
+---
+
+## 2026-06-21 Phase 2 — Service Layer Expansion (Detailed Plan)
+
+### 0. Inputs to lock before coding
+
+จาก Phase 0/1 ตรวจเสร็จแล้ว:
+
+| ข้อ | ค่าจริง | กระทบ Phase 2 อย่างไร |
+|---|---|---|
+| MySQL version | 8.4.7 | ใช้ `JSON_TABLE`, `WITH RECURSIVE`, functional index ได้ |
+| `students.status` enum | `'active','inactive','graduated','transferred'` | graduate → `'graduated'`; drop → `'inactive'` ไม่ต้องขยาย enum |
+| `classroom_students.status` | varchar(32) (Phase 1) | รับค่าใหม่ promoted/repeating/superseded ได้ทันที |
+| UNIQUE(classroom_id, student_id) | คงอยู่ | re-enroll ห้องเดิม = overwrite row (loses history) — ยอมรับใน Phase 2 |
+| Functional unique is_current=1 | applied | Service ต้อง flip is_current เก่าก่อนสร้างใหม่ใน transaction เดียว |
+| Callers ของ service | `ClassroomController` 3 จุด (line 428, 500, 553) | refactor ปลอดภัย ไม่กระทบ controller อื่น |
+| `enrolled_at` / `left_at` | `date` (ไม่ใช่ datetime) | ทุก method ส่ง `today()` ไม่ใช่ `now()` |
+| Format mismatch | `students.class_level="1"` vs `classrooms.grade_level="ม.1"` | helper `normalizeGradeLevel()` ตัด prefix ก่อน sync snapshot |
+| Pending intake 476 คน | ไม่มี active row + มี `class_level` | Rollover service ต้อง surface เป็น input source ที่สอง |
+
+### 1. หลักการ Phase 2
+
+1. **Service ใหม่ทุก state transition** — controller ห้ามแตะ `classroom_students` ตรง
+2. **One private helper `closeActiveEnrollment` ใช้ภายในทุก close path** — ไม่กระจาย logic
+3. **Transaction ทุก method** — ใช้ `DB::transaction()` แบบ nesting-safe (Laravel จัดการ savepoint)
+4. **Event fire ทุก transition** — listener ทำ Phase 7 (ยังไม่ใส่)
+5. **Idempotent rollover commit** — รัน plan เดิม 2 ครั้ง ต้องไม่ duplicate (UNIQUE protect แล้ว)
+6. **No silent overwrite of history** — `manageAcademicInfoSnapshot()` flip `is_current` เก่าก่อนสร้างใหม่
+7. **Test ทุก commit** — code + test ใน commit เดียว
+
+### 2. ออกแบบ API ของ `StudentEnrollmentService` (refactor + ขยาย)
+
+#### 2.1 Private helper ใหม่
+
+```php
+private function closeActiveEnrollment(
+    Student $student,
+    Classroom $classroom,
+    string $newStatus,             // STATUS_TRANSFERRED|PROMOTED|GRADUATED|DROPPED|REPEATING|SUPERSEDED
+    ?string $reason = null,
+    ?CarbonInterface $at = null,   // default today()
+    ?string $batchId = null,
+    ?int $userId = null
+): ?ClassroomStudent
+```
+- หา active row (`classroom_id`, `student_id`, `status='active'`)
+- ถ้าไม่มี → return null (caller ตัดสินใจว่า error หรือ skip)
+- update: `status`, `left_at` (date), `leave_reason`, `rollover_batch_id`, `created_by_user_id`
+- return updated row
+
+#### 2.2 Private helper `manageAcademicInfoSnapshot`
+
+```php
+private function manageAcademicInfoSnapshot(
+    Student $student,
+    Classroom $newActive,          // ห้องปัจจุบันที่กลายเป็น active
+    ?string $batchId = null
+): StudentAcademicInfo
+```
+- flip ทุก SAI row ของ `$student` ให้ `is_current = false`
+- หา SAI ของ year นี้ → ถ้ามี update, ไม่มี create
+- set fields: classroom_id, current_grade, current_class, classroom_full, academic_year, is_current=true, semester (จาก classroom)
+- ปลอดภัยกับ functional unique เพราะทำ flip → upsert ใน transaction เดียว
+
+#### 2.3 Private helper `normalizeGradeLevel`
+
+```php
+private function normalizeGradeLevel(?string $value): ?string
+{
+    if ($value === null) return null;
+    // "ม.1" -> "1", "1" -> "1", "ป.3" -> "3", "อ.2" -> "2"
+    return preg_replace('/^[^0-9]+/u', '', trim($value)) ?: null;
+}
+```
+- ใช้ใน `enrollStudent`/`promoteStudent` ตอน sync `students.class_level`
+
+#### 2.4 Refactor `enrollStudent`
+
+```php
+public function enrollStudent(
+    Student $student,
+    Classroom $classroom,
+    ?int $studentNumber = null,
+    ?string $batchId = null,
+    ?int $userId = null
+): ClassroomStudent
+```
+เปลี่ยน:
+- auto student_number เดิม
+- `updateOrCreate` เดิม + เพิ่ม `rollover_batch_id`, `created_by_user_id`
+- ใช้ `normalizeGradeLevel` ก่อน update `students.class_level`
+- เรียก `manageAcademicInfoSnapshot` แทน inline update
+- fire `StudentEnrolled($student, $enrollment)`
+
+#### 2.5 Refactor `transferStudent` — assert same year
+
+```php
+public function transferStudent(
+    Student $student,
+    Classroom $fromClassroom,
+    Classroom $toClassroom,
+    string $reason = 'ย้ายห้อง',
+    ?string $batchId = null,
+    ?int $userId = null
+): ClassroomStudent
+```
+- assert `$fromClassroom->academic_year_id === $toClassroom->academic_year_id`
+  - ถ้าไม่ใช่ → throw `InvalidArgumentException("Use promoteStudent() for cross-year transfers")`
+- `closeActiveEnrollment(..., STATUS_TRANSFERRED, $reason, today(), $batchId, $userId)`
+- `enrollStudent($student, $toClassroom, null, $batchId, $userId)`
+- fire `StudentTransferred(...)`
+
+#### 2.6 New `graduateStudent`
+
+```php
+public function graduateStudent(
+    Student $student,
+    ?Classroom $classroom = null,  // ถ้า null หา active เอง
+    string $reason = 'จบการศึกษา',
+    ?CarbonInterface $at = null,
+    ?string $batchId = null,
+    ?int $userId = null
+): ?ClassroomStudent
+```
+- หา active enrollment ถ้า `$classroom === null`
+- `closeActiveEnrollment(..., STATUS_GRADUATED, $reason, $at, $batchId, $userId)`
+- update `$student->status = 'graduated'`, clear `class_level`, `class_section`
+- update SAI row ของ year ที่จบ → set `graduation_date = $at`, `study_status = 'graduated'`, `is_current = false`
+- fire `StudentGraduated($student, $closed, $batchId)`
+
+#### 2.7 New `dropStudent`
+
+```php
+public function dropStudent(
+    Student $student,
+    ?Classroom $classroom = null,
+    string $reason,                // required (ลาออก/พ้นสภาพ/...)
+    ?CarbonInterface $at = null,
+    ?string $batchId = null,
+    ?int $userId = null
+): ?ClassroomStudent
+```
+- เหมือน graduate แต่ status = STATUS_DROPPED, students.status = 'inactive'
+- ไม่ set graduation_date
+
+#### 2.8 New `repeatStudent`
+
+```php
+public function repeatStudent(
+    Student $student,
+    Classroom $newClassroom,        // ห้องเป้าหมายของปีใหม่ (ระดับเดียวกัน)
+    ?int $studentNumber = null,
+    string $reason = 'ซ้ำชั้น',
+    ?string $batchId = null,
+    ?int $userId = null
+): ClassroomStudent
+```
+- assert `$newClassroom->grade_level === $currentActive->classroom->grade_level` (ระดับเดียวกัน)
+- assert `$newClassroom->id !== $currentActive->classroom_id` (กัน UNIQUE clash; ห้องเดิมห้ามใช้)
+- close active เดิมด้วย STATUS_REPEATING, leave_reason=$reason
+- `enrollStudent($student, $newClassroom, $studentNumber, $batchId, $userId)`
+- fire `StudentRepeated(...)`
+
+#### 2.9 New `promoteStudent`
+
+```php
+public function promoteStudent(
+    Student $student,
+    Classroom $fromClassroom,
+    Classroom $toClassroom,
+    string $reason = 'เลื่อนชั้น',
+    ?int $studentNumber = null,
+    ?string $batchId = null,
+    ?int $userId = null
+): ClassroomStudent
+```
+- assert `$from.academic_year_id !== $to.academic_year_id` (ข้ามปีเท่านั้น)
+- assert `$to.academic_year->start_date > $from.academic_year->start_date` (ปีใหม่ต้องมาทีหลัง)
+- close active เดิมใน fromClassroom = STATUS_PROMOTED
+- `enrollStudent($student, $toClassroom, $studentNumber, $batchId, $userId)` — สร้าง row ใหม่ในห้องใหม่ปีใหม่
+- `manageAcademicInfoSnapshot` สร้าง SAI ของปีใหม่
+- fire `StudentPromoted(...)`
+
+#### 2.10 Deprecate `promoteClassroom` (ของเดิม)
+
+- เก็บไว้เป็น thin wrapper: เรียก `promoteStudent` ในลูป ใส่ deprecation note
+- ในระยะยาวให้ `AcademicYearRolloverService` เป็นคนเรียก
+
+#### 2.11 Deprecate `unenrollStudent` (ของเดิม)
+
+- ปัจจุบันใช้ status `'transferred'` เป็น default และเขียน leave_reason ตามใจ
+- ให้คงไว้แต่ deprecation comment → caller (ClassroomController:428) ควรเรียก `dropStudent` หรือ `transferStudent` ที่ตรง semantic
+- ห้ามลบใน Phase 2 (กัน controller พัง)
+
+### 3. ออกแบบ `AcademicYearRolloverService` (ใหม่)
+
+#### 3.1 Value object `RolloverPlan`
+
+```php
+final class RolloverPlan implements Arrayable, JsonSerializable
+{
+    public function __construct(
+        public readonly int $academyId,
+        public readonly int $fromYearId,
+        public readonly int $toYearId,
+        /** @var array<int, array{
+         *   from_classroom_id: int,
+         *   to_classroom_id?: int,    // กรณี promote/repeat
+         *   action: 'promote'|'graduate'|'drop'|'repeat'|'new_intake'|'skip',
+         *   student_id: int,
+         *   reason?: string,
+         * }> */
+        public readonly array $entries,
+        public readonly array $summary,   // counts per action
+        public readonly array $warnings,  // human-readable strings
+    ) {}
+}
+```
+
+#### 3.2 `RolloverBatch` Eloquent model
+
+```php
+class RolloverBatch extends Model {
+    protected $table = 'rollover_batches';
+    protected $keyType = 'string';
+    public $incrementing = false;
+    protected $casts = [
+        'plan_summary' => 'array',
+        'totals' => 'array',
+        'committed_at' => 'datetime',
+        'undo_closed_at' => 'datetime',
+        'undone_at' => 'datetime',
+    ];
+    public function isUndoable(): bool {
+        return $this->status === 'committed'
+            && $this->undo_closed_at === null
+            && $this->committed_at?->addDay()->isFuture();
+    }
+}
+```
+- relations: academy, fromYear, toYear, committedBy, undoneBy, classroomStudents (hasMany by rollover_batch_id)
+
+#### 3.3 `previewRollover(Academy $academy, AcademicYear $from, AcademicYear $to): array`
+
+อ่านอย่างเดียว — สร้าง suggested mapping:
+- สำหรับนักเรียน active ในห้องของ $from:
+  - หา target classroom ใน $to ที่ `grade_level = nextGrade(currentGrade)` และ `section` เดียวกัน
+  - ถ้า nextGrade ไม่มี (ม.6 → ?) → action = `graduate`
+  - ถ้ามี target classroom → action = `promote`, to_classroom_id = ...
+  - ถ้า nextGrade มีระดับแต่ไม่มี section ตรง → action = `promote` ใส่ section แรก + warning
+- สำหรับ pending intake (`students.class_level != ''` AND no active enrollment AND `academy_id` = $academy):
+  - หา target classroom ใน $to ที่ `grade_level = students.class_level (normalized)` + `section = students.class_section`
+  - action = `new_intake`
+- คืน: `{ suggested_mapping, missing_targets[], totals: {promote, graduate, repeat, drop, new_intake}, warnings[] }`
+
+`nextGrade()` helper:
+```php
+private function nextGrade(string $grade): ?string {
+    // ม.1→ม.2, ม.3→ม.4, ม.6→null (graduate), ป.1→ป.2, ป.6→ม.1, อ.3→ป.1, etc.
+    // ขั้นแรกรองรับ ม. และ ป. ก่อน อ. อนุบาลค่อยขยาย
+}
+```
+
+#### 3.4 `planRollover(Academy, AcademicYear $from, $to, array $userMapping): RolloverPlan`
+
+- รับ userMapping จาก wizard (อาจปรับจาก preview)
+- ตรวจ:
+  - ทุก `to_classroom_id` อยู่ใน $to.year และ academy_id ตรง
+  - student_id ทุกตัวอยู่ใน academy
+  - student ไม่ซ้ำใน entries (1 คน 1 action)
+- สรุป summary/warnings
+- คืน RolloverPlan (ไม่เขียน DB)
+
+#### 3.5 `commitRollover(RolloverPlan, User $by): RolloverBatch`
+
+```
+DB::transaction(function () use ($plan, $by) {
+    $batchId = (string) Str::uuid();
+    $batch = RolloverBatch::create([
+        'id' => $batchId,
+        'academy_id' => $plan->academyId,
+        'from_academic_year_id' => $plan->fromYearId,
+        'to_academic_year_id' => $plan->toYearId,
+        'status' => 'committed',
+        'committed_at' => now(),
+        'committed_by_user_id' => $by->id,
+        'plan_summary' => $plan->summary,
+        'totals' => [],
+    ]);
+
+    $totals = ['promoted'=>0,'graduated'=>0,'dropped'=>0,'repeating'=>0,'new_intake'=>0,'skipped'=>0];
+    $beforeSnapshots = [];   // เก็บไว้ใช้ตอน undo
+
+    foreach ($plan->entries as $e) {
+        $student = Student::findOrFail($e['student_id']);
+        $beforeSnapshots[$e['student_id']] = $student->only(['status','class_level','class_section']);
+
+        match ($e['action']) {
+            'promote'    => $this->enroll->promoteStudent($student, $from, $to, $e['reason'] ?? 'เลื่อนชั้น', null, $batchId, $by->id),
+            'graduate'   => $this->enroll->graduateStudent($student, $from, $e['reason'] ?? 'จบการศึกษา', today(), $batchId, $by->id),
+            'drop'       => $this->enroll->dropStudent($student, $from, $e['reason'] ?? 'พ้นสภาพ', today(), $batchId, $by->id),
+            'repeat'     => $this->enroll->repeatStudent($student, $newClassroom, null, 'ซ้ำชั้น', $batchId, $by->id),
+            'new_intake' => $this->enroll->enrollStudent($student, $newClassroom, null, $batchId, $by->id),
+            'skip'       => null,
+        };
+        $totals[$e['action']]++;
+    }
+
+    $batch->update([
+        'totals' => $totals,
+        'plan_summary' => array_merge($plan->summary, ['before' => $beforeSnapshots]),
+    ]);
+    event(new RolloverCommitted($batch));
+    return $batch;
+});
+```
+
+#### 3.6 `undoRollover(string $batchId, User $by): RolloverBatch`
+
+- find batch, check `isUndoable()` → ถ้าไม่ → throw `RolloverNotUndoable`
+- `DB::transaction(function () use ($batch, $by) { ... })`
+- สำหรับ row ทุกตัวที่ `rollover_batch_id = $batchId`:
+  - ถ้า status เป็น active (newly created โดย commit) → delete
+  - ถ้า status เป็น closed (promoted/graduated/etc.) → กลับเป็น active, clear left_at/leave_reason/rollover_batch_id
+- restore `students.status/class_level/class_section` จาก `plan_summary.before`
+- ลบ SAI rows ที่สร้างใน commit (มี classroom_id ตรงกับ batch's new active rows)
+- set: `status='undone', undone_at=now(), undone_by_user_id=$by->id`
+- fire `RolloverUndone($batch)`
+
+#### 3.7 `closeUndoWindow(string $batchId, User $by): void`
+
+- update `undo_closed_at = now()`
+- ทำให้ `isUndoable() === false` ทันที
+
+### 4. Event classes (ไม่มี listener ใน Phase 2)
+
+ใน `app/Events/Enrollment/`:
+- `StudentEnrolled(Student $student, ClassroomStudent $enrollment, ?string $batchId)`
+- `StudentTransferred(Student, ClassroomStudent $closedFrom, ClassroomStudent $opened, ?string $batchId)`
+- `StudentPromoted(Student, ClassroomStudent $closedFrom, ClassroomStudent $opened, ?string $batchId)`
+- `StudentGraduated(Student, ?ClassroomStudent $closed, ?string $batchId)`
+- `StudentDropped(Student, ?ClassroomStudent $closed, string $reason, ?string $batchId)`
+- `StudentRepeated(Student, ClassroomStudent $closed, ClassroomStudent $opened, ?string $batchId)`
+- `RolloverCommitted(RolloverBatch $batch)`
+- `RolloverUndone(RolloverBatch $batch)`
+
+Plain PHP classes, ไม่มี broadcast/queue spec — เก็บไว้ Phase 7
+
+### 5. Tests
+
+#### 5.1 `StudentEnrollmentServiceTest` (เพิ่ม)
+
+| # | Test |
+|---|---|
+| T1 | `enrollStudent` fresh → row created + students.class_level normalized + SAI created with is_current=true |
+| T2 | `enrollStudent` ซ้ำห้องเดิม → row updated (overwrite), ไม่ duplicate |
+| T3 | `transferStudent` ในปีเดียวกัน → old row=transferred + new row=active + SAI flipped |
+| T4 | `transferStudent` ข้ามปี → throws InvalidArgumentException |
+| T5 | `graduateStudent` → students.status=graduated + class_level cleared + SAI.graduation_date set |
+| T6 | `dropStudent` → students.status=inactive + active row=dropped + reason saved |
+| T7 | `repeatStudent` ห้องใหม่ระดับเดียวกัน → close + new row + SAI สร้างใหม่ |
+| T8 | `repeatStudent` ห้องเดิม → throws (UNIQUE protection) |
+| T9 | `promoteStudent` → ห้องเก่า=promoted, ห้องใหม่=active, SAI year ใหม่ is_current |
+| T10 | `normalizeGradeLevel("ม.1")` === "1" |
+| T11 | `closeActiveEnrollment` ไม่มี active → return null (no throw) |
+| T12 | ทุก method fire event ถูกตัว (ใช้ `Event::fake()`) |
+
+#### 5.2 `AcademicYearRolloverServiceTest` (ใหม่)
+
+| # | Test |
+|---|---|
+| R1 | `previewRollover` ม.1/1 → suggest promote ไป ม.2/1 |
+| R2 | `previewRollover` ม.6/1 → suggest graduate |
+| R3 | `previewRollover` กับ pending intake → ปรากฏใน new_intake bucket |
+| R4 | `previewRollover` target year ไม่มีห้อง ม.2 → warnings ครบ |
+| R5 | `planRollover` student ซ้ำ 2 entries → throws ValidationException |
+| R6 | `commitRollover` 3 students (promote+graduate+drop) → totals ถูก + batch saved |
+| R7 | `commitRollover` ซ้ำ plan เดิม → idempotent (UNIQUE block) |
+| R8 | `undoRollover` ภายใน 24 ชม. → state กลับ + batch.status='undone' |
+| R9 | `undoRollover` เกิน 24 ชม. → throws RolloverNotUndoable |
+| R10 | `undoRollover` หลัง closeUndoWindow → throws |
+| R11 | `closeUndoWindow` → batch.undo_closed_at set |
+
+### 6. ลำดับ Commits ใน Phase 2 (9 commits)
+
+| # | Subject | ไฟล์หลัก | LOC โดยประมาณ |
+|---|---|---|---|
+| 2.A | refactor(enrollment): extract closeActiveEnrollment + normalizeGradeLevel + SAI snapshot helper | StudentEnrollmentService.php + tests | ~120 |
+| 2.B | feat(enrollment): add graduateStudent + dropStudent | StudentEnrollmentService.php + tests | ~80 |
+| 2.C | feat(enrollment): add repeatStudent | StudentEnrollmentService.php + tests | ~50 |
+| 2.D | feat(enrollment): add promoteStudent + tighten transferStudent assertion | StudentEnrollmentService.php + tests | ~70 |
+| 2.E | feat(events): add enrollment lifecycle events | app/Events/Enrollment/*.php | ~120 |
+| 2.F | feat(rollover): add RolloverBatch model + RolloverPlan value object | app/Models/RolloverBatch.php, app/Services/Rollover/RolloverPlan.php | ~140 |
+| 2.G | feat(rollover): add previewRollover + planRollover + nextGrade helper | AcademicYearRolloverService.php + tests | ~200 |
+| 2.H | feat(rollover): add commitRollover | AcademicYearRolloverService.php + tests | ~150 |
+| 2.I | feat(rollover): add undoRollover + closeUndoWindow + RolloverNotUndoable exception | AcademicYearRolloverService.php + tests | ~130 |
+
+**รวม ~1060 LOC, ~3 ชั่วโมง implementation** (ไม่นับ debugging)
+
+### 7. Verification per commit
+
+ทุก commit:
+1. `./vendor/bin/pint`
+2. `./vendor/bin/phpunit tests/Feature/StudentEnrollmentServiceTest.php tests/Feature/AcademicYearRolloverServiceTest.php tests/Feature/ClassroomEnrollmentSchemaTest.php`
+3. Live DB smoke (เฉพาะ commit ที่กระทบ live behavior — 2.A/2.B/2.D/2.H/2.I):
+   - เลือก 1 นักเรียนทดสอบ (เช่น id ใน ม.6) → graduate → ตรวจ DB → undo (ถ้า batch)
+
+### 8. Edge cases & gotchas ที่ต้องจัดการในโค้ด
+
+| # | Edge case | จุดที่ต้องระวัง |
+|---|---|---|
+| E1 | `enrolled_at` เป็น date, service ส่ง `now()` (datetime) → MySQL truncate | ใช้ `today()` หรือ `now()->toDateString()` |
+| E2 | Same-classroom re-enroll หลัง transfer ไป-กลับ | UNIQUE block — service ต้อง detect และ updateOrCreate row เดิม (status=active, left_at=null) |
+| E3 | ครู commit rollover พร้อมกัน 2 คน | `SELECT ... FOR UPDATE` ที่ academic_year row ของ to_year, หรือ academy-level lock |
+| E4 | `students.status` enum 4 ค่า — graduate/drop ใช้ได้ ('graduated', 'inactive') | ห้ามใส่ค่าใหม่ (ไม่งั้น throw enum violation) |
+| E5 | `manageAcademicInfoSnapshot` flip current + create ใหม่ใน trans เดียว | functional unique trip ระหว่าง flip → ต้อง update ก่อน insert |
+| E6 | `nextGrade(ม.6)` = null → action=graduate auto | preview ต้อง handle null ไม่ throw |
+| E7 | pending intake บางคนมี class_section=NULL | preview มี warning + fallback ไปห้องแรกของ grade |
+| E8 | undo หลัง commit ใหม่ที่ touched ตัวเดียวกัน | check ถ้า student มี active enrollment ที่ batch_id ≠ this batch → throw "cannot undo, student has newer changes" |
+| E9 | RolloverPlan ใหญ่ 2000+ entries → memory | iterate ด้วย chunked queue หรือ generator |
+| E10 | committed_at + 24h ผ่านไปครึ่งวัน admin call commit → batch ใหม่จะมี undo window ใหม่ ไม่กระทบ batch เก่า | ตรวจ `isUndoable()` per batch ไม่ใช่ global |
+
+### 9. Out of scope Phase 2 (เลื่อนไป phase อื่น)
+
+- ❌ Controller endpoints (Phase 3)
+- ❌ FormRequest validation (Phase 3)
+- ❌ Policy/authorization (Phase 3)
+- ❌ UI wizard (Phase 5)
+- ❌ Notification listeners (Phase 7)
+- ❌ Audit log integration (Phase 8)
+- ❌ Backfill 2405 NULL academic_year rows (Phase 9a)
+- ❌ Repair drift report (Phase 9a)
+- ❌ Multi-academy lock (defer until needed)
+
+### 10. Risks & Mitigation
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| E2 (same-classroom re-enroll) ทำให้ test T2 ดู "buggy" | สูง | กลาง | document explicit: "Phase 2 ไม่แก้ history loss ในห้องเดิม; Phase ถัดไปอาจ drop UNIQUE → partial unique" |
+| undo ที่ผ่านไป 23:59 → race ระหว่าง check และ apply | ต่ำ | กลาง | wrap undo ใน `SELECT FOR UPDATE` บน batch row |
+| 1929 rows ใน live DB กระทบโดยไม่ตั้งใจ | ต่ำ | สูง | ทุก smoke test บน live ทำกับ "test student" 1 คน, undo ทุกครั้ง |
+| Event ที่ยังไม่มี listener ทำให้ test ตก | กลาง | ต่ำ | ใช้ `Event::fake()` ใน test |
+| `manageAcademicInfoSnapshot` flip 2400+ rows ของ student คนเดียวที่มีประวัติยาว | ต่ำ | ต่ำ | scope flip ด้วย `where('student_id', X)` เท่านั้น (ไม่ flip ของคนอื่น) |
+
+### 11. Definition of Done — Phase 2
+
+- [ ] 9 commits land บน branch `feature/academic-year-rollover`
+- [ ] `phpunit tests/Feature/*Enrollment*` ผ่าน 100%
+- [ ] `phpunit tests/Feature/*Rollover*` ผ่าน 100%
+- [ ] pint clean
+- [ ] live smoke: graduate 1 test student → undo → state กลับ
+- [ ] commit message ทุกตัวระบุ Phase 2.{X}
+- [ ] ไม่กระทบ ClassroomController paths (smoke check 3 endpoints เดิม)
+- [ ] Worklog อัพเดท
+
+ตัดสินใจรอยืนยันก่อนเริ่ม:
+1. **E4 enum students.status** — ใช้ `'graduated'`/`'inactive'` ของเดิมตาม recommendation (ไม่ขยาย enum) — OK?
+2. **Same-classroom re-enroll** — Phase 2 ยอมรับ history loss สำหรับเคสนี้; แก้จริงต้องเปลี่ยน UNIQUE → partial unique = Phase ถัดไป — OK?
+3. **Lock strategy** — single-academy SELECT FOR UPDATE ที่ batch row เป็นจุดเริ่มต้น; multi-academy concurrency เลื่อนทีหลัง — OK?
