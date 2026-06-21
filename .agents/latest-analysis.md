@@ -6808,3 +6808,65 @@ async function load() {
 - Verification plan when implementing:
   - add focused feature tests for each repair rule and for missing-academic-info backfill creation
   - run targeted enrollment test suites plus dry-run and real-run checks on production-like data snapshot
+
+## 2026-06-21 Phase 9.2 implementation - Enrollment academic info backfill
+
+- Scope implemented:
+  - added artisan command `enrollment:backfill-academic-info`
+  - command supports `--year=`, `--academy=`, and `--dry-run`
+  - data source is `classroom_students` with eager-loaded `student`, `classroom`, and `academicYear`
+  - creates missing `student_academic_info` rows from enrollment history
+  - patches existing `student_academic_info` rows where `academic_year` is null and the row can be matched safely to the enrollment/classroom
+  - enriches existing same-year rows only when core fields are still empty, avoiding broad overwrite of manual data
+  - promotes existing same-year rows to `is_current=true` for active enrollment when no other current row exists
+- Files touched for Phase 9.2:
+  - `api/nuxnanravel/app/Console/Commands/EnrollmentBackfillAcademicInfo.php`
+  - `api/nuxnanravel/tests/Feature/EnrollmentBackfillAcademicInfoCommandTest.php`
+- Verification:
+  - `api/nuxnanravel`: `vendor\bin\pint app\Console\Commands\EnrollmentBackfillAcademicInfo.php tests\Feature\EnrollmentBackfillAcademicInfoCommandTest.php`
+  - `api/nuxnanravel`: `php artisan test tests\Feature\EnrollmentBackfillAcademicInfoCommandTest.php`
+    - Result: `5 passed (12 assertions)`
+- Notes:
+  - command uses `chunkById(200)` to avoid loading the whole enrollment table into memory
+  - current-row conflicts are counted and skipped instead of forcing a second `is_current=true` row
+
+## 2026-06-21 Phase 9.3 execution - Dry-run review and real run
+
+- Phase 9.1 safety adjustment:
+  - updated `EnrollmentRepairDirtyData` to normalize `students.class_level` through `StudentEnrollmentService::normalizeGradeLevel()` before comparing/writing snapshot drift
+  - added regression coverage for Thai grade strings such as `ม.6 -> 6`
+- Verification before DB execution:
+  - `php artisan test tests\Feature\EnrollmentRepairDirtyDataTest.php tests\Feature\EnrollmentBackfillAcademicInfoCommandTest.php`
+    - Result: `12 passed (45 assertions)`
+- Dry-run observations before real run:
+  - `enrollment:repair-dirty-data --dry-run`
+    - after normalization fix: `duplicate_active_fixed=0`, `student_snapshots_resynced=0`, `duplicate_current_demoted=0`, `manual_review_rows=1913`
+  - `enrollment:backfill-academic-info --dry-run`
+    - `processed=1929`, `patched_null_year=1913`, `skipped_existing=16`
+- Real run:
+  - executed `php artisan enrollment:backfill-academic-info`
+  - executed `php artisan enrollment:repair-dirty-data`
+- Post-run verification:
+  - `enrollment:repair-dirty-data --dry-run` => all counters `0`
+  - `enrollment:backfill-academic-info --dry-run` => `patched_null_year=0`, `skipped_existing=1929`
+- Residual data note:
+  - direct DB inspection still shows `student_academic_info.academic_year IS NULL = 491` rows
+  - these remaining rows are not enrollment-backed active records, so current Phase 9.2 logic intentionally leaves them untouched
+  - full execution summary recorded in `.agents/backups/2026-06-21/repair-report.md`
+
+## 2026-06-21 Phase 9.1 implementation - Enrollment repair dirty data
+
+- Scope implemented:
+  - added artisan command `enrollment:repair-dirty-data` supporting `--dry-run` and `--academy=` filters.
+  - command repairs three invariants:
+    1. duplicate active `classroom_students` rows per student/year -> keep latest active row, mark older rows `superseded`.
+    2. `students.class_level` / `class_section` drift from active classroom -> re-sync. Skip clearing snapshot if no active enrollment exists.
+    3. duplicate `student_academic_info.is_current=true` rows -> keep latest as current (sorting by `academic_year` desc, then `updated_at` desc, then `id` desc).
+  - command reports manual review rows: null academic years, deleted classrooms, academy mismatches, classroom/year mismatches.
+- Files touched for Phase 9.1:
+  - `api/nuxnanravel/app/Console/Commands/EnrollmentRepairDirtyData.php`
+  - `api/nuxnanravel/tests/Feature/EnrollmentRepairDirtyDataTest.php`
+- Verification:
+  - `api/nuxnanravel`: `vendor\bin\pint app\Console\Commands\EnrollmentRepairDirtyData.php tests\Feature\EnrollmentRepairDirtyDataTest.php`
+  - `api/nuxnanravel`: `php artisan test tests/Feature/EnrollmentRepairDirtyDataTest.php`
+    - Result: `6 passed (30 assertions)`

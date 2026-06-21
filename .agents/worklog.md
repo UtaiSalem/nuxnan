@@ -172,3 +172,82 @@
   - frontend behavior depends on the new backend enrollments endpoint from Phase 6.A
   - the inactive tab intentionally limits the client list to 200 rows for now
   - `vue-tsc` is not a reliable gate until the workspace plugin/export mismatch is fixed
+
+## 2026-06-21 - Phase 8.1 Apply Auditable + Tests
+
+- Branch: current working tree (uncommitted)
+- Task: Apply Auditable trait to ClassroomStudent and RolloverBatch models and write feature tests (Phase 8.1 / 8.A)
+- Files touched:
+  - `api/nuxnanravel/app/Models/ClassroomStudent.php`
+  - `api/nuxnanravel/app/Models/RolloverBatch.php`
+  - `api/nuxnanravel/app/Traits/Auditable.php`
+  - `api/nuxnanravel/app/Services/AuditLogService.php`
+  - `api/nuxnanravel/tests/Feature/EnrollmentAuditTest.php`
+- Done:
+  - Equipped `ClassroomStudent` and `RolloverBatch` models with `Auditable` trait to enable automated audit logs on creation, modification, and deletion.
+  - Set module name for both models to `'enrollment'` via `getAuditModule()` override and registered dynamic module detection check in `AuditLogService`.
+  - Configured `getAuditHiddenAttributes()` on `RolloverBatch` to exclude the huge `plan_summary` data from the audit logs, resolving the issue of excessive audit log bloat.
+  - Formatted files using Pint.
+- Verification run:
+  - Reran Pint on all modified files (passed, fixes applied).
+  - Created and ran `tests/Feature/EnrollmentAuditTest.php` containing 4 tests and 21 assertions (100% pass).
+  - Ran regression tests for `EnrollmentNotificationListenerTest`, `StudentEnrollmentServiceTest`, and `AcademicYearRolloverServiceTest` (100% pass, 31 tests, 111 assertions).
+
+## 2026-06-21 - Phase 9.1 Repair Dirty Data
+
+- Branch: current working tree (uncommitted)
+- Task: Create `enrollment:repair-dirty-data` artisan command to repair dirty enrollment data and check manual review cases (Phase 9.1 / 9.A)
+- Files touched:
+  - `api/nuxnanravel/app/Console/Commands/EnrollmentRepairDirtyData.php`
+  - `api/nuxnanravel/tests/Feature/EnrollmentRepairDirtyDataTest.php`
+- Done:
+  - Created `EnrollmentRepairDirtyData` console command supporting `--dry-run` and `--academy=` filters.
+  - Implemented logic for three invariants:
+    1. Duplicate active `classroom_students` rows: keeps newest active, marks older ones as `superseded`.
+    2. Student class drift: re-syncs `students.class_level` / `class_section` from active enrollment classroom. Does NOT clear snapshot if there is no active enrollment.
+    3. Duplicate current academic info: keeps latest `student_academic_info` row (sorting by `academic_year` desc, then `updated_at` desc, then `id` desc) and marks others as `is_current = false`.
+  - Implemented manual review detections (no auto-fix, counted in `manual_review_rows`):
+    1. Active enrollment with null `academic_year_id`.
+    2. Active enrollment with deleted classroom or classroom not matching academy.
+    3. `student_academic_info` (current) mismatched with active enrollment classroom/year.
+  - Formatted files using Laravel Pint.
+- Verification run:
+  - Ran Pint on all modified files (passed, fixes applied).
+  - Created and ran `tests/Feature/EnrollmentRepairDirtyDataTest.php` containing 6 tests and 30 assertions (100% pass).
+
+## 2026-06-21 - Phase 9.2-9.4 Backfill, Execution, and Report
+
+- Branch: current working tree (uncommitted)
+- Task: implement `enrollment:backfill-academic-info`, execute Phase 9.3 dry-run/real-run flow, and record Phase 9.4 repair report
+- Files touched:
+  - `.agents/latest-analysis.md`
+  - `.agents/backups/2026-06-21/repair-report.md`
+  - `api/nuxnanravel/app/Console/Commands/EnrollmentBackfillAcademicInfo.php`
+  - `api/nuxnanravel/app/Console/Commands/EnrollmentRepairDirtyData.php`
+  - `api/nuxnanravel/tests/Feature/EnrollmentBackfillAcademicInfoCommandTest.php`
+  - `api/nuxnanravel/tests/Feature/EnrollmentRepairDirtyDataTest.php`
+- Done:
+  - Added `EnrollmentBackfillAcademicInfo` artisan command with `--year=`, `--academy=`, and `--dry-run`.
+  - Implemented enrollment-backed backfill for missing `student_academic_info` rows and safe patching for existing rows with null `academic_year`.
+  - Updated `EnrollmentRepairDirtyData` to normalize `students.class_level` through `StudentEnrollmentService::normalizeGradeLevel()` before drift repair, preventing a large snapshot regression on Thai grade labels.
+  - Added regression coverage for the normalized snapshot behavior and new backfill command behavior.
+  - Executed Phase 9.3 flow:
+    - dry-run `enrollment:repair-dirty-data`
+    - dry-run `enrollment:backfill-academic-info`
+    - real run `enrollment:backfill-academic-info`
+    - real run `enrollment:repair-dirty-data`
+    - post-run dry-run verification for both commands
+  - Wrote Phase 9.4 count/report summary to `.agents/backups/2026-06-21/repair-report.md`.
+- Verification run:
+  - `api/nuxnanravel`: `vendor\bin\pint app\Console\Commands\EnrollmentRepairDirtyData.php tests\Feature\EnrollmentRepairDirtyDataTest.php`
+  - `api/nuxnanravel`: `vendor\bin\pint app\Console\Commands\EnrollmentBackfillAcademicInfo.php tests\Feature\EnrollmentBackfillAcademicInfoCommandTest.php`
+  - `api/nuxnanravel`: `php artisan test tests\Feature\EnrollmentRepairDirtyDataTest.php tests\Feature\EnrollmentBackfillAcademicInfoCommandTest.php`
+    - Result: `12 passed (45 assertions)`
+  - `api/nuxnanravel`: post-run `php artisan enrollment:repair-dirty-data --dry-run`
+    - Result: all counters `0`
+  - `api/nuxnanravel`: post-run `php artisan enrollment:backfill-academic-info --dry-run`
+    - Result: `processed=1929`, `patched_null_year=0`, `skipped_existing=1929`
+- Residual risks / notes:
+  - DB inspection after the run still shows `student_academic_info.academic_year IS NULL = 491` rows and all 491 rows have `is_current = true`.
+  - Those 491 rows are not backed by active `classroom_students` records and also have no usable classroom/year snapshot to infer safely, so the current Phase 9.2 command intentionally leaves them untouched.
+  - Enrollment-backed repair/backfill is clean; remaining null-year rows need a separate legacy/orphan cleanup strategy if the team wants full normalization of `student_academic_info`.
