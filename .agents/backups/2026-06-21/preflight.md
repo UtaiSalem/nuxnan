@@ -27,6 +27,12 @@ Generated: 2026-06-21 07:29:51
   - Format mismatch finding: `students.class_level` stores numeric (`"1"`, `"2"`), `classrooms.grade_level` stores prefixed (`"ม.1"`)
   - **Implication for Phase 2**: `enrollStudent()` should normalize before sync, or change `students.class_level` to store full label.
 - Students with non-empty `class_level` but **no active enrollment**: **476**
+  - **Investigated 2026-06-21**: NOT data dirty — pending intake for next academic year
+  - All 476 imported in single batch `2026-06-20 19:53`
+  - All 476 have never had ANY enrollment row (never_enrolled=476, has_history=0)
+  - Distribution: ม.1 (10 sections, ~360 students) + ม.4 (8 sections, ~116 students)
+  - **Action for Phase 5**: wizard must accept "pending intake" as a second input source, enrolling them into NEW-year classrooms (not current 2568 classrooms)
+  - **No action for Phase 9a** — these are expected state, not dirt
 
 ## 7. students.status distribution
 - `active`: 2896
