@@ -6389,3 +6389,357 @@ End-to-end smoke (หลัง 6.A-D):
 - Known non-code limitation at close-out:
   - frontend typecheck remains blocked by the existing `vue-router/volar/sfc-route-blocks` export-resolution issue in this workspace
   - manual browser smoke / SSR live check was not run in this pass
+
+## 2026-06-21 - Phase 7 planning (enrollment event listeners -> notifications)
+
+- Scope classification: backend-first with light frontend follow-up.
+- Existing foundations confirmed:
+  - `StudentEnrollmentService` and `AcademicYearRolloverService` already dispatch 8 enrollment/rollover events.
+  - `NotificationService` already centralizes database notification inserts.
+  - notification UI already renders generic `type`, `icon`, `color`, `content`, `action_url`, and `metadata`.
+- Key findings:
+  - there are no enrollment listeners yet and no `EventServiceProvider`; plan should rely on Laravel listener auto-discovery or explicitly add provider wiring if auto-discovery is disabled in this app.
+  - current realtime bell polling works from `/api/notifications/recent`, but `useNotifications().initEcho()` expects Laravel broadcast notifications on `App.Models.User.{id}`. `NotificationService` does not broadcast, so Reverb is not free in Phase 7.
+  - `User` model does not expose a clear writable `status` domain field, so "sync users.status" from the older master note is not currently grounded in model shape.
+  - guardian linkage is still fragile: `student_guardians` has no real `user_id` support yet; current access checks use `citizen_id` matching, so parent recipients need a cautious fallback strategy.
+- Likely touched files when implementing:
+  - `api/nuxnanravel/app/Listeners/Enrollment/*.php`
+  - `api/nuxnanravel/app/Models/Notification.php`
+  - `api/nuxnanravel/app/Services/NotificationService.php` or a new focused enrollment notification helper
+  - possibly `api/nuxnanravel/app/Providers/EventServiceProvider.php`
+  - `ui/composables/useNotifications.ts`
+  - `ui/pages/notifications.vue`
+- Recommended decisions:
+  - Phase 7 should target database notifications first; treat Reverb broadcast/email as optional follow-up unless explicitly prioritized.
+  - use 1 listener per event for clarity, but share payload-building helpers to avoid duplicated recipient/message logic.
+  - notify only recipients resolvable by stable current relations: student linked `user`, homeroom teacher, academy admins, and parent academy members matched through guardian `citizen_id` only when unique and present.
+  - keep academy-member revocation for dropped students as a separate service-side rule in the same phase only if the user wants behavior change bundled with notifications.
+- Verification plan:
+  - add focused feature tests asserting notification rows for each event family and recipient set.
+  - regression-check existing `StudentEnrollmentServiceTest`, `AcademicYearRolloverServiceTest`, and `RolloverControllerWriteTest`.
+  - if frontend copy/type filters are updated, do a read-back plus targeted SFC parse; do not rely on repo-wide `vue-tsc` until the existing workspace issue is fixed.
+
+### 2026-06-21 Implementation update - Phase 7.1 database notification listeners
+
+- Status: implemented and verified.
+- Backend changes shipped:
+  - added `EnrollmentNotificationService` to centralize recipient resolution and database payload creation for enrollment/rollover events
+  - added 8 listeners under `app/Listeners/Enrollment/` for:
+    - `StudentEnrolled`
+    - `StudentTransferred`
+    - `StudentPromoted`
+    - `StudentRepeated`
+    - `StudentGraduated`
+    - `StudentDropped`
+    - `RolloverCommitted`
+    - `RolloverUndone`
+  - extended `Notification` model with enrollment/rollover type constants plus icon/color mapping
+  - updated `StudentEnrollmentService::enrollStudent()` with `dispatchEvent` flag so transfer/promote/repeat flows do not emit nested `StudentEnrolled` notifications on the internally opened row
+- Listener registration decision:
+  - Laravel auto-discovers listeners from `app/Listeners`, so the explicit custom `EventServiceProvider` added in the first attempt was removed after it caused duplicate registrations (`ClassName` plus `ClassName@handle`)
+  - `php artisan event:list` now shows only the discovered `@handle` listeners for the new enrollment events
+- Recipient policy implemented in Phase 7.1:
+  - `student_enrolled`: student user + homeroom teacher
+  - `student_transferred`: student user + old/new homeroom teachers
+  - `student_promoted`: student user + old/new homeroom teachers + academy owner/admins
+  - `student_repeated`: student user + old/new homeroom teachers + academy owner/admins
+  - `student_graduated`: student user + homeroom teacher + academy owner/admins
+  - `student_dropped`: student user + homeroom teacher + academy owner/admins
+  - `rollover_committed` / `rollover_undone`: academy owner/admins
+  - parent/guardian recipients were intentionally deferred because guardian-to-user linkage is still not a stable first-class relation in the current schema
+- Verification run:
+  - `vendor\bin\pint app\Services\EnrollmentNotificationService.php app\Services\StudentEnrollmentService.php app\Models\Notification.php app\Listeners\Enrollment\*.php tests\Feature\EnrollmentNotificationListenerTest.php`
+  - `php artisan test tests/Feature/EnrollmentNotificationListenerTest.php tests/Feature/StudentEnrollmentServiceTest.php tests/Feature/AcademicYearRolloverServiceTest.php tests/Feature/Api/Academy/RolloverControllerWriteTest.php`
+  - result: `47 passed (150 assertions)`
+- Notes:
+  - test output still prints the existing maintenance/Xdebug noise (`Fixed enrolled_students count...`, xdebug log warning), but the suites pass cleanly
+  - frontend labels/filters for the new notification types are not part of 7.1 yet
+
+### 2026-06-21 Implementation update - Phase 7.2 notification UI + grouped type filters
+
+- Status: implemented and verified.
+- Frontend changes shipped:
+  - updated `ui/composables/useNotifications.ts` with exported grouped type lists:
+    - `ENROLLMENT_NOTIFICATION_TYPES`
+    - `ROLLOVER_NOTIFICATION_TYPES`
+  - added Thai labels for the new enrollment/rollover notification types so bell/page UIs no longer fall back to raw type ids
+  - rebuilt `ui/pages/notifications.vue` to add category tabs for:
+    - all
+    - unread
+    - grade
+    - certificate
+    - enrollment
+    - rollover
+  - notification rows now show a type badge plus relative timestamp using shared composable helpers
+  - empty-state copy is now tab-aware for the new categories
+- Cross-stack contract update:
+  - `NotificationController@index` now supports `types[]` multi-select filtering while preserving the legacy single `type` query param
+  - added `tests/Feature/NotificationControllerTest.php` to lock the `type` and `types[]` filtering behavior
+- Verification run:
+  - `vendor\bin\pint app\Http\Controllers\Api\Play\NotificationController.php tests\Feature\NotificationControllerTest.php`
+  - `php artisan test tests/Feature/NotificationControllerTest.php tests/Feature/EnrollmentNotificationListenerTest.php`
+  - result: `9 passed (36 assertions)`
+  - `ui`: targeted parse check via `@vue/compiler-sfc` on `pages/notifications.vue` plus composable read-back -> `frontend notification files parse ok`
+- Notes:
+  - repo-wide `vue-tsc` was intentionally not rerun because the workspace still has the known unrelated Volar/export-resolution issue
+
+---
+
+## 2026-06-21 Phase 7 (verified) + Phase 8 — Audit & History UI (Detailed Plan)
+
+### 0. Phase 7 status — DONE (verified, uncommitted)
+
+ตรวจ working tree พบ Phase 7 ทำเสร็จครบและ verified:
+- ✅ `app/Services/EnrollmentNotificationService.php` — 8 notify methods + 4 recipient resolvers
+- ✅ `app/Listeners/Enrollment/` — 8 listeners (Send{Enrolled,Transferred,Promoted,Repeated,Graduated,Dropped}Notification + Rollover{Committed,Undone})
+- ✅ `app/Models/Notification.php` — 8 new TYPE_* constants + icon mapping
+- ✅ `StudentEnrollmentService` — dispatch events (param `$dispatchEvent = true`)
+- ✅ `AcademicYearRolloverService` — fire RolloverCommitted (line 431) + RolloverUndone (line 518)
+- ✅ Laravel 12 auto-discovery → listeners ทำงานโดยไม่ต้อง register (test ยิง `event()` จริงผ่าน)
+- ✅ `EnrollmentNotificationListenerTest` — 7 tests, 29 assertions, ผ่าน
+- ✅ Regression รวม notification + service + rollover = 31 tests ผ่าน
+
+**Action ก่อนเริ่ม Phase 8:** commit Phase 7 ก่อน (ดู §5 commit guide)
+
+### 1. Phase 8 scope (จาก master plan §3)
+
+- 8.1 ใช้ `App\Traits\Auditable` apply กับ `ClassroomStudent`, (`StudentAcademicInfo` มีแล้ว)
+- 8.2 UI: tab "ประวัติการลงห้อง" ใน student master profile — timeline ปี/ห้อง/status/leave_reason/โดยใคร
+- 8.3 หน้า rollover history admin: list batch + กดดูรายละเอียด
+
+### 2. Prerequisites audit (codebase)
+
+| สิ่งที่ต้องมี | สถานะ |
+|---|---|
+| `App\Traits\Auditable` | ✅ มี — boot hooks created/updated/deleted + getAuditLogs(limit) + getAuditModule() |
+| `App\Models\AuditLog` | ✅ มี — fillable: user_id, action, entity_type, entity_id, module, old_values, new_values, metadata, ip, ua, url, method |
+| `StudentAcademicInfo` use Auditable | ✅ มีแล้ว (line 16) |
+| `ClassroomStudent` use Auditable | ❌ ยังไม่มี (line 17 = HasFactory เท่านั้น) |
+| `RolloverBatch` use Auditable | ❌ ยังไม่มี |
+| Rollover history endpoint (`GET /rollover/batches` + `/batches/{batch}`) | ✅ มีจาก Phase 3.D |
+| Frontend `useRolloverActions.listBatches/fetchBatch` | ✅ มีจาก Phase 5.A |
+| Student master profile page | ⚠️ มีแผน 2026-06-17 แต่ยังไม่ implement — Phase 8.2 ต้อง degrade เป็น "ใช้ EnrollmentHistoryDrawer ที่มี" |
+
+### 3. หลักการ Phase 8
+
+1. **Audit ผ่าน trait ที่มีอยู่** — ไม่สร้าง audit ใหม่; แค่ `use Auditable`
+2. **History UI reuse Phase 4 component** — `EnrollmentHistoryDrawer` มีแล้ว; Phase 8 เพิ่ม "ใครทำ" (created_by) + audit detail
+3. **Rollover history page ใหม่** — `/admin/gradebook/rollover/history` ใช้ `listBatches` ที่มี
+4. **ไม่ over-engineer** — student master profile ยังไม่มี → Phase 8.2 ลงที่ enrollment history ที่เข้าถึงได้จริง (classroom page + future profile)
+5. **Test audit เกิดจริง** — apply trait แล้ว verify AuditLog row ถูกสร้าง
+
+### 4. Sub-phase commits (4 commits, ~2 ชม.)
+
+| # | Subject | ไฟล์ | LOC | เวลา |
+|---|---|---|---|---|
+| 8.A | feat(enrollment): audit ClassroomStudent + RolloverBatch via Auditable | ClassroomStudent.php, RolloverBatch.php + test | ~80 | 30น |
+| 8.B | feat(api): rollover batch history already exists — add audit log to batch detail response | RolloverController show() + RolloverBatchResource + test | ~100 | 30น |
+| 8.C | feat(ui): rollover history page | pages/.../rollover/history.vue + RolloverBatchHistoryCard.vue | ~280 | 45น |
+| 8.D | docs(rollover): close Phase 7+8, worklog, memory | latest-analysis.md, worklog.md, MEMORY.md | ~60 | 15น |
+
+**รวม ~520 LOC, ~2 ชม.**
+
+### 5. Phase 7 commit (ก่อน 8.A)
+
+```bash
+git add api/nuxnanravel/app/Services/EnrollmentNotificationService.php \
+        api/nuxnanravel/app/Listeners/Enrollment/ \
+        api/nuxnanravel/app/Models/Notification.php \
+        api/nuxnanravel/app/Services/StudentEnrollmentService.php \
+        api/nuxnanravel/tests/Feature/EnrollmentNotificationListenerTest.php
+# commit: "feat(notifications): Phase 7 enrollment + rollover event listeners"
+```
+
+(ตรวจ `StudentEnrollmentService` diff ว่ามีแค่ event dispatch — ไม่ปน Phase อื่น)
+
+### 6. Sub-phase specs
+
+#### 8.A — Apply Auditable
+
+```php
+// app/Models/ClassroomStudent.php
+use App\Traits\Auditable;
+
+class ClassroomStudent extends Model
+{
+    use Auditable, HasFactory;
+    // ...
+    public function getAuditModule(): ?string { return 'enrollment'; }
+}
+```
+
+```php
+// app/Models/RolloverBatch.php
+use App\Traits\Auditable;
+
+class RolloverBatch extends Model
+{
+    use Auditable;
+    public function getAuditModule(): ?string { return 'enrollment'; }
+    // กัน plan_summary (large) จาก audit — getAuditHiddenAttributes
+    protected function getAuditHiddenAttributes(): array {
+        return ['plan_summary'];
+    }
+}
+```
+
+**ตรวจ AUDIT_ENABLED:** Auditable เคารพ `config/audit.php` env `AUDIT_ENABLED`; ใน test ต้อง set true หรือ trait มี default
+
+**Tests** (`tests/Feature/EnrollmentAuditTest.php`):
+- T1: graduate student → AuditLog row created (action=updated, entity_type=ClassroomStudent)
+- T2: commit rollover → AuditLog row for RolloverBatch (action=created)
+- T3: audit captures old_values/new_values for status change
+- T4: plan_summary excluded from RolloverBatch audit (hidden attr)
+
+**Commit:** `feat(enrollment): audit ClassroomStudent + RolloverBatch changes`
+
+#### 8.B — Batch detail audit in response
+
+`RolloverController::show()` — เพิ่ม audit logs:
+```php
+public function show(Academy $academy, RolloverBatch $batch): JsonResponse
+{
+    abort_unless(Gate::allows('enrollment.viewBatches', $academy), 403);
+    $batch->load(['fromYear', 'toYear', 'committedBy', 'undoneBy']);
+
+    return response()->json([
+        'success' => true,
+        'batch' => new RolloverBatchResource($batch),
+        'audit_logs' => $batch->getAuditLogs(20)->map(fn ($log) => [
+            'action' => $log->action,
+            'user' => $log->user_id,
+            'changed' => $log->new_values,
+            'at' => $log->created_at?->toIso8601String(),
+        ]),
+    ]);
+}
+```
+
+**Tests:**
+- T1: show batch → includes audit_logs array
+- T2: audit_logs visible to admin only (gate)
+
+**Commit:** `feat(api): include audit trail in rollover batch detail`
+
+#### 8.C — Rollover history page
+
+`pages/academies/[name]/admin/gradebook/rollover/history.vue`:
+
+```vue
+<script setup lang="ts">
+const { listBatches, fetchBatch, undo, closeUndo } = useRolloverActions(academyId)
+const batches = ref<RolloverBatchDTO[]>([])
+const selectedBatch = ref<RolloverBatchDTO | null>(null)
+const page = ref(1)
+
+async function load() {
+  const res = await listBatches(page.value)
+  batches.value = res.data
+}
+</script>
+
+<template>
+  <div class="max-w-5xl mx-auto p-4 space-y-4">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">ประวัติการเลื่อนชั้น</h1>
+      <NuxtLink :to="`/academies/${academyName}/admin/gradebook/rollover`" class="btn-primary">
+        + เลื่อนชั้นใหม่
+      </NuxtLink>
+    </div>
+
+    <div v-if="!batches.length" class="text-center py-12 text-zinc-500">
+      ยังไม่มีประวัติการเลื่อนชั้น
+    </div>
+
+    <RolloverBatchHistoryCard
+      v-for="batch in batches" :key="batch.id"
+      :batch="batch"
+      @view="selectedBatch = batch"
+      @undo="onUndo(batch)"
+    />
+  </div>
+</template>
+```
+
+`components/academy/rollover/RolloverBatchHistoryCard.vue`:
+- แสดง: from_year → to_year, committed_at, committed_by, totals tiles, status badge (committed/undone)
+- ปุ่ม "ดูรายละเอียด" + "ยกเลิก" (ถ้า isUndoable)
+- countdown ถ้า isUndoable
+
+**Commit:** `feat(ui): rollover batch history page`
+
+#### 8.D — Docs + memory
+
+- อัพเดท worklog: Phase 7 + 8
+- บันทึก memory `project_enrollment_rollover.md`:
+  - `classroom_students` = source of truth; `students.class_level` = snapshot
+  - rollover batch + undo 24h
+  - audit ผ่าน Auditable trait
+- ปิด latest-analysis Phase 8
+
+**Commit:** `docs(rollover): close Phase 7+8 + record enrollment memory`
+
+### 7. Verification
+
+ทุก backend commit:
+1. `./vendor/bin/pint`
+2. `./vendor/bin/phpunit tests/Feature/EnrollmentAuditTest.php`
+3. Regression 117 + notification 7 + audit 4 = ~128 tests
+
+หลัง 8.C:
+1. TS clean
+2. `npm run dev` — เปิด /admin/gradebook/rollover/history
+3. Manual: commit rollover (test) → ดู history page → เห็น batch + audit + undo
+
+### 8. Edge cases
+
+| # | Case | จัดการ |
+|---|---|---|
+| E1 | AUDIT_ENABLED=false ใน env | trait skip; test ต้อง force enable หรือ assert conditional |
+| E2 | RolloverBatch.plan_summary ใหญ่ → audit bloat | getAuditHiddenAttributes exclude |
+| E3 | ClassroomStudent audit ทุก enroll = เยอะมาก (rollover 2000 rows) | acceptable; AuditLog เป็น append table; ถ้าช้า → batch insert (Phase perf) |
+| E4 | history page pagination | listBatches มี page param แล้ว |
+| E5 | student master profile ยังไม่มี (8.2) | Phase 8 ลง enrollment history ที่ classroom page ที่มี; profile tab รอ master profile feature |
+| E6 | audit ตอน commit ใน transaction → rollback ถ้า fail | Auditable hooks อยู่ใน model events ใน transaction เดียว — rollback ถูก |
+
+### 9. Out of scope ของ Phase 8
+
+- ❌ Student master profile page (แผนแยก 2026-06-17, 35 ชม.)
+- ❌ Audit log viewer ทั่วทั้งระบบ
+- ❌ Audit diff visualization (แสดง old→new แบบ rich)
+- ❌ Batch insert optimization สำหรับ audit (perf phase)
+- ❌ Export audit to Excel
+
+### 10. Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| AUDIT_ENABLED config ไม่เปิดใน test/prod | กลาง | สูง | ตรวจ config ก่อน 8.A; document ใน worklog |
+| Audit 2000 rows ตอน rollover ทำให้ commit ช้า | กลาง | กลาง | measure; ถ้าช้า → disableAuditing() ระหว่าง bulk + log batch-level เดียว |
+| plan_summary leak ใน audit (PII ใน before-snapshot) | กลาง | สูง | getAuditHiddenAttributes exclude plan_summary |
+| ClassroomStudent audit เปลี่ยน behavior existing flow | ต่ำ | กลาง | trait เป็น additive (model events); existing tests ต้องผ่าน |
+
+### 11. Definition of Done — Phase 8
+
+- [ ] Phase 7 committed ก่อน
+- [ ] 4 Phase 8 commits land
+- [ ] ClassroomStudent + RolloverBatch audited
+- [ ] 4 audit tests + 2 batch-detail tests ผ่าน
+- [ ] Regression ~128 tests
+- [ ] rollover history page ทำงาน
+- [ ] worklog + memory อัพเดท
+- [ ] commit message ระบุ Phase 8.{A-D}
+
+### 12. Decisions ที่รอยืนยัน
+
+1. **Bulk audit ตอน rollover 2000 rows** — audit ทุก row หรือ batch-level เดียว?
+   - **Recommendation:** audit ทุก row ก่อน (correctness); measure แล้วค่อย optimize ถ้าช้า
+
+2. **Phase 8.2 student master profile tab** — ทำตอนนี้หรือเลื่อน
+   - **Recommendation:** **เลื่อน** — master profile ยังไม่มี; Phase 8 ลง rollover history page + reuse EnrollmentHistoryDrawer (มี created_by อยู่แล้วจาก Resource)
+
+3. **History page route** — `/rollover/history` หรือ tab ใน `/rollover`
+   - **Recommendation:** **แยก route `/history`** — wizard กับ history คนละ concern
+
+4. **plan_summary ใน audit** — exclude หรือ keep
+   - **Recommendation:** **exclude** (มี before-snapshot = PII + ใหญ่)

@@ -110,9 +110,10 @@ class StudentEnrollmentService
         Classroom $classroom,
         ?int $studentNumber = null,
         ?string $batchId = null,
-        ?int $userId = null
+        ?int $userId = null,
+        bool $dispatchEvent = true
     ): ClassroomStudent {
-        return DB::transaction(function () use ($student, $classroom, $studentNumber, $batchId, $userId) {
+        return DB::transaction(function () use ($student, $classroom, $studentNumber, $batchId, $userId, $dispatchEvent) {
             // Auto-assign student number if not provided
             if ($studentNumber === null) {
                 $studentNumber = ClassroomStudent::where('classroom_id', $classroom->id)
@@ -149,8 +150,9 @@ class StudentEnrollmentService
             // Update StudentAcademicInfo snapshot
             $this->manageAcademicInfoSnapshot($student, $classroom, $batchId);
 
-            // Fire event
-            event(new \App\Events\Enrollment\StudentEnrolled($student, $enrollment, $batchId));
+            if ($dispatchEvent) {
+                event(new \App\Events\Enrollment\StudentEnrolled($student, $enrollment, $batchId));
+            }
 
             return $enrollment;
         });
@@ -206,7 +208,7 @@ class StudentEnrollmentService
             );
 
             // สร้าง enrollment ใหม่
-            $opened = $this->enrollStudent($student, $toClassroom, null, $batchId, $userId);
+            $opened = $this->enrollStudent($student, $toClassroom, null, $batchId, $userId, false);
 
             if ($closed) {
                 event(new \App\Events\Enrollment\StudentTransferred($student, $closed, $opened, $batchId));
@@ -365,7 +367,7 @@ class StudentEnrollmentService
             }
 
             // Enroll in new classroom
-            $opened = $this->enrollStudent($student, $newClassroom, $studentNumber, $batchId, $userId);
+            $opened = $this->enrollStudent($student, $newClassroom, $studentNumber, $batchId, $userId, false);
 
             if ($closed) {
                 event(new \App\Events\Enrollment\StudentRepeated($student, $closed, $opened, $batchId));
@@ -403,7 +405,7 @@ class StudentEnrollmentService
                 $userId
             );
 
-            $opened = $this->enrollStudent($student, $toClassroom, $studentNumber, $batchId, $userId);
+            $opened = $this->enrollStudent($student, $toClassroom, $studentNumber, $batchId, $userId, false);
 
             if ($closed) {
                 event(new \App\Events\Enrollment\StudentPromoted($student, $closed, $opened, $batchId));
