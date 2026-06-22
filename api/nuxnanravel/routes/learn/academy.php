@@ -102,7 +102,6 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     Route::get('/{academy:name}/feeds', [AcademyActivityController::class, 'index'])->name('academy.feeds');
 
-    Route::get('/{academy:name}/courses', [AcademyCourseController::class, 'index'])->name('academy.courses.index');
     Route::get('/{academy:name}/courses/create', [AcademyCourseController::class, 'create'])->name('academy.courses.create');
     Route::post('/{academy}/courses', [AcademyCourseController::class, 'store'])->name('academy.courses.store');
 

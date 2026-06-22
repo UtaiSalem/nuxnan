@@ -4,6 +4,8 @@ import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import FeedPost from '~/components/play/feed/FeedPost.vue'
+import CourseCard from '~/components/learn/course/CourseCard.vue'
+import { useCourseGrouping } from '~/composables/useCourseGrouping'
 
 definePageMeta({
   layout: 'main',
@@ -13,11 +15,21 @@ definePageMeta({
 const route = useRoute()
 const api = useApi()
 const config = useRuntimeConfig()
+const { t } = useI18n()
 const { user } = storeToRefs(useAuthStore())
 
 // State
 const academy = ref<any>(null)
 const courses = ref<any[]>([])
+const courseFilters = ref({
+  education_level: '',
+  education_year: '',
+  semester: '',
+  academic_year: '',
+  search: '',
+})
+const courseAvailableFilters = ref<any>(null)
+const expandedCourseGroups = ref<Record<string, boolean>>({})
 const members = ref<any[]>([])
 const groups = ref<any[]>([])
 const activities = ref<any[]>([])
@@ -155,15 +167,15 @@ const canLeave = computed(() => {
 })
 
 // Tabs
-const tabs = [
-  { id: 'feed', label: 'Feed', icon: 'fluent:feed-24-regular' },
-  { id: 'courses', label: 'Courses', icon: 'fluent:book-24-regular' },
-  { id: 'members', label: 'Members', icon: 'fluent:people-24-regular' },
-  { id: 'classrooms', label: 'Classrooms', icon: 'fluent:board-24-regular' },
-  { id: 'events', label: 'Events', icon: 'fluent:calendar-star-24-regular' },
-  { id: 'groups', label: 'Groups', icon: 'fluent:people-community-24-regular' },
-  { id: 'about', label: 'About', icon: 'fluent:info-24-regular' },
-]
+const tabs = computed(() => [
+  { id: 'feed', label: t('academy.tabs.feed'), icon: 'fluent:feed-24-regular' },
+  { id: 'courses', label: t('academy.tabs.courses'), icon: 'fluent:book-24-regular' },
+  { id: 'members', label: t('academy.tabs.members'), icon: 'fluent:people-24-regular' },
+  { id: 'classrooms', label: t('academy.tabs.classrooms'), icon: 'fluent:board-24-regular' },
+  { id: 'events', label: t('academy.tabs.events'), icon: 'fluent:calendar-star-24-regular' },
+  { id: 'groups', label: t('academy.tabs.groups'), icon: 'fluent:people-community-24-regular' },
+  { id: 'about', label: t('academy.tabs.about'), icon: 'fluent:info-24-regular' },
+])
 
 const formatCompactNumber = (value?: number | null) => {
   if (value == null) return null
@@ -193,6 +205,14 @@ const heroStats = computed(() => {
       value: formatCompactNumber(groups.value.length || 0),
     },
   ].filter((item) => item.value !== null)
+})
+
+const { groupCourses } = useCourseGrouping()
+
+const groupedCourses = computed(() => groupCourses(courses.value))
+
+const hasActiveCourseFilters = computed(() => {
+  return Object.values(courseFilters.value).some((value) => String(value || '').trim().length > 0)
 })
 
 const getTabCount = (tabId: string) => {
@@ -294,13 +314,13 @@ const fetchGamificationSummary = async () => {
 }
 
 const switchToNextTab = () => {
-  const i = tabs.findIndex(t => t.id === currentTab.value)
-  if (i < tabs.length - 1) switchTab(tabs[i + 1].id)
+  const i = tabs.value.findIndex(tab => tab.id === currentTab.value)
+  if (i < tabs.value.length - 1) switchTab(tabs.value[i + 1].id)
 }
 
 const switchToPreviousTab = () => {
-  const i = tabs.findIndex(t => t.id === currentTab.value)
-  if (i > 0) switchTab(tabs[i - 1].id)
+  const i = tabs.value.findIndex(tab => tab.id === currentTab.value)
+  if (i > 0) switchTab(tabs.value[i - 1].id)
 }
 
 useSwipe(mainContentRef, {
@@ -343,9 +363,21 @@ const fetchCourses = async () => {
   
   isLoadingTab.value = true
   try {
-    const response: any = await api.get(`/api/academies/${academy.value.id}/courses`)
+    const params = new URLSearchParams({
+      per_page: '100',
+    })
+
+    if (courseFilters.value.education_level) params.set('education_level', courseFilters.value.education_level)
+    if (courseFilters.value.education_year) params.set('education_year', courseFilters.value.education_year)
+    if (courseFilters.value.semester) params.set('semester', courseFilters.value.semester)
+    if (courseFilters.value.academic_year) params.set('academic_year', courseFilters.value.academic_year)
+    if (courseFilters.value.search.trim()) params.set('search', courseFilters.value.search.trim())
+
+    const response: any = await api.get(`/api/academies/${academy.value.id}/courses?${params.toString()}`)
     if (response.success) {
-      courses.value = JSON.parse(JSON.stringify(response.courses || []))
+      const rawCourses = response.courses?.data || response.courses || []
+      courses.value = JSON.parse(JSON.stringify(rawCourses))
+      courseAvailableFilters.value = JSON.parse(JSON.stringify(response.available_filters || null))
     }
   } catch (err) {
     console.error('Failed to fetch courses:', err)
@@ -353,6 +385,35 @@ const fetchCourses = async () => {
     isLoadingTab.value = false
   }
 }
+
+const toggleCourseGroup = (groupKey: string) => {
+  expandedCourseGroups.value = {
+    ...expandedCourseGroups.value,
+    [groupKey]: !expandedCourseGroups.value[groupKey],
+  }
+}
+
+const resetCourseFilters = async () => {
+  courseFilters.value = {
+    education_level: '',
+    education_year: '',
+    semester: '',
+    academic_year: '',
+    search: '',
+  }
+
+  await fetchCourses()
+}
+
+watch(groupedCourses, (groups) => {
+  const nextState: Record<string, boolean> = {}
+
+  groups.forEach((group, index) => {
+    nextState[group.key] = expandedCourseGroups.value[group.key] ?? index < 2
+  })
+
+  expandedCourseGroups.value = nextState
+}, { immediate: true })
 
 const fetchMembers = async (page = 1) => {
   if (!academy.value) return
@@ -989,14 +1050,14 @@ onMounted(() => {
     fetchAcademy()
   }
   const hash = route.hash.replace('#', '')
-  if (tabs.some(t => t.id === hash)) {
+  if (tabs.value.some(tab => tab.id === hash)) {
     switchTab(hash)
   }
 })
 
 watch(() => route.hash, (newHash) => {
   const hash = newHash.replace('#', '')
-  if (tabs.some(t => t.id === hash)) {
+  if (tabs.value.some(tab => tab.id === hash)) {
     switchTab(hash)
   }
 })
@@ -1309,7 +1370,6 @@ watch(() => route.hash, (newHash) => {
           
           <!-- Courses Tab -->
           <div v-else-if="currentTab === 'courses'" class="space-y-4">
-            <!-- Header with Create Button -->
             <div v-if="academy.authIsAcademyAdmin" class="flex justify-end">
               <NuxtLink
                 to="/Learn/Courses/create"
@@ -1319,62 +1379,145 @@ watch(() => route.hash, (newHash) => {
                 สร้างรายวิชาใหม่
               </NuxtLink>
             </div>
-            
+
+            <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
+              <div class="flex flex-col gap-3 xl:flex-row">
+                <select
+                  v-model="courseFilters.academic_year"
+                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  @change="fetchCourses"
+                >
+                  <option value="">ทุกปีการศึกษา</option>
+                  <option
+                    v-for="option in courseAvailableFilters?.academic_years || []"
+                    :key="`academic-year-${option.value}`"
+                    :value="option.value === 'unspecified' ? '' : option.value"
+                  >
+                    {{ option.label }} ({{ option.count }})
+                  </option>
+                </select>
+
+                <select
+                  v-model="courseFilters.semester"
+                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  @change="fetchCourses"
+                >
+                  <option value="">ทุกภาคเรียน</option>
+                  <option
+                    v-for="option in courseAvailableFilters?.semesters || []"
+                    :key="`semester-${option.value}`"
+                    :value="option.value === 'unspecified' ? '' : option.value"
+                  >
+                    {{ option.label }} ({{ option.count }})
+                  </option>
+                </select>
+
+                <select
+                  v-model="courseFilters.education_level"
+                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  @change="fetchCourses"
+                >
+                  <option value="">ทุกระดับชั้น</option>
+                  <option
+                    v-for="option in courseAvailableFilters?.education_levels || []"
+                    :key="`level-${option.value}`"
+                    :value="option.value === 'unspecified' ? '' : option.value"
+                  >
+                    {{ option.label }} ({{ option.count }})
+                  </option>
+                </select>
+
+                <select
+                  v-model="courseFilters.education_year"
+                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  @change="fetchCourses"
+                >
+                  <option value="">ทุกปี/ชั้นเรียน</option>
+                  <option
+                    v-for="option in courseAvailableFilters?.education_years || []"
+                    :key="`year-${option.value}`"
+                    :value="option.value === 'unspecified' ? '' : option.value"
+                  >
+                    {{ option.label }} ({{ option.count }})
+                  </option>
+                </select>
+              </div>
+
+              <div class="flex flex-col gap-3 lg:flex-row">
+                <div class="relative flex-1">
+                  <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    v-model="courseFilters.search"
+                    type="text"
+                    placeholder="ค้นหารายวิชา..."
+                    class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 py-2 pl-10 pr-4 text-sm text-gray-700 dark:text-gray-200"
+                    @keyup.enter="fetchCourses"
+                  />
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="px-4 py-2 bg-vikinger-purple text-white rounded-lg text-sm font-medium hover:bg-vikinger-purple/90 transition-colors"
+                    @click="fetchCourses"
+                  >
+                    ค้นหา
+                  </button>
+                  <button
+                    v-if="hasActiveCourseFilters"
+                    type="button"
+                    class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
+                    @click="resetCourseFilters"
+                  >
+                    ล้างตัวกรอง
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div v-if="courses.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
               <Icon icon="fluent:book-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p class="text-gray-500 dark:text-gray-400">ยังไม่มีรายวิชา</p>
-              <p v-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">คลิก "สร้างรายวิชาใหม่" เพื่อเริ่มต้น</p>
+              <p class="text-gray-500 dark:text-gray-400">
+                {{ hasActiveCourseFilters ? 'ไม่พบรายวิชาตามตัวกรองที่เลือก' : 'ยังไม่มีรายวิชา' }}
+              </p>
+              <p v-if="hasActiveCourseFilters" class="text-sm text-gray-400 dark:text-gray-500 mt-2">ลองเปลี่ยนระดับชั้น ภาคเรียน หรือคำค้นหา ดูแล้วลองใหม่อีกครั้ง</p>
+              <p v-else-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">คลิก "สร้างรายวิชาใหม่" เพื่อเริ่มต้น</p>
             </div>
-            
-            <!-- Courses Grid -->
-            <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NuxtLink
-                v-for="course in courses"
-                :key="course.id"
-                :to="`/Learn/Courses/${course.id}`"
-                class="block bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden group"
+
+            <div v-else class="space-y-3">
+              <div
+                v-for="group in groupedCourses"
+                :key="group.key"
+                class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
               >
-                <!-- Course Cover -->
-                <div class="h-32 bg-gradient-to-br from-vikinger-purple to-vikinger-cyan relative">
-                  <img 
-                    v-if="course.cover" 
-                    :src="course.cover"
-                    class="w-full h-full object-cover"
-                  />
-                  <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
-                
-                <div class="p-4">
-                  <h3 class="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1 group-hover:text-vikinger-purple transition-colors">
-                    {{ course.name }}
-                  </h3>
-                  <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">{{ course.description }}</p>
-                  
-                  <!-- Course Info -->
-                  <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <div class="flex items-center gap-3">
-                      <span class="flex items-center gap-1">
-                        <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
-                        {{ course.students_count || 0 }}
-                      </span>
-                      <span class="flex items-center gap-1">
-                        <Icon icon="fluent:book-open-24-regular" class="w-4 h-4" />
-                        {{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บท
-                      </span>
-                    </div>
-                    <span 
-                      :class="[
-                        'px-2 py-0.5 rounded-full text-xs',
-                        course.status === 'published' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
-                        course.status === 'draft' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' :
-                        'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                      ]"
-                    >
-                      {{ course.status === 'published' ? 'เผยแพร่' : course.status === 'draft' ? 'แบบร่าง' : course.status }}
+                <button
+                  type="button"
+                  class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
+                  @click="toggleCourseGroup(group.key)"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-900 dark:text-white">{{ group.label }}</span>
+                    <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-300">
+                      {{ group.courses.length }} รายวิชา
                     </span>
                   </div>
+                  <Icon
+                    :icon="expandedCourseGroups[group.key] ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'"
+                    class="w-5 h-5 text-gray-400"
+                  />
+                </button>
+
+                <div v-if="expandedCourseGroups[group.key]" class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <CourseCard
+                    v-for="(course, index) in group.courses"
+                    :key="course.id"
+                    :course="course"
+                    :index="index"
+                    :to="`/Learn/Courses/${course.id}`"
+                    class="h-full"
+                  />
                 </div>
-              </NuxtLink>
+              </div>
             </div>
           </div>
           

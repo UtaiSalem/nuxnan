@@ -33,6 +33,7 @@ const selectedImages = ref([])
 const selectedFiles = ref([])
 const imageInput = ref(null)
 const fileInput = ref(null)
+const textareaRef = ref(null)
 
 // Tabs
 const activeTab = ref('status')
@@ -133,8 +134,16 @@ const createPost = async () => {
   }
 }
 
-// Reset form
-const resetForm = () => {
+// Auto-resize textarea
+const autoResize = () => {
+  const el = textareaRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = Math.max(el.scrollHeight, 160) + 'px'
+}
+
+// Clear all form state (no close emission)
+const clearFormState = () => {
   postText.value = ''
   selectedImages.value = []
   selectedFiles.value = []
@@ -144,8 +153,20 @@ const resetForm = () => {
   pollDuration.value = 24
   pollPointsPool.value = 12000
   maxVotes.value = 100
+}
+
+// Reset form and close modal
+const resetForm = () => {
+  clearFormState()
   closeModal()
 }
+
+// Reset form state when modal closes without posting
+watch(() => props.show, (newVal) => {
+  if (!newVal) {
+    clearFormState()
+  }
+})
 
 // Image handling
 const handleImageSelect = (event) => {
@@ -266,10 +287,11 @@ const formatFileSize = (bytes) => {
                 <!-- Post Input -->
                 <div class="rounded-lg mb-4 min-h-[120px] p-4 bg-gray-50 dark:bg-vikinger-dark-200">
                   <textarea 
+                    ref="textareaRef"
                     v-model="postText" 
                     placeholder="แชร์ความรู้หรือถามคำถามในรายวิชานี้..." 
-                    rows="4"
-                    class="w-full bg-transparent border-none outline-none resize-none text-gray-800 dark:text-white placeholder-gray-400" 
+                    class="w-full bg-transparent border-none outline-none resize-none text-gray-800 dark:text-white placeholder-gray-400 min-h-[160px] max-h-[50vh]" 
+                    @input="autoResize"
                     @keydown.ctrl.enter="createPost" 
                     :disabled="isSubmitting" 
                   />

@@ -6956,3 +6956,50 @@ async function load() {
 - Closure note:
   - current delivery cycle can be considered closed from an implementation/verification standpoint
   - no additional actionable pending items remain in this working tree outside previously documented out-of-scope backlog and the known `491` orphan `student_academic_info` rows from Phase 9
+
+## 2026-06-22 Academy courses tab now uses shared course card design
+
+- Scope implemented:
+  - Replaced the custom course card markup in `ui/pages/academies/[name].vue` with the shared `ui/components/learn/course/CourseCard.vue` so school course cards match the familiar general course card UI.
+  - Added an optional `to` prop to `CourseCard` so this page can opt into direct navigation without changing existing parent-managed usages elsewhere.
+- Files touched:
+  - `ui/components/learn/course/CourseCard.vue`
+  - `ui/pages/academies/[name].vue`
+- Verification:
+  - Read-back confirmed the academy courses grid now renders `CourseCard` directly and routes each card to `/Learn/Courses/{id}` through the new optional navigation prop.
+
+## 2026-06-22 Planning note - academy course grouping by student segment
+
+- Findings:
+  - `ui/pages/academies/[name].vue` currently fetches `/api/academies/{id}/courses` into a flat `courses[]` list and renders all items in one grid.
+  - `AcademyCourseController::getAcademyCourses()` returns a flat paginated list and no grouping/filter metadata.
+  - `CourseResource` already exposes `education_level`, `education_year`, `semester`, and `academic_year`, which are usable for school-facing student-segment grouping without schema changes.
+  - The academy page already has a separate classrooms data flow, so classroom-aware grouping can be added later without blocking the first pass.
+- Intended files if implemented:
+  - `ui/pages/academies/[name].vue`
+  - optional new academy course section/filter component under `ui/components/academy/` or `ui/components/learn/academy/`
+  - `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyCourseController.php`
+- Decision:
+  - Recommend Phase 1 grouping by `education_level + education_year`, with semester/academic-year filters and collapsible sections.
+  - Defer true classroom/persona-based grouping to a second phase if the school wants “ห้อง/สาย/ระดับชั้น” specific shelves.
+- Risks:
+  - Existing courses may have incomplete `education_level` / `education_year`, so an “อื่นๆ/ยังไม่ระบุ” bucket is required.
+  - Rendering all groups expanded at once can still be heavy with 100+ courses, so lazy section expansion or paginated section loading should be planned.
+- Verification plan:
+  - read-back/UI parse for the academy page and targeted API response inspection for grouping/filter metadata.
+
+## 2026-06-22 Implementation note - academy courses grouped by student segment
+
+- Scope completed:
+  - Removed the conflicting `GET /api/academies/{academy:name}/courses` route so the academy courses API resolves cleanly by academy id.
+  - Updated `ui/pages/academies/[name]/admin/courses/index.vue` to load courses by `academyId`, preserving admin behavior after the route cleanup.
+  - Extended `AcademyCourseController::getAcademyCourses()` with student-segment filters (`education_level`, `education_year`, `semester`, `academic_year`, `search`, `status`) plus `available_filters` metadata for the frontend.
+  - Added `ui/composables/useCourseGrouping.ts` and updated `ui/pages/academies/[name].vue` to group courses by `education_level + education_year`, render collapsible sections, and expose school-facing filters above the grid.
+- Verification:
+  - `api/nuxnanravel`: `php artisan route:list --path=academies --name=academy.courses`
+  - `api/nuxnanravel`: `php artisan test tests/Feature/Api/Academy/AcademyCourseListTest.php`
+    - Result: `3 passed (12 assertions)`
+  - `api/nuxnanravel`: `vendor\bin\pint app\Http\Controllers\Api\Learn\Academy\AcademyCourseController.php tests\Feature\Api\Academy\AcademyCourseListTest.php`
+  - Frontend academy page was re-read around the grouped-course template and fetch logic; an automated Vue SFC parse check was attempted but blocked by sandbox read restrictions against `ui/node_modules`.
+- Remaining caution:
+  - The new academy page fetch currently requests `per_page=100` so grouping is useful immediately for large schools, but truly huge academies may still want a second pass with server-driven grouped pagination or lazy section loading.

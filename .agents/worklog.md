@@ -297,3 +297,25 @@
 - Remaining:
   - no new actionable items remain for this cycle in the current working tree
   - historical backlog entries elsewhere in this file should be treated as separate future work unless explicitly reopened
+
+## 2026-06-22 - Course Academy Backfill and Academic Year Repair (Cloned Courses Repair)
+
+- Branch: current working tree (uncommitted)
+- Task: Create `courses:backfill-academy` Artisan command to fix missing `academy_id` and `academic_year` values for cloned/copied courses (IDs 22, 23, 24, 25)
+- Files touched:
+  - `api/nuxnanravel/app/Console/Commands/BackfillCourseAcademy.php`
+  - `api/nuxnanravel/tests/Feature/BackfillCourseAcademyCommandTest.php`
+- Done:
+  - Added Artisan command `courses:backfill-academy` supporting `--academy=`, `--year=`, `--ids=`, and `--dry-run`.
+  - Previewed changes on IDs 22, 23, 24, 25.
+  - Successfully patched targets to `academy_id = 1` and `academic_year = 2569`.
+  - Re-synced `courses_offered` count on `Academy` model with ID 1 to 4.
+  - Ran Laravel Pint formatter on `BackfillCourseAcademy.php` and `BackfillCourseAcademyCommandTest.php`.
+- Verification:
+  - Verified Course #22 has `academic_year = 2569` and `academy_id = 1` in database.
+  - Verified Course #23, #24, #25 have `academy_id = 1` in database.
+  - Verified `Academy` with ID 1 has `courses_offered = 4`.
+  - Verified that `/api/academies/1/courses` successfully returns all 4 courses.
+  - Ran `php artisan test tests/Feature/BackfillCourseAcademyCommandTest.php` -> 3 passed (12 assertions).
+
+
