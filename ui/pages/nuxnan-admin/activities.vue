@@ -97,14 +97,14 @@ const getActivityIcon = (type: string) => {
 const getActivityColor = (type: string) => {
   const colors: Record<string, string> = {
     login: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-    logout: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+    logout: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
     register: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
     purchase: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
     complete: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
     review: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
-    profile_update: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
+    profile_update: 'bg-hopeui-primary-100 text-hopeui-primary-600 dark:bg-hopeui-primary-900 dark:text-hopeui-primary-400'
   }
-  return colors[type] || 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+  return colors[type] || 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
 }
 
 // Format date
@@ -131,20 +131,20 @@ onMounted(() => {
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">กิจกรรมล่าสุด</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">กิจกรรมล่าสุด</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">
           กิจกรรมทั้งหมด {{ totalActivities.toLocaleString() }} รายการ
         </p>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="flex flex-col sm:flex-row gap-4">
         <!-- Type Filter -->
         <select
           v-model="selectedType"
-          class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           @change="handleFilter"
         >
           <option v-for="type in activityTypes" :key="type.value" :value="type.value">
@@ -154,7 +154,7 @@ onMounted(() => {
 
         <button
           @click="fetchActivities"
-          class="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 transition-colors inline-flex items-center gap-2"
+          class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors inline-flex items-center gap-2"
         >
           <Icon icon="fluent:arrow-sync-24-regular" class="w-5 h-5" />
           รีเฟรช
@@ -163,25 +163,25 @@ onMounted(() => {
     </div>
 
     <!-- Activities List -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-hopeui border border-slate-100 dark:border-slate-700 overflow-hidden">
       <!-- Loading State -->
       <div v-if="isLoading" class="p-8 text-center">
-        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-        <p class="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
+        <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
       </div>
 
       <!-- Empty State -->
       <div v-else-if="activities.length === 0" class="p-8 text-center">
-        <Icon icon="fluent:activity-24-regular" class="w-12 h-12 text-gray-300 mx-auto" />
-        <p class="text-gray-500 mt-2">ไม่พบกิจกรรม</p>
+        <Icon icon="fluent:activity-24-regular" class="w-12 h-12 text-slate-300 mx-auto" />
+        <p class="text-slate-500 mt-2">ไม่พบกิจกรรม</p>
       </div>
 
       <!-- Activities -->
-      <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+      <div v-else class="divide-y divide-slate-100 dark:divide-slate-700">
         <div
           v-for="activity in activities"
           :key="activity.id"
-          class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          class="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
         >
           <div class="flex items-start gap-4">
             <!-- Activity Icon -->
@@ -192,13 +192,13 @@ onMounted(() => {
             <!-- Content -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <span class="font-medium text-gray-800 dark:text-white">
+                <span class="font-medium text-slate-800 dark:text-white">
                   {{ activity.user?.name || 'Unknown User' }}
                 </span>
-                <span class="text-gray-500 dark:text-gray-400">-</span>
-                <span class="text-gray-600 dark:text-gray-300">{{ activity.description }}</span>
+                <span class="text-slate-500 dark:text-slate-400">-</span>
+                <span class="text-slate-600 dark:text-slate-300">{{ activity.description }}</span>
               </div>
-              <div class="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <div class="flex items-center gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
                 <span class="flex items-center gap-1">
                   <Icon icon="fluent:clock-24-regular" class="w-4 h-4" />
                   {{ formatDate(activity.created_at) }}
@@ -221,16 +221,16 @@ onMounted(() => {
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="p-4 border-t border-gray-100 dark:border-gray-700">
+      <div v-if="totalPages > 1" class="p-4 border-t border-slate-100 dark:border-slate-700">
         <div class="flex justify-center gap-1">
           <button
             v-for="page in totalPages"
             :key="page"
             @click="goToPage(page)"
             class="w-10 h-10 rounded-lg text-sm font-medium transition-colors"
-            :class="currentPage === page 
-              ? 'bg-indigo-600 text-white' 
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+            :class="currentPage === page
+              ? 'bg-hopeui-primary-600 text-white'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'"
           >
             {{ page }}
           </button>

@@ -78,19 +78,19 @@ const getStatusLabel = (status: string) => {
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">รายงาน</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">ดูสถิติและรายงานต่างๆ ของระบบ</p>
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">รายงาน</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">ดูสถิติและรายงานต่างๆ ของระบบ</p>
       </div>
       <div class="flex items-center gap-3">
         <select
           v-model="selectedPeriod"
-          class="px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
         >
           <option v-for="period in periods" :key="period.value" :value="period.value">
             {{ period.label }}
           </option>
         </select>
-        <button class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <button class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
           <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
           ดาวน์โหลด
         </button>
@@ -99,11 +99,11 @@ const getStatusLabel = (status: string) => {
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-hopeui border border-slate-100 dark:border-slate-700">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">รายได้รวม</p>
-            <p class="text-2xl font-bold text-gray-800 dark:text-white mt-1">
+            <p class="text-sm text-slate-500 dark:text-slate-400">รายได้รวม</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">
               ฿{{ stats.totalRevenue.toLocaleString() }}
             </p>
             <div class="flex items-center gap-1 mt-2">
@@ -117,11 +117,11 @@ const getStatusLabel = (status: string) => {
         </div>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-hopeui border border-slate-100 dark:border-slate-700">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">ผู้ใช้งาน</p>
-            <p class="text-2xl font-bold text-gray-800 dark:text-white mt-1">
+            <p class="text-sm text-slate-500 dark:text-slate-400">ผู้ใช้งาน</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">
               {{ stats.totalUsers.toLocaleString() }}
             </p>
             <div class="flex items-center gap-1 mt-2">
@@ -135,11 +135,11 @@ const getStatusLabel = (status: string) => {
         </div>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-hopeui border border-slate-100 dark:border-slate-700">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">คอร์สทั้งหมด</p>
-            <p class="text-2xl font-bold text-gray-800 dark:text-white mt-1">
+            <p class="text-sm text-slate-500 dark:text-slate-400">คอร์สทั้งหมด</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">
               {{ stats.totalCourses.toLocaleString() }}
             </p>
             <div class="flex items-center gap-1 mt-2">
@@ -153,11 +153,11 @@ const getStatusLabel = (status: string) => {
         </div>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-hopeui border border-slate-100 dark:border-slate-700">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">การลงทะเบียน</p>
-            <p class="text-2xl font-bold text-gray-800 dark:text-white mt-1">
+            <p class="text-sm text-slate-500 dark:text-slate-400">การลงทะเบียน</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">
               {{ stats.totalEnrollments.toLocaleString() }}
             </p>
             <div class="flex items-center gap-1 mt-2">
@@ -174,17 +174,17 @@ const getStatusLabel = (status: string) => {
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Revenue by Category -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">รายได้ตามประเภท</h2>
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-hopeui border border-slate-100 dark:border-slate-700">
+        <h2 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">รายได้ตามประเภท</h2>
         <div class="space-y-4">
           <div v-for="category in revenueByCategory" :key="category.name">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-sm text-gray-600 dark:text-gray-300">{{ category.name }}</span>
-              <span class="text-sm font-medium text-gray-800 dark:text-white">
+              <span class="text-sm text-slate-600 dark:text-slate-300">{{ category.name }}</span>
+              <span class="text-sm font-medium text-slate-800 dark:text-white">
                 ฿{{ category.value.toLocaleString() }} ({{ category.percentage }}%)
               </span>
             </div>
-            <div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div class="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
               <div :class="[category.color, 'h-full rounded-full transition-all duration-500']" :style="{ width: `${category.percentage}%` }" />
             </div>
           </div>
@@ -192,22 +192,22 @@ const getStatusLabel = (status: string) => {
       </div>
 
       <!-- Top Selling Courses -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">คอร์สขายดี</h2>
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-hopeui border border-slate-100 dark:border-slate-700">
+        <h2 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">คอร์สขายดี</h2>
         <div class="space-y-4">
           <div v-for="(course, index) in topCourses" :key="course.name" class="flex items-center gap-4">
             <span :class="[
               'flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold',
               index === 0 ? 'bg-yellow-100 text-yellow-700' :
-              index === 1 ? 'bg-gray-100 text-gray-700' :
+              index === 1 ? 'bg-slate-100 text-slate-700' :
               index === 2 ? 'bg-orange-100 text-orange-700' :
-              'bg-gray-50 text-gray-500'
+              'bg-slate-50 text-slate-500'
             ]">
               {{ index + 1 }}
             </span>
             <div class="flex-1 min-w-0">
-              <p class="font-medium text-gray-800 dark:text-white truncate">{{ course.name }}</p>
-              <p class="text-sm text-gray-500">{{ course.sales }} ยอดขาย</p>
+              <p class="font-medium text-slate-800 dark:text-white truncate">{{ course.name }}</p>
+              <p class="text-sm text-slate-500">{{ course.sales }} ยอดขาย</p>
             </div>
             <span class="font-semibold text-green-600">฿{{ course.revenue.toLocaleString() }}</span>
           </div>
@@ -216,35 +216,35 @@ const getStatusLabel = (status: string) => {
     </div>
 
     <!-- Recent Transactions -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-800 dark:text-white">ธุรกรรมล่าสุด</h2>
-        <NuxtLink to="/nuxnan-admin/transactions" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+        <h2 class="text-lg font-semibold text-slate-800 dark:text-white">ธุรกรรมล่าสุด</h2>
+        <NuxtLink to="/nuxnan-admin/transactions" class="text-sm text-hopeui-primary-600 hover:text-hopeui-primary-700 font-medium">
           ดูทั้งหมด
         </NuxtLink>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead>
-            <tr class="border-b border-gray-100 dark:border-gray-700">
-              <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">ผู้ใช้</th>
-              <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">ประเภท</th>
-              <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">จำนวน</th>
-              <th class="pb-3 text-center text-xs font-medium text-gray-500 uppercase">สถานะ</th>
-              <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">วันที่</th>
+            <tr class="border-b border-slate-100 dark:border-slate-700">
+              <th class="pb-3 text-left text-xs font-medium text-slate-500 uppercase">ผู้ใช้</th>
+              <th class="pb-3 text-left text-xs font-medium text-slate-500 uppercase">ประเภท</th>
+              <th class="pb-3 text-right text-xs font-medium text-slate-500 uppercase">จำนวน</th>
+              <th class="pb-3 text-center text-xs font-medium text-slate-500 uppercase">สถานะ</th>
+              <th class="pb-3 text-right text-xs font-medium text-slate-500 uppercase">วันที่</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
+          <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
             <tr v-for="tx in recentTransactions" :key="tx.id">
-              <td class="py-3 text-gray-800 dark:text-white font-medium">{{ tx.user }}</td>
-              <td class="py-3 text-gray-600 dark:text-gray-300">{{ tx.type }}</td>
+              <td class="py-3 text-slate-800 dark:text-white font-medium">{{ tx.user }}</td>
+              <td class="py-3 text-slate-600 dark:text-slate-300">{{ tx.type }}</td>
               <td class="py-3 text-right font-medium text-green-600">฿{{ tx.amount.toLocaleString() }}</td>
               <td class="py-3 text-center">
                 <span :class="[getStatusBadge(tx.status), 'px-2 py-1 rounded-full text-xs font-medium']">
                   {{ getStatusLabel(tx.status) }}
                 </span>
               </td>
-              <td class="py-3 text-right text-gray-500">{{ tx.date }}</td>
+              <td class="py-3 text-right text-slate-500">{{ tx.date }}</td>
             </tr>
           </tbody>
         </table>
