@@ -96,13 +96,13 @@ const handleSubmit = async () => {
     <div class="flex items-center gap-4">
       <NuxtLink
         to="/nuxnan-admin/content"
-        class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+        class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
       </NuxtLink>
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">สร้างเนื้อหาใหม่</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">สร้างบทความ ประกาศ หรือเนื้อหาอื่นๆ</p>
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">สร้างเนื้อหาใหม่</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">สร้างบทความ ประกาศ หรือเนื้อหาอื่นๆ</p>
       </div>
     </div>
 
@@ -123,16 +123,16 @@ const handleSubmit = async () => {
     </div>
 
     <!-- Form -->
-    <form @submit.prevent="handleSubmit" class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+    <form @submit.prevent="handleSubmit" class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-6">
       <!-- Title -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           หัวข้อ <span class="text-red-500">*</span>
         </label>
         <input
           v-model="form.title"
           type="text"
-          class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
           :class="{ 'border-red-500': errors.title }"
           placeholder="หัวข้อเนื้อหา"
         />
@@ -142,12 +142,12 @@ const handleSubmit = async () => {
       <!-- Type & Status -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             ประเภท
           </label>
           <select
             v-model="form.type"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           >
             <option v-for="type in contentTypes" :key="type.value" :value="type.value">
               {{ type.label }}
@@ -156,12 +156,12 @@ const handleSubmit = async () => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             สถานะ
           </label>
           <select
             v-model="form.status"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           >
             <option v-for="status in statuses" :key="status.value" :value="status.value">
               {{ status.label }}
@@ -172,13 +172,13 @@ const handleSubmit = async () => {
 
       <!-- Content -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           เนื้อหา <span class="text-red-500">*</span>
         </label>
         <textarea
           v-model="form.content"
           rows="10"
-          class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+          class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent resize-none"
           :class="{ 'border-red-500': errors.content }"
           placeholder="เนื้อหา..."
         ></textarea>
@@ -186,14 +186,14 @@ const handleSubmit = async () => {
       </div>
 
       <!-- Featured -->
-      <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+      <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
         <label class="flex items-center gap-3 cursor-pointer">
           <input
             v-model="form.is_featured"
             type="checkbox"
-            class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            class="w-5 h-5 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
           />
-          <span class="text-gray-700 dark:text-gray-300">แสดงในหน้าแรก (Featured)</span>
+          <span class="text-slate-700 dark:text-slate-300">แสดงในหน้าแรก (Featured)</span>
         </label>
       </div>
 
@@ -202,7 +202,7 @@ const handleSubmit = async () => {
         <button
           type="submit"
           :disabled="isSubmitting"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 rounded-xl text-white font-medium transition-colors"
+          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-hopeui-primary-300 rounded-xl text-white font-medium transition-colors"
         >
           <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
           <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
@@ -211,7 +211,7 @@ const handleSubmit = async () => {
         
         <NuxtLink
           to="/nuxnan-admin/content"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 font-medium transition-colors"
+          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
         >
           <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
           ยกเลิก

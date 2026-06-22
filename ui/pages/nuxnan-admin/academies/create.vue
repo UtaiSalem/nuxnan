@@ -92,13 +92,13 @@ const handleSubmit = async () => {
     <div class="flex items-center gap-4">
       <NuxtLink
         to="/nuxnan-admin/academies"
-        class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+        class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
       </NuxtLink>
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">สร้างสถาบันใหม่</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">กรอกข้อมูลเพื่อสร้างสถาบัน</p>
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">สร้างสถาบันใหม่</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">กรอกข้อมูลเพื่อสร้างสถาบัน</p>
       </div>
     </div>
 
@@ -119,16 +119,16 @@ const handleSubmit = async () => {
     </div>
 
     <!-- Form -->
-    <form @submit.prevent="handleSubmit" class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+    <form @submit.prevent="handleSubmit" class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-6">
       <!-- Name -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           ชื่อสถาบัน <span class="text-red-500">*</span>
         </label>
         <input
           v-model="form.name"
           type="text"
-          class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
           :class="{ 'border-red-500': errors.name }"
           placeholder="เช่น สถาบัน ABC"
         />
@@ -137,43 +137,43 @@ const handleSubmit = async () => {
 
       <!-- Description -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           คำอธิบาย
         </label>
         <textarea
           v-model="form.description"
           rows="4"
-          class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+          class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent resize-none"
           placeholder="รายละเอียดเกี่ยวกับสถาบัน..."
         ></textarea>
       </div>
 
       <!-- Logo -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           โลโก้
         </label>
         <div class="flex items-center gap-4">
-          <label class="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors">
-            <Icon icon="fluent:image-add-24-regular" class="w-8 h-8 text-gray-400" />
-            <span class="mt-2 text-sm text-gray-500">คลิกเพื่ออัพโหลด</span>
+          <label class="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:border-hopeui-primary-500 dark:hover:border-hopeui-primary-400 transition-colors">
+            <Icon icon="fluent:image-add-24-regular" class="w-8 h-8 text-slate-400" />
+            <span class="mt-2 text-sm text-slate-500">คลิกเพื่ออัพโหลด</span>
             <input type="file" accept="image/*" class="hidden" @change="handleFileChange" />
           </label>
-          <div v-if="form.logo" class="text-sm text-gray-600 dark:text-gray-400">
+          <div v-if="form.logo" class="text-sm text-slate-600 dark:text-slate-400">
             {{ form.logo.name }}
           </div>
         </div>
       </div>
 
       <!-- Active Status -->
-      <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+      <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
         <label class="flex items-center gap-3 cursor-pointer">
           <input
             v-model="form.is_active"
             type="checkbox"
-            class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            class="w-5 h-5 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
           />
-          <span class="text-gray-700 dark:text-gray-300">เปิดใช้งานทันที</span>
+          <span class="text-slate-700 dark:text-slate-300">เปิดใช้งานทันที</span>
         </label>
       </div>
 
@@ -182,7 +182,7 @@ const handleSubmit = async () => {
         <button
           type="submit"
           :disabled="isSubmitting"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 rounded-xl text-white font-medium transition-colors"
+          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-hopeui-primary-300 rounded-xl text-white font-medium transition-colors"
         >
           <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
           <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
@@ -191,7 +191,7 @@ const handleSubmit = async () => {
         
         <NuxtLink
           to="/nuxnan-admin/academies"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 font-medium transition-colors"
+          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
         >
           <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
           ยกเลิก
