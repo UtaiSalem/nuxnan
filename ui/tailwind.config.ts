@@ -87,6 +87,24 @@ export default {
           pink: '#ff6b81',
           gradient: 'linear-gradient(90deg, #615dfa 0%, #23d2e2 100%)',
         },
+        // HopeUI palette — scoped to nuxnan-admin only, separate from Vikinger brand colors above
+        'hopeui-primary': {
+          100: '#d8ddfa',
+          200: '#b0bcf6',
+          300: '#899af1',
+          400: '#6179ed',
+          500: '#3a57e8',
+          600: '#2e46ba',
+          700: '#23348b',
+          800: '#17235d',
+          900: '#0c112e',
+        },
+        'hopeui-success': '#1aa053',
+        'hopeui-info': '#08B1BA',
+        'hopeui-warning': '#f16a1b',
+        'hopeui-danger': '#e02865',
+        'hopeui-container': '#f5f6fa',
+        'hopeui-body': '#f9f9f9',
       },
       fontFamily: {
         sans: ['Prompt', 'Inter', 'sans-serif'],
@@ -112,6 +130,12 @@ export default {
         'purple-glow': '0 0 20px rgba(97, 93, 250, 0.5)',
         'card': '0 4px 16px rgba(0, 0, 0, 0.1)',
         'card-dark': '0 4px 16px rgba(0, 0, 0, 0.4)',
+        // HopeUI shadow scale — scoped to nuxnan-admin
+        'hopeui-sm': '0 0.125rem 0.25rem rgba(0, 0, 0, .1)',
+        'hopeui': '0 0.625rem 1.875rem rgba(0, 0, 0, .03)',
+        'hopeui-md': '0 0.5rem 1rem rgba(0, 0, 0, .03)',
+        'hopeui-lg': '0 0.625rem 1.875rem rgba(0, 0, 0, .05)',
+        'hopeui-dropdown': '0 0.625rem 1.875rem rgb(0 0 0 / 10%)',
       },
       borderRadius: {
         'vikinger': '12px',
