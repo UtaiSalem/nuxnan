@@ -258,9 +258,9 @@ const getRoleBadgeClass = (roleName: string) => {
     'ADMIN': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     'MODERATOR': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
     'INSTRUCTOR': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    'USER': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+    'USER': 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
   }
-  return badges[roleName] || 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+  return badges[roleName] || 'bg-hopeui-primary-100 text-hopeui-primary-700 dark:bg-hopeui-primary-900 dark:text-hopeui-primary-400'
 }
 
 // Check if role is system role (cannot be deleted)
@@ -295,14 +295,14 @@ onMounted(() => {
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">จัดการบทบาท</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">จัดการบทบาท</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">
           บทบาททั้งหมด {{ totalRoles }} บทบาท
         </p>
       </div>
       <button
         @click="openCreateModal"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white transition-colors"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
       >
         <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
         เพิ่มบทบาทใหม่
@@ -310,21 +310,21 @@ onMounted(() => {
     </div>
 
     <!-- Search Filter -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="flex flex-col sm:flex-row gap-4">
         <div class="flex-1 relative">
-          <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             v-model="searchQuery"
             type="text"
             placeholder="ค้นหาบทบาท..."
-            class="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
             @keyup.enter="handleSearch"
           />
         </div>
         <button
           @click="handleSearch"
-          class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white transition-colors"
+          class="px-4 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
         >
           ค้นหา
         </button>
@@ -332,52 +332,52 @@ onMounted(() => {
     </div>
 
     <!-- Roles Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-hopeui border border-slate-100 dark:border-slate-700 overflow-hidden">
       <!-- Loading State -->
       <div v-if="isLoading" class="p-8 text-center">
-        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-        <p class="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
+        <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
       </div>
 
       <!-- Table -->
       <div v-else class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <thead class="bg-slate-50 dark:bg-slate-700/50">
             <tr>
-              <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">บทบาท</th>
-              <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">คำอธิบาย</th>
-              <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">ผู้ใช้</th>
-              <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">สิทธิ์</th>
-              <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">สถานะ</th>
-              <th class="px-6 py-4 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">จัดการ</th>
+              <th class="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">บทบาท</th>
+              <th class="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">คำอธิบาย</th>
+              <th class="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">ผู้ใช้</th>
+              <th class="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">สิทธิ์</th>
+              <th class="px-6 py-4 text-center text-sm font-semibold text-slate-700 dark:text-slate-300">สถานะ</th>
+              <th class="px-6 py-4 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">จัดการ</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <tr v-for="role in roles" :key="role.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            <tr v-for="role in roles" :key="role.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-full flex items-center justify-center" :class="getRoleBadgeClass(role.name)">
                     <Icon icon="fluent:shield-24-regular" class="w-5 h-5" />
                   </div>
                   <div>
-                    <div class="font-medium text-gray-800 dark:text-white">{{ role.display_name || role.name }}</div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ role.name }}</div>
+                    <div class="font-medium text-slate-800 dark:text-white">{{ role.display_name || role.name }}</div>
+                    <div class="text-sm text-slate-500 dark:text-slate-400">{{ role.name }}</div>
                   </div>
                 </div>
               </td>
               <td class="px-6 py-4">
-                <p class="text-gray-600 dark:text-gray-400 text-sm truncate max-w-xs">
+                <p class="text-slate-600 dark:text-slate-400 text-sm truncate max-w-xs">
                   {{ role.description || '-' }}
                 </p>
               </td>
               <td class="px-6 py-4 text-center">
-                <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300">
                   <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
                   {{ role.users_count || 0 }}
                 </span>
               </td>
               <td class="px-6 py-4 text-center">
-                <span class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-sm text-indigo-700 dark:text-indigo-400">
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-hopeui-primary-100 dark:bg-hopeui-primary-900 rounded-lg text-sm text-hopeui-primary-700 dark:text-hopeui-primary-400">
                   <Icon icon="fluent:key-24-regular" class="w-4 h-4" />
                   {{ role.permissions_count || 0 }}
                 </span>
@@ -386,7 +386,7 @@ onMounted(() => {
                 <span v-if="role.status" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                   ใช้งาน
                 </span>
-                <span v-else class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                <span v-else class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                   ปิดใช้งาน
                 </span>
               </td>
@@ -410,7 +410,7 @@ onMounted(() => {
                   <button
                     v-else
                     disabled
-                    class="p-2 text-gray-400 cursor-not-allowed rounded-lg"
+                    class="p-2 text-slate-400 cursor-not-allowed rounded-lg"
                     title="ไม่สามารถลบบทบาทระบบได้"
                   >
                     <Icon icon="fluent:lock-closed-24-regular" class="w-5 h-5" />
@@ -424,21 +424,21 @@ onMounted(() => {
 
       <!-- Empty State -->
       <div v-if="!isLoading && roles.length === 0" class="p-8 text-center">
-        <Icon icon="fluent:shield-error-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto" />
-        <h3 class="mt-4 text-lg font-medium text-gray-800 dark:text-white">ไม่พบบทบาท</h3>
-        <p class="mt-1 text-gray-500">ลองค้นหาด้วยคำอื่น หรือเพิ่มบทบาทใหม่</p>
+        <Icon icon="fluent:shield-error-24-regular" class="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto" />
+        <h3 class="mt-4 text-lg font-medium text-slate-800 dark:text-white">ไม่พบบทบาท</h3>
+        <p class="mt-1 text-slate-500">ลองค้นหาด้วยคำอื่น หรือเพิ่มบทบาทใหม่</p>
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <div class="text-sm text-gray-500 dark:text-gray-400">
+      <div v-if="totalPages > 1" class="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+        <div class="text-sm text-slate-500 dark:text-slate-400">
           แสดง {{ (currentPage - 1) * perPage + 1 }} - {{ Math.min(currentPage * perPage, totalRoles) }} จาก {{ totalRoles }} รายการ
         </div>
         <div class="flex items-center gap-1">
           <button
             @click="goToPage(currentPage - 1)"
             :disabled="currentPage === 1"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon icon="fluent:chevron-left-24-regular" class="w-5 h-5" />
           </button>
@@ -448,9 +448,9 @@ onMounted(() => {
             @click="goToPage(page)"
             :class="[
               'px-3 py-1 rounded-lg text-sm font-medium',
-              page === currentPage 
-                ? 'bg-indigo-600 text-white' 
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              page === currentPage
+                ? 'bg-hopeui-primary-500 text-white'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
             ]"
           >
             {{ page }}
@@ -458,7 +458,7 @@ onMounted(() => {
           <button
             @click="goToPage(currentPage + 1)"
             :disabled="currentPage === totalPages"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5" />
           </button>
@@ -470,59 +470,59 @@ onMounted(() => {
     <Teleport to="body">
       <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50" @click="showCreateModal = false"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-          <div class="p-6 border-b border-gray-100 dark:border-gray-700">
-            <h2 class="text-xl font-bold text-gray-800 dark:text-white">เพิ่มบทบาทใหม่</h2>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+          <div class="p-6 border-b border-slate-100 dark:border-slate-700">
+            <h2 class="text-xl font-bold text-slate-800 dark:text-white">เพิ่มบทบาทใหม่</h2>
           </div>
-          
+
           <form @submit.prevent="submitCreate" class="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อบทบาท (ภาษาอังกฤษ)</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ชื่อบทบาท (ภาษาอังกฤษ)</label>
               <input
                 v-model="formData.name"
                 type="text"
                 placeholder="เช่น CONTENT_MANAGER"
-                class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
               />
               <p v-if="formErrors.name" class="text-red-500 text-sm mt-1">{{ formErrors.name }}</p>
             </div>
-            
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อแสดง</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ชื่อแสดง</label>
               <input
                 v-model="formData.display_name"
                 type="text"
                 placeholder="เช่น ผู้จัดการเนื้อหา"
-                class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
               />
             </div>
-            
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำอธิบาย</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">คำอธิบาย</label>
               <textarea
                 v-model="formData.description"
                 rows="2"
                 placeholder="อธิบายหน้าที่ของบทบาทนี้..."
-                class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
               ></textarea>
             </div>
 
             <!-- Permissions -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">สิทธิ์การใช้งาน</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">สิทธิ์การใช้งาน</label>
               <div class="space-y-4">
-                <div v-for="(permissions, group) in availablePermissions" :key="group" class="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden">
-                  <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+                <div v-for="(permissions, group) in availablePermissions" :key="group" class="border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden">
+                  <div class="px-4 py-3 bg-slate-50 dark:bg-slate-700 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <input
                         type="checkbox"
                         :checked="isGroupSelected(permissions)"
                         @change="toggleGroup(permissions)"
-                        class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        class="w-4 h-4 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
                       />
-                      <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ group }}</span>
+                      <span class="font-medium text-slate-700 dark:text-slate-300 capitalize">{{ group }}</span>
                     </div>
-                    <span class="text-sm text-gray-500">{{ permissions.length }} สิทธิ์</span>
+                    <span class="text-sm text-slate-500">{{ permissions.length }} สิทธิ์</span>
                   </div>
                   <div class="p-4 grid grid-cols-2 gap-2">
                     <label v-for="permission in permissions" :key="permission.name" class="flex items-center gap-2 cursor-pointer">
@@ -530,9 +530,9 @@ onMounted(() => {
                         type="checkbox"
                         :checked="formData.permissions.includes(permission.name)"
                         @change="togglePermission(permission.name)"
-                        class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        class="w-4 h-4 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
                       />
-                      <span class="text-sm text-gray-600 dark:text-gray-400">{{ permission.display_name || permission.name }}</span>
+                      <span class="text-sm text-slate-600 dark:text-slate-400">{{ permission.display_name || permission.name }}</span>
                     </label>
                   </div>
                 </div>
@@ -540,18 +540,18 @@ onMounted(() => {
             </div>
           </form>
 
-          <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+          <div class="p-6 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
             <button
               type="button"
               @click="showCreateModal = false"
-              class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+              class="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
             >
               ยกเลิก
             </button>
             <button
               @click="submitCreate"
               :disabled="isSubmitting"
-              class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors disabled:opacity-50"
+              class="px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 text-white rounded-xl transition-colors disabled:opacity-50"
             >
               {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
             </button>
@@ -564,57 +564,57 @@ onMounted(() => {
     <Teleport to="body">
       <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50" @click="showEditModal = false"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-          <div class="p-6 border-b border-gray-100 dark:border-gray-700">
-            <h2 class="text-xl font-bold text-gray-800 dark:text-white">แก้ไขบทบาท</h2>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+          <div class="p-6 border-b border-slate-100 dark:border-slate-700">
+            <h2 class="text-xl font-bold text-slate-800 dark:text-white">แก้ไขบทบาท</h2>
           </div>
-          
+
           <form @submit.prevent="submitEdit" class="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อบทบาท</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ชื่อบทบาท</label>
               <input
                 v-model="formData.name"
                 type="text"
                 :disabled="isSystemRole(editingRole?.name)"
-                class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 disabled:opacity-50"
               />
-              <p v-if="isSystemRole(editingRole?.name)" class="text-sm text-gray-500 mt-1">ไม่สามารถเปลี่ยนชื่อบทบาทระบบได้</p>
+              <p v-if="isSystemRole(editingRole?.name)" class="text-sm text-slate-500 mt-1">ไม่สามารถเปลี่ยนชื่อบทบาทระบบได้</p>
             </div>
-            
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อแสดง</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ชื่อแสดง</label>
               <input
                 v-model="formData.display_name"
                 type="text"
-                class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
               />
             </div>
-            
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำอธิบาย</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">คำอธิบาย</label>
               <textarea
                 v-model="formData.description"
                 rows="2"
-                class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
               ></textarea>
             </div>
 
             <!-- Permissions -->
             <div v-if="editingRole?.name !== 'SUPER_ADMIN'">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">สิทธิ์การใช้งาน</label>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">สิทธิ์การใช้งาน</label>
               <div class="space-y-4">
-                <div v-for="(permissions, group) in availablePermissions" :key="group" class="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden">
-                  <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+                <div v-for="(permissions, group) in availablePermissions" :key="group" class="border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden">
+                  <div class="px-4 py-3 bg-slate-50 dark:bg-slate-700 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <input
                         type="checkbox"
                         :checked="isGroupSelected(permissions)"
                         @change="toggleGroup(permissions)"
-                        class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        class="w-4 h-4 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
                       />
-                      <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ group }}</span>
+                      <span class="font-medium text-slate-700 dark:text-slate-300 capitalize">{{ group }}</span>
                     </div>
-                    <span class="text-sm text-gray-500">{{ permissions.length }} สิทธิ์</span>
+                    <span class="text-sm text-slate-500">{{ permissions.length }} สิทธิ์</span>
                   </div>
                   <div class="p-4 grid grid-cols-2 gap-2">
                     <label v-for="permission in permissions" :key="permission.name" class="flex items-center gap-2 cursor-pointer">
@@ -622,9 +622,9 @@ onMounted(() => {
                         type="checkbox"
                         :checked="formData.permissions.includes(permission.name)"
                         @change="togglePermission(permission.name)"
-                        class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        class="w-4 h-4 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
                       />
-                      <span class="text-sm text-gray-600 dark:text-gray-400">{{ permission.display_name || permission.name }}</span>
+                      <span class="text-sm text-slate-600 dark:text-slate-400">{{ permission.display_name || permission.name }}</span>
                     </label>
                   </div>
                 </div>
@@ -638,18 +638,18 @@ onMounted(() => {
             </div>
           </form>
 
-          <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+          <div class="p-6 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
             <button
               type="button"
               @click="showEditModal = false"
-              class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+              class="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
             >
               ยกเลิก
             </button>
             <button
               @click="submitEdit"
               :disabled="isSubmitting"
-              class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors disabled:opacity-50"
+              class="px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 text-white rounded-xl transition-colors disabled:opacity-50"
             >
               {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
             </button>
@@ -662,20 +662,20 @@ onMounted(() => {
     <Teleport to="body">
       <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50" @click="showDeleteModal = false"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6">
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6">
           <div class="text-center">
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
               <Icon icon="fluent:delete-24-regular" class="w-8 h-8 text-red-600" />
             </div>
-            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">ยืนยันการลบ</h3>
-            <p class="text-gray-500 dark:text-gray-400 mb-6">
-              คุณต้องการลบบทบาท <span class="font-semibold text-gray-800 dark:text-white">{{ roleToDelete?.display_name || roleToDelete?.name }}</span> ใช่หรือไม่?
+            <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2">ยืนยันการลบ</h3>
+            <p class="text-slate-500 dark:text-slate-400 mb-6">
+              คุณต้องการลบบทบาท <span class="font-semibold text-slate-800 dark:text-white">{{ roleToDelete?.display_name || roleToDelete?.name }}</span> ใช่หรือไม่?
               <br /><span class="text-red-500">การกระทำนี้ไม่สามารถยกเลิกได้</span>
             </p>
             <div class="flex justify-center gap-3">
               <button
                 @click="showDeleteModal = false"
-                class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                class="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
               >
                 ยกเลิก
               </button>

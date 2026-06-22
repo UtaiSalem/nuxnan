@@ -457,7 +457,7 @@ const getRoleBadge = (role: string) => {
   const badges: Record<string, string> = {
     admin:      'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     instructor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    student:    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    student:    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
   }
   return badges[role] ?? badges.student
 }
@@ -478,18 +478,18 @@ onMounted(fetchUsers)
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <div class="flex items-center gap-3">
-          <h1 class="text-2xl font-bold text-gray-800 dark:text-white">จัดการผู้ใช้</h1>
+          <h1 class="text-2xl font-bold text-slate-800 dark:text-white">จัดการผู้ใช้</h1>
           <span v-if="totalPendingUsers > 0" class="px-2 py-0.5 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full text-xs font-medium">
             {{ totalPendingUsers }} รอยืนยัน
           </span>
         </div>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
+        <p class="text-slate-500 dark:text-slate-400 mt-1">
           ผู้ใช้งานทั้งหมด {{ totalUsers.toLocaleString() }} คน
         </p>
       </div>
       <NuxtLink
         to="/nuxnan-admin/users/create"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white transition-colors"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
       >
         <Icon icon="fluent:person-add-24-regular" class="w-5 h-5" />
         เพิ่มผู้ใช้ใหม่
@@ -497,16 +497,16 @@ onMounted(fetchUsers)
     </div>
 
     <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="flex flex-col sm:flex-row gap-4">
         <!-- Search -->
         <div class="flex-1 relative">
-          <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             v-model="searchQuery"
             type="text"
             placeholder="ค้นหาผู้ใช้..."
-            class="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
             @keyup.enter="handleSearch"
           />
         </div>
@@ -514,7 +514,7 @@ onMounted(fetchUsers)
         <!-- Status Filter -->
         <select
           v-model="selectedStatus"
-          class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           @change="handleFilter"
         >
           <option v-for="status in statusOptions" :key="status.value" :value="status.value">
@@ -525,7 +525,7 @@ onMounted(fetchUsers)
         <!-- Role Filter -->
         <select
           v-model="selectedRole"
-          class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           @change="handleFilter"
         >
           <option v-for="role in roles" :key="role.value" :value="role.value">
@@ -536,7 +536,7 @@ onMounted(fetchUsers)
         <!-- Scope Filter -->
         <select
           v-model="selectedScope"
-          class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           @change="handleFilter"
         >
           <option v-for="s in scopes" :key="s.value" :value="s.value">
@@ -547,7 +547,7 @@ onMounted(fetchUsers)
         <!-- Search Button -->
         <button
           @click="handleSearch"
-          class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white transition-colors"
+          class="px-4 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
         >
           ค้นหา
         </button>
@@ -555,12 +555,12 @@ onMounted(fetchUsers)
     </div>
 
     <!-- Bulk Actions -->
-    <div v-if="selectedUserIds.length > 0" class="flex items-center justify-between gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800 shadow-sm">
+    <div v-if="selectedUserIds.length > 0" class="flex items-center justify-between gap-3 p-4 bg-hopeui-primary-100 dark:bg-hopeui-primary-900/20 rounded-2xl border border-hopeui-primary-100 dark:border-hopeui-primary-900 shadow-hopeui">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center">
-          <Icon icon="fluent:select-all-24-regular" class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+        <div class="w-10 h-10 bg-hopeui-primary-100 dark:bg-hopeui-primary-900/40 rounded-full flex items-center justify-center">
+          <Icon icon="fluent:select-all-24-regular" class="w-5 h-5 text-hopeui-primary-600 dark:text-hopeui-primary-500" />
         </div>
-        <span class="text-sm font-medium text-indigo-700 dark:text-indigo-300">เลือก {{ selectedUserIds.length }} คน</span>
+        <span class="text-sm font-medium text-hopeui-primary-600 dark:text-hopeui-primary-500">เลือก {{ selectedUserIds.length }} คน</span>
       </div>
       <div class="flex items-center gap-2">
         <button 
@@ -572,7 +572,7 @@ onMounted(fetchUsers)
         </button>
         <button 
           @click="selectedUserIds = []" 
-          class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
         >
           ยกเลิก
         </button>
@@ -580,77 +580,77 @@ onMounted(fetchUsers)
     </div>
 
     <!-- Users Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-hopeui border border-slate-100 dark:border-slate-700 overflow-hidden">
       <!-- Loading State -->
       <div v-if="isLoading" class="p-8 text-center">
-        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-        <p class="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
+        <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
       </div>
 
       <!-- Table -->
       <div v-else class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <thead class="bg-slate-50 dark:bg-slate-700/50">
             <tr>
               <th class="px-6 py-4 text-left">
                 <input
                   type="checkbox"
                   :checked="isAllSelected"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  class="rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
                   @change="toggleSelectAll"
                 />
               </th>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 ผู้ใช้
               </th>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 อีเมล
               </th>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 บทบาท
               </th>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 สถานะ
               </th>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-6 py-4 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 วันที่สมัคร
               </th>
-              <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th class="px-6 py-4 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 จัดการ
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
             <tr
               v-for="user in users"
               :key="user.id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-              :class="{ 'bg-indigo-50/50 dark:bg-indigo-900/10': selectedUserIds.includes(user.id) }"
+              class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+              :class="{ 'bg-hopeui-primary-100/50 dark:bg-hopeui-primary-900/10': selectedUserIds.includes(user.id) }"
             >
               <td class="px-6 py-4 whitespace-nowrap">
                 <input
                   type="checkbox"
                   :checked="selectedUserIds.includes(user.id)"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  class="rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
                   @change="toggleSelectUser(user.id)"
                 />
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center gap-3">
                   <img
-                    :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6366f1&color=fff`"
+                    :src="user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=3a57e8&color=fff`"
                     :alt="user.name"
                     class="w-10 h-10 rounded-full object-cover"
                   />
                   <div>
-                    <p class="font-medium text-gray-800 dark:text-white">{{ user.name }}</p>
-                    <p class="text-xs text-vikinger-cyan font-semibold">@{{ user.username }}</p>
-                    <p class="text-xs text-gray-500">ID: {{ user.id }}</p>
+                    <p class="font-medium text-slate-800 dark:text-white">{{ user.name }}</p>
+                    <p class="text-xs text-hopeui-primary-600 dark:text-hopeui-primary-500 font-semibold">@{{ user.username }}</p>
+                    <p class="text-xs text-slate-500">ID: {{ user.id }}</p>
                   </div>
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span class="text-gray-600 dark:text-gray-300">{{ user.email }}</span>
+                <span class="text-slate-600 dark:text-slate-300">{{ user.email }}</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span :class="[getRoleBadge(user.role), 'px-2.5 py-1 rounded-full text-xs font-medium']">
@@ -663,7 +663,7 @@ onMounted(fetchUsers)
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span class="text-gray-600 dark:text-gray-300">
+                <span class="text-slate-600 dark:text-slate-300">
                   {{ formatDate(user.created_at) }}
                 </span>
               </td>
@@ -673,7 +673,7 @@ onMounted(fetchUsers)
                   <button
                     v-if="!user.is_verified && !user.deleted_at"
                     @click="openVerifyModal(user)"
-                    class="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                    class="p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                     title="ยืนยันบัญชี"
                   >
                     <Icon icon="fluent:checkmark-circle-24-regular" class="w-5 h-5" />
@@ -681,31 +681,31 @@ onMounted(fetchUsers)
                   <button
                     v-if="user.is_verified && !user.deleted_at"
                     @click="openUnverifyModal(user)"
-                    class="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 rounded-lg transition-colors"
+                    class="p-2 text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 rounded-lg transition-colors"
                     title="ถอนการยืนยัน"
                   >
                     <Icon icon="fluent:dismiss-circle-24-regular" class="w-5 h-5" />
                   </button>
 
-                  <div class="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1" />
+                  <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
 
                   <NuxtLink
                     :to="`/nuxnan-admin/users/${user.id}`"
-                    class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                    class="p-2 text-slate-500 hover:text-hopeui-primary-600 hover:bg-hopeui-primary-100 dark:hover:bg-hopeui-primary-900/30 rounded-lg transition-colors"
                     title="ดูรายละเอียด"
                   >
                     <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
                   </NuxtLink>
                   <button
                     @click="openEditModal(user)"
-                    class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    class="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                     title="แก้ไข"
                   >
                     <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
                   </button>
                   <button
                     @click="openDeleteModal(user)"
-                    class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    class="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="ลบ"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
@@ -713,7 +713,7 @@ onMounted(fetchUsers)
                   <button
                     v-if="user.deleted_at"
                     @click="restoreUser(user)"
-                    class="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                    class="p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                     title="กู้คืนบัญชี"
                   >
                     <Icon icon="fluent:arrow-undo-24-regular" class="w-5 h-5" />
@@ -726,31 +726,31 @@ onMounted(fetchUsers)
 
         <!-- Empty State -->
         <div v-if="users.length === 0" class="p-8 text-center">
-          <Icon icon="fluent:people-24-regular" class="w-12 h-12 text-gray-300 mx-auto" />
-          <p class="text-gray-500 mt-2">ไม่พบผู้ใช้งาน</p>
+          <Icon icon="fluent:people-24-regular" class="w-12 h-12 text-slate-300 mx-auto" />
+          <p class="text-slate-500 mt-2">ไม่พบผู้ใช้งาน</p>
         </div>
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <p class="text-sm text-gray-500">
+      <div v-if="totalPages > 1" class="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+        <p class="text-sm text-slate-500">
           แสดง {{ (currentPage - 1) * perPage + 1 }} - {{ Math.min(currentPage * perPage, totalUsers) }} จาก {{ totalUsers }} รายการ
         </p>
         <div class="flex items-center gap-2">
           <button
             :disabled="currentPage === 1"
             @click="goToPage(currentPage - 1)"
-            class="p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 rounded-lg border border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Icon icon="fluent:chevron-left-24-regular" class="w-5 h-5" />
           </button>
-          <span class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300">
+          <span class="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300">
             หน้า {{ currentPage }} / {{ totalPages }}
           </span>
           <button
             :disabled="currentPage === totalPages"
             @click="goToPage(currentPage + 1)"
-            class="p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            class="p-2 rounded-lg border border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5" />
           </button>
@@ -781,22 +781,22 @@ onMounted(fetchUsers)
         >
           <div class="absolute inset-0 bg-black/50" @click="closeEditModal" />
           <form
-            class="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]"
+            class="relative bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh]"
             @submit.prevent="saveEditUser"
           >
-            <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-4">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between gap-4">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                   <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 class="text-base font-semibold text-gray-800 dark:text-white">แก้ไขผู้ใช้</h3>
-                  <p class="text-sm text-gray-500">{{ userToEdit?.name || 'กำลังโหลดข้อมูล...' }}</p>
+                  <h3 class="text-base font-semibold text-slate-800 dark:text-white">แก้ไขผู้ใช้</h3>
+                  <p class="text-sm text-slate-500">{{ userToEdit?.name || 'กำลังโหลดข้อมูล...' }}</p>
                 </div>
               </div>
               <button
                 type="button"
-                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                 :disabled="isSavingEdit"
                 @click="closeEditModal"
               >
@@ -805,7 +805,7 @@ onMounted(fetchUsers)
             </div>
 
             <div class="overflow-y-auto p-6 space-y-5 flex-1">
-              <div v-if="isLoadingEdit" class="flex items-center justify-center py-8 gap-3 text-gray-500">
+              <div v-if="isLoadingEdit" class="flex items-center justify-center py-8 gap-3 text-slate-500">
                 <Icon icon="fluent:spinner-ios-20-regular" class="w-6 h-6 animate-spin" />
                 <span>กำลังโหลดข้อมูลผู้ใช้...</span>
               </div>
@@ -817,13 +817,13 @@ onMounted(fetchUsers)
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                       ชื่อผู้ใช้ (Username) <span class="text-red-500">*</span>
                     </label>
                     <input
                       v-model="editForm.username"
                       type="text"
-                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
                       :class="{ 'border-red-500': editErrors.username }"
                       placeholder="เช่น nuxnan_user"
                     />
@@ -831,13 +831,13 @@ onMounted(fetchUsers)
                   </div>
 
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                       ชื่อแสดงผล <span class="text-red-500">*</span>
                     </label>
                     <input
                       v-model="editForm.name"
                       type="text"
-                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
                       :class="{ 'border-red-500': editErrors.name }"
                       placeholder="ชื่อที่ต้องการให้แสดง"
                     />
@@ -845,13 +845,13 @@ onMounted(fetchUsers)
                   </div>
 
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                       อีเมล <span class="text-red-500">*</span>
                     </label>
                     <input
                       v-model="editForm.email"
                       type="email"
-                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
                       :class="{ 'border-red-500': editErrors.email }"
                       placeholder="email@example.com"
                     />
@@ -859,11 +859,11 @@ onMounted(fetchUsers)
                   </div>
 
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เบอร์โทรศัพท์</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">เบอร์โทรศัพท์</label>
                     <input
                       v-model="editForm.phone_number"
                       type="tel"
-                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
                       :class="{ 'border-red-500': editErrors.phone_number }"
                       placeholder="เช่น 0812345678"
                     />
@@ -871,10 +871,10 @@ onMounted(fetchUsers)
                   </div>
 
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">บทบาทหลัก</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">บทบาทหลัก</label>
                     <select
                       v-model="editForm.role"
-                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
                       :class="{ 'border-red-500': editErrors.role }"
                     >
                       <option v-for="role in editableRoles" :key="role.value" :value="role.value">
@@ -885,10 +885,10 @@ onMounted(fetchUsers)
                   </div>
 
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">สถานะบัญชี</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">สถานะบัญชี</label>
                     <select
                       v-model="editForm.status"
-                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
                     >
                       <option v-for="status in editStatuses" :key="status.value" :value="status.value">
                         {{ status.label }}
@@ -897,11 +897,11 @@ onMounted(fetchUsers)
                   </div>
 
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">รหัสผ่านใหม่</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">รหัสผ่านใหม่</label>
                     <input
                       v-model="editForm.password"
                       type="password"
-                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
                       :class="{ 'border-red-500': editErrors.password }"
                       placeholder="เว้นว่างไว้ถ้าไม่เปลี่ยน"
                     />
@@ -909,11 +909,11 @@ onMounted(fetchUsers)
                   </div>
 
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ยืนยันรหัสผ่านใหม่</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">ยืนยันรหัสผ่านใหม่</label>
                     <input
                       v-model="editForm.password_confirmation"
                       type="password"
-                      class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
                       :class="{ 'border-red-500': editErrors.password_confirmation }"
                       placeholder="กรอกซ้ำเมื่อเปลี่ยนรหัสผ่าน"
                     />
@@ -922,40 +922,40 @@ onMounted(fetchUsers)
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl cursor-pointer">
+                  <label class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl cursor-pointer">
                     <input
                       v-model="editForm.is_super_admin"
                       type="checkbox"
-                      class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                      class="rounded border-slate-300 dark:border-slate-600 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
                     />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">ให้สิทธิ์ Super Admin</span>
+                    <span class="text-sm text-slate-700 dark:text-slate-300">ให้สิทธิ์ Super Admin</span>
                   </label>
 
-                  <label class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl cursor-pointer">
+                  <label class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl cursor-pointer">
                     <input
                       v-model="editForm.is_plearnd_admin"
                       type="checkbox"
-                      class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                      class="rounded border-slate-300 dark:border-slate-600 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
                     />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">ให้สิทธิ์ Plearnd Admin</span>
+                    <span class="text-sm text-slate-700 dark:text-slate-300">ให้สิทธิ์ Plearnd Admin</span>
                   </label>
                 </div>
               </template>
             </div>
 
-            <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-3">
+            <div class="p-6 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 @click="closeEditModal"
                 :disabled="isSavingEdit"
-                class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isLoadingEdit || isSavingEdit"
-                class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="flex-1 px-4 py-2.5 bg-hopeui-primary-600 text-white rounded-xl hover:bg-hopeui-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Icon v-if="isSavingEdit" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
                 <span>{{ isSavingEdit ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข' }}</span>
@@ -974,7 +974,7 @@ onMounted(fetchUsers)
           class="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
           <div class="absolute inset-0 bg-black/50" @click="showVerifyModal = false" />
-          <div class="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-xl p-6">
+          <div class="relative bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl p-6">
             <div class="flex items-center gap-4 mb-6">
               <div 
                 class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
@@ -987,10 +987,10 @@ onMounted(fetchUsers)
                 />
               </div>
               <div>
-                <h3 class="text-lg font-bold text-gray-800 dark:text-white">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white">
                   {{ verifyAction === 'verify' ? 'ยืนยันบัญชีผู้ใช้' : 'ยกเลิกการยืนยันบัญชี' }}
                 </h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
+                <p class="text-sm text-slate-500 dark:text-slate-400">
                   {{ userToVerify?.name }} ({{ userToVerify?.email }})
                 </p>
               </div>
@@ -1002,14 +1002,14 @@ onMounted(fetchUsers)
               </div>
               
               <div class="space-y-1.5">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
                   หมายเหตุ (ไม่บังคับ)
                 </label>
                 <textarea
                   v-model="verifyNote"
                   rows="2"
                   placeholder="ระบุข้อความสั้นๆ..."
-                  class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 resize-none"
                 />
               </div>
             </div>
@@ -1018,7 +1018,7 @@ onMounted(fetchUsers)
               <button
                 @click="showVerifyModal = false"
                 :disabled="isVerifying"
-                class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>
@@ -1045,17 +1045,17 @@ onMounted(fetchUsers)
           class="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
           <div class="absolute inset-0 bg-black/50" @click="closeDeleteModal" />
-          <div class="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
+          <div class="relative bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
 
             <!-- Header -->
-            <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                   <Icon icon="fluent:person-delete-24-regular" class="w-5 h-5 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
-                  <h3 class="text-base font-semibold text-gray-800 dark:text-white">ปิดใช้งานบัญชี</h3>
-                  <p class="text-sm text-gray-500">{{ userToDelete?.name }}</p>
+                  <h3 class="text-base font-semibold text-slate-800 dark:text-white">ปิดใช้งานบัญชี</h3>
+                  <p class="text-sm text-slate-500">{{ userToDelete?.name }}</p>
                 </div>
               </div>
             </div>
@@ -1064,7 +1064,7 @@ onMounted(fetchUsers)
             <div class="overflow-y-auto p-6 space-y-4 flex-1">
 
               <!-- Loading impact -->
-              <div v-if="isLoadingImpact" class="flex items-center justify-center py-8 gap-3 text-gray-500">
+              <div v-if="isLoadingImpact" class="flex items-center justify-center py-8 gap-3 text-slate-500">
                 <Icon icon="fluent:spinner-ios-20-regular" class="w-6 h-6 animate-spin" />
                 <span>กำลังตรวจสอบผลกระทบ...</span>
               </div>
@@ -1128,13 +1128,13 @@ onMounted(fetchUsers)
                   </div>
 
                   <!-- Warning acknowledge checkbox -->
-                  <label class="flex items-start gap-2.5 cursor-pointer p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                  <label class="flex items-start gap-2.5 cursor-pointer p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
                     <input
                       v-model="warningAcknowledged"
                       type="checkbox"
-                      class="mt-0.5 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500"
+                      class="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-red-600 focus:ring-red-500"
                     />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">
+                    <span class="text-sm text-slate-700 dark:text-slate-300">
                       รับทราบว่าข้อมูลที่ระบุจะได้รับผลกระทบและไม่สามารถย้อนกลับได้
                     </span>
                   </label>
@@ -1150,14 +1150,14 @@ onMounted(fetchUsers)
 
               <!-- Reason textarea (แสดงเฉพาะเมื่อไม่มี blocker) -->
               <div v-if="deleteImpact && !hasBlockers" class="space-y-1.5">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
                   เหตุผลที่ปิดใช้งาน <span class="text-red-500">*</span>
                 </label>
                 <textarea
                   v-model="deleteReason"
                   rows="3"
                   placeholder="ระบุเหตุผลอย่างน้อย 5 ตัวอักษร..."
-                  class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                  class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
                 />
                 <p v-if="deleteReason.length > 0 && deleteReason.trim().length < 5" class="text-xs text-red-500">
                   กรุณาระบุเหตุผลอย่างน้อย 5 ตัวอักษร
@@ -1167,11 +1167,11 @@ onMounted(fetchUsers)
             </div>
 
             <!-- Footer -->
-            <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex gap-3">
+            <div class="p-6 border-t border-slate-100 dark:border-slate-700 flex gap-3">
               <button
                 @click="closeDeleteModal"
                 :disabled="isDeleting"
-                class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>

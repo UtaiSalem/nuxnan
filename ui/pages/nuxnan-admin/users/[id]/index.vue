@@ -48,7 +48,7 @@ const fetchUser = async () => {
 const getStatusBadge = (status: string) => {
   const badges: Record<string, string> = {
     active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    inactive: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    inactive: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
     suspended: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
   }
   return badges[status] || badges.inactive
@@ -59,7 +59,7 @@ const getRoleBadge = (role: string) => {
   const badges: Record<string, string> = {
     admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     instructor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    user: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+    user: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
   }
   return badges[role] || badges.user
 }
@@ -147,18 +147,18 @@ onMounted(() => {
     <div class="flex items-center gap-4">
       <NuxtLink
         to="/nuxnan-admin/users"
-        class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+        class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
       </NuxtLink>
       <div class="flex-1">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">รายละเอียดผู้ใช้</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">ผู้ใช้ #{{ userId }}</p>
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">รายละเอียดผู้ใช้</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">ผู้ใช้ #{{ userId }}</p>
       </div>
       <NuxtLink
         v-if="user"
         :to="`/nuxnan-admin/users/${userId}/edit`"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white transition-colors"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
       >
         <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
         แก้ไข
@@ -166,21 +166,21 @@ onMounted(() => {
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div v-if="isLoading" class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="text-center">
-        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-        <p class="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
+        <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
       </div>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div v-else-if="error" class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="text-center">
         <Icon icon="fluent:error-circle-24-regular" class="w-12 h-12 text-red-400 mx-auto" />
-        <p class="text-gray-500 mt-2">{{ error }}</p>
+        <p class="text-slate-500 mt-2">{{ error }}</p>
         <button
           @click="fetchUser"
-          class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white transition-colors"
+          class="mt-4 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
         >
           ลองใหม่อีกครั้ง
         </button>
@@ -190,17 +190,17 @@ onMounted(() => {
     <!-- User Details -->
     <template v-else-if="user">
       <!-- Profile Card -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
         <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <!-- Avatar -->
-          <div class="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+          <div class="w-24 h-24 bg-gradient-to-br from-hopeui-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
             {{ user.name?.charAt(0)?.toUpperCase() || 'U' }}
           </div>
           
           <!-- Info -->
           <div class="flex-1 text-center sm:text-left">
-            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">{{ user.name }}</h2>
-            <p class="text-gray-500 dark:text-gray-400">@{{ user.username || 'no-username' }}</p>
+            <h2 class="text-2xl font-bold text-slate-800 dark:text-white">{{ user.name }}</h2>
+            <p class="text-slate-500 dark:text-slate-400">@{{ user.username || 'no-username' }}</p>
             
             <div class="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
               <span class="px-3 py-1 text-sm rounded-full" :class="getStatusBadge(user.status || 'active')">
@@ -223,52 +223,52 @@ onMounted(() => {
       <!-- Details Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Contact Info -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-            <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-indigo-600" />
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+            <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-hopeui-primary-600" />
             ข้อมูลติดต่อ
           </h3>
           
           <div class="space-y-4">
             <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">อีเมล</p>
-              <p class="text-gray-800 dark:text-white">{{ user.email || '-' }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">อีเมล</p>
+              <p class="text-slate-800 dark:text-white">{{ user.email || '-' }}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">เบอร์โทรศัพท์</p>
-              <p class="text-gray-800 dark:text-white">{{ user.phone || '-' }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">เบอร์โทรศัพท์</p>
+              <p class="text-slate-800 dark:text-white">{{ user.phone || '-' }}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">รหัสอ้างอิง</p>
-              <p class="text-gray-800 dark:text-white font-mono">{{ user.reference_code || '-' }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">รหัสอ้างอิง</p>
+              <p class="text-slate-800 dark:text-white font-mono">{{ user.reference_code || '-' }}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">รหัสส่วนตัว</p>
-              <p class="text-gray-800 dark:text-white font-mono">{{ user.personal_code || '-' }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">รหัสส่วนตัว</p>
+              <p class="text-slate-800 dark:text-white font-mono">{{ user.personal_code || '-' }}</p>
             </div>
           </div>
         </div>
 
         <!-- Account Info -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-            <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-indigo-600" />
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+            <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-hopeui-primary-600" />
             ข้อมูลบัญชี
           </h3>
           
           <div class="space-y-4">
             <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">สร้างเมื่อ</p>
-              <p class="text-gray-800 dark:text-white">{{ formatDate(user.created_at) }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">สร้างเมื่อ</p>
+              <p class="text-slate-800 dark:text-white">{{ formatDate(user.created_at) }}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">อัปเดตล่าสุด</p>
-              <p class="text-gray-800 dark:text-white">{{ formatDate(user.updated_at) }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">อัปเดตล่าสุด</p>
+              <p class="text-slate-800 dark:text-white">{{ formatDate(user.updated_at) }}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">ยืนยันอีเมลเมื่อ</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">ยืนยันอีเมลเมื่อ</p>
               <div class="flex items-center gap-3">
-                <p class="text-gray-800 dark:text-white">
+                <p class="text-slate-800 dark:text-white">
                   {{ user.email_verified_at ? formatDate(user.email_verified_at) : 'ยังไม่ยืนยัน' }}
                 </p>
                 <!-- Verify/Unverify Button -->
@@ -298,28 +298,28 @@ onMounted(() => {
               <p v-if="verifyError" class="text-sm text-red-600 dark:text-red-400 mt-1">{{ verifyError }}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">เข้าสู่ระบบล่าสุด</p>
-              <p class="text-gray-800 dark:text-white">{{ user.last_login_at ? formatDate(user.last_login_at) : '-' }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">เข้าสู่ระบบล่าสุด</p>
+              <p class="text-slate-800 dark:text-white">{{ user.last_login_at ? formatDate(user.last_login_at) : '-' }}</p>
             </div>
           </div>
         </div>
 
         <!-- Wallet & Points -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-            <Icon icon="fluent:wallet-24-regular" class="w-5 h-5 text-indigo-600" />
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+            <Icon icon="fluent:wallet-24-regular" class="w-5 h-5 text-hopeui-primary-600" />
             กระเป๋าเงิน & คะแนน
           </h3>
           
           <div class="space-y-4">
             <div class="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
-              <span class="text-gray-600 dark:text-gray-300">ยอดเงิน</span>
+              <span class="text-slate-600 dark:text-slate-300">ยอดเงิน</span>
               <span class="text-lg font-bold text-green-600 dark:text-green-400">
                 ฿{{ (user.wallet_balance || 0).toLocaleString() }}
               </span>
             </div>
             <div class="flex justify-between items-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-              <span class="text-gray-600 dark:text-gray-300">คะแนน</span>
+              <span class="text-slate-600 dark:text-slate-300">คะแนน</span>
               <span class="text-lg font-bold text-purple-600 dark:text-purple-400">
                 {{ (user.points || 0).toLocaleString() }} pts
               </span>
@@ -328,28 +328,28 @@ onMounted(() => {
         </div>
 
         <!-- Statistics -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-            <Icon icon="fluent:data-trending-24-regular" class="w-5 h-5 text-indigo-600" />
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+            <Icon icon="fluent:data-trending-24-regular" class="w-5 h-5 text-hopeui-primary-600" />
             สถิติ
           </h3>
           
           <div class="grid grid-cols-2 gap-4">
-            <div class="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-              <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ user.courses_count || 0 }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">คอร์สที่ลงทะเบียน</p>
+            <div class="text-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+              <p class="text-2xl font-bold text-slate-800 dark:text-white">{{ user.courses_count || 0 }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">คอร์สที่ลงทะเบียน</p>
             </div>
-            <div class="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-              <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ user.completed_courses || 0 }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">คอร์สที่เรียนจบ</p>
+            <div class="text-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+              <p class="text-2xl font-bold text-slate-800 dark:text-white">{{ user.completed_courses || 0 }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">คอร์สที่เรียนจบ</p>
             </div>
-            <div class="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-              <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ user.referrals_count || 0 }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">ผู้ที่แนะนำ</p>
+            <div class="text-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+              <p class="text-2xl font-bold text-slate-800 dark:text-white">{{ user.referrals_count || 0 }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">ผู้ที่แนะนำ</p>
             </div>
-            <div class="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-              <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ user.login_count || 0 }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">จำนวนเข้าสู่ระบบ</p>
+            <div class="text-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+              <p class="text-2xl font-bold text-slate-800 dark:text-white">{{ user.login_count || 0 }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">จำนวนเข้าสู่ระบบ</p>
             </div>
           </div>
         </div>

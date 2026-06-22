@@ -125,13 +125,13 @@ const handleSubmit = async () => {
     <div class="flex items-center gap-4">
       <NuxtLink
         to="/nuxnan-admin/users"
-        class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+        class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
       </NuxtLink>
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">เพิ่มผู้ใช้ใหม่</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">กรอกข้อมูลเพื่อสร้างผู้ใช้ใหม่</p>
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">เพิ่มผู้ใช้ใหม่</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">กรอกข้อมูลเพื่อสร้างผู้ใช้ใหม่</p>
       </div>
     </div>
 
@@ -152,33 +152,33 @@ const handleSubmit = async () => {
     </div>
 
     <!-- Form -->
-    <form @submit.prevent="handleSubmit" class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+    <form @submit.prevent="handleSubmit" class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-6">
       <!-- Name/Username -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           ชื่อ-สกุล <span class="text-red-500">*</span>
         </label>
         <input
           v-model="form.username"
           type="text"
-          class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
           :class="{ 'border-red-500 ring-1 ring-red-500': errors.username }"
           placeholder="เช่น สมชาย ใจดี"
         />
-        <p class="mt-1 text-xs text-gray-400">ชื่อจริง-สกุล (ไทยได้ มีเว้นวรรคได้) ใช้เป็นชื่อเข้าระบบ ห้ามซ้ำ</p>
+        <p class="mt-1 text-xs text-slate-400">ชื่อจริง-สกุล (ไทยได้ มีเว้นวรรคได้) ใช้เป็นชื่อเข้าระบบ ห้ามซ้ำ</p>
         <p v-if="errors.username" class="mt-1 text-sm text-red-500">{{ errors.username }}</p>
       </div>
 
       <!-- Email & Phone -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             อีเมล <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.email"
             type="email"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
             :class="{ 'border-red-500 ring-1 ring-red-500': errors.email }"
             placeholder="example@email.com"
           />
@@ -186,13 +186,13 @@ const handleSubmit = async () => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             เบอร์โทรศัพท์
           </label>
           <input
             v-model="form.phone_number"
             type="tel"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
             :class="{ 'border-red-500 ring-1 ring-red-500': errors.phone_number }"
             placeholder="08XXXXXXXX"
           />
@@ -203,21 +203,21 @@ const handleSubmit = async () => {
       <!-- Password -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             รหัสผ่าน <span class="text-red-500">*</span>
           </label>
           <div class="relative">
             <input
               v-model="form.password"
               :type="showPassword ? 'text' : 'password'"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
               :class="{ 'border-red-500 ring-1 ring-red-500': errors.password }"
               placeholder="••••••••"
             />
             <button 
               type="button"
               @click="showPassword = !showPassword"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               <Icon :icon="showPassword ? 'fluent:eye-off-24-regular' : 'fluent:eye-24-regular'" class="w-5 h-5" />
             </button>
@@ -226,21 +226,21 @@ const handleSubmit = async () => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             ยืนยันรหัสผ่าน <span class="text-red-500">*</span>
           </label>
           <div class="relative">
             <input
               v-model="form.password_confirmation"
               :type="showConfirmPassword ? 'text' : 'password'"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
               :class="{ 'border-red-500 ring-1 ring-red-500': errors.password_confirmation }"
               placeholder="••••••••"
             />
             <button 
               type="button"
               @click="showConfirmPassword = !showConfirmPassword"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               <Icon :icon="showConfirmPassword ? 'fluent:eye-off-24-regular' : 'fluent:eye-24-regular'" class="w-5 h-5" />
             </button>
@@ -252,12 +252,12 @@ const handleSubmit = async () => {
       <!-- Role & Status -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             บทบาท
           </label>
           <select
             v-model="form.role"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           >
             <option v-for="role in roles" :key="role.value" :value="role.value">
               {{ role.label }}
@@ -266,12 +266,12 @@ const handleSubmit = async () => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             สถานะ
           </label>
           <select
             v-model="form.status"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           >
             <option v-for="status in statuses" :key="status.value" :value="status.value">
               {{ status.label }}
@@ -281,25 +281,25 @@ const handleSubmit = async () => {
       </div>
 
       <!-- Admin Options -->
-      <div class="space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-        <h3 class="font-medium text-gray-700 dark:text-gray-300">สิทธิ์ผู้ดูแล</h3>
+      <div class="space-y-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+        <h3 class="font-medium text-slate-700 dark:text-slate-300">สิทธิ์ผู้ดูแล</h3>
         
         <label class="flex items-center gap-3 cursor-pointer">
           <input
             v-model="form.is_super_admin"
             type="checkbox"
-            class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            class="w-5 h-5 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
           />
-          <span class="text-gray-700 dark:text-gray-300">Super Admin</span>
+          <span class="text-slate-700 dark:text-slate-300">Super Admin</span>
         </label>
 
         <label class="flex items-center gap-3 cursor-pointer">
           <input
             v-model="form.is_plearnd_admin"
             type="checkbox"
-            class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            class="w-5 h-5 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
           />
-          <span class="text-gray-700 dark:text-gray-300">Plearnd Admin</span>
+          <span class="text-slate-700 dark:text-slate-300">Plearnd Admin</span>
         </label>
       </div>
 
@@ -308,7 +308,7 @@ const handleSubmit = async () => {
         <button
           type="submit"
           :disabled="isSubmitting"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 rounded-xl text-white font-medium transition-colors"
+          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-hopeui-primary-500 rounded-xl text-white font-medium transition-colors"
         >
           <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
           <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
@@ -317,7 +317,7 @@ const handleSubmit = async () => {
         
         <NuxtLink
           to="/nuxnan-admin/users"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 font-medium transition-colors"
+          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
         >
           <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
           ยกเลิก
