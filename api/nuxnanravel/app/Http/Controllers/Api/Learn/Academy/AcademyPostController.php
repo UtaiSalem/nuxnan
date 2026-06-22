@@ -52,20 +52,84 @@ class AcademyPostController extends Controller
             'content'   => 'nullable|string|max:1000',
             'images'    => 'array|max:4',
             'images.*'  => 'image|mimes:jpeg,png,jpg,gif,svg|max:5120',
+            'posted_as_group_id' => 'nullable|integer|exists:academy_groups,id',
+            'post_type'         => 'nullable|string|in:regular,announcement,event,director,attendance,achievement',
+            'target_audience'   => 'nullable|array',
+            'target_audience.*' => 'string|in:student,teacher,parent,all',
+            'reward_points'     => 'nullable|integer|min:0|max:999',
+            'embed_data'        => 'nullable|array',
+            'is_pinned'         => 'nullable|boolean',
         ]);
 
         if (empty($validatedData['content']) && !$request->hasFile('images')) {
             return response()->json(['message' => 'Post cannot be empty.'], 422);
         }
 
+        // Custom validation check สำหรับ Posted as Group
+        if ($request->filled('posted_as_group_id')) {
+            $groupId = $validatedData['posted_as_group_id'];
+            $userId = auth()->id();
+            
+            // 1. ตรวจสอบว่าเป็นสมาชิก หรือ Admin ของกลุ่มนั้นหรือไม่
+            $isMember = \App\Models\AcademyGroupMember::where('academy_group_id', $groupId)
+                ->where('user_id', $userId)
+                ->exists();
+            $isAdmin = \App\Models\AcademyGroupAdmin::where('academy_group_id', $groupId)
+                ->where('user_id', $userId)
+                ->exists();
+
+            if (!$isMember && !$isAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'คุณไม่ใช่สมาชิกของส่วนงานนี้'
+                ], 403);
+            }
+
+            // 2. ตรวจสอบสิทธิ์ can_post ของกลุ่ม (STRICT permission check)
+            $canPost = \App\Models\AcademyGroupPermission::where('academy_group_id', $groupId)
+                ->where('permission_key', 'can_post')
+                ->where('enabled', true)
+                ->exists();
+
+            if (!$canPost) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ส่วนงานนี้ยังไม่ได้เปิดสิทธิ์โพสต์'
+                ], 403);
+            }
+        }
+
         $content = $validatedData['content'] ?? '';
         $hashtags = $this->extractHashtags($content);
+
+        $isAcademyAdmin = $academy->isAdmin(auth()->user());
+        $postType = $validatedData['post_type'] ?? 'regular';
+        $targetAudience = $validatedData['target_audience'] ?? null;
+        $rewardPoints = $validatedData['reward_points'] ?? 0;
+        $embedData = $validatedData['embed_data'] ?? null;
+        $isPinned = $validatedData['is_pinned'] ?? false;
+
+        if (!$isAcademyAdmin) {
+            $postType = 'regular';
+            $targetAudience = null;
+            $rewardPoints = 0;
+            $embedData = null;
+            $isPinned = false;
+        }
 
         $post = new AcademyPost();
         $post->user_id = auth()->user()->id;
         $post->academy_id = $academy->id;
         $post->content = $content;
         $post->hashtags = json_encode($hashtags);
+        if ($request->filled('posted_as_group_id')) {
+            $post->posted_as_group_id = $validatedData['posted_as_group_id'];
+        }
+        $post->post_type = $postType;
+        $post->target_audience = $targetAudience;
+        $post->reward_points = $rewardPoints;
+        $post->embed_data = $embedData;
+        $post->is_pinned = $isPinned;
         $post->save();
         
         if($request->hasFile('images')) {
@@ -87,6 +151,35 @@ class AcademyPostController extends Controller
         $activity->activity_type = ActivityType::CREATE_POST->value;
         $activity->activityable()->associate($post);
         $activity->save();
+
+        // Dispatch notifications for group post to all group members/admins
+        if ($post->posted_as_group_id) {
+            $groupId = $post->posted_as_group_id;
+            $group = \App\Models\AcademyGroup::find($groupId);
+            if ($group) {
+                $memberIds = \App\Models\AcademyGroupMember::where('academy_group_id', $groupId)
+                    ->pluck('user_id');
+                $adminIds = \App\Models\AcademyGroupAdmin::where('academy_group_id', $groupId)
+                    ->pluck('user_id');
+                
+                $recipientIds = $memberIds->merge($adminIds)->unique()->filter(function ($id) use ($post) {
+                    return $id != $post->user_id;
+                });
+
+                $notifications = [];
+                foreach ($recipientIds as $recipientId) {
+                    $notifications[] = [
+                        'user_id' => $recipientId,
+                        'sender_id' => auth()->id(),
+                        'type' => \App\Models\Notification::TYPE_GROUP_POST_CREATED,
+                        'content' => "มีข่าวสารโพสต์ใหม่ในนามกลุ่ม \"{$group->name}\"",
+                        'action_url' => "/academies/{$academy->name}/groups/{$groupId}",
+                        'related_id' => $post->id,
+                    ];
+                }
+                app(\App\Services\NotificationService::class)->sendBulk($notifications);
+            }
+        }
 
         // Deduct points after successful save
         auth()->user()->decrement('pp', $pointsRequired);

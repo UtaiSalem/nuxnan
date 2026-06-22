@@ -2,9 +2,29 @@
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
 
+const props = defineProps({
+  context: {
+    type: String,
+    default: 'newsfeed'
+  },
+  contextId: {
+    type: Number,
+    default: null
+  },
+  lockedGroupId: {
+    type: Number,
+    default: null
+  },
+  postedAsGroupId: {
+    type: Number,
+    default: null
+  }
+})
+
+const emit = defineEmits(['open-modal', 'update:postedAsGroupId'])
+
 const authStore = useAuthStore()
 const { getAvatarUrl } = useAvatar()
-const emit = defineEmits(['open-modal'])
 
 const userAvatar = computed(() => getAvatarUrl(authStore.user))
 
@@ -87,6 +107,22 @@ const openModal = (tab = 'status') => {
           </div>
           <span class="text-xs font-semibold text-gray-600 dark:text-gray-400 group-hover/btn:text-red-500 dark:group-hover/btn:text-red-400 transition-colors hidden sm:inline">เช็คอิน</span>
         </button>
+      </div>
+
+      <!-- Identity selection row -->
+      <div 
+        v-if="context === 'academy'" 
+        class="mt-3 pt-3 border-t border-gray-100 dark:border-vikinger-dark-50/15 flex items-center justify-between"
+      >
+        <span class="text-xs text-gray-500 dark:text-gray-400 font-semibold">โพสต์ในนาม:</span>
+        <AcademyGroupsPostAsSelector
+          :model-value="postedAsGroupId"
+          @update:model-value="val => emit('update:postedAsGroupId', val)"
+          :academy-id="contextId"
+          :locked-group-id="lockedGroupId"
+          :user="authStore.user"
+          variant="compact"
+        />
       </div>
     </div>
   </div>

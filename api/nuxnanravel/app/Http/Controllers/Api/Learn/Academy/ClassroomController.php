@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Academy\Enrollment\ClassroomStudentResource;
 use App\Models\Academy;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
@@ -12,6 +13,7 @@ use App\Services\MemberService;
 use App\Services\StudentEnrollmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ClassroomController extends Controller
 {
@@ -120,6 +122,44 @@ class ClassroomController extends Controller
         return response()->json([
             'success' => true,
             'classroom' => $classroomData,
+        ]);
+    }
+
+    /**
+     * List classroom enrollments with optional status/year filters.
+     */
+    public function listEnrollments(Request $request, int $academyId, int $classroomId): JsonResponse
+    {
+        $classroom = Classroom::where('academy_id', $academyId)->findOrFail($classroomId);
+
+        $validated = $request->validate([
+            'status' => ['nullable', 'array'],
+            'status.*' => ['string', Rule::in(ClassroomStudent::$statuses)],
+            'academic_year_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('academic_years', 'id')->where(fn ($query) => $query->where('academy_id', $academyId)),
+            ],
+        ]);
+
+        $statuses = $validated['status'] ?? [ClassroomStudent::STATUS_ACTIVE];
+
+        $enrollments = ClassroomStudent::query()
+            ->where('classroom_id', $classroom->id)
+            ->whereIn('status', $statuses)
+            ->when(
+                isset($validated['academic_year_id']),
+                fn ($query) => $query->where('academic_year_id', $validated['academic_year_id'])
+            )
+            ->with(['student', 'classroom', 'createdBy'])
+            ->orderByRaw('CASE WHEN left_at IS NULL THEN 1 ELSE 0 END DESC')
+            ->orderByDesc('left_at')
+            ->orderBy('student_number')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => ClassroomStudentResource::collection($enrollments),
         ]);
     }
 

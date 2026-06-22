@@ -21,4 +21,9 @@ class AcademyGroupAdmin extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function appointer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'appointed_by');
+    }
 }

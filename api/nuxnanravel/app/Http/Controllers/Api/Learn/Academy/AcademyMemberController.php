@@ -3,89 +3,86 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
-
-
+use App\Http\Resources\Learn\Academy\AcademyMemberResource;
+use App\Http\Resources\Learn\Academy\AcademyResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Academy;
+use App\Models\AcademyMember;
 use App\Models\Student;
 use Illuminate\Http\Request;
-use App\Models\AcademyMember;
-use App\Http\Resources\Learn\Course\info\CourseResource;
-use App\Http\Resources\Learn\Academy\AcademyResource;
-
-use App\Http\Resources\Learn\Academy\AcademyMemberResource;
 
 class AcademyMemberController extends Controller
 {
-    //index
+    // index
     public function index(Academy $academy)
     {
         $courses = $academy->courses;
         $coursesresource = CourseResource::collection($courses);
         $isAcademyAdmin = $academy->user_id == auth()->id();
-        
+
         return response()->json([
             // 'authMemberCourses' => $authMemberCourses,
-            'allCourses'        => $coursesresource,
-            'courses'           => $coursesresource,
-            'authOwnerCourses'  => CourseResource::collection(auth()->user()->courses),
+            'allCourses' => $coursesresource,
+            'courses' => $coursesresource,
+            'authOwnerCourses' => CourseResource::collection(auth()->user()->courses),
             'authMemberCourses' => [],
-            'academy'           => new AcademyResource($academy),
-            'isAcademyAdmin'    => $isAcademyAdmin,
+            'academy' => new AcademyResource($academy),
+            'isAcademyAdmin' => $isAcademyAdmin,
         ]);
     }
+
     public function storemember(Academy $academy)
-    {   
+    {
         if (auth()->user()->pp < $academy->membership_fees_points) {
             return response()->json([
                 'success' => false,
-                'msg'     => 'แต้มสะสมไม่เพียงพอ กรุณาเติมแต้มสะสมก่อนสมัครสมาชิก'
+                'msg' => 'แต้มสะสมไม่เพียงพอ กรุณาเติมแต้มสะสมก่อนสมัครสมาชิก',
             ], 201);
         }
 
         $curent_member_status = AcademyMember::where('academy_id', $academy->id)->where('user_id', auth()->id())->first();
 
         if ($academy->academySetting->auto_accept_members === 1) {
-            if (!$curent_member_status) {
+            if (! $curent_member_status) {
                 $newStatus = $academy->academyMembers()->create([
-                    'user_id'   => auth()->id(),
-                    'status'    => 2, 
+                    'user_id' => auth()->id(),
+                    'status' => 2,
                 ]);
                 $academy->increment('total_students');
             }
-        }else {
-            if (!$curent_member_status) {
+        } else {
+            if (! $curent_member_status) {
                 $newStatus = $academy->academyMembers()->create([
-                    'user_id'   => auth()->id(),
-                    'status'    => 1, 
+                    'user_id' => auth()->id(),
+                    'status' => 1,
                 ]);
             }
         }
-        
+
         // $academy->members()->toggle(auth()->id());
         // $isMember = $academy->isMember(auth()->user());
         // $isMember ? $academy->increment('total_students'): $academy->decrement('total_students');
 
         return response()->json([
             'success' => true,
-            'memberStatus'  => $newStatus->status,
+            'memberStatus' => $newStatus->status,
             'totalStudents' => $academy->total_students,
         ], 200);
     }
 
-
     public function unmember(Academy $academy)
-    {   
+    {
         $auth_member = AcademyMember::where('academy_id', $academy->id)
             ->where('user_id', auth()->id())
             ->first();
-            
-        if (!$auth_member) {
+
+        if (! $auth_member) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่ได้เป็นสมาชิกของโรงเรียนนี้'
+                'message' => 'คุณไม่ได้เป็นสมาชิกของโรงเรียนนี้',
             ], 404);
         }
-        
+
         // Check if member is approved (status 2) before decrementing
         if ($auth_member->status == 2) {
             $academy->decrement('total_students');
@@ -93,10 +90,10 @@ class AcademyMemberController extends Controller
 
         // Only delete the current user's membership, not all members
         $auth_member->delete();
-        
+
         return response()->json([
             'success' => true,
-            'message' => 'ยกเลิกการเป็นสมาชิกเรียบร้อยแล้ว'
+            'message' => 'ยกเลิกการเป็นสมาชิกเรียบร้อยแล้ว',
         ], 200);
     }
 
@@ -106,9 +103,10 @@ class AcademyMemberController extends Controller
             'status' => 2,
         ]);
         $academy->increment('total_students');
+
         return response()->json([
             'success' => true,
-            'memberStatus'  => $member->status,
+            'memberStatus' => $member->status,
             'totalStudents' => $academy->total_students,
         ], 200);
     }
@@ -119,9 +117,10 @@ class AcademyMemberController extends Controller
             'status' => 3,
         ]);
         $academy->decrement('total_students');
+
         return response()->json([
             'success' => true,
-            'memberStatus'  => $member->status,
+            'memberStatus' => $member->status,
             'totalStudents' => $academy->total_students,
         ], 200);
     }
@@ -129,9 +128,10 @@ class AcademyMemberController extends Controller
     public function memberstatus(Academy $academy)
     {
         $member = AcademyMember::where('academy_id', $academy->id)->where('user_id', auth()->id())->first();
+
         return response()->json([
             'success' => true,
-            'memberStatus'  => $member->status,
+            'memberStatus' => $member->status,
         ], 200);
     }
 
@@ -144,7 +144,7 @@ class AcademyMemberController extends Controller
 
         return response()->json([
             'success' => true,
-            'members'  => AcademyMemberResource::collection($members),
+            'members' => AcademyMemberResource::collection($members),
             'pagination' => [
                 'current_page' => $members->currentPage(),
                 'last_page' => $members->lastPage(),
@@ -157,9 +157,10 @@ class AcademyMemberController extends Controller
     public function membercount(Academy $academy)
     {
         $members = $academy->academyMembers()->count();
+
         return response()->json([
             'success' => true,
-            'totalStudents'  => $members,
+            'totalStudents' => $members,
         ], 200);
     }
 
@@ -169,6 +170,102 @@ class AcademyMemberController extends Controller
      */
     public function getFilterOptions(Academy $academy)
     {
+        $currentYearId = \App\Models\AcademicYear::query()
+            ->where('academy_id', $academy->id)
+            ->where('is_current', true)
+            ->value('id');
+
+        $hasActiveEnrollmentsInCurrentYear = $currentYearId
+            ? \App\Models\ClassroomStudent::query()
+                ->where('academy_id', $academy->id)
+                ->where('academic_year_id', $currentYearId)
+                ->where('status', \App\Models\ClassroomStudent::STATUS_ACTIVE)
+                ->exists()
+            : false;
+
+        if ($hasActiveEnrollmentsInCurrentYear) {
+            $currentEnrollmentQuery = \DB::table('classroom_students')
+                ->join('classrooms', 'classroom_students.classroom_id', '=', 'classrooms.id')
+                ->join('academy_members', function ($join) use ($academy) {
+                    $join->on('academy_members.student_id', '=', 'classroom_students.student_id')
+                        ->where('academy_members.academy_id', '=', $academy->id);
+                })
+                ->where('classroom_students.academy_id', $academy->id)
+                ->where('classroom_students.academic_year_id', $currentYearId)
+                ->where('classroom_students.status', \App\Models\ClassroomStudent::STATUS_ACTIVE)
+                ->where('classrooms.is_active', true);
+
+            $classLevels = (clone $currentEnrollmentQuery)
+                ->select('classrooms.grade_level')
+                ->distinct()
+                ->orderBy('classrooms.grade_level')
+                ->pluck('classrooms.grade_level')
+                ->map(fn ($level) => ['value' => $level, 'label' => $level])
+                ->values();
+
+            $classSections = (clone $currentEnrollmentQuery)
+                ->select('classrooms.section')
+                ->distinct()
+                ->orderBy('classrooms.section')
+                ->pluck('classrooms.section')
+                ->map(fn ($section) => ['value' => $section, 'label' => 'เธซเนเธญเธ '.$section])
+                ->values();
+
+            $classrooms = (clone $currentEnrollmentQuery)
+                ->select(
+                    'classrooms.id',
+                    'classrooms.grade_level as class_level',
+                    'classrooms.section as class_section',
+                    'classrooms.name',
+                    \DB::raw('COUNT(DISTINCT classroom_students.student_id) as student_count')
+                )
+                ->groupBy('classrooms.id', 'classrooms.grade_level', 'classrooms.section', 'classrooms.name')
+                ->orderBy('classrooms.grade_level')
+                ->orderBy('classrooms.section')
+                ->get()
+                ->map(function ($item) {
+                    $label = $item->class_level;
+                    if ($item->class_section) {
+                        $label .= '/'.$item->class_section;
+                    }
+
+                    return [
+                        'id' => $item->id,
+                        'class_level' => $item->class_level,
+                        'class_section' => $item->class_section,
+                        'label' => $item->name ?? $label,
+                        'count' => $item->student_count,
+                    ];
+                })
+                ->values();
+
+            $genderCounts = \DB::table('students')
+                ->join('academy_members', 'students.id', '=', 'academy_members.student_id')
+                ->where('academy_members.academy_id', $academy->id)
+                ->select(
+                    'students.gender',
+                    \DB::raw('COUNT(*) as count')
+                )
+                ->groupBy('students.gender')
+                ->get()
+                ->keyBy('gender');
+
+            $genders = [
+                ['value' => 1, 'label' => 'เธเธฒเธข', 'count' => $genderCounts->get(1)?->count ?? 0],
+                ['value' => 0, 'label' => 'เธซเธเธดเธ', 'count' => $genderCounts->get(0)?->count ?? 0],
+            ];
+
+            return response()->json([
+                'success' => true,
+                'filters' => [
+                    'class_levels' => $classLevels,
+                    'class_sections' => $classSections,
+                    'classrooms' => $classrooms,
+                    'genders' => $genders,
+                ],
+            ], 200);
+        }
+
         // Try to get data from classrooms table first (more reliable)
         $hasClassrooms = \App\Models\Classroom::where('academy_id', $academy->id)
             ->where('is_active', true)
@@ -181,7 +278,7 @@ class AcademyMemberController extends Controller
                 ->distinct()
                 ->orderBy('grade_level')
                 ->pluck('grade_level')
-                ->map(fn($level) => ['value' => $level, 'label' => $level])
+                ->map(fn ($level) => ['value' => $level, 'label' => $level])
                 ->values();
 
             $classSections = \App\Models\Classroom::where('academy_id', $academy->id)
@@ -189,14 +286,14 @@ class AcademyMemberController extends Controller
                 ->distinct()
                 ->orderBy('section')
                 ->pluck('section')
-                ->map(fn($section) => ['value' => $section, 'label' => 'ห้อง ' . $section])
+                ->map(fn ($section) => ['value' => $section, 'label' => 'ห้อง '.$section])
                 ->values();
 
             // Classroom summary with student count from pivot table
             $classrooms = \DB::table('classrooms')
                 ->leftJoin('classroom_students', function ($join) {
                     $join->on('classrooms.id', '=', 'classroom_students.classroom_id')
-                         ->where('classroom_students.status', '=', 'active');
+                        ->where('classroom_students.status', '=', 'active');
                 })
                 ->where('classrooms.academy_id', $academy->id)
                 ->where('classrooms.is_active', true)
@@ -214,8 +311,9 @@ class AcademyMemberController extends Controller
                 ->map(function ($item) {
                     $label = $item->class_level;
                     if ($item->class_section) {
-                        $label .= '/' . $item->class_section;
+                        $label .= '/'.$item->class_section;
                     }
+
                     return [
                         'id' => $item->id,
                         'class_level' => $item->class_level,
@@ -227,31 +325,31 @@ class AcademyMemberController extends Controller
         } else {
             // Fallback: use students.class_level + class_section directly
             $classLevels = Student::whereIn('id', function ($query) use ($academy) {
-                    $query->select('student_id')
-                        ->from('academy_members')
-                        ->where('academy_id', $academy->id)
-                        ->whereNotNull('student_id');
-                })
+                $query->select('student_id')
+                    ->from('academy_members')
+                    ->where('academy_id', $academy->id)
+                    ->whereNotNull('student_id');
+            })
                 ->whereNotNull('class_level')
                 ->where('class_level', '!=', '')
                 ->distinct()
                 ->orderBy('class_level')
                 ->pluck('class_level')
-                ->map(fn($level) => ['value' => $level, 'label' => $level])
+                ->map(fn ($level) => ['value' => $level, 'label' => $level])
                 ->values();
 
             $classSections = Student::whereIn('id', function ($query) use ($academy) {
-                    $query->select('student_id')
-                        ->from('academy_members')
-                        ->where('academy_id', $academy->id)
-                        ->whereNotNull('student_id');
-                })
+                $query->select('student_id')
+                    ->from('academy_members')
+                    ->where('academy_id', $academy->id)
+                    ->whereNotNull('student_id');
+            })
                 ->whereNotNull('class_section')
                 ->where('class_section', '!=', '')
                 ->distinct()
                 ->orderBy('class_section')
                 ->pluck('class_section')
-                ->map(fn($section) => ['value' => $section, 'label' => 'ห้อง ' . $section])
+                ->map(fn ($section) => ['value' => $section, 'label' => 'ห้อง '.$section])
                 ->values();
 
             $classrooms = \DB::table('students')
@@ -270,8 +368,9 @@ class AcademyMemberController extends Controller
                 ->map(function ($item) {
                     $label = $item->class_level;
                     if ($item->class_section) {
-                        $label .= '/' . $item->class_section;
+                        $label .= '/'.$item->class_section;
                     }
+
                     return [
                         'class_level' => $item->class_level,
                         'class_section' => $item->class_section,
@@ -309,7 +408,8 @@ class AcademyMemberController extends Controller
         ], 200);
     }
 
-    public function getAcademyMembers(Academy $academy) {
+    public function getAcademyMembers(Academy $academy)
+    {
         $perPage = request()->get('per_page', 20);
         $members = $academy->academyMembers()
             ->with(['user', 'student', 'academyRole'])
@@ -317,7 +417,7 @@ class AcademyMemberController extends Controller
 
         return response()->json([
             'success' => true,
-            'members'  => AcademyMemberResource::collection($members),
+            'members' => AcademyMemberResource::collection($members),
             'pagination' => [
                 'current_page' => $members->currentPage(),
                 'last_page' => $members->lastPage(),
@@ -336,7 +436,7 @@ class AcademyMemberController extends Controller
         if ($academy->user_id !== auth()->id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์เชิญสมาชิก'
+                'message' => 'คุณไม่มีสิทธิ์เชิญสมาชิก',
             ], 403);
         }
 
@@ -354,7 +454,7 @@ class AcademyMemberController extends Controller
         if ($existingMember) {
             return response()->json([
                 'success' => false,
-                'message' => 'ผู้ใช้นี้เป็นสมาชิกหรือถูกเชิญอยู่แล้ว'
+                'message' => 'ผู้ใช้นี้เป็นสมาชิกหรือถูกเชิญอยู่แล้ว',
             ], 422);
         }
 
@@ -382,10 +482,10 @@ class AcademyMemberController extends Controller
             ->where('status', 4) // invited status
             ->first();
 
-        if (!$invitation) {
+        if (! $invitation) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบคำเชิญ'
+                'message' => 'ไม่พบคำเชิญ',
             ], 404);
         }
 
@@ -412,10 +512,10 @@ class AcademyMemberController extends Controller
             ->where('status', 4) // invited status
             ->first();
 
-        if (!$invitation) {
+        if (! $invitation) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบคำเชิญ'
+                'message' => 'ไม่พบคำเชิญ',
             ], 404);
         }
 
@@ -434,7 +534,7 @@ class AcademyMemberController extends Controller
     {
         $invitations = AcademyMember::where('user_id', auth()->id())
             ->where('status', 4) // invited status
-            ->with(['academy' => function($query) {
+            ->with(['academy' => function ($query) {
                 $query->select('id', 'name', 'logo', 'slogan', 'type');
             }])
             ->get();
@@ -454,7 +554,7 @@ class AcademyMemberController extends Controller
         if ($academy->user_id !== auth()->id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ดูข้อมูลนี้'
+                'message' => 'คุณไม่มีสิทธิ์ดูข้อมูลนี้',
             ], 403);
         }
 
@@ -485,14 +585,14 @@ class AcademyMemberController extends Controller
                         ->orWhere('email', 'LIKE', "%{$search}%")
                         ->orWhere('reference_code', 'LIKE', "%{$search}%");
                 })
-                ->orWhereHas('student', function ($studentQuery) use ($search) {
-                    $studentQuery->where('first_name_th', 'LIKE', "%{$search}%")
-                        ->orWhere('last_name_th', 'LIKE', "%{$search}%")
-                        ->orWhere('first_name_en', 'LIKE', "%{$search}%")
-                        ->orWhere('last_name_en', 'LIKE', "%{$search}%")
-                        ->orWhere('student_id', 'LIKE', "%{$search}%");
-                })
-                ->orWhere('member_code', 'LIKE', "%{$search}%");
+                    ->orWhereHas('student', function ($studentQuery) use ($search) {
+                        $studentQuery->where('first_name_th', 'LIKE', "%{$search}%")
+                            ->orWhere('last_name_th', 'LIKE', "%{$search}%")
+                            ->orWhere('first_name_en', 'LIKE', "%{$search}%")
+                            ->orWhere('last_name_en', 'LIKE', "%{$search}%")
+                            ->orWhere('student_id', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhere('member_code', 'LIKE', "%{$search}%");
             });
         }
 
@@ -551,12 +651,12 @@ class AcademyMemberController extends Controller
         // Sort
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        
+
         // Special sorting for student fields
         if (in_array($sortBy, ['class_level', 'class_section', 'student_id'])) {
             $query->leftJoin('students', 'academy_members.student_id', '=', 'students.id')
                 ->select('academy_members.*')
-                ->orderBy('students.' . $sortBy, $sortOrder);
+                ->orderBy('students.'.$sortBy, $sortOrder);
         } else {
             $query->orderBy($sortBy, $sortOrder);
         }
@@ -583,10 +683,10 @@ class AcademyMemberController extends Controller
     public function removeMember(Academy $academy, AcademyMember $member)
     {
         // Check if the current user has permission to remove members
-        if (!$this->canManageMembers($academy)) {
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ลบสมาชิก'
+                'message' => 'คุณไม่มีสิทธิ์ลบสมาชิก',
             ], 403);
         }
 
@@ -594,7 +694,7 @@ class AcademyMemberController extends Controller
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
@@ -602,7 +702,7 @@ class AcademyMemberController extends Controller
         if ($member->user_id === $academy->user_id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถลบเจ้าของโรงเรียนได้'
+                'message' => 'ไม่สามารถลบเจ้าของโรงเรียนได้',
             ], 403);
         }
 
@@ -626,17 +726,17 @@ class AcademyMemberController extends Controller
      */
     public function suspendMember(Academy $academy, AcademyMember $member, Request $request)
     {
-        if (!$this->canManageMembers($academy)) {
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ระงับสมาชิก'
+                'message' => 'คุณไม่มีสิทธิ์ระงับสมาชิก',
             ], 403);
         }
 
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
@@ -644,7 +744,7 @@ class AcademyMemberController extends Controller
         if ($member->user_id === $academy->user_id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถระงับเจ้าของโรงเรียนได้'
+                'message' => 'ไม่สามารถระงับเจ้าของโรงเรียนได้',
             ], 403);
         }
 
@@ -671,24 +771,24 @@ class AcademyMemberController extends Controller
      */
     public function unsuspendMember(Academy $academy, AcademyMember $member)
     {
-        if (!$this->canManageMembers($academy)) {
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ยกเลิกการระงับสมาชิก'
+                'message' => 'คุณไม่มีสิทธิ์ยกเลิกการระงับสมาชิก',
             ], 403);
         }
 
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
         if ($member->status !== 5) {
             return response()->json([
                 'success' => false,
-                'message' => 'สมาชิกไม่ได้ถูกระงับ'
+                'message' => 'สมาชิกไม่ได้ถูกระงับ',
             ], 422);
         }
 
@@ -715,18 +815,18 @@ class AcademyMemberController extends Controller
         // Check if current user is the member themselves OR has permission to manage members
         $user = auth()->user();
         $isOwnerOfMemberRecord = $member->user_id === $user->id;
-        
-        if (!$isOwnerOfMemberRecord && !$this->canManageMembers($academy)) {
+
+        if (! $isOwnerOfMemberRecord && ! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้'
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้',
             ], 403);
         }
 
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
@@ -748,17 +848,17 @@ class AcademyMemberController extends Controller
      */
     public function updateMember(Academy $academy, AcademyMember $member, Request $request)
     {
-        if (!$this->canManageMembers($academy)) {
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์แก้ไขข้อมูลสมาชิก'
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขข้อมูลสมาชิก',
             ], 403);
         }
 
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
@@ -847,7 +947,7 @@ class AcademyMemberController extends Controller
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
@@ -857,13 +957,13 @@ class AcademyMemberController extends Controller
         // Get course statistics
         $enrolledCoursesCount = 0;
         $completedCoursesCount = 0;
-        
+
         if ($member->user_id) {
-            $enrolledCoursesCount = \App\Models\CourseMember::whereHas('course', function($q) use ($academy) {
+            $enrolledCoursesCount = \App\Models\CourseMember::whereHas('course', function ($q) use ($academy) {
                 $q->where('academy_id', $academy->id);
             })->where('user_id', $member->user_id)->where('status', 2)->count();
 
-            $completedCoursesCount = \App\Models\CourseMember::whereHas('course', function($q) use ($academy) {
+            $completedCoursesCount = \App\Models\CourseMember::whereHas('course', function ($q) use ($academy) {
                 $q->where('academy_id', $academy->id);
             })->where('user_id', $member->user_id)->where('is_completed', true)->count();
         }
@@ -880,7 +980,7 @@ class AcademyMemberController extends Controller
                 ->whereIn('status', [\App\Models\SemesterTranscript::STATUS_PUBLISHED, \App\Models\SemesterTranscript::STATUS_APPROVED])
                 ->orderBy('semester_id', 'desc')
                 ->first();
-            
+
             if ($latestTranscript && $latestTranscript->gpa !== null) {
                 $gpa = (float) $latestTranscript->gpa;
             } elseif ($member->user_id) {
@@ -889,7 +989,7 @@ class AcademyMemberController extends Controller
                     ->where('status', \App\Models\CourseGrade::STATUS_COMPLETED)
                     ->where('is_published', true)
                     ->get();
-                
+
                 if ($courseGrades->isNotEmpty()) {
                     $totalGradePoints = 0;
                     $totalCredits = 0;
@@ -905,17 +1005,17 @@ class AcademyMemberController extends Controller
             }
         }
         $memberData['gpa'] = $gpa;
-        
+
         // Calculate attendance rate from attendance records
         $attendanceRate = null;
         if ($member->user_id && $member->student_id) {
-            $attendanceDetails = \App\Models\AttendanceDetail::whereHas('courseMember', function($q) use ($academy, $member) {
-                    $q->where('academy_id', $academy->id)
-                      ->where('user_id', $member->user_id);
-                })
+            $attendanceDetails = \App\Models\AttendanceDetail::whereHas('courseMember', function ($q) use ($academy, $member) {
+                $q->where('academy_id', $academy->id)
+                    ->where('user_id', $member->user_id);
+            })
                 ->where('course_member_id', '!=', null)
                 ->get();
-            
+
             if ($attendanceDetails->isNotEmpty()) {
                 $totalSessions = $attendanceDetails->count();
                 $attendedSessions = $attendanceDetails->where('status', 'present')->count();
@@ -923,6 +1023,7 @@ class AcademyMemberController extends Controller
             }
         }
         $memberData['attendance_rate'] = $attendanceRate;
+
         return response()->json([
             'success' => true,
             'member' => $memberData,
@@ -937,15 +1038,15 @@ class AcademyMemberController extends Controller
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
         $courses = [];
-        
+
         if ($member->user_id) {
             $courseMembers = \App\Models\CourseMember::with('course')
-                ->whereHas('course', function($q) use ($academy) {
+                ->whereHas('course', function ($q) use ($academy) {
                     $q->where('academy_id', $academy->id);
                 })
                 ->where('user_id', $member->user_id)
@@ -980,7 +1081,7 @@ class AcademyMemberController extends Controller
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
@@ -1000,7 +1101,7 @@ class AcademyMemberController extends Controller
         if ($member->academy_role_id) {
             $activities[] = [
                 'id' => 2,
-                'description' => 'ได้รับบทบาท ' . ($member->academyRole->display_name_th ?? 'สมาชิก'),
+                'description' => 'ได้รับบทบาท '.($member->academyRole->display_name_th ?? 'สมาชิก'),
                 'icon' => 'fluent:person-tag-24-regular',
                 'created_at' => $member->updated_at?->toISOString(),
             ];
@@ -1019,10 +1120,10 @@ class AcademyMemberController extends Controller
     public function bulkInviteMembers(Academy $academy, Request $request)
     {
         // Check permission
-        if (!$this->canManageMembers($academy)) {
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์เชิญสมาชิก'
+                'message' => 'คุณไม่มีสิทธิ์เชิญสมาชิก',
             ], 403);
         }
 
@@ -1037,7 +1138,7 @@ class AcademyMemberController extends Controller
         $userIds = $request->user_ids ?? [];
         $emails = $request->emails ?? [];
         $role = $request->role ?? 'student';
-        
+
         $invitedCount = 0;
         $skippedCount = 0;
         $errors = [];
@@ -1050,6 +1151,7 @@ class AcademyMemberController extends Controller
 
             if ($existingMember) {
                 $skippedCount++;
+
                 continue;
             }
 
@@ -1067,7 +1169,7 @@ class AcademyMemberController extends Controller
         // Invite by emails (create invitation or find existing user)
         foreach ($emails as $email) {
             $user = \App\Models\User::where('email', $email)->first();
-            
+
             if ($user) {
                 // User exists, check if already member
                 $existingMember = AcademyMember::where('academy_id', $academy->id)
@@ -1076,6 +1178,7 @@ class AcademyMemberController extends Controller
 
                 if ($existingMember) {
                     $skippedCount++;
+
                     continue;
                 }
 
@@ -1112,10 +1215,10 @@ class AcademyMemberController extends Controller
     public function importMembersFromCsv(Academy $academy, Request $request)
     {
         // Check permission
-        if (!$this->canManageMembers($academy)) {
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์นำเข้าสมาชิก'
+                'message' => 'คุณไม่มีสิทธิ์นำเข้าสมาชิก',
             ], 403);
         }
 
@@ -1137,9 +1240,9 @@ class AcademyMemberController extends Controller
         // Parse CSV
         $handle = fopen($file->getRealPath(), 'r');
         $headers = fgetcsv($handle);
-        
+
         // Normalize headers (lowercase, trim)
-        $headers = array_map(function($h) {
+        $headers = array_map(function ($h) {
             return strtolower(trim($h));
         }, $headers);
 
@@ -1151,23 +1254,24 @@ class AcademyMemberController extends Controller
 
         if ($emailIndex === false && $referenceCodeIndex === false) {
             fclose($handle);
+
             return response()->json([
                 'success' => false,
-                'message' => 'ไฟล์ CSV ต้องมีคอลัมน์ email หรือ reference_code'
+                'message' => 'ไฟล์ CSV ต้องมีคอลัมน์ email หรือ reference_code',
             ], 422);
         }
 
         $lineNumber = 1;
         while (($row = fgetcsv($handle)) !== false) {
             $lineNumber++;
-            
+
             $email = $emailIndex !== false ? trim($row[$emailIndex] ?? '') : null;
             $referenceCode = $referenceCodeIndex !== false ? trim($row[$referenceCodeIndex] ?? '') : null;
             $role = $roleIndex !== false ? trim($row[$roleIndex] ?? '') : $defaultRole;
             $memberCode = $memberCodeIndex !== false ? trim($row[$memberCodeIndex] ?? '') : null;
 
             // Validate role
-            if (!in_array($role, ['student', 'parent', 'teacher', 'staff', 'admin'])) {
+            if (! in_array($role, ['student', 'parent', 'teacher', 'staff', 'admin'])) {
                 $role = $defaultRole;
             }
 
@@ -1176,14 +1280,15 @@ class AcademyMemberController extends Controller
             if ($email) {
                 $user = \App\Models\User::where('email', $email)->first();
             }
-            if (!$user && $referenceCode) {
+            if (! $user && $referenceCode) {
                 $user = \App\Models\User::where('reference_code', $referenceCode)->first();
             }
 
-            if (!$user) {
+            if (! $user) {
                 $identifier = $email ?: $referenceCode;
                 $errors[] = "บรรทัด {$lineNumber}: ไม่พบผู้ใช้ {$identifier}";
                 $skipped++;
+
                 continue;
             }
 
@@ -1194,12 +1299,13 @@ class AcademyMemberController extends Controller
 
             if ($existingMember) {
                 $skipped++;
+
                 continue;
             }
 
             // Create member
             $status = $autoApprove ? 2 : 4; // 2 = approved, 4 = invited
-            
+
             AcademyMember::create([
                 'academy_id' => $academy->id,
                 'user_id' => $user->id,
@@ -1238,10 +1344,10 @@ class AcademyMemberController extends Controller
     public function bulkAction(Academy $academy, Request $request)
     {
         // Check permission
-        if (!$this->canManageMembers($academy)) {
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ดำเนินการนี้'
+                'message' => 'คุณไม่มีสิทธิ์ดำเนินการนี้',
             ], 403);
         }
 
@@ -1255,7 +1361,7 @@ class AcademyMemberController extends Controller
         $memberIds = $request->member_ids;
         $action = $request->action;
         $reason = $request->get('reason', '');
-        
+
         $successCount = 0;
         $failedCount = 0;
         $errors = [];
@@ -1265,16 +1371,18 @@ class AcademyMemberController extends Controller
                 ->where('academy_id', $academy->id)
                 ->first();
 
-            if (!$member) {
+            if (! $member) {
                 $failedCount++;
                 $errors[] = "ไม่พบสมาชิก ID: {$memberId}";
+
                 continue;
             }
 
             // Cannot modify academy owner
             if ($member->user_id === $academy->user_id) {
                 $failedCount++;
-                $errors[] = "ไม่สามารถดำเนินการกับเจ้าของโรงเรียนได้";
+                $errors[] = 'ไม่สามารถดำเนินการกับเจ้าของโรงเรียนได้';
+
                 continue;
             }
 
@@ -1298,7 +1406,7 @@ class AcademyMemberController extends Controller
                             }
                             $member->update([
                                 'status' => 3,
-                                'note_comment' => $reason ?: 'ถูกปฏิเสธโดยผู้ดูแล'
+                                'note_comment' => $reason ?: 'ถูกปฏิเสธโดยผู้ดูแล',
                             ]);
                             $successCount++;
                         }
@@ -1311,7 +1419,7 @@ class AcademyMemberController extends Controller
                             }
                             $member->update([
                                 'status' => 5,
-                                'note_comment' => $reason ?: 'ถูกระงับโดยผู้ดูแล'
+                                'note_comment' => $reason ?: 'ถูกระงับโดยผู้ดูแล',
                             ]);
                             $successCount++;
                         }
@@ -1321,7 +1429,7 @@ class AcademyMemberController extends Controller
                         if ($member->status === 5) {
                             $member->update([
                                 'status' => 2,
-                                'note_comment' => null
+                                'note_comment' => null,
                             ]);
                             $academy->increment('total_students');
                             $successCount++;
@@ -1352,7 +1460,7 @@ class AcademyMemberController extends Controller
 
         return response()->json([
             'success' => $successCount > 0,
-            'message' => "{$actionLabels[$action]}สำเร็จ {$successCount} รายการ" . ($failedCount > 0 ? ", ล้มเหลว {$failedCount} รายการ" : ''),
+            'message' => "{$actionLabels[$action]}สำเร็จ {$successCount} รายการ".($failedCount > 0 ? ", ล้มเหลว {$failedCount} รายการ" : ''),
             'success_count' => $successCount,
             'failed_count' => $failedCount,
             'errors' => $errors,
@@ -1366,10 +1474,10 @@ class AcademyMemberController extends Controller
     public function exportSelectedMembers(Academy $academy, Request $request)
     {
         // Check permission
-        if (!$this->canManageMembers($academy)) {
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ส่งออกข้อมูลสมาชิก'
+                'message' => 'คุณไม่มีสิทธิ์ส่งออกข้อมูลสมาชิก',
             ], 403);
         }
 
@@ -1384,7 +1492,7 @@ class AcademyMemberController extends Controller
             ->with(['user:id,email,name,reference_code', 'student', 'academyRole']);
 
         // If specific IDs provided, filter by them
-        if (!empty($memberIds)) {
+        if (! empty($memberIds)) {
             $query->whereIn('id', $memberIds);
         }
 
@@ -1392,15 +1500,15 @@ class AcademyMemberController extends Controller
 
         $headers = [
             'Content-Type' => 'text/csv; charset=utf-8',
-            'Content-Disposition' => 'attachment; filename="academy_members_' . date('Y-m-d_His') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="academy_members_'.date('Y-m-d_His').'.csv"',
         ];
 
-        $callback = function() use ($members) {
+        $callback = function () use ($members) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+
             // CSV header
             fputcsv($file, [
                 'รหัสสมาชิก',
@@ -1444,10 +1552,10 @@ class AcademyMemberController extends Controller
     public function exportMembersToCsv(Academy $academy)
     {
         // Check permission
-        if (!$this->canManageMembers($academy)) {
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ส่งออกข้อมูลสมาชิก'
+                'message' => 'คุณไม่มีสิทธิ์ส่งออกข้อมูลสมาชิก',
             ], 403);
         }
 
@@ -1458,12 +1566,12 @@ class AcademyMemberController extends Controller
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="academy_members_' . $academy->id . '.csv"',
+            'Content-Disposition' => 'attachment; filename="academy_members_'.$academy->id.'.csv"',
         ];
 
-        $callback = function() use ($members) {
+        $callback = function () use ($members) {
             $file = fopen('php://output', 'w');
-            
+
             // CSV header
             fputcsv($file, [
                 'member_code',
@@ -1493,5 +1601,3 @@ class AcademyMemberController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 }
-
-

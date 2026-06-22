@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Student;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
+use App\Models\Student;
+use App\Models\StudentAcademicInfo;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,22 +19,109 @@ use Illuminate\Support\Facades\DB;
 class StudentEnrollmentService
 {
     /**
+     * Helper to normalize grade level for student.class_level
+     * "ม.1" -> "1", "1" -> "1", "ป.3" -> "3", "อ.2" -> "2"
+     */
+    public function normalizeGradeLevel(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return preg_replace('/^[^0-9]+/u', '', trim($value)) ?: null;
+    }
+
+    /**
+     * Close the active enrollment of a student in a classroom
+     */
+    private function closeActiveEnrollment(
+        Student $student,
+        Classroom $classroom,
+        string $newStatus,
+        ?string $reason = null,
+        $at = null,
+        ?string $batchId = null,
+        ?int $userId = null
+    ): ?ClassroomStudent {
+        $enrollment = ClassroomStudent::where('classroom_id', $classroom->id)
+            ->where('student_id', $student->id)
+            ->where('status', ClassroomStudent::STATUS_ACTIVE)
+            ->first();
+
+        if (! $enrollment) {
+            return null;
+        }
+
+        $leftAt = $at ?: today();
+
+        $enrollment->update([
+            'status' => $newStatus,
+            'left_at' => $leftAt,
+            'leave_reason' => $reason,
+            'rollover_batch_id' => $batchId,
+            'created_by_user_id' => $userId,
+        ]);
+
+        return $enrollment;
+    }
+
+    /**
+     * Manage student academic info snapshot sequentially
+     */
+    private function manageAcademicInfoSnapshot(
+        Student $student,
+        Classroom $newActive,
+        ?string $batchId = null
+    ): StudentAcademicInfo {
+        // Step 1: Flip all current academic records to false to avoid unique constraint violations
+        StudentAcademicInfo::where('student_id', $student->id)
+            ->where('is_current', true)
+            ->update(['is_current' => false]);
+
+        // Step 2: Resolve year name
+        $academicYear = $newActive->academicYear;
+        $yearName = $academicYear ? $academicYear->name : StudentAcademicInfo::getCurrentAcademicYear();
+
+        // Step 3: updateOrCreate for this year
+        return StudentAcademicInfo::updateOrCreate(
+            [
+                'student_id' => $student->id,
+                'academic_year' => $yearName,
+            ],
+            [
+                'academy_id' => $newActive->academy_id,
+                'classroom_id' => $newActive->id,
+                'current_grade' => $newActive->grade_level,
+                'current_class' => $newActive->section,
+                'classroom_full' => $newActive->display_name,
+                'education_level' => StudentAcademicInfo::getEducationLevelFromString($newActive->grade_level),
+                'semester' => $newActive->semester ?? StudentAcademicInfo::getCurrentSemester(),
+                'study_status' => StudentAcademicInfo::STATUS_STUDYING,
+                'is_current' => true,
+            ]
+        );
+    }
+
+    /**
      * ลงทะเบียนนักเรียนเข้าห้องเรียน
      */
     public function enrollStudent(
         Student $student,
         Classroom $classroom,
-        ?int $studentNumber = null
+        ?int $studentNumber = null,
+        ?string $batchId = null,
+        ?int $userId = null,
+        bool $dispatchEvent = true
     ): ClassroomStudent {
-        return DB::transaction(function () use ($student, $classroom, $studentNumber) {
+        return DB::transaction(function () use ($student, $classroom, $studentNumber, $batchId, $userId, $dispatchEvent) {
             // Auto-assign student number if not provided
             if ($studentNumber === null) {
                 $studentNumber = ClassroomStudent::where('classroom_id', $classroom->id)
-                    ->where('status', 'active')
+                    ->where('status', ClassroomStudent::STATUS_ACTIVE)
                     ->max('student_number') + 1;
             }
 
-            // Create or update enrollment record
+            // Create or update enrollment record (E2 same-classroom re-enroll updateOrCreate strategy)
             $enrollment = ClassroomStudent::updateOrCreate(
                 [
                     'classroom_id' => $classroom->id,
@@ -44,27 +132,26 @@ class StudentEnrollmentService
                     'academic_year_id' => $classroom->academic_year_id,
                     'student_number' => $studentNumber,
                     'status' => ClassroomStudent::STATUS_ACTIVE,
-                    'enrolled_at' => now(),
+                    'enrolled_at' => today(),
                     'left_at' => null,
                     'leave_reason' => null,
+                    'rollover_batch_id' => $batchId,
+                    'created_by_user_id' => $userId,
                 ]
             );
 
-            // Sync class_level & class_section for backward compatibility
+            // Sync class_level & class_section for backward compatibility (with normalization)
             $student->update([
-                'class_level' => $classroom->grade_level,
+                'class_level' => $this->normalizeGradeLevel($classroom->grade_level),
                 'class_section' => $classroom->section,
+                'status' => 'active',
             ]);
 
-            // Update current StudentAcademicInfo if exists
-            $academicInfo = $student->currentAcademicInfo;
-            if ($academicInfo) {
-                $academicInfo->update([
-                    'classroom_id' => $classroom->id,
-                    'current_grade' => $classroom->grade_level,
-                    'current_class' => $classroom->section,
-                    'classroom_full' => $classroom->display_name,
-                ]);
+            // Update StudentAcademicInfo snapshot
+            $this->manageAcademicInfoSnapshot($student, $classroom, $batchId);
+
+            if ($dispatchEvent) {
+                event(new \App\Events\Enrollment\StudentEnrolled($student, $enrollment, $batchId));
             }
 
             return $enrollment;
@@ -94,32 +181,242 @@ class StudentEnrollmentService
     }
 
     /**
-     * ย้ายนักเรียนจากห้องเดิมไปห้องใหม่
+     * ย้ายนักเรียนจากห้องเดิมไปห้องใหม่ในปีการศึกษาเดียวกัน
      */
     public function transferStudent(
         Student $student,
         Classroom $fromClassroom,
         Classroom $toClassroom,
-        string $reason = 'ย้ายห้อง'
+        string $reason = 'ย้ายห้อง',
+        ?string $batchId = null,
+        ?int $userId = null
     ): ClassroomStudent {
-        return DB::transaction(function () use ($student, $fromClassroom, $toClassroom, $reason) {
+        return DB::transaction(function () use ($student, $fromClassroom, $toClassroom, $reason, $batchId, $userId) {
+            if ($fromClassroom->academic_year_id !== $toClassroom->academic_year_id) {
+                throw new \InvalidArgumentException('Use promoteStudent() for cross-year transfers');
+            }
+
             // ปิด enrollment เดิม
-            ClassroomStudent::where('classroom_id', $fromClassroom->id)
-                ->where('student_id', $student->id)
-                ->where('status', 'active')
-                ->update([
-                    'status' => ClassroomStudent::STATUS_TRANSFERRED,
-                    'left_at' => now(),
-                    'leave_reason' => $reason,
-                ]);
+            $closed = $this->closeActiveEnrollment(
+                $student,
+                $fromClassroom,
+                ClassroomStudent::STATUS_TRANSFERRED,
+                $reason,
+                today(),
+                $batchId,
+                $userId
+            );
 
             // สร้าง enrollment ใหม่
-            return $this->enrollStudent($student, $toClassroom);
+            $opened = $this->enrollStudent($student, $toClassroom, null, $batchId, $userId, false);
+
+            if ($closed) {
+                event(new \App\Events\Enrollment\StudentTransferred($student, $closed, $opened, $batchId));
+            }
+
+            return $opened;
         });
     }
 
     /**
-     * นักเรียนออกจากห้องเรียน (ย้ายออก, พ้นสภาพ, จบการศึกษา)
+     * นักเรียนจบการศึกษา
+     */
+    public function graduateStudent(
+        Student $student,
+        ?Classroom $classroom = null,
+        string $reason = 'จบการศึกษา',
+        ?string $batchId = null,
+        ?int $userId = null
+    ): ?ClassroomStudent {
+        return DB::transaction(function () use ($student, $classroom, $reason, $batchId, $userId) {
+            if ($classroom === null) {
+                $activeEnrollment = ClassroomStudent::where('student_id', $student->id)
+                    ->where('status', ClassroomStudent::STATUS_ACTIVE)
+                    ->first();
+                $classroom = $activeEnrollment ? $activeEnrollment->classroom : null;
+            }
+
+            $closed = null;
+            if ($classroom) {
+                $closed = $this->closeActiveEnrollment(
+                    $student,
+                    $classroom,
+                    ClassroomStudent::STATUS_GRADUATED,
+                    $reason,
+                    today(),
+                    $batchId,
+                    $userId
+                );
+            }
+
+            // Update student record
+            $student->update([
+                'status' => 'graduated',
+                'class_level' => null,
+                'class_section' => null,
+            ]);
+
+            // Update academic info
+            $academicInfo = $student->currentAcademicInfo ?: $student->academicInfos()->latest('academic_year')->first();
+            if ($academicInfo) {
+                $academicInfo->update([
+                    'graduation_date' => today(),
+                    'study_status' => StudentAcademicInfo::STATUS_GRADUATED,
+                    'is_current' => false,
+                ]);
+            }
+
+            event(new \App\Events\Enrollment\StudentGraduated($student, $closed, $batchId));
+
+            return $closed;
+        });
+    }
+
+    /**
+     * นักเรียนออกจากห้องเรียน (ลาออก/พ้นสภาพ)
+     */
+    public function dropStudent(
+        Student $student,
+        ?Classroom $classroom = null,
+        string $reason = 'พ้นสภาพ',
+        ?string $batchId = null,
+        ?int $userId = null
+    ): ?ClassroomStudent {
+        return DB::transaction(function () use ($student, $classroom, $reason, $batchId, $userId) {
+            if ($classroom === null) {
+                $activeEnrollment = ClassroomStudent::where('student_id', $student->id)
+                    ->where('status', ClassroomStudent::STATUS_ACTIVE)
+                    ->first();
+                $classroom = $activeEnrollment ? $activeEnrollment->classroom : null;
+            }
+
+            $closed = null;
+            if ($classroom) {
+                $closed = $this->closeActiveEnrollment(
+                    $student,
+                    $classroom,
+                    ClassroomStudent::STATUS_DROPPED,
+                    $reason,
+                    today(),
+                    $batchId,
+                    $userId
+                );
+            }
+
+            // Update student status to inactive
+            $student->update([
+                'status' => 'inactive',
+                'class_level' => null,
+                'class_section' => null,
+            ]);
+
+            // Update academic info
+            $academicInfo = $student->currentAcademicInfo ?: $student->academicInfos()->latest('academic_year')->first();
+            if ($academicInfo) {
+                $academicInfo->update([
+                    'study_status' => StudentAcademicInfo::STATUS_DROPPED,
+                    'is_current' => false,
+                ]);
+            }
+
+            event(new \App\Events\Enrollment\StudentDropped($student, $closed, $reason, $batchId));
+
+            return $closed;
+        });
+    }
+
+    /**
+     * เรียนซ้ำชั้นในห้องเรียนใหม่
+     */
+    public function repeatStudent(
+        Student $student,
+        Classroom $newClassroom,
+        ?int $studentNumber = null,
+        string $reason = 'ซ้ำชั้น',
+        ?string $batchId = null,
+        ?int $userId = null
+    ): ClassroomStudent {
+        return DB::transaction(function () use ($student, $newClassroom, $studentNumber, $reason, $batchId, $userId) {
+            $activeEnrollment = ClassroomStudent::where('student_id', $student->id)
+                ->where('status', ClassroomStudent::STATUS_ACTIVE)
+                ->first();
+
+            $closed = null;
+            if ($activeEnrollment) {
+                $fromClassroom = $activeEnrollment->classroom;
+
+                // Assert same grade level
+                if ($newClassroom->grade_level !== $fromClassroom->grade_level) {
+                    throw new \InvalidArgumentException('repeatStudent() requires the new classroom to have the same grade level');
+                }
+
+                // Assert different classroom
+                if ($newClassroom->id === $fromClassroom->id) {
+                    throw new \InvalidArgumentException('Cannot repeat in the exact same classroom ID to avoid UNIQUE constraint conflicts');
+                }
+
+                $closed = $this->closeActiveEnrollment(
+                    $student,
+                    $fromClassroom,
+                    ClassroomStudent::STATUS_REPEATING,
+                    $reason,
+                    today(),
+                    $batchId,
+                    $userId
+                );
+            }
+
+            // Enroll in new classroom
+            $opened = $this->enrollStudent($student, $newClassroom, $studentNumber, $batchId, $userId, false);
+
+            if ($closed) {
+                event(new \App\Events\Enrollment\StudentRepeated($student, $closed, $opened, $batchId));
+            }
+
+            return $opened;
+        });
+    }
+
+    /**
+     * เลื่อนชั้นนักเรียนข้ามปีการศึกษา
+     */
+    public function promoteStudent(
+        Student $student,
+        Classroom $fromClassroom,
+        Classroom $toClassroom,
+        string $reason = 'เลื่อนชั้น',
+        ?int $studentNumber = null,
+        ?string $batchId = null,
+        ?int $userId = null
+    ): ClassroomStudent {
+        return DB::transaction(function () use ($student, $fromClassroom, $toClassroom, $reason, $studentNumber, $batchId, $userId) {
+            // assert cross-year
+            if ($fromClassroom->academic_year_id === $toClassroom->academic_year_id) {
+                throw new \InvalidArgumentException('Use transferStudent() for same-year classroom transitions');
+            }
+
+            $closed = $this->closeActiveEnrollment(
+                $student,
+                $fromClassroom,
+                ClassroomStudent::STATUS_PROMOTED,
+                $reason,
+                today(),
+                $batchId,
+                $userId
+            );
+
+            $opened = $this->enrollStudent($student, $toClassroom, $studentNumber, $batchId, $userId, false);
+
+            if ($closed) {
+                event(new \App\Events\Enrollment\StudentPromoted($student, $closed, $opened, $batchId));
+            }
+
+            return $opened;
+        });
+    }
+
+    /**
+     * @deprecated Use dropStudent or transferStudent
      */
     public function unenrollStudent(
         Student $student,
@@ -130,10 +427,10 @@ class StudentEnrollmentService
         return DB::transaction(function () use ($student, $classroom, $status, $reason) {
             $updated = ClassroomStudent::where('classroom_id', $classroom->id)
                 ->where('student_id', $student->id)
-                ->where('status', 'active')
+                ->where('status', ClassroomStudent::STATUS_ACTIVE)
                 ->update([
                     'status' => $status,
-                    'left_at' => now(),
+                    'left_at' => today(),
                     'leave_reason' => $reason,
                 ]);
 
@@ -142,12 +439,7 @@ class StudentEnrollmentService
     }
 
     /**
-     * เลื่อนชั้นนักเรียนทั้งห้อง (ขึ้นปีการศึกษาใหม่)
-     *
-     * @param Classroom $fromClassroom ห้องเดิม (ปีที่แล้ว)
-     * @param Classroom $toClassroom ห้องใหม่ (ปีใหม่)
-     * @param string $reasonForOld เหตุผลที่ปิด enrollment เดิม
-     * @return int จำนวนนักเรียนที่เลื่อนชั้น
+     * @deprecated Use AcademicYearRolloverService or call promoteStudent directly in loop
      */
     public function promoteClassroom(
         Classroom $fromClassroom,
@@ -164,7 +456,7 @@ class StudentEnrollmentService
 
             foreach ($activeStudents as $enrollment) {
                 if ($enrollment->student) {
-                    $this->transferStudent(
+                    $this->promoteStudent(
                         $enrollment->student,
                         $fromClassroom,
                         $toClassroom,
@@ -194,7 +486,7 @@ class StudentEnrollmentService
         foreach ($enrollments as $enrollment) {
             if ($enrollment->student && $enrollment->classroom) {
                 $enrollment->student->update([
-                    'class_level' => $enrollment->classroom->grade_level,
+                    'class_level' => $this->normalizeGradeLevel($enrollment->classroom->grade_level),
                     'class_section' => $enrollment->classroom->section,
                 ]);
                 $synced++;

@@ -28,7 +28,7 @@ class AnnouncementController extends Controller
         $user = $request->user();
         
         $query = SchoolAnnouncement::where('academy_id', $academy->id)
-            ->with(['creator:id,name,profile_photo_path']);
+            ->with(['creator:id,name,profile_photo_path,email_verified_at']);
 
         // For non-admins, only show published and non-expired announcements
         if (!$this->isAcademyAdmin($user, $academy)) {
@@ -111,7 +111,7 @@ class AnnouncementController extends Controller
             ['read_at' => now()]
         );
 
-        $announcement->load('creator:id,name,profile_photo_path');
+        $announcement->load('creator:id,name,profile_photo_path,email_verified_at');
         $announcement->is_read = true;
         $announcement->read_count = $announcement->reads()->count();
 
@@ -183,7 +183,7 @@ class AnnouncementController extends Controller
 
             DB::commit();
 
-            $announcement->load('creator:id,name,profile_photo_path');
+            $announcement->load('creator:id,name,profile_photo_path,email_verified_at');
 
             return response()->json([
                 'success' => true,
@@ -256,7 +256,7 @@ class AnnouncementController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Announcement updated successfully',
-                'data' => $announcement->fresh()->load('creator:id,name,profile_photo_path'),
+                'data' => $announcement->fresh()->load('creator:id,name,profile_photo_path,email_verified_at'),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

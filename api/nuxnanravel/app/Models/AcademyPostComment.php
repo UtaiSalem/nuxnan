@@ -31,7 +31,7 @@ class AcademyPostComment extends Model
 
     public function post()
     {
-        return $this->belongsTo(AcademyPost::class);
+        return $this->belongsTo(AcademyPost::class, 'academy_post_id');
     }
 
     public function parentComment()

@@ -21,21 +21,57 @@ class Notification extends Model
     // Notification Types - Grading System
     // ===========================================
     public const TYPE_GRADE_PUBLISHED = 'grade_published';
+
     public const TYPE_GRADE_FINALIZED = 'grade_finalized';
+
     public const TYPE_APPEAL_SUBMITTED = 'appeal_submitted';
+
     public const TYPE_APPEAL_RESPONDED = 'appeal_responded';
+
     public const TYPE_CERTIFICATE_ISSUED = 'certificate_issued';
+
     public const TYPE_ELIGIBILITY_UNLOCKED = 'eligibility_unlocked';
+
     public const TYPE_REMEDIATION_OPENED = 'remediation_opened';
+
     public const TYPE_REMEDIATION_COMPLETED = 'remediation_completed';
+
     public const TYPE_COURSE_MEMBER_REMOVED = 'course_member_removed';
+
     public const TYPE_COURSE_SELF_LEFT = 'course_self_left';
+
     public const TYPE_COURSE_REMOVAL_REFUNDED = 'course_removal_refunded';
+
+    // Group notification types
+    public const TYPE_GROUP_MEMBER_ADDED = 'group_member_added';
+
+    public const TYPE_GROUP_ADMIN_ADDED = 'group_admin_added';
+
+    public const TYPE_GROUP_POST_CREATED = 'group_post_created';
+
+    public const TYPE_STUDENT_ENROLLED = 'student_enrolled';
+
+    public const TYPE_STUDENT_TRANSFERRED = 'student_transferred';
+
+    public const TYPE_STUDENT_PROMOTED = 'student_promoted';
+
+    public const TYPE_STUDENT_REPEATED = 'student_repeated';
+
+    public const TYPE_STUDENT_GRADUATED = 'student_graduated';
+
+    public const TYPE_STUDENT_DROPPED = 'student_dropped';
+
+    public const TYPE_ROLLOVER_COMMITTED = 'rollover_committed';
+
+    public const TYPE_ROLLOVER_UNDONE = 'rollover_undone';
 
     // Other types
     public const TYPE_GENERAL = 'general';
+
     public const TYPE_COURSE = 'course';
+
     public const TYPE_ASSIGNMENT = 'assignment';
+
     public const TYPE_QUIZ = 'quiz';
 
     // ===========================================
@@ -80,12 +116,14 @@ class Notification extends Model
     public function markAsRead(): self
     {
         $this->update(['read_status' => true]);
+
         return $this;
     }
 
     public function markAsUnread(): self
     {
         $this->update(['read_status' => false]);
+
         return $this;
     }
 
@@ -103,6 +141,17 @@ class Notification extends Model
             self::TYPE_ASSIGNMENT => 'heroicons:clipboard-document-list',
             self::TYPE_QUIZ => 'heroicons:question-mark-circle',
             self::TYPE_COURSE => 'heroicons:book-open',
+            self::TYPE_GROUP_MEMBER_ADDED => 'heroicons:user-group',
+            self::TYPE_GROUP_ADMIN_ADDED => 'heroicons:star',
+            self::TYPE_GROUP_POST_CREATED => 'heroicons:document-text',
+            self::TYPE_STUDENT_ENROLLED => 'heroicons:user-plus',
+            self::TYPE_STUDENT_TRANSFERRED => 'heroicons:arrows-right-left',
+            self::TYPE_STUDENT_PROMOTED => 'heroicons:arrow-up-circle',
+            self::TYPE_STUDENT_REPEATED => 'heroicons:arrow-path',
+            self::TYPE_STUDENT_GRADUATED => 'heroicons:academic-cap',
+            self::TYPE_STUDENT_DROPPED => 'heroicons:x-circle',
+            self::TYPE_ROLLOVER_COMMITTED => 'heroicons:clipboard-document-check',
+            self::TYPE_ROLLOVER_UNDONE => 'heroicons:arrow-uturn-left',
             default => 'heroicons:bell',
         };
     }
@@ -121,6 +170,17 @@ class Notification extends Model
             self::TYPE_ELIGIBILITY_UNLOCKED => 'cyan',
             self::TYPE_REMEDIATION_OPENED => 'orange',
             self::TYPE_REMEDIATION_COMPLETED => 'teal',
+            self::TYPE_GROUP_MEMBER_ADDED => 'purple',
+            self::TYPE_GROUP_ADMIN_ADDED => 'yellow',
+            self::TYPE_GROUP_POST_CREATED => 'blue',
+            self::TYPE_STUDENT_ENROLLED => 'blue',
+            self::TYPE_STUDENT_TRANSFERRED => 'yellow',
+            self::TYPE_STUDENT_PROMOTED => 'green',
+            self::TYPE_STUDENT_REPEATED => 'orange',
+            self::TYPE_STUDENT_GRADUATED => 'emerald',
+            self::TYPE_STUDENT_DROPPED => 'orange',
+            self::TYPE_ROLLOVER_COMMITTED => 'cyan',
+            self::TYPE_ROLLOVER_UNDONE => 'yellow',
             default => 'gray',
         };
     }

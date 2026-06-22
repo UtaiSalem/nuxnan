@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Play;
 
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
@@ -23,8 +23,14 @@ class NotificationController extends Controller
             $query->unread();
         }
 
-        // Filter by type
-        if ($request->type) {
+        $types = $request->input('types', []);
+        if (is_string($types)) {
+            $types = [$types];
+        }
+
+        if (is_array($types) && ! empty($types)) {
+            $query->whereIn('type', array_values(array_filter($types, fn ($type) => is_string($type) && $type !== '')));
+        } elseif ($request->type) {
             $query->ofType($request->type);
         }
 
@@ -34,6 +40,7 @@ class NotificationController extends Controller
         $notifications->getCollection()->transform(function ($notification) {
             $notification->icon = $notification->icon;
             $notification->color = $notification->color;
+
             return $notification;
         });
 
@@ -75,6 +82,7 @@ class NotificationController extends Controller
         $notifications->transform(function ($notification) {
             $notification->icon = $notification->icon;
             $notification->color = $notification->color;
+
             return $notification;
         });
 

@@ -22,9 +22,39 @@ const isOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
 // Fetch on mount
+let pollInterval: any = null
+
+const startPolling = () => {
+  pollInterval = setInterval(() => {
+    if (!document.hidden) {
+      fetchRecent()
+    }
+  }, 60000)
+}
+
+const stopPolling = () => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
+}
+
+const handleVisibilityChange = () => {
+  if (!document.hidden) {
+    fetchRecent()
+  }
+}
+
 onMounted(() => {
   fetchRecent()
   initEcho()
+  startPolling()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+  stopPolling()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 
 // Close on click outside
@@ -48,13 +78,55 @@ const handleClick = async (notification: any) => {
 const handleMarkAllRead = async () => {
   await markAllAsRead()
 }
+
+const activeIndex = ref(-1)
+
+const onKeydown = (e: KeyboardEvent) => {
+  if (!isOpen.value) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+      isOpen.value = true
+      e.preventDefault()
+    }
+    return
+  }
+  switch (e.key) {
+    case 'ArrowDown':
+      e.preventDefault()
+      activeIndex.value = Math.min(activeIndex.value + 1, notifications.value.length - 1)
+      break
+    case 'ArrowUp':
+      e.preventDefault()
+      activeIndex.value = Math.max(activeIndex.value - 1, 0)
+      break
+    case 'Enter':
+      e.preventDefault()
+      if (activeIndex.value >= 0 && activeIndex.value < notifications.value.length) {
+        handleClick(notifications.value[activeIndex.value])
+      }
+      break
+    case 'Escape':
+      e.preventDefault()
+      isOpen.value = false
+      break
+  }
+}
+
+watch(isOpen, (open) => {
+  if (open) {
+    activeIndex.value = notifications.value.length > 0 ? 0 : -1
+  } else {
+    activeIndex.value = -1
+  }
+})
 </script>
 
 <template>
-  <div ref="dropdownRef" class="relative">
+  <div ref="dropdownRef" class="relative" @keydown="onKeydown">
     <!-- Bell Button -->
     <button
       @click="isOpen = !isOpen"
+      aria-haspopup="listbox"
+      :aria-expanded="isOpen"
       class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
     >
       <Icon icon="heroicons:bell" class="w-6 h-6" />
@@ -79,6 +151,7 @@ const handleMarkAllRead = async () => {
     >
       <div
         v-if="isOpen"
+        role="listbox"
         class="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-xl shadow-lg ring-1 ring-black/5 dark:ring-white/10 z-50 overflow-hidden"
       >
         <!-- Header -->
@@ -105,20 +178,27 @@ const handleMarkAllRead = async () => {
             <Icon icon="heroicons:arrow-path" class="w-6 h-6 mx-auto text-gray-400 animate-spin" />
           </div>
 
-          <!-- Empty State -->
-          <div v-else-if="notifications.length === 0" class="p-8 text-center">
-            <Icon icon="heroicons:bell-slash" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600" />
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">ไม่มีการแจ้งเตือน</p>
-          </div>
+          <CommonEmptyState
+            v-else-if="notifications.length === 0"
+            icon="heroicons:bell-slash"
+            title="ไม่มีการแจ้งเตือน"
+            description="คุณได้อ่านข้อมูลทั้งหมดหรือยังไม่มีการแจ้งเตือนใหม่เข้ามา"
+            compact
+          />
 
           <!-- List -->
           <div v-else>
             <button
-              v-for="notification in notifications"
+              v-for="(notification, index) in notifications"
               :key="notification.id"
+              role="option"
+              :aria-selected="activeIndex === index"
               @click="handleClick(notification)"
               class="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
-              :class="{ 'bg-blue-50/50 dark:bg-blue-900/10': !notification.read_status }"
+              :class="[
+                !notification.read_status ? 'bg-blue-50/50 dark:bg-blue-900/10' : '',
+                activeIndex === index ? 'bg-gray-100 dark:bg-gray-700/60' : ''
+              ]"
             >
               <!-- Icon -->
               <div

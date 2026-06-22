@@ -229,6 +229,11 @@ class SchoolEventController extends Controller
 
             DB::commit();
 
+            // Mirror if published
+            if ($event->status === 'published') {
+                app(\App\Services\EventToPostMirror::class)->mirror($event);
+            }
+
             // Generate sessions if recurring
             if ($event->is_recurring && !empty($event->recurrence_pattern)) {
                 $this->generateSessions($event);
@@ -311,6 +316,13 @@ class SchoolEventController extends Controller
 
             DB::commit();
 
+            // Mirror if published, otherwise unmirror (if draft/cancelled)
+            if ($event->status === 'published') {
+                app(\App\Services\EventToPostMirror::class)->mirror($event);
+            } else {
+                app(\App\Services\EventToPostMirror::class)->unmirror($event);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Event updated successfully',
@@ -351,6 +363,9 @@ class SchoolEventController extends Controller
             $academy->id
         );
 
+        // Mirror to post
+        app(\App\Services\EventToPostMirror::class)->mirror($event);
+
         return response()->json([
             'success' => true,
             'message' => 'Event published successfully',
@@ -384,6 +399,9 @@ class SchoolEventController extends Controller
             ['status' => 'cancelled'],
             $academy->id
         );
+
+        // Unmirror event post
+        app(\App\Services\EventToPostMirror::class)->unmirror($event);
 
         // TODO: Notify registered participants
 
@@ -626,6 +644,10 @@ class SchoolEventController extends Controller
         }
 
         $oldData = $event->toArray();
+
+        // Unmirror post before deleting event
+        app(\App\Services\EventToPostMirror::class)->unmirror($event);
+
         $event->delete();
 
         $this->auditLog->log(

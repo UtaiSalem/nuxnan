@@ -5,10 +5,10 @@ import CourseLifecycleBadge from '~/components/learn/course/CourseLifecycleBadge
 const props = defineProps<{
   course: any
   index?: number
+  to?: string
 }>()
 
 const emit = defineEmits(['loading-page'])
-const router = useRouter()
 const config = useRuntimeConfig()
 
 const getCoverUrl = (course: any) => {
@@ -38,7 +38,10 @@ const getBadgeType = (course: any, index: number) => {
 
 const goToCourse = () => {
   emit('loading-page')
-  //router.push(`/courses/${props.course.id}`) // Parent handles navigation or loading state
+
+  if (props.to) {
+    navigateTo(props.to)
+  }
 }
 </script>
 

@@ -23,6 +23,17 @@
     "error": "เกิดข้อผิดพลาด",
     "success": "สำเร็จ"
   },
+  "academy": {
+    "tabs": {
+      "feed": "ฟีด",
+      "courses": "รายวิชา",
+      "members": "สมาชิก",
+      "classrooms": "ห้องเรียน",
+      "events": "กิจกรรม",
+      "groups": "กลุ่ม",
+      "about": "เกี่ยวกับ"
+    }
+  },
   "nav": {
     "dashboard": "แดชบอร์ด",
     "newsfeed": "ฟีดข่าว",

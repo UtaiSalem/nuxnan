@@ -518,6 +518,16 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasMany(AcademyPost::class);
     }
 
+    public function mutedGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            AcademyGroup::class,
+            'user_muted_groups',
+            'user_id',
+            'academy_group_id'
+        )->withTimestamps();
+    }
+
     public function courseMembers(): BelongsToMany
     {
         return $this->belongsToMany(Course::class, 'course_members', 'user_id', 'course_id');

@@ -33,11 +33,21 @@ class AcademyGroupController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'required|string|in:department,classroom,club',
+            'type' => 'required|string|in:office,department,section,academic_group,classroom,club,committee',
+            'parent_id' => 'nullable|integer|exists:academy_groups,id',
             'settings' => 'nullable|array'
         ]);
 
         $group = $academy->academyGroups()->create($validated);
+
+        // Auto-seed Default Permissions
+        foreach (\App\Constants\AcademyGroupPermissions::PERMISSIONS as $key => $meta) {
+            \App\Models\AcademyGroupPermission::create([
+                'academy_group_id' => $group->id,
+                'permission_key'   => $key,
+                'enabled'          => $meta['default'],
+            ]);
+        }
 
         return response()->json([
             'success' => true,
@@ -64,7 +74,8 @@ class AcademyGroupController extends Controller
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'nullable|string|in:department,classroom,club',
+            'type' => 'nullable|string|in:office,department,section,academic_group,classroom,club,committee',
+            'parent_id' => 'nullable|integer|exists:academy_groups,id',
             'settings' => 'nullable|array'
         ]);
 
@@ -94,7 +105,10 @@ class AcademyGroupController extends Controller
      */
     public function getMembers(AcademyGroup $academyGroup)
     {
-        $members = $academyGroup->members()->with('profile')->get();
+        $members = $academyGroup->members()
+            ->wherePivot('status', 2)
+            ->with('profile')
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -113,16 +127,57 @@ class AcademyGroupController extends Controller
             'role' => 'nullable|string|in:student,teacher,admin'
         ]);
 
-        // Check if already a member
-        if ($academyGroup->members()->where('user_id', $validated['user_id'])->exists()) {
+        $userId = $validated['user_id'];
+
+        // ⭐ ตรวจสอบว่าเป็นสมาชิกของสถาบันที่ได้รับอนุมัติแล้วหรือไม่ (status = 2)
+        $isAcademyMember = \App\Models\AcademyMember::where('academy_id', $academyGroup->academy_id)
+            ->where('user_id', $userId)
+            ->where('status', 2) // 2 = Approved
+            ->exists();
+
+        if (!$isAcademyMember) {
             return response()->json([
                 'success' => false,
-                'message' => 'ผู้ใช้นี้เป็นสมาชิกของกลุ่มอยู่แล้ว'
-            ], 400);
+                'message' => 'ผู้ใช้รายนี้ยังไม่ได้เป็นสมาชิกที่ได้รับการอนุมัติของสถาบันการศึกษา'
+            ], 422);
         }
 
-        $academyGroup->members()->attach($validated['user_id'], [
-            'role' => $validated['role'] ?? 'student'
+        // Check if already a member (approved or pending)
+        $existing = \App\Models\AcademyGroupMember::where('academy_group_id', $academyGroup->id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($existing) {
+            if ($existing->status === 1) {
+                // Approve the pending request
+                $existing->update([
+                    'role' => $validated['role'] ?? 'student',
+                    'status' => 2,
+                    'invited_by' => auth()->id()
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ผู้ใช้นี้เป็นสมาชิกของกลุ่มอยู่แล้ว'
+                ], 400);
+            }
+        } else {
+            $academyGroup->members()->attach($userId, [
+                'role' => $validated['role'] ?? 'student',
+                'status' => 2,
+                'invited_by' => auth()->id()
+            ]);
+        }
+
+        $academyGroup->load('academy');
+        $academyName = $academyGroup->academy?->name ?? 'academy';
+        app(\App\Services\NotificationService::class)->send([
+            'user_id' => $userId,
+            'sender_id' => auth()->id(),
+            'type' => \App\Models\Notification::TYPE_GROUP_MEMBER_ADDED,
+            'content' => "คุณได้รับการเพิ่มเข้าร่วมส่วนงาน \"{$academyGroup->name}\"",
+            'action_url' => "/academies/{$academyName}/groups/{$academyGroup->id}",
+            'related_id' => $academyGroup->id,
         ]);
 
         return response()->json([
@@ -169,11 +224,118 @@ class AcademyGroupController extends Controller
     }
 
     /**
+     * POST /groups/{academyGroup}/join-request
+     * User self-requests to join group
+     */
+    public function requestJoin(Request $request, AcademyGroup $academyGroup)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        // ต้องเป็น academy member ก่อน
+        $isAcademyMember = \App\Models\AcademyMember::where('academy_id', $academyGroup->academy_id)
+            ->where('user_id', $user->id)
+            ->where('status', 2)
+            ->exists();
+        if (!$isAcademyMember) {
+            return response()->json(['success' => false, 'message' => 'ต้องเป็นสมาชิกของโรงเรียนก่อน'], 422);
+        }
+
+        // ป้องกันซ้ำ
+        $existing = \App\Models\AcademyGroupMember::where('academy_group_id', $academyGroup->id)
+            ->where('user_id', $user->id)
+            ->first();
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => $existing->status === 1 ? 'ส่งคำขอเข้าร่วมแล้ว รอการอนุมัติ' : 'คุณเป็นสมาชิกของกลุ่มนี้อยู่แล้ว',
+            ], 422);
+        }
+
+        $member = \App\Models\AcademyGroupMember::create([
+            'academy_group_id' => $academyGroup->id,
+            'user_id'          => $user->id,
+            'role'             => 'student',
+            'status'           => 1, // pending
+        ]);
+
+        // Send notification to group admins
+        $groupAdminIds = \App\Models\AcademyGroupAdmin::where('academy_group_id', $academyGroup->id)
+            ->pluck('user_id');
+
+        $academyGroup->load('academy');
+        $academyName = $academyGroup->academy?->name ?? 'academy';
+
+        $notifications = [];
+        foreach ($groupAdminIds as $adminId) {
+            $notifications[] = [
+                'user_id' => $adminId,
+                'sender_id' => $user->id,
+                'type' => \App\Models\Notification::TYPE_GROUP_MEMBER_ADDED,
+                'content' => "{$user->name} ขอเข้าร่วมส่วนงาน \"{$academyGroup->name}\"",
+                'action_url' => "/academies/{$academyName}/groups/{$academyGroup->id}?tab=members",
+                'related_id' => $academyGroup->id,
+            ];
+        }
+        app(\App\Services\NotificationService::class)->sendBulk($notifications);
+
+        return response()->json(['success' => true, 'request' => $member], 201);
+    }
+
+    /**
+     * GET /groups/{academyGroup}/pending-members
+     */
+    public function pendingMembers(AcademyGroup $academyGroup)
+    {
+        $pending = \App\Models\AcademyGroupMember::with('user:id,name,email,profile_photo_path')
+            ->where('academy_group_id', $academyGroup->id)
+            ->where('status', 1)
+            ->get();
+        return response()->json(['success' => true, 'data' => $pending]);
+    }
+
+    /**
+     * POST /groups/{academyGroup}/approve/{member}
+     */
+    public function approveMember(Request $request, AcademyGroup $academyGroup, \App\Models\AcademyGroupMember $member)
+    {
+        abort_unless($member->academy_group_id === $academyGroup->id, 404);
+        $member->update(['status' => 2]);
+
+        // Notify user
+        $academyGroup->load('academy');
+        $academyName = $academyGroup->academy?->name ?? 'academy';
+
+        app(\App\Services\NotificationService::class)->send([
+            'user_id' => $member->user_id,
+            'sender_id' => auth()->id(),
+            'type' => \App\Models\Notification::TYPE_GROUP_MEMBER_ADDED,
+            'content' => "คำขอเข้าร่วมส่วนงาน \"{$academyGroup->name}\" ของคุณได้รับการอนุมัติแล้ว",
+            'action_url' => "/academies/{$academyName}/groups/{$academyGroup->id}",
+            'related_id' => $academyGroup->id,
+        ]);
+
+        return response()->json(['success' => true, 'member' => $member]);
+    }
+
+    /**
+     * POST /groups/{academyGroup}/reject/{member}
+     */
+    public function rejectMember(Request $request, AcademyGroup $academyGroup, \App\Models\AcademyGroupMember $member)
+    {
+        abort_unless($member->academy_group_id === $academyGroup->id, 404);
+        $member->delete(); // delete request to allow user to request again later
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * Get groups by type (departments, classrooms, or clubs).
      */
     public function getByType(Academy $academy, string $type)
     {
-        if (!in_array($type, ['department', 'classroom', 'club'])) {
+        if (!\App\Constants\AcademyGroupTypes::exists($type)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid group type'
@@ -284,5 +446,117 @@ class AcademyGroupController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
+    }
+
+    /**
+     * GET /groups/{academyGroup}/posts
+     * List posts where posted_as_group_id = group.id, paginated.
+     */
+    public function posts(Request $request, AcademyGroup $academyGroup)
+    {
+        $perPage = (int) $request->input('per_page', 10);
+
+        $activities = \App\Models\Activity::with([
+            'user',
+            'activityable.user',
+            'activityable.academy',
+            'activityable.images',
+            'activityable.postedAsGroup',
+            'activityable.comments' => function ($cq) {
+                $cq->with('user')->latest()->limit(3);
+            },
+        ])
+        ->whereHasMorph('activityable', [\App\Models\AcademyPost::class], function ($query) use ($academyGroup) {
+            $query->where('posted_as_group_id', $academyGroup->id);
+        })
+        ->latest()
+        ->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'data' => \App\Http\Resources\Play\ActivityResource::collection($activities->items()),
+                'current_page' => $activities->currentPage(),
+                'last_page' => $activities->lastPage(),
+                'total' => $activities->total(),
+                'per_page' => $activities->perPage(),
+                'next_page_url' => $activities->nextPageUrl(),
+                'prev_page_url' => $activities->previousPageUrl(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /groups/{academyGroup}/stats
+     */
+    public function stats(AcademyGroup $academyGroup)
+    {
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'members_count' => \App\Models\AcademyGroupMember::where('academy_group_id', $academyGroup->id)->count(),
+                'admins_count'  => \App\Models\AcademyGroupAdmin::where('academy_group_id', $academyGroup->id)->count(),
+                'posts_count'   => \App\Models\AcademyPost::where('posted_as_group_id', $academyGroup->id)->count(),
+                'created_at'    => $academyGroup->created_at,
+            ],
+        ]);
+    }
+
+    /**
+     * GET /academies/{academy}/postable-groups
+     * Returns groups within this academy where the current user is admin/member
+     * AND the group has can_post = true.
+     */
+    public function postableForUser(Request $request, Academy $academy)
+    {
+        $userId = $request->user()?->id;
+        if (!$userId) {
+            return response()->json(['success' => true, 'data' => []]);
+        }
+
+        // 1. group ids ที่ user เป็น admin
+        $adminGroupIds = \App\Models\AcademyGroupAdmin::where('user_id', $userId)
+            ->pluck('academy_group_id');
+
+        // 2. group ids ที่ user เป็น member
+        $memberGroupIds = \App\Models\AcademyGroupMember::where('user_id', $userId)
+            ->pluck('academy_group_id');
+
+        $candidateIds = $adminGroupIds->merge($memberGroupIds)->unique();
+
+        if ($candidateIds->isEmpty()) {
+            return response()->json(['success' => true, 'data' => []]);
+        }
+
+        // 3. filter: must belong to this academy AND have can_post enabled
+        $postableIds = \App\Models\AcademyGroupPermission::whereIn('academy_group_id', $candidateIds)
+            ->where('permission_key', 'can_post')
+            ->where('enabled', true)
+            ->pluck('academy_group_id');
+
+        $groups = \App\Models\AcademyGroup::whereIn('id', $postableIds)
+            ->where('academy_id', $academy->id)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'description']);
+
+        // attach role (admin/member) per group สำหรับ UI ใส่ badge
+        $roleMap = [];
+        foreach ($adminGroupIds as $gid) $roleMap[$gid] = 'admin';
+        foreach ($memberGroupIds as $gid) {
+            if (!isset($roleMap[$gid])) $roleMap[$gid] = 'member';
+        }
+
+        $payload = $groups->map(function ($g) use ($roleMap) {
+            return [
+                'id'        => $g->id,
+                'name'      => $g->name,
+                'type'      => $g->type,
+                'type_meta' => \App\Constants\AcademyGroupTypes::get($g->type),
+                'role'      => $roleMap[$g->id] ?? null,
+            ];
+        });
+
+        return response()->json(['success' => true, 'data' => $payload]);
     }
 }

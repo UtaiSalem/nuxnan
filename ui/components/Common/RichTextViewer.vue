@@ -28,7 +28,7 @@ const sanitizedContent = computed(() => {
   const sanitized = sanitizeHtml(html)
   
   // Add sandbox to iframes that don't already have it (avoids duplicate attribute)
-  const sandboxValue = 'allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin'
+  const sandboxValue = 'allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation'
   return sanitized.replace(/<iframe(?![^>]*\ssandbox)/gi, `<iframe sandbox="${sandboxValue}"`)
 })
 

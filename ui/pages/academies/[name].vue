@@ -4,7 +4,8 @@ import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import FeedPost from '~/components/play/feed/FeedPost.vue'
-import AcademyActionGuide from '~/components/academy/AcademyActionGuide.vue'
+import CourseCard from '~/components/learn/course/CourseCard.vue'
+import { useCourseGrouping } from '~/composables/useCourseGrouping'
 
 definePageMeta({
   layout: 'main',
@@ -14,27 +15,41 @@ definePageMeta({
 const route = useRoute()
 const api = useApi()
 const config = useRuntimeConfig()
+const { t } = useI18n()
 const { user } = storeToRefs(useAuthStore())
 
 // State
 const academy = ref<any>(null)
 const courses = ref<any[]>([])
+const courseFilters = ref({
+  education_level: '',
+  education_year: '',
+  semester: '',
+  academic_year: '',
+  search: '',
+})
+const courseAvailableFilters = ref<any>(null)
+const expandedCourseGroups = ref<Record<string, boolean>>({})
 const members = ref<any[]>([])
 const groups = ref<any[]>([])
 const activities = ref<any[]>([])
 const classrooms = ref<any[]>([])
 const events = ref<any[]>([])
+const pinnedAnnouncements = ref<any[]>([])
 const isLoading = ref(true)
 const isLoadingTab = ref(false)
 const error = ref<string | null>(null)
 const currentTab = ref('feed')
 const isAcademyAdmin = ref(false)
 const isMemberActionLoading = ref(false)
+const gamificationSummary = ref<any>(null)
+const isGamificationLoading = ref(true)
+const showMobileLeftDrawer = ref(false)
+const showMobileRightDrawer = ref(false)
+const mainContentRef = ref<HTMLElement | null>(null)
 
 // Group creation state
 const showCreateGroupModal = ref(false)
-const newGroup = ref({ name: '', description: '', type: 'classroom' })
-const isCreatingGroup = ref(false)
 
 // Event creation state
 const showCreateEventModal = ref(false)
@@ -112,6 +127,19 @@ const coverUrl = computed(() => {
   return academy.value.cover
 })
 
+const academyVerified = computed(() => {
+  return Boolean(
+    academy.value?.verified ||
+    academy.value?.is_verified ||
+    academy.value?.email_verified_at,
+  )
+})
+
+const academyHandle = computed(() => {
+  if (!academy.value) return ''
+  return academy.value.slug || academyName.value
+})
+
 const memberStatusText = computed(() => {
   if (!academy.value) return null
   
@@ -139,16 +167,167 @@ const canLeave = computed(() => {
 })
 
 // Tabs
-const tabs = [
-  { id: 'feed', label: 'ฟีด', icon: 'fluent:feed-24-regular' },
-  { id: 'courses', label: 'รายวิชา', icon: 'fluent:book-24-regular' },
-  { id: 'members', label: 'สมาชิก', icon: 'fluent:people-24-regular' },
-  { id: 'classrooms', label: 'ห้องเรียน', icon: 'fluent:board-24-regular' },
-  { id: 'events', label: 'กิจกรรม', icon: 'fluent:calendar-star-24-regular' },
-  { id: 'groups', label: 'กลุ่ม', icon: 'fluent:people-community-24-regular' },
-]
+const tabs = computed(() => [
+  { id: 'feed', label: t('academy.tabs.feed'), icon: 'fluent:feed-24-regular' },
+  { id: 'courses', label: t('academy.tabs.courses'), icon: 'fluent:book-24-regular' },
+  { id: 'members', label: t('academy.tabs.members'), icon: 'fluent:people-24-regular' },
+  { id: 'classrooms', label: t('academy.tabs.classrooms'), icon: 'fluent:board-24-regular' },
+  { id: 'events', label: t('academy.tabs.events'), icon: 'fluent:calendar-star-24-regular' },
+  { id: 'groups', label: t('academy.tabs.groups'), icon: 'fluent:people-community-24-regular' },
+  { id: 'about', label: t('academy.tabs.about'), icon: 'fluent:info-24-regular' },
+])
+
+const formatCompactNumber = (value?: number | null) => {
+  if (value == null) return null
+  return new Intl.NumberFormat('th-TH').format(value)
+}
+
+const heroStats = computed(() => {
+  if (!academy.value) return []
+
+  return [
+    {
+      id: 'members',
+      icon: 'fluent:people-24-regular',
+      label: 'สมาชิก',
+      value: formatCompactNumber(academy.value.total_students || membersPagination.value.total || 0),
+    },
+    {
+      id: 'courses',
+      icon: 'fluent:book-24-regular',
+      label: 'รายวิชา',
+      value: formatCompactNumber(academy.value.courses_offered || courses.value.length || 0),
+    },
+    {
+      id: 'groups',
+      icon: 'fluent:people-community-24-regular',
+      label: 'ส่วนงาน',
+      value: formatCompactNumber(groups.value.length || 0),
+    },
+  ].filter((item) => item.value !== null)
+})
+
+const { groupCourses } = useCourseGrouping()
+
+const groupedCourses = computed(() => groupCourses(courses.value))
+
+const hasActiveCourseFilters = computed(() => {
+  return Object.values(courseFilters.value).some((value) => String(value || '').trim().length > 0)
+})
+
+const getTabCount = (tabId: string) => {
+  const counts: Record<string, number | null> = {
+    feed: activitiesPagination.value.total || activities.value.length || null,
+    courses: academy.value?.courses_offered || courses.value.length || null,
+    members: academy.value?.total_students || membersPagination.value.total || members.value.length || null,
+    classrooms: classrooms.value.length || null,
+    events: eventsPagination.value.total || events.value.length || null,
+    groups: groups.value.length || null,
+  }
+
+  return counts[tabId]
+}
+
+const shareAcademy = async () => {
+  if (!academy.value || !import.meta.client) return
+
+  const url = window.location.href
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: academy.value.name,
+        text: academy.value.slogan || `มาดูหน้าโรงเรียน ${academy.value.name} กัน`,
+        url,
+      })
+      return
+    }
+
+    await navigator.clipboard.writeText(url)
+    await Swal.fire({
+      icon: 'success',
+      title: 'คัดลอกลิงก์แล้ว',
+      timer: 1800,
+      showConfirmButton: false,
+    })
+  } catch (err) {
+    console.error('Failed to share academy page:', err)
+  }
+}
+
+const loadPinnedAnnouncements = async () => {
+  if (!academy.value) return
+
+  try {
+    const response: any = await api.get(`/api/academies/${academy.value.id}/announcements`)
+    const rows = response?.data || response?.announcements || []
+    pinnedAnnouncements.value = rows
+      .filter((row: any) => row?.is_pinned)
+      .slice(0, 3)
+  } catch (err) {
+    console.error('Failed to load pinned announcements:', err)
+  }
+}
+
+const escapeAnnouncementHtml = (value: string) => {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+const openPinnedAnnouncement = async (announcementId: number) => {
+  const selected = pinnedAnnouncements.value.find((item: any) => item.id === announcementId)
+  if (!selected) return
+
+  await Swal.fire({
+    title: selected.title,
+    html: `
+      <div style="text-align:left;white-space:pre-line;line-height:1.7;color:#4b5563;">
+        ${escapeAnnouncementHtml(selected.content || '')}
+      </div>
+    `,
+    width: 720,
+    confirmButtonText: 'ปิด',
+  })
+}
 
 // Methods
+const fetchGamificationSummary = async () => {
+  if (!academy.value) return
+  isGamificationLoading.value = true
+  try {
+    const response: any = await api.get(`/api/academies/${academy.value.id}/gamification/summary`)
+    if (response.success) {
+      gamificationSummary.value = response.data
+      academy.value.level = response.data.level
+      academy.value.xp_to_next = response.data.xp_to_next
+      academy.value.progress_pct = response.data.progress_pct
+    }
+  } catch (err) {
+    console.error('Failed to fetch gamification summary:', err)
+  } finally {
+    isGamificationLoading.value = false
+  }
+}
+
+const switchToNextTab = () => {
+  const i = tabs.value.findIndex(tab => tab.id === currentTab.value)
+  if (i < tabs.value.length - 1) switchTab(tabs.value[i + 1].id)
+}
+
+const switchToPreviousTab = () => {
+  const i = tabs.value.findIndex(tab => tab.id === currentTab.value)
+  if (i > 0) switchTab(tabs.value[i - 1].id)
+}
+
+useSwipe(mainContentRef, {
+  onSwipeLeft: switchToNextTab,
+  onSwipeRight: switchToPreviousTab,
+})
+
 const fetchAcademy = async () => {
   if (!user.value) return
   
@@ -161,6 +340,10 @@ const fetchAcademy = async () => {
     if (response.success) {
       academy.value = JSON.parse(JSON.stringify(response.academy))
       isAcademyAdmin.value = response.isAcademyAdmin || false
+      
+      // Parallel fetch gamification summary
+      await fetchGamificationSummary()
+      await loadPinnedAnnouncements()
       
       // Auto-fetch activities for the default tab (feed)
       await fetchActivities()
@@ -180,9 +363,21 @@ const fetchCourses = async () => {
   
   isLoadingTab.value = true
   try {
-    const response: any = await api.get(`/api/academies/${academy.value.id}/courses`)
+    const params = new URLSearchParams({
+      per_page: '100',
+    })
+
+    if (courseFilters.value.education_level) params.set('education_level', courseFilters.value.education_level)
+    if (courseFilters.value.education_year) params.set('education_year', courseFilters.value.education_year)
+    if (courseFilters.value.semester) params.set('semester', courseFilters.value.semester)
+    if (courseFilters.value.academic_year) params.set('academic_year', courseFilters.value.academic_year)
+    if (courseFilters.value.search.trim()) params.set('search', courseFilters.value.search.trim())
+
+    const response: any = await api.get(`/api/academies/${academy.value.id}/courses?${params.toString()}`)
     if (response.success) {
-      courses.value = JSON.parse(JSON.stringify(response.courses || []))
+      const rawCourses = response.courses?.data || response.courses || []
+      courses.value = JSON.parse(JSON.stringify(rawCourses))
+      courseAvailableFilters.value = JSON.parse(JSON.stringify(response.available_filters || null))
     }
   } catch (err) {
     console.error('Failed to fetch courses:', err)
@@ -190,6 +385,35 @@ const fetchCourses = async () => {
     isLoadingTab.value = false
   }
 }
+
+const toggleCourseGroup = (groupKey: string) => {
+  expandedCourseGroups.value = {
+    ...expandedCourseGroups.value,
+    [groupKey]: !expandedCourseGroups.value[groupKey],
+  }
+}
+
+const resetCourseFilters = async () => {
+  courseFilters.value = {
+    education_level: '',
+    education_year: '',
+    semester: '',
+    academic_year: '',
+    search: '',
+  }
+
+  await fetchCourses()
+}
+
+watch(groupedCourses, (groups) => {
+  const nextState: Record<string, boolean> = {}
+
+  groups.forEach((group, index) => {
+    nextState[group.key] = expandedCourseGroups.value[group.key] ?? index < 2
+  })
+
+  expandedCourseGroups.value = nextState
+}, { immediate: true })
 
 const fetchMembers = async (page = 1) => {
   if (!academy.value) return
@@ -560,6 +784,7 @@ const switchTab = async (tabId: string) => {
   
   switch (tabId) {
     case 'feed':
+      if (pinnedAnnouncements.value.length === 0) await loadPinnedAnnouncements()
       if (activities.value.length === 0) await fetchActivities()
       break
     case 'courses':
@@ -580,6 +805,8 @@ const switchTab = async (tabId: string) => {
       break
     case 'groups':
       if (groups.value.length === 0) await fetchGroups()
+      break
+    case 'about':
       break
   }
 }
@@ -794,40 +1021,7 @@ const getAcademyTypeInfo = (type: string | null) => {
   return typeMap[type || ''] || { label: 'ทั่วไป', icon: 'fluent:building-24-regular', color: 'text-gray-500' }
 }
 
-// Group creation
-const createGroup = async () => {
-  if (!academy.value || !newGroup.value.name.trim() || isCreatingGroup.value) return
-  
-  isCreatingGroup.value = true
-  try {
-    const response: any = await api.post(`/api/academies/${academy.value.id}/groups`, {
-      name: newGroup.value.name,
-      description: newGroup.value.description,
-      type: newGroup.value.type
-    })
-    
-    if (response.success) {
-      groups.value.push(JSON.parse(JSON.stringify(response.group)))
-      showCreateGroupModal.value = false
-      newGroup.value = { name: '', description: '', type: 'classroom' }
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'สร้างกลุ่มสำเร็จ',
-        timer: 2000,
-        showConfirmButton: false
-      })
-    }
-  } catch (err: any) {
-    Swal.fire({
-      icon: 'error',
-      title: 'เกิดข้อผิดพลาด',
-      text: err?.data?.message || 'ไม่สามารถสร้างกลุ่มได้',
-    })
-  } finally {
-    isCreatingGroup.value = false
-  }
-}
+
 
 const getGroupTypeInfo = (type: string) => {
   const types: Record<string, { label: string; icon: string; color: string }> = {
@@ -856,14 +1050,14 @@ onMounted(() => {
     fetchAcademy()
   }
   const hash = route.hash.replace('#', '')
-  if (tabs.some(t => t.id === hash)) {
+  if (tabs.value.some(tab => tab.id === hash)) {
     switchTab(hash)
   }
 })
 
 watch(() => route.hash, (newHash) => {
   const hash = newHash.replace('#', '')
-  if (tabs.some(t => t.id === hash)) {
+  if (tabs.value.some(tab => tab.id === hash)) {
     switchTab(hash)
   }
 })
@@ -913,20 +1107,21 @@ watch(() => route.hash, (newHash) => {
       />
 
       <!-- Cover & Profile Section -->
-      <div class="relative bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-lg overflow-hidden mb-6">
+      <div class="relative mb-6 overflow-hidden rounded-[28px] border border-white/60 bg-white shadow-lg dark:border-gray-700 dark:bg-vikinger-dark-200">
         <!-- Cover Image -->
         <div 
-          class="h-48 md:h-64 bg-gray-300 dark:bg-gray-700 bg-cover bg-center relative"
+          class="relative h-48 bg-gray-300 bg-cover bg-center dark:bg-gray-700 md:h-[180px]"
           :style="{ backgroundImage: `url(${coverUrl})` }"
         >
-          <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+          <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_30%),linear-gradient(180deg,rgba(17,24,39,0.05),rgba(17,24,39,0.35)_72%,rgba(17,24,39,0.72))]"></div>
+          <div class="absolute inset-0 opacity-20 mix-blend-soft-light" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 20px 20px;"></div>
         </div>
         
         <!-- Profile Info -->
-        <div class="relative px-4 md:px-8 pb-6">
+        <div class="relative px-4 pb-6 md:px-8">
           <!-- Logo -->
-          <div class="absolute -top-16 left-4 md:left-8">
-            <div class="w-28 h-28 md:w-36 md:h-36 rounded-xl border-4 border-white dark:border-vikinger-dark-200 shadow-lg overflow-hidden bg-white">
+          <div class="absolute -top-14 left-4 md:left-8">
+            <div class="h-28 w-28 overflow-hidden rounded-2xl border-[6px] border-white bg-white shadow-xl dark:border-vikinger-dark-200 md:h-32 md:w-32">
               <img 
                 :src="logoUrl" 
                 :alt="academy.name"
@@ -936,29 +1131,46 @@ watch(() => route.hash, (newHash) => {
           </div>
           
           <!-- Info & Actions -->
-          <div class="flex flex-col md:flex-row md:items-end md:justify-between pt-16 md:pt-6 md:pl-44">
+          <div class="flex flex-col gap-5 pt-16 md:flex-row md:items-end md:justify-between md:pt-5 md:pl-40">
             <!-- Academy Info -->
             <div class="mb-4 md:mb-0">
-              <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                {{ academy.name }}
-              </h1>
+              <div class="mb-2 flex flex-wrap items-center gap-2">
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">
+                  {{ academy.name }}
+                </h1>
+                <Icon
+                  v-if="academyVerified"
+                  icon="heroicons:check-badge-solid"
+                  class="h-6 w-6 text-vikinger-cyan"
+                />
+                <span
+                  v-if="academy.level"
+                  class="inline-flex items-center rounded-full bg-vikinger-purple/10 px-3 py-1 text-xs font-bold text-vikinger-purple"
+                >
+                  เลเวล {{ academy.level }}
+                </span>
+              </div>
               <p v-if="academy.slogan" class="text-gray-600 dark:text-gray-400 mb-3">
                 {{ academy.slogan }}
               </p>
+              <div class="mb-3 text-sm text-gray-400 dark:text-gray-500">
+                @{{ academyHandle }}
+              </div>
               
               <!-- Stats -->
-              <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                <div class="flex items-center gap-1.5">
-                  <Icon :icon="getAcademyTypeInfo(academy.type).icon" :class="['w-4 h-4', getAcademyTypeInfo(academy.type).color]" />
-                  <span>{{ getAcademyTypeInfo(academy.type).label }}</span>
+              <div class="flex flex-wrap gap-2.5">
+                <div class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/90 px-3 py-2 text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-vikinger-dark-100 dark:text-gray-300">
+                  <Icon :icon="getAcademyTypeInfo(academy.type).icon" :class="['h-4 w-4', getAcademyTypeInfo(academy.type).color]" />
+                  <span class="font-medium">{{ getAcademyTypeInfo(academy.type).label }}</span>
                 </div>
-                <div class="flex items-center gap-1.5">
-                  <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
-                  <span>{{ academy.total_students || 0 }} สมาชิก</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <Icon icon="fluent:book-24-regular" class="w-4 h-4" />
-                  <span>{{ academy.courses_offered || 0 }} รายวิชา</span>
+                <div
+                  v-for="stat in heroStats"
+                  :key="stat.id"
+                  class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/90 px-3 py-2 text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-vikinger-dark-100 dark:text-gray-300"
+                >
+                  <Icon :icon="stat.icon" class="h-4 w-4 text-vikinger-purple" />
+                  <span class="font-semibold text-gray-900 dark:text-white">{{ stat.value }}</span>
+                  <span>{{ stat.label }}</span>
                 </div>
               </div>
             </div>
@@ -982,6 +1194,15 @@ watch(() => route.hash, (newHash) => {
                 <Icon icon="fluent:settings-24-regular" class="w-4 h-4" />
                 จัดการโรงเรียน
               </NuxtLink>
+
+              <button
+                type="button"
+                class="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-vikinger-dark-100 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-vikinger-dark-300 transition-colors"
+                @click="shareAcademy"
+              >
+                <Icon icon="heroicons:share" class="w-4 h-4" />
+                แชร์
+              </button>
               
               <!-- Join Button -->
               <button
@@ -1010,7 +1231,7 @@ watch(() => route.hash, (newHash) => {
         
         <!-- Tabs -->
         <div class="border-t border-gray-200 dark:border-gray-700">
-          <div class="flex overflow-x-auto">
+          <div class="flex overflow-x-auto px-2 md:px-4">
             <button
               v-for="tab in tabs"
               :key="tab.id"
@@ -1024,25 +1245,80 @@ watch(() => route.hash, (newHash) => {
             >
               <Icon :icon="tab.icon" class="w-5 h-5" />
               {{ tab.label }}
+              <span
+                v-if="getTabCount(tab.id)"
+                class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300"
+              >
+                {{ formatCompactNumber(getTabCount(tab.id)) }}
+              </span>
             </button>
           </div>
         </div>
       </div>
+
+      <!-- Mobile Drawer Triggers -->
+      <div class="flex gap-3 mb-6 lg:hidden">
+        <button
+          type="button"
+          class="flex-1 px-4 py-3 bg-white dark:bg-vikinger-dark-200 text-gray-800 dark:text-gray-200 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-bold flex items-center justify-center gap-2 shadow-sm active:bg-gray-50 dark:active:bg-vikinger-dark-100"
+          @click="showMobileLeftDrawer = true"
+        >
+          <Icon icon="heroicons:bars-3" class="w-4 h-4 text-vikinger-purple" />
+          เมนูลัด
+        </button>
+        <button
+          type="button"
+          class="flex-1 px-4 py-3 bg-white dark:bg-vikinger-dark-200 text-gray-800 dark:text-gray-200 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-bold flex items-center justify-center gap-2 shadow-sm active:bg-gray-50 dark:active:bg-vikinger-dark-100"
+          @click="showMobileRightDrawer = true"
+        >
+          <Icon icon="heroicons:chart-bar" class="w-4 h-4 text-vikinger-purple" />
+          สถิติและกิจกรรม
+        </button>
+      </div>
       
       <!-- Tab Content -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Content -->
-        <div class="lg:col-span-2">
-          <AcademyActionGuide
+      <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-5 xl:grid-cols-[260px_minmax(0,1fr)_320px]">
+        <!-- Left Sidebar -->
+        <aside class="hidden lg:block lg:sticky lg:top-[86px] lg:space-y-5">
+          <SchoolQuickMenu
+            v-if="academy"
             :academy="academy"
             :is-pending="academy?.memberStatus === 1 || academy?.memberStatus === 'pending'"
             @join="requestMembership"
-            class="mb-4 md:mb-6"
+            @navigate="switchTab"
           />
 
+          <SchoolLevelCard
+            v-if="gamificationSummary"
+            :level="gamificationSummary.level"
+            :total-xp="gamificationSummary.total_xp"
+            :xp-to-next="gamificationSummary.xp_to_next"
+            :progress-pct="gamificationSummary.progress_pct"
+          />
+        </aside>
+
+        <!-- Main Content -->
+        <main ref="mainContentRef" class="min-w-0">
           <!-- Loading Tab Content -->
-          <div v-if="isLoadingTab" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
-            <Icon icon="svg-spinners:ring-resize" class="w-8 h-8 text-vikinger-purple mx-auto" />
+          <div v-if="isLoadingTab" class="space-y-3">
+            <template v-if="currentTab === 'feed'">
+              <PlayFeedPostSkeleton v-for="i in 3" :key="i" />
+            </template>
+            <template v-else-if="currentTab === 'groups'">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <AcademyGroupsGroupCardSkeleton v-for="i in 4" :key="i" />
+              </div>
+            </template>
+            <template v-else-if="currentTab === 'members'">
+              <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+                <AcademyGroupsMemberRowSkeleton v-for="i in 5" :key="i" />
+              </div>
+            </template>
+            <template v-else>
+              <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
+                <Icon icon="svg-spinners:ring-resize" class="w-8 h-8 text-vikinger-purple mx-auto" />
+              </div>
+            </template>
           </div>
           
           <!-- Feed Tab -->
@@ -1054,6 +1330,13 @@ watch(() => route.hash, (newHash) => {
               :context-id="academy.id"
               :context-name="academy.name"
               @post-created="handleAcademyPostCreated"
+            />
+
+            <SchoolPinnedAnnouncement
+              v-for="announcement in pinnedAnnouncements"
+              :key="announcement.id"
+              :announcement="announcement"
+              @open="openPinnedAnnouncement"
             />
             
             <div v-if="activities.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
@@ -1087,7 +1370,6 @@ watch(() => route.hash, (newHash) => {
           
           <!-- Courses Tab -->
           <div v-else-if="currentTab === 'courses'" class="space-y-4">
-            <!-- Header with Create Button -->
             <div v-if="academy.authIsAcademyAdmin" class="flex justify-end">
               <NuxtLink
                 to="/Learn/Courses/create"
@@ -1097,62 +1379,145 @@ watch(() => route.hash, (newHash) => {
                 สร้างรายวิชาใหม่
               </NuxtLink>
             </div>
-            
+
+            <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
+              <div class="flex flex-col gap-3 xl:flex-row">
+                <select
+                  v-model="courseFilters.academic_year"
+                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  @change="fetchCourses"
+                >
+                  <option value="">ทุกปีการศึกษา</option>
+                  <option
+                    v-for="option in courseAvailableFilters?.academic_years || []"
+                    :key="`academic-year-${option.value}`"
+                    :value="option.value === 'unspecified' ? '' : option.value"
+                  >
+                    {{ option.label }} ({{ option.count }})
+                  </option>
+                </select>
+
+                <select
+                  v-model="courseFilters.semester"
+                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  @change="fetchCourses"
+                >
+                  <option value="">ทุกภาคเรียน</option>
+                  <option
+                    v-for="option in courseAvailableFilters?.semesters || []"
+                    :key="`semester-${option.value}`"
+                    :value="option.value === 'unspecified' ? '' : option.value"
+                  >
+                    {{ option.label }} ({{ option.count }})
+                  </option>
+                </select>
+
+                <select
+                  v-model="courseFilters.education_level"
+                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  @change="fetchCourses"
+                >
+                  <option value="">ทุกระดับชั้น</option>
+                  <option
+                    v-for="option in courseAvailableFilters?.education_levels || []"
+                    :key="`level-${option.value}`"
+                    :value="option.value === 'unspecified' ? '' : option.value"
+                  >
+                    {{ option.label }} ({{ option.count }})
+                  </option>
+                </select>
+
+                <select
+                  v-model="courseFilters.education_year"
+                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  @change="fetchCourses"
+                >
+                  <option value="">ทุกปี/ชั้นเรียน</option>
+                  <option
+                    v-for="option in courseAvailableFilters?.education_years || []"
+                    :key="`year-${option.value}`"
+                    :value="option.value === 'unspecified' ? '' : option.value"
+                  >
+                    {{ option.label }} ({{ option.count }})
+                  </option>
+                </select>
+              </div>
+
+              <div class="flex flex-col gap-3 lg:flex-row">
+                <div class="relative flex-1">
+                  <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    v-model="courseFilters.search"
+                    type="text"
+                    placeholder="ค้นหารายวิชา..."
+                    class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 py-2 pl-10 pr-4 text-sm text-gray-700 dark:text-gray-200"
+                    @keyup.enter="fetchCourses"
+                  />
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="px-4 py-2 bg-vikinger-purple text-white rounded-lg text-sm font-medium hover:bg-vikinger-purple/90 transition-colors"
+                    @click="fetchCourses"
+                  >
+                    ค้นหา
+                  </button>
+                  <button
+                    v-if="hasActiveCourseFilters"
+                    type="button"
+                    class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
+                    @click="resetCourseFilters"
+                  >
+                    ล้างตัวกรอง
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div v-if="courses.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
               <Icon icon="fluent:book-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p class="text-gray-500 dark:text-gray-400">ยังไม่มีรายวิชา</p>
-              <p v-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">คลิก "สร้างรายวิชาใหม่" เพื่อเริ่มต้น</p>
+              <p class="text-gray-500 dark:text-gray-400">
+                {{ hasActiveCourseFilters ? 'ไม่พบรายวิชาตามตัวกรองที่เลือก' : 'ยังไม่มีรายวิชา' }}
+              </p>
+              <p v-if="hasActiveCourseFilters" class="text-sm text-gray-400 dark:text-gray-500 mt-2">ลองเปลี่ยนระดับชั้น ภาคเรียน หรือคำค้นหา ดูแล้วลองใหม่อีกครั้ง</p>
+              <p v-else-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">คลิก "สร้างรายวิชาใหม่" เพื่อเริ่มต้น</p>
             </div>
-            
-            <!-- Courses Grid -->
-            <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NuxtLink
-                v-for="course in courses"
-                :key="course.id"
-                :to="`/Learn/Courses/${course.id}`"
-                class="block bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden group"
+
+            <div v-else class="space-y-3">
+              <div
+                v-for="group in groupedCourses"
+                :key="group.key"
+                class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
               >
-                <!-- Course Cover -->
-                <div class="h-32 bg-gradient-to-br from-vikinger-purple to-vikinger-cyan relative">
-                  <img 
-                    v-if="course.cover" 
-                    :src="course.cover"
-                    class="w-full h-full object-cover"
-                  />
-                  <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
-                
-                <div class="p-4">
-                  <h3 class="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1 group-hover:text-vikinger-purple transition-colors">
-                    {{ course.name }}
-                  </h3>
-                  <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">{{ course.description }}</p>
-                  
-                  <!-- Course Info -->
-                  <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <div class="flex items-center gap-3">
-                      <span class="flex items-center gap-1">
-                        <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
-                        {{ course.students_count || 0 }}
-                      </span>
-                      <span class="flex items-center gap-1">
-                        <Icon icon="fluent:book-open-24-regular" class="w-4 h-4" />
-                        {{ course.course_lessons_count ?? course.lessons_count ?? course.lessons ?? 0 }} บท
-                      </span>
-                    </div>
-                    <span 
-                      :class="[
-                        'px-2 py-0.5 rounded-full text-xs',
-                        course.status === 'published' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
-                        course.status === 'draft' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' :
-                        'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                      ]"
-                    >
-                      {{ course.status === 'published' ? 'เผยแพร่' : course.status === 'draft' ? 'แบบร่าง' : course.status }}
+                <button
+                  type="button"
+                  class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
+                  @click="toggleCourseGroup(group.key)"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-900 dark:text-white">{{ group.label }}</span>
+                    <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-300">
+                      {{ group.courses.length }} รายวิชา
                     </span>
                   </div>
+                  <Icon
+                    :icon="expandedCourseGroups[group.key] ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'"
+                    class="w-5 h-5 text-gray-400"
+                  />
+                </button>
+
+                <div v-if="expandedCourseGroups[group.key]" class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <CourseCard
+                    v-for="(course, index) in group.courses"
+                    :key="course.id"
+                    :course="course"
+                    :index="index"
+                    :to="`/Learn/Courses/${course.id}`"
+                    class="h-full"
+                  />
                 </div>
-              </NuxtLink>
+              </div>
             </div>
           </div>
           
@@ -1233,11 +1598,15 @@ watch(() => route.hash, (newHash) => {
               </div>
             </div>
             
-            <div v-if="members.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
-              <Icon icon="fluent:people-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p class="text-gray-500 dark:text-gray-400">ยังไม่มีสมาชิก</p>
-              <p v-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">คลิก "เชิญสมาชิก" เพื่อเชิญผู้ใช้เข้าร่วม</p>
-            </div>
+            <CommonEmptyState
+              v-if="members.length === 0"
+              icon="heroicons:users"
+              title="ยังไม่มีสมาชิก"
+              description="ยังไม่มีนักเรียนหรือครูเข้าร่วมโรงเรียนนี้"
+              :cta-label="academy.authIsAcademyAdmin ? 'เชิญสมาชิก' : undefined"
+              cta-icon="fluent:person-add-24-regular"
+              @action="showInviteMemberModal = true"
+            />
             
             <!-- Members List -->
             <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm overflow-hidden">
@@ -1838,11 +2207,15 @@ watch(() => route.hash, (newHash) => {
               </button>
             </div>
             
-            <div v-if="groups.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
-              <Icon icon="fluent:people-community-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p class="text-gray-500 dark:text-gray-400">ยังไม่มีกลุ่ม</p>
-              <p v-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">คลิก "สร้างกลุ่มใหม่" เพื่อเริ่มต้น</p>
-            </div>
+            <CommonEmptyState
+              v-if="groups.length === 0"
+              icon="heroicons:building-office"
+              title="ยังไม่มีส่วนงาน"
+              description="เริ่มสร้างฝ่าย กลุ่มสาระ หรือชมรมใหม่ของโรงเรียน"
+              :cta-label="academy.authIsAcademyAdmin ? 'เปิดส่วนงานใหม่' : undefined"
+              cta-icon="fluent:add-24-regular"
+              @action="showCreateGroupModal = true"
+            />
             
             <!-- Groups Grid -->
             <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1887,22 +2260,91 @@ watch(() => route.hash, (newHash) => {
               </div>
             </div>
           </div>
-        </div>
+
+          <div v-else-if="currentTab === 'about'" class="space-y-4">
+            <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
+              <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Icon icon="fluent:info-24-regular" class="w-5 h-5 text-vikinger-purple" />
+                About this school
+              </h3>
+
+              <div class="space-y-3 text-sm">
+                <div v-if="academy.address" class="flex items-start gap-3">
+                  <Icon icon="fluent:location-24-regular" class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <span class="text-gray-600 dark:text-gray-400">{{ academy.address }}</span>
+                </div>
+
+                <div v-if="academy.email" class="flex items-center gap-3">
+                  <Icon icon="fluent:mail-24-regular" class="w-5 h-5 text-gray-400" />
+                  <a :href="`mailto:${academy.email}`" class="text-vikinger-purple hover:underline">{{ academy.email }}</a>
+                </div>
+
+                <div v-if="academy.phone" class="flex items-center gap-3">
+                  <Icon icon="fluent:call-24-regular" class="w-5 h-5 text-gray-400" />
+                  <a :href="`tel:${academy.phone}`" class="text-vikinger-purple hover:underline">{{ academy.phone }}</a>
+                </div>
+
+                <div v-if="academy.established_year" class="flex items-center gap-3">
+                  <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-gray-400" />
+                  <span class="text-gray-600 dark:text-gray-400">Established {{ academy.established_year }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="academy.director" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
+              <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Icon icon="fluent:person-star-24-regular" class="w-5 h-5 text-vikinger-purple" />
+                Director
+              </h3>
+
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                  <img 
+                    v-if="academy.director.avatar" 
+                    :src="academy.director.avatar" 
+                    :alt="academy.director.name"
+                    class="w-full h-full object-cover"
+                  />
+                  <Icon v-else icon="fluent:person-24-regular" class="w-full h-full p-2 text-gray-400" />
+                </div>
+                <div>
+                  <h4 class="font-medium text-gray-900 dark:text-white">{{ academy.director.name }}</h4>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">Director</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
         
-        <!-- Sidebar -->
-        <div class="space-y-6">
-          <!-- Student Card Widget (สำหรับสมาชิกที่ได้รับอนุมัติแล้ว) -->
+        <!-- Right Sidebar -->
+        <aside class="hidden xl:block xl:sticky xl:top-[86px] xl:space-y-6">
+          <!-- Quick Stats -->
+          <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
+            <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Icon icon="fluent:data-bar-horizontal-24-regular" class="w-5 h-5 text-vikinger-purple" />
+              Stats
+            </h3>
+            <SchoolStatGrid :academy="{ ...academy, total_classrooms: classrooms.length }" />
+          </div>
+
+          <!-- Student Card Widget -->
           <LearnAcademyStudentCardWidget
             v-if="academy && (academy.memberStatus === 2 || academy.authIsAcademyAdmin)"
             :academy-id="academy.id"
             :academy-name="academyName"
           />
 
+          <!-- Upcoming Events -->
+          <SchoolUpcomingEvents :academy-id="academy.id" @view-all="switchTab('events')" />
+
+          <!-- Classroom Leaderboard -->
+          <SchoolClassroomLeaderboard :academy-id="academy.id" cycle="month" />
+
           <!-- About Card -->
           <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
             <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:info-24-regular" class="w-5 h-5 text-vikinger-purple" />
-              เกี่ยวกับโรงเรียน
+              About this school
             </h3>
             
             <div class="space-y-3 text-sm">
@@ -1923,7 +2365,7 @@ watch(() => route.hash, (newHash) => {
               
               <div v-if="academy.established_year" class="flex items-center gap-3">
                 <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-gray-400" />
-                <span class="text-gray-600 dark:text-gray-400">ก่อตั้งเมื่อ {{ academy.established_year }}</span>
+                <span class="text-gray-600 dark:text-gray-400">Established {{ academy.established_year }}</span>
               </div>
             </div>
           </div>
@@ -1932,7 +2374,7 @@ watch(() => route.hash, (newHash) => {
           <div v-if="academy.director" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
             <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:person-star-24-regular" class="w-5 h-5 text-vikinger-purple" />
-              ผู้อำนวยการ
+              Director
             </h3>
             
             <div class="flex items-center gap-3">
@@ -1947,152 +2389,23 @@ watch(() => route.hash, (newHash) => {
               </div>
               <div>
                 <h4 class="font-medium text-gray-900 dark:text-white">{{ academy.director.name }}</h4>
-                <p class="text-sm text-gray-500 dark:text-gray-400">ผู้อำนวยการ</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Director</p>
               </div>
             </div>
           </div>
-          
-          <!-- Quick Stats -->
-          <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
-            <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Icon icon="fluent:data-bar-horizontal-24-regular" class="w-5 h-5 text-vikinger-purple" />
-              สถิติ
-            </h3>
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div class="text-center p-3 bg-gray-50 dark:bg-vikinger-dark-100 rounded-lg">
-                <div class="text-2xl font-bold text-vikinger-purple">{{ academy.total_students || 0 }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400">นักเรียน</div>
-              </div>
-              <div class="text-center p-3 bg-gray-50 dark:bg-vikinger-dark-100 rounded-lg">
-                <div class="text-2xl font-bold text-vikinger-cyan">{{ academy.total_teachers || 0 }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400">ครู</div>
-              </div>
-              <div class="text-center p-3 bg-gray-50 dark:bg-vikinger-dark-100 rounded-lg">
-                <div class="text-2xl font-bold text-green-500">{{ academy.courses_offered || 0 }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400">รายวิชา</div>
-              </div>
-              <div class="text-center p-3 bg-gray-50 dark:bg-vikinger-dark-100 rounded-lg">
-                <div class="text-2xl font-bold text-emerald-500">{{ classrooms.length || 0 }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400">ห้องเรียน</div>
-              </div>
-              <div class="text-center p-3 bg-gray-50 dark:bg-vikinger-dark-100 rounded-lg">
-                <div class="text-2xl font-bold text-amber-500">{{ eventsPagination.total || events.length || 0 }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400">กิจกรรม</div>
-              </div>
-              <div class="text-center p-3 bg-gray-50 dark:bg-vikinger-dark-100 rounded-lg">
-                <div class="text-2xl font-bold text-orange-500">{{ groups.length || 0 }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400">กลุ่ม</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        </aside>
       </div>
     </div>
     
     <!-- Create Group Modal -->
-    <Teleport to="body">
-      <div 
-        v-if="showCreateGroupModal" 
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        @click.self="showCreateGroupModal = false"
-      >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        
-        <!-- Modal Content -->
-        <div class="relative bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
-          <!-- Modal Header -->
-          <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Icon icon="fluent:people-community-add-24-regular" class="w-6 h-6 text-vikinger-purple" />
-              สร้างกลุ่มใหม่
-            </h3>
-            <button
-              @click="showCreateGroupModal = false"
-              class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-          
-          <!-- Modal Body -->
-          <div class="p-6 space-y-4">
-            <!-- Group Name -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                ชื่อกลุ่ม <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="newGroup.name"
-                type="text"
-                placeholder="เช่น ห้อง ม.1/1, แผนกวิทยาศาสตร์, ชมรมดนตรี"
-                class="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-vikinger-purple/50"
-              />
-            </div>
-            
-            <!-- Group Type -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                ประเภทกลุ่ม
-              </label>
-              <div class="grid grid-cols-3 gap-3">
-                <button
-                  v-for="gtype in [
-                    { value: 'department', label: 'แผนก', icon: 'fluent:building-24-regular' },
-                    { value: 'classroom', label: 'ห้องเรียน', icon: 'fluent:board-24-regular' },
-                    { value: 'club', label: 'ชมรม', icon: 'fluent:star-24-regular' }
-                  ]"
-                  :key="gtype.value"
-                  @click="newGroup.type = gtype.value"
-                  :class="[
-                    'p-3 rounded-lg border-2 flex flex-col items-center gap-2 transition-all',
-                    newGroup.type === gtype.value
-                      ? 'border-vikinger-purple bg-vikinger-purple/10 text-vikinger-purple'
-                      : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-vikinger-purple/50'
-                  ]"
-                >
-                  <Icon :icon="gtype.icon" class="w-6 h-6" />
-                  <span class="text-xs font-medium">{{ gtype.label }}</span>
-                </button>
-              </div>
-            </div>
-            
-            <!-- Group Description -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                รายละเอียด (ไม่บังคับ)
-              </label>
-              <textarea
-                v-model="newGroup.description"
-                rows="3"
-                placeholder="อธิบายเกี่ยวกับกลุ่มนี้..."
-                class="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-vikinger-purple/50 resize-none"
-              ></textarea>
-            </div>
-          </div>
-          
-          <!-- Modal Footer -->
-          <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-3">
-            <button
-              @click="showCreateGroupModal = false"
-              class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              ยกเลิก
-            </button>
-            <button
-              @click="createGroup"
-              :disabled="!newGroup.name.trim() || isCreatingGroup"
-              class="px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium hover:bg-vikinger-purple/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <Icon v-if="isCreatingGroup" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-              <Icon v-else icon="fluent:add-24-regular" class="w-4 h-4" />
-              สร้างกลุ่ม
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Create Group Modal -->
+    <AcademyGroupsGroupCreateModal
+      v-if="academy"
+      v-model:open="showCreateGroupModal"
+      :academy-id="academy.id"
+      default-type="classroom"
+      @created="(g) => groups.push(g)"
+    />
 
     <!-- Invite Member Modal -->
     <LazyLearnAcademyInviteMemberModal
@@ -2102,14 +2415,45 @@ watch(() => route.hash, (newHash) => {
       @close="showInviteMemberModal = false"
       @invited="onMemberInvited"
     />
-    <!-- Invite Member Modal -->
-    <LazyLearnAcademyInviteMemberModal
-      v-if="academy"
-      :is-open="showInviteMemberModal"
-      :academy-id="academy.id"
-      @close="showInviteMemberModal = false"
-      @invited="onMemberInvited"
-    />
+
+    <!-- Left Mobile Drawer -->
+    <CommonSidebarDrawer v-model:open="showMobileLeftDrawer" side="left" title="เมนูลัด">
+      <div v-if="academy" class="space-y-4">
+        <SchoolQuickMenu
+          :academy="academy"
+          :is-pending="academy?.memberStatus === 1 || academy?.memberStatus === 'pending'"
+          @join="() => { requestMembership(); showMobileLeftDrawer = false; }"
+          @navigate="(t) => { switchTab(t); showMobileLeftDrawer = false; }"
+        />
+        <SchoolLevelCard
+          v-if="gamificationSummary"
+          :level="gamificationSummary.level"
+          :total-xp="gamificationSummary.total_xp"
+          :xp-to-next="gamificationSummary.xp_to_next"
+          :progress-pct="gamificationSummary.progress_pct"
+        />
+      </div>
+    </CommonSidebarDrawer>
+
+    <!-- Right Mobile Drawer -->
+    <CommonSidebarDrawer v-model:open="showMobileRightDrawer" side="right" title="Stats & activity">
+      <div v-if="academy" class="space-y-6">
+        <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Icon icon="fluent:data-bar-horizontal-24-regular" class="w-5 h-5 text-vikinger-purple" />
+            Stats
+          </h3>
+          <SchoolStatGrid :academy="{ ...academy, total_classrooms: classrooms.length }" />
+        </div>
+        <LearnAcademyStudentCardWidget
+          v-if="academy.memberStatus === 2 || academy.authIsAcademyAdmin"
+          :academy-id="academy.id"
+          :academy-name="academyName"
+        />
+        <SchoolUpcomingEvents :academy-id="academy.id" @view-all="(() => { switchTab('events'); showMobileRightDrawer = false; })" />
+        <SchoolClassroomLeaderboard :academy-id="academy.id" cycle="month" />
+      </div>
+    </CommonSidebarDrawer>
 
     <!-- Create Event Modal -->
     <Teleport to="body">

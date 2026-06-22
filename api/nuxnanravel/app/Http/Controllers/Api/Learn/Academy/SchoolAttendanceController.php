@@ -191,6 +191,35 @@ class SchoolAttendanceController extends Controller
                 "เช็คชื่อมาโรงเรียนวันที่ {$attendance->date->format('d/m/Y')}",
                 ['academy_id' => $academy->id]
             );
+
+            // Phase M XP / Points
+            if ($status !== 'absent') {
+                app(\App\Services\Gamification\XpService::class)->award(
+                    $academy,
+                    'attendance.recorded',
+                    config('xp_rates.school.attendance.recorded', 5),
+                    $student->id,
+                    null,
+                    ['attendance_id' => $attendance->id, 'type' => 'school']
+                );
+
+                $classroom = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+                    ->where('type', 'classroom')
+                    ->whereHas('members', function ($query) use ($student) {
+                        $query->where('user_id', $student->id);
+                    })
+                    ->first();
+
+                if ($classroom) {
+                    app(\App\Services\Gamification\ClassroomPointsService::class)->award(
+                        $classroom,
+                        'attendance.checkin',
+                        config('xp_rates.classroom.attendance.checkin', 1),
+                        $student->id,
+                        ['attendance_id' => $attendance->id]
+                    );
+                }
+            }
         });
 
         return response()->json([
@@ -231,16 +260,45 @@ class SchoolAttendanceController extends Controller
                     ]
                 );
 
-                if ($record['status'] === 'present') {
+                if (in_array($record['status'], ['present', 'late'])) {
                     $student = User::find($record['student_id']);
                     if ($student) {
-                        $pointsService->awardByRule(
-                            $student,
-                            'school_attendance',
-                            $attendance->id,
-                            "เช็คชื่อมาโรงเรียนวันที่ {$attendance->date->format('d/m/Y')}",
-                            ['academy_id' => $academy->id]
+                        if ($record['status'] === 'present') {
+                            $pointsService->awardByRule(
+                                $student,
+                                'school_attendance',
+                                $attendance->id,
+                                "เช็คชื่อมาโรงเรียนวันที่ {$attendance->date->format('d/m/Y')}",
+                                ['academy_id' => $academy->id]
+                            );
+                        }
+
+                        // Phase M XP / Points
+                        app(\App\Services\Gamification\XpService::class)->award(
+                            $academy,
+                            'attendance.recorded',
+                            config('xp_rates.school.attendance.recorded', 5),
+                            $student->id,
+                            null,
+                            ['attendance_id' => $attendance->id, 'type' => 'school']
                         );
+
+                        $classroom = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+                            ->where('type', 'classroom')
+                            ->whereHas('members', function ($query) use ($student) {
+                                $query->where('user_id', $student->id);
+                            })
+                            ->first();
+
+                        if ($classroom) {
+                            app(\App\Services\Gamification\ClassroomPointsService::class)->award(
+                                $classroom,
+                                'attendance.checkin',
+                                config('xp_rates.classroom.attendance.checkin', 1),
+                                $student->id,
+                                ['attendance_id' => $attendance->id]
+                            );
+                        }
                     }
                 }
             }

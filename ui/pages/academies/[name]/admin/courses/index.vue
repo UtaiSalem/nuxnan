@@ -74,9 +74,8 @@ const fetchCourses = async (append = false) => {
       ...(selectedStatus.value !== 'all' && { status: selectedStatus.value }),
     })
 
-    // เรียกด้วย academy "name" ให้ตรงกับ route binding {academy:name} → controller index
-    // (index คืน { courses: [...], pagination: {...} } โดยไม่มี key success)
-    const response: any = await api.get(`/api/academies/${academyName.value}/courses?${params}`)
+    const response: any = await api.get(`/api/academies/${academyId.value}/courses?${params}`)
+
 
     const raw = response.courses
     const newCourses = Array.isArray(raw) ? raw : (raw?.data || [])

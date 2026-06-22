@@ -1148,20 +1148,7 @@ const onQRActionComplete = (result) => {
           >
             <Icon icon="fluent:wallet-24-regular" class="w-6 h-6" />
           </NuxtLink>
-          <NuxtLink
-            to="/notifications"
-            class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
-            :class="
-              route.path === '/notifications'
-                ? 'bg-gradient-vikinger text-white shadow-vikinger'
-                : isDarkMode
-                ? 'text-gray-300 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
-                : 'text-gray-700 hover:bg-gray-100 hover:text-vikinger-purple'
-            "
-            :title="'การแจ้งเตือน'"
-          >
-            <Icon icon="fluent:alert-24-regular" class="w-6 h-6" />
-          </NuxtLink>
+          <NotificationsNotificationBell v-if="authUser" />
           <NuxtLink
             to="/play/games"
             class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"

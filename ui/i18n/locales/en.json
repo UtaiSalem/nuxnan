@@ -23,6 +23,17 @@
     "error": "Error",
     "success": "Success"
   },
+  "academy": {
+    "tabs": {
+      "feed": "Feed",
+      "courses": "Courses",
+      "members": "Members",
+      "classrooms": "Classrooms",
+      "events": "Events",
+      "groups": "Groups",
+      "about": "About"
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
     "newsfeed": "Newsfeed",

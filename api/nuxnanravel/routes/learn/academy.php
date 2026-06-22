@@ -3,8 +3,11 @@
 use App\Http\Controllers\Api\Learn\Academy\AcademyActivityController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyCourseController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyGroupAdminController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyGroupController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyGroupMuteController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyGroupPermissionController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyGroupTypeController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyMemberController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyPostCommentController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyPostController;
@@ -22,6 +25,7 @@ use App\Http\Controllers\Api\Learn\Academy\DepartmentController;
 use App\Http\Controllers\Api\Learn\Academy\EmergencyAlertController;
 use App\Http\Controllers\Api\Learn\Academy\ExpenseController;
 use App\Http\Controllers\Api\Learn\Academy\FeeStructureController;
+use App\Http\Controllers\Api\Learn\Academy\GamificationController;
 use App\Http\Controllers\Api\Learn\Academy\GuardianController;
 use App\Http\Controllers\Api\Learn\Academy\InviteLinkController;
 use App\Http\Controllers\Api\Learn\Academy\LeaveRequestController;
@@ -33,14 +37,18 @@ use App\Http\Controllers\Api\Learn\Academy\ParentDashboardController;
 use App\Http\Controllers\Api\Learn\Academy\PaymentController;
 use App\Http\Controllers\Api\Learn\Academy\PayrollController;
 use App\Http\Controllers\Api\Learn\Academy\ReportController;
+use App\Http\Controllers\Api\Learn\Academy\RolloverController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolEventController;
 use App\Http\Controllers\Api\Learn\Academy\StaffAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\StaffController;
+use App\Http\Controllers\Api\Learn\Academy\StudentLifecycleController;
 use App\Http\Controllers\Api\Learn\Academy\TuitionFeeController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes for invite links (no auth required for validation)
 Route::get('/invite/{code}', [InviteLinkController::class, 'validateCode'])->name('invite.validate');
+Route::get('/academy-group-types', [AcademyGroupTypeController::class, 'index'])->name('api.academy.groupTypes');
+Route::get('/academy-group-permissions', [AcademyGroupTypeController::class, 'permissions'])->name('api.academy.groupPermissions');
 
 // Auth required routes for invite links
 Route::middleware(['auth:api'])->group(function () {
@@ -64,10 +72,13 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     // Academy Groups
     Route::get('/{academy}/groups', [AcademyGroupController::class, 'index'])->name('academy.groups.index');
+    Route::get('/{academy}/postable-groups', [AcademyGroupController::class, 'postableForUser'])->name('api.academy.postableGroups');
     Route::patch('/{academy}/groups/reorder', [AcademyGroupController::class, 'reorder'])->name('academy.groups.reorder');
     Route::get('/{academy}/groups/type/{type}', [AcademyGroupController::class, 'getByType'])->name('academy.groups.byType');
     Route::post('/{academy}/groups', [AcademyGroupController::class, 'store'])->name('academy.groups.store');
     Route::get('/groups/{academyGroup}', [AcademyGroupController::class, 'show'])->name('academy.groups.show');
+    Route::get('/groups/{academyGroup}/posts', [AcademyGroupController::class, 'posts'])->name('academy.groups.posts');
+    Route::get('/groups/{academyGroup}/stats', [AcademyGroupController::class, 'stats'])->name('academy.groups.stats');
     Route::patch('/groups/{academyGroup}', [AcademyGroupController::class, 'update'])->name('academy.groups.update');
     Route::delete('/groups/{academyGroup}', [AcademyGroupController::class, 'destroy'])->name('academy.groups.destroy');
 
@@ -76,10 +87,21 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::post('/groups/{academyGroup}/members', [AcademyGroupController::class, 'addMember'])->name('academy.groups.members.add');
     Route::delete('/groups/{academyGroup}/members', [AcademyGroupController::class, 'removeMember'])->name('academy.groups.members.remove');
     Route::patch('/groups/{academyGroup}/members/role', [AcademyGroupController::class, 'updateMemberRole'])->name('academy.groups.members.updateRole');
+    Route::post('/groups/{academyGroup}/join-request', [AcademyGroupController::class, 'requestJoin'])->name('api.academy.groups.requestJoin');
+    Route::get('/groups/{academyGroup}/pending-members', [AcademyGroupController::class, 'pendingMembers'])->name('api.academy.groups.pendingMembers');
+    Route::post('/groups/{academyGroup}/approve/{member}', [AcademyGroupController::class, 'approveMember'])->name('api.academy.groups.approveMember');
+    Route::post('/groups/{academyGroup}/reject/{member}', [AcademyGroupController::class, 'rejectMember'])->name('api.academy.groups.rejectMember');
+    Route::get('/groups/{academyGroup}/admins', [AcademyGroupAdminController::class, 'index'])->name('academy.groups.admins.index');
+    Route::post('/groups/{academyGroup}/admins', [AcademyGroupAdminController::class, 'store'])->name('academy.groups.admins.add');
+    Route::delete('/groups/{academyGroup}/admins', [AcademyGroupAdminController::class, 'destroy'])->name('academy.groups.admins.remove');
+    Route::patch('/groups/{academyGroup}/admins/role', [AcademyGroupAdminController::class, 'updateRole'])->name('academy.groups.admins.updateRole');
+
+    // Group Mute/Unmute
+    Route::post('/groups/{academyGroup}/mute', [AcademyGroupMuteController::class, 'mute'])->name('api.academy.groups.mute');
+    Route::delete('/groups/{academyGroup}/mute', [AcademyGroupMuteController::class, 'unmute'])->name('api.academy.groups.unmute');
 
     Route::get('/{academy:name}/feeds', [AcademyActivityController::class, 'index'])->name('academy.feeds');
 
-    Route::get('/{academy:name}/courses', [AcademyCourseController::class, 'index'])->name('academy.courses.index');
     Route::get('/{academy:name}/courses/create', [AcademyCourseController::class, 'create'])->name('academy.courses.create');
     Route::post('/{academy}/courses', [AcademyCourseController::class, 'store'])->name('academy.courses.store');
 
@@ -99,17 +121,28 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     Route::get('/{academy}/posts/{post}', [AcademyPostController::class, 'show'])->name('academy_post.show');
 
+    // Gamification
+    Route::get('/{academy}/gamification/summary', [GamificationController::class, 'summary'])->name('academy.gamification.summary');
+    Route::get('/{academy}/gamification/leaderboard', [GamificationController::class, 'leaderboard'])->name('academy.gamification.leaderboard');
+    Route::get('/{academy}/gamification/recent', [GamificationController::class, 'recentEvents'])->name('academy.gamification.recent');
+
 });
 
 // API Routes - Additional routes for API (Note: routes/api.php already has /api prefix from RouteServiceProvider)
 Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Academy Groups API - specific routes first
     Route::get('/groups/{academyGroup}', [AcademyGroupController::class, 'show'])->name('api.academy.groups.show');
+    Route::get('/groups/{academyGroup}/posts', [AcademyGroupController::class, 'posts'])->name('api.academy.groups.posts');
+    Route::get('/groups/{academyGroup}/stats', [AcademyGroupController::class, 'stats'])->name('api.academy.groups.stats');
     Route::delete('/groups/{academyGroup}', [AcademyGroupController::class, 'destroy'])->name('api.academy.groups.destroy');
     Route::get('/groups/{academyGroup}/members', [AcademyGroupController::class, 'getMembers'])->name('api.academy.groups.members');
     Route::post('/groups/{academyGroup}/members', [AcademyGroupController::class, 'addMember'])->name('api.academy.groups.members.add');
     Route::delete('/groups/{academyGroup}/members', [AcademyGroupController::class, 'removeMember'])->name('api.academy.groups.members.remove');
     Route::patch('/groups/{academyGroup}/members/role', [AcademyGroupController::class, 'updateMemberRole'])->name('api.academy.groups.members.updateRole');
+    Route::get('/groups/{academyGroup}/admins', [AcademyGroupAdminController::class, 'index'])->name('api.academy.groups.admins.index');
+    Route::post('/groups/{academyGroup}/admins', [AcademyGroupAdminController::class, 'store'])->name('api.academy.groups.admins.add');
+    Route::delete('/groups/{academyGroup}/admins', [AcademyGroupAdminController::class, 'destroy'])->name('api.academy.groups.admins.remove');
+    Route::patch('/groups/{academyGroup}/admins/role', [AcademyGroupAdminController::class, 'updateRole'])->name('api.academy.groups.admins.updateRole');
 
     // User's invitations
     Route::get('/my-invitations', [AcademyMemberController::class, 'getMyInvitations'])->name('api.academy.my-invitations');
@@ -304,6 +337,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     Route::prefix('{academy}/classrooms/{classroom}')->group(function () {
+        Route::get('enrollments', [ClassroomController::class, 'listEnrollments'])->name('api.academy.classrooms.enrollments');
         Route::get('/', [ClassroomController::class, 'show'])->name('api.academy.classrooms.show');
         Route::patch('/', [ClassroomController::class, 'update'])->name('api.academy.classrooms.update');
         Route::delete('/', [ClassroomController::class, 'destroy'])->name('api.academy.classrooms.destroy');
@@ -346,6 +380,35 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::post('{academy}/classrooms/transfer-student', [ClassroomController::class, 'transferStudent'])->name('api.academy.classrooms.transferStudent');
     Route::post('{academy}/classrooms/promote', [ClassroomController::class, 'promoteClassroom'])->name('api.academy.classrooms.promote');
     Route::get('{academy}/students/{student}/enrollment-history', [ClassroomController::class, 'getStudentEnrollmentHistory'])->name('api.academy.students.enrollmentHistory');
+
+    Route::scopeBindings()->group(function () {
+        Route::post('{academy}/students/{student}/graduate', [StudentLifecycleController::class, 'graduate'])
+            ->name('api.academy.students.graduate');
+        Route::post('{academy}/students/{student}/drop', [StudentLifecycleController::class, 'drop'])
+            ->name('api.academy.students.drop');
+        Route::post('{academy}/students/{student}/repeat', [StudentLifecycleController::class, 'repeat'])
+            ->name('api.academy.students.repeat');
+        Route::post('{academy}/students/{student}/promote', [StudentLifecycleController::class, 'promote'])
+            ->name('api.academy.students.promote');
+        Route::post('{academy}/students/{student}/transfer', [StudentLifecycleController::class, 'transfer'])
+            ->name('api.academy.students.transfer');
+        Route::get('{academy}/students/{student}/enrollment-history-v2', [StudentLifecycleController::class, 'history'])
+            ->name('api.academy.students.enrollmentHistoryV2');
+    });
+
+    // === Phase 3.D/E: Rollover wizard ===
+    Route::prefix('{academy}/rollover')->name('api.academy.rollover.')->group(function () {
+        Route::post('preview', [RolloverController::class, 'preview'])->name('preview');
+        Route::post('plan', [RolloverController::class, 'plan'])->name('plan');
+        Route::post('commit', [RolloverController::class, 'commit'])->name('commit');
+        Route::get('batches', [RolloverController::class, 'index'])->name('index');
+
+        Route::scopeBindings()->group(function () {
+            Route::get('batches/{batch}', [RolloverController::class, 'show'])->name('show');
+            Route::post('batches/{batch}/undo', [RolloverController::class, 'undo'])->name('undo');
+            Route::post('batches/{batch}/close-undo', [RolloverController::class, 'closeUndo'])->name('closeUndo');
+        });
+    });
 
     // Invitation accept/decline (token-based, not classroom-scoped)
     Route::post('classrooms/invitations/{token}/accept', [ClassroomInvitationController::class, 'accept'])->name('api.academy.classrooms.invitations.accept');
