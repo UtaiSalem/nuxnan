@@ -165,21 +165,21 @@ onMounted(() => {
     <div class="flex items-center gap-4">
       <NuxtLink
         to="/nuxnan-admin/coupons"
-        class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+        class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
       </NuxtLink>
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">แก้ไขคูปอง</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">แก้ไขข้อมูลคูปอง #{{ couponId }}</p>
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">แก้ไขคูปอง</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">แก้ไขข้อมูลคูปอง #{{ couponId }}</p>
       </div>
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div v-if="isLoading" class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="text-center">
-        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-        <p class="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
+        <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
       </div>
     </div>
 
@@ -201,16 +201,16 @@ onMounted(() => {
       </div>
 
       <!-- Form -->
-      <form @submit.prevent="handleSubmit" class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+      <form @submit.prevent="handleSubmit" class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-6">
         <!-- Code -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             รหัสคูปอง <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.code"
             type="text"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent uppercase"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent uppercase"
             :class="{ 'border-red-500': errors.code }"
             placeholder="SAVE20"
           />
@@ -219,13 +219,13 @@ onMounted(() => {
 
         <!-- Name -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             ชื่อคูปอง <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.name"
             type="text"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
             :class="{ 'border-red-500': errors.name }"
             placeholder="ส่วนลด 20% สำหรับสมาชิกใหม่"
           />
@@ -234,13 +234,13 @@ onMounted(() => {
 
         <!-- Description -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             คำอธิบาย
           </label>
           <textarea
             v-model="form.description"
             rows="3"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent resize-none"
             placeholder="รายละเอียดเพิ่มเติมของคูปอง"
           ></textarea>
         </div>
@@ -248,12 +248,12 @@ onMounted(() => {
         <!-- Discount Type & Value -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               ประเภทส่วนลด
             </label>
             <select
               v-model="form.discount_type"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
             >
               <option v-for="type in discountTypes" :key="type.value" :value="type.value">
                 {{ type.label }}
@@ -262,7 +262,7 @@ onMounted(() => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               มูลค่าส่วนลด <span class="text-red-500">*</span>
             </label>
             <div class="relative">
@@ -270,10 +270,10 @@ onMounted(() => {
                 v-model.number="form.discount_value"
                 type="number"
                 min="0"
-                class="w-full px-4 py-2.5 pr-10 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                class="w-full px-4 py-2.5 pr-10 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
                 :class="{ 'border-red-500': errors.discount_value }"
               />
-              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
                 {{ form.discount_type === 'percentage' ? '%' : '฿' }}
               </span>
             </div>
@@ -284,27 +284,27 @@ onMounted(() => {
         <!-- Min Purchase & Max Discount -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               ยอดสั่งซื้อขั้นต่ำ (บาท)
             </label>
             <input
               v-model.number="form.min_purchase"
               type="number"
               min="0"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
               placeholder="0"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               ส่วนลดสูงสุด (บาท)
             </label>
             <input
               v-model.number="form.max_discount"
               type="number"
               min="0"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
               placeholder="0 = ไม่จำกัด"
             />
           </div>
@@ -313,27 +313,27 @@ onMounted(() => {
         <!-- Usage Limits -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               จำนวนใช้งานทั้งหมด
             </label>
             <input
               v-model.number="form.usage_limit"
               type="number"
               min="0"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
               placeholder="ไม่จำกัด"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               จำกัดต่อผู้ใช้
             </label>
             <input
               v-model.number="form.per_user_limit"
               type="number"
               min="1"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -341,26 +341,26 @@ onMounted(() => {
         <!-- Dates -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               วันที่เริ่มต้น <span class="text-red-500">*</span>
             </label>
             <input
               v-model="form.start_date"
               type="datetime-local"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
               :class="{ 'border-red-500': errors.start_date }"
             />
             <p v-if="errors.start_date" class="mt-1 text-sm text-red-500">{{ errors.start_date }}</p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               วันที่สิ้นสุด <span class="text-red-500">*</span>
             </label>
             <input
               v-model="form.end_date"
               type="datetime-local"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
               :class="{ 'border-red-500': errors.end_date }"
             />
             <p v-if="errors.end_date" class="mt-1 text-sm text-red-500">{{ errors.end_date }}</p>
@@ -369,12 +369,12 @@ onMounted(() => {
 
         <!-- Applicable To -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             ใช้ได้กับ
           </label>
           <select
             v-model="form.applicable_to"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           >
             <option v-for="option in applicableOptions" :key="option.value" :value="option.value">
               {{ option.label }}
@@ -383,14 +383,14 @@ onMounted(() => {
         </div>
 
         <!-- Active Status -->
-        <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+        <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
           <label class="flex items-center gap-3 cursor-pointer">
             <input
               v-model="form.is_active"
               type="checkbox"
-              class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              class="w-5 h-5 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
             />
-            <span class="text-gray-700 dark:text-gray-300">เปิดใช้งาน</span>
+            <span class="text-slate-700 dark:text-slate-300">เปิดใช้งาน</span>
           </label>
         </div>
 
@@ -399,7 +399,7 @@ onMounted(() => {
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 rounded-xl text-white font-medium transition-colors"
+            class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-hopeui-primary-300 rounded-xl text-white font-medium transition-colors"
           >
             <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
             <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
@@ -408,7 +408,7 @@ onMounted(() => {
           
           <NuxtLink
             to="/nuxnan-admin/coupons"
-            class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 font-medium transition-colors"
+            class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
           >
             <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
             ยกเลิก

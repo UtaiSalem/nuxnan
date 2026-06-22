@@ -224,15 +224,15 @@ onMounted(() => {
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">รายการรอดำเนินการ</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">รายการรอดำเนินการ</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">
           รายการที่รอการอนุมัติทั้งหมด {{ (totalPendingWithdrawals + totalPendingDeposits).toLocaleString() }} รายการ
         </p>
       </div>
 
       <button
         @click="fetchPendingRequests"
-        class="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 transition-colors inline-flex items-center gap-2"
+        class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors inline-flex items-center gap-2"
       >
         <Icon icon="fluent:arrow-sync-24-regular" class="w-5 h-5" />
         รีเฟรช
@@ -240,15 +240,15 @@ onMounted(() => {
     </div>
 
     <!-- Tabs -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-1 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-1 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="flex">
         <button
           @click="activeTab = 'withdrawals'"
           :class="[
             'flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors',
             activeTab === 'withdrawals'
-              ? 'bg-indigo-600 text-white'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              ? 'bg-hopeui-primary-500 text-white'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
           ]"
         >
           ถอนเงิน ({{ totalPendingWithdrawals }})
@@ -258,8 +258,8 @@ onMounted(() => {
           :class="[
             'flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors',
             activeTab === 'deposits'
-              ? 'bg-indigo-600 text-white'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              ? 'bg-hopeui-primary-500 text-white'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
           ]"
         >
           เติมเงิน ({{ totalPendingDeposits }})
@@ -268,27 +268,27 @@ onMounted(() => {
     </div>
 
     <!-- Pending Requests -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-hopeui border border-slate-100 dark:border-slate-700 overflow-hidden">
       <!-- Loading State -->
       <div v-if="isLoading" class="p-8 text-center">
-        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-        <p class="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
+        <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
       </div>
 
       <!-- Empty State -->
       <div v-else-if="(activeTab === 'withdrawals' ? pendingWithdrawals : pendingDeposits).length === 0" class="p-8 text-center">
         <Icon icon="fluent:checkmark-circle-24-regular" class="w-12 h-12 text-green-400 mx-auto" />
-        <p class="text-gray-500 mt-2">
+        <p class="text-slate-500 mt-2">
           {{ activeTab === 'withdrawals' ? 'ไม่มีคำขอถอนเงินรอดำเนินการ' : 'ไม่มีคำขอเติมเงินรอดำเนินการ' }}
         </p>
       </div>
 
       <!-- List -->
-      <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+      <div v-else class="divide-y divide-slate-100 dark:divide-slate-700">
         <div
           v-for="request in activeTab === 'withdrawals' ? pendingWithdrawals : pendingDeposits"
           :key="request.id"
-          class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          class="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
         >
           <div class="flex flex-col lg:flex-row gap-4">
             <!-- User Info -->
@@ -302,26 +302,26 @@ onMounted(() => {
                   class="w-12 h-12 rounded-full object-cover"
                   @error="($event.target as HTMLImageElement).style.display = 'none'"
                 />
-                <div v-else class="w-12 h-12 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center">
-                  <Icon icon="fluent:person-24-regular" class="w-6 h-6 text-indigo-500" />
+                <div v-else class="w-12 h-12 bg-gradient-to-br from-hopeui-primary-100 to-purple-100 dark:from-hopeui-primary-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center">
+                  <Icon icon="fluent:person-24-regular" class="w-6 h-6 text-hopeui-primary-500" />
                 </div>
               </div>
-              
+
               <div class="min-w-0 flex-1">
-                <p class="font-semibold text-gray-800 dark:text-white truncate">
+                <p class="font-semibold text-slate-800 dark:text-white truncate">
                   {{ request.user?.name || 'Unknown' }}
                 </p>
-                <p class="text-sm text-gray-500 truncate">
+                <p class="text-sm text-slate-500 truncate">
                   {{ request.user?.email || '-' }}
                 </p>
                 <!-- Phone number -->
-                <p v-if="request.user?.phone_number" class="text-sm text-gray-500 flex items-center gap-1">
+                <p v-if="request.user?.phone_number" class="text-sm text-slate-500 flex items-center gap-1">
                   <Icon icon="fluent:call-24-regular" class="w-3.5 h-3.5" />
                   {{ request.user?.phone_number }}
                 </p>
-                
+
                 <!-- Payment method for deposits -->
-                <p v-if="activeTab === 'deposits' && request.payment_method" class="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                <p v-if="activeTab === 'deposits' && request.payment_method" class="text-xs text-slate-400 flex items-center gap-1 mt-1">
                   <Icon icon="fluent:payment-24-regular" class="w-3 h-3" />
                   {{ request.payment_method_label || request.payment_method }}
                 </p>
@@ -329,19 +329,19 @@ onMounted(() => {
             </div>
 
             <!-- Bank Info (for withdrawals) -->
-            <div v-if="activeTab === 'withdrawals' && request.metadata?.bank_account" class="flex-1 min-w-0 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
-              <p class="text-xs text-gray-400 mb-1">ข้อมูลบัญชีธนาคาร</p>
+            <div v-if="activeTab === 'withdrawals' && request.metadata?.bank_account" class="flex-1 min-w-0 bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
+              <p class="text-xs text-slate-400 mb-1">ข้อมูลบัญชีธนาคาร</p>
               <div class="space-y-1">
-                <p class="text-sm font-medium text-gray-800 dark:text-white flex items-center gap-2">
-                  <Icon icon="fluent:building-bank-24-regular" class="w-4 h-4 text-blue-500" />
+                <p class="text-sm font-medium text-slate-800 dark:text-white flex items-center gap-2">
+                  <Icon icon="fluent:building-bank-24-regular" class="w-4 h-4 text-hopeui-info" />
                   {{ getBankName(request.metadata.bank_account.bank_name) }}
                 </p>
-                <p class="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
-                  <Icon icon="fluent:document-number-24-regular" class="w-4 h-4 text-gray-400" />
+                <p class="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                  <Icon icon="fluent:document-number-24-regular" class="w-4 h-4 text-slate-400" />
                   {{ request.metadata.bank_account.account_number }}
                 </p>
-                <p class="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
-                  <Icon icon="fluent:person-24-regular" class="w-4 h-4 text-gray-400" />
+                <p class="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                  <Icon icon="fluent:person-24-regular" class="w-4 h-4 text-slate-400" />
                   {{ request.metadata.bank_account.account_name }}
                 </p>
               </div>
@@ -349,26 +349,26 @@ onMounted(() => {
 
             <!-- Amount & Details -->
             <div class="text-right whitespace-nowrap min-w-[160px]">
-              <p class="text-xl font-bold text-gray-800 dark:text-white">
+              <p class="text-xl font-bold text-slate-800 dark:text-white">
                 {{ formatCurrency(request.amount) }}
               </p>
               <!-- Fee & Net Amount -->
-              <div v-if="request.metadata?.fee" class="text-xs text-gray-500 mt-1">
+              <div v-if="request.metadata?.fee" class="text-xs text-slate-500 mt-1">
                 <span>ค่าธรรมเนียม: {{ formatCurrency(request.metadata.fee) }}</span>
                 <p class="text-green-600 font-medium">
                   รับจริง: {{ formatCurrency(request.metadata.net_amount) }}
                 </p>
               </div>
-              <p class="text-sm text-gray-500 mt-1">
+              <p class="text-sm text-slate-500 mt-1">
                 {{ formatDate(request.created_at) }}
               </p>
               <!-- Wallet balance -->
-              <p v-if="request.user?.wallet !== undefined" class="text-xs text-gray-400 flex items-center justify-end gap-1 mt-1">
+              <p v-if="request.user?.wallet !== undefined" class="text-xs text-slate-400 flex items-center justify-end gap-1 mt-1">
                 <Icon icon="fluent:wallet-24-regular" class="w-3 h-3" />
                 ยอดคงเหลือ: {{ formatCurrency(parseFloat(request.user.wallet)) }}
               </p>
               <!-- Reference for deposits -->
-              <p v-if="activeTab === 'deposits' && request.reference_number" class="text-xs text-gray-400 mt-1">
+              <p v-if="activeTab === 'deposits' && request.reference_number" class="text-xs text-slate-400 mt-1">
                 Ref: {{ request.reference_number }}
               </p>
             </div>
@@ -379,7 +379,7 @@ onMounted(() => {
               class="hidden sm:block relative group cursor-pointer"
               @click="openSlipModal(request)"
             >
-              <div class="w-12 h-16 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 relative">
+              <div class="w-12 h-16 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 relative">
                 <img
                   :src="request.slip_url || request.transfer_slip"
                   class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
@@ -434,22 +434,22 @@ onMounted(() => {
     <!-- Approve Modal -->
     <Teleport to="body">
       <div v-if="showApproveModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="showApproveModal = false"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-xl transform transition-all scale-100">
-          <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">ยืนยันการอนุมัติ</h3>
-          <p class="text-gray-600 dark:text-gray-300 mb-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showApproveModal = false"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl transform transition-all scale-100">
+          <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">ยืนยันการอนุมัติ</h3>
+          <p class="text-slate-600 dark:text-slate-300 mb-4">
             คุณต้องการอนุมัติ{{ activeTab === 'withdrawals' ? 'การถอนเงิน' : 'คำขอเติมเงิน' }} <span class="font-bold text-green-600">{{ formatCurrency(selectedRequest?.amount || 0) }}</span> ใช่หรือไม่?
           </p>
 
           <!-- Admin note for deposits -->
           <div v-if="activeTab === 'deposits'" class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               หมายเหตุ (ไม่บังคับ)
             </label>
             <textarea
               v-model="adminNote"
               rows="2"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
               placeholder="เพิ่มหมายเหตุ..."
             ></textarea>
           </div>
@@ -467,7 +467,7 @@ onMounted(() => {
             </button>
             <button
               @click="showApproveModal = false"
-              class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl transition-colors font-medium"
+              class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium"
             >
               ยกเลิก
             </button>
@@ -479,35 +479,35 @@ onMounted(() => {
     <!-- Reject Modal -->
     <Teleport to="body">
       <div v-if="showRejectModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="showRejectModal = false"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-xl transform transition-all scale-100">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showRejectModal = false"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl transform transition-all scale-100">
           <div class="flex items-center gap-3 mb-4 text-red-600">
              <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                 <Icon icon="fluent:warning-24-filled" class="w-6 h-6" />
              </div>
-             <h3 class="text-lg font-bold text-gray-900 dark:text-white">ปฏิเสธ{{ activeTab === 'withdrawals' ? 'คำขอถอนเงิน' : 'คำขอเติมเงิน' }}</h3>
+             <h3 class="text-lg font-bold text-slate-900 dark:text-white">ปฏิเสธ{{ activeTab === 'withdrawals' ? 'คำขอถอนเงิน' : 'คำขอเติมเงิน' }}</h3>
           </div>
-          
+
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               เหตุผล <span class="text-red-500">*</span>
             </label>
             <textarea
               v-model="rejectReason"
               rows="3"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
               placeholder="ระบุเหตุผลในการปฏิเสธ..."
               autofocus
             ></textarea>
           </div>
           <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               หมายเหตุ (ไม่บังคับ)
             </label>
             <textarea
               v-model="adminNote"
               rows="2"
-              class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
               placeholder="เพิ่มหมายเหตุ..."
             ></textarea>
           </div>
@@ -515,7 +515,7 @@ onMounted(() => {
             <button
               @click="rejectRequest"
               :disabled="isProcessing || !rejectReason.trim()"
-              class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded-xl transition-colors font-medium shadow-sm shadow-red-600/30"
+              class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-500 text-white rounded-xl transition-colors font-medium shadow-sm shadow-red-600/30"
             >
               <span v-if="isProcessing" class="flex items-center justify-center gap-2">
                  <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" /> กำลังดำเนินการ
@@ -524,7 +524,7 @@ onMounted(() => {
             </button>
             <button
               @click="showRejectModal = false"
-              class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl transition-colors font-medium"
+              class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium"
             >
               ยกเลิก
             </button>
@@ -537,7 +537,7 @@ onMounted(() => {
     <Teleport to="body">
       <div v-if="showSlipModal" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
         <!-- Backdrop with blur -->
-        <div class="absolute inset-0 bg-gray-900/80 backdrop-blur-md transition-all duration-300" @click="showSlipModal = false"></div>
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-md transition-all duration-300" @click="showSlipModal = false"></div>
         
         <!-- Modal Content -->
         <div class="relative w-full max-w-3xl max-h-[90vh] flex flex-col items-center justify-center">
@@ -579,15 +579,15 @@ onMounted(() => {
                 </div>
               </div>
               
-              <div v-else class="bg-white dark:bg-gray-800 p-12 rounded-xl text-center min-w-[300px]">
-                <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <Icon icon="fluent:image-off-24-filled" class="w-10 h-10 text-gray-400" />
+              <div v-else class="bg-white dark:bg-slate-800 p-12 rounded-xl text-center min-w-[300px]">
+                <div class="w-20 h-20 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Icon icon="fluent:image-off-24-filled" class="w-10 h-10 text-slate-400" />
                 </div>
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-1">ไม่พบหลักฐานการโอนเงิน</h3>
-                <p class="text-gray-500 text-sm">ไฟล์อาจถูกลบหรือลิงก์ไม่ถูกต้อง</p>
+                <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-1">ไม่พบหลักฐานการโอนเงิน</h3>
+                <p class="text-slate-500 text-sm">ไฟล์อาจถูกลบหรือลิงก์ไม่ถูกต้อง</p>
                 <button
                    @click="showSlipModal = false"
-                   class="mt-6 px-6 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                   class="mt-6 px-6 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium transition-colors"
                 >
                    ปิดหน้าต่าง
                 </button>

@@ -90,7 +90,7 @@ const getStatusBadge = (status: string) => {
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
     completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    cancelled: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
+    cancelled: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-400'
   }
   return badges[status] || badges.pending
 }
@@ -127,20 +127,20 @@ onMounted(() => {
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">ธุรกรรมทั้งหมด</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">ธุรกรรมทั้งหมด</h1>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">
           ธุรกรรม {{ totalTransactions.toLocaleString() }} รายการ
         </p>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="flex flex-col sm:flex-row gap-4">
         <!-- Type Filter -->
         <select
           v-model="selectedType"
-          class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           @change="handleFilter"
         >
           <option v-for="type in transactionTypes" :key="type.value" :value="type.value">
@@ -151,7 +151,7 @@ onMounted(() => {
         <!-- Status Filter -->
         <select
           v-model="selectedStatus"
-          class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           @change="handleFilter"
         >
           <option v-for="status in transactionStatuses" :key="status.value" :value="status.value">
@@ -161,7 +161,7 @@ onMounted(() => {
 
         <button
           @click="fetchTransactions"
-          class="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 transition-colors inline-flex items-center gap-2"
+          class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors inline-flex items-center gap-2"
         >
           <Icon icon="fluent:arrow-sync-24-regular" class="w-5 h-5" />
           รีเฟรช
@@ -170,37 +170,37 @@ onMounted(() => {
     </div>
 
     <!-- Transactions Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-hopeui border border-slate-100 dark:border-slate-700 overflow-hidden">
       <!-- Loading State -->
       <div v-if="isLoading" class="p-8 text-center">
-        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-        <p class="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
+        <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
       </div>
 
       <!-- Empty State -->
       <div v-else-if="transactions.length === 0" class="p-8 text-center">
-        <Icon icon="fluent:wallet-24-regular" class="w-12 h-12 text-gray-300 mx-auto" />
-        <p class="text-gray-500 mt-2">ไม่พบธุรกรรม</p>
+        <Icon icon="fluent:wallet-24-regular" class="w-12 h-12 text-slate-300 mx-auto" />
+        <p class="text-slate-500 mt-2">ไม่พบธุรกรรม</p>
       </div>
 
       <!-- Table -->
       <div v-else class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <thead class="bg-slate-50 dark:bg-slate-700/50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ID</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ผู้ใช้</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ประเภท</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">จำนวน</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">สถานะ</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">วันที่</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">ID</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">ผู้ใช้</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">ประเภท</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">จำนวน</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">สถานะ</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">วันที่</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <tr v-for="tx in transactions" :key="tx.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">#{{ tx.id }}</td>
-              <td class="px-4 py-3 text-sm text-gray-800 dark:text-white">{{ tx.user?.name || '-' }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 capitalize">{{ tx.type }}</td>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+            <tr v-for="tx in transactions" :key="tx.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">#{{ tx.id }}</td>
+              <td class="px-4 py-3 text-sm text-slate-800 dark:text-white">{{ tx.user?.name || '-' }}</td>
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300 capitalize">{{ tx.type }}</td>
               <td class="px-4 py-3 text-sm text-right font-medium" :class="tx.amount >= 0 ? 'text-green-600' : 'text-red-600'">
                 {{ formatCurrency(tx.amount) }}
               </td>
@@ -209,7 +209,7 @@ onMounted(() => {
                   {{ transactionStatuses.find(s => s.value === tx.status)?.label || tx.status }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+              <td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                 {{ formatDate(tx.created_at) }}
               </td>
             </tr>
@@ -218,16 +218,16 @@ onMounted(() => {
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="p-4 border-t border-gray-100 dark:border-gray-700">
+      <div v-if="totalPages > 1" class="p-4 border-t border-slate-100 dark:border-slate-700">
         <div class="flex justify-center gap-1">
           <button
             v-for="page in Math.min(totalPages, 10)"
             :key="page"
             @click="goToPage(page)"
             class="w-10 h-10 rounded-lg text-sm font-medium transition-colors"
-            :class="currentPage === page 
-              ? 'bg-indigo-600 text-white' 
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+            :class="currentPage === page
+              ? 'bg-hopeui-primary-500 text-white'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'"
           >
             {{ page }}
           </button>
