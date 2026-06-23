@@ -66,6 +66,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::get('/users/{user}/membered-academies', [AcademyController::class, 'getAuthMemberedAcademies'])->name('academies.membered');
     Route::get('/by-id/{academy}', [AcademyController::class, 'show'])->name('academy.showById');
     Route::get('/my-student-card', [ClassroomController::class, 'getMyStudentCard'])->name('api.academy.myStudentCard');
+    Route::get('/my-invitations', [AcademyMemberController::class, 'getMyInvitations'])->name('api.academy.my-invitations.early');
 
     // Wildcard route MUST be last
     Route::get('/{academy:name}', [AcademyController::class, 'show'])->name('academy.show');
@@ -143,9 +144,6 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::post('/groups/{academyGroup}/admins', [AcademyGroupAdminController::class, 'store'])->name('api.academy.groups.admins.add');
     Route::delete('/groups/{academyGroup}/admins', [AcademyGroupAdminController::class, 'destroy'])->name('api.academy.groups.admins.remove');
     Route::patch('/groups/{academyGroup}/admins/role', [AcademyGroupAdminController::class, 'updateRole'])->name('api.academy.groups.admins.updateRole');
-
-    // User's invitations
-    Route::get('/my-invitations', [AcademyMemberController::class, 'getMyInvitations'])->name('api.academy.my-invitations');
 
     // Additional wildcard routes
     Route::get('/{academy}/courses', [AcademyCourseController::class, 'getAcademyCourses'])->name('api.academy.courses.getAcademyCourses');

@@ -9,6 +9,7 @@ import StatsBoxWidget from '~/components/organisms/StatsBoxWidget.vue'
 import ReactionsWidget from '~/components/organisms/ReactionsWidget.vue'
 import PeopleMayKnowWidget from '~/components/widgets/PeopleMayKnowWidget.vue'
 import PendingFriendsWidget from '~/components/widgets/PendingFriendsWidget.vue'
+import PendingAcademyInvitationsWidget from '~/components/widgets/PendingAcademyInvitationsWidget.vue'
 import DonatesWidget from '~/components/widgets/DonatesWidget.vue'
 import AdvertisesWidget from '~/components/widgets/AdvertisesWidget.vue'
 import RecentlyViewedCoursesWidget from '~/components/widgets/RecentlyViewedCoursesWidget.vue'
@@ -367,6 +368,7 @@ onUnmounted(() => {
         <!-- Self-loading sidebar widgets -->
         <PeopleMayKnowWidget />
         <PendingFriendsWidget />
+        <PendingAcademyInvitationsWidget />
         <DonatesWidget />
         <AdvertisesWidget />
 
