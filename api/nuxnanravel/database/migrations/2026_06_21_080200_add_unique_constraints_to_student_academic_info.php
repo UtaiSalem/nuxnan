@@ -9,8 +9,10 @@ use Illuminate\Support\Facades\Schema;
  * Phase 1 — student_academic_info integrity
  *
  * 1. Unique (student_id, academic_year) — กัน duplicate ประวัติปีเดียวกัน
- * 2. Functional unique on (student_id) WHERE is_current=1 — กัน 2 current rows
- *    ใช้ expression index ของ MySQL 8 (preflight ยืนยัน 8.4.7 → supported)
+ * 2. Unique (student_id) WHERE is_current=1 — กัน 2 current rows
+ *    ใช้ generated column (CASE WHEN is_current=1 THEN student_id END) + unique index ธรรมดา
+ *    เพราะ MariaDB ไม่รองรับ inline expression index syntax ของ MySQL 8
+ *    (CREATE UNIQUE INDEX ... ((expr))) — generated column ใช้ได้ทั้ง MySQL 5.7.6+/8 และ MariaDB 10.2+
  *
  * Pre-condition (จาก preflight §9):
  * - 0 duplicate (student_id, academic_year)
@@ -27,20 +29,38 @@ return new class extends Migration
             });
         }
 
-        if (DB::getDriverName() === 'mysql' && ! $this->indexExists('student_academic_info', 'uq_sai_current_student')) {
-            // Functional unique: only counts rows where is_current=1.
-            // For is_current=0, expression returns NULL, and NULL is not unique-checked.
-            DB::statement(
-                'CREATE UNIQUE INDEX uq_sai_current_student '
-                .'ON student_academic_info ((CASE WHEN is_current = 1 THEN student_id END))'
-            );
+        if (DB::getDriverName() === 'mysql') {
+            if (! Schema::hasColumn('student_academic_info', 'current_student_uid')) {
+                Schema::table('student_academic_info', function (Blueprint $table) {
+                    $table->bigInteger('current_student_uid')
+                        ->unsigned()
+                        ->nullable()
+                        ->virtualAs('CASE WHEN is_current = 1 THEN student_id END')
+                        ->after('is_current');
+                });
+            }
+
+            if (! $this->indexExists('student_academic_info', 'uq_sai_current_student')) {
+                DB::statement(
+                    'CREATE UNIQUE INDEX uq_sai_current_student '
+                    .'ON student_academic_info (current_student_uid)'
+                );
+            }
         }
     }
 
     public function down(): void
     {
-        if (DB::getDriverName() === 'mysql' && $this->indexExists('student_academic_info', 'uq_sai_current_student')) {
-            DB::statement('DROP INDEX uq_sai_current_student ON student_academic_info');
+        if (DB::getDriverName() === 'mysql') {
+            if ($this->indexExists('student_academic_info', 'uq_sai_current_student')) {
+                DB::statement('DROP INDEX uq_sai_current_student ON student_academic_info');
+            }
+
+            if (Schema::hasColumn('student_academic_info', 'current_student_uid')) {
+                Schema::table('student_academic_info', function (Blueprint $table) {
+                    $table->dropColumn('current_student_uid');
+                });
+            }
         }
 
         if ($this->indexExists('student_academic_info', 'uq_sai_student_year')) {
