@@ -7003,3 +7003,12 @@ async function load() {
   - Frontend academy page was re-read around the grouped-course template and fetch logic; an automated Vue SFC parse check was attempted but blocked by sandbox read restrictions against `ui/node_modules`.
 - Remaining caution:
   - The new academy page fetch currently requests `per_page=100` so grouping is useful immediately for large schools, but truly huge academies may still want a second pass with server-driven grouped pagination or lazy section loading.
+
+## 2026-06-22 Teacher account SQL generation
+
+- Generated `tmp/create_teacher_users.sql` from the first worksheet of the supplied teacher workbook.
+- The final file contains 120 guarded `users` inserts, 120 bcrypt password hashes, and 120 unique generated emails.
+- Employee IDs are normalized by removing a numeric trailing `.0` and lowercasing before generating `t<id>@jariyathum.ac.th` and the source password `jsm<id>`.
+- Excluded by user request: `นาย อซิซ สาเม๊าะ`, `นางซารีนา ส่าเม๊าะ`, `นายอับดุลสุโก ดินอะ`, and `นายอ๊ะหมัด แอเก็ม`.
+- Changed the generated email domain from `@jariyathum.ac.th` to `@jsm.ac.th` by user request.
+- Verification: direct UTF-8 read confirmed intact Thai text, 120 insert statements, 120 bcrypt hashes, 120 unique `@jsm.ac.th` emails, no old-domain occurrences, and a complete transaction wrapper.
