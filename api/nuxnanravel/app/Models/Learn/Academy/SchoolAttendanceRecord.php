@@ -13,7 +13,7 @@ class SchoolAttendanceRecord extends Model
     protected $fillable = [
         'attendance_id', 'academy_id', 'student_id',
         'status', 'check_in_method', 'checked_in_at',
-        'remark', 'recorded_by',
+        'remarks', 'recorded_by',
     ];
 
     protected $casts = [

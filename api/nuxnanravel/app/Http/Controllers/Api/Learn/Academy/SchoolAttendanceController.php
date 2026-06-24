@@ -8,10 +8,10 @@ use App\Models\AcademyMember;
 use App\Models\ClassroomStudent;
 use App\Models\Learn\Academy\SchoolAttendance;
 use App\Models\Learn\Academy\SchoolAttendanceRecord;
-use App\Models\Student;
-use App\Models\StudentCard;
 use App\Models\User;
 use App\Services\PointsService;
+use App\Services\StudentIdentifierResolver;
+use App\Traits\ManagesEventPermissions;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +20,8 @@ use Illuminate\Validation\Rule;
 
 class SchoolAttendanceController extends Controller
 {
+    use ManagesEventPermissions;
+
     // GET /academies/{academy}/school-attendances
     public function index(Academy $academy, Request $request): JsonResponse
     {
@@ -60,6 +62,8 @@ class SchoolAttendanceController extends Controller
     // POST /academies/{academy}/school-attendances  — สร้าง session + generate QR
     public function store(Academy $academy, Request $request): JsonResponse
     {
+        $this->authorizeManager($academy);
+
         $validated = $request->validate([
             'date' => 'required|date',
             'title' => 'nullable|string|max:200',
@@ -94,6 +98,7 @@ class SchoolAttendanceController extends Controller
     public function refreshQr(Academy $academy, SchoolAttendance $attendance): JsonResponse
     {
         $this->authorizeAttendance($academy, $attendance);
+        $this->authorizeManager($academy);
 
         if (! $attendance->isOpen()) {
             return response()->json(['success' => false, 'message' => 'การเช็คชื่อนี้ปิดแล้ว ไม่สามารถต่ออายุ QR ได้'], 422);
@@ -233,12 +238,13 @@ class SchoolAttendanceController extends Controller
     public function storeRecords(Academy $academy, SchoolAttendance $attendance, Request $request): JsonResponse
     {
         $this->authorizeAttendance($academy, $attendance);
+        $this->authorizeManager($academy);
 
         $validated = $request->validate([
             'records' => 'required|array|min:1',
             'records.*.student_id' => 'required|exists:users,id',
             'records.*.status' => ['required', Rule::in(['present', 'absent', 'late', 'leave'])],
-            'records.*.remark' => 'nullable|string|max:200',
+            'records.*.remarks' => 'nullable|string|max:200',
         ]);
 
         DB::transaction(function () use ($attendance, $academy, $validated) {
@@ -255,7 +261,7 @@ class SchoolAttendanceController extends Controller
                         'status' => $record['status'],
                         'check_in_method' => 'manual',
                         'checked_in_at' => $record['status'] !== 'absent' ? now() : null,
-                        'remark' => $record['remark'] ?? null,
+                        'remarks' => $record['remarks'] ?? null,
                         'recorded_by' => auth()->id(),
                     ]
                 );
@@ -314,6 +320,7 @@ class SchoolAttendanceController extends Controller
     public function scanStudent(Academy $academy, SchoolAttendance $attendance, Request $request): JsonResponse
     {
         $this->authorizeAttendance($academy, $attendance);
+        $this->authorizeManager($academy);
 
         $validated = $request->validate([
             'identifier' => 'required|string|max:50',
@@ -326,54 +333,11 @@ class SchoolAttendanceController extends Controller
 
         $identifier = trim($validated['identifier']);
         $scanMethod = $validated['scan_method'] ?? 'manual';
-        $userId = null;
-        $studentName = null;
-        $studentPhoto = null;
 
-        // --- Strategy 1: member_code (numeric) ---
-        if (is_numeric($identifier)) {
-            $member = AcademyMember::where('academy_id', $academy->id)
-                ->where('member_code', (int) $identifier)
-                ->with('user:id,name,profile_photo_path')
-                ->first();
-
-            if ($member && $member->user_id) {
-                $userId = $member->user_id;
-                $studentName = $member->user?->name;
-                $studentPhoto = $member->user?->profile_photo_path;
-            }
-        }
-
-        // --- Strategy 2: student_number from student_cards ---
-        if (! $userId) {
-            $card = StudentCard::where('academy_id', $academy->id)
-                ->where('student_number', $identifier)
-                ->first();
-
-            if ($card) {
-                $student = Student::where('student_id', $card->student_number)
-                    ->orWhere('citizen_id', $card->national_id)
-                    ->first();
-
-                if ($student) {
-                    $member = AcademyMember::where('academy_id', $academy->id)
-                        ->where('student_id', $student->id)
-                        ->with('user:id,name,profile_photo_path')
-                        ->first();
-
-                    if ($member && $member->user_id) {
-                        $userId = $member->user_id;
-                        $studentName = $member->user?->name ?? $card->full_name_thai;
-                        $studentPhoto = $member->user?->profile_photo_path;
-                    }
-                }
-
-                // Fallback: name from card even without user link
-                if (! $userId) {
-                    $studentName = $card->full_name_thai;
-                }
-            }
-        }
+        $resolved = app(StudentIdentifierResolver::class)->resolve($academy->id, $identifier);
+        $userId = $resolved['user_id'];
+        $studentName = $resolved['student_name'];
+        $studentPhoto = $resolved['student_photo'];
 
         if (! $userId) {
             return response()->json([
@@ -452,6 +416,7 @@ class SchoolAttendanceController extends Controller
     public function close(Academy $academy, SchoolAttendance $attendance): JsonResponse
     {
         $this->authorizeAttendance($academy, $attendance);
+        $this->authorizeManager($academy);
 
         if (! $attendance->isOpen()) {
             return response()->json(['success' => false, 'message' => 'ปิดการเช็คชื่อนี้แล้ว'], 422);
@@ -471,6 +436,10 @@ class SchoolAttendanceController extends Controller
     // GET /academies/{academy}/school-attendances/student/{student}
     public function studentHistory(Academy $academy, User $student, Request $request): JsonResponse
     {
+        if ($request->user()->id !== $student->id) {
+            $this->authorizeManager($academy);
+        }
+
         $request->validate([
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date',
@@ -506,6 +475,11 @@ class SchoolAttendanceController extends Controller
     private function authorizeAttendance(Academy $academy, SchoolAttendance $attendance): void
     {
         abort_if($attendance->academy_id !== $academy->id, 404);
+    }
+
+    private function authorizeManager(Academy $academy): void
+    {
+        abort_unless($this->isAcademyAdmin(auth()->user(), $academy), 403, 'Unauthorized');
     }
 
     // Enrich a collection of SchoolAttendanceRecord with student_number and classroom_name.
