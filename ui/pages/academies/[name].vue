@@ -5,6 +5,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import FeedPost from '~/components/play/feed/FeedPost.vue'
 import CourseCard from '~/components/learn/course/CourseCard.vue'
+import EventFormModal from '~/components/academy/events/EventFormModal.vue'
 import { useCourseGrouping } from '~/composables/useCourseGrouping'
 
 definePageMeta({
@@ -53,18 +54,6 @@ const showCreateGroupModal = ref(false)
 
 // Event creation state
 const showCreateEventModal = ref(false)
-const newEvent = ref({
-  title: '',
-  description: '',
-  event_type: 'activity',
-  start_datetime: '',
-  end_datetime: '',
-  location: '',
-  location_type: 'onsite',
-  max_participants: null as number | null,
-  requires_registration: false,
-})
-const isCreatingEvent = ref(false)
 
 // Events pagination
 const eventsPagination = ref({
@@ -100,12 +89,9 @@ const activitiesNextPageUrl = ref<string | null>(null)
 const academyName = computed(() => route.params.name as string)
 
 // Check if current route is a child route (e.g., /admin, /dashboard)
-const isChildRoute = computed(() => {
-  const basePath = `/academies/${academyName.value}`
-  const decodedBasePath = `/academies/${academyName.value}`
-  return route.path !== basePath && route.path !== decodedBasePath && 
-         (route.path.startsWith(basePath + '/') || route.path.startsWith(decodedBasePath + '/'))
-})
+// Uses route.name (stable, never URL-encoded) instead of route.path, which stays
+// percent-encoded for non-ASCII academy names (e.g. Thai) and broke this comparison.
+const isChildRoute = computed(() => route.name !== 'academies-name')
 
 const logoUrl = computed(() => {
   if (!academy.value?.logo) {
@@ -634,60 +620,20 @@ const hasMoreEvents = computed(() => {
 })
 
 // Create event
-const createEvent = async () => {
-  if (!academy.value || !newEvent.value.title.trim() || isCreatingEvent.value) return
-  
-  isCreatingEvent.value = true
-  try {
-    const response: any = await api.post(`/api/academies/${academy.value.id}/events`, {
-      title: newEvent.value.title,
-      description: newEvent.value.description,
-      event_type: newEvent.value.event_type,
-      start_datetime: newEvent.value.start_datetime,
-      end_datetime: newEvent.value.end_datetime,
-      location: newEvent.value.location,
-      location_type: newEvent.value.location_type,
-      max_participants: newEvent.value.max_participants,
-      requires_registration: newEvent.value.requires_registration,
-      status: 'published',
-    })
-    
-    if (response.success) {
-      // Add new event to list
-      if (response.data) {
-        events.value.unshift(JSON.parse(JSON.stringify(response.data)))
-      } else {
-        await fetchEvents()
-      }
-      showCreateEventModal.value = false
-      newEvent.value = {
-        title: '',
-        description: '',
-        event_type: 'activity',
-        start_datetime: '',
-        end_datetime: '',
-        location: '',
-        location_type: 'onsite',
-        max_participants: null,
-        requires_registration: false,
-      }
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'สร้างกิจกรรมสำเร็จ',
-        timer: 2000,
-        showConfirmButton: false
-      })
-    }
-  } catch (err: any) {
-    Swal.fire({
-      icon: 'error',
-      title: 'เกิดข้อผิดพลาด',
-      text: err?.data?.message || 'ไม่สามารถสร้างกิจกรรมได้',
-    })
-  } finally {
-    isCreatingEvent.value = false
+const onEventSaved = (savedEvent: any) => {
+  if (savedEvent) {
+    events.value.unshift(JSON.parse(JSON.stringify(savedEvent)))
+  } else {
+    fetchEvents()
   }
+  showCreateEventModal.value = false
+
+  Swal.fire({
+    icon: 'success',
+    title: 'สร้างกิจกรรมสำเร็จ',
+    timer: 2000,
+    showConfirmButton: false,
+  })
 }
 
 // Register for event
@@ -2456,190 +2402,12 @@ watch(() => route.hash, (newHash) => {
     </CommonSidebarDrawer>
 
     <!-- Create Event Modal -->
-    <Teleport to="body">
-      <div 
-        v-if="showCreateEventModal" 
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        @click.self="showCreateEventModal = false"
-      >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        
-        <!-- Modal Content -->
-        <div class="relative bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-          <!-- Modal Header -->
-          <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-vikinger-dark-200 z-10">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Icon icon="fluent:calendar-add-24-regular" class="w-6 h-6 text-vikinger-purple" />
-              สร้างกิจกรรมใหม่
-            </h3>
-            <button
-              @click="showCreateEventModal = false"
-              class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-          
-          <!-- Modal Body -->
-          <div class="p-6 space-y-4">
-            <!-- Event Title -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                ชื่อกิจกรรม <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="newEvent.title"
-                type="text"
-                placeholder="เช่น กีฬาสี, ค่ายวิทยาศาสตร์, ประชุมผู้ปกครอง"
-                class="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-vikinger-purple/50"
-              />
-            </div>
-
-            <!-- Event Type -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                ประเภทกิจกรรม
-              </label>
-              <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                <button
-                  v-for="etype in [
-                    { value: 'activity', label: 'กิจกรรม', icon: 'fluent:calendar-star-24-regular' },
-                    { value: 'meeting', label: 'ประชุม', icon: 'fluent:people-team-24-regular' },
-                    { value: 'sports', label: 'กีฬา', icon: 'fluent:sport-24-regular' },
-                    { value: 'ceremony', label: 'พิธีการ', icon: 'fluent:hat-graduation-24-regular' },
-                    { value: 'exam', label: 'สอบ', icon: 'fluent:document-text-24-regular' },
-                    { value: 'holiday', label: 'วันหยุด', icon: 'fluent:beach-24-regular' },
-                    { value: 'other', label: 'อื่นๆ', icon: 'fluent:calendar-24-regular' },
-                  ]"
-                  :key="etype.value"
-                  @click="newEvent.event_type = etype.value"
-                  :class="[
-                    'p-2 rounded-lg border-2 flex flex-col items-center gap-1 transition-all text-center',
-                    newEvent.event_type === etype.value
-                      ? 'border-vikinger-purple bg-vikinger-purple/10 text-vikinger-purple'
-                      : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-vikinger-purple/50'
-                  ]"
-                >
-                  <Icon :icon="etype.icon" class="w-5 h-5" />
-                  <span class="text-xs font-medium">{{ etype.label }}</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Date/Time -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  วันเวลาเริ่ม <span class="text-red-500">*</span>
-                </label>
-                <input
-                  v-model="newEvent.start_datetime"
-                  type="datetime-local"
-                  class="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-vikinger-purple/50"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  วันเวลาสิ้นสุด
-                </label>
-                <input
-                  v-model="newEvent.end_datetime"
-                  type="datetime-local"
-                  class="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-vikinger-purple/50"
-                />
-              </div>
-            </div>
-
-            <!-- Location -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                สถานที่
-              </label>
-              <div class="flex gap-2 mb-2">
-                <button
-                  v-for="loc in [{ value: 'onsite', label: 'สถานที่จริง' }, { value: 'online', label: 'ออนไลน์' }]"
-                  :key="loc.value"
-                  @click="newEvent.location_type = loc.value"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                    newEvent.location_type === loc.value
-                      ? 'bg-vikinger-purple text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  ]"
-                >
-                  {{ loc.label }}
-                </button>
-              </div>
-              <input
-                v-model="newEvent.location"
-                type="text"
-                :placeholder="newEvent.location_type === 'online' ? 'ลิงก์ห้องประชุมออนไลน์' : 'ห้องประชุม, หอประชุม, สนามกีฬา'"
-                class="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-vikinger-purple/50"
-              />
-            </div>
-
-            <!-- Max Participants & Registration -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  จำนวนรับสูงสุด
-                </label>
-                <input
-                  v-model.number="newEvent.max_participants"
-                  type="number"
-                  min="0"
-                  placeholder="ไม่จำกัด"
-                  class="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-vikinger-purple/50"
-                />
-              </div>
-              <div class="flex items-end">
-                <label class="flex items-center gap-3 cursor-pointer pb-3">
-                  <input
-                    v-model="newEvent.requires_registration"
-                    type="checkbox"
-                    class="w-5 h-5 rounded border-gray-300 text-vikinger-purple focus:ring-vikinger-purple/50"
-                  />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">ต้องลงทะเบียนก่อน</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Description -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                รายละเอียด
-              </label>
-              <textarea
-                v-model="newEvent.description"
-                rows="3"
-                placeholder="อธิบายรายละเอียดเกี่ยวกับกิจกรรมนี้..."
-                class="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-vikinger-purple/50 resize-none"
-              ></textarea>
-            </div>
-          </div>
-          
-          <!-- Modal Footer -->
-          <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-3 sticky bottom-0 bg-white dark:bg-vikinger-dark-200">
-            <button
-              @click="showCreateEventModal = false"
-              class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              ยกเลิก
-            </button>
-            <button
-              @click="createEvent"
-              :disabled="!newEvent.title.trim() || !newEvent.start_datetime || isCreatingEvent"
-              class="px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium hover:bg-vikinger-purple/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <Icon v-if="isCreatingEvent" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-              <Icon v-else icon="fluent:add-24-regular" class="w-4 h-4" />
-              สร้างกิจกรรม
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <EventFormModal
+      v-if="showCreateEventModal && academy"
+      :academy-id="academy.id"
+      @close="showCreateEventModal = false"
+      @saved="onEventSaved"
+    />
     </div>
   </div>
 </template>
