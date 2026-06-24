@@ -32,7 +32,6 @@ class UserProfile extends Model
         'visits',
         'metadata',
         // Personal Information
-        'phone_number',
         'address',
         'city',
         'country',

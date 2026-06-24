@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
-
-use App\Http\Resources\UserResource;
 
 class SettingsController extends Controller
 {
@@ -75,16 +75,20 @@ class SettingsController extends Controller
             'show_online_status' => 'nullable|boolean',
         ]);
 
+        // phone_number เป็นของ users table เพียงที่เดียว ตัดออกก่อน fill ลง profile
+        $phoneNumber = $validated['phone_number'] ?? null;
+        $profileData = Arr::except($validated, ['phone_number']);
+
         // Create profile if not exists
         $profile = $user->profile ?? new UserProfile(['user_id' => $user->id]);
 
         // Update fields
-        $profile->fill($validated);
+        $profile->fill($profileData);
         $user->profile()->save($profile);
 
         // Update phone_number in users table if provided
         if (array_key_exists('phone_number', $validated)) {
-            $user->phone_number = $validated['phone_number'];
+            $user->phone_number = $phoneNumber;
             $user->save();
         }
 
