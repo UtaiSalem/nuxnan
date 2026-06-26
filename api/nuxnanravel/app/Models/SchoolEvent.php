@@ -2,26 +2,28 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\Auditable;
 
 /**
  * SchoolEvent Model - กิจกรรมโรงเรียน
  */
 class SchoolEvent extends Model
 {
-    use HasFactory, SoftDeletes, Auditable;
+    use Auditable, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'academy_id',
+        'group_id',
         'created_by',
         'title',
         'description',
         'event_type',
+        'attendance_pattern',
         'category',
         'start_datetime',
         'end_datetime',
@@ -58,32 +60,83 @@ class SchoolEvent extends Model
 
     // Event type constants
     const TYPE_MEETING = 'meeting';
+
+    const TYPE_TRAINING = 'training';
+
     const TYPE_HOLIDAY = 'holiday';
+
+    const TYPE_ORIENTATION = 'orientation';
+
     const TYPE_EXAM = 'exam';
+
+    const TYPE_ACADEMIC_COMPETITION = 'academic_competition';
+
+    const TYPE_STUDENT_DEVELOPMENT = 'student_development';
+
+    const TYPE_CLUB = 'club';
+
     const TYPE_ACTIVITY = 'activity';
+
     const TYPE_SPORTS = 'sports';
+
     const TYPE_CEREMONY = 'ceremony';
+
+    const TYPE_FIELD_TRIP = 'field_trip';
+
+    const TYPE_VOLUNTEER = 'volunteer';
+
     const TYPE_OTHER = 'other';
 
     const TYPES = [
         self::TYPE_MEETING => 'การประชุม',
+        self::TYPE_TRAINING => 'อบรม/สัมมนา',
         self::TYPE_HOLIDAY => 'วันหยุด',
+        self::TYPE_ORIENTATION => 'ปฐมนิเทศ/ปัจฉิมนิเทศ',
         self::TYPE_EXAM => 'การสอบ',
+        self::TYPE_ACADEMIC_COMPETITION => 'แข่งขันวิชาการ',
+        self::TYPE_STUDENT_DEVELOPMENT => 'กิจกรรมพัฒนาผู้เรียน',
+        self::TYPE_CLUB => 'ชมรม/ชุมนุม',
         self::TYPE_ACTIVITY => 'กิจกรรม',
         self::TYPE_SPORTS => 'กีฬา',
         self::TYPE_CEREMONY => 'พิธีการ',
+        self::TYPE_FIELD_TRIP => 'ทัศนศึกษา',
+        self::TYPE_VOLUNTEER => 'จิตอาสา',
         self::TYPE_OTHER => 'อื่นๆ',
+    ];
+
+    // Attendance pattern constants — how enrollment/check-in is handled for this event
+    const PATTERN_ONE_TIME = 'one_time';
+
+    const PATTERN_SEMESTER = 'semester';
+
+    const PATTERN_RECURRING = 'recurring';
+
+    const PATTERNS = [
+        self::PATTERN_ONE_TIME => 'ครั้งเดียว (ลงทะเบียน+เช็คชื่อวันเดียว)',
+        self::PATTERN_SEMESTER => 'ต่อเนื่องรายภาคเรียน (สมัครแล้วเช็คชื่อทุกนัด)',
+        self::PATTERN_RECURRING => 'ต่อเนื่องรายวัน/สัปดาห์/เดือน',
+    ];
+
+    // Suggested default pattern by type — used as a UI default only, not enforced
+    const DEFAULT_PATTERN_BY_TYPE = [
+        self::TYPE_STUDENT_DEVELOPMENT => self::PATTERN_SEMESTER,
+        self::TYPE_CLUB => self::PATTERN_SEMESTER,
     ];
 
     // Location type constants
     const LOCATION_ONSITE = 'onsite';
+
     const LOCATION_ONLINE = 'online';
+
     const LOCATION_HYBRID = 'hybrid';
 
     // Status constants
     const STATUS_DRAFT = 'draft';
+
     const STATUS_PUBLISHED = 'published';
+
     const STATUS_CANCELLED = 'cancelled';
+
     const STATUS_COMPLETED = 'completed';
 
     const STATUSES = [
@@ -99,7 +152,18 @@ class SchoolEvent extends Model
         return $this->belongsTo(Academy::class);
     }
 
+    // Owning organizational unit (e.g. a dormitory or club AcademyGroup). Null = school-wide.
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(AcademyGroup::class, 'group_id');
+    }
+
     public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
@@ -139,16 +203,28 @@ class SchoolEvent extends Model
 
     public function getAvailableSlotsAttribute(): ?int
     {
-        if (!$this->max_participants) return null;
+        if (! $this->max_participants) {
+            return null;
+        }
+
         return max(0, $this->max_participants - $this->registered_count);
     }
 
     public function getIsRegistrationOpenAttribute(): bool
     {
-        if (!$this->requires_registration) return false;
-        if ($this->status !== self::STATUS_PUBLISHED) return false;
-        if ($this->registration_deadline && $this->registration_deadline < now()) return false;
-        if ($this->max_participants && $this->available_slots <= 0) return false;
+        if (! $this->requires_registration) {
+            return false;
+        }
+        if ($this->status !== self::STATUS_PUBLISHED) {
+            return false;
+        }
+        if ($this->registration_deadline && $this->registration_deadline < now()) {
+            return false;
+        }
+        if ($this->max_participants && $this->available_slots <= 0) {
+            return false;
+        }
+
         return true;
     }
 
@@ -173,7 +249,10 @@ class SchoolEvent extends Model
 
     public function hasAvailableSlots(): bool
     {
-        if (!$this->max_participants) return true;
+        if (! $this->max_participants) {
+            return true;
+        }
+
         return $this->registered_count < $this->max_participants;
     }
 

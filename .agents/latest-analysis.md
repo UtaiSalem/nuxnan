@@ -7012,3 +7012,22 @@ async function load() {
 - Excluded by user request: `นาย อซิซ สาเม๊าะ`, `นางซารีนา ส่าเม๊าะ`, `นายอับดุลสุโก ดินอะ`, and `นายอ๊ะหมัด แอเก็ม`.
 - Changed the generated email domain from `@jariyathum.ac.th` to `@jsm.ac.th` by user request.
 - Verification: direct UTF-8 read confirmed intact Thai text, 120 insert statements, 120 bcrypt hashes, 120 unique `@jsm.ac.th` emails, no old-domain occurrences, and a complete transaction wrapper.
+
+
+## 2026-06-24 User Profile Phone Number Duplication Cleanup
+
+- Task: Delete duplicate `phone_number` in `user_profiles` + fix collation mismatch.
+- Files modified:
+  - `api/nuxnanravel/app/Http/Controllers/Api/SettingsController.php`
+  - `api/nuxnanravel/app/Models/UserProfile.php`
+  - `api/nuxnanravel/database/migrations/2026_06_24_120000_drop_phone_number_from_user_profiles_table.php` (created)
+- Findings:
+  - `users.phone_number` (collation: `utf8mb3_unicode_ci`) and `user_profiles.phone_number` (collation: `utf8mb3_general_ci`) had different collations, causing potential database collation mismatch issues.
+  - All entries for `user_profiles.phone_number` in the database were `NULL`, making it safe to drop the column immediately.
+  - Added migration with a defensive data backfill (joining on `user_id` and copying non-null phone numbers to `users.phone_number` if missing in `users`) before dropping the column.
+  - Cut the dual-write behavior in `SettingsController@updateProfile` by removing `phone_number` from the `$profileData` before calling `$profile->fill($profileData)`.
+  - Removed `phone_number` from `$fillable` array in `UserProfile` model.
+- Verification:
+  - Ran `php artisan migrate` successfully.
+  - Ran `php artisan test tests/Feature/UserProfilePrivacyTest.php` successfully (5 passed, 26 assertions).
+  - Ran `vendor/bin/pint` successfully.

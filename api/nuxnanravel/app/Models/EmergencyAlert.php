@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Traits\Auditable;
 
 /**
  * EmergencyAlert Model - การแจ้งเตือนฉุกเฉิน
  */
 class EmergencyAlert extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'academy_id',
@@ -43,11 +43,17 @@ class EmergencyAlert extends Model
 
     // Alert type constants
     const TYPE_FIRE = 'fire';
+
     const TYPE_EARTHQUAKE = 'earthquake';
+
     const TYPE_FLOOD = 'flood';
+
     const TYPE_LOCKDOWN = 'lockdown';
+
     const TYPE_MEDICAL = 'medical';
+
     const TYPE_WEATHER = 'weather';
+
     const TYPE_OTHER = 'other';
 
     const TYPES = [
@@ -62,8 +68,11 @@ class EmergencyAlert extends Model
 
     // Severity constants
     const SEVERITY_LOW = 'low';
+
     const SEVERITY_MEDIUM = 'medium';
+
     const SEVERITY_HIGH = 'high';
+
     const SEVERITY_CRITICAL = 'critical';
 
     const SEVERITIES = [
@@ -80,6 +89,11 @@ class EmergencyAlert extends Model
     }
 
     public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }

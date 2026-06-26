@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\MeetingSlot;
 use App\Models\MeetingBooking;
+use App\Models\MeetingSlot;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,14 +47,14 @@ class MeetingController extends Controller
         }
 
         // Only future slots by default
-        if (!$request->has('include_past')) {
+        if (! $request->has('include_past')) {
             $query->where('meeting_date', '>=', now()->format('Y-m-d'));
         }
 
         // Filter by availability
         if ($request->boolean('available_only')) {
             $query->where('is_active', true)
-                  ->whereColumn('booked_count', '<', 'max_bookings');
+                ->whereColumn('booked_count', '<', 'max_bookings');
         }
 
         $slots = $query->orderBy('meeting_date')
@@ -126,7 +126,7 @@ class MeetingController extends Controller
         $user = $request->user();
 
         // Check if user is a teacher in this academy
-        if (!$this->isTeacher($user, $academy)) {
+        if (! $this->isTeacher($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -185,9 +185,10 @@ class MeetingController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create slot: ' . $e->getMessage(),
+                'message' => 'Failed to create slot: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -199,7 +200,7 @@ class MeetingController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isTeacher($user, $academy)) {
+        if (! $this->isTeacher($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -245,14 +246,15 @@ class MeetingController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => count($slots) . ' meeting slots created',
+                'message' => count($slots).' meeting slots created',
                 'data' => $slots,
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create slots: ' . $e->getMessage(),
+                'message' => 'Failed to create slots: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -268,7 +270,7 @@ class MeetingController extends Controller
 
         $user = $request->user();
 
-        if ($slot->teacher_id !== $user->id && !$this->isAcademyAdmin($user, $academy)) {
+        if ($slot->teacher_id !== $user->id && ! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -293,7 +295,7 @@ class MeetingController extends Controller
         $oldData = $slot->toArray();
         $slot->update($request->only([
             'start_time', 'end_time', 'max_bookings', 'location',
-            'online_url', 'notes', 'is_active'
+            'online_url', 'notes', 'is_active',
         ]));
 
         $this->auditLog->log(
@@ -323,7 +325,7 @@ class MeetingController extends Controller
 
         $user = $request->user();
 
-        if ($slot->teacher_id !== $user->id && !$this->isAcademyAdmin($user, $academy)) {
+        if ($slot->teacher_id !== $user->id && ! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -365,7 +367,7 @@ class MeetingController extends Controller
         $user = $request->user();
 
         // Check if slot is available
-        if (!$slot->is_active || $slot->booked_count >= $slot->max_bookings) {
+        if (! $slot->is_active || $slot->booked_count >= $slot->max_bookings) {
             return response()->json([
                 'success' => false,
                 'message' => 'This slot is no longer available',
@@ -424,9 +426,10 @@ class MeetingController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to book meeting: ' . $e->getMessage(),
+                'message' => 'Failed to book meeting: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -442,7 +445,7 @@ class MeetingController extends Controller
 
         $user = $request->user();
 
-        if ($slot->teacher_id !== $user->id && !$this->isAcademyAdmin($user, $academy)) {
+        if ($slot->teacher_id !== $user->id && ! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -467,13 +470,13 @@ class MeetingController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isTeacher($user, $academy)) {
+        if (! $this->isTeacher($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $query = MeetingBooking::whereHas('slot', function ($q) use ($user, $academy) {
             $q->where('academy_id', $academy->id)
-              ->where('teacher_id', $user->id);
+                ->where('teacher_id', $user->id);
         })->with([
             'slot:id,meeting_date,start_time,end_time,location',
             'parent:id,name,email,profile_photo_path',
@@ -530,7 +533,7 @@ class MeetingController extends Controller
         }
 
         // Only upcoming by default
-        if (!$request->has('include_past')) {
+        if (! $request->has('include_past')) {
             $query->whereHas('slot', function ($q) {
                 $q->where('meeting_date', '>=', now()->format('Y-m-d'));
             });
@@ -564,7 +567,7 @@ class MeetingController extends Controller
 
         $user = $request->user();
 
-        if ($slot->teacher_id !== $user->id && !$this->isAcademyAdmin($user, $academy)) {
+        if ($slot->teacher_id !== $user->id && ! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -609,9 +612,9 @@ class MeetingController extends Controller
         $user = $request->user();
 
         // Allow teacher, parent, or admin to cancel
-        if ($slot->teacher_id !== $user->id && 
-            $booking->parent_id !== $user->id && 
-            !$this->isAcademyAdmin($user, $academy)) {
+        if ($slot->teacher_id !== $user->id &&
+            $booking->parent_id !== $user->id &&
+            ! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -632,9 +635,10 @@ class MeetingController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to cancel booking: ' . $e->getMessage(),
+                'message' => 'Failed to cancel booking: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -652,7 +656,7 @@ class MeetingController extends Controller
 
         $user = $request->user();
 
-        if ($slot->teacher_id !== $user->id && !$this->isAcademyAdmin($user, $academy)) {
+        if ($slot->teacher_id !== $user->id && ! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -682,10 +686,9 @@ class MeetingController extends Controller
      */
     private function isAcademyAdmin($user, Academy $academy): bool
     {
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'admin', 'moderator'])
-            ->exists();
+        // Canonical check: owner (user_id/owner_id), academy_admins, or super admin.
+        // The academy_members pivot `role` is not the source of truth for admin rights.
+        return $academy->isAdmin($user);
     }
 
     /**

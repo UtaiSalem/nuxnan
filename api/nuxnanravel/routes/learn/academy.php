@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\Learn\Academy\PayrollController;
 use App\Http\Controllers\Api\Learn\Academy\ReportController;
 use App\Http\Controllers\Api\Learn\Academy\RolloverController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolEventController;
+use App\Http\Controllers\Api\Learn\Academy\ActivitySessionController;
 use App\Http\Controllers\Api\Learn\Academy\StaffAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\StaffController;
 use App\Http\Controllers\Api\Learn\Academy\StudentLifecycleController;
@@ -639,6 +640,14 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('/{event}/registrations', [SchoolEventController::class, 'registrations'])->name('api.academy.events.registrations');
         Route::post('/{event}/registrations/{registration}/confirm', [SchoolEventController::class, 'confirmRegistration'])->name('api.academy.events.confirmRegistration');
         Route::post('/{event}/registrations/{registration}/attendance', [SchoolEventController::class, 'markAttendance'])->name('api.academy.events.markAttendance');
+
+        // Activity Sessions - เช็คชื่อกิจกรรมต่อเนื่อง (ชมรม, ลูกเสือ, ละหมาดรายวัน ฯลฯ)
+        Route::get('/{event}/sessions/{session}', [ActivitySessionController::class, 'show'])->name('api.academy.events.sessions.show');
+        Route::post('/{event}/sessions/{session}/refresh-qr', [ActivitySessionController::class, 'refreshQr'])->name('api.academy.events.sessions.refreshQr');
+        Route::post('/{event}/sessions/{session}/check-in', [ActivitySessionController::class, 'checkIn'])->name('api.academy.events.sessions.checkIn');
+        Route::post('/{event}/sessions/{session}/scan', [ActivitySessionController::class, 'scanStudent'])->name('api.academy.events.sessions.scanStudent');
+        Route::post('/{event}/sessions/{session}/records', [ActivitySessionController::class, 'storeRecords'])->name('api.academy.events.sessions.storeRecords');
+        Route::get('/{event}/enrollments/{enrollment}/attendance-summary', [ActivitySessionController::class, 'attendanceSummary'])->name('api.academy.events.enrollments.attendanceSummary');
     });
 
     // Emergency Alerts - การแจ้งเตือนฉุกเฉิน

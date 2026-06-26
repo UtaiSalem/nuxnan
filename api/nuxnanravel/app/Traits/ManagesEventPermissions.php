@@ -15,10 +15,10 @@ trait ManagesEventPermissions
 {
     protected function isAcademyAdmin(User $user, Academy $academy): bool
     {
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'admin', 'moderator'])
-            ->exists();
+        // Delegate to the canonical academy permission check (owner via
+        // user_id/owner_id, academy_admins table, or super admin). The
+        // academy_members pivot has no `role` column, so it cannot be used here.
+        return $academy->isAdmin($user);
     }
 
     protected function isGroupAdmin(User $user, int $groupId): bool

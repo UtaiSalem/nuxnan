@@ -16,7 +16,7 @@ export interface AcademyGroupTypeMeta {
   /** Iconify icon name */
   icon: string
   /** Tailwind color tone — used for badge bg/text + gradient header */
-  color: 'purple' | 'cyan' | 'green' | 'orange' | 'pink' | 'amber' | 'gray'
+  color: 'purple' | 'cyan' | 'green' | 'orange' | 'pink' | 'amber' | 'teal' | 'gray'
   /** Display sort order within "ส่วนงาน" tab */
   order: number
 }
@@ -29,6 +29,7 @@ export const ACADEMY_GROUP_TYPES: AcademyGroupTypeMeta[] = [
   { key: 'classroom',      label: 'ห้องเรียน',     labelEn: 'Classroom',      icon: 'heroicons:academic-cap',              color: 'cyan',   order: 5 },
   { key: 'club',           label: 'ชมรม',          labelEn: 'Club',           icon: 'heroicons:trophy',                    color: 'pink',   order: 6 },
   { key: 'committee',      label: 'คณะกรรมการ',    labelEn: 'Committee',      icon: 'heroicons:user-group',                color: 'amber',  order: 7 },
+  { key: 'dormitory',      label: 'หอพัก',         labelEn: 'Dormitory',      icon: 'heroicons:home-modern',               color: 'teal',   order: 8 },
 ]
 
 const UNKNOWN_TYPE: AcademyGroupTypeMeta = {
@@ -98,6 +99,12 @@ export const GROUP_TYPE_COLOR_CLASSES: Record<AcademyGroupTypeMeta['color'], {
     iconBg:   'bg-amber-500/15 text-amber-700 dark:text-amber-300',
     gradient: 'from-amber-500 to-yellow-400',
     text:     'text-amber-700 dark:text-amber-300',
+  },
+  teal: {
+    badge:    'bg-teal-500/15 text-teal-700 dark:text-teal-300',
+    iconBg:   'bg-teal-500/15 text-teal-700 dark:text-teal-300',
+    gradient: 'from-teal-500 to-cyan-400',
+    text:     'text-teal-700 dark:text-teal-300',
   },
   gray: {
     badge:    'bg-gray-200/70 dark:bg-gray-700 text-gray-700 dark:text-gray-300',

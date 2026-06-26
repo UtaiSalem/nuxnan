@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\EmergencyAlert;
 use App\Models\AlertAcknowledgement;
+use App\Models\EmergencyAlert;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,17 +26,17 @@ class EmergencyAlertController extends Controller
     public function index(Request $request, Academy $academy)
     {
         $user = $request->user();
-        
+
         $query = EmergencyAlert::where('academy_id', $academy->id)
             ->with(['creator:id,name,profile_photo_path']);
 
         // Filter active only for non-admins
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             $query->where('is_active', true)
-                  ->where(function ($q) {
-                      $q->whereNull('expires_at')
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')
                         ->orWhere('expires_at', '>', now());
-                  });
+                });
         }
 
         // Filter by type
@@ -66,6 +66,7 @@ class EmergencyAlertController extends Controller
         $alerts->getCollection()->transform(function ($alert) use ($acknowledgedIds) {
             $alert->is_acknowledged = isset($acknowledgedIds[$alert->id]);
             $alert->user_response = $acknowledgedIds[$alert->id] ?? null;
+
             return $alert;
         });
 
@@ -90,7 +91,7 @@ class EmergencyAlertController extends Controller
             ->where('is_active', true)
             ->where(function ($q) {
                 $q->whereNull('expires_at')
-                  ->orWhere('expires_at', '>', now());
+                    ->orWhere('expires_at', '>', now());
             })
             ->orderByRaw("FIELD(severity, 'critical', 'high', 'medium', 'low')")
             ->orderByDesc('created_at')
@@ -105,6 +106,7 @@ class EmergencyAlertController extends Controller
 
         $alerts = $alerts->map(function ($alert) use ($acknowledgedIds) {
             $alert->is_acknowledged = in_array($alert->id, $acknowledgedIds);
+
             return $alert;
         });
 
@@ -155,7 +157,7 @@ class EmergencyAlertController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -225,9 +227,10 @@ class EmergencyAlertController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create alert: ' . $e->getMessage(),
+                'message' => 'Failed to create alert: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -243,7 +246,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -267,7 +270,7 @@ class EmergencyAlertController extends Controller
             $oldData = $alert->toArray();
 
             $alert->update($request->only([
-                'title', 'message', 'severity', 'expires_at'
+                'title', 'message', 'severity', 'expires_at',
             ]));
 
             $this->auditLog->log(
@@ -288,9 +291,10 @@ class EmergencyAlertController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update alert: ' . $e->getMessage(),
+                'message' => 'Failed to update alert: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -306,7 +310,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -382,7 +386,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -423,7 +427,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -451,7 +455,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -478,9 +482,8 @@ class EmergencyAlertController extends Controller
      */
     private function isAcademyAdmin($user, Academy $academy): bool
     {
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'admin', 'moderator'])
-            ->exists();
+        // Canonical check: owner (user_id/owner_id), academy_admins, or super admin.
+        // The academy_members pivot `role` is not the source of truth for admin rights.
+        return $academy->isAdmin($user);
     }
 }

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\SchoolAnnouncement;
 use App\Models\AnnouncementRead;
+use App\Models\SchoolAnnouncement;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,17 +26,17 @@ class AnnouncementController extends Controller
     public function index(Request $request, Academy $academy)
     {
         $user = $request->user();
-        
+
         $query = SchoolAnnouncement::where('academy_id', $academy->id)
             ->with(['creator:id,name,profile_photo_path,email_verified_at']);
 
         // For non-admins, only show published and non-expired announcements
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             $query->where('is_published', true)
-                  ->where(function ($q) {
-                      $q->whereNull('expires_at')
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')
                         ->orWhere('expires_at', '>', now());
-                  });
+                });
         }
 
         // Filter by type
@@ -54,7 +54,7 @@ class AnnouncementController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('content', 'like', "%{$search}%");
+                    ->orWhere('content', 'like', "%{$search}%");
             });
         }
 
@@ -71,6 +71,7 @@ class AnnouncementController extends Controller
 
         $announcements->getCollection()->transform(function ($announcement) use ($readIds) {
             $announcement->is_read = in_array($announcement->id, $readIds);
+
             return $announcement;
         });
 
@@ -98,7 +99,7 @@ class AnnouncementController extends Controller
         $user = $request->user();
 
         // Check access for unpublished announcements
-        if (!$announcement->is_published && !$this->isAcademyAdmin($user, $academy)) {
+        if (! $announcement->is_published && ! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Announcement not found'], 404);
         }
 
@@ -128,7 +129,7 @@ class AnnouncementController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -192,9 +193,10 @@ class AnnouncementController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create announcement: ' . $e->getMessage(),
+                'message' => 'Failed to create announcement: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -210,7 +212,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -239,7 +241,7 @@ class AnnouncementController extends Controller
 
             $announcement->update($request->only([
                 'title', 'content', 'announcement_type', 'priority',
-                'target_audience', 'attachments', 'is_pinned', 'expires_at'
+                'target_audience', 'attachments', 'is_pinned', 'expires_at',
             ]));
 
             $this->auditLog->log(
@@ -260,9 +262,10 @@ class AnnouncementController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update announcement: ' . $e->getMessage(),
+                'message' => 'Failed to update announcement: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -278,7 +281,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -311,7 +314,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -344,7 +347,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -373,7 +376,7 @@ class AnnouncementController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->isAcademyAdmin($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -402,9 +405,8 @@ class AnnouncementController extends Controller
      */
     private function isAcademyAdmin($user, Academy $academy): bool
     {
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'admin', 'moderator'])
-            ->exists();
+        // Canonical check: owner (user_id/owner_id), academy_admins, or super admin.
+        // The academy_members pivot `role` is not the source of truth for admin rights.
+        return $academy->isAdmin($user);
     }
 }

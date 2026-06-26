@@ -4,19 +4,21 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\SchoolEvent;
-use App\Models\EventRegistration;
 use App\Models\ActivityEnrollment;
 use App\Models\ActivitySession;
+use App\Models\EventRegistration;
+use App\Models\SchoolEvent;
 use App\Services\AuditLogService;
+use App\Traits\ManagesEventPermissions;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 
 class SchoolEventController extends Controller
 {
+    use ManagesEventPermissions;
+
     protected AuditLogService $auditLog;
 
     public function __construct(AuditLogService $auditLog)
@@ -30,13 +32,23 @@ class SchoolEventController extends Controller
     public function index(Request $request, Academy $academy)
     {
         $user = $request->user();
-        
-        $query = SchoolEvent::where('academy_id', $academy->id)
-            ->with(['creator:id,name,profile_photo_path']);
 
-        // For non-admins, only show published events
-        if (!$this->isAcademyAdmin($user, $academy)) {
-            $query->where('status', 'published');
+        $query = SchoolEvent::where('academy_id', $academy->id)
+            ->with(['author:id,name,profile_photo_path']);
+
+        // Academy admins see every event. Group admins additionally see drafts of their own group.
+        // Everyone else only sees published events.
+        if (! $this->isAcademyAdmin($user, $academy)) {
+            $managedGroupIds = \App\Models\AcademyGroupAdmin::where('user_id', $user->id)
+                ->whereIn('academy_group_id', \App\Models\AcademyGroup::where('academy_id', $academy->id)->pluck('id'))
+                ->pluck('academy_group_id');
+
+            $query->where(function ($q) use ($managedGroupIds) {
+                $q->where('status', 'published');
+                if ($managedGroupIds->isNotEmpty()) {
+                    $q->orWhereIn('group_id', $managedGroupIds);
+                }
+            });
         }
 
         // Filter by type
@@ -62,14 +74,14 @@ class SchoolEventController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
         // Calendar view - get by month
         if ($request->has('month') && $request->has('year')) {
             $query->whereMonth('start_datetime', $request->month)
-                  ->whereYear('start_datetime', $request->year);
+                ->whereYear('start_datetime', $request->year);
         }
 
         $events = $query->orderBy('start_datetime')
@@ -84,6 +96,7 @@ class SchoolEventController extends Controller
         $events->getCollection()->transform(function ($event) use ($registeredIds) {
             $event->registration_status = $registeredIds[$event->id] ?? null;
             $event->registered_count = $event->registrations()->whereIn('status', ['pending', 'confirmed', 'attended'])->count();
+
             return $event;
         });
 
@@ -131,11 +144,11 @@ class SchoolEventController extends Controller
         $user = $request->user();
 
         // Check access for non-published events
-        if ($event->status !== 'published' && !$this->isAcademyAdmin($user, $academy)) {
+        if ($event->status !== 'published' && ! $this->canManageEvent($user, $academy, $event->group_id)) {
             return response()->json(['success' => false, 'message' => 'Event not found'], 404);
         }
 
-        $event->load('creator:id,name,profile_photo_path');
+        $event->load('author:id,name,profile_photo_path');
 
         // Get user's registration if exists
         $registration = EventRegistration::where('event_id', $event->id)
@@ -146,7 +159,7 @@ class SchoolEventController extends Controller
         $event->registered_count = $event->registrations()
             ->whereIn('status', ['pending', 'confirmed', 'attended'])
             ->count();
-        $event->spots_remaining = $event->max_participants 
+        $event->spots_remaining = $event->max_participants
             ? max(0, $event->max_participants - $event->registered_count)
             : null;
 
@@ -163,22 +176,26 @@ class SchoolEventController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        // Group admins (e.g. หัวหน้าหอพัก/ชมรม) may create events scoped to their own group;
+        // school-wide events (no group_id) require academy admin.
+        if (! $this->canManageEvent($user, $academy, $request->group_id)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'event_type' => 'in:meeting,holiday,exam,activity,sports,ceremony,other',
+            'event_type' => 'in:meeting,training,holiday,orientation,exam,academic_competition,student_development,club,activity,sports,ceremony,field_trip,volunteer,other',
+            'attendance_pattern' => 'in:one_time,semester,recurring',
+            'group_id' => 'nullable|exists:academy_groups,id',
             'category' => 'nullable|string|max:100',
             'start_datetime' => 'required|date',
-            'end_datetime' => 'required|date|after:start_datetime',
+            'end_datetime' => 'nullable|date|after:start_datetime',
             'location' => 'nullable|string|max:255',
-            'is_online' => 'boolean',
-            'online_url' => 'nullable|url',
+            'location_type' => 'in:onsite,online,hybrid',
+            'meeting_url' => 'nullable|url',
             'max_participants' => 'nullable|integer|min:1',
-            'registration_required' => 'boolean',
+            'requires_registration' => 'boolean',
             'registration_deadline' => 'nullable|date|before:start_datetime',
             'is_all_day' => 'boolean',
             'is_recurring' => 'boolean',
@@ -196,20 +213,27 @@ class SchoolEventController extends Controller
 
         DB::beginTransaction();
         try {
+            $eventType = $request->get('event_type', 'activity');
+
             $event = SchoolEvent::create([
                 'academy_id' => $academy->id,
+                'group_id' => $request->group_id,
                 'created_by' => $user->id,
                 'title' => $request->title,
                 'description' => $request->description,
-                'event_type' => $request->get('event_type', 'activity'),
+                'event_type' => $eventType,
+                'attendance_pattern' => $request->get(
+                    'attendance_pattern',
+                    SchoolEvent::DEFAULT_PATTERN_BY_TYPE[$eventType] ?? SchoolEvent::PATTERN_ONE_TIME
+                ),
                 'category' => $request->category,
                 'start_datetime' => $request->start_datetime,
                 'end_datetime' => $request->end_datetime,
                 'location' => $request->location,
-                'is_online' => $request->get('is_online', false),
-                'online_url' => $request->online_url,
+                'location_type' => $request->get('location_type', 'onsite'),
+                'meeting_url' => $request->meeting_url,
                 'max_participants' => $request->max_participants,
-                'registration_required' => $request->get('registration_required', false),
+                'requires_registration' => $request->get('requires_registration', false),
                 'registration_deadline' => $request->registration_deadline,
                 'is_all_day' => $request->get('is_all_day', false),
                 'is_recurring' => $request->get('is_recurring', false),
@@ -235,11 +259,11 @@ class SchoolEventController extends Controller
             }
 
             // Generate sessions if recurring
-            if ($event->is_recurring && !empty($event->recurrence_pattern)) {
+            if ($event->is_recurring && ! empty($event->recurrence_pattern)) {
                 $this->generateSessions($event);
             }
 
-            $event->load('creator:id,name,profile_photo_path');
+            $event->load('author:id,name,profile_photo_path');
 
             return response()->json([
                 'success' => true,
@@ -248,9 +272,10 @@ class SchoolEventController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create event: ' . $e->getMessage(),
+                'message' => 'Failed to create event: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -266,22 +291,30 @@ class SchoolEventController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageEvent($user, $academy, $event->group_id)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Re-assigning to a different group also requires managing that group
+        if ($request->has('group_id') && $request->group_id != $event->group_id
+            && ! $this->canManageEvent($user, $academy, $request->group_id)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validator = Validator::make($request->all(), [
             'title' => 'string|max:255',
             'description' => 'nullable|string',
-            'event_type' => 'in:meeting,holiday,exam,activity,sports,ceremony,other',
+            'event_type' => 'in:meeting,training,holiday,orientation,exam,academic_competition,student_development,club,activity,sports,ceremony,field_trip,volunteer,other',
+            'attendance_pattern' => 'in:one_time,semester,recurring',
+            'group_id' => 'nullable|exists:academy_groups,id',
             'category' => 'nullable|string|max:100',
             'start_datetime' => 'date',
-            'end_datetime' => 'date|after:start_datetime',
+            'end_datetime' => 'nullable|date|after:start_datetime',
             'location' => 'nullable|string|max:255',
-            'is_online' => 'boolean',
-            'online_url' => 'nullable|url',
+            'location_type' => 'in:onsite,online,hybrid',
+            'meeting_url' => 'nullable|url',
             'max_participants' => 'nullable|integer|min:1',
-            'registration_required' => 'boolean',
+            'requires_registration' => 'boolean',
             'registration_deadline' => 'nullable|date',
         ]);
 
@@ -298,11 +331,11 @@ class SchoolEventController extends Controller
             $oldData = $event->toArray();
 
             $event->update($request->only([
-                'title', 'description', 'event_type', 'category',
+                'title', 'description', 'event_type', 'attendance_pattern', 'group_id', 'category',
                 'start_datetime', 'end_datetime', 'location',
-                'is_online', 'online_url', 'max_participants',
-                'registration_required', 'registration_deadline',
-                'is_all_day', 'is_recurring', 'recurrence_pattern'
+                'location_type', 'meeting_url', 'max_participants',
+                'requires_registration', 'registration_deadline',
+                'is_all_day', 'is_recurring', 'recurrence_pattern',
             ]));
 
             $this->auditLog->log(
@@ -326,13 +359,14 @@ class SchoolEventController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Event updated successfully',
-                'data' => $event->fresh()->load('creator:id,name,profile_photo_path'),
+                'data' => $event->fresh()->load('author:id,name,profile_photo_path'),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update event: ' . $e->getMessage(),
+                'message' => 'Failed to update event: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -348,7 +382,7 @@ class SchoolEventController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageEvent($user, $academy, $event->group_id)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -384,7 +418,7 @@ class SchoolEventController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageEvent($user, $academy, $event->group_id)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -424,7 +458,7 @@ class SchoolEventController extends Controller
         $user = $request->user();
 
         // Check if event accepts registrations
-        if (!$event->registration_required) {
+        if (! $event->registration_required) {
             return response()->json([
                 'success' => false,
                 'message' => 'This event does not require registration',
@@ -464,12 +498,14 @@ class SchoolEventController extends Controller
                     'status' => 'pending',
                     'cancelled_at' => null,
                 ]);
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Re-registered for event successfully',
                     'data' => $existing->fresh(),
                 ]);
             }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Already registered for this event',
@@ -521,7 +557,7 @@ class SchoolEventController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'Registration not found',
@@ -547,7 +583,7 @@ class SchoolEventController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageEvent($user, $academy, $event->group_id)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -585,7 +621,7 @@ class SchoolEventController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageEvent($user, $academy, $event->group_id)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -609,7 +645,7 @@ class SchoolEventController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageEvent($user, $academy, $event->group_id)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -639,7 +675,7 @@ class SchoolEventController extends Controller
 
         $user = $request->user();
 
-        if (!$this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageEvent($user, $academy, $event->group_id)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -737,17 +773,6 @@ class SchoolEventController extends Controller
     }
 
     /**
-     * Check if user is academy admin
-     */
-    private function isAcademyAdmin($user, Academy $academy): bool
-    {
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'admin', 'moderator'])
-            ->exists();
-    }
-
-    /**
      * Generate sessions based on recurrence pattern
      */
     private function generateSessions(SchoolEvent $event)
@@ -769,6 +794,8 @@ class SchoolEventController extends Controller
 
         $frequency = $pattern['frequency'] ?? 'weekly'; // daily, weekly
         $daysOfWeek = $pattern['days'] ?? []; // 0=Sun, 1=Mon... or specific dates
+        $timeSlots = $pattern['time_slots'] ?? null; // [{label, time}, ...] for multiple check-ins per day (e.g. ละหมาด 5 เวลา)
+        $slotDurationMinutes = $pattern['slot_duration_minutes'] ?? 15;
 
         $sessions = [];
         $currentDate = $startDate->copy();
@@ -787,47 +814,55 @@ class SchoolEventController extends Controller
             }
 
             if ($shouldCreate) {
-                // Create session
-                // Ensure time is preserved from event start time
-                $sessionStart = $currentDate->copy()->setTimeFromString($startDate->format('H:i'));
-                
-                // Calculate duration
-                $duration = $startDate->diffInMinutes(Carbon::parse($event->end_datetime));
-                // Wait, if event spans multiple days originally, this logic might be weird.
-                // Usually recurring events have a duration per session.
-                // Assuming start_datetime and end_datetime define the FIRST session time and duration.
-                
-                // Correct logic: event->end_datetime is often used as the END execution of the recurring series? 
-                // Or provided as end time of the first event instance.
-                // Let's assume start_datetime and end_datetime define the time block (e.g. 14:00 - 16:00) on the first day.
-                // And recurrence creates copies of this block.
-                
-                $originalStart = Carbon::parse($event->start_datetime);
-                $originalEnd = Carbon::parse($event->end_datetime);
-                
-                if ($originalStart->isSameDay($originalEnd)) {
-                     $durationMinutes = $originalStart->diffInMinutes($originalEnd);
-                     $sessionEnd = $sessionStart->copy()->addMinutes($durationMinutes);
-                } else {
-                     // Multi-day session? default 2 hours
-                     $sessionEnd = $sessionStart->copy()->addHours(2);
-                }
+                if (! empty($timeSlots)) {
+                    // One session per time slot per day (e.g. ละหมาด 5 เวลา/วัน)
+                    foreach ($timeSlots as $slot) {
+                        $sessionStart = $currentDate->copy()->setTimeFromString($slot['time']);
+                        $sessionEnd = $sessionStart->copy()->addMinutes($slotDurationMinutes);
 
-                $sessions[] = [
-                    'event_id' => $event->id,
-                    'title' => $event->title . ' - ' . $sessionStart->format('d M'),
-                    'start_datetime' => $sessionStart,
-                    'end_datetime' => $sessionEnd,
-                    'status' => 'scheduled',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                        $sessions[] = [
+                            'event_id' => $event->id,
+                            'title' => $event->title.' - '.$sessionStart->format('d M').' ('.($slot['label'] ?? $slot['time']).')',
+                            'slot_label' => $slot['label'] ?? null,
+                            'start_datetime' => $sessionStart,
+                            'end_datetime' => $sessionEnd,
+                            'status' => 'scheduled',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+                } else {
+                    // Single session per day — preserve time block from the event's first instance
+                    $sessionStart = $currentDate->copy()->setTimeFromString($startDate->format('H:i'));
+
+                    $originalStart = Carbon::parse($event->start_datetime);
+                    $originalEnd = Carbon::parse($event->end_datetime);
+
+                    if ($originalStart->isSameDay($originalEnd)) {
+                        $durationMinutes = $originalStart->diffInMinutes($originalEnd);
+                        $sessionEnd = $sessionStart->copy()->addMinutes($durationMinutes);
+                    } else {
+                        // Multi-day session? default 2 hours
+                        $sessionEnd = $sessionStart->copy()->addHours(2);
+                    }
+
+                    $sessions[] = [
+                        'event_id' => $event->id,
+                        'title' => $event->title.' - '.$sessionStart->format('d M'),
+                        'slot_label' => null,
+                        'start_datetime' => $sessionStart,
+                        'end_datetime' => $sessionEnd,
+                        'status' => 'scheduled',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
             }
 
             $currentDate->addDay();
         }
 
-        if (!empty($sessions)) {
+        if (! empty($sessions)) {
             ActivitySession::insert($sessions);
         }
     }
