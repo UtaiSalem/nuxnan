@@ -467,6 +467,8 @@ const handleTopicComplete = async (topicId: number) => {
       rewardResult.value = result.reward
       showRewardToast.value = true
       setTimeout(() => { showRewardToast.value = false }, 4000)
+    } else {
+      swal.toast('อ่านครบทุกหัวข้อ บทเรียนนี้เสร็จสมบูรณ์แล้ว!', 'success')
     }
   }
 }
