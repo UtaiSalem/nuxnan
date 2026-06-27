@@ -21,6 +21,12 @@ const getStatusColor = (lesson: any) => {
   if (lesson.progress_percentage > 0) return 'text-amber-500'
   return 'text-gray-300'
 }
+
+const getScoreColor = (lesson: any) => {
+  if (lesson.score_percentage >= 80) return 'text-emerald-500'
+  if (lesson.score_percentage >= 50) return 'text-amber-500'
+  return 'text-red-500'
+}
 </script>
 
 <template>
@@ -79,7 +85,18 @@ const getStatusColor = (lesson: any) => {
               {{ lesson.status_label }}
             </span>
           </div>
-          <div v-if="lesson.progress_percentage > 0 && !lesson.completed" class="text-[10px] font-black text-blue-500 font-audiowide">
+          <div
+            v-if="lesson.has_graded_activity"
+            class="shrink-0 flex flex-col items-end leading-none"
+          >
+            <span class="text-[10px] font-black font-audiowide" :class="getScoreColor(lesson)">
+              {{ lesson.score }}/{{ lesson.max_score }}
+            </span>
+            <span class="text-[8px] font-bold uppercase tracking-tighter text-gray-400">
+              {{ lesson.score_percentage }}%
+            </span>
+          </div>
+          <div v-else-if="lesson.progress_percentage > 0 && !lesson.completed" class="text-[10px] font-black text-blue-500 font-audiowide">
             {{ lesson.progress_percentage }}%
           </div>
         </div>

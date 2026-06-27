@@ -118,12 +118,37 @@ class CourseMemberController extends Controller
         $userId = $member->user_id;
 
         // Get all lessons with completion status
-        $lessons = $this->orderedCourseLessons($course)->get()->map(function ($lesson) use ($userId) {
+        $lessons = $this->orderedCourseLessons($course)->with('topics.assignments', 'assignments')->get()->map(function ($lesson) use ($userId) {
             $progress = \App\Models\LessonProgress::where('lesson_id', $lesson->id)
                 ->where('user_id', $userId)
                 ->first();
 
             $completed = $progress && $progress->status === 'completed';
+
+            // Graded activities (assignments) attached directly to the lesson or to its topics
+            $gradedAssignments = $lesson->assignments
+                ->merge($lesson->topics->flatMap->assignments)
+                ->filter(fn ($assignment) => $assignment->status === 1);
+
+            $hasGradedActivity = $gradedAssignments->isNotEmpty();
+            $score = null;
+            $maxScore = null;
+            $scorePercentage = null;
+
+            if ($hasGradedActivity) {
+                $answers = \App\Models\AssignmentAnswer::whereIn('assignment_id', $gradedAssignments->pluck('id'))
+                    ->where('user_id', $userId)
+                    ->get()
+                    ->keyBy('assignment_id');
+
+                $score = $gradedAssignments->sum(function ($assignment) use ($answers) {
+                    $answer = $answers->get($assignment->id);
+
+                    return $answer ? ($answer->points ?? 0) : 0;
+                });
+                $maxScore = $gradedAssignments->sum(fn ($assignment) => $assignment->points ?? $assignment->max_score ?? 100);
+                $scorePercentage = $maxScore > 0 ? round(($score / $maxScore) * 100) : 0;
+            }
 
             return [
                 'id' => $lesson->id,
@@ -131,6 +156,10 @@ class CourseMemberController extends Controller
                 'completed' => $completed,
                 'progress_percentage' => $completed ? 100 : 0,
                 'status_label' => $completed ? 'เสร็จสิ้น' : 'ยังไม่เริ่ม',
+                'has_graded_activity' => $hasGradedActivity,
+                'score' => $score,
+                'max_score' => $maxScore,
+                'score_percentage' => $scorePercentage,
             ];
         });
 

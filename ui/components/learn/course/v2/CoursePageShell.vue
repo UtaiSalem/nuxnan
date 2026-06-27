@@ -4,6 +4,7 @@ import CourseHero from '~/components/learn/course/v2/CourseHero.vue'
 import CourseHeroStats from '~/components/learn/course/v2/CourseHeroStats.vue'
 import CourseTabBar from '~/components/learn/course/v2/CourseTabBar.vue'
 import CourseSidebar from '~/components/learn/course/v2/CourseSidebar.vue'
+import CourseLessonsMenu from '~/components/learn/course/v2/CourseLessonsMenu.vue'
 import CourseInstructorWidget from '~/components/learn/course/CourseInstructorWidget.vue'
 import CourseProgressWidget from '~/components/learn/course/CourseProgressWidget.vue'
 import CourseLessonProgressWidget from '~/components/learn/course/CourseLessonProgressWidget.vue'
@@ -96,6 +97,12 @@ const isCourseBoardRoute = computed(() => {
   return path === `${basePath}/feeds` || path === `${basePath}/feeds/`
 })
 
+const isCourseLessonsIndexRoute = computed(() => {
+  const path = route.path
+  const basePath = `/Learn/Courses/${courseId.value}/lessons`
+  return path === basePath || path === `${basePath}/`
+})
+
 const shouldShowCourseInfoWidget = computed(() => isCourseInfoRoute.value || isCourseBoardRoute.value)
 
 usePageLayoutWidgets({
@@ -151,7 +158,8 @@ usePageLayoutWidgets({
 
       <!-- Default left widgets (non-feed pages) -->
       <template v-if="!isCourseBoardRoute && !isAttendancesRoute">
-        <CourseInstructorWidget v-if="course" :course="course" :owner="course.user" />
+        <!-- On the lessons index page, left side is reserved for lesson-related widgets only -->
+        <CourseInstructorWidget v-if="course && !isCourseLessonsIndexRoute" :course="course" :owner="course.user" />
 
         <CourseInfoWidget
           v-if="course && isTableLayout && shouldShowCourseInfoWidget"
@@ -170,8 +178,33 @@ usePageLayoutWidgets({
         />
 
         <template v-if="!isTableLayout">
-          <RecentlyViewedCoursesWidget />
-          <FavoriteCoursesWidget />
+          <template v-if="!isCourseLessonsIndexRoute">
+            <RecentlyViewedCoursesWidget />
+            <FavoriteCoursesWidget />
+          </template>
+
+          <div
+            v-if="courseMemberOfAuth && !isCourseAdmin && isCourseLessonsIndexRoute"
+            class="lg:sticky lg:top-36 space-y-4"
+          >
+            <CourseProgressWidget
+              :progress="overallProgress"
+              :course-id="courseId"
+              :is-loading="isProgressLoading"
+            />
+
+            <CourseLessonProgressWidget
+              :lessons="lessons"
+              :is-loading="isProgressLoading"
+              :error="progressError"
+            />
+
+            <CourseLessonsMenu
+              v-if="course"
+              :course-id="courseId"
+              :is-admin="isCourseAdmin"
+            />
+          </div>
         </template>
       </template>
     </Teleport>
@@ -185,6 +218,9 @@ usePageLayoutWidgets({
 
       <!-- Default right widgets (non-feed pages) -->
       <template v-if="!isCourseBoardRoute">
+        <!-- Course-related widgets moved here on the lessons index page -->
+        <CourseInstructorWidget v-if="course && isCourseLessonsIndexRoute" :course="course" :owner="course.user" />
+
         <CourseInfoWidget
           v-if="course && !isTableLayout && shouldShowCourseInfoWidget"
           :course="course"
@@ -203,12 +239,14 @@ usePageLayoutWidgets({
 
         <template v-if="courseMemberOfAuth && !isCourseInfoRoute && !isCourseAdmin">
           <CourseProgressWidget
+            v-if="!isCourseLessonsIndexRoute"
             :progress="overallProgress"
             :course-id="courseId"
             :is-loading="isProgressLoading"
           />
 
           <CourseLessonProgressWidget
+            v-if="!isCourseLessonsIndexRoute"
             :lessons="lessons"
             :is-loading="isProgressLoading"
             :error="progressError"
@@ -234,7 +272,13 @@ usePageLayoutWidgets({
           :course="course"
           :is-admin="isCourseAdmin"
           :course-member-of-auth="courseMemberOfAuth"
+          :show-lessons-menu="!isCourseLessonsIndexRoute"
         />
+
+        <template v-if="isCourseLessonsIndexRoute">
+          <RecentlyViewedCoursesWidget />
+          <FavoriteCoursesWidget />
+        </template>
 
         <MemberedCoursesWidget />
         <MyCoursesWidget />

@@ -9,6 +9,7 @@ const props = defineProps({
   course: { type: Object, required: true },
   courseMemberOfAuth: { type: Object, default: null },
   isAdmin: { type: Boolean, default: false },
+  showLessonsMenu: { type: Boolean, default: true },
 })
 
 const owner = computed(() => props.course?.user || props.course?.owner)
@@ -19,7 +20,7 @@ const courseId = computed(() => props.course?.id)
 <template>
   <div class="space-y-6">
     <!-- Lessons Menu -->
-    <CourseLessonsMenu v-if="courseId" :course-id="courseId" :is-admin="isAdmin" />
+    <CourseLessonsMenu v-if="courseId && showLessonsMenu" :course-id="courseId" :is-admin="isAdmin" />
 
     <!-- Group Card -->
     <CourseSidebarGroup v-if="memberGroup" :group="memberGroup" />
