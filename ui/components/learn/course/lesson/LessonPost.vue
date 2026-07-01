@@ -102,7 +102,6 @@ const handleUnlock = async () => {
 
 // State
 const showFullContent = ref(false)
-const showTopics = ref(false)
 const showVideoModal = ref(false) // Video modal state
 const showImagePreview = ref(false) // Image preview modal state
 const previewIndex = ref(0) // Current preview image index
@@ -426,10 +425,6 @@ const handleImageError = (event: Event, index: number) => {
 // Methods
 const toggleContent = () => {
   showFullContent.value = !showFullContent.value
-}
-
-const toggleTopics = () => {
-  showTopics.value = !showTopics.value
 }
 
 const handleEdit = () => {
@@ -917,20 +912,7 @@ const publicationStatusColor = computed(() => {
           </div>
 
           <div v-if="hasTopics">
-               <button
-                @click="toggleTopics"
-                class="w-full flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-              >
-                 <span class="font-semibold text-gray-800 dark:text-gray-200">
-                    {{ showTopics ? 'ซ่อนหัวข้อ' : 'แสดงหัวข้อทั้งหมด' }}
-                 </span>
-                 <Icon
-                  :icon="showTopics ? 'fluent:chevron-up-24-filled' : 'fluent:chevron-down-24-filled'"
-                  class="w-5 h-5 text-gray-600 dark:text-gray-400"
-                />
-              </button>
-
-              <div v-show="showTopics" class="mt-4 space-y-2">
+              <div class="space-y-2">
                 <TopicAccordion
                   v-for="topic in lesson.topics"
                   :key="topic.id"
