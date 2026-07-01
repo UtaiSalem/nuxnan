@@ -10,38 +10,57 @@ const courseStore = useCourseStore()
 const route = useRoute()
 
 const lessons = computed(() => courseStore.lessons)
-const isLoading = ref(false)
 
 const currentLessonId = computed(() => {
   const lessonId = route.params.lessonId
   return lessonId ? Number(lessonId) : null
 })
 
-const fetchLessons = async () => {
-  isLoading.value = true
+const isOnLessonsIndex = computed(() => {
+  const path = route.path
+  const base = `/Learn/Courses/${props.courseId}/lessons`
+  return path === base || path === `${base}/`
+})
+
+const hasLessonsForCourse = () =>
+  lessons.value.length > 0
+  && lessons.value.every((l: any) => Number(l.course_id) === Number(props.courseId))
+
+const isSelfLoading = ref(false)
+const isLoading = computed(() =>
+  isSelfLoading.value || (isOnLessonsIndex.value && !hasLessonsForCourse())
+)
+
+const fetchLessonsIfNeeded = async () => {
+  if (isOnLessonsIndex.value || hasLessonsForCourse()) return
+
+  isSelfLoading.value = true
   try {
-    await courseStore.fetchLessons(props.courseId, true)
+    await courseStore.fetchLessons(props.courseId)
   } finally {
-    isLoading.value = false
+    isSelfLoading.value = false
   }
 }
 
 onMounted(() => {
-  fetchLessons()
+  fetchLessonsIfNeeded()
 })
 
 watch(() => props.courseId, () => {
-  fetchLessons()
+  fetchLessonsIfNeeded()
 })
 
+const isDraft = (lesson: any) =>
+  lesson.publication_status === 'draft' || (!lesson.publication_status && lesson.status === 'draft')
+
 const getLessonStatusIcon = (lesson: any) => {
-  if (lesson.status === 'draft') return 'fluent:draft-24-regular'
+  if (isDraft(lesson)) return 'fluent:draft-24-regular'
   if (lesson.is_locked) return 'fluent:lock-closed-24-regular'
   return 'fluent:checkmark-circle-24-regular'
 }
 
 const getLessonStatusColor = (lesson: any) => {
-  if (lesson.status === 'draft') return 'text-gray-400'
+  if (isDraft(lesson)) return 'text-gray-400'
   if (lesson.is_locked) return 'text-amber-500'
   return 'text-emerald-500'
 }
@@ -77,7 +96,7 @@ const getLessonStatusColor = (lesson: any) => {
         ]"
       >
         <!-- Status Indicator -->
-        <div 
+        <div
           class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
           :class="[
             currentLessonId === lesson.id
@@ -85,8 +104,8 @@ const getLessonStatusColor = (lesson: any) => {
               : 'bg-gray-100 dark:bg-vikinger-dark-50/30'
           ]"
         >
-          <Icon 
-            :icon="getLessonStatusIcon(lesson)" 
+          <Icon
+            :icon="getLessonStatusIcon(lesson)"
             class="w-4 h-4"
             :class="currentLessonId === lesson.id ? 'text-white' : getLessonStatusColor(lesson)"
           />
@@ -97,7 +116,7 @@ const getLessonStatusColor = (lesson: any) => {
           <div class="text-xs font-bold truncate">
             {{ lesson.title }}
           </div>
-          <div 
+          <div
             class="text-[10px] font-medium"
             :class="currentLessonId === lesson.id ? 'text-white/70' : 'text-gray-500'"
           >
@@ -106,16 +125,16 @@ const getLessonStatusColor = (lesson: any) => {
         </div>
 
         <!-- Active Arrow -->
-        <Icon 
+        <Icon
           v-if="currentLessonId === lesson.id"
-          icon="fluent:chevron-right-24-filled" 
+          icon="fluent:chevron-right-24-filled"
           class="w-4 h-4 text-white animate-bounce-x"
         />
       </NuxtLink>
     </div>
 
     <!-- View All Link -->
-    <NuxtLink 
+    <NuxtLink
       :to="`/Learn/Courses/${courseId}/lessons`"
       class="mt-4 flex items-center justify-center gap-2 py-2 text-[10px] font-black text-vikinger-purple dark:text-vikinger-cyan hover:underline"
     >
