@@ -205,6 +205,16 @@ usePageLayoutWidgets({
               :is-admin="isCourseAdmin"
             />
           </div>
+
+          <div
+            v-if="isCourseAdmin && isCourseLessonsIndexRoute && course"
+            class="lg:sticky lg:top-36 space-y-4"
+          >
+            <CourseLessonsMenu
+              :course-id="courseId"
+              :is-admin="true"
+            />
+          </div>
         </template>
       </template>
     </Teleport>
@@ -219,7 +229,7 @@ usePageLayoutWidgets({
       <!-- Default right widgets (non-feed pages) -->
       <template v-if="!isCourseBoardRoute">
         <!-- Course-related widgets moved here on the lessons index page -->
-        <CourseInstructorWidget v-if="course && isCourseLessonsIndexRoute" :course="course" :owner="course.user" />
+        <CourseInstructorWidget v-if="course && isCourseLessonsIndexRoute" :course="course" :owner="course.user" :show-lessons-menu="false" />
 
         <CourseInfoWidget
           v-if="course && !isTableLayout && shouldShowCourseInfoWidget"

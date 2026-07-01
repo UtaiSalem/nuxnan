@@ -5,6 +5,7 @@ import { Icon } from '@iconify/vue'
 const props = defineProps({
   course: { type: Object, required: true },
   owner: { type: Object, required: true },
+  showLessonsMenu: { type: Boolean, default: true },
 })
 
 const api = useApi()
@@ -64,7 +65,7 @@ const lessons = computed(() => {
     </div>
 
     <!-- Course Lessons Menu -->
-    <div class="border-t border-gray-100 dark:border-vikinger-dark-100">
+    <div v-if="showLessonsMenu" class="border-t border-gray-100 dark:border-vikinger-dark-100">
       <div class="px-4 py-3 bg-gray-50/50 dark:bg-vikinger-dark-100/30 flex items-center justify-between">
         <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
           เมนูบทเรียนของรายวิชา
