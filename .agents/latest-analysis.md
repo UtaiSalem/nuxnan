@@ -1,4 +1,4 @@
-# แผนการรีไฟน์ Phaser Classroom Simulation (Refined v4)
+﻿# แผนการรีไฟน์ Phaser Classroom Simulation (Refined v4)
 
 ## 5 Critical Bugs
 
@@ -7031,3 +7031,1030 @@ async function load() {
   - Ran `php artisan migrate` successfully.
   - Ran `php artisan test tests/Feature/UserProfilePrivacyTest.php` successfully (5 passed, 26 assertions).
   - Ran `vendor/bin/pint` successfully.
+## 2026-06-19 Nuxt duplicated student-profile imports warning
+
+- Scope: frontend-only analysis; no application source changes made.
+- Root cause: `ui/composables/useMyStudentProfile.ts` duplicates and exports eight interfaces already exported by `ui/composables/useStudentProfile.ts`: `StudentProfile`, `ClassroomInfo`, `AcademicInfo`, `StudentAddress`, `StudentContact`, `StudentGuardian`, `StudentHealthInfo`, and `AcademyInfo`.
+- Nuxt auto-import scans both composables, keeps the exports from `useStudentProfile.ts`, and ignores the duplicate names from `useMyStudentProfile.ts`; generated `ui/.nuxt/imports.d.ts` confirms that resolution.
+- The duplicated interface bodies are currently identical. The repeated warning blocks at startup/HMR are repeated scans, not separate defects. Runtime/build completes, but the ambiguity can hide future type-contract drift.
+- Recommended fix: make `useStudentProfile.ts` the single type owner; import the shared types into `useMyStudentProfile.ts` with `import type`, keep only `MyStudentProfileData` and `STUDENT_NOT_LINKED_CODE` local, and reuse `ACCESS_LEVEL_LABELS` if appropriate.
+- Verification plan: run `npx nuxt prepare` or restart `npm run dev`, confirm no duplicated-import warnings and inspect regenerated `.nuxt/imports.d.ts`; then run a focused TypeScript/build check and smoke both `/academies/:name/my-profile` and `/academies/:name/students/:id/profile`.
+- Existing user work preserved: `ui/pages/academies/[name]/dashboard/student.vue` has an uncommitted quick-action link and must not be overwritten.
+
+---
+
+## Work Plan — Dedupe `useMyStudentProfile` Types (2026-06-19, refined v2)
+
+### 0. ข้อค้นพบเพิ่มเติมจากการสำรวจ (กระทบทิศทางแผน)
+
+| รหัส | สิ่งที่เจอ | นัยต่อแผน |
+|---|---|---|
+| **F1** | `useMyStudentProfile` ถูกใช้ที่ `ui/pages/academies/[name]/my-profile.vue` ที่เดียวเท่านั้น | blast radius เล็กมาก กล้า refactor ได้ |
+| **F2** | `ProfileViewCards.vue:15` import type จาก `useStudentProfile` อยู่แล้ว → ฝั่งนี้ implicitly ยอมรับว่า `useStudentProfile` เป็น source of truth | ยืนยันทิศทาง "ใช้ useStudentProfile เป็นแหล่ง type หลัก" |
+| **F3** | `useMyStudentProfile` มี inline `labels` map ซ้ำกับ `ACCESS_LEVEL_LABELS` ที่ exported อยู่แล้ว (บรรทัด 200–208) | dedup เพิ่มได้ในรอบเดียวกัน |
+| **F4** | `STUDENT_NOT_LINKED_CODE` กับ `MyStudentProfileData` มีแค่ใน `useMyStudentProfile` ที่เดียว → local-only | คงไว้ในไฟล์เดิม ไม่ต้องย้าย |
+| **F5** | Computed getters ทั้งสองไฟล์เกือบ identical (student, classroom, fullNameTh, ...) | ตรงนี้คือ "นัวซ้ำ" อีกชั้น แต่ **ไม่อยู่ในขอบเขตรอบนี้** — บันทึกเป็น follow-up |
+| **F6** | `MyStudentProfileData` กับ `StudentProfileData` มี shape เหมือนกัน 100% | สามารถยุบเป็น type alias ของ `StudentProfileData` ได้ ลด surface อีกหนึ่งจุด |
+| **F7** | คอมเมนต์ในไฟล์เขียนว่า "Types (re-exported from useStudentProfile for convenience)" แต่จริง ๆ **redeclare ไม่ใช่ re-export** → คอมเมนต์หลอก | ลบคอมเมนต์เก่าและแทนด้วยข้อเท็จจริงปัจจุบัน |
+| **F8** | ทั้งสอง composable อยู่ใน `ui/composables/` ซึ่ง Nuxt auto-import scan | ไม่ต้องแตะ import ใน `my-profile.vue` หลัง refactor — symbol เดิมยังถูก resolve ผ่าน auto-import |
+
+### 1. หลักการของรอบนี้
+
+1. **เป้าหมายเดียว**: ทำให้ warning duplicate-import หาย โดยไม่กระทบ runtime
+2. **source of truth = `useStudentProfile.ts`** ตามที่ `ProfileViewCards.vue` ใช้อยู่แล้ว (F2)
+3. **ไม่ทำ refactor ขยายขอบ** เช่น ยุบ computed getters ร่วมกัน → บันทึกเป็น follow-up (F5)
+4. **ไม่แตะ `my-profile.vue`** ถ้าไม่จำเป็น — symbol auto-import คงเดิม (F8)
+5. **ไม่ touch ไฟล์ dashboard ที่ค้าง uncommitted** (`ui/pages/academies/[name]/dashboard/student.vue`)
+6. **commit เดียวจบ** — เป็น cleanup ขนาดเล็ก ไม่ต้องแยก phase
+
+### 2. แผนทีละขั้นตอน (single PR, ~15 นาที)
+
+#### **Step 1 — เตรียม working tree (1 นาที)**
+- `git status` ยืนยันว่ามี modified อยู่ 2 ไฟล์: `.agents/latest-analysis.md` กับ `ui/pages/academies/[name]/dashboard/student.vue`
+- **ห้าม `git add -A`** — stage เฉพาะไฟล์ที่จะแก้ในรอบนี้
+
+#### **Step 2 — แก้ `useMyStudentProfile.ts` (5 นาที)**
+
+โครงสร้างไฟล์ใหม่:
+```ts
+/**
+ * Composable for fetching the current user's own student profile.
+ * Calls /api/academies/{academy}/students/me/profile
+ * Returns the same shape as useStudentProfile so ProfileViewCards components can be reused.
+ */
+import { ref, computed, type Ref } from 'vue'
+import { useApi } from './useApi'
+import type {
+  StudentProfile,
+  ClassroomInfo,
+  AcademicInfo,
+  StudentAddress,
+  StudentContact,
+  StudentGuardian,
+  StudentHealthInfo,
+  AcademyInfo,
+  StudentProfileData,
+} from './useStudentProfile'
+import { ACCESS_LEVEL_LABELS } from './useStudentProfile'
+
+// MyStudentProfileData has identical shape to StudentProfileData (per /students/me/profile contract).
+// Keep as type alias so future drift fails type-check loudly.
+export type MyStudentProfileData = StudentProfileData
+
+export const STUDENT_NOT_LINKED_CODE = 'STUDENT_NOT_LINKED'
+
+export const useMyStudentProfile = (academyName: Ref<string> | string) => {
+  // ... body เดิม แต่ accessLevelLabel ใช้ ACCESS_LEVEL_LABELS[accessLevel.value] || accessLevel.value
+}
+```
+
+การเปลี่ยนแปลงเฉพาะจุด:
+- **ลบ** 8 interface declarations (บรรทัด 17–119): `StudentProfile`, `ClassroomInfo`, `AcademicInfo`, `StudentAddress`, `StudentContact`, `StudentGuardian`, `StudentHealthInfo`, `AcademyInfo`
+- **ลบ** `interface MyStudentProfileData` (บรรทัด 121–131) → แทนด้วย `export type MyStudentProfileData = StudentProfileData`
+- **เพิ่ม** `import type { ... } from './useStudentProfile'` (เฉพาะ 8 type + `StudentProfileData`)
+- **เพิ่ม** `import { ACCESS_LEVEL_LABELS } from './useStudentProfile'` (value import แยกจาก type import)
+- **แทน** inline `labels` map ใน `accessLevelLabel` computed (บรรทัด 199–209) ด้วย `ACCESS_LEVEL_LABELS[accessLevel.value] || accessLevel.value`
+- **ลบ** คอมเมนต์ "Types (re-exported from useStudentProfile for convenience)" และเปลี่ยนเป็นคำอธิบายที่ตรงข้อเท็จจริง (F7)
+- **คง** ทุก computed/state/action getter เดิม — return shape ต้องเหมือนเดิม 100%
+
+#### **Step 3 — Verify: TypeScript & auto-import (3 นาที)**
+- `cd ui ; npx nuxt prepare` — สร้าง `.nuxt/imports.d.ts` ใหม่
+- ตรวจ `ui/.nuxt/imports.d.ts` ว่ายังมี `useMyStudentProfile`, `MyStudentProfileData`, `STUDENT_NOT_LINKED_CODE` และไม่มี warning duplicate
+- `npx vue-tsc --noEmit 2>&1 | Select-String -Pattern "useMyStudentProfile|useStudentProfile|my-profile"` — ต้องไม่มี error ใหม่จาก 2 ไฟล์นี้
+- ไม่ต้อง check ทั้ง repo (CLAUDE.md ยืนยันว่ามี pre-existing errors)
+
+#### **Step 4 — Verify: dev server warning หาย (3 นาที)**
+- Restart `npm run dev` ใน `ui/` (ถ้าค้างอยู่)
+- ดู console — warning เก่าจะระบุชื่อ 8 symbol → ต้องไม่ขึ้นอีก
+- ถ้ายังขึ้น → ตรวจ Step 2 ว่าลบครบหรือยัง (อาจมี duplicate ใน `.d.ts` cache → ลบ `ui/.nuxt/` แล้ว `nuxt prepare` ใหม่)
+
+#### **Step 5 — Smoke test (3 นาที)**
+- เปิด `/academies/<academy>/my-profile`:
+  - หน้าโหลด → ข้อมูล student แสดง, `accessLevelLabel` แสดงเป็นภาษาไทยตรง (เช่น "นักเรียน (ตัวเอง)")
+  - กรณี unlinked → error message เดิมยังขึ้น
+- เปิด `/academies/<academy>/students/<id>/profile`:
+  - ไม่มีอะไรเปลี่ยน (regression check) — ProfileViewCards ยัง render type จาก `useStudentProfile` ถูกต้อง
+- กรณีไม่สะดวกเปิด browser → ระบุชัดในรายงานว่า "skipped UI smoke" ตาม global instruction
+
+#### **Step 6 — Commit (1 นาที)**
+```
+refactor(ui): dedupe student profile types in useMyStudentProfile
+
+useMyStudentProfile.ts re-declared 8 interfaces already exported by
+useStudentProfile.ts, triggering Nuxt duplicate auto-import warnings.
+Make useStudentProfile the single owner; import types and the shared
+ACCESS_LEVEL_LABELS map. MyStudentProfileData becomes a type alias.
+```
+- Stage เฉพาะ `ui/composables/useMyStudentProfile.ts` (+ `.agents/latest-analysis.md` ถ้าต้องการเก็บแผนนี้ใน commit เดียวกัน)
+- **อย่า** stage `ui/pages/academies/[name]/dashboard/student.vue`
+
+### 3. Risk & Rollback
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Type drift หาก backend ของ `/students/me/profile` กับ `/students/{id}/profile` เริ่มต่างกัน | ต่ำ ระยะสั้น / สูง ระยะยาว | กลาง | type alias จะ break พร้อมกัน → บังคับ resolve ตอนนั้น (ดี) |
+| Auto-import miss `MyStudentProfileData` หลัง alias | ต่ำ | ต่ำ | Step 3 ตรวจ `.nuxt/imports.d.ts` ก่อน commit |
+| Warning ไม่หายเพราะ HMR cache | กลาง | ต่ำ | ลบ `ui/.nuxt/` + restart dev (Step 4) |
+| `accessLevelLabel` แสดงผลต่างจากเดิม | ต่ำ มาก | ต่ำ | ทั้งสอง map identical (verified §3 ของไฟล์) |
+
+Rollback: `git revert <sha>` คืนค่าเดิมได้ทันที — ไม่มี migration / API change
+
+### 4. Out of Scope (รอบนี้ — บันทึกเป็น follow-up)
+
+- ❌ **ยุบ computed getters ร่วมกัน** (F5) — สร้าง `useStudentProfileBase(profileDataRef)` factory แล้วให้ทั้งสอง composable wrap; เลี่ยงรอบนี้เพราะเพิ่ม diff surface และอาจกระทบ caller ที่ไม่จำเป็น
+- ❌ ย้าย type ไป `ui/types/student.ts` แยก — ไม่จำเป็นถ้ามี source of truth ไฟล์เดียว
+- ❌ แก้ shape ของ API response (`StudentProfileData` mismatch กับ backend resource จริง) — ไม่ใช่ปัญหารอบนี้
+- ❌ แตะ `useStudentProfile.ts` — ไฟล์นี้ stable อยู่แล้ว, เปลี่ยนเสี่ยง regression ทั่ว ProfileViewCards
+- ❌ แตะ `dashboard/student.vue` ที่ค้าง uncommitted
+
+### 5. Definition of Done
+
+- [ ] `useMyStudentProfile.ts` ไม่มี `export interface` ของ 8 type ที่ซ้ำ
+- [ ] `ACCESS_LEVEL_LABELS` ถูก import จาก `useStudentProfile` (ไม่มี inline duplicate map)
+- [ ] `MyStudentProfileData = StudentProfileData` (alias)
+- [ ] `.nuxt/imports.d.ts` regenerate แล้ว ไม่มี duplicate
+- [ ] `npm run dev` ไม่ขึ้น duplicate-import warning อีก
+- [ ] `/academies/:name/my-profile` ทำงานเหมือนเดิม (smoke)
+- [ ] `/academies/:name/students/:id/profile` ไม่ regress (smoke)
+- [ ] Commit single, ไม่ลาก `dashboard/student.vue` ติดมาด้วย
+
+## 2026-06-19 Plan — Main dashboard entry to academy dashboard
+
+- Scope: frontend-first planning; no feature implementation performed.
+- User-visible source: `ui/components/dashboard/DashboardQuickActions.vue`, rendered by `ui/pages/Dashboard.vue`.
+- Existing reusable flow:
+  - Approved memberships are available from `GET /api/academies/users/{user}/membered-academies`.
+  - `/academies` already lists all/membered academies and can serve as the multi-academy or empty-state destination.
+  - `/academies/{name}/dashboard` already resolves the authenticated member's role and redirects to student, teacher, parent, staff, or admin dashboard.
+- Recommended behavior for a new `โรงเรียนของฉัน` quick action:
+  - One approved academy: link directly to `/academies/{encodedName}/dashboard`.
+  - Zero or multiple approved academies: link to `/academies?view=my` (the page should honor the query and open the “ของฉัน” view).
+  - Loading/API failure: keep a safe `/academies` fallback and avoid blocking the other quick actions.
+- Likely files:
+  - `ui/components/dashboard/DashboardQuickActions.vue`
+  - `ui/pages/Dashboard.vue` only if membership state is fetched at page level and passed as typed props.
+  - `ui/pages/academies/index.vue` to initialize `currentView` from `?view=my`.
+  - Prefer a small shared `useMemberedAcademies` composable only if duplicate fetching remains across dashboard, academies page, and widget.
+- API caution: the current endpoint accepts a route-bound `{user}` and should be reviewed to ensure callers cannot enumerate another user's memberships; a self-scoped endpoint is preferable as a follow-up if authorization is missing.
+- Verification plan: test zero/one/multiple memberships, every academy role redirect, URL encoding for Thai academy names, loading/error fallback, responsive 2-column quick-action layout, and existing Earn links.
+- Preserve existing user work in `ui/composables/useMyStudentProfile.ts` and `ui/pages/academies/[name]/dashboard/student.vue`.
+
+---
+
+## Work Plan — Quick Action "โรงเรียนของฉัน" (Refined v2, 2026-06-19)
+
+### 0. ข้อค้นพบเพิ่มเติมจากการสำรวจโค้ดจริง (กระทบทิศทางแผนของผู้ใช้)
+
+| รหัส | สิ่งที่เจอ | นัยต่อแผน |
+|---|---|---|
+| **D1** | `DashboardQuickActions.vue` ใช้ `const actions = [...]` แบบ **static array** ไม่มี state/fetch เลย — เป็น pure layout component | การเพิ่มปุ่มที่ "smart" (ปลายทางขึ้นกับจำนวนโรงเรียน) ทำให้ต้องเปลี่ยน component นี้จาก static → reactive และเพิ่ม fetch lifecycle |
+| **D2** | Grid ปัจจุบันคือ `grid-cols-2` (4 ปุ่ม = 2×2) ทุก viewport | แผนผู้ใช้บอก "ปุ่มเต็มความกว้าง" ใต้ 2×2 → ทำได้ด้วย wrapper แยกหรือ grid item `col-span-2` |
+| **D3** | API endpoint คือ `GET /api/academies/users/{user}/membered-academies` รับ `{user}` ใน URL → **เสี่ยง IDOR** ถ้า controller ไม่เช็คว่า `auth()->id() === $user->id` | ก่อน implement frontend ต้อง grep controller ยืนยัน authorization; ถ้าไม่มี ให้เพิ่มก่อนหรือเปลี่ยนเป็น `/me/` self-scoped |
+| **D4** | `MemberedAcademiesWidget.vue` มี fetch logic เดียวกัน + ใช้ `JSON.parse(JSON.stringify(...))` workaround สำหรับ Pinia | ถ้าจะแยก composable `useMemberedAcademies` ต้องคง workaround นี้ไว้ (มี comment ระบุเป็น fix จงใจ) — มิฉะนั้น regress widget เดิม |
+| **D5** | response shape ไม่แน่นอน: `response.academies?.data || response.academies` (paginated vs raw array) | composable ต้อง normalize shape ก่อนคืนค่า มิฉะนั้น caller ต้อง handle 2 รูปแบบ |
+| **D6** | `/academies/{name}/dashboard/index.vue` มี router logic ของตัวเองอยู่แล้ว (call `my-role` API แล้ว redirect ไป student/teacher/parent/staff/admin) | quick action **ไม่ต้องรู้บทบาท** ส่งไป `/dashboard` ตรง ๆ ระบบเดิมจัดการเอง |
+| **D7** | response item ของ membered-academies มี field `status` (1=pending, 2=approved) ดูจาก `getMemberStatusLabel` ใน widget | "1 โรงเรียน" ที่จะ deep-link ต้องนับเฉพาะ `status === 2` (approved) เท่านั้น — pending ไม่ควรพาเข้า dashboard |
+| **D8** | `MemberStatus` field ของ membered-academies endpoint อาจมีค่าอื่น (rejected, suspended, ...) | filter ใน composable ใช้ `===2` ไม่ใช่ `!==1` เพื่อความเข้มงวด |
+| **D9** | ชื่อโรงเรียนภาษาไทย/อักขระพิเศษ → ปัจจุบัน `/academies/${encodedName}/dashboard` ที่ใช้ `encodeURIComponent` ก็พอ — แต่ต้องไม่ลืม encode ใน quick action ด้วย | ใช้ helper `encodeURIComponent(academy.name)` ตรงจุด link |
+| **D10** | Quick action เดิมเป็น `NuxtLink :to="action.link"` (static string) | สำหรับปุ่มใหม่ที่ link เปลี่ยนตาม state ต้องใช้ `computed` หรือ render แยกออกจาก loop |
+| **D11** | Endpoint นี้ถูกเรียกใน widget อยู่แล้ว → ถ้า Dashboard.vue render ทั้ง `MemberedAcademiesWidget` + `DashboardQuickActions` เพิ่ม fetch ตัวเดียวกัน 2 รอบ | ระยะยาวควรย้ายไป Pinia store แต่ **รอบนี้ accept duplicate fetch** เพื่อไม่ขยาย scope (cache ที่ HTTP layer ดูแลพอ) |
+| **D12** | `Dashboard.vue` ใช้ `layout: 'main'` + `middleware: ['auth']` → `user` พร้อมใช้ผ่าน auth store แน่นอน | ไม่ต้อง guard null user ภายใน quick action component (แต่เผื่อ edge case ระหว่าง logout ก็ใส่ early-return) |
+
+### 1. หลักการของรอบนี้ (เสริม/แก้ของผู้ใช้)
+
+1. **ไม่ทำ over-engineering**: ไม่ต้องสร้าง Pinia store ใหม่ ไม่ต้อง refactor widget เดิม — เพิ่ม composable เล็ก ๆ ใช้ร่วม 1 ตัว
+2. **ปุ่มต้อง "feel instant"**: ถ้า fetch ยังไม่เสร็จ → ใช้ปลายทาง fallback `/academies` ทันที (ไม่ block, ไม่ disable ปุ่ม)
+3. **Security first**: ก่อน implement ตรวจ `AcademyController::getAuthMemberedAcademies` ว่า enforce ownership หรือไม่ — ถ้าไม่ enforce เพิ่ม policy/abort ก่อน (D3)
+4. **ไม่กระทบเมนู 4 ปุ่มเดิม**: ต้อง render ครบเหมือนเดิม ทุก viewport
+5. **คง widget เดิมไม่แตะ**: `MemberedAcademiesWidget.vue` ไม่ต้องเปลี่ยน (D4) — เพื่อแยก concern และลด blast radius
+6. **commit แยกตาม layer**: backend (ถ้ามี security fix) → composable → component → query handler ที่ academies page
+
+### 2. Decision Matrix — ปลายทางของปุ่ม
+
+| สถานะ | จำนวนสมาชิก approved | ปลายทาง |
+|---|---|---|
+| กำลังโหลด | unknown | `/academies` (safe fallback) |
+| Fetch error | unknown | `/academies` |
+| ไม่มี (0) | 0 | `/academies?view=all` (เปิดแท็บค้นหา ไม่ใช่ "ของฉัน" ที่ว่าง) |
+| มี 1 แห่ง | 1 | `/academies/{encodeURIComponent(name)}/dashboard` |
+| มีหลายแห่ง | ≥2 | `/academies?view=my` |
+| มี pending อย่างเดียว | 0 approved + ≥1 pending | `/academies?view=my` (ให้เห็นสถานะรออนุมัติ) |
+
+หมายเหตุ: เพิ่ม case "pending only" ที่ผู้ใช้ยังไม่ได้ระบุ — ถ้าส่งไป `/academies` (all) ผู้ใช้จะหา pending ของตัวเองไม่เจอ; ส่งไป `?view=my` ดีกว่า
+
+### 3. Backend Security Pre-check (Phase 0, ~15 นาที)
+
+ก่อนทำ frontend ทำสิ่งนี้ก่อน (ไม่ใช่ optional):
+
+1. อ่าน `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyController.php` method `getAuthMemberedAcademies`
+2. ตรวจว่ามี check pattern แบบ:
+   ```php
+   if (auth()->id() !== $user->id) { abort(403); }
+   ```
+   หรือ `$this->authorize('viewMemberships', $user)` หรือ Policy
+3. ถ้าไม่มี → เพิ่ม guard ใน method นี้ (commit แยก):
+   ```php
+   public function getAuthMemberedAcademies(User $user, Request $request) {
+       abort_unless($request->user()->id === $user->id, 403);
+       // ... existing code
+   }
+   ```
+4. รัน `php artisan test --filter=Academy` (ถ้ามี test) + manual: เรียก endpoint ด้วย user A พยายามดูของ user B → ต้องได้ 403
+
+**ทำไมต้องทำก่อน frontend**: ถ้า controller ไม่ปลอดภัย การเพิ่มปุ่มที่ใช้ endpoint นี้แล้ว rollout ออกไปคือการขยายผิวโจมตี — แก้ตอนนี้คอมมิตเล็ก ทบทวนง่าย
+
+**Deliverable**: 1 commit `fix(api): enforce owner check on membered-academies endpoint` (ถ้าจำเป็น)
+
+### 4. Phase-by-Phase Plan
+
+#### **Phase 1 — Composable `useMemberedAcademies` (~25 นาที)**
+
+สร้างไฟล์ใหม่ `ui/composables/useMemberedAcademies.ts`:
+
+```ts
+import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
+
+export interface MemberedAcademy {
+  id: number
+  name: string
+  slogan?: string
+  logo?: string
+  status: number // 1=pending, 2=approved
+  // ... fields เพิ่มเติมตาม API response
+}
+
+export const useMemberedAcademies = () => {
+  const api = useApi()
+  const { user } = storeToRefs(useAuthStore())
+
+  const academies = ref<MemberedAcademy[]>([])
+  const isLoading = ref(false)
+  const isLoaded = ref(false)
+  const error = ref<string | null>(null)
+
+  const fetch = async () => {
+    if (!user.value) return
+    if (isLoaded.value) return // simple in-memory cache ต่อ instance
+    isLoading.value = true
+    try {
+      const res: any = await api.get(
+        `/api/academies/users/${user.value.id}/membered-academies`,
+        { params: { per_page: 50 } } // เผื่อผู้ใช้สังกัดหลายโรงเรียน
+      )
+      if (res.success) {
+        const list = res.academies?.data || res.academies || []
+        academies.value = JSON.parse(JSON.stringify(list)) // คง workaround เดิม [[D4]]
+        isLoaded.value = true
+      }
+    } catch (e) {
+      error.value = (e as Error).message
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const approved = computed(() => academies.value.filter(a => a.status === 2))
+  const pending = computed(() => academies.value.filter(a => a.status === 1))
+
+  const quickActionTarget = computed(() => {
+    if (isLoading.value || !isLoaded.value) return '/academies'
+    if (error.value) return '/academies'
+    if (approved.value.length === 1) {
+      const name = encodeURIComponent(approved.value[0].name)
+      return `/academies/${name}/dashboard`
+    }
+    if (approved.value.length >= 2) return '/academies?view=my'
+    if (pending.value.length > 0) return '/academies?view=my'
+    return '/academies?view=all'
+  })
+
+  return { academies, approved, pending, isLoading, isLoaded, error, fetch, quickActionTarget }
+}
+```
+
+ขอบเขตที่ตั้งใจ:
+- ไม่ทำ shared state ข้าม component (เพราะใช้ที่เดียวคือ DashboardQuickActions); แต่ออกแบบให้ widget เดิม migrate ได้ในอนาคต
+- `quickActionTarget` เป็น computed → reactive อัตโนมัติเมื่อ fetch เสร็จ
+
+**Deliverable**: 1 ไฟล์ใหม่, 1 commit `feat(ui): add useMemberedAcademies composable`
+
+#### **Phase 2 — เพิ่มปุ่ม "โรงเรียนของฉัน" ใน DashboardQuickActions (~30 นาที)**
+
+แก้ `ui/components/dashboard/DashboardQuickActions.vue`:
+
+โครงสร้างใหม่:
+```vue
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { Icon } from '@iconify/vue'
+
+const actions = [ /* 4 ปุ่มเดิม ไม่แตะ */ ]
+
+const { fetch, quickActionTarget, isLoading, approved } = useMemberedAcademies()
+onMounted(() => { fetch() })
+</script>
+
+<template>
+  <div class="bg-white ... p-4">
+    <h2 ...>เมนูเข้าถึงด่วน</h2>
+
+    <div class="grid grid-cols-2 gap-2 md:gap-3">
+      <NuxtLink v-for="action in actions" ... /> <!-- เดิม -->
+    </div>
+
+    <!-- ปุ่มใหม่: เต็มความกว้าง, อยู่ใต้ grid 2×2 -->
+    <NuxtLink
+      :to="quickActionTarget"
+      class="mt-3 group flex items-center gap-3 p-3 rounded-xl
+             bg-gradient-to-r from-sky-50 to-indigo-50
+             dark:from-sky-900/20 dark:to-indigo-900/20
+             border border-sky-100 dark:border-sky-900/30
+             hover:border-sky-300 dark:hover:border-sky-600
+             transition-all"
+      :aria-busy="isLoading"
+    >
+      <div class="w-10 h-10 bg-gradient-to-br from-sky-500 to-indigo-600
+                  rounded-xl flex items-center justify-center shadow-md
+                  group-hover:scale-110 transition-transform">
+        <Icon icon="mdi:school" class="w-5 h-5 text-white" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="font-bold text-gray-900 dark:text-white text-xs md:text-sm">
+          โรงเรียนของฉัน
+        </p>
+        <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 truncate">
+          <span v-if="isLoading">กำลังโหลด...</span>
+          <span v-else-if="approved.length === 1">{{ approved[0].name }}</span>
+          <span v-else-if="approved.length > 1">{{ approved.length }} โรงเรียน</span>
+          <span v-else>ค้นหาหรือสมัครเข้าโรงเรียน</span>
+        </p>
+      </div>
+      <Icon icon="mdi:chevron-right" class="w-5 h-5 text-gray-400
+             group-hover:text-sky-600 group-hover:translate-x-1 transition-all" />
+    </NuxtLink>
+  </div>
+</template>
+```
+
+ข้อตัดสินใจ design:
+- **แยกออกจาก v-for**: ปุ่มใหม่มี shape ต่าง (full-width + secondary text) — ฝืน loop จะทำ template ซับซ้อน
+- **มี subtitle ไดนามิก**: ผู้ใช้เห็นทันทีว่ามีกี่โรงเรียน — ลดความรู้สึกว่า "ไม่รู้จะเข้าไปไหน"
+- **gradient โทนน้ำเงิน-คราม** ตัดกับ 4 ปุ่มเดิม (purple/emerald/amber/rose) — บอกว่าเป็นกลุ่ม navigation ไม่ใช่ Earn
+- **ไม่ disable ตอน loading**: link `to="/academies"` (fallback) ยังคลิกได้ → ผู้ใช้ไม่ติด
+
+**Deliverable**: 1 commit `feat(ui): add school quick action to dashboard`
+
+#### **Phase 3 — รองรับ `?view=my` ใน `/academies` (~15 นาที)**
+
+แก้ `ui/pages/academies/index.vue`:
+
+ตรง section `// State`:
+```ts
+const route = useRoute()
+const currentView = ref<'all' | 'my'>(
+  route.query.view === 'my' ? 'my' : 'all'
+)
+```
+
+เพิ่ม watch (เผื่อ navigate ไป-มาด้วย browser history):
+```ts
+watch(() => route.query.view, (v) => {
+  currentView.value = v === 'my' ? 'my' : 'all'
+})
+```
+
+ตรวจว่า `fetchMyAcademies` ถูกเรียกตอน `currentView === 'my'` หรือ onMount แล้วยัง — ถ้ายังไม่ถูกเรียก ให้ trigger ใน `onMounted` เมื่อ initial view = 'my'
+
+**Deliverable**: 1 commit `feat(ui): honor ?view=my query on academies page`
+
+#### **Phase 4 — Edge case & Polish (~20 นาที)**
+
+- **4.1**: ทดสอบ academy name ที่มีอักขระพิเศษ (เช่น `โรงเรียนวัด/สวน`, `St. John's`) — `encodeURIComponent` ครอบคลุมไหม? ถ้าชื่อมี `/` ต้องไม่หลุดเป็น path segment
+- **4.2**: Reduced motion: ปุ่ม hover animation มี `transition-transform` กับ `translate-x-1` — ตรวจว่าไม่กระตุก
+- **4.3**: Dark mode: gradient `dark:from-sky-900/20` ตรวจคอนทราสต์
+- **4.4**: Mobile (<480px): `gap-3` + 10px font ของ subtitle ไม่ overflow
+- **4.5**: A11y: `aria-busy` ตอน loading; ปุ่มมี `<NuxtLink>` มี implicit role=link → screen reader ได้
+
+**Deliverable**: 0–1 commit `fix(ui): polish school quick action visuals` (ถ้าเจอประเด็น)
+
+### 5. Execution Order
+
+| ลำดับ | Phase | Layer | เวลา | ขึ้นต่อ |
+|---|---|---|---|---|
+| 1 | 0 — Security pre-check | Backend | 15 นาที | - |
+| 2 | 1 — Composable | Frontend | 25 นาที | 0 (ผ่าน) |
+| 3 | 2 — Component | Frontend | 30 นาที | 1 |
+| 4 | 3 — `?view=my` handler | Frontend | 15 นาที | - (parallel กับ 2) |
+| 5 | 4 — Polish | Frontend | 20 นาที | 2, 3 |
+
+**รวม ≈ 1 ชม. 45 นาที** กระจาย 3–5 commits
+
+### 6. Verification Checklist
+
+**Functional:**
+- [ ] User ไม่มีโรงเรียน → คลิกปุ่ม → ไป `/academies?view=all`
+- [ ] User มี 1 โรงเรียน approved → ไป `/academies/{name}/dashboard` → router เดิมพาไป role-specific dashboard
+- [ ] User มีหลายโรงเรียน approved → ไป `/academies?view=my` → แท็บ "ของฉัน" เปิดอัตโนมัติ
+- [ ] User มี pending อย่างเดียว → ไป `/academies?view=my` เห็นสถานะรออนุมัติ
+- [ ] Fetch error → คลิกได้ ไป `/academies` (fallback)
+- [ ] ระหว่าง loading → คลิกได้ ไป `/academies` (ไม่ block)
+
+**Visual:**
+- [ ] Mobile (380px): ปุ่ม 4 อันเดิมเป็น 2×2 + ปุ่มใหม่เต็มแถวด้านล่าง
+- [ ] Tablet (800px): เหมือนเดิม
+- [ ] Desktop (1280px): เหมือนเดิม
+- [ ] Dark mode: gradient/border/text contrast ผ่าน
+- [ ] Subtitle truncate ถูกต้องเมื่อชื่อโรงเรียนยาว
+
+**Security:**
+- [ ] User A เรียก `/api/academies/users/{B}/membered-academies` ได้ 403
+- [ ] User A เรียกของตัวเอง ได้ 200
+
+**Regression:**
+- [ ] เมนู 4 ปุ่มเดิมยังคลิกได้ ไปหน้าเดิม
+- [ ] `MemberedAcademiesWidget` ใน Dashboard.vue ยังโหลดและแสดงผลปกติ
+- [ ] หน้า `/academies` แท็บ "ทั้งหมด" ยังเปิดเป็น default เมื่อไม่มี `?view`
+
+### 7. Risk Register
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Endpoint membered-academies ไม่ได้เช็ค ownership (D3) | กลาง | สูง | Phase 0 ทำก่อน frontend |
+| Fetch ซ้ำกับ MemberedAcademiesWidget (D11) | สูง | ต่ำ | ยอมรับรอบนี้; ระยะยาวย้ายไป Pinia (out of scope) |
+| ชื่อโรงเรียนมี `/` หรืออักขระพิเศษ (D9) | ต่ำ | กลาง | `encodeURIComponent` + ทดสอบ 4.1 |
+| `MemberedAcademy.status` ค่าจริงไม่ตรงกับ 1/2 (D8) | ต่ำ | กลาง | กรอง `=== 2` เคร่ง; log unknown ใน dev |
+| `Dashboard.vue` ใส่ `key` หรือ `v-if` ที่ทำให้ DashboardQuickActions unmount/remount → fetch ซ้ำ | ต่ำ | ต่ำ | composable มี `isLoaded` flag กัน refetch |
+| 4 ปุ่มเดิมเสียดุล layout เพราะมีปุ่มที่ 5 | กลาง | ต่ำ | ปุ่มใหม่อยู่ "นอก" grid (ไม่ใช่ item ที่ 5 ของ 2×2 ที่จะเหลือ 1 ช่องว่าง) |
+| Subtitle "X โรงเรียน" สื่อสารไม่ชัด | ต่ำ | ต่ำ | ใช้ภาษาเดียวกับ widget เดิม |
+
+### 8. Out of Scope (รอบนี้)
+
+- ❌ ย้าย `MemberedAcademiesWidget` มาใช้ `useMemberedAcademies` (มีของอยู่แล้ว ใช้งานได้ — แตะคือเพิ่มความเสี่ยง)
+- ❌ สร้าง Pinia store สำหรับ memberships (รอจุดที่ third caller เกิดขึ้น)
+- ❌ เปลี่ยน endpoint ไปเป็น `/me/membered-academies` self-scoped (เป็น API refactor แยก — แค่เพิ่ม guard ใน controller รอบนี้พอ)
+- ❌ Skeleton loader ของปุ่ม (1.5 วินาทีของ loading ไม่คุ้มทำ skeleton; subtitle "กำลังโหลด..." พอ)
+- ❌ Analytics tracking ของคลิก (ทำเป็น follow-up ถ้าต้องการ)
+- ❌ แก้ `useMyStudentProfile.ts` ที่ค้าง modified (เป็นอีก task — ตามแผน v2 ก่อนหน้า)
+
+### 9. Files Touched Summary
+
+**สร้างใหม่:**
+- `ui/composables/useMemberedAcademies.ts`
+
+**แก้ไข:**
+- `ui/components/dashboard/DashboardQuickActions.vue`
+- `ui/pages/academies/index.vue`
+- `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyController.php` (เฉพาะถ้า Phase 0 พบว่าขาด guard)
+
+**ไม่แตะ:**
+- `ui/components/widgets/MemberedAcademiesWidget.vue` (D4)
+- `ui/pages/Dashboard.vue`
+- `ui/composables/useMyStudentProfile.ts` (modified อยู่ — เป็น task อื่น)
+- `ui/pages/academies/[name]/dashboard/student.vue` (modified อยู่ — เป็น task อื่น)
+- `ui/pages/academies/[name]/dashboard/index.vue` (router เดิมทำงานถูกต้องอยู่แล้ว — D6)
+
+### 10. Definition of Done
+
+- [ ] Backend guard ตรวจสอบและเพิ่มหากจำเป็น
+- [ ] Composable `useMemberedAcademies` มี unit-test-friendly shape (return refs, no side effects ใน setup)
+- [ ] ปุ่มใหม่ render ครบทุก viewport, ทุก state
+- [ ] `/academies?view=my` เปิดแท็บถูกต้อง
+- [ ] เมนู 4 ปุ่มเดิมไม่ regress
+- [ ] Verify ทั้ง 4 กรณี (0, 1, หลาย, pending-only) ผ่าน
+- [ ] Commits แยกตาม layer, revert ทีละตัวได้
+
+---
+
+## 2026-06-19 แผนปรับปรุงและข้อตกลงงาน (Improved Plan v2)
+
+แผนงานนี้ได้รับการรีไฟน์เพื่อตอบรับความต้องการด้านความปลอดภัย ความเสถียรของ visual component และการป้องกัน regression ของ widget เดิมที่มีอยู่แล้ว โดยสรุปเป็นรายละเอียดดังนี้:
+
+### 1. การตัดสินใจเชิงเทคนิคและสถาปัตยกรรม (Revised Decisions Matrix)
+
+- **D1 (Component Shape Mismatch)**: ปุ่มใหม่ "โรงเรียนของฉัน" จะไม่ถูกยัดเข้าไปในโครงสร้าง `actions` static array ของ `DashboardQuickActions.vue` เพื่อไม่ให้เกิดการขัดกันของ data shape (เดิมเป็น static array ล้วน ไม่มี state) ปุ่มใหม่นี้จะถูกแยกออกมาเขียนอยู่ด้านนอก loop `v-for` เพื่อแยก layout และรองรับ dynamic state + dynamic subtitle ได้อย่างอิสระ
+- **D3 (Backend First / Phase 0)**: endpoint `/api/academies/users/{user}/membered-academies` รับ user id ใน URL ซึ่งมีความเสี่ยงช่องโหว่ IDOR (Insecure Direct Object Reference) เราจึงบังคับให้มี **Phase 0** ในการเข้าไปตรวจสอบและเพิ่ม Security Policy / Guard ใน Controller ก่อนที่จะเริ่มทำ Frontend เสมอ
+- **D4 (ห้ามแตะ Widget เดิม)**: `MemberedAcademiesWidget.vue` ดึงข้อมูลผ่าน workflow เฉพาะที่มีการใช้ `JSON.parse(JSON.stringify(...))` เพื่อแก้ปัญหา reactivity ของ Pinia การพยายามยุบรวม composable เข้าด้วยกันในจังหวะนี้อาจนำไปสู่ regression ได้ จึงกำหนดให้ **"ห้ามแตะต้อง Widget เดิมนี้อย่างเด็ดขาด"** และเลื่อนประเด็นการยุบรวมนี้เป็น Out of Scope
+- **D7 (Decision Matrix - Pending Only)**: หากผู้ใช้งานมีสถานะ "รออนุมัติ" (pending - status === 1) อย่างเดียว และไม่มีโรงเรียนที่อนุมัติเลย (approved - status === 2) การนำทางจะต้องพาไปยัง `/academies?view=my` เพื่อให้เจอโรงเรียนที่รอสถานะอนุมัติของตนเอง ไม่ใช่ส่งไปหน้ารายชื่อโรงเรียนทั้งหมด (`/academies`)
+- **D10 (Dynamic Subtitle)**: ตัวปุ่มต้องบอกสถานะแก่ผู้ใช้ผ่าน Subtitle ไดนามิก เช่น:
+  - กำลังโหลด -> "กำลังโหลด..."
+  - มี 1 โรงเรียนอนุมัติ -> แสดงชื่อโรงเรียนนั้นตรงๆ (e.g. "โรงเรียนอัสสัมชัญ")
+  - มีมากกว่า 1 โรงเรียนอนุมัติ -> แสดงจำนวนโรงเรียน (e.g. "3 โรงเรียน")
+  - ไม่มีโรงเรียนที่อนุมัติ แต่มีรออนุมัติ/ไม่มีเลย -> "ค้นหาหรือสมัครเข้าโรงเรียน"
+- **D11 (Duplicate Fetch Acceptable)**: ยอมรับการดึงข้อมูลซ้ำซ้อนในหน้านี้ชั่วคราว (DashboardQuickActions Fetch แยกกับ Widget เดิม) เพื่อลดความซับซ้อนและเลี่ยงการสร้าง Pinia store ใหม่โดยไม่จำเป็นจนกว่าจะมี caller รายที่สามเข้ามาใช้
+
+### 2. ลำดับเฟสการพัฒนา (Refined Phase Steps)
+
+#### **Phase 0: Backend Security Guard (ความปลอดภัยระดับ API) (~20 นาที)**
+- ตรวจสอบ `AcademyController.php` หรือ controller ที่รับผิดชอบ endpoint `/api/academies/users/{user}/membered-academies`
+- เพิ่มเงื่อนไขตรวจสอบว่า `$user->id === auth()->id()` (หรือใช้ Gate / Policy) เพื่อบล็อกไม่ให้ User A เรียกดูของ User B ได้
+- เขียน Test คลุมกรณีเรียกข้ามสิทธิ์ต้องคืน `403 Forbidden`
+
+#### **Phase 1: Composable Implementation (`useMemberedAcademies`) (~25 นาที)**
+- สร้าง `ui/composables/useMemberedAcademies.ts`
+- ใช้ `useApi` ในการดึงข้อมูลจาก `/api/academies/users/{user.id}/membered-academies`
+- กรอง `approved` เฉพาะ status === 2 และ `pending` เฉพาะ status === 1
+- เขียน Logic การเปลี่ยนเส้นทางอัตโนมัติ (`quickActionTarget`):
+  - โหลดไม่เสร็จ / Error -> `/academies`
+  - Approved = 1 โรงเรียน -> `/academies/{name}/dashboard`
+  - Approved >= 2 โรงเรียน -> `/academies?view=my`
+  - Pending > 0 และ Approved == 0 -> `/academies?view=my` (เพื่อไปดูสถานะรออนุมัติ)
+  - อื่นๆ -> `/academies?view=all`
+
+#### **Phase 2: UI Button integration ใน `DashboardQuickActions.vue` (~30 นาที)**
+- ดึงข้อมูลจาก composable มาใช้งาน
+- แทรกปุ่ม "โรงเรียนของฉัน" ต่อท้าย grid 2x2 ของ quick action เดิม
+- ตกแต่งด้วย Gradient สีน้ำเงิน-คราม แยกความต่างจากปุ่ม Earn พร้อมไอคอน `mdi:school`
+- แสดง dynamic subtitle ตามกฎในข้อ D10
+
+#### **Phase 3: query parameter view handler ใน `/academies/index.vue` (~15 นาที)**
+- แก้ไขหน้า `/academies/index.vue` ให้ทำการ watch `route.query.view`
+- เมื่อพบ `view === 'my'` ให้สลับแท็บไปที่ "ของฉัน" (My Academies) โดยอัตโนมัติ
+
+#### **Phase 4: Visual Polish และ Edge Case (~15 นาที)**
+- ตรวจสอบการเข้ารหัสชื่อโรงเรียนด้วย `encodeURIComponent` สำหรับกรณีที่ชื่อโรงเรียนมีอักขระพิเศษ (เช่น เครื่องหมาย `/`) ป้องกัน path แตก
+- ทดสอบ dark mode contrast และ responsive layout บน viewport mobile, tablet, desktop
+
+---
+
+### 3. แผนการตรวจสอบและทดสอบ (Revised Verification Plan)
+
+#### **Security Test Cases**
+- [ ] **TC-SEC-01**: ใช้ Token ของ User A ยิงขอ `/api/academies/users/{User_B_Id}/membered-academies` -> คาดหวังผลลัพธ์เป็น `403 Forbidden`
+- [ ] **TC-SEC-02**: ใช้ Token ของ User A ยิงขอ `/api/academies/users/{User_A_Id}/membered-academies` -> คาดหวังผลลัพธ์เป็น `200 OK`
+
+#### **Routing & State Test Cases**
+- [ ] **TC-ROUTE-01 (No Academies)**: ผู้ใช้ไม่มีสังกัดโรงเรียนใดๆ -> Subtitle แสดง "ค้นหาหรือสมัครเข้าโรงเรียน" -> คลิกปุ่มแล้วปลายทางคือ `/academies`
+- [ ] **TC-ROUTE-02 (Single Approved)**: ผู้ใช้มีโรงเรียนที่อนุมัติแล้ว 1 แห่ง -> Subtitle แสดงชื่อโรงเรียนจริง -> คลิกปุ่มแล้วนำทางไปยังแดชบอร์ดเฉพาะของโรงเรียนนั้น `/academies/{encodeURIComponent(name)}/dashboard`
+- [ ] **TC-ROUTE-03 (Multiple Approved)**: ผู้ใช้มีโรงเรียนที่อนุมัติแล้ว 2 แห่งขึ้นไป -> Subtitle แสดง "X โรงเรียน" -> คลิกปุ่มแล้วนำทางไปยัง `/academies?view=my`
+- [ ] **TC-ROUTE-04 (Pending Only)**: ผู้ใช้มีแต่โรงเรียนที่รออนุมัติ (ไม่มีตัวที่ approved เลย) -> Subtitle แสดง "ค้นหาหรือสมัครเข้าโรงเรียน" -> คลิกปุ่มแล้วนำทางไปยัง `/academies?view=my` (เพื่อให้ผู้ใช้เจอสถานะของตัวเอง)
+
+---
+
+### 4. รายชื่อไฟล์ที่เกี่ยวข้อง (Files Touched Matrix)
+
+**ไฟล์ที่จะสร้างใหม่:**
+- `ui/composables/useMemberedAcademies.ts`
+
+**ไฟล์ที่จะมีการแก้ไข:**
+- `ui/components/dashboard/DashboardQuickActions.vue`
+- `ui/pages/academies/index.vue`
+- `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyController.php` (หรือ Controller ที่เหมาะสมในการทำ security guard)
+
+**ไฟล์ที่ "ห้ามแตะต้องอย่างเด็ดขาด" (Uncommitted / Protected):**
+- `ui/composables/useMyStudentProfile.ts` (ไฟล์ uncommitted เดิม - ห้ามนำมารวมใน commit นี้)
+- `ui/pages/academies/[name]/dashboard/student.vue` (ไฟล์ uncommitted เดิม - ห้ามนำมารวมใน commit นี้)
+- `ui/components/widgets/MemberedAcademiesWidget.vue` (ป้องกัน regression ตาม D4)
+- `ui/pages/Dashboard.vue`
+
+---
+
+## 2026-06-19 Analysis — Academy page as a role-aware navigation hub
+
+- Scope: UX/information-architecture analysis only; no application implementation changed.
+- Target: `/academies/:name`, currently implemented by `ui/pages/academies/[name].vue`.
+- Current page prioritizes school cover/profile, attendance widget, and content tabs (`ฟีด`, `รายวิชา`, `สมาชิก`, `ห้องเรียน`, `กิจกรรม`, `กลุ่ม`). It does not expose a clear “ถ้าต้องการทำ X ให้ไป Y” guide for approved members.
+- Navigation is fragmented across:
+  - public/member tabs in `ui/pages/academies/[name].vue`;
+  - role router at `ui/pages/academies/[name]/dashboard/index.vue`;
+  - role-specific quick actions in `dashboard/{student,teacher,parent,admin}.vue`;
+  - the large permission-aware admin sidebar in `ui/pages/academies/[name]/admin.vue`;
+  - personal pages (`my-profile`, `my-transcript`, `my-card`, `my-settings`) and school store.
+- Recommended IA: place a role-aware “ศูนย์นำทางโรงเรียน” directly below the academy identity/header. It should show one primary CTA (`ไปหน้าแดชบอร์ดของฉัน`) plus task-based cards grouped by intent, not system module names.
+- First-release action guide (up to 10 destinations, filtered by role/permission and route availability):
+  1. เรียนต่อ/ดูรายวิชา
+  2. ดูงานและแบบทดสอบ
+  3. เช็กชื่อ/ดูประวัติการเข้าเรียน
+  4. ดูผลการเรียน
+  5. ดูโปรไฟล์ของฉัน
+  6. ดูบัตรนักเรียน
+  7. อ่านประกาศและกิจกรรม
+  8. ดูห้องเรียน/สมาชิก
+  9. ร้านค้าโรงเรียน
+  10. จัดการโรงเรียน (admin/authorized staff only)
+- Each card should contain an action verb title, one-line outcome, destination label, icon, and optional status/badge; unavailable actions should be hidden or explicitly marked “เร็ว ๆ นี้”, never linked to a missing page.
+- Route audit found multiple current quick-action targets without matching Nuxt pages, including teacher routes (`/teacher/courses`, `/teacher/attendance`, `/teacher/gradebook`, `/teacher/assignments/create`), several parent routes, and admin targets such as `/admin/announcements/create`, `/admin/reports`, `/admin/teachers`, and `/admin/finance`. These must not be copied into the new guide until implemented or redirected to an existing destination.
+- Suggested implementation files:
+  - new `ui/components/academy/AcademyActionGuide.vue`;
+  - `ui/pages/academies/[name].vue` for placement and academy/member context;
+  - reuse `useAcademyRole` for role/permission filtering;
+  - optionally centralize destination definitions in `ui/composables/useAcademyNavigation.ts` so the main page and role dashboards cannot drift.
+- UX priorities: role-aware default, intent-based Thai labels, visible destination hint, no horizontal-only discovery, responsive 2-column mobile / 3–5-column desktop cards, keyboard focus, loading skeleton, and “recent/frequent” shortcuts only after the stable route map exists.
+- Verification plan:
+  - route existence check for every rendered link;
+  - guest, pending, student, teacher, parent, staff, admin, and owner states;
+  - mobile/tablet/desktop and dark mode;
+  - confirm the user can locate the expected destination for 10 representative tasks without opening the admin sidebar;
+  - browser visual smoke test is still required because the in-app browser connection was blocked by Windows permission during analysis; localhost itself returned HTTP 200.
+
+---
+
+## Work Plan — Academy Action Guide v2 (2026-06-19, refined)
+
+ไฟล์หน้าโรงเรียนปัจจุบัน `ui/pages/academies/[name].vue` ยาว **2,282 บรรทัด** มี state ปะปนทุก tab อยู่ในไฟล์เดียว → การแทรก component ใหม่ต้องระวังเรื่อง side-effect และ payload prop เป็นพิเศษ และเป็นเหตุผลที่ต้องแยก `AcademyActionGuide.vue` เป็น component ปิด ไม่ดึง state ผ่าน parent มากเกินไป
+
+### 0. ข้อค้นพบเพิ่มเติมจากการอ่านโค้ดจริง (เสริมบทวิเคราะห์)
+
+| รหัส | สิ่งที่เจอ | นัยต่อแผน |
+|---|---|---|
+| **N1** | `[name].vue` มี local state `isAcademyAdmin = ref(false)` แยกจาก `useAcademyRole` → มีสองแหล่ง truth ของ role | guide ต้องใช้ `useAcademyRole` อย่างเดียว ไม่อ่าน `isAcademyAdmin` flag ของหน้า |
+| **N2** | `useAcademyRole` มี `isOwner / isAdmin / isTeacher / isStudent / isParent / isStaff / isGuest` พร้อมใช้ + `permissions[]` array | filter destination ทำผ่าน computed ของ composable นี้โดยตรง ไม่ต้องสร้าง mapping ใหม่ |
+| **N3** | มี tabs 6 ตัวอยู่แล้ว (`feed/courses/members/classrooms/events/groups`) ที่ `currentTab` ภายในหน้า | guide ที่บอก "ดูสมาชิก/ห้องเรียน" ต้องลิงก์ภายในหน้าเดิม (anchor + set tab) ไม่ใช่ route ใหม่ — ป้องกัน dead link |
+| **N4** | personal pages ที่มีอยู่จริง: `my-profile.vue, my-card.vue, my-transcript.vue, my-settings.vue, store.vue` (ตรวจ ls ตรง) | 5 destination นี้ปลอดภัย ลิงก์ตรงได้ |
+| **N5** | dashboard role files มีครบ: `student/teacher/parent/admin` + `index.vue` (router) — **ไม่มี `staff.vue`** | ถ้า role = `staff`/`finance_staff` ต้องไม่ลิงก์ไป `/dashboard/staff` ที่ไม่มีไฟล์ → fallback ไป `/dashboard` ให้ router ตัดสินใจ หรือซ่อนปุ่ม dashboard |
+| **N6** | `useAcademyRole.isStaff` รวม `finance_staff` ด้วย แต่ destination "จัดการการเงิน" ปัจจุบันไม่มีหน้า `/admin/finance` | ใช้ permission-based filter (เช่น `finance.view`) ไม่ใช่ role name อย่างเดียว |
+| **N7** | `admin.vue` คือ layout sidebar ของ admin section — entry point จริงคือ `/academies/{name}/admin` | "จัดการโรงเรียน" ลิงก์ตรงไป `/admin` พอ ไม่ต้องเดา subpath |
+| **N8** | บทวิเคราะห์ระบุว่า teacher routes (`/teacher/courses` ฯลฯ) ส่วนใหญ่ยังไม่มีไฟล์ | สำหรับ teacher rounds นี้ลิงก์ "สอนของฉัน" ส่งไป `/dashboard/teacher` (มีจริง) เท่านั้น ไม่ใส่ subpath |
+| **N9** | ไม่มีการระบุ permission constant ใน `useAcademyRole.ts` — ใช้แค่ string match บน `permissions[]` | ต้องตรวจ permission key จริงที่ backend ส่ง (Phase 0.2) ก่อนใส่ filter ที่ frontend |
+| **N10** | `[name].vue` middleware = `auth` → guest จริง ๆ ไม่เข้าหน้านี้ — แต่ `isGuest` ของ composable หมายถึง "ล็อกอินแต่ไม่ใช่สมาชิก approved" | "guest state" ของ guide ต้องโชว์เป็น "เข้าร่วมโรงเรียน" + 2 destination สาธารณะ (ฟีด, รายวิชา) เท่านั้น |
+| **N11** | ขนาดไฟล์ parent ใหญ่มาก (~2300 บรรทัด) แตะแล้วเสี่ยง merge conflict | แทรกเฉพาะ `<AcademyActionGuide :academy="academy" />` หนึ่งบรรทัด + import — ไม่ refactor อย่างอื่น |
+| **N12** | บทวิเคราะห์เสนอ `useAcademyNavigation.ts` แบบ central registry แต่หน้านี้เป็น caller แรกและเดียว | composable นี้ตั้งใจให้ role dashboards (`dashboard/student.vue` ฯลฯ) มาใช้ร่วมในอนาคต — ออกแบบ API ให้ตอบโจทย์นั้นตั้งแต่แรก แต่ **ไม่ migrate dashboard pages ในรอบนี้** |
+
+### 1. หลักการของรอบนี้
+
+1. **Intent-based, ไม่ใช่ module-based** — labels เริ่มจากกริยา "ดู/เช็ก/อ่าน/จัดการ" ไม่ใช่ชื่อระบบ ("LMS", "HRIS")
+2. **Route-existence gate ตั้งแต่ design time** — destination ทุกอันต้องผ่าน checklist "มีไฟล์จริงไหม"; ที่ไม่มีให้ตัดทิ้งจาก v1 ไม่ใช่ใส่ `เร็ว ๆ นี้`
+3. **Permission-driven, role-augmented** — กรองหลักด้วย `permissions[]` ตามด้วย role flag; ลด hard-code
+4. **Single source of truth ของ destination list** — central registry ใน `useAcademyNavigation.ts` เพื่อกัน drift ระหว่าง guide กับ role dashboards ในอนาคต
+5. **ไม่แตะ parent page logic** — เพิ่ม import + 1 ตำแหน่ง render เท่านั้น
+6. **Mobile-first, dark mode parity** — ทดสอบ 380/800/1280 + dark mode ก่อน commit
+
+### 2. Destination Registry Contract
+
+```ts
+// ui/composables/useAcademyNavigation.ts
+export interface AcademyDestination {
+  id: string                       // 'continue-learning', 'my-profile', ...
+  title: string                    // "เรียนต่อ"
+  outcome: string                  // "ดูรายวิชาที่กำลังเรียนอยู่"
+  icon: string                     // 'mdi:book-open-page-variant'
+  to: string | { path: string; query?: Record<string, string>; hash?: string }
+  destinationLabel: string         // "หน้ารายวิชา" (ใต้ปุ่ม)
+  intent: 'learn' | 'evaluate' | 'identity' | 'community' | 'commerce' | 'manage'
+  visibleWhen: (ctx: NavContext) => boolean
+  badge?: { type: 'count' | 'dot' | 'text'; value?: string | number }
+  color?: 'sky' | 'amber' | 'emerald' | 'rose' | 'violet' | 'slate'
+  order: number
+}
+
+interface NavContext {
+  academyName: string              // encoded
+  role: ReturnType<typeof useAcademyRole>
+  hasStudentLink: boolean          // มี student record ใน academy นี้
+  hasParentLink: boolean
+  isMember: boolean                // status === approved
+  isPending: boolean
+}
+```
+
+**ข้อบังคับ:**
+- `to` ทุกค่าผ่านฟังก์ชัน `assertRouteExists()` ที่ dev time (throw warning) — ป้องกัน dead link ในตอน build
+- `outcome` ต้องเป็นประโยคสมบูรณ์ผลลัพธ์ — ผู้ใช้อ่านแล้วต้องรู้ว่าได้อะไรกลับมา ไม่ใช่ "ระบบรายวิชา"
+
+### 3. Destination List v1 (สูงสุด 10, intent-grouped)
+
+| # | id | title | outcome | to | visible | source |
+|---|---|---|---|---|---|---|
+| 1 | `my-dashboard` | ไปแดชบอร์ดของฉัน | "เปิดหน้าตามบทบาทของคุณ" | `/academies/{n}/dashboard` | `isMember && role!=='staff'` (N5) | dashboard/index.vue router |
+| 2 | `continue-learning` | เรียนต่อ | "ดูรายวิชาที่กำลังเรียนอยู่" | `/academies/{n}#courses` (hash → set currentTab) | `isStudent ‖ isMember` | tab `courses` ใน N3 |
+| 3 | `my-assignments` | งาน/แบบทดสอบของฉัน | "ดูงานค้างและกำหนดส่ง" | `/academies/{n}/dashboard/student` (จนกว่าจะมีหน้าเฉพาะ) | `isStudent` | student dashboard |
+| 4 | `my-attendance` | เช็กชื่อ/ประวัติเข้าเรียน | "ดูสถิติการเข้าเรียนของคุณ" | `/academies/{n}/attendance` | `isStudent ‖ isParent` | folder `attendance/` มีจริง |
+| 5 | `my-transcript` | ผลการเรียน | "ดูคะแนนและเกรดของคุณ" | `/academies/{n}/my-transcript` | `isStudent` | N4 |
+| 6 | `my-profile` | โปรไฟล์ของฉัน | "ดู/แก้ไขข้อมูลนักเรียน" | `/academies/{n}/my-profile` | `hasStudentLink` | N4 |
+| 7 | `my-card` | บัตรนักเรียน | "ดูบัตรนักเรียนของคุณ" | `/academies/{n}/my-card` | `hasStudentLink` | N4 |
+| 8 | `members-and-classrooms` | ห้องเรียน/สมาชิก | "ค้นหาเพื่อนร่วมโรงเรียน" | `/academies/{n}#classrooms` | `isMember` | tab N3 |
+| 9 | `announcements` | ประกาศและกิจกรรม | "อ่านประกาศและกำหนดการ" | `/academies/{n}#events` | `isMember` | tab `events` N3 |
+| 10 | `school-store` | ร้านค้าโรงเรียน | "ซื้อสินค้า/แต้มของโรงเรียน" | `/academies/{n}/store` | `isMember` | N4 |
+| 11* | `manage-school` | จัดการโรงเรียน | "เข้าหน้าจัดการสำหรับผู้ดูแล" | `/academies/{n}/admin` | `isAdmin ‖ isOwner ‖ has 'academy.manage' permission` | N7 |
+| 12* | `pending-status` | สถานะการสมัคร | "ดูสถานะคำขอเข้าร่วม" | `/academies/{n}` (banner inline) | `isPending` | guard state |
+
+\* รายการที่ 11/12 จะใส่หรือไม่ใส่ขึ้นกับ role; UI สูงสุดยังคงโชว์ 10 cards ในครั้งเดียว — ตัดด้วย `order + slice(0,10)` หลัง filter
+
+**ถูกตัดจาก v1 (เพราะ N5/N6/N8 — ไฟล์ไม่มี):**
+- ❌ `teacher-courses`, `teacher-attendance`, `teacher-gradebook`, `teacher-assignment-create`
+- ❌ `admin-announcements-create`, `admin-reports`, `admin-teachers`, `admin-finance`
+- ❌ "ดูผู้ปกครอง" (parent module ยังกระจัด)
+- → บันทึกใน `Out of Scope` พร้อม route paths ที่รอ implement
+
+### 4. Phase-by-Phase Plan
+
+#### **Phase 0 — Route-existence Audit (~30 นาที, blocking)**
+
+เป้า: เคลียร์ route map ก่อนเขียน registry
+
+ขั้นตอน:
+- **0.1** `glob` หาไฟล์จริงทั้งหมดของ destination 12 รายการ + alternative ที่บทวิเคราะห์ระบุ:
+  ```powershell
+  Get-ChildItem ui/pages/academies/[name] -Recurse -Filter *.vue |
+    Select-Object FullName
+  ```
+- **0.2** เปิด backend `php artisan route:list --path=academy` + ตรวจ `RolePermission` enum/seeder หา permission key จริง (เช่น `academy.manage`, `finance.view`) — เพื่อให้ `visibleWhen` ใช้ key ถูกต้อง
+- **0.3** สำหรับ destination ที่ resolve แล้วชี้ไปไฟล์ไม่พบ → ลบหรือ downgrade ไปไฟล์ใกล้เคียงที่มีอยู่; **ห้ามใส่ `#` หรือ `เร็ว ๆ นี้` ในรอบนี้**
+- **0.4** บันทึก audit ผลลัพธ์ใน `.agents/academy-routes-audit.md` (1 ตาราง: destination id → resolved path → exists ✓/✗)
+
+**Deliverable:** ไฟล์ audit + เวอร์ชันสุดท้ายของตารางใน §3
+
+**ทำไม blocking:** ถ้าข้าม จะ ship dead links ทันที — ขัดหลักการ §1.2
+
+---
+
+#### **Phase 1 — Composable `useAcademyNavigation` (~45 นาที)**
+
+ขั้นตอน:
+- **1.1** สร้าง `ui/composables/useAcademyNavigation.ts` ตาม interface §2
+- **1.2** Export `useAcademyNavigation(academyName, roleRef)` คืน:
+  ```ts
+  {
+    allDestinations: AcademyDestination[],  // raw registry (สำหรับ test)
+    visibleDestinations: ComputedRef<AcademyDestination[]>,  // filtered + sorted + sliced(0,10)
+    primaryCta: ComputedRef<AcademyDestination | null>,      // id='my-dashboard' หรือ fallback
+    groupedByIntent: ComputedRef<Record<string, AcademyDestination[]>>,
+    pendingHint: ComputedRef<string | null>                  // ข้อความสำหรับ pending banner
+  }
+  ```
+- **1.3** เขียน registry เป็น **constant array** ในไฟล์เดียวกัน (ไม่แยกไฟล์ data) เพื่อให้ตัดสินใจ visible จาก closure ของ ctx ตรง ๆ
+- **1.4** Helper `buildHref(to, encodedName)`: รองรับทั้ง string, object, และ hash (`#tabId`) — return string สำหรับ `<NuxtLink :to>`
+- **1.5** ในโหมด dev: console.warn เมื่อ `to` ที่ resolved ไม่ตรงกับ `useRouter().resolve()` (ใช้ best-effort, ไม่ throw)
+
+**Deliverable:** 1 composable + 1 commit `feat(ui): add useAcademyNavigation composable`
+
+---
+
+#### **Phase 2 — Component `AcademyActionGuide.vue` (~60 นาที)**
+
+โครงสร้าง:
+```vue
+<script setup lang="ts">
+import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
+
+const props = defineProps<{
+  academy: { id: number; name: string } | null
+  isPending?: boolean
+}>()
+
+const academyId = computed(() => props.academy?.id ?? null)
+const encodedName = computed(() => encodeURIComponent(props.academy?.name ?? ''))
+
+const role = useAcademyRole(academyId)
+const { visibleDestinations, primaryCta, pendingHint } =
+  useAcademyNavigation(encodedName, role, { isPending: () => !!props.isPending })
+
+onMounted(() => { if (academyId.value) role.fetchRole(academyId.value) })
+</script>
+
+<template>
+  <section v-if="academy" class="bg-white dark:bg-gray-900 rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+    <header class="flex items-center justify-between mb-3">
+      <div>
+        <h2 class="font-bold text-base md:text-lg">ศูนย์นำทางโรงเรียน</h2>
+        <p class="text-xs text-gray-500">เลือกสิ่งที่อยากทำ — เราจะพาไปให้ถึง</p>
+      </div>
+      <NuxtLink v-if="primaryCta" :to="primaryCta.to"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700">
+        <Icon :icon="primaryCta.icon" class="w-4 h-4" />
+        {{ primaryCta.title }}
+      </NuxtLink>
+    </header>
+
+    <div v-if="pendingHint" class="mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm">
+      {{ pendingHint }}
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
+      <NuxtLink v-for="dest in visibleDestinations" :key="dest.id" :to="dest.to"
+        class="group p-3 rounded-xl border border-gray-100 dark:border-gray-800
+               hover:border-sky-300 hover:shadow-md transition-all
+               bg-gradient-to-br from-white to-gray-50
+               dark:from-gray-900 dark:to-gray-800/50">
+        <div class="flex items-center gap-2 mb-1">
+          <Icon :icon="dest.icon" class="w-5 h-5 text-sky-600 dark:text-sky-400" />
+          <span class="font-semibold text-sm">{{ dest.title }}</span>
+        </div>
+        <p class="text-xs text-gray-500 line-clamp-2">{{ dest.outcome }}</p>
+        <p class="mt-2 text-[10px] text-gray-400 flex items-center gap-1">
+          <Icon icon="mdi:arrow-right" class="w-3 h-3" />
+          {{ dest.destinationLabel }}
+        </p>
+      </NuxtLink>
+    </div>
+
+    <p v-if="!visibleDestinations.length" class="text-sm text-gray-500 text-center py-6">
+      ไม่มีเมนูที่ใช้งานได้สำหรับบทบาทปัจจุบัน
+    </p>
+  </section>
+</template>
+```
+
+ข้อตัดสินใจ design:
+- **2-col mobile / 3-col tablet / 5-col desktop** — รอง 10 cards ได้ใน 2 แถวบน desktop
+- **Primary CTA แยกที่ header** — บทวิเคราะห์ระบุ "หนึ่ง CTA หลัก + cards" — ปุ่ม `my-dashboard` ไม่ต้องอยู่ใน grid (ลด 1 ช่อง)
+- **Pending banner** — แสดงเมื่อ `isPending` (รอนุมัติ) ก่อน grid; ไม่ duplicate กับ cards
+- **Icon-first, outcome-second** — ตรงกับ "intent-based"
+- **Loading**: ไม่ใส่ skeleton ใน v1 — `useAcademyRole` resolve เร็ว, fallback "ไม่มีเมนู" รับได้
+
+**Deliverable:** 1 component + 1 commit `feat(ui): add AcademyActionGuide component`
+
+---
+
+#### **Phase 3 — Integration กับหน้า `[name].vue` (~20 นาที)**
+
+เป้า: แทรก guide ใต้ header academy โดย**ไม่แตะ logic อื่น**
+
+ขั้นตอน:
+- **3.1** ที่หัวไฟล์เพิ่ม import: `import AcademyActionGuide from '~/components/academy/AcademyActionGuide.vue'`
+- **3.2** หา section ที่ render academy cover/profile header (ก่อน `<div v-else-if="currentTab === 'feed'">`) แทรก:
+  ```vue
+  <AcademyActionGuide
+    :academy="academy"
+    :is-pending="academy?.member_status === 'pending'"
+    class="mb-4 md:mb-6"
+  />
+  ```
+- **3.3** เพิ่ม watcher บน `currentTab` เพื่อรับ `route.hash` (`#courses`, `#classrooms`, `#events`): หากมี hash ที่ตรง tab id → set `currentTab` ใน `onMounted` (เพื่อให้ลิงก์จาก guide ทำงาน)
+  ```ts
+  onMounted(() => {
+    const hash = route.hash.replace('#', '')
+    if (tabs.some(t => t.id === hash)) currentTab.value = hash
+  })
+  ```
+- **3.4** ทดสอบว่า academy ที่ user ไม่ได้เป็นสมาชิก (เปิดดูทั่วไป) ยังเห็น guide ที่กรอง destination เหลือเฉพาะตัวเปิดสาธารณะ
+
+**Deliverable:** 1 commit `feat(ui): mount academy action guide on academy page`
+
+---
+
+#### **Phase 4 — Empty/Edge States & A11y Polish (~30 นาที)**
+
+- **4.1** Guest (logged-in แต่ไม่เป็นสมาชิก, N10): แสดงเฉพาะ "เรียนต่อ" + "ห้องเรียน/สมาชิก" (preview) + primary CTA แทนด้วย "เข้าร่วมโรงเรียน" (เรียก existing join flow)
+- **4.2** Pending: ซ่อน primary CTA "my-dashboard"; pending banner ขึ้นพร้อมข้อความ "คำขอของคุณกำลังรออนุมัติ"
+- **4.3** Staff/finance_staff (N5): primary CTA ไป `/admin` ถ้ามี permission; else fallback ไป `/dashboard` index
+- **4.4** A11y:
+  - `<section>` มี `aria-labelledby` ผูกกับ `<h2>` id
+  - แต่ละ card ใช้ `<NuxtLink>` (role=link auto) — ตรวจว่า `outcome` ไม่อยู่ใน `aria-hidden`
+  - Focus ring มองเห็น: `focus-visible:ring-2 focus-visible:ring-sky-500`
+- **4.5** Reduced motion: `motion-reduce:transition-none motion-reduce:transform-none` บน hover effects
+
+**Deliverable:** 1 commit `feat(ui): refine academy guide for edge states and a11y`
+
+---
+
+#### **Phase 5 — Browser Verification (~30 นาที)**
+
+- **5.1** `cd ui ; npm run dev` เปิด `/academies/<thai-name>/`
+- **5.2** ทดสอบ 4 บทบาท (สลับ user ใน DB หรือใช้ seeded users):
+  - student → เห็น cards 1-7,8,9,10
+  - teacher → เห็น cards 1,2,8,9,10 + manage-school **ถ้ามี permission**
+  - parent → เห็น cards 1,4,8,9,10
+  - admin/owner → เห็นครบ + `manage-school`
+  - guest (ออกจาก membership) → เห็น 2 cards + join CTA
+  - pending → เห็น banner + cards limited
+- **5.3** ทดสอบ 3 viewport (380/800/1280) + dark mode toggle
+- **5.4** Click ทุก destination → ต้องไม่มี 404 (ตรวจ Network tab ดู status)
+- **5.5** ลอง `/academies/<name>#courses` ใน URL → guide + tab `courses` ต้องเปิดพร้อมกัน
+
+หากเปิดบราวเซอร์ไม่ได้ → ระบุ "skipped UI smoke" ใน report ตามแนวทาง CLAUDE.md
+
+**Deliverable:** report ใน `.agents/worklog.md`
+
+### 5. Execution Order & Time Budget
+
+| ลำดับ | Phase | Layer | เวลา | ขึ้นต่อ |
+|---|---|---|---|---|
+| 1 | 0 — Route audit | Ops/Backend | 30 นาที | - |
+| 2 | 1 — Composable | Frontend | 45 นาที | 0 |
+| 3 | 2 — Component | Frontend | 60 นาที | 1 |
+| 4 | 3 — Integration | Frontend | 20 นาที | 2 |
+| 5 | 4 — Edge & a11y | Frontend | 30 นาที | 3 |
+| 6 | 5 — Browser verify | QA | 30 นาที | 4 |
+
+**รวม ≈ 3 ชม. 35 นาที** กระจาย 4–5 commits (revert ทีละขั้นได้)
+
+### 6. Verification Checklist
+
+**Functional:**
+- [ ] Student: เห็น "ผลการเรียน, โปรไฟล์, บัตรนักเรียน" ครบ คลิกแล้วเปิดหน้าจริง
+- [ ] Teacher: ไม่เห็น "บัตรนักเรียน" (`hasStudentLink=false`); เห็น "จัดการ" เฉพาะมี permission
+- [ ] Parent: เห็น "เช็กชื่อบุตร", ไม่เห็น "งานของฉัน"
+- [ ] Admin: เห็น "จัดการโรงเรียน" ลิงก์ `/admin` ใช้งานได้
+- [ ] Owner: เห็นครบ + primary CTA ไม่หาย
+- [ ] Guest (ไม่เป็นสมาชิก): เห็น CTA "เข้าร่วม" + cards preview
+- [ ] Pending: เห็น banner สถานะ + ไม่เห็น primary "my-dashboard"
+- [ ] Hash navigation: `#courses` เปิด tab + scroll ถูกตำแหน่ง
+
+**Route integrity:**
+- [ ] ไม่มี `<NuxtLink>` ใน guide ที่ resolve เป็น 404
+- [ ] Route audit (Phase 0.4) ตรงกับ destination ที่ render จริง
+
+**Visual:**
+- [ ] Mobile 380px: 2 col, line-clamp ทำงาน, ไม่ overflow
+- [ ] Desktop 1280px: 5 col, 10 cards พอดี 2 แถว
+- [ ] Dark mode: คอนทราสต์ผ่าน WCAG AA สำหรับ title และ outcome
+- [ ] Focus ring มองเห็น
+
+**A11y:**
+- [ ] Tab key เดินผ่าน primary CTA → cards ตามลำดับ
+- [ ] Screen reader อ่าน title + outcome ของแต่ละ card
+- [ ] `prefers-reduced-motion` ปิด hover transform
+
+**Regression (parent page):**
+- [ ] 6 tabs เดิมทำงานเหมือนเดิม
+- [ ] Feed, courses list, members, classrooms, events, groups load ปกติ
+- [ ] Loading state ของ `[name].vue` ไม่กระทบ guide (guide รอ `academy` truthy ผ่าน `v-if`)
+
+### 7. Risk Register
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Route audit เจอ dead link จำนวนมาก → ตัด v1 เหลือไม่ถึง 10 | กลาง | กลาง | ยอมรับ v1 น้อยกว่า 10 ดีกว่า dead link; บันทึก follow-up |
+| `useAcademyRole` ส่งคืนช้าทำให้ guide กระพริบ (cards เปลี่ยน) | กลาง | ต่ำ | ใช้ `v-if="role.isLoaded"` ห่อ grid + แสดง shell loading 200ms |
+| Hash navigation ชนกับ scroll-to ของ Nuxt | ต่ำ | ต่ำ | ใช้ `app.config` `scrollBehavior` เดิม; ทดสอบ Phase 5.5 |
+| Permission key string ไม่ตรง backend (N9) | กลาง | กลาง | Phase 0.2 ตรวจ + ใส่ logging warn ถ้าไม่ match |
+| Parent page (2282 บรรทัด) มี state ที่เปลี่ยนแล้วทำให้ guide unmount/remount | ต่ำ | กลาง | guide รับเฉพาะ `academy` prop, ไม่ผูก `currentTab` |
+| Encoding ชื่อโรงเรียนไทยที่มี `/` | ต่ำ | กลาง | ใช้ `encodeURIComponent` ใน composable, ทดสอบกับชื่อจริงในที่อยู่ปัจจุบัน |
+| Pending status field name ใน `academy` payload ไม่ตรง (`member_status`) | กลาง | ต่ำ | Phase 0.2 confirm field; fallback `false` ถ้าไม่มี |
+| Cards >10 หลัง filter | ต่ำ | ต่ำ | `slice(0,10)` ใน `visibleDestinations` |
+| guide ทำให้ LCP ของหน้าเลื่อน เพราะ render เพิ่ม | ต่ำ | ต่ำ | guide render หลัง `academy` truthy; ไม่มี API call นอกจาก role (มีอยู่แล้ว) |
+
+### 8. Out of Scope (รอบนี้ — บันทึก follow-up)
+
+- ❌ Teacher quick actions ครบชุด (`/teacher/courses`, `/teacher/gradebook`, `/teacher/assignments/create`) — รอ pages
+- ❌ Admin sub-destinations (`/admin/announcements/create`, `/admin/reports`, `/admin/finance`, `/admin/teachers`) — รอ pages
+- ❌ Parent module enhancements (รอ flow แยก)
+- ❌ "Recent/Frequent" personalization — รอ stable route map (บทวิเคราะห์ระบุ)
+- ❌ Migration ของ role dashboards (`dashboard/{student,teacher,parent,admin}.vue`) มาใช้ registry เดียวกัน — รอ guide stable 1 sprint
+- ❌ i18n เต็มชุด (รอบนี้ใส่ไทยตรง — สอดคล้องกับหน้าอื่นในระบบ)
+- ❌ Animation/transition ของ card hover ซับซ้อน — เน้น functionality
+- ❌ A/B test ของ position (above feed vs sidebar)
+
+### 9. Files Touched Summary
+
+**สร้างใหม่:**
+- `ui/composables/useAcademyNavigation.ts`
+- `ui/components/academy/AcademyActionGuide.vue`
+- `.agents/academy-routes-audit.md` (Phase 0)
+
+**แก้ไข (minimal):**
+- `ui/pages/academies/[name].vue` (+import, +1 บรรทัด render, +hash watcher ~5 บรรทัด)
+
+**ไม่แตะ:**
+- `ui/composables/useAcademyRole.ts` (อ่านอย่างเดียว)
+- `ui/pages/academies/[name]/dashboard/*.vue` (รอ migration phase ถัดไป)
+- `ui/pages/academies/[name]/admin.vue` (sidebar เดิม)
+- `ui/pages/Dashboard.vue`
+- ไฟล์ uncommitted: `useMyStudentProfile.ts`, `dashboard/student.vue`
+
+### 10. Definition of Done
+
+- [ ] Route audit เสร็จ บันทึกใน `.agents/academy-routes-audit.md`
+- [ ] composable `useAcademyNavigation` มี registry + filter logic + `visibleDestinations`/`primaryCta`/`pendingHint`
+- [ ] component `AcademyActionGuide.vue` render 6 บทบาทถูกต้อง
+- [ ] Parent page แตะแค่ import + 1 component tag + hash watcher
+- [ ] ไม่มี dead link
+- [ ] Verify 6 บทบาท × 3 viewport + dark mode ผ่าน
+- [ ] 4–5 commits แยกตาม phase, revert ได้ทีละขั้น
+- [ ] อัพเดท `.agents/worklog.md`
+
+## 2026-06-22 Analysis — Thai default locale still renders academy tabs in English
+
+- Scope: frontend-only diagnosis and implementation planning; no application source was changed.
+- Confirmed configuration:
+  - `ui/nuxt.config.ts` has used `defaultLocale: 'th'` and browser-language detection since the initial repository commit.
+  - Browser detection is enabled with cookie key `i18n_redirected`, and Nuxt i18n 10.2.4 resolves the initial locale in this order: cookie, request/browser language, detection fallback (`th`), then current/default locale.
+  - Therefore `defaultLocale: 'th'` does not force Thai when a valid `i18n_redirected=en` cookie exists or when root-page browser detection selects English.
+- Confirmed academy-tab history:
+  - Before commit `7ab23513` on 2026-06-22 08:04 +07, `ui/pages/academies/[name].vue` hardcoded `Feed`, `Courses`, `Members`, `Classrooms`, `Events`, `Groups`, and `About`.
+  - Commit `7ab23513` changed the tabs to `useI18n()` keys and added matching Thai/English messages.
+  - Current `main` contains that commit through merge `103e0eee`.
+- Additional gaps:
+  - No application language switcher or `setLocale()` usage exists, so a user whose cookie/browser selects English has no supported UI path back to Thai.
+  - `ui/pages/nuxnan-admin/settings.vue` displays a “default language” field, but its save action is simulated and does not affect Nuxt i18n/runtime configuration.
+  - No browser/dev-server session was attached during analysis, so the exact active cookie and whether the screenshot came from a stale pre-merge bundle could not be observed directly.
+- Recommended product decision:
+  - If the requirement is “Thai for first-time users, but preserve an explicit user choice,” disable automatic browser-language selection and add a real language switcher that writes the locale cookie.
+  - If the requirement is “Thai only for everyone,” disable browser detection and remove/ignore English selection; this is simpler but discards the existing English locale.
+- Likely implementation files:
+  - `ui/nuxt.config.ts`
+  - New `ui/components/layout/LanguageSwitcher.vue` or a minimal control integrated into `ui/layouts/main.vue`
+  - `ui/i18n/locales/th.json` and `ui/i18n/locales/en.json` only for switcher labels if existing keys are insufficient
+  - Optional focused test under the frontend test setup, if introduced; otherwise use runtime/browser verification
+- Verification plan:
+  - Restart/rebuild Nuxt to rule out stale bundles.
+  - Test clean browser state, `i18n_redirected=en`, `i18n_redirected=th`, English browser preference, Thai browser preference, direct academy URL, and navigation from `/`.
+  - Confirm academy tabs react immediately after a supported locale switch and persist after reload.
+  - Confirm SSR HTML `lang`, hydration, and other existing `useI18n()` consumers remain consistent.
+
+## 2026-07-02 — Lesson topics shown directly
+
+- Scope: frontend-only UX fix in `ui/components/learn/course/lesson/LessonPost.vue`.
+- Removed the outer “show/hide all topics” control and its local state; each lesson now renders its `TopicAccordion` list immediately.
+- Per-topic accordion behavior, topic management, reading progress, and the admin reorder control remain unchanged.
+- Source inspection confirms the removed state/control has no remaining references. Browser smoke reached `/auth`, so authenticated visual verification remains pending.
+
+## 2026-07-02 — Admin lesson-index left widget analysis
+
+- Scope: frontend-only planning; no application source changed for this request.
+- `CoursePageShell.vue` intentionally reserves the left column on the lessons index, but currently fills it only for enrolled non-admin learners; course admins therefore get an empty left column.
+- Best existing fit: `CourseLessonsMenu.vue`, used as a lesson table of contents with topic counts and lesson links. It is more task-relevant than generic recent/favorite-course widgets and complements the instructor/course widgets already shown on the right.
+- Recommended implementation: render `CourseLessonsMenu` in a sticky left stack for admins on the lessons index; retain the learner progress widgets for non-admin members. Add an admin create-lesson shortcut and normalize its status display to `publication_status` if needed.
+- Verification: admin/member/guest role checks, empty/loading/many-lessons states, desktop balance, mobile slide-out panel, and no duplicate lesson fetch.
