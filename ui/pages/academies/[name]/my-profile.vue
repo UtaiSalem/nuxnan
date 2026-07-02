@@ -244,7 +244,13 @@ watch(activeTab, (tab) => {
             </div>
 
             <div v-show="activeTab === 'card'">
-              <StudentCardTab :student-card="studentCard" />
+              <StudentCardTab
+                :student-card="studentCard"
+                :student="student"
+                :academy="academy"
+                :access-level="accessLevel || ''"
+                @saved="fetchProfile"
+              />
             </div>
 
             <div v-show="activeTab === 'homevisit'">

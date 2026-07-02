@@ -200,7 +200,13 @@ const activeTab = ref((route.query.tab as string) || 'overview')
 
             <!-- บัตรนักเรียน -->
             <div v-show="activeTab === 'card'">
-              <StudentCardTab :student-card="studentCard" />
+              <StudentCardTab
+                :student-card="studentCard"
+                :student="student"
+                :academy="academy"
+                :access-level="accessLevel || ''"
+                @saved="fetchProfile"
+              />
             </div>
 
             <!-- เยี่ยมบ้าน -->

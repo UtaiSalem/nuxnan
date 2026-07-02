@@ -45,7 +45,7 @@ async function fetchStudentCard() {
     try {
       // Try academy-specific API first
       const response: any = await api.get(
-        `/api/academies/${props.academyId}/student-cards/profile/${props.member.student_id}`
+        `/api/academies/${props.academyId}/student-cards/by-student/${props.member.student_id}`
       )
       if (response.success) {
         student.value = response.student
