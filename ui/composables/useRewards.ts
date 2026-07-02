@@ -391,8 +391,10 @@ export const useRewards = () => {
   /**
    * Format points number
    */
-  const formatPoints = (value: number): string => {
-    return new Intl.NumberFormat('th-TH').format(value)
+  const formatPoints = (value: number | null | undefined): string => {
+    const n = Number(value)
+    if (!isFinite(n)) return '0'
+    return new Intl.NumberFormat('th-TH').format(n)
   }
   
   return {

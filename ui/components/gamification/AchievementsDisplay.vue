@@ -195,7 +195,10 @@ const loadAvailableAchievements = async () => {
 // Load stats
 const loadStats = async () => {
   try {
-    stats.value = await getAchievementStats()
+    const data = await getAchievementStats()
+    if (data && typeof data === 'object') {
+      stats.value = { ...stats.value, ...data }
+    }
   } catch (error) {
     console.error('Failed to load stats:', error)
   }
