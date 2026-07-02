@@ -6,33 +6,56 @@
 
 ---
 
+## 2026-07-03 — ✅ FEATURE COMPLETE
+
+### School Student Master Profile Unification — เสร็จสมบูรณ์ทุก Phase
+
+| Phase | งาน | Commit |
+|-------|-----|--------|
+| 0–4 | Branch + schema verify + backend API sections + 8-tab shell | `74f1fb8a` |
+| 5 | Navigation Unification (MemberManageModal, student-cards, home-visits, memberId redirect) | `f26bfa95` |
+| 6+7 | Self-service my-profile 8 tabs + sectional edit endpoints + ChangeRequest approval flow | `3e95cc99` |
+| 8 | Student Card module — card visual flip, admin photo upload/edit, byStudent route fix | `6c29c00d` |
+| 9 | Home Visit CRUD — JWT-native controller, pagination, privacy filtering, migration | `328a058c` |
+| 10 | Cleanup — remove `Schema::hasColumn` guard, update worklog | *(this commit)* |
+
+### สิ่งที่เพิ่มเติม / ข้อมูลสำคัญ
+
+**Routes ที่เพิ่มใน `student-profile.php`:**
+- `PATCH /academies/{academy}/students/{student}/personal`
+- CRUD `/addresses`, `/contacts`, `/guardians`, `/health`, `/academic-info`
+- `GET/PATCH /change-requests` (approve/reject)
+- `GET/POST/PUT/DELETE /home-visits` + `PATCH /home-visits/{visit}/status`
+
+**Routes ที่เพิ่มใน `academy-student-card.php`:**
+- `GET /student-cards/by-student/{student}`
+
+**Feature scope ที่ตัดสินใจ skip:**
+- Phase 5.1: QR flow `/members/{studentCode}` — ไม่มี route นี้ใน frontend
+- PDF export ใน AdminController — pre-existing TODO ไม่เกี่ยวกับ feature นี้
+
+**Admin pages ที่ยังคงอยู่ (ไม่ถูกลบ):**
+- `/admin/home-visits/*` — ยังใช้งานอยู่สำหรับ full admin management (zones, export)
+- `/admin/student-cards/*` — ยังใช้งานอยู่สำหรับ bulk operations
+
+### Branch / Git State
+
+- Branch: `feature/student-master-profile`
+- Latest commit: *(phase 10)*
+- Status: พร้อม merge/push
+- Migration รันแล้ว: `expand_student_home_visit_statuses` ✅
+
+---
+
 ## 2026-07-02 — บ้าน (อัพเดทรอบสอง)
 
 ### งานที่ทำในวันนี้ (เพิ่มเติม)
 
 - **School Student Master Profile — Phase 0-4** (`74f1fb8a`)
-  - Phase 0: สร้าง branch `feature/student-master-profile` + เก็บ baseline routes ใน `.agents/routes-baseline.txt`
-  - Phase 1-2: ตรวจพบว่า schema + namespace refactor เสร็จแล้ว (migration 2026-06-18 + Master/ controllers)
-  - Phase 3 (Backend): ขยาย `StudentProfileController::buildProfileResponse()` ให้คืน `student_card` + `home_visit` + `school_activity` sections พร้อม eager load `studentCard` + `homeVisits`
-  - Phase 4 (Frontend): refactor `profile.vue` เป็น 8-tab shell (ภาพรวม/ข้อมูลส่วนตัว/ที่อยู่/ผู้ปกครอง/สุขภาพ/การศึกษา/บัตรนักเรียน/เยี่ยมบ้าน); สร้าง `StudentCardTab.vue` + `HomeVisitTab.vue`; อัพเดท `useStudentProfile.ts` types + computed refs
 
 ### งานที่ค้างอยู่ (TODO ต่อ)
 
-- [x] **Phase 5** — Navigation Unification (`f26bfa95`) — profile.vue ?tab= param, MemberManageModal button, student-cards/home-visits fallback nav, [memberId].vue redirect
-  - หมายเหตุ: 5.1 QR flow ไม่มี `/members/{studentCode}` route ใน frontend ปัจจุบัน — skip
-- [ ] **Phase 6** — Self-service route `/academies/[name]/me/profile.vue` (backend `me/profile` มีแล้ว)
-- [ ] **Phase 7a** — Edit endpoints: personal/contacts/addresses (student self-service)
-- [ ] **Phase 7b** — Edit endpoints: guardians/health/academic (staff + approval flow)
-- [ ] **Phase 8** — Student Card module integration (edit mode + fix `StudentCardModal` bug)
-- [ ] **Phase 9** — Home Visit module integration (CRUD in HomeVisitTab + legacy route cleanup)
-- [ ] **Phase 10** — Cleanup + docs
-
-### Branch / Git State
-
-- Branch: `feature/student-master-profile`
-- Latest commit: `74f1fb8a`
-- Uncommitted: ไม่มี (clean)
-- Push status: **ยังไม่ push**
+- [x] Phase 5–10 ทั้งหมด — เสร็จแล้ว (ดูตารางด้านบน)
 
 ---
 

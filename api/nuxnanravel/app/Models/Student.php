@@ -218,17 +218,6 @@ class Student extends Model
 
     public function studentCard(): HasOne
     {
-        // Schema guard: column may not exist yet in some environments
-        $hasColumn = \Cache::remember('has_col:sc.student_id', 3600, function () {
-            return \Schema::hasColumn('student_cards', 'student_id');
-        });
-
-        if (! $hasColumn) {
-            // Return relation that never matches; accessor will fall back to legacy
-            return $this->hasOne(StudentCard::class, 'student_id', 'id')
-                ->whereRaw('1=0');
-        }
-
         return $this->hasOne(StudentCard::class);
     }
 
