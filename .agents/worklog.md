@@ -6,7 +6,36 @@
 
 ---
 
-## 2026-07-02 — บ้าน
+## 2026-07-02 — บ้าน (อัพเดทรอบสอง)
+
+### งานที่ทำในวันนี้ (เพิ่มเติม)
+
+- **School Student Master Profile — Phase 0-4** (`74f1fb8a`)
+  - Phase 0: สร้าง branch `feature/student-master-profile` + เก็บ baseline routes ใน `.agents/routes-baseline.txt`
+  - Phase 1-2: ตรวจพบว่า schema + namespace refactor เสร็จแล้ว (migration 2026-06-18 + Master/ controllers)
+  - Phase 3 (Backend): ขยาย `StudentProfileController::buildProfileResponse()` ให้คืน `student_card` + `home_visit` + `school_activity` sections พร้อม eager load `studentCard` + `homeVisits`
+  - Phase 4 (Frontend): refactor `profile.vue` เป็น 8-tab shell (ภาพรวม/ข้อมูลส่วนตัว/ที่อยู่/ผู้ปกครอง/สุขภาพ/การศึกษา/บัตรนักเรียน/เยี่ยมบ้าน); สร้าง `StudentCardTab.vue` + `HomeVisitTab.vue`; อัพเดท `useStudentProfile.ts` types + computed refs
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+
+- [ ] **Phase 5** — Navigation Unification (QR flow + MemberManageModal + student-cards/index + home-visits/index)
+- [ ] **Phase 6** — Self-service route `/academies/[name]/me/profile.vue` (backend `me/profile` มีแล้ว)
+- [ ] **Phase 7a** — Edit endpoints: personal/contacts/addresses (student self-service)
+- [ ] **Phase 7b** — Edit endpoints: guardians/health/academic (staff + approval flow)
+- [ ] **Phase 8** — Student Card module integration (edit mode + fix `StudentCardModal` bug)
+- [ ] **Phase 9** — Home Visit module integration (CRUD in HomeVisitTab + legacy route cleanup)
+- [ ] **Phase 10** — Cleanup + docs
+
+### Branch / Git State
+
+- Branch: `feature/student-master-profile`
+- Latest commit: `74f1fb8a`
+- Uncommitted: ไม่มี (clean)
+- Push status: **ยังไม่ push**
+
+---
+
+## 2026-07-02 — บ้าน (รอบแรก)
 
 ### งานที่ทำในวันนี้
 
