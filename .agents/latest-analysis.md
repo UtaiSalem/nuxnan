@@ -8057,6 +8057,15 @@ onMounted(() => { if (academyId.value) role.fetchRole(academyId.value) })
 - Kept the existing larger torso and shoulder silhouette, and added a named `leaveHatch` graphics overlay across the body so `ATTENDANCE_STATUS.LEAVE` reads differently from `ABSENT` even beyond alpha reduction.
 - Wired the hatch into both `createSeat()` and `updateSeatStatuses()` so it appears, disappears, and stays in sync during differential updates.
 - Verification: focused `vue-tsc --noEmit` output contains no errors for `attendancePhaserScene.ts`; visual browser verification is still pending.
+
+## 2026-07-02 — Attendance Phaser patrol TweenChain refactor
+
+- Scope: frontend-only patrol readability refactor in `ui/components/learn/course/attendances/phaser/attendancePhaserScene.ts`.
+- Confirmed the workspace uses `phaser ^4.1.0`, and local typings expose `Phaser.Tweens.TweenChain` plus `scene.tweens.chain()`.
+- Replaced nested `onComplete` patrol flow with `TweenChain` sequences for both inspect-aisle patrol and front-walk patrol, while intentionally leaving the arrival trail/impact tweens as parallel non-chain animations.
+- Added `patrolTween` tracking so `stopTeacherPatrol()` can stop and destroy the in-flight chain cleanly alongside the existing sprite tween shutdown.
+- Kept the aisle-inspection pause readable by modeling it as its own short chain step, preserving the think-dots pause behavior before the teacher walks back to the front.
+- Verification: focused `vue-tsc --noEmit` output contains no errors for `attendancePhaserScene.ts`; `git diff --check` passes aside from existing LF/CRLF warnings.
 ## 2026-07-02 — Lesson topics shown directly
 
 - Scope: frontend-only UX fix in `ui/components/learn/course/lesson/LessonPost.vue`.
@@ -8079,4 +8088,3 @@ onMounted(() => { if (academyId.value) role.fetchRole(academyId.value) })
 - Managed animations with sequential stagger and scale/alpha fade-in pop (using `Back.Out` ease) matching the design language.
 - Added cleanups to `destroyThinkDots()` during tween start, patrol stoppage, and loop stale checks.
 - Verified that it respects reduced-motion preferences (`prefersReducedMotion()`).
-

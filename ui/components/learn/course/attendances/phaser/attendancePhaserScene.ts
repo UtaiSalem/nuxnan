@@ -74,6 +74,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
   private teacherSprite?: Phaser.GameObjects.Container
   private teacherPersonRef?: Phaser.GameObjects.Container
   private teacherEyes: Phaser.GameObjects.Arc[] = []
+  private patrolTween?: Phaser.Tweens.TweenChain
   private teacherLoopActive = false
   private teacherPatrolToken = 0
   private teacherShutdownHooked = false
@@ -899,6 +900,11 @@ export class AttendanceRoomScene extends Phaser.Scene {
   private stopTeacherPatrol() {
     this.teacherLoopActive = false
     this.teacherPatrolToken++
+    if (this.patrolTween) {
+      this.patrolTween.stop()
+      this.patrolTween.destroy()
+      this.patrolTween = undefined
+    }
     if (this.teacherSprite) {
       this.tweens.killTweensOf(this.teacherSprite)
       if (this.teacherPersonRef) this.tweens.killTweensOf(this.teacherPersonRef)
@@ -1016,6 +1022,13 @@ export class AttendanceRoomScene extends Phaser.Scene {
       geom.zoneStarts[lastZoneIdx] + lastZoneCols * geom.deskCellW + (lastZoneCols - 1) * geom.zoneGap - 12
 
     const isStale = () => myToken !== this.teacherPatrolToken || !this.teacherLoopActive || !this.teacherSprite || !this.sys.isActive()
+    const stopActiveChain = () => {
+      if (this.patrolTween) {
+        this.patrolTween.stop()
+        this.patrolTween.destroy()
+        this.patrolTween = undefined
+      }
+    }
 
     const step = () => {
       this.destroyThinkDots()
@@ -1044,71 +1057,83 @@ export class AttendanceRoomScene extends Phaser.Scene {
         const targetY = geom.floorY + (row + 0.5) * geom.rowGap
 
         this.faceTeacher(aisleX)
-
-        this.tweens.add({
+        const pauseDelay = rand(1200, 2600) * speedMult
+        const chain = this.tweens.chain({
           targets: teacher,
-          x: aisleX,
-          y: frontY,
-          duration: 900 * speedMult,
-          ease: 'Sine.InOut',
-          onComplete: () => {
-            if (isStale()) {
-              this.destroyThinkDots()
-              return
-            }
-            this.tweens.add({
-              targets: teacher,
+          tweens: [
+            {
+              x: aisleX,
+              y: frontY,
+              duration: 900 * speedMult,
+              ease: 'Sine.InOut',
+            },
+            {
               y: targetY,
               duration: 1400 * speedMult,
               ease: 'Sine.InOut',
-              onComplete: () => {
+            },
+            {
+              x: aisleX,
+              y: targetY,
+              delay: pauseDelay,
+              duration: 1,
+              onStart: () => {
                 if (isStale()) {
                   this.destroyThinkDots()
+                  stopActiveChain()
                   return
                 }
-                // T8: Use delay on the return tween for stability
-                const pauseDelay = rand(1200, 2600) * speedMult
                 if (pauseDelay >= 1200) {
                   this.showThinkDots()
                 }
-                this.tweens.add({
-                  targets: teacher,
-                  x: this.gridCenterX,
-                  y: frontY,
-                  delay: pauseDelay,
-                  duration: 1400 * speedMult,
-                  ease: 'Sine.InOut',
-                  onStart: () => {
-                    this.destroyThinkDots()
-                    this.faceTeacher(this.gridCenterX)
-                  },
-                  onComplete: step,
-                })
               },
-            })
-          },
+              onComplete: () => {
+                this.destroyThinkDots()
+                this.faceTeacher(this.gridCenterX)
+              },
+            },
+            {
+              x: this.gridCenterX,
+              y: frontY,
+              duration: 1400 * speedMult,
+              ease: 'Sine.InOut',
+            },
+          ],
+        })
+        this.patrolTween = chain
+        chain.setCallback('onComplete', () => {
+          if (this.patrolTween === chain) this.patrolTween = undefined
+          step()
         })
       } else {
         const targetX = rand(leftEdge, rightEdge)
         this.faceTeacher(targetX)
-
-        this.tweens.add({
+        const chain = this.tweens.chain({
           targets: teacher,
-          x: targetX,
-          y: frontY,
-          duration: rand(2200, 3600) * speedMult,
-          ease: 'Sine.InOut',
-          onComplete: () => {
-            if (isStale()) return
-            // T8: Pause via delay
-            this.tweens.add({
-              targets: teacher,
+          tweens: [
+            {
+              x: targetX,
+              y: frontY,
+              duration: rand(2200, 3600) * speedMult,
+              ease: 'Sine.InOut',
+            },
+            {
               x: targetX,
               delay: rand(500, 1500) * speedMult,
-              duration: 1, // dummy duration
-              onComplete: step,
-            })
-          },
+              duration: 1,
+              onStart: () => {
+                if (isStale()) {
+                  stopActiveChain()
+                }
+              },
+            },
+          ],
+        })
+        this.patrolTween = chain
+        chain.setCallback('onComplete', () => {
+          if (this.patrolTween === chain) this.patrolTween = undefined
+          if (isStale()) return
+          step()
         })
       }
     }
