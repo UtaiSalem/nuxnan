@@ -23,6 +23,8 @@ import AddressViewCard from '~/components/learn/student/profile-cards/AddressVie
 import ContactViewCard from '~/components/learn/student/profile-cards/ContactViewCard.vue'
 import GuardianViewCard from '~/components/learn/student/profile-cards/GuardianViewCard.vue'
 import HealthInfoViewCard from '~/components/learn/student/profile-cards/HealthInfoViewCard.vue'
+import StudentCardTab from '~/components/student/profile/StudentCardTab.vue'
+import HomeVisitTab from '~/components/student/profile/HomeVisitTab.vue'
 import { Icon } from '@iconify/vue'
 
 definePageMeta({
@@ -51,6 +53,9 @@ const {
   academy,
   fullNameTh,
   classDisplay,
+  studentCard,
+  homeVisit,
+  schoolActivity,
   fetchProfile,
 } = useMyStudentProfile(academyName)
 
@@ -70,6 +75,25 @@ const goBack = () => {
 const goToDashboard = () => {
   navigateTo(`/academies/${academyName.value}/`)
 }
+
+const tabs = [
+  { key: 'overview', label: 'ภาพรวม' },
+  { key: 'personal', label: 'ข้อมูลส่วนตัว' },
+  { key: 'contact', label: 'ที่อยู่/ติดต่อ' },
+  { key: 'guardian', label: 'ผู้ปกครอง' },
+  { key: 'health', label: 'สุขภาพ' },
+  { key: 'academic', label: 'การศึกษา' },
+  { key: 'card', label: 'บัตรนักเรียน' },
+  { key: 'homevisit', label: 'เยี่ยมบ้าน' },
+]
+
+const validTabKeys = new Set(tabs.map(tab => tab.key))
+const requestedTab = typeof route.query.tab === 'string' ? route.query.tab : 'overview'
+const activeTab = ref(validTabKeys.has(requestedTab) ? requestedTab : 'overview')
+
+watch(activeTab, (tab) => {
+  router.replace({ query: { ...route.query, tab: tab === 'overview' ? undefined : tab } })
+})
 </script>
 
 <template>
@@ -157,7 +181,7 @@ const goToDashboard = () => {
       </div>
 
       <!-- Profile Content -->
-      <div v-else-if="student" class="space-y-5 sm:space-y-6">
+      <div v-else-if="student" class="space-y-5">
 
         <!-- Profile Header -->
         <ProfileHeader
@@ -168,30 +192,64 @@ const goToDashboard = () => {
           :access-level-label="accessLevelLabel"
         />
 
-        <!-- Two Column Layout for Desktop -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-          <!-- Left Column -->
-          <div class="space-y-5 sm:space-y-6">
-            <!-- Personal Info -->
-            <PersonalInfoCard :student="student" />
-
-            <!-- Academic Info -->
-            <AcademicInfoViewCard :academic-info="academicInfo" />
-
-            <!-- Health Info -->
-            <HealthInfoViewCard :health-info="healthInfo" />
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div class="flex overflow-x-auto scrollbar-hide border-b border-gray-100">
+            <button
+              v-for="tab in tabs"
+              :key="tab.key"
+              type="button"
+              :class="[
+                'flex-shrink-0 px-4 py-3 text-xs font-medium transition-colors whitespace-nowrap',
+                activeTab === tab.key
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50',
+              ]"
+              @click="activeTab = tab.key"
+            >
+              {{ tab.label }}
+            </button>
           </div>
 
-          <!-- Right Column -->
-          <div class="space-y-5 sm:space-y-6">
-            <!-- Guardian Info -->
-            <GuardianViewCard :guardians="guardians" />
+          <div class="p-5">
+            <div v-show="activeTab === 'overview'" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div class="space-y-4">
+                <PersonalInfoCard :student="student" :access-level="accessLevel || ''" @saved="fetchProfile" />
+                <AcademicInfoViewCard :academic-info="academicInfo" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+              </div>
+              <div class="space-y-4">
+                <GuardianViewCard :guardians="guardians" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+                <ContactViewCard :contacts="contacts" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+              </div>
+            </div>
 
-            <!-- Address Info -->
-            <AddressViewCard :addresses="addresses" />
+            <div v-show="activeTab === 'personal'">
+              <PersonalInfoCard :student="student" :access-level="accessLevel || ''" @saved="fetchProfile" />
+            </div>
 
-            <!-- Contact Info -->
-            <ContactViewCard :contacts="contacts" />
+            <div v-show="activeTab === 'contact'" class="space-y-4">
+              <AddressViewCard :addresses="addresses" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+              <ContactViewCard :contacts="contacts" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+            </div>
+
+            <div v-show="activeTab === 'guardian'">
+              <GuardianViewCard :guardians="guardians" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+            </div>
+
+            <div v-show="activeTab === 'health'">
+              <HealthInfoViewCard :health-info="healthInfo" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+            </div>
+
+            <div v-show="activeTab === 'academic'">
+              <AcademicInfoViewCard :academic-info="academicInfo" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+            </div>
+
+            <div v-show="activeTab === 'card'">
+              <StudentCardTab :student-card="studentCard" />
+            </div>
+
+            <div v-show="activeTab === 'homevisit'">
+              <HomeVisitTab :home-visit="homeVisit" :access-level="accessLevel || ''" />
+            </div>
           </div>
         </div>
       </div>

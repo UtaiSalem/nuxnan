@@ -35,6 +35,9 @@ export const useMyStudentProfile = (academyName: Ref<string> | string) => {
   const healthInfo = computed(() => profileData.value?.health_info ?? null)
   const accessLevel = computed(() => profileData.value?.access_level ?? null)
   const academy = computed(() => profileData.value?.academy ?? null)
+  const studentCard = computed(() => profileData.value?.student_card ?? null)
+  const homeVisit = computed(() => profileData.value?.home_visit ?? null)
+  const schoolActivity = computed(() => profileData.value?.school_activity ?? null)
 
   const fullNameTh = computed(() => {
     if (!student.value) return ''
@@ -137,6 +140,9 @@ export const useMyStudentProfile = (academyName: Ref<string> | string) => {
     primaryAddress,
     primaryContact,
     primaryGuardian,
+    studentCard,
+    homeVisit,
+    schoolActivity,
 
     fetchProfile,
   }

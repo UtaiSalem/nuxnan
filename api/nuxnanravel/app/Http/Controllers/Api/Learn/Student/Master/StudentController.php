@@ -9,9 +9,13 @@ use App\Models\StudentCard;
 use App\Models\StudentHomeVisit;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\StudentResource;
+use App\Traits\HandlesStudentUpdates;
+use App\Models\Academy;
+use App\Http\Requests\Student\UpdatePersonalRequest;
 
 class StudentController extends Controller
 {
+    use HandlesStudentUpdates;
     /**
      * Display a listing of students with unified master data.
      */
@@ -271,6 +275,32 @@ class StudentController extends Controller
             'success' => true,
             'message' => 'อัปเดตข้อมูลสำเร็จแล้ว',
             'student' => new StudentResource($student->fresh()->load(['addresses', 'contacts', 'guardians', 'healthInfo']))
+        ]);
+    }
+
+    /**
+     * Update student personal information (sectional edit)
+     */
+    public function updatePersonal(UpdatePersonalRequest $request, Academy $academy, Student $student)
+    {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
+        $result = $this->processFieldUpdates($student, $student, 'Student', '', $request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => empty($result['pending'])
+                ? 'อัปเดตข้อมูลส่วนตัวสำเร็จแล้ว'
+                : 'ส่งคำขอแก้ไขข้อมูลส่วนตัวรอการอนุมัติแล้ว',
+            'data' => $student->fresh(),
+            'pending_fields' => $result['pending'] ?? [],
         ]);
     }
 

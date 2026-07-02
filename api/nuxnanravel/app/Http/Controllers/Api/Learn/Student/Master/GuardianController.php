@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentGuardian;
 use App\Models\GuardianContact;
+use App\Http\Requests\Student\UpdateGuardianRequest;
 use App\Traits\HandlesStudentUpdates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class GuardianController extends Controller
@@ -19,25 +20,20 @@ class GuardianController extends Controller
     /**
      * Get student guardian data
      */
-    public function show(Request $request, $student_id)
+    public function show(Academy $academy, Student $student)
     {
-        try {
-            // Try to find student by ID first, then by student_id (code)
-            $student = Student::find($student_id);
-            if (!$student) {
-                $student = Student::where('student_id', $student_id)->first();
-            }
-            
-            if (!$student) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'ไม่พบข้อมูลนักเรียน'
-                ], 404);
-            }
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
 
+        $this->authorize('update', $student);
+
+        try {
             // Load guardians with contacts using both relationships
             $guardians = StudentGuardian::where('student_id', $student->id)
-                ->orWhere('student_code', $student->student_id)
                 ->with('contacts')
                 ->get();
             
@@ -97,40 +93,36 @@ class GuardianController extends Controller
     /**
      * Store new guardian data
      */
-    public function store(Request $request, $student_id)
+    public function store(UpdateGuardianRequest $request, Academy $academy, Student $student)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            $student = Student::findOrFail($student_id);
-            
-            // Validation
-            $validator = Validator::make($request->all(), [
-                'guardian.guardian_type' => 'required|in:father,mother,guardian,relative',
-                'guardian.citizen_id' => 'nullable|string|max:13',
-                'guardian.title_prefix' => 'nullable|string|max:20',
-                'guardian.first_name' => 'required|string|max:100',
-                'guardian.last_name' => 'required|string|max:100',
-                'guardian.occupation' => 'nullable|string|max:100',
-                'guardian.workplace' => 'nullable|string|max:200',
-                'guardian.monthly_income' => 'nullable|numeric|min:0',
-                'guardian.relationship' => 'nullable|string|max:50',
-                'guardian.is_primary_contact' => 'boolean',
-                'guardian.is_emergency_contact' => 'boolean',
-                'contact.contact_type' => 'required|in:phone,email,line,facebook,other',
-                'contact.contact_value' => 'required|string|max:100',
-                'contact.is_primary' => 'boolean'
-            ]);
-
-            if ($validator->fails()) {
-                throw new ValidationException($validator);
-            }
-
-            $validatedData = $validator->validated();
+            $validatedData = $request->validated();
             
             DB::beginTransaction();
 
-            // Create guardian
+            // Create guardian (always blacklist under normal settings, so owner goes pending)
+            $changeRequest = $this->applyUpdate($student, 'StudentGuardian', null, 'guardian.create', $validatedData);
+            if ($changeRequest) {
+                DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'ส่งคำขอเพิ่มข้อมูลผู้ปกครองแล้ว รอการอนุมัติ',
+                    'needs_approval' => true
+                ]);
+            }
+
+            // Create guardian directly
             $guardian = StudentGuardian::create([
-                'student_id' => $student_id,
+                'student_id' => $student->id,
                 'student_code' => $student->student_id,
                 'guardian_type' => $validatedData['guardian']['guardian_type'],
                 'citizen_id' => $validatedData['guardian']['citizen_id'] ?? null,
@@ -167,13 +159,6 @@ class GuardianController extends Controller
                 'message' => 'บันทึกข้อมูลผู้ปกครองสำเร็จ'
             ]);
 
-        } catch (ValidationException $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'ข้อมูลไม่ถูกต้อง',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -186,46 +171,31 @@ class GuardianController extends Controller
     /**
      * Update guardian data
      */
-    public function update(Request $request, $student_id)
+    public function update(UpdateGuardianRequest $request, Academy $academy, Student $student)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            $student = Student::with('guardians.contacts')->findOrFail($student_id);
-            
-            // Get existing guardian
-            $guardian = $student->guardians->first();
+            // Load existing guardian
+            $guardian = StudentGuardian::where('student_id', $student->id)->first();
             
             if (!$guardian) {
                 // If no guardian exists, create new one
-                return $this->store($request, $student_id);
+                return $this->store($request, $academy, $student);
             }
 
-            // Validation
-            $validator = Validator::make($request->all(), [
-                'guardian.guardian_type' => 'required|in:father,mother,guardian,relative',
-                'guardian.citizen_id' => 'nullable|string|max:13',
-                'guardian.title_prefix' => 'nullable|string|max:20',
-                'guardian.first_name' => 'required|string|max:100',
-                'guardian.last_name' => 'required|string|max:100',
-                'guardian.occupation' => 'nullable|string|max:100',
-                'guardian.workplace' => 'nullable|string|max:200',
-                'guardian.monthly_income' => 'nullable|numeric|min:0',
-                'guardian.relationship' => 'nullable|string|max:50',
-                'guardian.is_primary_contact' => 'boolean',
-                'guardian.is_emergency_contact' => 'boolean',
-                'contact.contact_type' => 'required|in:phone,email,line,facebook,other',
-                'contact.contact_value' => 'required|string|max:100',
-                'contact.is_primary' => 'boolean'
-            ]);
-
-            if ($validator->fails()) {
-                throw new ValidationException($validator);
-            }
-
-            $validatedData = $validator->validated();
+            $validatedData = $request->validated();
             
             DB::beginTransaction();
 
-            // Route through approval flow: per-field decision (direct update vs change request).
+            // Route through approval flow
             $guardianFields = [
                 'guardian_type' => $validatedData['guardian']['guardian_type'],
                 'citizen_id' => $validatedData['guardian']['citizen_id'] ?? null,
@@ -245,15 +215,15 @@ class GuardianController extends Controller
             $contact = $guardian->contacts->where('is_primary', true)->first() 
                      ?? $guardian->contacts->first();
 
+            // Let's also check approval for contacts if needed, but per-spec contacts update directly or can be updated directly.
+            // As contact is guardian's contact, we can update directly as per current behavior or check.
             if ($contact) {
-                // Update existing contact
                 $contact->update([
                     'contact_type' => $validatedData['contact']['contact_type'],
                     'contact_value' => $validatedData['contact']['contact_value'],
                     'is_primary' => $validatedData['contact']['is_primary'] ?? true,
                 ]);
             } else {
-                // Create new contact
                 $contact = GuardianContact::create([
                     'guardian_id' => $guardian->id,
                     'contact_type' => $validatedData['contact']['contact_type'],
@@ -277,13 +247,6 @@ class GuardianController extends Controller
                     : 'ส่งคำขอแก้ไขข้อมูลผู้ปกครองรอการอนุมัติแล้ว',
             ]);
 
-        } catch (ValidationException $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'ข้อมูลไม่ถูกต้อง',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([

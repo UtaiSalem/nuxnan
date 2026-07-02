@@ -163,7 +163,7 @@ const quickActions = computed(() => [
   {
     title: 'บัตรนักเรียน',
     icon: 'fluent:person-v-card-24-regular',
-    to: `/academies/${academyName.value}/my-card`,
+    to: `/academies/${academyName.value}/my-profile?tab=card`,
     color: 'bg-amber-500',
   },
   {

@@ -18,7 +18,8 @@
 
 ### งานที่ค้างอยู่ (TODO ต่อ)
 
-- [ ] **Phase 5** — Navigation Unification (QR flow + MemberManageModal + student-cards/index + home-visits/index)
+- [x] **Phase 5** — Navigation Unification (`f26bfa95`) — profile.vue ?tab= param, MemberManageModal button, student-cards/home-visits fallback nav, [memberId].vue redirect
+  - หมายเหตุ: 5.1 QR flow ไม่มี `/members/{studentCode}` route ใน frontend ปัจจุบัน — skip
 - [ ] **Phase 6** — Self-service route `/academies/[name]/me/profile.vue` (backend `me/profile` มีแล้ว)
 - [ ] **Phase 7a** — Edit endpoints: personal/contacts/addresses (student self-service)
 - [ ] **Phase 7b** — Edit endpoints: guardians/health/academic (staff + approval flow)

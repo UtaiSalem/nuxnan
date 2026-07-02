@@ -8088,3 +8088,11 @@ onMounted(() => { if (academyId.value) role.fetchRole(academyId.value) })
 - Managed animations with sequential stagger and scale/alpha fade-in pop (using `Back.Out` ease) matching the design language.
 - Added cleanups to `destroyThinkDots()` during tween start, patrol stoppage, and loop stale checks.
 - Verified that it respects reduced-motion preferences (`prefersReducedMotion()`).
+## 2026-07-03 — Student Master Profile Phase 6 self-service route
+
+- Scope: frontend self-service profile consolidation.
+- Added `studentCard`, `homeVisit`, and `schoolActivity` computed refs to `useMyStudentProfile`.
+- Replaced `/academies/[name]/my-profile` success layout with the same eight-tab profile shell used by the staff/student-id route while preserving the dedicated `STUDENT_NOT_LINKED` state.
+- Added validated `?tab=` handling and query synchronization for tab navigation.
+- Student dashboard and academy navigation card actions now link directly to `/my-profile?tab=card`; the legacy `/my-card` route redirects there with history replacement.
+- Verification: `git diff --check` passes. Full `vue-tsc` remains red from repository-wide pre-existing errors; filtered output shows no new errors in the composable/navigation/card page, while `my-profile.vue` retains the existing generated-layout typing error for `layout: 'default'` also present on the master profile route. `npm.cmd run build` exceeded the 120-second command limit without emitting an error before termination.

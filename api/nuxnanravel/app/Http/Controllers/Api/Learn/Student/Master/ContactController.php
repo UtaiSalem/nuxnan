@@ -3,19 +3,30 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
-use App\Models\StudentContact;
+use App\Models\Academy;
 use App\Models\Student;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Models\StudentContact;
 use App\Traits\HandlesStudentUpdates;
+use App\Http\Requests\Student\UpdateContactRequest;
+use Illuminate\Http\Request;
 
 class ContactController extends Controller
 {
     use HandlesStudentUpdates;
-    public function index($studentId)
+
+    public function index(Academy $academy, Student $student)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            $contacts = StudentContact::where('student_id', $studentId)
+            $contacts = StudentContact::where('student_id', $student->id)
                 ->orderBy('is_primary', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -32,24 +43,37 @@ class ContactController extends Controller
         }
     }
 
-    public function store(Request $request, $studentId)
+    public function store(UpdateContactRequest $request, Academy $academy, Student $student)
     {
-        try {
-            $validated = $request->validate([
-                'contact_type' => ['required', Rule::in(['phone', 'email', 'line', 'facebook'])],
-                'contact_value' => 'required|string|max:255',
-                'is_primary' => 'boolean'
-            ]);
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
 
-            // เพิ่ม student_id จาก route parameter
-            $validated['student_id'] = $studentId;
+        $this->authorize('update', $student);
+
+        try {
+            $validated = $request->validated();
+
+            // Check if creation needs approval
+            $changeRequest = $this->applyUpdate($student, 'StudentContact', null, 'contact.create', $validated);
+            if ($changeRequest) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'ส่งคำขอเพิ่มข้อมูลการติดต่อแล้ว รอการอนุมัติ',
+                    'needs_approval' => true
+                ]);
+            }
 
             // หากเป็นการติดต่อหลัก ให้เปลี่ยนการติดต่ออื่นให้ไม่ใช่หลัก
             if (isset($validated['is_primary']) && $validated['is_primary']) {
-                StudentContact::where('student_id', $studentId)
+                StudentContact::where('student_id', $student->id)
                     ->update(['is_primary' => false]);
             }
 
+            $validated['student_id'] = $student->id;
             $contact = StudentContact::create($validated);
 
             return response()->json([
@@ -57,99 +81,106 @@ class ContactController extends Controller
                 'message' => 'เพิ่มข้อมูลการติดต่อเรียบร้อยแล้ว',
                 'data' => $contact
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'ข้อมูลไม่ถูกต้อง',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการเพิ่มข้อมูลการติดต่อ'
+                'message' => 'เกิดข้อผิดพลาดในการเพิ่มข้อมูลการติดต่อ: ' . $e->getMessage()
             ], 500);
         }
     }
 
-    public function update(Request $request, $studentId, $id)
+    public function update(UpdateContactRequest $request, Academy $academy, Student $student, StudentContact $contact)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        if ($contact->student_id !== $student->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลการติดต่อไม่ตรงกับนักเรียน'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            $contact = StudentContact::findOrFail($id);
-            
-            $validated = $request->validate([
-                'contact_type' => ['required', Rule::in(['phone', 'email', 'line', 'facebook'])],
-                'contact_value' => 'required|string|max:255',
-                'is_primary' => 'boolean'
-            ]);
+            $validated = $request->validated();
 
-            // ตรวจสอบว่าการติดต่อนี้เป็นของนักเรียนที่ถูกต้องหรือไม่
-            if ((int)$contact->student_id !== (int)$studentId) {
+            $needsApproval = false;
+            $directUpdates = [];
+
+            foreach ($validated as $field => $value) {
+                if ($value === $contact->$field) continue;
+                
+                $changeRequest = $this->applyUpdate($student, 'StudentContact', $contact->id, "contact.$field", $value, $contact->$field);
+                if ($changeRequest) {
+                    $needsApproval = true;
+                } else {
+                    $directUpdates[$field] = $value;
+                }
+            }
+
+            if (!empty($directUpdates)) {
+                // หากเป็นการติดต่อหลัก ให้เปลี่ยนการติดต่ออื่นให้ไม่ใช่หลัก
+                if (isset($directUpdates['is_primary']) && $directUpdates['is_primary']) {
+                    StudentContact::where('student_id', $contact->student_id)
+                        ->where('id', '!=', $contact->id)
+                        ->update(['is_primary' => false]);
+                }
+                $contact->update($directUpdates);
+            }
+
+            if ($needsApproval) {
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'ไม่สามารถแก้ไขข้อมูลการติดต่อของนักเรียนคนอื่นได้'
-                ], 403);
+                    'status' => 'success',
+                    'message' => 'ส่งคำขอแก้ไขข้อมูลการติดต่อแล้ว รอการอนุมัติ ส่วนข้อมูลที่ไม่ต้องอนุมัติถูกอัปเดตแล้ว',
+                    'needs_approval' => true,
+                    'data' => $contact->fresh()
+                ]);
             }
-
-            // เพิ่ม student_id ให้กับ validated data
-            $validated['student_id'] = $studentId;
-
-            // หากเป็นการติดต่อหลัก ให้เปลี่ยนการติดต่ออื่นให้ไม่ใช่หลัก
-            if (isset($validated['is_primary']) && $validated['is_primary']) {
-                StudentContact::where('student_id', $contact->student_id)
-                    ->where('id', '!=', $id)
-                    ->update(['is_primary' => false]);
-            }
-
-            $contact->update($validated);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'แก้ไขข้อมูลการติดต่อเรียบร้อยแล้ว',
                 'data' => $contact->fresh()
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'ข้อมูลไม่ถูกต้อง',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'ไม่พบข้อมูลการติดต่อที่ต้องการแก้ไข'
-            ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการแก้ไขข้อมูลการติดต่อ'
+                'message' => 'เกิดข้อผิดพลาดในการแก้ไขข้อมูลการติดต่อ: ' . $e->getMessage()
             ], 500);
         }
     }
 
-    public function destroy($studentId, $id)
+    public function destroy(Academy $academy, Student $student, StudentContact $contact)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        if ($contact->student_id !== $student->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลการติดต่อไม่ตรงกับนักเรียน'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            $contact = StudentContact::findOrFail($id);
-            
-            // ตรวจสอบว่าการติดต่อนี้เป็นของนักเรียนที่ถูกต้องหรือไม่
-            if ((int)$contact->student_id !== (int)$studentId) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'ไม่สามารถลบข้อมูลการติดต่อของนักเรียนคนอื่นได้'
-                ], 403);
-            }
-            
             $contact->delete();
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'ลบข้อมูลการติดต่อเรียบร้อยแล้ว'
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'ไม่พบข้อมูลการติดต่อที่ต้องการลบ'
-            ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -158,21 +189,27 @@ class ContactController extends Controller
         }
     }
 
-    public function setPrimary(Request $request, $studentId, $id)
+    public function setPrimary(Academy $academy, Student $student, StudentContact $contact)
     {
-        try {
-            $contact = StudentContact::findOrFail($id);
-            
-            // ตรวจสอบว่าการติดต่อนี้เป็นของนักเรียนที่ถูกต้องหรือไม่
-            if ((int)$contact->student_id !== (int)$studentId) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'ไม่สามารถตั้งค่าข้อมูลการติดต่อของนักเรียนคนอื่นได้'
-                ], 403);
-            }
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
 
+        if ($contact->student_id !== $student->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลการติดต่อไม่ตรงกับนักเรียน'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
+        try {
             // เปลี่ยนการติดต่ออื่นให้ไม่ใช่หลัก
-            StudentContact::where('student_id', $studentId)
+            StudentContact::where('student_id', $student->id)
                 ->update(['is_primary' => false]);
 
             // ตั้งการติดต่อนี้เป็นหลัก
@@ -183,11 +220,6 @@ class ContactController extends Controller
                 'message' => 'ตั้งค่าเป็นการติดต่อหลักเรียบร้อยแล้ว',
                 'data' => $contact->fresh()
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'ไม่พบข้อมูลการติดต่อที่ต้องการ'
-            ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',

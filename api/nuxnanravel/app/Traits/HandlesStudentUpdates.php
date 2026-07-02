@@ -110,7 +110,7 @@ trait HandlesStudentUpdates
                     return $mode === 'blacklist';
                 }
             }
-            if ($field === $pattern) {
+            if ($field === $pattern || str_starts_with($field, $pattern . '.')) {
                 return $mode === 'blacklist';
             }
         }

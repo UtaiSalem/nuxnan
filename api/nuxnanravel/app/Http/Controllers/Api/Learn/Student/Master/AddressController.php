@@ -3,20 +3,30 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentAddress;
 use App\Traits\HandlesStudentUpdates;
+use App\Http\Requests\Student\UpdateAddressRequest;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class AddressController extends Controller
 {
     use HandlesStudentUpdates;
 
-    public function index($studentId)
+    public function index(Academy $academy, Student $student)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            $addresses = StudentAddress::where('student_id', $studentId)
+            $addresses = StudentAddress::where('student_id', $student->id)
                 ->orderBy('is_current', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -33,25 +43,21 @@ class AddressController extends Controller
         }
     }
 
-    public function store(Request $request, $studentId)
+    public function store(UpdateAddressRequest $request, Academy $academy, Student $student)
     {
-        try {
-            $student = Student::findOrFail($studentId);
-            $validated = $request->validate([
-                'address_type' => ['required', Rule::in(['current', 'permanent', 'temporary'])],
-                'house_number' => 'required|string|max:50',
-                'village_number' => 'nullable|string|max:20',
-                'village_name' => 'nullable|string|max:100',
-                'alley' => 'nullable|string|max:100',
-                'road' => 'nullable|string|max:100',
-                'subdistrict' => 'required|string|max:100',
-                'district' => 'required|string|max:100',
-                'province' => 'required|string|max:100',
-                'postal_code' => 'nullable|string|max:10',
-                'is_current' => 'boolean'
-            ]);
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
 
-            // Check if creation needs approval (using a generic 'address' field check)
+        $this->authorize('update', $student);
+
+        try {
+            $validated = $request->validated();
+
+            // Check if creation needs approval
             $changeRequest = $this->applyUpdate($student, 'StudentAddress', null, 'address.create', $validated);
             if ($changeRequest) {
                 return response()->json([
@@ -63,12 +69,12 @@ class AddressController extends Controller
 
             // หากเป็นที่อยู่ปัจจุบัน ให้เปลี่ยนที่อยู่อื่นให้ไม่ใช่ปัจจุบัน
             if (isset($validated['is_current']) && $validated['is_current']) {
-                StudentAddress::where('student_id', $studentId)
+                StudentAddress::where('student_id', $student->id)
                     ->update(['is_current' => false]);
             }
 
-            $validated['student_id'] = $studentId;
-            $validated['academy_id'] = $student->academy_id;
+            $validated['student_id'] = $student->id;
+            $validated['academy_id'] = $academy->id;
             $address = StudentAddress::create($validated);
 
             return response()->json([
@@ -84,25 +90,26 @@ class AddressController extends Controller
         }
     }
 
-    public function update(Request $request, $studentId, $id)
+    public function update(UpdateAddressRequest $request, Academy $academy, Student $student, StudentAddress $address)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        if ($address->student_id !== $student->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลที่อยู่ไม่ตรงกับนักเรียน'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            $student = Student::findOrFail($studentId);
-            $address = StudentAddress::where('student_id', $studentId)->findOrFail($id);
-            
-            $validated = $request->validate([
-                'address_type' => ['nullable', Rule::in(['current', 'permanent', 'temporary'])],
-                'house_number' => 'nullable|string|max:50',
-                'village_number' => 'nullable|string|max:20',
-                'village_name' => 'nullable|string|max:100',
-                'alley' => 'nullable|string|max:100',
-                'road' => 'nullable|string|max:100',
-                'subdistrict' => 'nullable|string|max:100',
-                'district' => 'nullable|string|max:100',
-                'province' => 'nullable|string|max:100',
-                'postal_code' => 'nullable|string|max:10',
-                'is_current' => 'nullable|boolean'
-            ]);
+            $validated = $request->validated();
 
             $needsApproval = false;
             $directUpdates = [];
@@ -122,7 +129,7 @@ class AddressController extends Controller
                 // หากเป็นที่อยู่ปัจจุบัน ให้เปลี่ยนที่อยู่อื่นให้ไม่ใช่ปัจจุบัน
                 if (isset($directUpdates['is_current']) && $directUpdates['is_current']) {
                     StudentAddress::where('student_id', $address->student_id)
-                        ->where('id', '!=', $id)
+                        ->where('id', '!=', $address->id)
                         ->update(['is_current' => false]);
                 }
                 $address->update($directUpdates);
@@ -131,7 +138,7 @@ class AddressController extends Controller
             if ($needsApproval) {
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'ส่งคำขอแก้ไขบางข้อมูลที่อยู่แล้ว รอการอนุมัติ ส่วนข้อมูลที่ไม่ต้องอนุมัติถูกอัปเดตแล้ว',
+                    'message' => 'ส่งคำขอแก้ไขข้อมูลที่อยู่แล้ว รอการอนุมัติ ส่วนข้อมูลที่ไม่ต้องอนุมัติถูกอัปเดตแล้ว',
                     'needs_approval' => true,
                     'data' => $address->fresh()
                 ]);
@@ -150,10 +157,25 @@ class AddressController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(Academy $academy, Student $student, StudentAddress $address)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        if ($address->student_id !== $student->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลที่อยู่ไม่ตรงกับนักเรียน'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            $address = StudentAddress::findOrFail($id);
             $address->delete();
 
             return response()->json([
@@ -168,13 +190,27 @@ class AddressController extends Controller
         }
     }
 
-    public function setCurrent($id)
+    public function setCurrent(Academy $academy, Student $student, StudentAddress $address)
     {
-        try {
-            $address = StudentAddress::findOrFail($id);
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
 
+        if ($address->student_id !== $student->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลที่อยู่ไม่ตรงกับนักเรียน'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
+        try {
             // เปลี่ยนที่อยู่อื่นให้ไม่ใช่ปัจจุบัน
-            StudentAddress::where('student_id', $address->student_id)
+            StudentAddress::where('student_id', $student->id)
                 ->update(['is_current' => false]);
 
             // ตั้งที่อยู่นี้เป็นปัจจุบัน

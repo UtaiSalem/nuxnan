@@ -163,39 +163,39 @@ const activeTab = ref((route.query.tab as string) || 'overview')
             <!-- ภาพรวม -->
             <div v-show="activeTab === 'overview'" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <div class="space-y-4">
-                <PersonalInfoCard :student="student" />
-                <AcademicInfoViewCard :academic-info="academicInfo" />
+                <PersonalInfoCard :student="student" :access-level="accessLevel || ''" @saved="fetchProfile" />
+                <AcademicInfoViewCard :academic-info="academicInfo" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
               </div>
               <div class="space-y-4">
-                <GuardianViewCard :guardians="guardians" />
-                <ContactViewCard :contacts="contacts" />
+                <GuardianViewCard :guardians="guardians" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+                <ContactViewCard :contacts="contacts" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
               </div>
             </div>
 
             <!-- ข้อมูลส่วนตัว -->
             <div v-show="activeTab === 'personal'">
-              <PersonalInfoCard :student="student" />
+              <PersonalInfoCard :student="student" :access-level="accessLevel || ''" @saved="fetchProfile" />
             </div>
 
             <!-- ที่อยู่/ติดต่อ -->
             <div v-show="activeTab === 'contact'" class="space-y-4">
-              <AddressViewCard :addresses="addresses" />
-              <ContactViewCard :contacts="contacts" />
+              <AddressViewCard :addresses="addresses" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
+              <ContactViewCard :contacts="contacts" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
             </div>
 
             <!-- ผู้ปกครอง -->
             <div v-show="activeTab === 'guardian'">
-              <GuardianViewCard :guardians="guardians" />
+              <GuardianViewCard :guardians="guardians" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
             </div>
 
             <!-- สุขภาพ -->
             <div v-show="activeTab === 'health'">
-              <HealthInfoViewCard :health-info="healthInfo" />
+              <HealthInfoViewCard :health-info="healthInfo" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
             </div>
 
             <!-- การศึกษา -->
             <div v-show="activeTab === 'academic'">
-              <AcademicInfoViewCard :academic-info="academicInfo" />
+              <AcademicInfoViewCard :academic-info="academicInfo" :access-level="accessLevel || ''" :student-id="student?.id" :academy-id="student?.academy_id" @saved="fetchProfile" />
             </div>
 
             <!-- บัตรนักเรียน -->
