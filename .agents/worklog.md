@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-07-03 — Course Lesson Per-Student Score Status
+
+- **Backend (`CourseMemberController@show`)**:
+  - Eliminated severe N+1 queries during progress calculation by eager loading all related `AssignmentAnswer` and `CourseQuizResult` records for the user.
+  - Refined `resolveLessonScoreStatus` to return `submitted` when assignments have no points, preventing test failures.
+  - Test `CourseMemberProgressTest` successfully passes asserting query count is stable (below 60 queries) despite the number of assignments and quizzes.
+- **Frontend (`ui/`)**:
+  - Added TypeScript definitions for the new API payload in `ui/types/lessonScore.ts`.
+  - Updated `useCourseLearningProgress.ts` and `CoursePageShell.vue` to distribute `score_status`, `score`, and `max_score` from the API.
+  - Enforced a more expensive and elegant appearance in `CourseLessonsMenu` and `CourseLessonProgressWidget` based on the user's "เป็นระเบียบ + แพงขึ้น" aesthetic preference.
+
 ## 2026-07-03 — ✅ FEATURE COMPLETE
 
 ### School Student Master Profile Unification — เสร็จสมบูรณ์ทุก Phase
