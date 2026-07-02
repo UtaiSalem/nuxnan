@@ -168,7 +168,11 @@ const handleFilter = () => {
 }
 
 const viewVisit = (visit: any) => {
-  navigateTo(`/academies/${academyName.value}/admin/home-visits/${visit.id}`)
+  if (visit.student?.id) {
+    navigateTo(`/academies/${academyName.value}/students/${visit.student.id}/profile?tab=homevisit`)
+  } else {
+    navigateTo(`/academies/${academyName.value}/admin/home-visits/${visit.id}`)
+  }
 }
 
 const getStatusColor = (status: string) => {

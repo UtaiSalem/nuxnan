@@ -63,7 +63,7 @@ const tabs = [
   { key: 'homevisit',  label: 'เยี่ยมบ้าน' },
 ]
 
-const activeTab = ref('overview')
+const activeTab = ref((route.query.tab as string) || 'overview')
 </script>
 
 <template>
