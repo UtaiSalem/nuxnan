@@ -113,6 +113,38 @@ export interface AcademyInfo {
   logo: string | null
 }
 
+export interface StudentCardInfo {
+  exists: boolean
+  id: number | null
+  card_number: string | null
+  issued_at: string | null
+  expires_at: string | null
+  photo_status: 'approved' | 'pending' | 'missing'
+  preview_url: string | null
+  match_strategy: string | null
+}
+
+export interface HomeVisitSummary {
+  id: number
+  visited_at: string | null
+  status: string | null
+  visitor_name: string | null
+  observations?: string | null
+}
+
+export interface HomeVisitInfo {
+  total_visits: number
+  latest: HomeVisitSummary | null
+  next_scheduled: { id: number; scheduled_at: string | null } | null
+  recent: HomeVisitSummary[]
+}
+
+export interface SchoolActivityInfo {
+  joined_at: string | null
+  member_code: string | null
+  last_active_at: string | null
+}
+
 export interface StudentProfileData {
   student: StudentProfile
   classroom: ClassroomInfo | null
@@ -123,6 +155,9 @@ export interface StudentProfileData {
   health_info: StudentHealthInfo | null
   access_level: string
   academy: AcademyInfo
+  student_card: StudentCardInfo
+  home_visit: HomeVisitInfo
+  school_activity: SchoolActivityInfo
 }
 
 // Access level labels
@@ -156,6 +191,9 @@ export const useStudentProfile = (academyName: Ref<string> | string, studentId: 
   const healthInfo = computed(() => profileData.value?.health_info ?? null)
   const accessLevel = computed(() => profileData.value?.access_level ?? null)
   const academy = computed(() => profileData.value?.academy ?? null)
+  const studentCard = computed(() => profileData.value?.student_card ?? null)
+  const homeVisit = computed(() => profileData.value?.home_visit ?? null)
+  const schoolActivity = computed(() => profileData.value?.school_activity ?? null)
 
   const fullNameTh = computed(() => {
     if (!student.value) return ''
@@ -259,6 +297,11 @@ export const useStudentProfile = (academyName: Ref<string> | string, studentId: 
     primaryAddress,
     primaryContact,
     primaryGuardian,
+
+    // New sections (Phase 3 additions)
+    studentCard,
+    homeVisit,
+    schoolActivity,
 
     // Actions
     fetchProfile,

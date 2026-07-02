@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api\Learn\Student\Profile;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Student;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\ClassroomMember;
+use App\Models\Student;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class StudentProfileController extends Controller
@@ -27,10 +27,10 @@ class StudentProfileController extends Controller
         $user = Auth::user();
 
         $academy = $this->findAcademy($academyId);
-        if (!$academy) {
+        if (! $academy) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบสถาบันการศึกษา'
+                'message' => 'ไม่พบสถาบันการศึกษา',
             ], 404);
         }
 
@@ -38,18 +38,18 @@ class StudentProfileController extends Controller
             ->where('academy_id', $academy->id)
             ->first();
 
-        if (!$student) {
+        if (! $student) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบข้อมูลนักเรียน'
+                'message' => 'ไม่พบข้อมูลนักเรียน',
             ], 404);
         }
 
         $accessLevel = $this->checkAccess($user, $student, $academy);
-        if (!$accessLevel) {
+        if (! $accessLevel) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนนี้'
+                'message' => 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนนี้',
             ], 403);
         }
 
@@ -70,10 +70,10 @@ class StudentProfileController extends Controller
         $user = Auth::user();
 
         $academy = $this->findAcademy($academyId);
-        if (!$academy) {
+        if (! $academy) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบสถาบันการศึกษา'
+                'message' => 'ไม่พบสถาบันการศึกษา',
             ], 404);
         }
 
@@ -81,11 +81,11 @@ class StudentProfileController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$student) {
+        if (! $student) {
             return response()->json([
                 'success' => false,
                 'message' => 'บัญชีของคุณยังไม่ได้เชื่อมกับข้อมูลนักเรียนในโรงเรียนนี้ กรุณาติดต่อครูประจำชั้น',
-                'code' => 'STUDENT_NOT_LINKED'
+                'code' => 'STUDENT_NOT_LINKED',
             ], 404);
         }
 
@@ -100,7 +100,7 @@ class StudentProfileController extends Controller
         $user = Auth::user();
 
         $academy = $this->findAcademy($academyId);
-        if (!$academy) {
+        if (! $academy) {
             return response()->json(['success' => false, 'message' => 'ไม่พบสถาบัน'], 404);
         }
 
@@ -108,12 +108,12 @@ class StudentProfileController extends Controller
             ->where('academy_id', $academy->id)
             ->first();
 
-        if (!$student) {
+        if (! $student) {
             return response()->json(['success' => false, 'message' => 'ไม่พบนักเรียน'], 404);
         }
 
         $accessLevel = $this->checkAccess($user, $student, $academy);
-        if (!$accessLevel) {
+        if (! $accessLevel) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -141,7 +141,7 @@ class StudentProfileController extends Controller
         $user = Auth::user();
 
         $academy = $this->findAcademy($academyId);
-        if (!$academy) {
+        if (! $academy) {
             return response()->json(['success' => false, 'message' => 'ไม่พบสถาบัน'], 404);
         }
 
@@ -149,11 +149,11 @@ class StudentProfileController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$student) {
+        if (! $student) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลนักเรียนที่เชื่อมโยง',
-                'code' => 'STUDENT_NOT_LINKED'
+                'code' => 'STUDENT_NOT_LINKED',
             ], 404);
         }
 
@@ -196,7 +196,7 @@ class StudentProfileController extends Controller
         $student->load([
             'academicInfos' => function ($query) {
                 $query->orderBy('is_current', 'desc')
-                      ->orderBy('academic_year', 'desc');
+                    ->orderBy('academic_year', 'desc');
             },
             'addresses',
             'contacts',
@@ -204,6 +204,10 @@ class StudentProfileController extends Controller
             'healthInfo',
             'activeClassroom',
             'currentEnrollment',
+            'studentCard',
+            'homeVisits' => function ($query) {
+                $query->orderBy('visit_date', 'desc')->limit(5);
+            },
         ]);
 
         // Classroom info
@@ -309,6 +313,7 @@ class StudentProfileController extends Controller
                         $data['monthly_income'] = $guardian->monthly_income;
                         $data['workplace'] = $guardian->workplace;
                     }
+
                     return $data;
                 }),
                 'health_info' => $student->healthInfo ? [
@@ -327,6 +332,9 @@ class StudentProfileController extends Controller
                     'name' => $academy->name,
                     'logo' => $academy->logo,
                 ],
+                'student_card' => $this->buildStudentCardSection($student),
+                'home_visit' => $this->buildHomeVisitSection($student, $accessLevel),
+                'school_activity' => $this->buildSchoolActivitySection($student, $academy),
             ],
         ]);
     }
@@ -337,7 +345,7 @@ class StudentProfileController extends Controller
      */
     private function checkAccess($user, Student $student, Academy $academy): ?string
     {
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 
@@ -352,7 +360,7 @@ class StudentProfileController extends Controller
             ->where('status', 1)
             ->first();
 
-        if (!$academyMember) {
+        if (! $academyMember) {
             return null;
         }
 
@@ -366,13 +374,13 @@ class StudentProfileController extends Controller
             $isHomeroom = ClassroomMember::whereHas('classroom', function ($q) use ($student) {
                 $q->whereHas('classroomStudents', function ($sq) use ($student) {
                     $sq->where('student_id', $student->id)
-                       ->where('status', 'active');
+                        ->where('status', 'active');
                 });
             })
-            ->where('user_id', $user->id)
-            ->where('role', 'teacher')
-            ->where('is_active', true)
-            ->exists();
+                ->where('user_id', $user->id)
+                ->where('role', 'teacher')
+                ->where('is_active', true)
+                ->exists();
 
             if ($isHomeroom) {
                 return 'homeroom';
@@ -401,11 +409,91 @@ class StudentProfileController extends Controller
     }
 
     /**
+     * Build the student_card section of the profile response.
+     */
+    private function buildStudentCardSection(Student $student): array
+    {
+        $card = $student->getRelationValue('studentCard');
+
+        if (! $card) {
+            return [
+                'exists' => false,
+                'id' => null,
+                'card_number' => null,
+                'issued_at' => null,
+                'expires_at' => null,
+                'photo_status' => 'missing',
+                'preview_url' => null,
+                'match_strategy' => null,
+            ];
+        }
+
+        return [
+            'exists' => true,
+            'id' => $card->id,
+            'card_number' => $card->student_number,
+            'issued_at' => $card->card_issue_date,
+            'expires_at' => $card->card_expiry_date,
+            'photo_status' => $card->profile_image ? 'approved' : 'missing',
+            'preview_url' => $card->profile_image ? asset('storage/'.$card->profile_image) : null,
+            'match_strategy' => 'fk',
+        ];
+    }
+
+    /**
+     * Build the home_visit section of the profile response.
+     */
+    private function buildHomeVisitSection(Student $student, string $accessLevel): array
+    {
+        $visits = $student->getRelationValue('homeVisits') ?? collect();
+
+        $latest = $visits->first();
+        $nextScheduled = $visits->firstWhere('visit_status', 'scheduled');
+
+        return [
+            'total_visits' => $student->homeVisits()->count(),
+            'latest' => $latest ? [
+                'id' => $latest->id,
+                'visited_at' => $latest->visit_date?->toDateString(),
+                'status' => $latest->visit_status,
+                'visitor_name' => $latest->visitor_name,
+            ] : null,
+            'next_scheduled' => $nextScheduled ? [
+                'id' => $nextScheduled->id,
+                'scheduled_at' => $nextScheduled->next_visit?->toDateString(),
+            ] : null,
+            'recent' => $visits->take(5)->map(fn ($v) => [
+                'id' => $v->id,
+                'visited_at' => $v->visit_date?->toDateString(),
+                'status' => $v->visit_status,
+                'visitor_name' => $v->visitor_name,
+                'observations' => in_array($accessLevel, ['admin', 'homeroom', 'teacher']) ? $v->observations : null,
+            ])->values(),
+        ];
+    }
+
+    /**
+     * Build the school_activity section of the profile response.
+     */
+    private function buildSchoolActivitySection(Student $student, Academy $academy): array
+    {
+        $member = AcademyMember::where('academy_id', $academy->id)
+            ->where('student_id', $student->id)
+            ->first();
+
+        return [
+            'joined_at' => $member?->enrollment_date ?? $member?->created_at?->toDateString(),
+            'member_code' => $member?->member_code,
+            'last_active_at' => $student->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
      * Mask citizen ID based on access level.
      */
     private function maskCitizenId(?string $citizenId, string $accessLevel): ?string
     {
-        if (!$citizenId) {
+        if (! $citizenId) {
             return null;
         }
 
@@ -418,6 +506,6 @@ class StudentProfileController extends Controller
             return '***-****-*****-**-*';
         }
 
-        return $digits[0] . '-****-*****-**-' . $digits[12];
+        return $digits[0].'-****-*****-**-'.$digits[12];
     }
 }
