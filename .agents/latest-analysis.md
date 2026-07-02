@@ -8662,33 +8662,267 @@ CoursePageShell
          courseStore.lessons ──→ CourseLessonsMenu (ยังคงเป็น base list)
 ```
 
-### 6. Decisions Locked
+### 6. Decisions Locked (อัพเดท 2026-07-03 — schema จริงพบใหม่)
 
-1. **Flat contract (assignment-only) สำหรับ lesson-level score** ← decision สุดท้าย (2026-07-03)
-   - `CourseQuiz` ผูกกับ `Course` โดยตรง ไม่มี FK → `Lesson` — ทำให้แยก quiz block ที่ระดับ lesson ไม่ได้จากข้อมูลจริง
-   - contract ที่ใช้จริง: `{ score_status, score, max_score, score_percentage, activity_counts }` (flat)
-   - Quiz score ยังคงแสดงที่ระดับ course ใน `quizzes[]` ของ response (มีอยู่แล้ว)
-   - ถ้าอนาคตต้องการ per-lesson quiz score → ต้อง migration เพิ่ม `lesson_id` FK ให้ `CourseQuiz` ก่อน (งาน follow-up แยก)
+**ยกเลิก flat contract เดิม** — Schema จริงรองรับ 2-block ได้โดยไม่ต้อง migration เพิ่ม:
 
-2. **`passing_threshold`** — ใช้ `course.passing_score` (ถ้ามี); ถ้าไม่มี → `score_status = 'scored'`
+| ประเภท | ระดับ | Table (คำตอบ) | Grading |
+|---|---|---|---|
+| แบบฝึกหัด (Assignment) | บทเรียน/หัวข้อ | `assignment_answers` | Manual (ครูตรวจ) |
+| แบบฝึกหัด (Assignment) | รายวิชา | `assignment_answers` | Manual (ครูตรวจ) |
+| แบบทดสอบ (Quiz) | บทเรียน | `lesson_answer_questions` (มี `lesson_id`) | Auto-graded |
+| แบบทดสอบ (Quiz) | รายวิชา | `course_quiz_results` + `user_answer_questions` | Auto-graded |
 
-3. **Admin/teacher** — ไม่ call progress endpoint; `progressMap = undefined`; ไม่มี badge แสดง
+→ **Quiz ระดับบทเรียน** ใช้ `questions` ที่ `questionable_type='App\Models\Lesson'` + ตอบผ่าน `lesson_answer_questions` — **ไม่ต้อง migration**
+→ **`CourseQuiz`** เป็นคนละระบบกัน (ระดับรายวิชา ไม่ใช่บทเรียน)
 
-4. **Quiz-at-lesson-level** — out of scope รอบนี้; บันทึกเป็น follow-up ด้านล่าง
+→ **ยืนยัน decision: ใช้ 2-block contract จริง** — ดู Design ด้านล่าง
 
-### 7. Out of Scope (รอบนี้) + Follow-ups
+### 7. Out of Scope (รอบนี้)
 
-- ❌ **Quiz score ที่ระดับ lesson** — `CourseQuiz` ไม่มี `lesson_id` FK; ต้องทำ migration แยกก่อน
-- ❌ Per-topic score breakdown
+- ❌ Per-topic score breakdown (แค่ per-lesson)
 - ❌ Score history / attempt history UI
 - ❌ Admin bulk view นักเรียนทั้ง course ใน lesson widget
 - ❌ Export per-lesson score เป็น Excel
 - ❌ Real-time score update ผ่าน WebSocket
 
-**Follow-up ที่แนะนำ (ถ้าต้องการ quiz ระดับ lesson จริง):**
-1. Migration: เพิ่ม `lesson_id` (nullable FK) ใน `course_quizzes`
-2. UI สร้าง quiz ให้เลือก "ผูกกับบทเรียนไหน" หรือ "ระดับ course"
-3. อัพเดท contract → `{ assignment: ActivityScoreBlock, quiz: ActivityScoreBlock }` ตามแผนเดิม
+---
+
+## Design — Lesson Score 2-Block v2 (2026-07-03)
+
+### 0. Schema Summary (จากการตรวจสอบจริง)
+
+```
+assignments (polymorphic)
+  assignmentable_type = 'App\Models\Lesson'   → แบบฝึกหัดของบทเรียน
+  assignmentable_type = 'App\Models\Topic'    → แบบฝึกหัดของหัวข้อ (ใน lesson)
+  assignmentable_type = 'App\Models\Course'   → แบบฝึกหัดของรายวิชา (course-level)
+  answers → assignment_answers (status: submitted|in_review|graded, points: float|null)
+
+questions (polymorphic)
+  questionable_type = 'App\Models\Lesson'     → แบบทดสอบของบทเรียน
+  questionable_type = 'App\Models\CourseQuiz' → แบบทดสอบของรายวิชา
+  points: int (คะแนนต่อข้อ)
+  answers → lesson_answer_questions (lesson_id, question_id, points, is_correct) ← auto-graded
+
+course_quizzes → course_quiz_results          → แบบทดสอบระดับรายวิชา (ระบบแยกต่างหาก)
+```
+
+### 1. Contract ที่ใช้จริง (v2)
+
+```typescript
+// ui/types/lessonScore.ts — แทนที่ version เดิม
+
+export type AssignmentStatus =
+  | 'none'              // ไม่มีแบบฝึกหัดในบทเรียนนี้
+  | 'not_attempted'     // มีแต่ยังไม่ส่งเลย
+  | 'submitted'         // ส่งแล้ว รอครูรับ (status=submitted)
+  | 'awaiting_grading'  // ครูรับแล้ว รอตรวจ (status=in_review)
+  | 'graded'            // ตรวจแล้ว มีคะแนน (status=graded, points≠null)
+  | 'passed'            // graded + score_percentage >= passing_threshold
+  | 'failed'            // graded + score_percentage < passing_threshold
+
+export type QuizStatus =
+  | 'none'              // ไม่มีแบบทดสอบในบทเรียนนี้
+  | 'not_attempted'     // มีคำถามแต่ยังไม่ตอบเลย
+  | 'partial'           // ตอบบางข้อ (answered < total_questions)
+  | 'completed'         // ตอบครบทุกข้อ ไม่มี threshold
+  | 'passed'            // ตอบครบ + score_percentage >= passing_threshold
+  | 'failed'            // ตอบครบ + score_percentage < passing_threshold
+
+export interface AssignmentBlock {
+  status: AssignmentStatus
+  count: number             // จำนวนแบบฝึกหัด (lesson + topic level)
+  score: number | null      // null ถ้า status ∉ {graded, passed, failed}
+  max_score: number | null
+  score_percentage: number | null
+}
+
+export interface QuizBlock {
+  status: QuizStatus
+  total_questions: number   // จำนวนข้อทั้งหมดในบทเรียน
+  answered: number          // จำนวนที่ตอบแล้ว
+  score: number | null      // null ถ้า not_attempted
+  max_score: number | null
+  score_percentage: number | null
+}
+
+export interface LessonProgressSummary {
+  lesson_id: number
+  title: string
+  completed: boolean
+  progress_percentage: number
+  status_label: string
+  assignment: AssignmentBlock
+  quiz: QuizBlock
+}
+
+// Course-level (แสดงแยก ไม่ใช่ per-lesson)
+export interface CourseLevelSummary {
+  course_assignments: AssignmentBlock   // assignments ที่ assignmentable_type=Course
+  course_quizzes: CourseQuizSummary[]   // CourseQuiz แต่ละรายการ
+}
+
+export interface CourseQuizSummary {
+  quiz_id: number
+  title: string
+  status: 'not_attempted' | 'completed' | 'passed' | 'failed'
+  score: number | null
+  max_score: number
+  score_percentage: number | null
+  passing_score: number    // per-quiz threshold (มีของตัวเอง)
+  attempts: number
+}
+```
+
+### 2. Response Shape ของ `/api/courses/{course}/members/{member}/progress`
+
+```jsonc
+{
+  "overall_progress": { "progress_percentage": 65, "status_label": "กำลังเรียน" },
+
+  // Per-lesson — 2 block แยก
+  "lessons": [
+    {
+      "lesson_id": 5,
+      "title": "บทที่ 1",
+      "completed": false,
+      "progress_percentage": 60,
+      "status_label": "กำลังทำ",
+      "assignment": {
+        "status": "awaiting_grading",
+        "count": 1,
+        "score": null, "max_score": null, "score_percentage": null
+      },
+      "quiz": {
+        "status": "partial",
+        "total_questions": 10, "answered": 6,
+        "score": 5, "max_score": 10, "score_percentage": 50
+      }
+    },
+    {
+      "lesson_id": 6,
+      "title": "บทที่ 2 (ไม่มีกิจกรรม)",
+      "completed": true,
+      "progress_percentage": 100,
+      "status_label": "เสร็จสิ้น",
+      "assignment": { "status": "none", "count": 0, "score": null, "max_score": null, "score_percentage": null },
+      "quiz": { "status": "none", "total_questions": 0, "answered": 0, "score": null, "max_score": null, "score_percentage": null }
+    }
+  ],
+
+  // Course-level — แยกออกมาต่างหาก
+  "course_level": {
+    "course_assignments": {
+      "status": "graded", "count": 2,
+      "score": 18, "max_score": 20, "score_percentage": 90
+    },
+    "course_quizzes": [
+      {
+        "quiz_id": 1, "title": "แบบทดสอบปลายภาค",
+        "status": "passed", "score": 8, "max_score": 10,
+        "score_percentage": 80, "passing_score": 60, "attempts": 1
+      }
+    ]
+  },
+
+  "assignments": [ /* รายการ assignment เดิม (ยังคงส่งสำหรับ backward compat) */ ],
+  "quizzes": [ /* รายการ CourseQuiz เดิม */ ]
+}
+```
+
+### 3. Business Rules ที่ต้อง Lock
+
+**Assignment Block:**
+- นับเฉพาะ `assignmentable_type IN ('App\Models\Lesson', 'App\Models\Topic')` สำหรับ per-lesson
+- `status` derive จาก **worst case**: ถ้ามีหลายชิ้น ชิ้นที่แย่สุดกำหนด status ทั้ง block
+  - มีชิ้นหนึ่ง `not_attempted` → block = `not_attempted`
+  - ทุกชิ้น submitted แต่ยังไม่ตรวจ → `awaiting_grading`
+  - ทุกชิ้นตรวจแล้ว → `graded` / `passed` / `failed`
+- `passing_threshold` ใช้ `course.passing_score` (ถ้ามี); ถ้าไม่มี → ใช้ `graded` แทน `passed/failed`
+- `score` = null จนกว่าจะเป็น `graded/passed/failed`
+
+**Quiz Block:**
+- นับ `questions` ที่ `questionable_type='App\Models\Lesson'` และ `questionable_id=lesson_id`
+- `answered` = COUNT ของ `lesson_answer_questions` ที่ `user_id=?` และ `question_id IN (lesson questions)`
+- `score` = SUM(`lesson_answer_questions.points`) — บันทึกทันทีแม้ตอบไม่ครบ
+- `max_score` = SUM(`questions.points`) ของทุกข้อในบทเรียน
+- `status`:
+  - `answered = 0` → `not_attempted`
+  - `0 < answered < total_questions` → `partial` (แสดง score แบบ partial ได้)
+  - `answered = total_questions` + ไม่มี threshold → `completed`
+  - `answered = total_questions` + threshold → `passed` / `failed`
+- Quiz auto-graded: ไม่มีสถานะ `submitted` หรือ `awaiting_grading`
+
+**Course-level (แยกจาก per-lesson):**
+- `course_assignments`: assignments ที่ `assignmentable_type='App\Models\Course'`
+- `course_quizzes`: `CourseQuiz` ทั้งหมดของ course (มี `passing_score` แยกต่างหากต่อ quiz)
+
+### 4. UI Rendering Rules
+
+**`CourseLessonsMenu` (compact list):**
+
+| สถานการณ์ | Assignment chip | Quiz chip |
+|---|---|---|
+| ไม่มีทั้งสอง | — | — |
+| มีแค่ assignment, ยังไม่ส่ง | 🔲 ยังไม่ส่ง (slate) | — |
+| assignment รอตรวจ | ⏳ รอตรวจ (amber) | — |
+| assignment ตรวจแล้ว passed | ✅ 18/20 (green) | — |
+| มีแค่ quiz, partial | — | ✏️ 6/10 ข้อ (blue) |
+| quiz ผ่าน | — | ✅ 8/10 (green) |
+| assignment รอตรวจ + quiz ผ่าน | ⏳ รอตรวจ | ✅ 8/10 |
+| assignment failed + quiz partial | ❌ 12/20 | ✏️ 6/10 ข้อ |
+
+**`CourseLessonProgressWidget` (sidebar detail):**
+- แสดง 2 row แยกเมื่อ block count > 0
+- `partial` quiz: แสดง `5/10 pts (6/10 ข้อ)` — score + จำนวนข้อที่ตอบ
+- ไม่แสดง score ถ้า `score === null`
+
+### 5. Bulk-load Strategy (แก้ N+1 ครบ)
+
+```php
+// Pre-load ทุกอย่างก่อน map loop:
+
+// 1. LessonProgress
+$lpMap = LessonProgress::whereIn('lesson_id', $lessonIds)
+    ->where('user_id', $userId)->get()->keyBy('lesson_id');
+
+// 2. Lesson+Topic assignments (per-lesson)
+$lessonAssignmentIds = $rawLessons->flatMap(fn ($l) =>
+    $l->assignments->pluck('id')
+      ->merge($l->topics->flatMap->assignments->pluck('id'))
+)->unique();
+$lessonAnswerMap = AssignmentAnswer::whereIn('assignment_id', $lessonAssignmentIds)
+    ->where('user_id', $userId)->get()->keyBy('assignment_id');
+
+// 3. Lesson-level quiz questions + answers
+$lessonQuestions = Question::whereIn('questionable_id', $lessonIds)
+    ->where('questionable_type', 'App\Models\Lesson')
+    ->get()->groupBy('questionable_id');   // keyed by lesson_id
+
+$lessonQuizAnswers = LessonAnswerQuestion::whereIn('lesson_id', $lessonIds)
+    ->where('user_id', $userId)->get()->groupBy('lesson_id');
+
+// 4. Course-level assignments (แยก — ไม่ map ลง lesson)
+$courseAssignmentIds = $course->courseAssignments->pluck('id');
+$courseAnswerMap = AssignmentAnswer::whereIn('assignment_id', $courseAssignmentIds)
+    ->where('user_id', $userId)->get()->keyBy('assignment_id');
+
+// 5. Course quizzes (แยก — มีอยู่แล้วใน response)
+// ใช้ $bestQuizResults ที่ bulk-load ไว้แล้ว
+```
+
+**Query count เป้าหมาย: ≤ 12 queries** (เดิม 60+)
+
+### 6. Decisions ที่ต้อง Confirm
+
+| # | คำถาม | Recommendation |
+|---|---|---|
+| D1 | Assignment worst-case vs average? | **Worst-case** — นักเรียนต้องรู้ว่ายังมีงานค้างอยู่ |
+| D2 | Quiz partial แสดง score ได้เลยไหม? | **ใช่** — แสดง `5/10 pts (6/10 ข้อ)` ดีกว่าซ่อน |
+| D3 | `passing_threshold` quiz บทเรียน ใช้ course-level หรือ custom? | **`course.passing_score`** รอบนี้; ถ้าต้องการ per-lesson → เพิ่ม field ภายหลัง |
+| D4 | Topic-level assignment รวมใน lesson block หรือแสดงแยก? | **รวม** (topic เป็นส่วนหนึ่งของ lesson) |
+| D5 | `course_level` ส่งใน response เดิมหรือ endpoint ใหม่? | **Response เดิม** (field เพิ่ม) — ไม่ต้อง fetch เพิ่ม |
 
 ### 8. Risk Register
 
