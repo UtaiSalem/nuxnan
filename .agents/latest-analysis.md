@@ -8096,3 +8096,11 @@ onMounted(() => { if (academyId.value) role.fetchRole(academyId.value) })
 - Added validated `?tab=` handling and query synchronization for tab navigation.
 - Student dashboard and academy navigation card actions now link directly to `/my-profile?tab=card`; the legacy `/my-card` route redirects there with history replacement.
 - Verification: `git diff --check` passes. Full `vue-tsc` remains red from repository-wide pre-existing errors; filtered output shows no new errors in the composable/navigation/card page, while `my-profile.vue` retains the existing generated-layout typing error for `layout: 'default'` also present on the master profile route. `npm.cmd run build` exceeded the 120-second command limit without emitting an error before termination.
+## 2026-07-03 — Student Master Profile Phase 9 home-visit integration
+
+- Added JWT-authenticated student-scoped home-visit CRUD/status routes, `StoreHomeVisitRequest`, and `Master/HomeVisitController` with academy/student/visit scope checks.
+- Authorization: self/guardian/staff may list/show; admin/homeroom/teacher may create/update; admin/homeroom may delete or use the status-only endpoint. Observations are omitted for self/guardian responses.
+- Added a MySQL-safe enum expansion migration retaining legacy statuses while adding `scheduled` and `cancelled`; migration has not been run against the local application database.
+- Added `useHomeVisit.ts` and rewrote `HomeVisitTab.vue` with paginated loading, inline create/edit, delete, validation errors, role-gated controls, and master-profile refresh events.
+- Wired both staff and self-service profile routes to the CRUD tab; profile summary treats legacy `pending` as scheduled and falls back to visit date for the next appointment.
+- Verification: PHP syntax and route registration passed; Pint applied; `StudentHomeVisitApiTest` passes 3 tests / 12 assertions. Filtered `vue-tsc` reports no errors in `HomeVisitTab.vue` or `useHomeVisit.ts`; profile pages retain pre-existing Phase 7 `academy_id` and generated layout typing errors.

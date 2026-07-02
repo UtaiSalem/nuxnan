@@ -254,7 +254,13 @@ watch(activeTab, (tab) => {
             </div>
 
             <div v-show="activeTab === 'homevisit'">
-              <HomeVisitTab :home-visit="homeVisit" :access-level="accessLevel || ''" />
+              <HomeVisitTab
+                :home-visit="homeVisit"
+                :student="student"
+                :academy="academy"
+                :access-level="accessLevel || ''"
+                @saved="fetchProfile"
+              />
             </div>
           </div>
         </div>

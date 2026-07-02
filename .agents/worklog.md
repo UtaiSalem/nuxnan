@@ -155,3 +155,8 @@
 | 2026-05-25 | Exam Retake Flow Phase 1 | ✅ Done |
 | 2026-05-24 | Lesson Drag-and-Drop Reordering | ✅ Done |
 | 2026-05-24 | Remediation & Unified Eligibility | ✅ Done |
+## 2026-07-03 — Student Master Profile Phase 9
+
+- Completed JWT home-visit CRUD integration across `Master/HomeVisitController`, student-profile routes, `useHomeVisit.ts`, and `HomeVisitTab.vue`.
+- Added status-enum migration `2026_07_03_000001_expand_student_home_visit_statuses.php` (created, not run) and focused `StudentHomeVisitApiTest` (3 passed, 12 assertions).
+- Existing Phase 7 and other dirty-worktree changes were preserved.

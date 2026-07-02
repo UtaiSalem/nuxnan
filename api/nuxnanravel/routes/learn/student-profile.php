@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Learn\Student\Master\GuardianController;
 use App\Http\Controllers\Api\Learn\Student\Master\HealthController;
 use App\Http\Controllers\Api\Learn\Student\Master\AcademicInfoController;
 use App\Http\Controllers\Api\Learn\Student\Master\ChangeRequestController;
+use App\Http\Controllers\Api\Learn\Student\Master\HomeVisitController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,5 +83,11 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
         Route::get('/change-requests', [ChangeRequestController::class, 'index'])->name('change-requests.index');
         Route::patch('/change-requests/{changeRequest}/approve', [ChangeRequestController::class, 'approve'])->name('change-requests.approve');
         Route::patch('/change-requests/{changeRequest}/reject', [ChangeRequestController::class, 'reject'])->name('change-requests.reject');
+
+        // Home visit routes (JWT master-profile flow)
+        Route::patch('/home-visits/{homeVisit}/status', [HomeVisitController::class, 'updateStatus'])->name('home-visits.update-status');
+        Route::apiResource('/home-visits', HomeVisitController::class)
+            ->except(['create', 'edit'])
+            ->names('home-visits');
     });
 });

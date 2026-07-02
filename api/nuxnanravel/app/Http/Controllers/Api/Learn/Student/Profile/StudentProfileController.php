@@ -448,7 +448,7 @@ class StudentProfileController extends Controller
         $visits = $student->getRelationValue('homeVisits') ?? collect();
 
         $latest = $visits->first();
-        $nextScheduled = $visits->firstWhere('visit_status', 'scheduled');
+        $nextScheduled = $visits->first(fn ($visit) => in_array($visit->visit_status, ['scheduled', 'pending'], true));
 
         return [
             'total_visits' => $student->homeVisits()->count(),
@@ -460,7 +460,7 @@ class StudentProfileController extends Controller
             ] : null,
             'next_scheduled' => $nextScheduled ? [
                 'id' => $nextScheduled->id,
-                'scheduled_at' => $nextScheduled->next_visit?->toDateString(),
+                'scheduled_at' => ($nextScheduled->next_visit ?? $nextScheduled->visit_date)?->toDateString(),
             ] : null,
             'recent' => $visits->take(5)->map(fn ($v) => [
                 'id' => $v->id,

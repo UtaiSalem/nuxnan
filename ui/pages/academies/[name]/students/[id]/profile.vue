@@ -211,7 +211,13 @@ const activeTab = ref((route.query.tab as string) || 'overview')
 
             <!-- เยี่ยมบ้าน -->
             <div v-show="activeTab === 'homevisit'">
-              <HomeVisitTab :home-visit="homeVisit" :access-level="accessLevel || ''" />
+              <HomeVisitTab
+                :home-visit="homeVisit"
+                :student="student"
+                :academy="academy"
+                :access-level="accessLevel || ''"
+                @saved="fetchProfile"
+              />
             </div>
 
           </div>
