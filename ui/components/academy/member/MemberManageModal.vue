@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+const route = useRoute()
 
 // Types defined locally
 interface AcademyRole {
@@ -380,9 +381,17 @@ function closeModal() {
                   
                   <div v-if="member?.student">
                     <label class="text-xs text-gray-500 dark:text-gray-400">ข้อมูลนักเรียน</label>
-                    <div class="mt-1 p-3 bg-white dark:bg-gray-900 rounded border">
+                    <div class="mt-1 p-3 bg-white dark:bg-gray-900 rounded border space-y-2">
                       <p><strong>รหัส:</strong> {{ member.student.student_id }}</p>
                       <p><strong>ชั้น:</strong> {{ member.student.current_classroom || `${member.student.class_level}/${member.student.class_section}` }}</p>
+                      <button
+                        v-if="member.student.id"
+                        @click="navigateTo(`/academies/${route.params.name}/students/${member.student.id}/profile`)"
+                        class="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <Icon icon="fluent:person-24-regular" class="w-3.5 h-3.5" />
+                        ดูโปรไฟล์นักเรียน
+                      </button>
                     </div>
                   </div>
 

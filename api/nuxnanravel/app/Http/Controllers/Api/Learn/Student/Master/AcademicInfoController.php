@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentAcademicInfo;
 use App\Traits\HandlesStudentUpdates;
+use App\Http\Requests\Student\UpdateAcademicInfoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -16,8 +18,17 @@ class AcademicInfoController extends Controller
     /**
      * แสดงข้อมูลประวัติการศึกษาทั้งหมดของนักเรียน
      */
-    public function index(Student $student)
+    public function index(Academy $academy, Student $student)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         $academicInfos = $student->academicInfos()
                                 ->orderBy('academic_year', 'desc')
                                 ->orderBy('is_current', 'desc')
@@ -34,8 +45,17 @@ class AcademicInfoController extends Controller
     /**
      * แสดงข้อมูลประวัติการศึกษาปัจจุบันของนักเรียน
      */
-    public function show(Student $student)
+    public function show(Academy $academy, Student $student)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         $academicInfo = $student->currentAcademicInfo;
         
         return response()->json([
@@ -47,15 +67,23 @@ class AcademicInfoController extends Controller
     /**
      * แสดงข้อมูลประวัติการศึกษารายการเดียว
      */
-    public function showRecord(Student $student, StudentAcademicInfo $academicInfo)
+    public function showRecord(Academy $academy, Student $student, StudentAcademicInfo $academicInfo)
     {
-        // Verify that this academic info belongs to the student
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
         if ($academicInfo->student_id !== $student->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบข้อมูลประวัติการศึกษา',
             ], 404);
         }
+
+        $this->authorize('update', $student);
 
         return response()->json([
             'success' => true,
@@ -66,30 +94,18 @@ class AcademicInfoController extends Controller
     /**
      * อัพเดทข้อมูลประวัติการศึกษารายการเดียว
      */
-    public function update(Request $request, Student $student, ?StudentAcademicInfo $academicInfo = null)
+    public function update(UpdateAcademicInfoRequest $request, Academy $academy, Student $student, ?StudentAcademicInfo $academicInfo = null)
     {
-        $validated = $request->validate([
-            'current_grade' => 'nullable|string|max:10',
-            'education_level' => 'nullable|integer|in:0,1,2',
-            'current_class' => 'nullable|string|max:10',
-            'classroom_full' => 'nullable|string|max:20',
-            'school_name' => 'nullable|string|max:200',
-            'school_address' => 'nullable|string',
-            'school_province' => 'nullable|string|max:100',
-            'previous_school_name' => 'nullable|string|max:200',
-            'previous_school_province' => 'nullable|string|max:100',
-            'previous_grade_level' => 'nullable|string|max:20',
-            'disability_type' => 'nullable|string|max:100',
-            'special_needs' => 'nullable|string',
-            'academic_year' => 'nullable|string|max:10',
-            'semester' => 'nullable|integer|in:1,2',
-            'enrollment_date' => 'nullable|date',
-            'graduation_date' => 'nullable|date|after_or_equal:enrollment_date',
-            'study_status' => 'nullable|in:studying,graduated,transferred,dropped,suspended',
-            'is_current' => 'nullable|boolean',
-            'transfer_reason' => 'nullable|string|max:500',
-            'notes' => 'nullable|string',
-        ]);
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();
@@ -124,6 +140,17 @@ class AcademicInfoController extends Controller
 
             // For new records (no id yet), staff bypass approval and persist; owner queues approval.
             if (!$academicInfo->exists) {
+                // Check if creation needs approval
+                $changeRequest = $this->applyUpdate($student, 'StudentAcademicInfo', null, 'academic.create', $validated);
+                if ($changeRequest) {
+                    DB::commit();
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'ส่งคำขอเพิ่มประวัติการศึกษาแล้ว รอการอนุมัติ',
+                        'needs_approval' => true
+                    ]);
+                }
+
                 $academicInfo->fill($validated)->save();
                 $result = ['updated' => $validated, 'pending' => []];
             } else {
@@ -162,30 +189,18 @@ class AcademicInfoController extends Controller
     /**
      * สร้างข้อมูลประวัติการศึกษาใหม่
      */
-    public function store(Request $request, Student $student)
+    public function store(UpdateAcademicInfoRequest $request, Academy $academy, Student $student)
     {
-        $validated = $request->validate([
-            'current_grade' => 'nullable|string|max:10',
-            'education_level' => 'nullable|integer|in:0,1,2',
-            'current_class' => 'nullable|string|max:10',
-            'classroom_full' => 'nullable|string|max:20',
-            'school_name' => 'nullable|string|max:200',
-            'school_address' => 'nullable|string',
-            'school_province' => 'nullable|string|max:100',
-            'previous_school_name' => 'nullable|string|max:200',
-            'previous_school_province' => 'nullable|string|max:100',
-            'previous_grade_level' => 'nullable|string|max:20',
-            'disability_type' => 'nullable|string|max:100',
-            'special_needs' => 'nullable|string',
-            'academic_year' => 'nullable|string|max:10',
-            'semester' => 'nullable|integer|in:1,2',
-            'enrollment_date' => 'nullable|date',
-            'graduation_date' => 'nullable|date|after_or_equal:enrollment_date',
-            'study_status' => 'nullable|in:studying,graduated,transferred,dropped,suspended',
-            'is_current' => 'nullable|boolean',
-            'transfer_reason' => 'nullable|string|max:500',
-            'notes' => 'nullable|string',
-        ]);
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();
@@ -193,6 +208,17 @@ class AcademicInfoController extends Controller
             // ดึงข้อมูล enrollment_date จากตาราง students ถ้าไม่ได้ระบุมา
             if (empty($validated['enrollment_date']) && $student->enrollment_date) {
                 $validated['enrollment_date'] = $student->enrollment_date->format('Y-m-d');
+            }
+
+            // Check if creation needs approval
+            $changeRequest = $this->applyUpdate($student, 'StudentAcademicInfo', null, 'academic.create', $validated);
+            if ($changeRequest) {
+                DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'ส่งคำขอเพิ่มประวัติการศึกษาแล้ว รอการอนุมัติ',
+                    'needs_approval' => true
+                ]);
             }
 
             // สร้างข้อมูลใหม่
@@ -234,17 +260,25 @@ class AcademicInfoController extends Controller
     /**
      * ลบข้อมูลประวัติการศึกษา
      */
-    public function destroy(Student $student, StudentAcademicInfo $academicInfo)
+    public function destroy(Academy $academy, Student $student, StudentAcademicInfo $academicInfo)
     {
-        try {
-            // ตรวจสอบว่า academic record นี้เป็นของ student คนนี้
-            if ($academicInfo->student_id !== $student->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'ไม่พบข้อมูลประวัติการศึกษา',
-                ], 404);
-            }
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
 
+        if ($academicInfo->student_id !== $student->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบข้อมูลประวัติการศึกษา',
+            ], 404);
+        }
+
+        $this->authorize('update', $student);
+
+        try {
             $academicInfo->delete();
 
             return response()->json([
@@ -261,138 +295,28 @@ class AcademicInfoController extends Controller
     }
 
     /**
-     * ค้นหานักเรียนตามข้อมูลการศึกษา
-     */
-    public function searchByAcademicInfo(Request $request)
-    {
-        $validated = $request->validate([
-            'grade' => 'nullable|string|max:10',
-            'class' => 'nullable|string|max:10',
-            'academic_year' => 'nullable|string|max:10',
-            'previous_school' => 'nullable|string|max:200',
-        ]);
-
-        $query = Student::with('academicInfo')
-            ->whereHas('academicInfo', function($q) use ($validated) {
-                if (!empty($validated['grade'])) {
-                    $q->where('current_grade', $validated['grade']);
-                }
-                if (!empty($validated['class'])) {
-                    $q->where('current_class', $validated['class']);
-                }
-                if (!empty($validated['academic_year'])) {
-                    $q->where('academic_year', $validated['academic_year']);
-                }
-                if (!empty($validated['previous_school'])) {
-                    $q->where('previous_school_name', 'LIKE', '%' . $validated['previous_school'] . '%');
-                }
-            });
-
-        $students = $query->paginate(20);
-
-        return response()->json([
-            'success' => true,
-            'data' => $students,
-        ]);
-    }
-
-    /**
-     * ดึงสถิติข้อมูลการศึกษา
-     */
-    public function statistics()
-    {
-        try {
-            $stats = [
-                'total_students_with_academic_info' => StudentAcademicInfo::count(),
-                'students_by_grade' => StudentAcademicInfo::select('current_grade', DB::raw('count(*) as total'))
-                    ->whereNotNull('current_grade')
-                    ->groupBy('current_grade')
-                    ->orderBy('current_grade')
-                    ->get(),
-                'students_by_academic_year' => StudentAcademicInfo::select('academic_year', DB::raw('count(*) as total'))
-                    ->whereNotNull('academic_year')
-                    ->groupBy('academic_year')
-                    ->orderBy('academic_year', 'desc')
-                    ->get(),
-                'students_with_disabilities' => StudentAcademicInfo::whereNotNull('disability_type')->count(),
-                'students_with_special_needs' => StudentAcademicInfo::whereNotNull('special_needs')->count(),
-                'transfer_students' => StudentAcademicInfo::whereNotNull('previous_school_name')->count(),
-            ];
-
-            return response()->json([
-                'success' => true,
-                'data' => $stats,
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการดึงสถิติ: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * อัพเดทข้อมูลหลายรายการพร้อมกัน
-     */
-    public function bulkUpdate(Request $request)
-    {
-        $validated = $request->validate([
-            'updates' => 'required|array',
-            'updates.*.student_id' => 'required|exists:students,id',
-            'updates.*.academic_year' => 'nullable|string|max:10',
-            'updates.*.semester' => 'nullable|integer|in:1,2',
-            'updates.*.current_grade' => 'nullable|string|max:10',
-            'updates.*.current_class' => 'nullable|string|max:10',
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $updated = 0;
-            foreach ($validated['updates'] as $update) {
-                $student = Student::find($update['student_id']);
-                if ($student && $student->academicInfo) {
-                    $student->academicInfo->update(array_filter($update, function($value) {
-                        return !is_null($value) && $value !== '';
-                    }));
-                    $updated++;
-                }
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => "อัพเดทข้อมูลเรียบร้อย {$updated} รายการ",
-                'updated_count' => $updated,
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollback();
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการอัพเดทข้อมูล: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
      * ตั้งค่า academic record เป็น current
      */
-    public function setCurrent(Student $student, StudentAcademicInfo $academicInfo)
+    public function setCurrent(Academy $academy, Student $student, StudentAcademicInfo $academicInfo)
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        if ($academicInfo->student_id !== $student->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบข้อมูลประวัติการศึกษา',
+            ], 404);
+        }
+
+        $this->authorize('update', $student);
+
         try {
             DB::beginTransaction();
-
-            // ตรวจสอบว่า academic record นี้เป็นของ student คนนี้
-            if ($academicInfo->student_id !== $student->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'ไม่พบข้อมูลประวัติการศึกษา',
-                ], 404);
-            }
 
             // Unset current flag from other records
             $student->academicInfos()->update(['is_current' => false]);

@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentHealthInfo;
+use App\Http\Requests\Student\UpdateHealthRequest;
 use App\Traits\HandlesStudentUpdates;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 class HealthController extends Controller
 {
@@ -18,8 +19,17 @@ class HealthController extends Controller
     /**
      * Show student health information
      */
-    public function show(Student $student): JsonResponse
+    public function show(Academy $academy, Student $student): JsonResponse
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
             $healthInfo = StudentHealthInfo::where('student_id', $student->id)->first();
             
@@ -49,27 +59,18 @@ class HealthController extends Controller
     /**
      * Store new health information
      */
-    public function store(Request $request, Student $student): JsonResponse
+    public function store(UpdateHealthRequest $request, Academy $academy, Student $student): JsonResponse
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            $validator = Validator::make($request->all(), [
-                'height' => 'nullable|numeric|between:0,300',
-                'weight' => 'nullable|numeric|between:0,300',
-                'allergies' => 'nullable|string|max:1000',
-                'chronic_diseases' => 'nullable|string|max:1000',
-                'medications' => 'nullable|string|max:1000',
-                'blood_type' => 'nullable|string|max:10',
-                'rh_factor' => 'nullable|string|max:10'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'ข้อมูลไม่ถูกต้อง',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
             // Check if health info already exists
             $existingHealth = StudentHealthInfo::where('student_id', $student->id)->first();
             if ($existingHealth) {
@@ -79,16 +80,27 @@ class HealthController extends Controller
                 ], 409);
             }
 
+            $validated = $request->validated();
             $healthData = [
                 'student_id' => $student->id,
-                'height_cm' => $request->height,
-                'weight_kg' => $request->weight,
-                'allergies' => $request->allergies,
-                'chronic_diseases' => $request->chronic_diseases,
-                'medications' => $request->medications,
-                'blood_type' => $request->blood_type,
-                'rh_factor' => $request->rh_factor
+                'height_cm' => $validated['height'] ?? null,
+                'weight_kg' => $validated['weight'] ?? null,
+                'allergies' => $validated['allergies'] ?? null,
+                'chronic_diseases' => $validated['chronic_diseases'] ?? null,
+                'medications' => $validated['medications'] ?? null,
+                'blood_type' => $validated['blood_type'] ?? null,
+                'rh_factor' => $validated['rh_factor'] ?? null
             ];
+
+            // Check if creation needs approval
+            $changeRequest = $this->applyUpdate($student, 'StudentHealthInfo', null, 'health.create', $healthData);
+            if ($changeRequest) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'ส่งคำขอเพิ่มข้อมูลสุขภาพแล้ว รอการอนุมัติ',
+                    'needs_approval' => true
+                ]);
+            }
 
             $health = StudentHealthInfo::create($healthData);
 
@@ -111,46 +123,36 @@ class HealthController extends Controller
     /**
      * Update existing health information
      */
-    public function update(Request $request, Student $student, StudentHealthInfo $health): JsonResponse
+    public function update(UpdateHealthRequest $request, Academy $academy, Student $student, StudentHealthInfo $health): JsonResponse
     {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+            ], 403);
+        }
+
+        if ($health->student_id !== $student->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ไม่มีสิทธิ์ในการแก้ไขข้อมูลนี้'
+            ], 403);
+        }
+
+        $this->authorize('update', $student);
+
         try {
-            // Verify the health record belongs to this student
-            if ($health->student_id !== $student->id) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'ไม่มีสิทธิ์ในการแก้ไขข้อมูลนี้'
-                ], 403);
-            }
+            $validated = $request->validated();
+            $healthData = [];
+            if (array_key_exists('height', $validated)) $healthData['height_cm'] = $validated['height'];
+            if (array_key_exists('weight', $validated)) $healthData['weight_kg'] = $validated['weight'];
+            if (array_key_exists('allergies', $validated)) $healthData['allergies'] = $validated['allergies'];
+            if (array_key_exists('chronic_diseases', $validated)) $healthData['chronic_diseases'] = $validated['chronic_diseases'];
+            if (array_key_exists('medications', $validated)) $healthData['medications'] = $validated['medications'];
+            if (array_key_exists('blood_type', $validated)) $healthData['blood_type'] = $validated['blood_type'];
+            if (array_key_exists('rh_factor', $validated)) $healthData['rh_factor'] = $validated['rh_factor'];
 
-            $validator = Validator::make($request->all(), [
-                'height' => 'nullable|numeric|between:0,300',
-                'weight' => 'nullable|numeric|between:0,300',
-                'allergies' => 'nullable|string|max:1000',
-                'chronic_diseases' => 'nullable|string|max:1000',
-                'medications' => 'nullable|string|max:1000',
-                'blood_type' => 'nullable|string|max:10',
-                'rh_factor' => 'nullable|string|max:10'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'ข้อมูลไม่ถูกต้อง',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $healthData = [
-                'height_cm' => $request->height,
-                'weight_kg' => $request->weight,
-                'allergies' => $request->allergies,
-                'chronic_diseases' => $request->chronic_diseases,
-                'medications' => $request->medications,
-                'blood_type' => $request->blood_type,
-                'rh_factor' => $request->rh_factor
-            ];
-
-            // Health is in default blacklist → owner edits get queued for approval.
+            // Route through processFieldUpdates
             $result = $this->processFieldUpdates($student, $health, 'StudentHealthInfo', 'health', $healthData);
 
             return response()->json([

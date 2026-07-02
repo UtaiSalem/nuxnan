@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Student\Card;
 use Carbon\Carbon;
 use App\Models\Academy;
 use App\Models\StudentCard;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
@@ -157,6 +158,25 @@ class StudentCardController extends Controller
         return response()->json([
             'success' => true,
             'student' => $student_card
+        ]);
+    }
+
+    /**
+     * Get student card by student ID
+     */
+    public function byStudent(Academy $academy, Student $student)
+    {
+        $card = StudentCard::where('academy_id', $academy->id)
+            ->where(function($q) use ($student) {
+                $q->where('student_id', $student->id)
+                  ->orWhere('student_number', $student->student_id)
+                  ->orWhere('national_id', $student->citizen_id);
+            })
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'student' => $card
         ]);
     }
  

@@ -72,6 +72,11 @@ const loadMemberProfile = async () => {
     const response: any = await api.get(`/api/academies/${academyId.value}/members/${memberId.value}/profile`)
     if (response.success) {
       member.value = response.member
+      // Redirect to master profile when student record is linked
+      if (response.member?.student?.id) {
+        navigateTo(`/academies/${academyName.value}/students/${response.member.student.id}/profile`, { replace: true })
+        return
+      }
     }
   } catch (err) {
     console.error('Failed to load member profile:', err)

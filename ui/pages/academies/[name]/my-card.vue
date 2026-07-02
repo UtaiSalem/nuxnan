@@ -20,18 +20,8 @@ const studentCard = ref<any>(null)
 const student = ref<any>(null)
 const isFlipped = ref(false)
 
-onMounted(async () => {
-  try {
-    const response: any = await api.get(`/api/academies/${academyName.value}`)
-    if (response.success) {
-      academy.value = response.academy
-      await fetchMyStudentCard()
-    }
-  } catch (err) {
-    console.error('Failed to load:', err)
-  } finally {
-    isLoading.value = false
-  }
+onMounted(() => {
+  navigateTo(`/academies/${academyName.value}/my-profile?tab=card`, { replace: true })
 })
 
 const fetchMyStudentCard = async () => {

@@ -146,7 +146,11 @@ const switchToRooms = () => {
 }
 
 const viewStudentCard = (student: any) => {
-  navigateTo(`/academies/${academyName.value}/admin/student-cards/${student.id}`)
+  if (student.student_id) {
+    navigateTo(`/academies/${academyName.value}/students/${student.student_id}/profile?tab=card`)
+  } else {
+    navigateTo(`/academies/${academyName.value}/admin/student-cards/${student.id}`)
+  }
 }
 
 const editStudentCard = (student: any) => {

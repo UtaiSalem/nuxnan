@@ -33,9 +33,12 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
         Route::get('/levels', [StudentCardController::class, 'getLevels'])->name('levels');
         Route::get('/sections', [StudentCardController::class, 'getSections'])->name('sections');
         
+        // Get card by student model binding
+        Route::get('/by-student/{student}', [StudentCardController::class, 'byStudent'])->name('by-student');
+
         // Get students by classroom
         Route::get('/{level}/{room}', [StudentCardController::class, 'getStudentByRoom'])->name('by-room');
-        
+
         // Individual student profile
         Route::get('/profile/{student_card}', [StudentCardController::class, 'profile'])->name('profile');
         Route::put('/{student_card}', [StudentCardController::class, 'update'])->name('update');

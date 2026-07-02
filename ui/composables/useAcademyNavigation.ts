@@ -125,7 +125,7 @@ export const useAcademyNavigation = (
       title: 'บัตรนักเรียน',
       outcome: 'ดูบัตรนักเรียนของคุณ',
       icon: 'fluent:contact-card-24-regular',
-      to: `/academies/{n}/my-card`,
+      to: `/academies/{n}/my-profile?tab=card`,
       destinationLabel: 'หน้าบัตรนักเรียน',
       intent: 'identity',
       color: 'slate',

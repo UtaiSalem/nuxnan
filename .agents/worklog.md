@@ -6,7 +6,60 @@
 
 ---
 
-## 2026-07-02 — บ้าน
+## 2026-07-03 — ✅ FEATURE COMPLETE
+
+### School Student Master Profile Unification — เสร็จสมบูรณ์ทุก Phase
+
+| Phase | งาน | Commit |
+|-------|-----|--------|
+| 0–4 | Branch + schema verify + backend API sections + 8-tab shell | `74f1fb8a` |
+| 5 | Navigation Unification (MemberManageModal, student-cards, home-visits, memberId redirect) | `f26bfa95` |
+| 6+7 | Self-service my-profile 8 tabs + sectional edit endpoints + ChangeRequest approval flow | `3e95cc99` |
+| 8 | Student Card module — card visual flip, admin photo upload/edit, byStudent route fix | `6c29c00d` |
+| 9 | Home Visit CRUD — JWT-native controller, pagination, privacy filtering, migration | `328a058c` |
+| 10 | Cleanup — remove `Schema::hasColumn` guard, update worklog | *(this commit)* |
+
+### สิ่งที่เพิ่มเติม / ข้อมูลสำคัญ
+
+**Routes ที่เพิ่มใน `student-profile.php`:**
+- `PATCH /academies/{academy}/students/{student}/personal`
+- CRUD `/addresses`, `/contacts`, `/guardians`, `/health`, `/academic-info`
+- `GET/PATCH /change-requests` (approve/reject)
+- `GET/POST/PUT/DELETE /home-visits` + `PATCH /home-visits/{visit}/status`
+
+**Routes ที่เพิ่มใน `academy-student-card.php`:**
+- `GET /student-cards/by-student/{student}`
+
+**Feature scope ที่ตัดสินใจ skip:**
+- Phase 5.1: QR flow `/members/{studentCode}` — ไม่มี route นี้ใน frontend
+- PDF export ใน AdminController — pre-existing TODO ไม่เกี่ยวกับ feature นี้
+
+**Admin pages ที่ยังคงอยู่ (ไม่ถูกลบ):**
+- `/admin/home-visits/*` — ยังใช้งานอยู่สำหรับ full admin management (zones, export)
+- `/admin/student-cards/*` — ยังใช้งานอยู่สำหรับ bulk operations
+
+### Branch / Git State
+
+- Branch: `feature/student-master-profile`
+- Latest commit: *(phase 10)*
+- Status: พร้อม merge/push
+- Migration รันแล้ว: `expand_student_home_visit_statuses` ✅
+
+---
+
+## 2026-07-02 — บ้าน (อัพเดทรอบสอง)
+
+### งานที่ทำในวันนี้ (เพิ่มเติม)
+
+- **School Student Master Profile — Phase 0-4** (`74f1fb8a`)
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+
+- [x] Phase 5–10 ทั้งหมด — เสร็จแล้ว (ดูตารางด้านบน)
+
+---
+
+## 2026-07-02 — บ้าน (รอบแรก)
 
 ### งานที่ทำในวันนี้
 
@@ -125,3 +178,8 @@
 | 2026-05-25 | Exam Retake Flow Phase 1 | ✅ Done |
 | 2026-05-24 | Lesson Drag-and-Drop Reordering | ✅ Done |
 | 2026-05-24 | Remediation & Unified Eligibility | ✅ Done |
+## 2026-07-03 — Student Master Profile Phase 9
+
+- Completed JWT home-visit CRUD integration across `Master/HomeVisitController`, student-profile routes, `useHomeVisit.ts`, and `HomeVisitTab.vue`.
+- Added status-enum migration `2026_07_03_000001_expand_student_home_visit_statuses.php` (created, not run) and focused `StudentHomeVisitApiTest` (3 passed, 12 assertions).
+- Existing Phase 7 and other dirty-worktree changes were preserved.
