@@ -45,14 +45,21 @@ const FRONT_WALKWAY = 72 // reserved strip between board and first desk row for 
 const DOOR_AREA = 110
 const TEACHER_W = 56
 const ROW_GAP_FIXED = 104
+const SEAT_SHOULDERS_Y = -12
+const SEAT_SHOULDERS_W = 26
+const SEAT_SHOULDERS_H = 4
+const SEAT_BODY_Y = -14
+const SEAT_BODY_W = 22
+const SEAT_BODY_H = 14
+const LEAVE_HATCH_COLOR = 0x064e7b
 
 type SeatSpriteRefs = {
   container: Phaser.GameObjects.Container
   pulse?: Phaser.Tweens.Tween | null
 }
 
-type PolygonPoint = Phaser.Types.Math.Vector2Like
-type PolyArg = Phaser.Math.Vector2[]
+type FacePoints = Phaser.Math.Vector2[]
+const facePoint = (x: number, y: number) => new Phaser.Math.Vector2(x, y)
 
 export class AttendanceRoomScene extends Phaser.Scene {
   private handlers: AttendanceSceneHandlers
@@ -71,6 +78,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
   private teacherPatrolToken = 0
   private teacherShutdownHooked = false
   private teacherSeatGeometry: { zoneStarts: number[]; deskCellW: number; zoneGap: number; floorY: number; rowGap: number; rows: number; aisleWidth: number } | null = null
+  private teacherThinkDots?: Phaser.GameObjects.Container
   private hoverTooltip?: Phaser.GameObjects.Container
 
   constructor(handlers: AttendanceSceneHandlers = {}) {
@@ -398,11 +406,11 @@ export class AttendanceRoomScene extends Phaser.Scene {
     avatarGhost.setStrokeStyle(2, 0x8c795f, 0.5)
 
     const desk = this.add.graphics()
-    const topFace: PolygonPoint[] = [
-      { x: -deskTopW / 2, y: 0 },
-      { x: 0, y: -deskDepth },
-      { x: deskTopW / 2, y: 0 },
-      { x: 0, y: deskDepth },
+    const topFace: FacePoints = [
+      facePoint(-deskTopW / 2, 0),
+      facePoint(0, -deskDepth),
+      facePoint(deskTopW / 2, 0),
+      facePoint(0, deskDepth),
     ]
     desk.lineStyle(1.5, 0x8b5e3c, 0.25)
     
@@ -458,40 +466,43 @@ export class AttendanceRoomScene extends Phaser.Scene {
     const tone = this.seatTone(seat.status, arriving)
     container.setData('seat', seat) // for status lookups in differential render
     const desk = this.add.graphics()
-    const leftFace: PolygonPoint[] = [
-      { x: -deskTopW / 2, y: 0 },
-      { x: 0, y: deskDepth },
-      { x: 0, y: deskDepth + deskTopH },
-      { x: -deskTopW / 2, y: deskTopH },
+    const leftFace: FacePoints = [
+      facePoint(-deskTopW / 2, 0),
+      facePoint(0, deskDepth),
+      facePoint(0, deskDepth + deskTopH),
+      facePoint(-deskTopW / 2, deskTopH),
     ]
-    const rightFace: PolygonPoint[] = [
-      { x: deskTopW / 2, y: 0 },
-      { x: 0, y: deskDepth },
-      { x: 0, y: deskDepth + deskTopH },
-      { x: deskTopW / 2, y: deskTopH },
+    const rightFace: FacePoints = [
+      facePoint(deskTopW / 2, 0),
+      facePoint(0, deskDepth),
+      facePoint(0, deskDepth + deskTopH),
+      facePoint(deskTopW / 2, deskTopH),
     ]
-    const topFace: PolygonPoint[] = [
-      { x: -deskTopW / 2, y: 0 },
-      { x: 0, y: -deskDepth },
-      { x: deskTopW / 2, y: 0 },
-      { x: 0, y: deskDepth },
+    const topFace: FacePoints = [
+      facePoint(-deskTopW / 2, 0),
+      facePoint(0, -deskDepth),
+      facePoint(deskTopW / 2, 0),
+      facePoint(0, deskDepth),
     ]
     desk.fillStyle(tone.left, 1)
-    desk.fillPoints(leftFace as PolyArg, true)
+    desk.fillPoints(leftFace, true)
     desk.fillStyle(tone.right, 1)
-    desk.fillPoints(rightFace as PolyArg, true)
+    desk.fillPoints(rightFace, true)
     desk.fillStyle(tone.top, 1)
-    desk.fillPoints(topFace as PolyArg, true)
+    desk.fillPoints(topFace, true)
     desk.lineStyle(1.5, tone.stroke, 1)
-    desk.strokePoints(topFace as PolyArg, true)
+    desk.strokePoints(topFace, true)
 
     const shadow = this.add.ellipse(0, deskTopH + 24, deskTopW, 10, 0x5e8c34, seat.status === ATTENDANCE_STATUS.ABSENT ? 0.18 : 0.28)
     shadow.setName('shadow')
     const isLeave = seat.status === ATTENDANCE_STATUS.LEAVE
-    const shoulders = this.add.rectangle(0, -12, 26, 4, tone.stroke, isLeave ? 0.45 : 0.85)
+    const shoulders = this.add.rectangle(0, SEAT_SHOULDERS_Y, SEAT_SHOULDERS_W, SEAT_SHOULDERS_H, tone.stroke, isLeave ? 0.45 : 0.85)
     shoulders.setName('shoulders')
-    const body = this.add.rectangle(0, -14, 22, 14, tone.shirt, isLeave ? 0.45 : 1)
+    const body = this.add.rectangle(0, SEAT_BODY_Y, SEAT_BODY_W, SEAT_BODY_H, tone.shirt, isLeave ? 0.45 : 1)
     body.setName('body')
+    const leaveHatch = this.add.graphics()
+    leaveHatch.setName('leaveHatch')
+    this.drawLeaveHatch(leaveHatch, isLeave)
 
     const { circle: avatar } = this.drawAvatar(container, 0, -28, { avatar: seat.avatar, name: seat.name }, avatarRadius)
     avatar.setName('avatar')
@@ -522,7 +533,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
         }).setOrigin(0.5)
       : null
 
-    container.add([shadow, shoulders, body, avatar, desk, seatBadge, seatNum, nameText])
+    container.add([shadow, shoulders, body, leaveHatch, avatar, desk, seatBadge, seatNum, nameText])
     if (timeText) container.add(timeText)
 
     container.setData('memberId', seat.course_member_id)
@@ -594,6 +605,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
       const desk = container.getByName('desk') as Phaser.GameObjects.Graphics
       const body = container.getByName('body') as Phaser.GameObjects.Rectangle
       const shoulders = container.getByName('shoulders') as Phaser.GameObjects.Rectangle | null
+      const leaveHatch = container.getByName('leaveHatch') as Phaser.GameObjects.Graphics | null
       const avatar = container.getByName('avatar') as Phaser.GameObjects.Arc
       const seatBadge = container.getByName('seatBadge') as Phaser.GameObjects.Arc
       if (!desk || !body || !avatar || !seatBadge) return
@@ -603,36 +615,37 @@ export class AttendanceRoomScene extends Phaser.Scene {
       const deskDepth = 16
 
       desk.clear()
-      const leftFace: PolygonPoint[] = [
-        { x: -deskTopW / 2, y: 0 },
-        { x: 0, y: deskDepth },
-        { x: 0, y: deskDepth + deskTopH },
-        { x: -deskTopW / 2, y: deskTopH },
+      const leftFace: FacePoints = [
+        facePoint(-deskTopW / 2, 0),
+        facePoint(0, deskDepth),
+        facePoint(0, deskDepth + deskTopH),
+        facePoint(-deskTopW / 2, deskTopH),
       ]
-      const rightFace: PolygonPoint[] = [
-        { x: deskTopW / 2, y: 0 },
-        { x: 0, y: deskDepth },
-        { x: 0, y: deskDepth + deskTopH },
-        { x: deskTopW / 2, y: deskTopH },
+      const rightFace: FacePoints = [
+        facePoint(deskTopW / 2, 0),
+        facePoint(0, deskDepth),
+        facePoint(0, deskDepth + deskTopH),
+        facePoint(deskTopW / 2, deskTopH),
       ]
-      const topFace: PolygonPoint[] = [
-        { x: -deskTopW / 2, y: 0 },
-        { x: 0, y: -deskDepth },
-        { x: deskTopW / 2, y: 0 },
-        { x: 0, y: deskDepth },
+      const topFace: FacePoints = [
+        facePoint(-deskTopW / 2, 0),
+        facePoint(0, -deskDepth),
+        facePoint(deskTopW / 2, 0),
+        facePoint(0, deskDepth),
       ]
       desk.fillStyle(tone.left, 1)
-      desk.fillPoints(leftFace as PolyArg, true)
+      desk.fillPoints(leftFace, true)
       desk.fillStyle(tone.right, 1)
-      desk.fillPoints(rightFace as PolyArg, true)
+      desk.fillPoints(rightFace, true)
       desk.fillStyle(tone.top, 1)
-      desk.fillPoints(topFace as PolyArg, true)
+      desk.fillPoints(topFace, true)
       desk.lineStyle(1.5, tone.stroke, 1)
-      desk.strokePoints(topFace as PolyArg, true)
+      desk.strokePoints(topFace, true)
 
       const isLeave = seat.status === ATTENDANCE_STATUS.LEAVE
       body.setFillStyle(tone.shirt, isLeave ? 0.45 : 1)
       shoulders?.setFillStyle(tone.stroke, isLeave ? 0.45 : 0.85)
+      if (leaveHatch) this.drawLeaveHatch(leaveHatch, isLeave)
       avatar.setStrokeStyle(3, tone.ring, 1)
       seatBadge.setFillStyle(tone.badge, 1)
 
@@ -890,6 +903,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
       this.tweens.killTweensOf(this.teacherSprite)
       if (this.teacherPersonRef) this.tweens.killTweensOf(this.teacherPersonRef)
     }
+    this.destroyThinkDots()
   }
 
   // T1: Compute X positions of aisle centers between zones (real aisles, not grid center).
@@ -910,6 +924,82 @@ export class AttendanceRoomScene extends Phaser.Scene {
     this.teacherPersonRef.setScale(facing, 1)
   }
 
+  private showThinkDots() {
+    this.destroyThinkDots()
+
+    if (this.prefersReducedMotion() || !this.teacherSprite) return
+
+    const dotsContainer = this.add.container(this.teacherSprite.x, this.teacherSprite.y - 30)
+    dotsContainer.setDepth(6)
+    if (this.dynamicLayer) {
+      this.dynamicLayer.add(dotsContainer)
+    }
+    this.teacherThinkDots = dotsContainer
+
+    const g1 = this.add.graphics()
+    g1.fillStyle(0xffffff, 1)
+    g1.fillCircle(0, 0, 3)
+    g1.lineStyle(1.2, 0x7A5230, 1)
+    g1.strokeCircle(0, 0, 3)
+    g1.setPosition(-12, 0)
+    g1.setAlpha(0)
+    g1.setScale(0)
+
+    const g2 = this.add.graphics()
+    g2.fillStyle(0xffffff, 1)
+    g2.fillCircle(0, 0, 3)
+    g2.lineStyle(1.2, 0x7A5230, 1)
+    g2.strokeCircle(0, 0, 3)
+    g2.setPosition(0, 0)
+    g2.setAlpha(0)
+    g2.setScale(0)
+
+    const g3 = this.add.graphics()
+    g3.fillStyle(0xffffff, 1)
+    g3.fillCircle(0, 0, 3)
+    g3.lineStyle(1.2, 0x7A5230, 1)
+    g3.strokeCircle(0, 0, 3)
+    g3.setPosition(12, 0)
+    g3.setAlpha(0)
+    g3.setScale(0)
+
+    dotsContainer.add([g1, g2, g3])
+
+    this.tweens.add({
+      targets: g1,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 350,
+      ease: 'Back.Out',
+    })
+    this.tweens.add({
+      targets: g2,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      delay: 150,
+      duration: 350,
+      ease: 'Back.Out',
+    })
+    this.tweens.add({
+      targets: g3,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      delay: 300,
+      duration: 350,
+      ease: 'Back.Out',
+    })
+  }
+
+  private destroyThinkDots() {
+    if (this.teacherThinkDots) {
+      this.teacherThinkDots.destroy()
+      this.teacherThinkDots = undefined
+    }
+  }
+
   private startTeacherPatrol(geom: NonNullable<AttendanceRoomScene['teacherSeatGeometry']>) {
     if (!this.teacherSprite) return
     const rand = (min: number, max: number) => min + Math.random() * (max - min)
@@ -928,6 +1018,7 @@ export class AttendanceRoomScene extends Phaser.Scene {
     const isStale = () => myToken !== this.teacherPatrolToken || !this.teacherLoopActive || !this.teacherSprite || !this.sys.isActive()
 
     const step = () => {
+      this.destroyThinkDots()
       if (isStale()) return
 
       // T5/T6/O: Responsive & Reduced Motion
@@ -961,23 +1052,34 @@ export class AttendanceRoomScene extends Phaser.Scene {
           duration: 900 * speedMult,
           ease: 'Sine.InOut',
           onComplete: () => {
-            if (isStale()) return
+            if (isStale()) {
+              this.destroyThinkDots()
+              return
+            }
             this.tweens.add({
               targets: teacher,
               y: targetY,
               duration: 1400 * speedMult,
               ease: 'Sine.InOut',
               onComplete: () => {
-                if (isStale()) return
+                if (isStale()) {
+                  this.destroyThinkDots()
+                  return
+                }
                 // T8: Use delay on the return tween for stability
+                const pauseDelay = rand(1200, 2600) * speedMult
+                if (pauseDelay >= 1200) {
+                  this.showThinkDots()
+                }
                 this.tweens.add({
                   targets: teacher,
                   x: this.gridCenterX,
                   y: frontY,
-                  delay: rand(1200, 2600) * speedMult,
+                  delay: pauseDelay,
                   duration: 1400 * speedMult,
                   ease: 'Sine.InOut',
                   onStart: () => {
+                    this.destroyThinkDots()
                     this.faceTeacher(this.gridCenterX)
                   },
                   onComplete: step,
@@ -1329,6 +1431,26 @@ export class AttendanceRoomScene extends Phaser.Scene {
       if (!this.load.isLoading()) this.load.start()
     }
     return { circle }
+  }
+  private drawLeaveHatch(graphic: Phaser.GameObjects.Graphics, visible: boolean) {
+    graphic.clear()
+    graphic.setVisible(visible)
+    if (!visible) return
+
+    graphic.lineStyle(2, LEAVE_HATCH_COLOR, 0.35)
+    const left = -SEAT_BODY_W / 2
+    const right = SEAT_BODY_W / 2
+    const top = SEAT_BODY_Y - SEAT_BODY_H / 2
+    const bottom = SEAT_BODY_Y + SEAT_BODY_H / 2
+    const lines: Array<[number, number, number, number]> = [
+      [left + 1, top + 3, left + 7, bottom - 1],
+      [left + 7, top + 1, right - 1, bottom - 1],
+      [left + 13, top + 1, right - 1, top + 7],
+    ]
+
+    lines.forEach(([x1, y1, x2, y2]) => {
+      graphic.lineBetween(x1, y1, x2, y2)
+    })
   }
 
   private formatDuration(ms: number) {

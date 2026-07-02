@@ -1,4 +1,4 @@
-﻿# แผนการรีไฟน์ Phaser Classroom Simulation (Refined v4)
+# แผนการรีไฟน์ Phaser Classroom Simulation (Refined v4)
 
 ## 5 Critical Bugs
 
@@ -8044,6 +8044,19 @@ onMounted(() => { if (academyId.value) role.fetchRole(academyId.value) })
   - Confirm academy tabs react immediately after a supported locale switch and persist after reload.
   - Confirm SSR HTML `lang`, hydration, and other existing `useI18n()` consumers remain consistent.
 
+## 2026-07-02 — Attendance Phaser PolygonPoint cleanup
+
+- Scope: frontend-only TypeScript cleanup in `ui/components/learn/course/attendances/phaser/attendancePhaserScene.ts`.
+- Replaced the redundant `PolygonPoint`/`PolyArg` aliases with semantic `FacePoints` (`Phaser.Math.Vector2[]`) and a `facePoint()` constructor helper.
+- All desk face arrays now contain real Phaser `Vector2` instances, so the eight `fillPoints()`/`strokePoints()` casts were removed.
+- Verification: focused `vue-tsc --noEmit` output contains no errors for `attendancePhaserScene.ts`; `git diff --check` passes.
+
+## 2026-07-02 — Attendance Phaser LEAVE hatch overlay
+
+- Scope: frontend-only visual refinement in `ui/components/learn/course/attendances/phaser/attendancePhaserScene.ts`.
+- Kept the existing larger torso and shoulder silhouette, and added a named `leaveHatch` graphics overlay across the body so `ATTENDANCE_STATUS.LEAVE` reads differently from `ABSENT` even beyond alpha reduction.
+- Wired the hatch into both `createSeat()` and `updateSeatStatuses()` so it appears, disappears, and stays in sync during differential updates.
+- Verification: focused `vue-tsc --noEmit` output contains no errors for `attendancePhaserScene.ts`; visual browser verification is still pending.
 ## 2026-07-02 — Lesson topics shown directly
 
 - Scope: frontend-only UX fix in `ui/components/learn/course/lesson/LessonPost.vue`.
@@ -8058,3 +8071,12 @@ onMounted(() => { if (academyId.value) role.fetchRole(academyId.value) })
 - Best existing fit: `CourseLessonsMenu.vue`, used as a lesson table of contents with topic counts and lesson links. It is more task-relevant than generic recent/favorite-course widgets and complements the instructor/course widgets already shown on the right.
 - Recommended implementation: render `CourseLessonsMenu` in a sticky left stack for admins on the lessons index; retain the learner progress widgets for non-admin members. Add an admin create-lesson shortcut and normalize its status display to `publication_status` if needed.
 - Verification: admin/member/guest role checks, empty/loading/many-lessons states, desktop balance, mobile slide-out panel, and no duplicate lesson fetch.
+
+## 2026-07-02 — Phaser classroom teacher patrol O3 think dots
+
+- Scope: frontend-only refinement in `ui/components/learn/course/attendances/phaser/attendancePhaserScene.ts`.
+- Implemented `showThinkDots()` to render three horizontal dots above the teacher's head during the long return path delay.
+- Managed animations with sequential stagger and scale/alpha fade-in pop (using `Back.Out` ease) matching the design language.
+- Added cleanups to `destroyThinkDots()` during tween start, patrol stoppage, and loop stale checks.
+- Verified that it respects reduced-motion preferences (`prefersReducedMotion()`).
+
