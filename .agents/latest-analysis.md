@@ -8664,30 +8664,31 @@ CoursePageShell
 
 ### 6. Decisions Locked
 
-1. **Assignment และ Quiz แสดงแยกกันเสมอ ไม่รวม total** ← decision หลักของรอบนี้
-   - contract ใช้ `{ assignment: ActivityScoreBlock, quiz: ActivityScoreBlock }`
-   - frontend render 2 chip/row แยกกัน; ไม่มี combined score เลย
-   - ถ้าอนาคตต้องการ "คะแนนรวม" → เพิ่ม field `total` เข้า contract ภายหลังโดยไม่ break field เดิม
+1. **Flat contract (assignment-only) สำหรับ lesson-level score** ← decision สุดท้าย (2026-07-03)
+   - `CourseQuiz` ผูกกับ `Course` โดยตรง ไม่มี FK → `Lesson` — ทำให้แยก quiz block ที่ระดับ lesson ไม่ได้จากข้อมูลจริง
+   - contract ที่ใช้จริง: `{ score_status, score, max_score, score_percentage, activity_counts }` (flat)
+   - Quiz score ยังคงแสดงที่ระดับ course ใน `quizzes[]` ของ response (มีอยู่แล้ว)
+   - ถ้าอนาคตต้องการ per-lesson quiz score → ต้อง migration เพิ่ม `lesson_id` FK ให้ `CourseQuiz` ก่อน (งาน follow-up แยก)
 
-2. **`passing_threshold` ระดับ course** — ใช้ `course.passing_score` (ถ้ามี) เป็น threshold ร่วมกันทั้ง assignment และ quiz
-   - ถ้าอนาคตต้องการ per-activity threshold → ย้ายออกจาก course level; contract รับ threshold ใน block ได้แล้ว
+2. **`passing_threshold`** — ใช้ `course.passing_score` (ถ้ามี); ถ้าไม่มี → `score_status = 'scored'`
 
-3. **Quiz ไม่มีสถานะ `submitted` หรือ `awaiting_grading`** — auto-graded ทันที
-   - `resolveQuizBlock` ข้ามสองสถานะนี้: ทำแล้ว → `scored/passed/failed`; ยังไม่ทำ → `not_attempted`
+3. **Admin/teacher** — ไม่ call progress endpoint; `progressMap = undefined`; ไม่มี badge แสดง
 
-4. **Mixed case (assignment รอตรวจ + quiz ผ่านแล้ว)** → แต่ละ block สะท้อนสถานะตัวเองอิสระ
-   - UI แสดง chip "รอตรวจ" (assignment) + "8/10 ผ่าน" (quiz) พร้อมกัน ไม่บล็อกกัน
+4. **Quiz-at-lesson-level** — out of scope รอบนี้; บันทึกเป็น follow-up ด้านล่าง
 
-5. **Admin/teacher** — progressMap = undefined; ไม่มี chip แสดงเลย
+### 7. Out of Scope (รอบนี้) + Follow-ups
 
-### 7. Out of Scope (รอบนี้)
-
-- ❌ Per-topic score breakdown (แค่ per-lesson)
+- ❌ **Quiz score ที่ระดับ lesson** — `CourseQuiz` ไม่มี `lesson_id` FK; ต้องทำ migration แยกก่อน
+- ❌ Per-topic score breakdown
 - ❌ Score history / attempt history UI
 - ❌ Admin bulk view นักเรียนทั้ง course ใน lesson widget
-- ❌ Direct questions (lesson-level questions ที่ไม่ผ่าน quiz) — ทำใน `activity_counts` แต่ยังไม่รวม score
 - ❌ Export per-lesson score เป็น Excel
 - ❌ Real-time score update ผ่าน WebSocket
+
+**Follow-up ที่แนะนำ (ถ้าต้องการ quiz ระดับ lesson จริง):**
+1. Migration: เพิ่ม `lesson_id` (nullable FK) ใน `course_quizzes`
+2. UI สร้าง quiz ให้เลือก "ผูกกับบทเรียนไหน" หรือ "ระดับ course"
+3. อัพเดท contract → `{ assignment: ActivityScoreBlock, quiz: ActivityScoreBlock }` ตามแผนเดิม
 
 ### 8. Risk Register
 
