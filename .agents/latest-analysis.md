@@ -8104,3 +8104,616 @@ onMounted(() => { if (academyId.value) role.fetchRole(academyId.value) })
 - Added `useHomeVisit.ts` and rewrote `HomeVisitTab.vue` with paginated loading, inline create/edit, delete, validation errors, role-gated controls, and master-profile refresh events.
 - Wired both staff and self-service profile routes to the CRUD tab; profile summary treats legacy `pending` as scheduled and falls back to visit date for the next appointment.
 - Verification: PHP syntax and route registration passed; Pint applied; `StudentHomeVisitApiTest` passes 3 tests / 12 assertions. Filtered `vue-tsc` reports no errors in `HomeVisitTab.vue` or `useHomeVisit.ts`; profile pages retain pre-existing Phase 7 `academy_id` and generated layout typing errors.
+## 2026-07-03 — Lesson widgets per-student score status plan
+
+- Scope: cross-stack analysis/plan for `/Learn/Courses/{id}/lessons`; no application source changed.
+- The learner sidebar is composed in `ui/components/learn/course/v2/CoursePageShell.vue`. `CourseLessonProgressWidget.vue` consumes `/api/courses/{course}/members/{member}/progress` through `useCourseLearningProgress.ts`, while `CourseLessonsMenu.vue` separately consumes the course store lesson list.
+- Existing member-progress response already aggregates published direct-lesson and topic assignments into lesson fields (`has_graded_activity`, `score`, `max_score`, `score_percentage`), and `CourseLessonProgressWidget` already renders those values.
+- Gaps: lesson/topic question scores are not included in the lesson aggregate; `CourseLessonsMenu` cannot display personal score fields; current assignment aggregation queries answers once per lesson (N+1); lesson menu and progress widget can drift because they use separate sources.
+- Intended implementation: extend the member-progress lesson contract to aggregate all published/score-bearing lesson activities (direct/topic assignments plus direct/topic questions), bulk-load the current learner's answers, expose a typed per-lesson score/status shape, and pass that same progress lesson array into both widgets on the learner lessons index. Preserve the course-store list for admins and non-personal contexts.
+- Score states should distinguish no graded activity, not attempted/submitted, awaiting grading, scored, and passed/failed where a passing threshold exists; show earned/max only once a score is available rather than presenting an unattempted activity as `0/max`.
+- Verification plan: focused API feature tests for assignment-only, quiz-only, mixed, unanswered, awaiting-grade, multi-attempt/boundary, wrong-course member authorization, and query count; frontend type/build check; authenticated browser smoke on course 24 for both widgets and responsive/dark states.
+
+---
+
+## Work Plan — Lesson Widgets Per-Student Score Status (2026-07-03)
+
+### 0. การวิเคราะห์เพิ่มเติมจากโค้ดจริง (ก่อนวางแผน)
+
+อ่านโค้ดเชิงลึกพบ 6 จุดที่บทวิเคราะห์ของผู้ใช้ยังไม่ได้ระบุ:
+
+**A. N+1 query ยืนยันแล้ว — `CourseMemberController.php:122–163`**
+- ทุก lesson loop เรียก `LessonProgress::where()` 1 ครั้ง + `AssignmentAnswer::whereIn()` 1 ครั้ง
+- course 30 บทเรียน = 60 queries เพิ่มจาก base; course ใหญ่ขึ้นเป็น linear
+
+**B. Quiz/Question ไม่อยู่ในสูตร — แค่ `assignments` เท่านั้น**
+- `$gradedAssignments = $lesson->assignments->merge($lesson->topics->flatMap->assignments)` — โมเดล `Assignment` เท่านั้น
+- `Quiz`, `Question` (lesson direct หรือ topic) ไม่ถูกนับ → นักเรียนที่ทำ quiz แล้ว score แสดง `0/max` เป็น ghost score
+
+**C. `CourseLessonsMenu` ไม่รับ progress prop — ใช้ course store เดี่ยว**
+- `CoursePageShell.vue:202,213` ส่งแค่ `:lessons` (จาก store) ไม่มี `:progress`
+- `CourseLessonsMenu` ไม่มี prop รับ score → ข้อมูลส่วนตัวไม่แสดงใน menu เลย
+
+**D. `score_status` field ยังไม่มี — frontend ต้อง infer เอง**
+- `CourseLessonProgressWidget:19–27` ต้อง derive สีจาก `score_percentage` + `completed` เอง
+- ไม่มี distinction ระหว่าง "submitted แต่รอตรวจ" กับ "ยังไม่ส่ง" ที่ระดับ lesson
+
+**E. `status_label` ถูกตีความผิด**
+- backend ส่ง `status_label: 'เสร็จสิ้น'|'ยังไม่เริ่ม'` ตาม `LessonProgress.status` เท่านั้น
+- ไม่ได้สะท้อน "ส่งงานแล้วรอตรวจ" หรือ "ทำ quiz ผ่าน/ไม่ผ่าน"
+
+**F. `passing_score` threshold ไม่ถูก expose ในระดับ lesson**
+- `Course` model อาจมี `passing_score` ระดับ course แต่ per-lesson threshold ยังไม่มี
+- ต้องตัดสินว่า "ผ่าน/ไม่ผ่าน" ใช้ threshold ที่ไหน (course-level % หรือ per-assignment ?)
+
+### 1. หลักการของแผนนี้
+
+1. **Backend fix ก่อน frontend** — แก้ N+1 + เพิ่ม quiz/question ก่อน ไม่ให้ frontend แสดงข้อมูลผิด
+2. **Assignment และ Quiz แสดงแยกกันเสมอ** — ไม่รวม score เป็น total เดียว เพราะ grading model ต่างกัน (manual vs auto) และนักเรียนต้องรู้ว่าแต่ละส่วนอยู่ที่ไหน
+3. **Single source of truth** — `CoursePageShell` fetch progress ครั้งเดียว, ส่ง `progressMap` ให้ทั้งสอง widget ผ่าน prop
+4. **ไม่ break admin path** — Admin ไม่ได้เป็น member → ไม่ call progress endpoint; `CourseLessonsMenu` ยังทำงานโดยไม่มี progressMap
+5. **`ActivityScoreStatus` enum ใช้ร่วมทั้ง assignment และ quiz** — backend resolve ให้แต่ละ block แยก, frontend แค่ render
+6. **ทุก commit เล็ก + revert ได้**
+7. **ไม่แตะ admin/course-detail view** — เฉพาะ learner-facing `/Learn/Courses/{id}/lessons` เท่านั้น
+
+### 2. Contract (กฎร่วมของทั้ง backend + frontend)
+
+**เหตุผลที่แยก assignment กับ quiz:**
+- Assignment — ครูตรวจ manual, มีสถานะ `submitted → in_review → graded`; คะแนนรู้หลังครูตรวจเท่านั้น
+- Quiz — auto-graded ทันที, มีสถานะ `not_attempted → scored`; ไม่มีขั้น `awaiting_grading`
+- รวมเป็น total เดียวทำให้ "quiz ผ่านแล้ว แต่ assignment ยังรอตรวจ" อ่านไม่ออก
+
+```typescript
+// ui/types/lessonScore.ts (ใหม่)
+
+/** สถานะที่ใช้ได้กับทั้ง assignment block และ quiz block */
+export type ActivityScoreStatus =
+  | 'none'              // ไม่มี activity ประเภทนี้ในบทเรียน
+  | 'not_attempted'     // มี activity แต่ยังไม่ส่ง/ทำเลย
+  | 'submitted'         // ส่งแล้ว (assignment เท่านั้น) รอครูรับ
+  | 'awaiting_grading'  // assignment: in_review / ยังไม่มี points
+  | 'scored'            // มีคะแนน, ไม่มี passing threshold
+  | 'passed'            // คะแนน >= passing_threshold
+  | 'failed'            // คะแนน < passing_threshold
+
+export interface ActivityScoreBlock {
+  status: ActivityScoreStatus
+  count: number          // จำนวน activity ประเภทนี้ในบทเรียน (0 → status = 'none')
+  score: number | null   // null ถ้า status ∈ {none, not_attempted, submitted, awaiting_grading}
+  max_score: number | null
+  score_percentage: number | null
+}
+
+export interface LessonProgressSummary {
+  lesson_id: number
+  completed: boolean
+  progress_percentage: number   // 0–100 อิง LessonProgress
+  status_label: string          // ป้าย completion ภาษาไทย
+  // แยก 2 block เสมอ — frontend render อิสระต่อกัน
+  assignment: ActivityScoreBlock
+  quiz: ActivityScoreBlock
+}
+```
+
+**Access-level rule:**
+- `score` → null เมื่อ status ∈ `none | not_attempted | submitted | awaiting_grading`
+- Frontend ห้าม render `0/max` เมื่อ `score === null`
+- `passed`/`failed` ต้องมี `passing_threshold ≥ 0`; ถ้าไม่มี → ใช้ `scored`
+- Quiz ไม่มี status `submitted` หรือ `awaiting_grading` (auto-graded) — ถ้าทำแล้ว → `scored/passed/failed` ทันที
+
+**ตัวอย่าง response จริง:**
+```jsonc
+// lesson มี 1 assignment (รอตรวจ) + 1 quiz (ผ่าน 8/10)
+{
+  "lesson_id": 5,
+  "completed": false,
+  "progress_percentage": 60,
+  "status_label": "กำลังทำ",
+  "assignment": {
+    "status": "awaiting_grading",
+    "count": 1,
+    "score": null,
+    "max_score": null,
+    "score_percentage": null
+  },
+  "quiz": {
+    "status": "passed",
+    "count": 1,
+    "score": 8,
+    "max_score": 10,
+    "score_percentage": 80
+  }
+}
+
+// lesson มีแค่ quiz ยังไม่ทำ
+{
+  "assignment": { "status": "none", "count": 0, "score": null, "max_score": null, "score_percentage": null },
+  "quiz": { "status": "not_attempted", "count": 1, "score": null, "max_score": null, "score_percentage": null }
+}
+```
+
+### 3. Phase-by-Phase Plan
+
+#### **Phase 1 — Backend: Fix N+1 + แยก Assignment / Quiz Score (1 PR, ~3.5 ชม.)**
+
+ไฟล์หลัก: `api/.../Course/members/CourseMemberController.php` ฟังก์ชัน `getMemberProgress()` (L.100–165)
+
+**1.1 Eager load quiz relations เพิ่มก่อน**
+```php
+// ใน orderedCourseLessons() เพิ่ม:
+->with([
+    'topics.assignments',
+    'topics.quizzes',          // เพิ่ม
+    'assignments',
+    'quizzes',                 // เพิ่ม
+])
+```
+> ก่อนเขียน: ตรวจว่า `Lesson::quizzes()` relation มีอยู่ใน model แล้ว ถ้าไม่มีสร้างก่อน
+
+**1.2 Bulk-load LessonProgress, AssignmentAnswers, QuizAnswers นอก loop**
+```php
+$lessonIds = $lessons->pluck('id');
+
+// LessonProgress
+$lpMap = \App\Models\LessonProgress::whereIn('lesson_id', $lessonIds)
+    ->where('user_id', $userId)->get()->keyBy('lesson_id');
+
+// Assignment answers
+$assignmentIds = $lessons->flatMap(fn ($l) =>
+    $l->assignments->pluck('id')
+      ->merge($l->topics->flatMap->assignments->pluck('id'))
+)->unique();
+$assignmentAnswerMap = \App\Models\AssignmentAnswer::whereIn('assignment_id', $assignmentIds)
+    ->where('user_id', $userId)->get()->groupBy('assignment_id');
+
+// Quiz answers (QuizAnswer หรือ QuizAttempt — ตรวจ model จริงก่อน)
+$quizIds = $lessons->flatMap(fn ($l) =>
+    $l->quizzes->pluck('id')
+      ->merge($l->topics->flatMap->quizzes->pluck('id'))
+)->unique();
+$quizAnswerMap = \App\Models\QuizAnswer::whereIn('quiz_id', $quizIds)
+    ->where('user_id', $userId)->get()->groupBy('quiz_id');
+```
+
+**1.3 Helper method `resolveAssignmentBlock()`**
+```php
+private function resolveAssignmentBlock(
+    Collection $assignments,  // published assignments ของ lesson นี้
+    Collection $answerMap,    // keyed by assignment_id, pre-loaded
+    ?float $passingThreshold
+): array {
+    if ($assignments->isEmpty()) {
+        return ['status' => 'none', 'count' => 0, 'score' => null, 'max_score' => null, 'score_percentage' => null];
+    }
+    $answers = $assignments->map(fn ($a) => $answerMap->get($a->id)?->first());
+
+    // ยังไม่ส่งงานเลย
+    if ($answers->every(fn ($ans) => $ans === null)) {
+        return ['status' => 'not_attempted', 'count' => $assignments->count(), ...nullScores()];
+    }
+    // มีบางชิ้นยังรอตรวจ (submitted / in_review หรือยังไม่มี points)
+    $hasAwaiting = $answers->contains(
+        fn ($ans) => $ans && in_array($ans->status, ['submitted', 'in_review']) && $ans->points === null
+    );
+    if ($hasAwaiting) {
+        return ['status' => 'awaiting_grading', 'count' => $assignments->count(), ...nullScores()];
+    }
+    // ทุกชิ้นมีคะแนนแล้ว
+    $score = $assignments->sum(fn ($a) => $answerMap->get($a->id)?->first()?->points ?? 0);
+    $max   = $assignments->sum(fn ($a) => $a->points ?? $a->max_score ?? 100);
+    $pct   = $max > 0 ? round($score / $max * 100) : 0;
+    $status = $passingThreshold !== null
+        ? ($pct >= $passingThreshold ? 'passed' : 'failed')
+        : 'scored';
+    return ['status' => $status, 'count' => $assignments->count(),
+            'score' => $score, 'max_score' => $max, 'score_percentage' => $pct];
+}
+```
+
+**1.4 Helper method `resolveQuizBlock()`**
+```php
+private function resolveQuizBlock(
+    Collection $quizzes,
+    Collection $quizAnswerMap,
+    ?float $passingThreshold
+): array {
+    if ($quizzes->isEmpty()) {
+        return ['status' => 'none', 'count' => 0, 'score' => null, 'max_score' => null, 'score_percentage' => null];
+    }
+    $attempted = $quizzes->filter(fn ($q) => $quizAnswerMap->has($q->id));
+    if ($attempted->isEmpty()) {
+        return ['status' => 'not_attempted', 'count' => $quizzes->count(), ...nullScores()];
+    }
+    // Quiz: auto-graded → ถ้าทำแล้วมีคะแนนทันที (ไม่มี awaiting_grading)
+    $score = $attempted->sum(fn ($q) => $quizAnswerMap->get($q->id)->first()?->score ?? 0);
+    $max   = $quizzes->sum(fn ($q) => $q->total_score ?? $q->max_score ?? 0);
+    // ถ้ายังไม่ทำทุกข้อ → แสดงเฉพาะที่ทำแล้ว (partial)
+    $pct   = $max > 0 ? round($score / $max * 100) : 0;
+    $status = $passingThreshold !== null
+        ? ($pct >= $passingThreshold ? 'passed' : 'failed')
+        : 'scored';
+    return ['status' => $status, 'count' => $quizzes->count(),
+            'score' => $score, 'max_score' => $max, 'score_percentage' => $pct];
+}
+```
+
+**1.5 Map loop ใหม่ (ใช้ bulk-loaded data)**
+```php
+$passingThreshold = $course->passing_score ?? null;
+
+$lessons = $lessons->map(function ($lesson) use ($lpMap, $assignmentAnswerMap, $quizAnswerMap, $passingThreshold) {
+    $lp = $lpMap->get($lesson->id);
+    $completed = $lp && $lp->status === 'completed';
+
+    $gradedAssignments = $lesson->assignments
+        ->merge($lesson->topics->flatMap->assignments)
+        ->filter(fn ($a) => $a->status === 1);
+
+    $gradedQuizzes = $lesson->quizzes
+        ->merge($lesson->topics->flatMap->quizzes)
+        ->filter(fn ($q) => ($q->status ?? 1) === 1);
+
+    return [
+        'id'                 => $lesson->id,
+        'title'              => $lesson->title,
+        'completed'          => $completed,
+        'progress_percentage'=> $completed ? 100 : ($lp?->progress_percentage ?? 0),
+        'status_label'       => $completed ? 'เสร็จสิ้น' : ($lp ? 'กำลังทำ' : 'ยังไม่เริ่ม'),
+        'assignment'         => $this->resolveAssignmentBlock($gradedAssignments, $assignmentAnswerMap, $passingThreshold),
+        'quiz'               => $this->resolveQuizBlock($gradedQuizzes, $quizAnswerMap, $passingThreshold),
+        // ลบ has_graded_activity, score, max_score, score_percentage (เก่า) ออก
+        // แทนด้วย 2 block ด้านบน — backward compat: frontend ต้อง update ด้วย
+    ];
+});
+```
+
+**1.6 ตรวจ query count ใน test**
+```php
+DB::enableQueryLog();
+$this->getJson("/api/courses/{$course->id}/members/{$member->id}/progress");
+$this->assertLessThan(15, count(DB::getQueryLog())); // เดิมอาจ 60+
+```
+
+**Commit:** `feat(course): split assignment/quiz score blocks in member progress, fix N+1`
+
+---
+
+#### **Phase 2 — TypeScript Contract & Composable Update (~1 ชม.)**
+
+**2.1 สร้าง `ui/types/lessonScore.ts`** — type definitions ตาม §2
+
+**2.2 อัพเดท `useCourseLearningProgress.ts`**
+- เพิ่ม `lessonProgress: Ref<LessonProgressSummary[]>` (เดิมไม่ expose lessons)
+- type `overallProgress` ให้ถูกต้อง
+- ไม่เปลี่ยน fetch logic (endpoint เดิม)
+
+**2.3 Export type ใน `ui/types/index.ts`** (ถ้ามี barrel)
+
+**Commit:** `feat(types): add LessonScoreStatus contract and update composable types`
+
+---
+
+#### **Phase 3 — CoursePageShell: Single Source Wiring (~1.5 ชม.)**
+
+ไฟล์: `ui/components/learn/course/v2/CoursePageShell.vue`
+
+**3.1 ดึง `lessonProgress` จาก composable ที่ได้อัพเดทแล้ว**
+```ts
+const { overallProgress, lessonProgress, fetchProgress } = useCourseLearningProgress(...)
+// lessonProgress: Ref<LessonProgressSummary[]>
+
+// สร้าง map สำหรับ O(1) lookup
+const progressByLessonId = computed(() =>
+  Object.fromEntries(lessonProgress.value.map(lp => [lp.lesson_id, lp]))
+)
+```
+
+**3.2 ส่ง `progressMap` ไปยัง CourseLessonsMenu**
+```vue
+<CourseLessonsMenu
+  :lessons="courseLessons"
+  :progress-map="isLearner ? progressByLessonId : undefined"  <!-- ใหม่ -->
+  ...
+/>
+```
+
+**3.3 ส่ง typed lessons ไปยัง CourseLessonProgressWidget**
+```vue
+<CourseLessonProgressWidget
+  :lessons="lessonProgress"    <!-- เปลี่ยนจาก courseLessons เป็น lessonProgress -->
+  ...
+/>
+```
+
+**3.4 Guard: ถ้าไม่ใช่ learner (admin/teacher) → progressMap = undefined ทั้งคู่; widget ซ่อน**
+
+**Commit:** `feat(shell): wire single lessonProgress source to both lesson widgets`
+
+---
+
+#### **Phase 4 — CourseLessonsMenu: เพิ่ม score display (~2 ชม.)**
+
+ไฟล์: `ui/components/learn/course/v2/CourseLessonsMenu.vue`
+
+**4.1 เพิ่ม prop**
+```ts
+const props = defineProps<{
+  lessons: Lesson[]
+  progressMap?: Record<number, LessonProgressSummary>  // ใหม่
+}>()
+```
+
+**4.2 Computed helper ต่อ lesson**
+```ts
+const getProgress = (lessonId: number) => props.progressMap?.[lessonId]
+
+const getScoreChipClass = (status: LessonScoreStatus) => ({
+  'bg-emerald-100 text-emerald-700': status === 'passed' || status === 'scored',
+  'bg-red-100 text-red-700': status === 'failed',
+  'bg-amber-100 text-amber-700': status === 'awaiting_grading' || status === 'submitted',
+  'bg-slate-100 text-slate-500': status === 'not_attempted',
+})
+```
+
+**4.3 Helper สี และ label ต่อ block**
+```ts
+const ASSIGNMENT_LABEL: Record<ActivityScoreStatus, string> = {
+  none: '', not_attempted: 'ยังไม่ส่ง', submitted: 'ส่งแล้ว',
+  awaiting_grading: 'รอตรวจ', scored: '', passed: 'ผ่าน', failed: 'ไม่ผ่าน',
+}
+const QUIZ_LABEL: Record<ActivityScoreStatus, string> = {
+  none: '', not_attempted: 'ยังไม่ทำ', submitted: '',
+  awaiting_grading: '', scored: '', passed: 'ผ่าน', failed: 'ไม่ผ่าน',
+}
+const blockChipClass = (status: ActivityScoreStatus) => ({
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300': status === 'passed',
+  'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300': status === 'failed',
+  'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300': ['awaiting_grading', 'submitted'].includes(status),
+  'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400': status === 'scored',
+  'bg-slate-50 text-slate-400': status === 'not_attempted',
+})
+```
+
+**4.4 UI ใน template — 2 chip ต่อแถว lesson (แสดงเฉพาะ block ที่ count > 0)**
+```vue
+<template v-if="getProgress(lesson.id) as lp">
+  <!-- Assignment chip -->
+  <span v-if="lp.assignment.count > 0"
+        class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+        :class="blockChipClass(lp.assignment.status)">
+    <Icon name="fluent:document-checkmark-24-regular" class="text-[10px]" />
+    <template v-if="lp.assignment.score !== null">
+      {{ lp.assignment.score }}/{{ lp.assignment.max_score }}
+    </template>
+    <template v-else>{{ ASSIGNMENT_LABEL[lp.assignment.status] }}</template>
+  </span>
+
+  <!-- Quiz chip -->
+  <span v-if="lp.quiz.count > 0"
+        class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+        :class="blockChipClass(lp.quiz.status)">
+    <Icon name="fluent:quiz-new-24-regular" class="text-[10px]" />
+    <template v-if="lp.quiz.score !== null">
+      {{ lp.quiz.score }}/{{ lp.quiz.max_score }}
+    </template>
+    <template v-else>{{ QUIZ_LABEL[lp.quiz.status] }}</template>
+  </span>
+</template>
+```
+
+**4.5 Verify:**
+- lesson มีแค่ quiz → assignment chip ไม่แสดง
+- lesson มีทั้งสอง → 2 chip ติดกัน ไม่ overflow บน mobile 380px
+- admin ที่ไม่มี progressMap → แถวแสดงปกติ ไม่มี chip เลย
+
+**Commit:** `feat(lessons-menu): display per-lesson score status badge from progress map`
+
+---
+
+#### **Phase 5 — CourseLessonProgressWidget: Type hardening + UI fix (~1 ชม.)**
+
+ไฟล์: `ui/components/learn/course/CourseLessonProgressWidget.vue`
+
+**5.1 เปลี่ยน prop type จาก `any[]` → `LessonProgressSummary[]`**
+```ts
+import type { LessonProgressSummary } from '~/types/lessonScore'
+const props = defineProps<{ lessons: LessonProgressSummary[] }>()
+```
+
+**5.2 ปรับ `getStatusColor` อิง lesson completion เท่านั้น (ไม่ใช้ score)**
+```ts
+// ไม่มี getScoreColor รวมอีกต่อไป — แต่ละ block มีสีของตัวเอง
+const getStatusColor = (lesson: LessonProgressSummary) => {
+  if (lesson.completed) return 'text-emerald-500'
+  if (lesson.progress_percentage > 0) return 'text-amber-500'
+  return 'text-slate-400'
+}
+```
+
+**5.3 แสดง 2 score row แยกใต้ชื่อบทเรียน**
+```vue
+<!-- แทนที่ section score เดิม -->
+<div class="flex flex-wrap gap-1 mt-1">
+  <!-- Assignment row -->
+  <template v-if="lesson.assignment.count > 0">
+    <span class="text-[9px] font-semibold text-slate-500">งาน:</span>
+    <span class="text-[9px] font-black font-audiowide"
+          :class="blockScoreClass(lesson.assignment.status)">
+      <template v-if="lesson.assignment.score !== null">
+        {{ lesson.assignment.score }}/{{ lesson.assignment.max_score }}
+        ({{ lesson.assignment.score_percentage }}%)
+      </template>
+      <template v-else>{{ ASSIGNMENT_LABEL[lesson.assignment.status] }}</template>
+    </span>
+  </template>
+
+  <!-- Quiz row -->
+  <template v-if="lesson.quiz.count > 0">
+    <span class="text-[9px] font-semibold text-slate-500">แบบทดสอบ:</span>
+    <span class="text-[9px] font-black font-audiowide"
+          :class="blockScoreClass(lesson.quiz.status)">
+      <template v-if="lesson.quiz.score !== null">
+        {{ lesson.quiz.score }}/{{ lesson.quiz.max_score }}
+        ({{ lesson.quiz.score_percentage }}%)
+      </template>
+      <template v-else>{{ QUIZ_LABEL[lesson.quiz.status] }}</template>
+    </span>
+  </template>
+
+  <!-- ไม่มีทั้งสองอย่าง → แสดงแค่ progress percentage เดิม -->
+  <template v-if="lesson.assignment.count === 0 && lesson.quiz.count === 0 && lesson.progress_percentage > 0">
+    <span class="text-[10px] font-black text-blue-500 font-audiowide">
+      {{ lesson.progress_percentage }}%
+    </span>
+  </template>
+</div>
+```
+
+**Commit:** `fix(lesson-progress-widget): remove ghost score display, use score_status for coloring`
+
+---
+
+#### **Phase 6 — Feature Tests (Backend) (~2 ชม.)**
+
+ไฟล์ใหม่: `api/.../tests/Feature/Course/CourseMemberProgressTest.php`
+
+กรณีที่ต้องครอบคลุม — แยก assignment block และ quiz block อิสระ:
+
+| # | กรณีทดสอบ | assignment.status | quiz.status |
+|---|---|---|---|
+| T1 | Lesson มีแค่ assignment ยังไม่ส่ง | `not_attempted` | `none` |
+| T2 | Assignment ส่งแล้ว รอตรวจ | `awaiting_grading` (score=null) | `none` |
+| T3 | Assignment ตรวจแล้ว ≥ threshold | `passed` (score=X) | `none` |
+| T4 | Assignment ตรวจแล้ว < threshold | `failed` (score=X) | `none` |
+| T5 | Lesson มีแค่ quiz ยังไม่ทำ | `none` | `not_attempted` |
+| T6 | Quiz ทำแล้ว auto-graded ≥ threshold | `none` | `passed` (score=X) |
+| T7 | Quiz ทำแล้ว < threshold | `none` | `failed` (score=X) |
+| T8 | **Mix: assignment รอตรวจ + quiz ผ่านแล้ว** | `awaiting_grading` | `passed` — **แยกกัน ไม่ปน** |
+| T9 | ไม่มี graded activity เลย | `none` score=null | `none` score=null |
+| T10 | Multiple quiz attempts — ใช้ attempt ล่าสุด | — | score จาก latest attempt |
+| T11 | Member ข้าม course → 403 | response 403 | — |
+| T12 | Query count ≤ 15 | assert count | — |
+
+```php
+public function test_bulk_query_count(): void
+{
+    DB::enableQueryLog();
+    $this->actingAs($student)->getJson(".../$course->id/members/$member->id/progress");
+    $this->assertLessThan(15, count(DB::getQueryLog()), 'N+1 query detected');
+}
+```
+
+**Commit:** `test(course): add member progress score status coverage and query count assertion`
+
+---
+
+#### **Phase 7 — Frontend Type Check + Browser Smoke (~1 ชม.)**
+
+- **7.1 TS check**: `cd ui && npx vue-tsc --noEmit 2>&1 | Select-String "lessonScore|CourseLessonsMenu|CourseLessonProgressWidget"` — ต้องไม่มี error ใหม่
+- **7.2 Dev server smoke** (`npm run dev`): เปิด `/Learn/Courses/24/lessons` ด้วย user ที่มี/ไม่มี submission ใน browser
+- **7.3 ตรวจ Network tab**: `/api/courses/24/members/{me}/progress` ถูกเรียก 1 ครั้ง ไม่ใช่ 2 ครั้ง (widget + menu แยก)
+- **7.4 ตรวจ Console**: ไม่มี Vue warning / `[Vue warn]: Missing required prop`
+- **7.5 Viewport smoke**: mobile 380px, tablet 768px, desktop 1280px
+- **7.6 Admin view**: login เป็น admin ของ course → `CourseLessonsMenu` แสดงปกติ ไม่มี score badge / ไม่ error
+
+**Commit:** ไม่มี (เป็น verification step)
+
+---
+
+### 4. Execution Order Summary
+
+| ลำดับ | Phase | ประเภท | เวลา | ความเสี่ยง |
+|---|---|---|---|---|
+| 1 | 1 Backend N+1 + quiz scores | Backend perf+feat | 3 ชม. | กลาง — แตะ query path |
+| 2 | 6 Feature tests | Backend test | 2 ชม. | ต่ำ |
+| 3 | 2 TypeScript contract | Frontend types | 1 ชม. | ต่ำ |
+| 4 | 3 CoursePageShell wiring | Frontend | 1.5 ชม. | กลาง — เปลี่ยน prop flow |
+| 5 | 4 CourseLessonsMenu | Frontend | 2 ชม. | ต่ำ |
+| 6 | 5 ProgressWidget fix | Frontend | 1 ชม. | ต่ำ |
+| 7 | 7 TS check + smoke | QA | 1 ชม. | — |
+
+**รวม ≈ 11.5 ชม.** กระจาย 6 commits แยกอิสระ
+
+**Dependency ที่บังคับ:**
+```
+Phase 1 (backend shape) → Phase 2 (TS types) → Phase 3 (shell wiring)
+                                                      ↓
+                                              Phase 4 (menu) + Phase 5 (widget) [parallel]
+                                                      ↓
+                                                  Phase 7 (QA)
+Phase 6 (tests) ทำได้คู่กับ Phase 2 เป็นต้นไป
+```
+
+### 5. Data Flow ก่อน vs หลัง
+
+**ก่อน (ปัจจุบัน):**
+```
+CoursePageShell
+  ├─ CourseLessonProgressWidget ─fetch→ /progress (60+ queries)
+  └─ CourseLessonsMenu ─ courseStore.lessons (ไม่มี personal score)
+```
+
+**หลัง:**
+```
+CoursePageShell
+  └─fetch→ /progress (≤15 queries, quiz+assignment+score_status)
+      ├─ lessonProgress[] ──→ CourseLessonProgressWidget (typed)
+      └─ progressByLessonId ──→ CourseLessonsMenu (prop, undefined สำหรับ admin)
+         courseStore.lessons ──→ CourseLessonsMenu (ยังคงเป็น base list)
+```
+
+### 6. Decisions Locked
+
+1. **Assignment และ Quiz แสดงแยกกันเสมอ ไม่รวม total** ← decision หลักของรอบนี้
+   - contract ใช้ `{ assignment: ActivityScoreBlock, quiz: ActivityScoreBlock }`
+   - frontend render 2 chip/row แยกกัน; ไม่มี combined score เลย
+   - ถ้าอนาคตต้องการ "คะแนนรวม" → เพิ่ม field `total` เข้า contract ภายหลังโดยไม่ break field เดิม
+
+2. **`passing_threshold` ระดับ course** — ใช้ `course.passing_score` (ถ้ามี) เป็น threshold ร่วมกันทั้ง assignment และ quiz
+   - ถ้าอนาคตต้องการ per-activity threshold → ย้ายออกจาก course level; contract รับ threshold ใน block ได้แล้ว
+
+3. **Quiz ไม่มีสถานะ `submitted` หรือ `awaiting_grading`** — auto-graded ทันที
+   - `resolveQuizBlock` ข้ามสองสถานะนี้: ทำแล้ว → `scored/passed/failed`; ยังไม่ทำ → `not_attempted`
+
+4. **Mixed case (assignment รอตรวจ + quiz ผ่านแล้ว)** → แต่ละ block สะท้อนสถานะตัวเองอิสระ
+   - UI แสดง chip "รอตรวจ" (assignment) + "8/10 ผ่าน" (quiz) พร้อมกัน ไม่บล็อกกัน
+
+5. **Admin/teacher** — progressMap = undefined; ไม่มี chip แสดงเลย
+
+### 7. Out of Scope (รอบนี้)
+
+- ❌ Per-topic score breakdown (แค่ per-lesson)
+- ❌ Score history / attempt history UI
+- ❌ Admin bulk view นักเรียนทั้ง course ใน lesson widget
+- ❌ Direct questions (lesson-level questions ที่ไม่ผ่าน quiz) — ทำใน `activity_counts` แต่ยังไม่รวม score
+- ❌ Export per-lesson score เป็น Excel
+- ❌ Real-time score update ผ่าน WebSocket
+
+### 8. Risk Register
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| `Lesson::quizzes()` relation ยังไม่มีใน model | กลาง | กลาง | Phase 1.1: ตรวจ model ก่อน; สร้าง `hasMany(Quiz::class)` ถ้าขาด |
+| Quiz มีหลาย model (`Quiz`, `QuizBank`, ฯลฯ) | กลาง | กลาง | Phase 1 อ่าน migration + model จริง ระบุ model ที่ถูกก่อนเขียน bulk-load |
+| `QuizAnswer` ไม่มี `score` column — อาจใช้ `total_score` หรือ `points` | กลาง | กลาง | ตรวจ schema ก่อน; helper ใช้ `$ans->score ?? $ans->points ?? $ans->total_score` |
+| Widget เดิมใช้ `has_graded_activity`/`score` flat — ต้อง migrate consumer | กลาง | กลาง | Phase 5 type ให้ถูกก่อน; TS check บล็อก regression |
+| Admin course view พลาด progressMap แล้วแสดง block ว่าง | ต่ำ | ต่ำ | Phase 3 guard `isLearner`; widget hide เมื่อ `assignment.count===0 && quiz.count===0` |
+| N+1 ยังเหลือใน path อื่น หลังแก้ | ต่ำ | ต่ำ | T12 query count assert บล็อก |
+| 2 chip ใน `CourseLessonsMenu` overflow layout บน mobile | กลาง | กลาง | Phase 4.5 smoke test 380px; ใช้ `flex-wrap` + truncate ถ้าจำเป็น |
+
+### 9. Verification Checklist (ทำหลัง Phase 1 + หลัง Phase 5)
+
+หลัง Phase 1:
+- [ ] `php artisan test --filter=CourseMemberProgressTest` ผ่านครบ 10 tests
+- [ ] `DB::getQueryLog()` count ≤ 15 สำหรับ course 30 บทเรียน
+- [ ] response shape มี field `score_status`, `activity_counts` ครบ
+- [ ] `score` เป็น null เมื่อ `score_status = not_attempted`
+
+หลัง Phase 5:
+- [ ] `vue-tsc --noEmit` ไม่มี error ใหม่จากไฟล์ที่แตะ
+- [ ] `/Learn/Courses/24/lessons` — Network: `/progress` เรียก 1 ครั้ง
+- [ ] `CourseLessonsMenu` แสดง score badge ถูกต้องตาม status
+- [ ] `CourseLessonProgressWidget` ไม่แสดง `0/max` สำหรับ lesson ที่ยังไม่ส่ง
+- [ ] Admin user เปิดหน้าเดียวกัน → ไม่มี badge ไม่มี error
+- [ ] Mobile 380px: badge ไม่ overflow layout
+

@@ -56,6 +56,11 @@ const {
   error: progressError 
 } = useCourseLearningProgress(courseId.value, props.courseMemberOfAuth?.id, props.isCourseAdmin)
 
+const progressByLessonId = computed(() => {
+  if (!lessons.value) return {}
+  return Object.fromEntries(lessons.value.map(lp => [lp.id, lp]))
+})
+
 const TABLE_ROUTES = [
   'learn-Courses-id-attendances',
   'learn-Courses-id-progress',
@@ -203,6 +208,7 @@ usePageLayoutWidgets({
               v-if="course"
               :course-id="courseId"
               :is-admin="isCourseAdmin"
+              :progress-map="!isCourseAdmin ? progressByLessonId : undefined"
             />
           </div>
 

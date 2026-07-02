@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import type { LessonProgressSummary } from '~/types/lessonScore'
 
 interface Props {
-  lessons: any[]
+  lessons: LessonProgressSummary[]
   isLoading?: boolean
   error?: string | null
 }
@@ -16,16 +17,17 @@ const progressPercentage = computed(() => {
   return Math.round((completedLessons.value / totalLessons.value) * 100)
 })
 
-const getStatusColor = (lesson: any) => {
+const getStatusColor = (lesson: LessonProgressSummary) => {
   if (lesson.completed) return 'text-emerald-500'
   if (lesson.progress_percentage > 0) return 'text-amber-500'
   return 'text-gray-300'
 }
 
-const getScoreColor = (lesson: any) => {
-  if (lesson.score_percentage >= 80) return 'text-emerald-500'
-  if (lesson.score_percentage >= 50) return 'text-amber-500'
-  return 'text-red-500'
+const getScoreColor = (lesson: LessonProgressSummary) => {
+  if (lesson.score_status === 'passed') return 'text-emerald-500'
+  if (lesson.score_status === 'scored' && (lesson.score_percentage ?? 0) >= 50) return 'text-amber-500'
+  if (lesson.score_status === 'failed') return 'text-red-500'
+  return 'text-slate-400'
 }
 </script>
 
@@ -89,12 +91,19 @@ const getScoreColor = (lesson: any) => {
             v-if="lesson.has_graded_activity"
             class="shrink-0 flex flex-col items-end leading-none"
           >
-            <span class="text-[10px] font-black font-audiowide" :class="getScoreColor(lesson)">
-              {{ lesson.score }}/{{ lesson.max_score }}
-            </span>
-            <span class="text-[8px] font-bold uppercase tracking-tighter text-gray-400">
-              {{ lesson.score_percentage }}%
-            </span>
+            <template v-if="lesson.score !== null">
+              <span class="text-[10px] font-black font-audiowide" :class="getScoreColor(lesson)">
+                {{ lesson.score }}/{{ lesson.max_score }}
+              </span>
+              <span class="text-[8px] font-bold uppercase tracking-tighter text-gray-400">
+                {{ lesson.score_percentage }}%
+              </span>
+            </template>
+            <template v-else>
+              <span v-if="lesson.score_status === 'awaiting_grading'" class="text-[9px] font-bold text-amber-500 uppercase mt-1">รอตรวจ</span>
+              <span v-else-if="lesson.score_status === 'not_attempted'" class="text-[9px] font-bold text-slate-400 uppercase mt-1">ยังไม่ส่ง</span>
+              <span v-else-if="lesson.score_status === 'submitted'" class="text-[9px] font-bold text-amber-500 uppercase mt-1">ส่งแล้ว</span>
+            </template>
           </div>
           <div v-else-if="lesson.progress_percentage > 0 && !lesson.completed" class="text-[10px] font-black text-blue-500 font-audiowide">
             {{ lesson.progress_percentage }}%

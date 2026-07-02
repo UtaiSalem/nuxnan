@@ -118,10 +118,34 @@ class CourseMemberController extends Controller
         $userId = $member->user_id;
 
         // Get all lessons with completion status
-        $lessons = $this->orderedCourseLessons($course)->with('topics.assignments', 'assignments')->get()->map(function ($lesson) use ($userId) {
-            $progress = \App\Models\LessonProgress::where('lesson_id', $lesson->id)
-                ->where('user_id', $userId)
-                ->first();
+        $rawLessons = $this->orderedCourseLessons($course)->with([
+            'topics.assignments',
+            'assignments',
+        ])->get();
+
+        $lessonIds = $rawLessons->pluck('id');
+        $progressMap = \App\Models\LessonProgress::whereIn('lesson_id', $lessonIds)
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('lesson_id');
+
+        $courseAssignments = $course->courseAssignments;
+
+        $allAssignmentIds = $rawLessons->flatMap(fn ($l) => 
+            $l->assignments->pluck('id')->merge($l->topics->flatMap->assignments->pluck('id'))
+        )->unique()->merge($courseAssignments->pluck('id'))->unique();
+
+        $answerMap = \App\Models\AssignmentAnswer::whereIn('assignment_id', $allAssignmentIds)
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('assignment_id');
+
+
+
+        $passingThreshold = $course->passing_score;
+
+        $lessons = $rawLessons->map(function ($lesson) use ($progressMap, $answerMap, $passingThreshold) {
+            $progress = $progressMap->get($lesson->id);
 
             $completed = $progress && $progress->status === 'completed';
 
@@ -130,25 +154,17 @@ class CourseMemberController extends Controller
                 ->merge($lesson->topics->flatMap->assignments)
                 ->filter(fn ($assignment) => $assignment->status === 1);
 
+            $gradedQuizzes = collect();
+
             $hasGradedActivity = $gradedAssignments->isNotEmpty();
-            $score = null;
-            $maxScore = null;
-            $scorePercentage = null;
-
-            if ($hasGradedActivity) {
-                $answers = \App\Models\AssignmentAnswer::whereIn('assignment_id', $gradedAssignments->pluck('id'))
-                    ->where('user_id', $userId)
-                    ->get()
-                    ->keyBy('assignment_id');
-
-                $score = $gradedAssignments->sum(function ($assignment) use ($answers) {
-                    $answer = $answers->get($assignment->id);
-
-                    return $answer ? ($answer->points ?? 0) : 0;
-                });
-                $maxScore = $gradedAssignments->sum(fn ($assignment) => $assignment->points ?? $assignment->max_score ?? 100);
-                $scorePercentage = $maxScore > 0 ? round(($score / $maxScore) * 100) : 0;
-            }
+            
+            $statusData = $this->resolveLessonScoreStatus(
+                $gradedAssignments,
+                $gradedQuizzes,
+                $answerMap,
+                collect(), // empty quiz map
+                $passingThreshold
+            );
 
             return [
                 'id' => $lesson->id,
@@ -157,15 +173,20 @@ class CourseMemberController extends Controller
                 'progress_percentage' => $completed ? 100 : 0,
                 'status_label' => $completed ? 'เสร็จสิ้น' : 'ยังไม่เริ่ม',
                 'has_graded_activity' => $hasGradedActivity,
-                'score' => $score,
-                'max_score' => $maxScore,
-                'score_percentage' => $scorePercentage,
+                'score_status' => $statusData['status'],
+                'score' => $statusData['score'],
+                'max_score' => $statusData['max_score'],
+                'score_percentage' => $statusData['score_percentage'],
+                'activity_counts' => [
+                    'assignments' => $gradedAssignments->count(),
+                    'quizzes' => $gradedQuizzes->count(),
+                    'questions' => 0,
+                ],
             ];
         });
 
         // Get all assignments (course + lesson) with submission status and scores
-        $courseAssignments = $course->courseAssignments;
-        $lessonAssignments = $this->orderedCourseLessons($course)->with('assignments')->get()->flatMap->assignments;
+        $lessonAssignments = $rawLessons->flatMap->assignments;
         $allAssignments = $courseAssignments->merge($lessonAssignments);
 
         // Filter assignments based on status and group
@@ -186,10 +207,8 @@ class CourseMemberController extends Controller
             }
 
             return true;
-        })->map(function ($assignment) use ($userId) {
-            $answer = \App\Models\AssignmentAnswer::where('assignment_id', $assignment->id)
-                ->where('user_id', $userId)
-                ->first();
+        })->map(function ($assignment) use ($answerMap) {
+            $answer = $answerMap->get($assignment->id);
 
             $actualStatus = 'not_submitted';
             $statusLabel = 'ยังไม่ส่ง';
@@ -228,19 +247,22 @@ class CourseMemberController extends Controller
         // Get all quizzes with completion status and scores
         $courseQuizzes = $course->courseQuizzes()->with('questions')->get();
 
+        $quizIds = $courseQuizzes->pluck('id');
+        $allQuizResults = \App\Models\CourseQuizResult::whereIn('quiz_id', $quizIds)
+            ->where('user_id', $userId)
+            ->where('course_id', $course->id)
+            ->get();
+            
+        $quizAttemptCounts = $allQuizResults->groupBy('quiz_id')->map->count();
+        $bestQuizResults = $allQuizResults->groupBy('quiz_id')->map(function ($results) {
+            return $results->sortByDesc('score')->first();
+        });
+
         $quizzes = $courseQuizzes->filter(function ($quiz) {
             return $quiz->is_active;
-        })->map(function ($quiz) use ($userId, $course) {
-            $result = \App\Models\CourseQuizResult::where('quiz_id', $quiz->id)
-                ->where('user_id', $userId)
-                ->where('course_id', $course->id)
-                ->orderBy('score', 'desc')
-                ->first();
-
-            $attemptCount = \App\Models\CourseQuizResult::where('quiz_id', $quiz->id)
-                ->where('user_id', $userId)
-                ->where('course_id', $course->id)
-                ->count();
+        })->map(function ($quiz) use ($bestQuizResults, $quizAttemptCounts) {
+            $result = $bestQuizResults->get($quiz->id);
+            $attemptCount = $quizAttemptCounts->get($quiz->id, 0);
 
             $maxScore = $quiz->total_score;
             if (! $maxScore || $maxScore == 0) {
@@ -1608,5 +1630,100 @@ class CourseMemberController extends Controller
             'message' => 'Profile updated successfully',
             'data' => $member->fresh(),
         ], 200);
+    }
+    /**
+     * Resolve the status and score of a lesson based on its graded activities.
+     */
+    private function resolveLessonScoreStatus(
+        \Illuminate\Support\Collection $gradedAssignments,
+        \Illuminate\Support\Collection $gradedQuizzes,
+        \Illuminate\Support\Collection $answerMap,
+        \Illuminate\Support\Collection $quizAnswerMap,
+        ?float $passingThreshold = null
+    ): array {
+        if ($gradedAssignments->isEmpty() && $gradedQuizzes->isEmpty()) {
+            return [
+                'status' => 'none',
+                'score' => null,
+                'max_score' => null,
+                'score_percentage' => null,
+            ];
+        }
+
+        $totalScore = 0;
+        $totalMaxScore = 0;
+        $hasMissing = false;
+        $hasPending = false;
+        $hasAttempted = false;
+
+        foreach ($gradedAssignments as $assignment) {
+            $answer = $answerMap->get($assignment->id);
+            $maxScore = $assignment->points ?? $assignment->max_score ?? 100;
+            $totalMaxScore += $maxScore;
+
+            if (!$answer) {
+                $hasMissing = true;
+            } else {
+                $hasAttempted = true;
+                if ($answer->status === 'graded' || $answer->points !== null) {
+                    $totalScore += $answer->points ?? 0;
+                } else {
+                    $hasPending = true;
+                }
+            }
+        }
+
+        foreach ($gradedQuizzes as $quiz) {
+            $result = $quizAnswerMap->get($quiz->id);
+            $quizMaxScore = $quiz->total_score;
+            if (!$quizMaxScore || $quizMaxScore == 0) {
+                $quizMaxScore = $quiz->questions->sum('points');
+            }
+            if (!$quizMaxScore || $quizMaxScore == 0) {
+                $quizMaxScore = $quiz->questions->count() ?: 10;
+            }
+            $totalMaxScore += $quizMaxScore;
+
+            if (!$result) {
+                $hasMissing = true;
+            } else {
+                $hasAttempted = true;
+                $totalScore += $result->score ?? 0;
+            }
+        }
+
+        if (!$hasAttempted) {
+            return [
+                'status' => 'not_attempted',
+                'score' => null,
+                'max_score' => null,
+                'score_percentage' => null,
+            ];
+        }
+
+        if ($hasMissing || $hasPending) {
+            return [
+                // Use 'submitted' if there is no graded score yet at all, but they've attempted something.
+                // Otherwise 'awaiting_grading'
+                'status' => ($totalScore > 0) ? 'awaiting_grading' : 'submitted',
+                'score' => null,
+                'max_score' => null,
+                'score_percentage' => null,
+            ];
+        }
+
+        $percentage = $totalMaxScore > 0 ? round(($totalScore / $totalMaxScore) * 100) : 0;
+        
+        $status = 'scored';
+        if ($passingThreshold !== null && $passingThreshold > 0) {
+            $status = $percentage >= $passingThreshold ? 'passed' : 'failed';
+        }
+
+        return [
+            'status' => $status,
+            'score' => $totalScore,
+            'max_score' => $totalMaxScore,
+            'score_percentage' => $percentage,
+        ];
     }
 }

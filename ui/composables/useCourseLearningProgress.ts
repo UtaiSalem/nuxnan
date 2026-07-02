@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import type { LessonProgressSummary } from '~/types/lessonScore'
 
 export function useCourseLearningProgress(
   courseId: string | number,
@@ -7,7 +8,7 @@ export function useCourseLearningProgress(
 ) {
   const api = useApi()
   
-  const lessons = ref<any[]>([])
+  const lessons = ref<LessonProgressSummary[]>([])
   const assignments = ref<any[]>([])
   const quizzes = ref<any[]>([])
   const overallProgress = ref<any>(null)

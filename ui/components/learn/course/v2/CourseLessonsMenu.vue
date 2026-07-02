@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import type { LessonProgressSummary, LessonScoreStatus } from '~/types/lessonScore'
 
 const props = defineProps<{
   courseId: string | number
   isAdmin?: boolean
+  progressMap?: Record<number, LessonProgressSummary>
 }>()
 
 const courseStore = useCourseStore()
@@ -64,6 +66,15 @@ const getLessonStatusColor = (lesson: any) => {
   if (lesson.is_locked) return 'text-amber-500'
   return 'text-emerald-500'
 }
+
+const getProgress = (lessonId: number) => props.progressMap?.[lessonId]
+
+const getScoreChipClass = (status: LessonScoreStatus) => {
+  if (status === 'passed' || status === 'scored') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+  if (status === 'failed') return 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
+  if (status === 'awaiting_grading' || status === 'submitted') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+  return 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300'
+}
 </script>
 
 <template>
@@ -123,6 +134,19 @@ const getLessonStatusColor = (lesson: any) => {
             {{ lesson.topics_count || 0 }} หัวข้อ
           </div>
         </div>
+
+        <template v-if="getProgress(lesson.id)">
+          <span v-if="getProgress(lesson.id)!.has_graded_activity"
+                class="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                :class="getScoreChipClass(getProgress(lesson.id)!.score_status)">
+            <template v-if="getProgress(lesson.id)!.score !== null">
+              {{ getProgress(lesson.id)!.score }}/{{ getProgress(lesson.id)!.max_score }}
+            </template>
+            <template v-else-if="getProgress(lesson.id)!.score_status === 'awaiting_grading'">รอตรวจ</template>
+            <template v-else-if="getProgress(lesson.id)!.score_status === 'submitted'">ส่งแล้ว</template>
+            <template v-else>-</template>
+          </span>
+        </template>
 
         <!-- Active Arrow -->
         <Icon
