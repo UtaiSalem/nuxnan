@@ -46,7 +46,7 @@ class AcademyRoleSeeder extends Seeder
         $systemRoles = AcademyRole::SYSTEM_ROLES;
 
         foreach ($systemRoles as $name => $data) {
-            AcademyRole::firstOrCreate(
+            AcademyRole::updateOrCreate(
                 [
                     'academy_id' => null, // System role
                     'name' => $name,

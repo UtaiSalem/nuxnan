@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class AcademyPermission extends Model
 {
@@ -44,6 +44,10 @@ class AcademyPermission extends Model
             ['name' => 'students.view', 'display_name' => 'ดูข้อมูลนักเรียน'],
             ['name' => 'students.manage', 'display_name' => 'จัดการข้อมูลนักเรียน'],
             ['name' => 'students.create', 'display_name' => 'เพิ่มนักเรียน'],
+            ['name' => 'students.import', 'display_name' => 'นำเข้าข้อมูลนักเรียน'],
+            ['name' => 'students.lifecycle', 'display_name' => 'จัดการสถานะนักเรียน'],
+            ['name' => 'students.activate_account', 'display_name' => 'เปิดใช้งานบัญชีนักเรียน'],
+            ['name' => 'students.export', 'display_name' => 'ส่งออกข้อมูลนักเรียน'],
             ['name' => 'students.delete', 'display_name' => 'ลบนักเรียน'],
         ],
         'teachers' => [
@@ -121,6 +125,7 @@ class AcademyPermission extends Model
                 $all[] = array_merge($permission, ['group' => $group]);
             }
         }
+
         return $all;
     }
 

@@ -95,12 +95,27 @@ class AcademyRole extends Model
                 'home_visits.view', 'home_visits.create',
             ],
         ],
+        'registrar' => [
+            'display_name_th' => 'นายทะเบียน',
+            'display_name_en' => 'Registrar',
+            'color' => 'teal',
+            'icon' => 'fluent:clipboard-text-24-filled',
+            'sort_order' => 5,
+            'permissions' => [
+                'academy.view',
+                'members.view',
+                'students.view', 'students.create', 'students.import',
+                'students.lifecycle', 'students.activate_account', 'students.export',
+                'reports.view',
+                'announcements.view',
+            ],
+        ],
         'staff' => [
             'display_name_th' => 'เจ้าหน้าที่',
             'display_name_en' => 'Staff',
             'color' => 'cyan',
             'icon' => 'fluent:person-24-filled',
-            'sort_order' => 5,
+            'sort_order' => 6,
             'permissions' => [
                 'academy.view',
                 'members.view',
@@ -113,7 +128,7 @@ class AcademyRole extends Model
             'display_name_en' => 'Finance Staff',
             'color' => 'amber',
             'icon' => 'fluent:money-24-filled',
-            'sort_order' => 6,
+            'sort_order' => 7,
             'permissions' => [
                 'academy.view',
                 'members.view',
@@ -127,7 +142,7 @@ class AcademyRole extends Model
             'display_name_en' => 'Student',
             'color' => 'emerald',
             'icon' => 'fluent:hat-graduation-24-filled',
-            'sort_order' => 7,
+            'sort_order' => 8,
             'permissions' => [
                 'academy.view',
                 'courses.view.enrolled',
@@ -142,7 +157,7 @@ class AcademyRole extends Model
             'display_name_en' => 'Parent/Guardian',
             'color' => 'rose',
             'icon' => 'fluent:people-24-filled',
-            'sort_order' => 8,
+            'sort_order' => 9,
             'permissions' => [
                 'academy.view',
                 'children.view',
@@ -159,7 +174,7 @@ class AcademyRole extends Model
             'display_name_en' => 'Guest',
             'color' => 'gray',
             'icon' => 'fluent:person-question-mark-24-regular',
-            'sort_order' => 9,
+            'sort_order' => 10,
             'permissions' => [
                 'academy.view.public',
             ],
