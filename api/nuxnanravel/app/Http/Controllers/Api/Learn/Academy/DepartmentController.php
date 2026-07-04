@@ -7,6 +7,7 @@ use App\Models\Academy;
 use App\Models\AcademyGroup;
 use App\Models\User;
 use App\Services\AcademyGroupPermissionService;
+use App\Services\SchoolDepartmentSetupService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -439,6 +440,46 @@ class DepartmentController extends Controller
             'success' => true,
             'message' => 'อัปเดตบทบาทสมาชิกสำเร็จ',
         ]);
+    }
+
+    /**
+     * Get the standard Thai school department template hierarchy
+     */
+    public function getTemplate(): JsonResponse
+    {
+        $service = new SchoolDepartmentSetupService;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'template' => $service->getTemplate(),
+            ],
+        ]);
+    }
+
+    /**
+     * Create standard Thai school department structure for an academy
+     */
+    public function setupDepartments(Request $request, Academy $academy): JsonResponse
+    {
+        $service = new SchoolDepartmentSetupService;
+
+        if (! $request->boolean('force') && $service->hasExistingDepartments($academy)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'โรงเรียนนี้มีโครงสร้างฝ่ายงานอยู่แล้ว หากต้องการสร้างเพิ่มเติม ให้ส่ง force=true',
+                'has_existing' => true,
+            ], 409);
+        }
+
+        $result = $service->setup($academy, auth()->id());
+
+        return response()->json([
+            'success' => true,
+            'message' => "สร้างโครงสร้างฝ่ายงานสำเร็จ ({$result['created']} รายการ)".
+                ($result['skipped'] > 0 ? " ข้าม {$result['skipped']} รายการที่มีอยู่แล้ว" : ''),
+            'data' => $result,
+        ], 201);
     }
 
     /**

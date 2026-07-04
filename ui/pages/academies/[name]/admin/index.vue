@@ -156,6 +156,14 @@ const quickActions = computed(() => [
     show: true,
   },
   {
+    title: 'ฝ่ายงาน/แผนก',
+    description: 'จัดการโครงสร้างฝ่ายงาน',
+    icon: 'heroicons:building-office',
+    to: `/academies/${academyName.value}/admin/departments`,
+    color: 'from-cyan-500 to-cyan-600',
+    show: true,
+  },
+  {
     title: 'ประกาศใหม่',
     description: 'สร้างประกาศถึงสมาชิก',
     icon: 'fluent:megaphone-24-filled',

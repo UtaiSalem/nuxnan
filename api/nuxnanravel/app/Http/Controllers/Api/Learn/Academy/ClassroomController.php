@@ -744,4 +744,45 @@ class ClassroomController extends Controller
             'studentCard' => $studentCard,
         ]);
     }
+
+    /**
+     * Get classroom statistics
+     */
+    public function getStatistics(Request $request, int $academyId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (! $this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
+        }
+
+        $academicYear = $request->query('academic_year');
+
+        $query = Classroom::where('academy_id', $academyId)
+            ->where('is_active', true)
+            ->where('status', 'active');
+
+        if ($academicYear) {
+            $query->where('academic_year', $academicYear);
+        }
+
+        $classrooms = $query->get();
+        $classroomIds = $classrooms->pluck('id');
+
+        $totalClassrooms = $classrooms->count();
+        $classroomsWithTeacher = $classrooms->whereNotNull('homeroom_teacher_id')->count();
+
+        $totalStudents = ClassroomStudent::whereIn('classroom_id', $classroomIds)
+            ->where('status', 'active')
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'statistics' => [
+                'total_classrooms' => $totalClassrooms,
+                'total_students' => $totalStudents,
+                'classrooms_with_teacher' => $classroomsWithTeacher,
+            ],
+        ]);
+    }
 }

@@ -37,6 +37,7 @@ const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showMembersModal = ref(false)
 const showPermissionsModal = ref(false)
+const showSetupModal = ref(false)
 const selectedDepartment = ref<any>(null)
 
 // Permission Management
@@ -553,6 +554,11 @@ const getRoleBadgeClass = (role: string) => {
 const getRoleLabel = (role: string) => {
   return roleOptions.find(r => r.value === role)?.label || role
 }
+
+const onSetupSuccess = async () => {
+  showSetupModal.value = false
+  await Promise.all([fetchDepartments(), fetchStatistics()])
+}
 </script>
 
 <template>
@@ -568,13 +574,22 @@ const getRoleLabel = (role: string) => {
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">จัดการแผนก</h1>
           <p class="text-gray-600 dark:text-gray-400 mt-1">จัดการแผนกต่างๆ ของโรงเรียน</p>
         </div>
-        <button
-          @click="openCreateModal"
-          class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
-        >
-          <Icon name="fluent:add-24-filled" class="w-5 h-5" />
-          <span>สร้างแผนก</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            @click="showSetupModal = true"
+            class="inline-flex items-center gap-2 px-4 py-2.5 border border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-xl font-medium transition-colors"
+          >
+            <Icon name="heroicons:building-office" class="w-5 h-5" />
+            <span>โครงสร้างมาตรฐาน</span>
+          </button>
+          <button
+            @click="openCreateModal"
+            class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+          >
+            <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+            <span>สร้างแผนก</span>
+          </button>
+        </div>
       </div>
 
       <!-- Statistics Cards -->
@@ -648,16 +663,25 @@ const getRoleLabel = (role: string) => {
       </div>
 
       <div v-else-if="departments.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
-        <Icon name="fluent:building-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+        <Icon name="heroicons:building-office" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีแผนก</h3>
-        <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างแผนกแรกของโรงเรียน</p>
-        <button
-          @click="openCreateModal"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
-        >
-          <Icon name="fluent:add-24-filled" class="w-5 h-5" />
-          <span>สร้างแผนก</span>
-        </button>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">เริ่มต้นสร้างโครงสร้างฝ่ายงานมาตรฐาน 5 ฝ่ายตามแนวทาง สพฐ. หรือสร้างแผนกเอง</p>
+        <div class="flex items-center justify-center gap-3">
+          <button
+            @click="showSetupModal = true"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors shadow-lg shadow-primary-500/20"
+          >
+            <Icon name="heroicons:building-office" class="w-5 h-5" />
+            <span>ตั้งค่าโครงสร้างมาตรฐาน</span>
+          </button>
+          <button
+            @click="openCreateModal"
+            class="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+            <span>สร้างแผนกเอง</span>
+          </button>
+        </div>
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1041,6 +1065,14 @@ const getRoleLabel = (role: string) => {
         </div>
       </div>
     </Teleport>
+
+    <!-- Department Setup Modal -->
+    <SchoolDepartmentSetupModal
+      :visible="showSetupModal"
+      :academy-id="academyId"
+      @close="showSetupModal = false"
+      @success="onSetupSuccess"
+    />
 
     <!-- Permissions Modal -->
     <Teleport to="body">
