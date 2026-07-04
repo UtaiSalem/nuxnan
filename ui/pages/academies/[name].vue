@@ -10,6 +10,7 @@ import { useCourseGrouping } from '~/composables/useCourseGrouping'
 
 definePageMeta({
   layout: 'main',
+  ssr: false,
   middleware: ['auth']
 })
 

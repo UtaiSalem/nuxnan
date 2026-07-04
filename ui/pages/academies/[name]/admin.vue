@@ -7,6 +7,7 @@ import { Icon } from '@iconify/vue'
 
 definePageMeta({
   layout: 'main',
+  ssr: false,
   middleware: ['auth']
 })
 
