@@ -7,8 +7,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
 definePageMeta({
-  layout: 'academy-admin',
-  middleware: ['auth']
+  layout: false,
 })
 
 const route = useRoute()

@@ -23,17 +23,22 @@ const isSidebarOpen = ref(false) // Default to closed on mobile
 
 // Academy Role
 const academyId = ref<number | null>(null)
-const { 
-  myRole, 
-  roleDisplayName, 
-  roleColor, 
+const {
+  myRole,
+  roleDisplayName,
+  roleColor,
   roleIcon,
-  can, 
-  isOwner, 
+  can,
+  isOwner,
   isAdmin,
   isTeacher,
-  fetchMyRole 
+  fetchMyRole
 } = useAcademyRole(academyId)
+
+// Provide to child pages so they don't need to resolve academy themselves
+provide('academyId', academyId)
+provide('academyName', academyName)
+provide('academy', academy)
 
 // Menu items
 const menuItems = computed(() => [
@@ -41,10 +46,11 @@ const menuItems = computed(() => [
     group: 'ภาพรวม',
     items: [
       {
-        name: 'Dashboard',
-        icon: 'fluent:home-24-regular',
+        name: 'แดชบอร์ด',
+        icon: 'fluent:grid-24-regular',
         to: `/academies/${academyName.value}/admin`,
         show: true,
+        exact: true,
       },
     ]
   },
@@ -56,19 +62,36 @@ const menuItems = computed(() => [
         icon: 'fluent:people-24-regular',
         to: `/academies/${academyName.value}/admin/members`,
         show: can('members.view') || can('members.manage'),
-        badge: null,
-      },
-      {
-        name: 'บทบาท & สิทธิ์',
-        icon: 'fluent:shield-person-24-regular',
-        to: `/academies/${academyName.value}/admin/roles`,
-        show: can('members.roles.manage'),
       },
       {
         name: 'คำขอเข้าร่วม',
-        icon: 'fluent:person-add-24-regular',
-        to: `/academies/${academyName.value}/admin/members`,
+        icon: 'fluent:person-clock-24-regular',
+        to: `/academies/${academyName.value}/admin/requests`,
         show: can('members.manage'),
+      },
+      {
+        name: 'บทบาทและสิทธิ์',
+        icon: 'fluent:shield-person-24-regular',
+        to: `/academies/${academyName.value}/admin/roles`,
+        show: can('members.manage') || can('roles.view'),
+      },
+      {
+        name: 'ลิงก์เชิญสมาชิก',
+        icon: 'fluent:link-24-regular',
+        to: `/academies/${academyName.value}/admin/invite-links`,
+        show: can('members.manage'),
+      },
+      {
+        name: 'แท็กสมาชิก',
+        icon: 'fluent:tag-24-regular',
+        to: `/academies/${academyName.value}/admin/member-tags`,
+        show: can('members.manage'),
+      },
+      {
+        name: 'ผู้ปกครอง',
+        icon: 'fluent:people-community-24-regular',
+        to: `/academies/${academyName.value}/admin/guardians`,
+        show: can('members.view'),
       },
     ]
   },
@@ -76,22 +99,34 @@ const menuItems = computed(() => [
     group: 'การเรียนการสอน',
     items: [
       {
-        name: 'รายวิชา',
+        name: 'คอร์สเรียน',
         icon: 'fluent:book-24-regular',
         to: `/academies/${academyName.value}/admin/courses`,
         show: can('courses.view') || can('courses.manage'),
       },
       {
-        name: 'กลุ่ม/ห้องเรียน',
-        icon: 'fluent:people-community-24-regular',
+        name: 'หลักสูตร',
+        icon: 'fluent:book-globe-24-regular',
+        to: `/academies/${academyName.value}/admin/curriculums`,
+        show: can('courses.view'),
+      },
+      {
+        name: 'ห้องเรียน',
+        icon: 'fluent:people-team-24-regular',
         to: `/academies/${academyName.value}/admin/classrooms`,
-        show: can('academy.view'),
+        show: can('groups.view') || can('academy.view'),
+      },
+      {
+        name: 'ฝ่าย/แผนก',
+        icon: 'fluent:organization-24-regular',
+        to: `/academies/${academyName.value}/admin/departments`,
+        show: can('groups.view') || can('academy.view'),
       },
       {
         name: 'ตารางเรียน',
         icon: 'fluent:calendar-24-regular',
         to: `/academies/${academyName.value}/admin/schedule`,
-        show: can('academy.view'),
+        show: can('schedule.view') || can('academy.view'),
       },
     ]
   },
@@ -100,9 +135,27 @@ const menuItems = computed(() => [
     items: [
       {
         name: 'ทะเบียนนักเรียน',
-        icon: 'fluent:person-info-24-regular',
+        icon: 'fluent:hat-graduation-24-regular',
         to: `/academies/${academyName.value}/admin/students`,
         show: can('students.view') || can('students.manage'),
+      },
+      {
+        name: 'บัตรนักเรียน',
+        icon: 'fluent:person-card-24-regular',
+        to: `/academies/${academyName.value}/admin/student-cards`,
+        show: can('students.view'),
+      },
+      {
+        name: 'การเข้าเรียน',
+        icon: 'fluent:clipboard-task-24-regular',
+        to: `/academies/${academyName.value}/admin/school-attendance`,
+        show: can('attendance.view') || can('academy.view'),
+      },
+      {
+        name: 'ผลการเรียน',
+        icon: 'fluent:star-24-regular',
+        to: `/academies/${academyName.value}/admin/gradebook`,
+        show: can('grades.view') || can('academy.view'),
       },
       {
         name: 'เยี่ยมบ้าน',
@@ -111,21 +164,26 @@ const menuItems = computed(() => [
         show: can('home_visits.view') || can('home_visits.manage'),
       },
       {
-        name: 'สุขภาพ',
-        icon: 'fluent:heart-pulse-24-regular',
-        to: `/academies/${academyName.value}/admin/students`,
+        name: 'นักเรียนกลุ่มเสี่ยง',
+        icon: 'fluent:warning-24-regular',
+        to: `/academies/${academyName.value}/admin/at-risk`,
         show: can('students.view'),
-      },
-      {
-        name: 'บัตรนักเรียน',
-        icon: 'fluent:card-ui-24-regular',
-        to: `/academies/${academyName.value}/admin/student-cards`,
-        show: can('students.view') || can('students.manage'),
       },
     ]
   },
   {
-    group: 'การสื่อสาร',
+    group: 'บุคลากร',
+    items: [
+      {
+        name: 'ข้อมูลบุคลากร',
+        icon: 'fluent:person-board-24-regular',
+        to: `/academies/${academyName.value}/admin/staff`,
+        show: can('staff.view') || can('academy.view'),
+      },
+    ]
+  },
+  {
+    group: 'กิจกรรม & การสื่อสาร',
     items: [
       {
         name: 'ประกาศ',
@@ -134,10 +192,21 @@ const menuItems = computed(() => [
         show: can('announcements.view') || can('announcements.manage'),
       },
       {
-        name: 'ข้อความ',
-        icon: 'fluent:chat-24-regular',
-        to: `/academies/${academyName.value}/admin/announcements`,
-        show: true,
+        name: 'กิจกรรม',
+        icon: 'fluent:calendar-star-24-regular',
+        to: `/academies/${academyName.value}/admin/events`,
+        show: can('announcements.manage') || can('academy.view'),
+      },
+    ]
+  },
+  {
+    group: 'ร้านค้า',
+    items: [
+      {
+        name: 'ร้านค้าโรงเรียน',
+        icon: 'fluent:store-24-regular',
+        to: `/academies/${academyName.value}/admin/store`,
+        show: can('settings.manage') || can('academy.view'),
       },
     ]
   },
@@ -145,9 +214,15 @@ const menuItems = computed(() => [
     group: 'รายงาน & สถิติ',
     items: [
       {
-        name: 'รายงานภาพรวม',
-        icon: 'fluent:chart-multiple-24-regular',
-        to: `/academies/${academyName.value}/admin`,
+        name: 'สถิติและรายงาน',
+        icon: 'fluent:data-bar-horizontal-24-regular',
+        to: `/academies/${academyName.value}/admin/reports`,
+        show: can('reports.view'),
+      },
+      {
+        name: 'ประวัติกิจกรรม',
+        icon: 'fluent:history-24-regular',
+        to: `/academies/${academyName.value}/admin/activity-log`,
         show: can('reports.view'),
       },
     ]
@@ -156,16 +231,16 @@ const menuItems = computed(() => [
     group: 'ตั้งค่า',
     items: [
       {
-        name: 'ข้อมูลโรงเรียน',
+        name: 'ระบบบริหารโรงเรียน',
         icon: 'fluent:building-24-regular',
-        to: `/academies/${academyName.value}/admin/settings`,
-        show: can('academy.settings.view') || can('academy.settings.edit'),
+        to: `/academies/${academyName.value}/admin/school-management`,
+        show: can('settings.manage') || can('academy.settings.edit'),
       },
       {
-        name: 'การตั้งค่าทั่วไป',
+        name: 'ตั้งค่าโรงเรียน',
         icon: 'fluent:settings-24-regular',
         to: `/academies/${academyName.value}/admin/settings`,
-        show: can('academy.settings.edit'),
+        show: can('academy.settings.view') || can('academy.settings.edit'),
       },
     ]
   },
@@ -194,7 +269,8 @@ onMounted(async () => {
   }
 })
 
-const isActiveRoute = (path: string) => {
+const isActiveRoute = (path: string, exact = false) => {
+  if (exact) return route.path === path
   return route.path === path || route.path.startsWith(path + '/')
 }
 
@@ -259,11 +335,8 @@ const toggleSidebar = () => {
       >
         <!-- Navigation -->
         <nav class="p-4 space-y-4 max-h-[70vh] lg:max-h-none overflow-y-auto">
-          <div v-for="group in menuItems" :key="group.group">
-            <h3 
-              v-if="group.items.some(item => item.show)"
-              class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-3"
-            >
+          <div v-for="group in menuItems" :key="group.group" v-show="group.items.some(item => item.show)">
+            <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-3">
               {{ group.group }}
             </h3>
             <ul class="space-y-1">
@@ -272,7 +345,7 @@ const toggleSidebar = () => {
                   :to="item.to"
                   :class="[
                     'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
-                    isActiveRoute(item.to)
+                    isActiveRoute(item.to, item.exact)
                       ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   ]"
