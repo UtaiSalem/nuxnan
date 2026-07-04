@@ -6,6 +6,64 @@
 
 ---
 
+## 2026-07-05 — Student Intake System Phase 1
+
+### งานที่ทำในวันนี้
+- **Phase 1: Database Constraints Fix** 
+  - สร้างและรัน migration `fix_student_unique_constraints` เปลี่ยน `student_id` และ `citizen_id` เป็น academy-scoped (unique per academy_id)
+  - สร้างและรัน migration `add_enrollment_lookup_index_to_classroom_students` เพิ่ม index สำหรับค้นหา active enrollment
+  - สร้างและรัน migration `create_student_import_tables` สำหรับรองรับระบบ bulk import (ตาราง `student_import_batches` และ `student_import_rows`)
+- **Registrar Role Setup**
+  - แก้ไข `AcademyRole::SYSTEM_ROLES` เพื่อเพิ่ม role `registrar` ("นายทะเบียน") ที่มีสิทธิ์ครบถ้วนสำหรับการทำงานเรื่องรับเข้าและจัดการนักเรียน
+  - รัน `AcademyRoleSeeder` ด้วย updateOrCreate เพื่อให้ระบบทุก academy มี role นึ้ใช้งานได้ทันที
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+- [ ] **Phase 2 — Single Student Intake (Backend)** 
+- [ ] **Phase 3 — Registrar UI (Single Intake)**
+
+---
+
+## 2026-07-04 — School Department Setup Template (5 ฝ่ายมาตรฐาน)
+
+### งานที่ทำในวันนี้
+- **วิเคราะห์โครงสร้าง 5 ฝ่ายมาตรฐาน** — เปรียบเทียบ proposed data model กับ codebase จริง สร้างบทวิเคราะห์แก้ไข `.agents/school-5-departments-revised-analysis.md`
+- **Phase 1: SchoolDepartmentSetupService** — สร้าง service ที่มี template 35 groups (1 office + 5 departments + 21 sections + 8 academic_groups) พร้อม idempotent setup ด้วย name+type matching
+- **Phase 2: API Endpoints** — เพิ่ม `GET /departments/template` และ `POST /departments/setup` ใน DepartmentController + routes
+- **Phase 3: Seeder** — สร้าง `SchoolDepartmentSeeder` สำหรับ dev/demo
+- **Phase 4: Frontend** — สร้าง `DepartmentSetupModal.vue` (tree preview + conflict handling) อัพเดท `departments.vue` (ปุ่ม setup ที่ header + empty state) เพิ่มปุ่ม "ฝ่ายงาน/แผนก" ใน admin index quick actions
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+- [ ] **ยังไม่ได้ commit** — ไฟล์ทั้งหมดยังเป็น uncommitted changes (ดู git status ด้านล่าง)
+- [ ] **ทดสอบ seeder** — รัน `php artisan db:seed --class=SchoolDepartmentSeeder` บน WAMP จริง
+- [ ] **ทดสอบ UI จริง** — login เข้า admin → กดปุ่ม "ตั้งค่าโครงสร้างมาตรฐาน" → ตรวจ hierarchy ถูกต้อง
+- [ ] **classrooms/statistics 500** — bug เดิมไม่เกี่ยวกับงานนี้ แต่ `ClassroomController.php` มี uncommitted changes อยู่ (ตรวจว่าเป็นงานก่อนหน้า)
+
+### Context สำคัญ
+- **แนวคิด opt-in per school** — ไม่ได้สร้าง departments ให้ทุกโรงเรียนอัตโนมัติ admin ต้องกดปุ่มเอง
+- Component ใน Nuxt ต้องใช้ชื่อ `SchoolDepartmentSetupModal` (prefix folder `school/`) ไม่ใช่ `DepartmentSetupModal`
+- `POST /departments/setup` รองรับ `force=true` กรณีมี groups อยู่แล้ว — จะ skip รายการที่ซ้ำชื่อ+type
+- แผนพัฒนาอยู่ที่ `.claude/plans/purrfect-fluttering-grove.md`
+- บทวิเคราะห์ 5 ฝ่ายอยู่ที่ `.agents/school-5-departments-revised-analysis.md`
+
+### ไฟล์ที่สร้างใหม่
+- `api/nuxnanravel/app/Services/SchoolDepartmentSetupService.php`
+- `api/nuxnanravel/database/seeders/SchoolDepartmentSeeder.php`
+- `ui/components/school/DepartmentSetupModal.vue`
+- `.agents/school-5-departments-revised-analysis.md`
+
+### ไฟล์ที่แก้ไข
+- `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/DepartmentController.php` — เพิ่ม getTemplate(), setupDepartments()
+- `api/nuxnanravel/routes/learn/academy.php` — เพิ่ม 2 routes (template, setup)
+- `ui/pages/academies/[name]/admin/departments.vue` — ปุ่ม setup + empty state + modal
+- `ui/pages/academies/[name]/admin/index.vue` — เพิ่ม quick action "ฝ่ายงาน/แผนก"
+
+### Branch / Git State
+- Branch: `main`
+- Uncommitted: **yes** — 5 modified + 4 untracked (ดูรายละเอียดด้านบน)
+- Push status: ยังไม่ commit / ยังไม่ push
+
+---
+
 ## 2026-07-03 — Course Lesson Per-Student Score Status
 
 - **Backend (`CourseMemberController@show`)**:
