@@ -6,6 +6,46 @@
 
 ---
 
+## 2026-07-05 — Admin Panel Smoke Test & Restructure (Phase A-D)
+
+### งานที่ทำ
+- **Phase A: Smoke Test & Bug Fixes**
+  - Fixed CORS for dev preview (dynamic port regex in `allowed_origins_patterns`)
+  - Created `CheckAcademyPermission` middleware + registered in `bootstrap/app.php`
+  - Fixed `classroomStudents` → `classroomEnrollments` relationship name in StudentIntakeController
+  - Rewrote `students.vue` parent to use provide/inject for academy ID
+  - Fixed StudentDataTable and import pages to use academy ID instead of name
+
+- **Phase B: Admin Sidebar Restructure**
+  - Updated `admin.vue` parent route with complete sidebar (30+ pages linked)
+  - Fixed mismatched sidebar links: attendance→school-attendance, grades→gradebook
+  - Added missing pages: events, store, at-risk, invite-links, member-tags, guardians, etc.
+  - Parent route now provides `academyId`, `academyName`, `academy` to all children
+  - Simplified `students.vue` sub-parent to passthrough
+
+- **Phase C: Enrollment Lifecycle UI**
+  - Wired `StudentActionMenu` + `StudentStatusActionModal` into StudentDataTable
+  - Added action column with 5 lifecycle actions (graduate/drop/repeat/promote/transfer)
+  - Added enrollment history drawer button per row
+  - All actions call existing backend endpoints via `useStudentEnrollmentActions` composable
+
+- **Phase D: Reports Dashboard**
+  - Created `reports.vue` page with overview stats from analytics API
+  - Report sections with links to students, at-risk, attendance, gradebook, staff, etc.
+
+### หมายเหตุ
+- Parent portal at `/academies/[name]/parent/` already fully built (grades, attendance, meetings)
+- Client-side navigation between admin pages may show transition glitches (HMR); full page loads work fine
+- 15 commits ahead of origin, not pushed yet
+
+### Commits (this session)
+- `dcec3bc5` fix(school): smoke test fixes — CORS, middleware, route binding, relationship
+- `17753e6a` feat(school): restructure admin sidebar with complete navigation
+- `40b4041c` feat(school): wire enrollment lifecycle actions into StudentDataTable
+- `402e0ab3` feat(school): add Reports Dashboard page
+
+---
+
 ## 2026-07-05 — Student Intake System Phase 1
 
 ### งานที่ทำในวันนี้
