@@ -241,6 +241,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Student Intake routes
+    Route::get('{academy}/student-intakes/list', [StudentIntakeController::class, 'index'])
+        ->middleware('academy.permission:students.view');
     Route::get('{academy}/student-intakes/stats', [StudentIntakeController::class, 'stats'])
         ->middleware('academy.permission:students.view');
     Route::get('{academy}/student-intakes/export', [StudentIntakeController::class, 'export'])

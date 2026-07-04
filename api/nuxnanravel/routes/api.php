@@ -52,6 +52,10 @@ Route::get('/login', function () {
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/validate-referral-code', [AuthController::class, 'validateReferralCode']);
+
+// Student Account Activation (public — no auth required)
+Route::get('/student-activate/{token}', [\App\Http\Controllers\Api\Auth\StudentActivationController::class, 'show']);
+Route::post('/student-activate/{token}', [\App\Http\Controllers\Api\Auth\StudentActivationController::class, 'activate']);
 Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh']);

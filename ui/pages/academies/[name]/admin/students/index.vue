@@ -5,6 +5,7 @@
  */
 import { Icon } from '@iconify/vue'
 import { useStudentAccountService } from '~/services/studentAccountService'
+import StudentDataTable from '~/components/academy/student/StudentDataTable.vue'
 
 definePageMeta({
   layout: false
@@ -198,17 +199,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Integration point for existing student list -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">
-      <Icon icon="fluent:table-24-regular" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ตารางรายชื่อนักเรียน</h3>
-      <p class="text-gray-500 dark:text-gray-400 mb-4">ในเวอร์ชันปัจจุบัน กรุณาดูรายชื่อนักเรียนจากหน้าสมาชิก (Members) โดยกรองด้วยแท็บ 'นักเรียน'</p>
-      <NuxtLink
-        :to="`/academies/${academyName}/admin/members`"
-        class="inline-flex items-center justify-center px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors"
-      >
-        ไปยังหน้าสมาชิก
-      </NuxtLink>
-    </div>
+    <!-- Student List -->
+    <StudentDataTable :academy-name="academyName" />
   </div>
 </template>

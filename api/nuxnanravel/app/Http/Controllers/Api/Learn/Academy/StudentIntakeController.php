@@ -10,6 +10,7 @@ use App\Models\Academy;
 use App\Models\Student;
 use App\Services\StudentIntakeService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class StudentIntakeController extends Controller
 {
@@ -35,6 +36,45 @@ class StudentIntakeController extends Controller
         );
 
         return response()->json(['success' => true, 'has_duplicates' => $duplicates !== [], 'data' => $duplicates]);
+    }
+
+    public function index(Request $request, Academy $academy): JsonResponse
+    {
+        $query = Student::where('academy_id', $academy->id);
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name_th', 'like', "%{$search}%")
+                  ->orWhere('last_name_th', 'like', "%{$search}%")
+                  ->orWhere('student_id', 'like', "%{$search}%")
+                  ->orWhere('citizen_id', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        if ($classroomId = $request->input('classroom_id')) {
+            $query->whereHas('classroomStudents', fn($q) => $q->where('classroom_id', $classroomId)->where('status', 'active'));
+        }
+
+        if ($accountStatus = $request->input('account_status')) {
+            $query->where('account_status', $accountStatus);
+        }
+
+        $sortField = $request->input('sort_field', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $allowedSorts = ['student_id', 'first_name_th', 'last_name_th', 'status', 'created_at'];
+        if (in_array($sortField, $allowedSorts)) {
+            $query->orderBy($sortField, $sortOrder === 'asc' ? 'asc' : 'desc');
+        }
+
+        $perPage = max(1, min($request->integer('per_page', 15), 100));
+        $students = $query->with(['classroomStudents' => fn($q) => $q->where('status', 'active')->with('classroom')])
+            ->paginate($perPage);
+
+        return response()->json($students);
     }
 
     public function stats(Academy $academy): JsonResponse

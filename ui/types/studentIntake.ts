@@ -83,3 +83,34 @@ export interface StudentIntakeResult {
   message: string
   data: any // Detailed response containing student, member, enrollment, etc.
 }
+
+export interface StudentListItem {
+  id: number
+  student_id: string
+  first_name_th: string
+  last_name_th: string
+  title_prefix_th: string | null
+  citizen_id: string | null
+  status: string
+  account_status: string | null
+  created_at: string
+  classroom_students: Array<{
+    id: number
+    classroom_id: number
+    status: string
+    classroom: {
+      id: number
+      name: string
+      grade_level: string | null
+      section: string | null
+    } | null
+  }>
+}
+
+export interface StudentListResponse {
+  data: StudentListItem[]
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+}
