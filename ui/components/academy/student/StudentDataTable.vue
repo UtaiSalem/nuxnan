@@ -2,12 +2,41 @@
 import { Icon } from '@iconify/vue'
 import type { StudentListItem } from '~/types/studentIntake'
 import { useStudentIntakeService } from '~/services/studentIntakeService'
+import { useStudentEnrollmentActions } from '~/composables/useStudentEnrollmentActions'
+import StudentActionMenu from '~/components/academy/enrollment/StudentActionMenu.vue'
+import StudentStatusActionModal from '~/components/academy/enrollment/StudentStatusActionModal.vue'
+import EnrollmentHistoryDrawer from '~/components/academy/enrollment/EnrollmentHistoryDrawer.vue'
+import type {
+  ClassroomOptionDTO,
+  ClassroomStudentDTO,
+  EnrollmentAction,
+  EnrollmentActionPayload,
+  StudentSummaryDTO,
+} from '~/types/enrollment'
 
 const props = defineProps<{
   academyId: number | null
 }>()
 
 const { listStudents } = useStudentIntakeService()
+const api = useApi()
+
+// Enrollment lifecycle state
+const {
+  execute: executeLifecycleAction,
+  isLoading: lifecycleLoading,
+  fieldErrors: lifecycleFieldErrors,
+  getErrorMessage,
+  resetErrors,
+} = useStudentEnrollmentActions(toRef(props, 'academyId'))
+
+const actionModalOpen = ref(false)
+const selectedAction = ref<EnrollmentAction | null>(null)
+const selectedStudent = ref<StudentSummaryDTO | null>(null)
+const selectedEnrollment = ref<ClassroomStudentDTO | null>(null)
+const availableClassrooms = ref<ClassroomOptionDTO[]>([])
+const historyDrawerOpen = ref(false)
+const historyStudent = ref<StudentSummaryDTO | null>(null)
 
 const students = ref<StudentListItem[]>([])
 const totalRecords = ref(0)
@@ -126,6 +155,88 @@ const getAccountBadge = (status: string | null) => {
   return { label: 'ยังไม่มี', class: 'text-gray-400 dark:text-gray-500' }
 }
 
+// Enrollment lifecycle handlers
+const toStudentSummary = (s: StudentListItem): StudentSummaryDTO => ({
+  id: s.id,
+  student_id: s.student_id || '',
+  academy_id: props.academyId || 0,
+  first_name_th: s.first_name_th,
+  last_name_th: s.last_name_th,
+  nickname: null,
+  status: s.status,
+  class_level: null,
+  class_section: null,
+})
+
+const toCurrentEnrollment = (s: StudentListItem): ClassroomStudentDTO | null => {
+  const active = s.classroom_students?.find(cs => cs.status === 'active')
+  if (!active) return null
+  return {
+    id: active.id,
+    student_id: s.id,
+    classroom_id: active.classroom_id,
+    academy_id: props.academyId || 0,
+    academic_year_id: null,
+    student_number: null,
+    status: active.status,
+    status_text: null,
+    enrolled_at: null,
+    left_at: null,
+    leave_reason: null,
+    rollover_batch_id: null,
+    classroom: active.classroom ? {
+      id: active.classroom.id,
+      display_name: active.classroom.name || `${active.classroom.grade_level}/${active.classroom.section}`,
+      grade_level: active.classroom.grade_level ?? null,
+      section: active.classroom.section ?? null,
+    } : undefined,
+  }
+}
+
+const fetchClassrooms = async () => {
+  if (!props.academyId) return
+  try {
+    const res: any = await api.get(`/api/academies/${props.academyId}/classrooms`)
+    if (res.success && res.classrooms) {
+      availableClassrooms.value = res.classrooms.map((c: any) => ({
+        id: c.id,
+        display_name: c.name || `${c.grade_level}/${c.section}`,
+        grade_level: c.grade_level,
+        section: c.section,
+        academic_year_id: c.academic_year_id ?? null,
+        academic_year_name: c.academic_year?.name ?? null,
+      }))
+    }
+  } catch (e) {
+    console.error('Failed to fetch classrooms', e)
+  }
+}
+
+const onActionSelect = (student: StudentListItem, action: EnrollmentAction) => {
+  selectedStudent.value = toStudentSummary(student)
+  selectedEnrollment.value = toCurrentEnrollment(student)
+  selectedAction.value = action
+  resetErrors()
+  actionModalOpen.value = true
+  if (!availableClassrooms.value.length) fetchClassrooms()
+}
+
+const onActionSubmit = async (payload: EnrollmentActionPayload<EnrollmentAction>) => {
+  if (!selectedAction.value || !selectedStudent.value) return
+  try {
+    await executeLifecycleAction(selectedAction.value, selectedStudent.value.id, payload)
+    actionModalOpen.value = false
+    fetchData()
+  } catch (e) {
+    // errors are in lifecycleFieldErrors
+  }
+}
+
+const onViewHistory = (student: StudentListItem) => {
+  historyStudent.value = toStudentSummary(student)
+  historyDrawerOpen.value = true
+}
+
 watch(() => props.academyId, (id) => {
   if (id) fetchData()
 }, { immediate: true })
@@ -177,16 +288,17 @@ watch(() => props.academyId, (id) => {
               <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">ห้องเรียน</th>
               <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">สถานะ</th>
               <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">บัญชี</th>
+              <th class="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">จัดการ</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
             <tr v-if="loading" v-for="i in lazyParams.rows" :key="i">
-              <td colspan="5" class="px-4 py-3">
+              <td colspan="6" class="px-4 py-3">
                 <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
               </td>
             </tr>
             <tr v-else-if="students.length === 0">
-              <td colspan="5" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+              <td colspan="6" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                 <Icon icon="fluent:people-24-regular" class="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                 <p>ไม่พบข้อมูลนักเรียน</p>
               </td>
@@ -213,6 +325,22 @@ watch(() => props.academyId, (id) => {
                 <span :class="['text-xs font-medium', getAccountBadge(student.account_status).class]">
                   {{ getAccountBadge(student.account_status).label }}
                 </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <button
+                    @click.stop="onViewHistory(student)"
+                    class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition"
+                    title="ดูประวัติการลงห้อง"
+                  >
+                    <Icon icon="mdi:history" class="w-4 h-4" />
+                  </button>
+                  <StudentActionMenu
+                    :student="toStudentSummary(student)"
+                    :enrollment="toCurrentEnrollment(student)"
+                    @select="onActionSelect(student, $event)"
+                  />
+                </div>
               </td>
             </tr>
           </tbody>
@@ -242,5 +370,26 @@ watch(() => props.academyId, (id) => {
         </div>
       </div>
     </div>
+
+    <!-- Enrollment Lifecycle Modal -->
+    <StudentStatusActionModal
+      :open="actionModalOpen"
+      :action="selectedAction"
+      :student="selectedStudent"
+      :enrollment="selectedEnrollment"
+      :available-classrooms="availableClassrooms"
+      :is-loading="lifecycleLoading"
+      :field-errors="lifecycleFieldErrors"
+      @update:open="actionModalOpen = $event"
+      @submit="onActionSubmit"
+    />
+
+    <!-- Enrollment History Drawer -->
+    <EnrollmentHistoryDrawer
+      :open="historyDrawerOpen"
+      :academy-id="academyId"
+      :student="historyStudent"
+      @update:open="historyDrawerOpen = $event"
+    />
   </div>
 </template>
