@@ -11,6 +11,43 @@ use App\Models\User;
 
 class EnrollmentPolicy
 {
+    public function intake(User $user, Academy $academy): bool
+    {
+        if ($academy->user_id === $user->id) {
+            return true;
+        }
+
+        $member = AcademyMember::query()
+            ->where('user_id', $user->id)
+            ->where('academy_id', $academy->id)
+            ->where('status', 2)
+            ->with('academyRole')
+            ->first();
+
+        if (! $member) {
+            return false;
+        }
+
+        return $member->hasAnyPermission(['students.create', 'students.manage'])
+            || in_array($member->role, ['admin', 'director'], true);
+    }
+
+    public function import(User $user, Academy $academy): bool
+    {
+        if ($academy->user_id === $user->id) {
+            return true;
+        }
+
+        $member = AcademyMember::query()
+            ->where('user_id', $user->id)
+            ->where('academy_id', $academy->id)
+            ->where('status', 2)
+            ->with('academyRole')
+            ->first();
+
+        return $member?->hasAnyPermission(['students.import', 'students.manage']) ?? false;
+    }
+
     /**
      * Determine whether the user can manage the per-student enrollment lifecycle
      * (graduate/drop/repeat/promote/transfer) for a given student in an academy.

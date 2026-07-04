@@ -6,6 +6,7 @@ use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -36,7 +37,7 @@ class Student extends Model
     /**
      * ห้องเรียนที่นักเรียนสังกัด (ผ่าน classroom_students pivot)
      */
-    public function classrooms(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function classrooms(): BelongsToMany
     {
         return $this->belongsToMany(Classroom::class, 'classroom_students', 'student_id', 'classroom_id')
             ->withPivot('student_number', 'status', 'academic_year_id', 'enrolled_at', 'left_at')
@@ -46,7 +47,7 @@ class Student extends Model
     /**
      * ห้องเรียนปัจจุบัน (active enrollment)
      */
-    public function activeClassroom(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function activeClassroom(): BelongsToMany
     {
         return $this->classrooms()->wherePivot('status', 'active');
     }
@@ -69,6 +70,7 @@ class Student extends Model
 
     protected $fillable = [
         'user_id',
+        'account_status',
         'academy_id',
         'student_id',
         'citizen_id',
