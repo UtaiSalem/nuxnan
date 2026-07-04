@@ -13,6 +13,7 @@ definePageMeta({
 
 const route = useRoute()
 const academyName = computed(() => route.params.name as string)
+const academyId = inject<Ref<number | null>>('academyId', ref(null))
 const { exportInvitations } = useStudentAccountService()
 
 // Setup basic stats
@@ -27,9 +28,10 @@ const isLoading = ref(true)
 const api = useApi()
 
 const fetchStats = async () => {
+  if (!academyId.value) return
   isLoading.value = true
   try {
-    const res: any = await api.get(`/api/academies/${academyName.value}/student-intakes/stats`)
+    const res: any = await api.get(`/api/academies/${academyId.value}/student-intakes/stats`)
     if (res && res.stats) {
       stats.value = res.stats
     } else {
@@ -50,7 +52,7 @@ const fetchStats = async () => {
 
 const exportStudents = async () => {
   try {
-    const res: any = await api.get(`/api/academies/${academyName.value}/student-intakes/export`, { responseType: 'blob' })
+    const res: any = await api.get(`/api/academies/${academyId.value}/student-intakes/export`, { responseType: 'blob' })
     const url = window.URL.createObjectURL(new Blob([res]))
     const link = document.createElement('a')
     link.href = url
@@ -65,15 +67,15 @@ const exportStudents = async () => {
 
 const handleExportInvitations = async () => {
   try {
-    await exportInvitations(academyName.value)
+    await exportInvitations(String(academyId.value))
   } catch (error) {
     console.error('Failed to export invitations', error)
   }
 }
 
-onMounted(() => {
-  fetchStats()
-})
+watch(academyId, (id) => {
+  if (id) fetchStats()
+}, { immediate: true })
 </script>
 
 <template>
@@ -200,6 +202,6 @@ onMounted(() => {
     </div>
 
     <!-- Student List -->
-    <StudentDataTable :academy-name="academyName" />
+    <StudentDataTable :academy-id="academyId" />
   </div>
 </template>

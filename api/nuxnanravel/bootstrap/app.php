@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'plearnd_admin' => \App\Http\Middleware\EnsurePlearndAdmin::class,
             'admin' => \App\Http\Middleware\EnsureAdminRole::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'academy.permission' => \App\Http\Middleware\CheckAcademyPermission::class,
             'audit.log' => \App\Http\Middleware\AuditRequest::class,
         ]);
         

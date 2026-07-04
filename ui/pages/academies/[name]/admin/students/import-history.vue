@@ -4,11 +4,11 @@ import { useStudentImportService } from '~/services/studentImportService'
 
 definePageMeta({
   layout: false,
-  middleware: ['auth', 'academy-role'],
 })
 
 const route = useRoute()
 const academyName = computed(() => route.params.name as string)
+const academyId = inject<Ref<number | null>>('academyId', ref(null))
 
 const { listBatches } = useStudentImportService()
 
@@ -18,9 +18,10 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 
 const fetchBatches = async () => {
+  if (!academyId.value) return
   loading.value = true
   try {
-    const res: any = await listBatches(academyName.value, currentPage.value)
+    const res: any = await listBatches(String(academyId.value), currentPage.value)
     batches.value = res.data || []
     totalPages.value = res.last_page || 1
   } catch (error) {
@@ -49,7 +50,9 @@ const formatDate = (dateStr: string) => {
   return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 }
 
-onMounted(() => fetchBatches())
+watch(academyId, (id) => {
+  if (id) fetchBatches()
+}, { immediate: true })
 </script>
 
 <template>

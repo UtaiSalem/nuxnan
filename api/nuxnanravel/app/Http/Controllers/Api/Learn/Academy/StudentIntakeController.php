@@ -56,7 +56,7 @@ class StudentIntakeController extends Controller
         }
 
         if ($classroomId = $request->input('classroom_id')) {
-            $query->whereHas('classroomStudents', fn($q) => $q->where('classroom_id', $classroomId)->where('status', 'active'));
+            $query->whereHas('classroomEnrollments', fn($q) => $q->where('classroom_id', $classroomId)->where('status', 'active'));
         }
 
         if ($accountStatus = $request->input('account_status')) {
@@ -71,7 +71,7 @@ class StudentIntakeController extends Controller
         }
 
         $perPage = max(1, min($request->integer('per_page', 15), 100));
-        $students = $query->with(['classroomStudents' => fn($q) => $q->where('status', 'active')->with('classroom')])
+        $students = $query->with(['classroomEnrollments' => fn($q) => $q->where('status', 'active')->with('classroom')])
             ->paginate($perPage);
 
         return response()->json($students);
@@ -82,7 +82,7 @@ class StudentIntakeController extends Controller
         return response()->json(['stats' => [
             'totalStudents' => Student::where('academy_id', $academy->id)->where('status', 'active')->count(),
             'newIntakes' => Student::where('academy_id', $academy->id)->where('created_at', '>=', now()->subMonths(6))->count(),
-            'unassigned' => Student::where('academy_id', $academy->id)->whereDoesntHave('classroomStudents', fn($q) => $q->where('status', 'active'))->count(),
+            'unassigned' => Student::where('academy_id', $academy->id)->whereDoesntHave('classroomEnrollments', fn($q) => $q->where('status', 'active'))->count(),
             'pendingActivation' => Student::where('academy_id', $academy->id)->where('account_status', 'pending_activation')->count(),
         ]]);
     }

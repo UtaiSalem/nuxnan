@@ -4,7 +4,7 @@ import type { StudentListItem } from '~/types/studentIntake'
 import { useStudentIntakeService } from '~/services/studentIntakeService'
 
 const props = defineProps<{
-  academyName: string
+  academyId: number | null
 }>()
 
 const { listStudents } = useStudentIntakeService()
@@ -42,9 +42,10 @@ const accountStatusOptions = [
 ]
 
 const fetchData = async () => {
+  if (!props.academyId) return
   loading.value = true
   try {
-    const res = await listStudents(props.academyName, {
+    const res = await listStudents(String(props.academyId), {
       page: lazyParams.value.page,
       per_page: lazyParams.value.rows,
       search: lazyParams.value.search || undefined,
@@ -125,7 +126,9 @@ const getAccountBadge = (status: string | null) => {
   return { label: 'ยังไม่มี', class: 'text-gray-400 dark:text-gray-500' }
 }
 
-onMounted(() => fetchData())
+watch(() => props.academyId, (id) => {
+  if (id) fetchData()
+}, { immediate: true })
 </script>
 
 <template>

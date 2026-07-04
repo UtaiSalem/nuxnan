@@ -49,7 +49,8 @@ const activeStep = ref('1')
 const router = useRouter()
 const route = useRoute()
 const academyName = route.params.name as string
-const { resetState, currentBatch } = useStudentImport(academyName)
+const academyId = inject<Ref<number | null>>('academyId', ref(null))
+const { resetState, currentBatch } = useStudentImport(String(academyId.value || ''))
 
 const handleNext = (nextStep: string) => {
   activeStep.value = nextStep

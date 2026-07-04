@@ -8,6 +8,7 @@ definePageMeta({
 
 const route = useRoute()
 const academyName = computed(() => route.params.name as string)
+const academyId = inject<Ref<number | null>>('academyId', ref(null))
 </script>
 
 <template>
@@ -30,6 +31,6 @@ const academyName = computed(() => route.params.name as string)
     </div>
 
     <!-- Wizard Component -->
-    <IntakeWizard :academy-name="academyName" />
+    <IntakeWizard :academy-name="String(academyId || '')" />
   </div>
 </template>
