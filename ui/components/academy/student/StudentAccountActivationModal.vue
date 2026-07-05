@@ -61,22 +61,20 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useStudentAccountService } from '../../../../services/studentAccountService'
-import { useRoute } from 'vue-router'
 
 const props = defineProps<{
   modelValue: boolean
+  academyId: number | null
   student: any | null
 }>()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'invited'])
 
 const visible = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
 
-const route = useRoute()
-const academyName = computed(() => route.params.name as string)
 const { generateInvitation } = useStudentAccountService()
 
 const isGenerating = ref(false)
@@ -84,14 +82,15 @@ const invitationLink = ref('')
 const copied = ref(false)
 
 const generateLink = async () => {
-  if (!props.student) return
+  if (!props.student || !props.academyId) return
   
   isGenerating.value = true
   try {
-    const res = await generateInvitation(academyName.value, props.student.id)
+    const res = await generateInvitation(String(props.academyId), props.student.id)
     if (res?.data?.token) {
       const baseUrl = window.location.origin
       invitationLink.value = `${baseUrl}/activate-student/${res.data.token}`
+      emit('invited')
     }
   } catch (error) {
     console.error(error)

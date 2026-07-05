@@ -261,8 +261,8 @@ class AdminController extends Controller
         // Get unique classrooms for filter from academic info
         $classrooms = Student::join('student_academic_info', 'students.id', '=', 'student_academic_info.student_id')
             ->distinct()
-            ->orderBy('student_academic_info.classroom')
-            ->pluck('student_academic_info.classroom')
+            ->orderBy('student_academic_info.current_class')
+            ->pluck('student_academic_info.current_class')
             ->filter();
 
         return response()->json([
@@ -388,8 +388,8 @@ class AdminController extends Controller
         // Get unique classrooms and teachers for filters
         $classrooms = Student::join('student_academic_info', 'students.id', '=', 'student_academic_info.student_id')
             ->distinct()
-            ->orderBy('student_academic_info.classroom')
-            ->pluck('student_academic_info.classroom')
+            ->orderBy('student_academic_info.current_class')
+            ->pluck('student_academic_info.current_class')
             ->filter();
 
         $teachers = StudentHomeVisit::distinct()

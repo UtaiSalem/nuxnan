@@ -6,6 +6,7 @@ import { useStudentEnrollmentActions } from '~/composables/useStudentEnrollmentA
 import StudentActionMenu from '~/components/academy/enrollment/StudentActionMenu.vue'
 import StudentStatusActionModal from '~/components/academy/enrollment/StudentStatusActionModal.vue'
 import EnrollmentHistoryDrawer from '~/components/academy/enrollment/EnrollmentHistoryDrawer.vue'
+import StudentAccountActivationModal from '~/components/academy/student/StudentAccountActivationModal.vue'
 import type {
   ClassroomOptionDTO,
   ClassroomStudentDTO,
@@ -37,6 +38,8 @@ const selectedEnrollment = ref<ClassroomStudentDTO | null>(null)
 const availableClassrooms = ref<ClassroomOptionDTO[]>([])
 const historyDrawerOpen = ref(false)
 const historyStudent = ref<StudentSummaryDTO | null>(null)
+const activationModalOpen = ref(false)
+const activationStudent = ref<StudentListItem | null>(null)
 
 const students = ref<StudentListItem[]>([])
 const totalRecords = ref(0)
@@ -237,6 +240,11 @@ const onViewHistory = (student: StudentListItem) => {
   historyDrawerOpen.value = true
 }
 
+const onActivateAccount = (student: StudentListItem) => {
+  activationStudent.value = student
+  activationModalOpen.value = true
+}
+
 watch(() => props.academyId, (id) => {
   if (id) fetchData()
 }, { immediate: true })
@@ -329,6 +337,14 @@ watch(() => props.academyId, (id) => {
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
                   <button
+                    v-if="student.account_status !== 'active'"
+                    @click.stop="onActivateAccount(student)"
+                    class="p-1.5 rounded-md text-zinc-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition"
+                    title="สร้างลิงก์เปิดบัญชี"
+                  >
+                    <Icon icon="fluent:person-key-24-regular" class="w-4 h-4" />
+                  </button>
+                  <button
                     @click.stop="onViewHistory(student)"
                     class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition"
                     title="ดูประวัติการลงห้อง"
@@ -390,6 +406,13 @@ watch(() => props.academyId, (id) => {
       :academy-id="academyId"
       :student="historyStudent"
       @update:open="historyDrawerOpen = $event"
+    />
+
+    <StudentAccountActivationModal
+      v-model="activationModalOpen"
+      :academy-id="academyId"
+      :student="activationStudent"
+      @invited="fetchData"
     />
   </div>
 </template>
