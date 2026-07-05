@@ -6,6 +6,36 @@
 
 ---
 
+## 2026-07-05 — API Bug Fixes & Admin Smoke Test (Session 2)
+
+### งานที่ทำ
+- **Fix Reports Page 500** — `dashboardStats` endpoint ใช้ namespace ผิด (`Learn\Academy\ClassSchedule` → `Models\ClassSchedule`) + AssignmentAnswer query ใช้ polymorphic relationship ผิด → เพิ่ม try-catch เพื่อ graceful fallback
+- **Fix HomeVisit AdminController** — ลบ deprecated `$this->middleware()` ที่ไม่รองรับใน Laravel 12
+- **Smoke Test Admin Pages** — ทดสอบ 6 หน้า:
+  - reports ✅ (แสดง 2893 นักเรียน)
+  - departments ✅ (5 แผนก + ปุ่ม setup ทำงาน)
+  - gradebook ✅ (51 ห้องเรียน)
+  - school-attendance ✅ (1 รายการ)
+  - announcements ✅ (3 ประกาศ)
+  - home-visits ⚠️ (pre-existing bug: `student_academic_info.classroom` column ไม่มี)
+- **5 ฝ่ายมาตรฐาน** — ยืนยันว่ากดปุ่ม "โครงสร้างมาตรฐาน" แล้วสร้างแผนกครบ 5 สำเร็จ
+
+### Pre-existing Bugs (ไม่ได้แก้)
+- `home-visits/statistics` → 500 เพราะ `student_academic_info.classroom` column ไม่มีใน DB
+- `academic years` console error — fetch academic years ล้มเหลว (ไม่กระทบ UI หลัก)
+
+### Commits
+- `b1fe7dc9` fix(api): resolve dashboardStats 500 and HomeVisit middleware error
+
+### งานถัดไป (Backlog)
+- [ ] Student Intake Phase 2-3 (Single Student Intake backend + Registrar UI)
+- [ ] Student List DataTable (Phase G2)
+- [ ] Student Account Activation Page (Phase G3)
+- [ ] Import History Page (Phase G1)
+- [ ] Fix home-visits schema mismatch (student_academic_info.classroom)
+
+---
+
 ## 2026-07-05 — Admin Panel Smoke Test & Restructure (Phase A-D)
 
 ### งานที่ทำ
