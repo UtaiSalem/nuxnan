@@ -16,15 +16,22 @@ const fetchOverview = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const res: any = await api.get(`/api/academies/${academyId.value}/analytics/overview`)
-    if (res.success) {
-      stats.value = res.data || res
-    } else {
-      stats.value = res
+    const [dashRes, memberRes] = await Promise.allSettled([
+      api.get(`/api/academies/${academyId.value}/analytics/dashboard-stats`),
+      api.get(`/api/academies/${academyId.value}/members/stats`),
+    ])
+    const dash = dashRes.status === 'fulfilled' ? (dashRes.value as any) : null
+    const members = memberRes.status === 'fulfilled' ? (memberRes.value as any) : null
+    stats.value = {
+      total_students: dash?.data?.total_students ?? members?.stats?.approved ?? 0,
+      total_staff: members?.stats?.by_role?.teacher ?? 0,
+      total_classrooms: dash?.data?.classes_today ?? 0,
+      total_courses: dash?.data?.total_courses ?? 0,
+      pending_grading: dash?.data?.pending_grading ?? 0,
     }
   } catch (e: any) {
     error.value = 'ไม่สามารถโหลดข้อมูลรายงานได้'
-    console.error('Failed to fetch analytics overview', e)
+    console.error('Failed to fetch analytics', e)
   } finally {
     isLoading.value = false
   }
