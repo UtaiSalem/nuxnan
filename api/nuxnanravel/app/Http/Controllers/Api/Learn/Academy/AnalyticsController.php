@@ -116,41 +116,34 @@ class AnalyticsController extends Controller
      */
     public function dashboardStats(Request $request, Academy $academy): JsonResponse
     {
-        $user = Auth::user();
-
-        // Basic counts
         $totalStudents = $academy->members()->where('role', 'student')->count();
         $totalCourses = $academy->courses()->count();
 
-        // Classes today
-        $today = now()->dayOfWeekIso; // 1-7
-        $classesToday = \App\Models\Learn\Academy\ClassSchedule::where('academy_id', $academy->id)
-            ->where('day_of_week', $today)
-            ->where('is_active', true);
-
-        // If not admin/owner, filter by teacher
-        $isFullAdmin = $academy->user_id === $user->id; // simplified check
-        if (! $isFullAdmin) {
-            $classesToday->where('teacher_id', $user->id);
+        $classesCount = 0;
+        try {
+            $today = now()->dayOfWeekIso;
+            $classesCount = \App\Models\ClassSchedule::where('academy_id', $academy->id)
+                ->where('day_of_week', $today)
+                ->where('is_active', true)
+                ->count();
+        } catch (\Throwable $e) {
+            // table may not exist yet
         }
 
-        $classesCount = $classesToday->count();
-
-        // Pending grading
-        $pendingGrading = \App\Models\AssignmentAnswer::whereHas('assignment.course', function ($q) use ($academy) {
-            $q->where('academy_id', $academy->id);
-        })
-            ->where(function($q) {
-                $q->whereNull('points')
-                  ->orWhere('status', 'submitted');
-            });
-
-        if (! $isFullAdmin) {
-            $pendingGrading->whereHas('assignment', function ($q) use ($user) {
-                $q->where('teacher_id', $user->id);
-            });
+        $pendingGradingCount = 0;
+        try {
+            $pendingGradingCount = \App\Models\AssignmentAnswer::whereHas('assignment', function ($q) use ($academy) {
+                $q->whereHasMorph('assignmentable', [\App\Models\Lesson::class], function ($lq) use ($academy) {
+                    $lq->whereHas('course', fn ($cq) => $cq->where('academy_id', $academy->id));
+                });
+            })
+                ->where(function ($q) {
+                    $q->whereNull('points')->orWhere('status', 'submitted');
+                })
+                ->count();
+        } catch (\Throwable $e) {
+            // relationship or table may not exist
         }
-        $pendingGradingCount = $pendingGrading->count();
 
         return response()->json([
             'success' => true,

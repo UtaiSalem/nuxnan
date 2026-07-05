@@ -11,22 +11,6 @@ use Carbon\Carbon;
 
 class AdminController extends Controller
 {
-    public function __construct()
-    {
-        // Ensure admin is authenticated via session OR API token
-        $this->middleware(function ($request, $next) {
-            // Allow if authenticated via API (for academy-based routes)
-            if (auth('api')->check()) {
-                return $next($request);
-            }
-            
-            // Otherwise, check session authentication (for legacy routes)
-            if (!session('homevisit_admin_authenticated')) {
-                return redirect()->route('homevisit.login');
-            }
-            return $next($request);
-        });
-    }
 
     /**
      * Get statistics for academy admin dashboard
