@@ -5,7 +5,7 @@ import { useStudentIntake } from '~/composables/useStudentIntake'
 const emit = defineEmits(['next', 'back'])
 const route = useRoute()
 const academyName = computed(() => route.params.name as string)
-const { payload, addGuardian, removeGuardian, setPrimaryGuardian, setEmergencyGuardian } = useStudentIntake(academyName.value)
+const { payload, addGuardian, removeGuardian, addGuardianContact, removeGuardianContact, setPrimaryGuardian, setEmergencyGuardian } = useStudentIntake(academyName.value)
 
 const isNextClicked = ref(false)
 
@@ -29,13 +29,13 @@ const handleNext = () => {
       <div>
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">ข้อมูลผู้ปกครอง</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          ระบุข้อมูลบิดา มารดา หรือผู้ปกครอง (เพิ่มได้สูงสุด 5 คน)
+          ระบุข้อมูลบิดา มารดา หรือผู้ปกครอง (เพิ่มได้สูงสุด 4 คน)
         </p>
       </div>
       <button 
         type="button"
         @click="addGuardian"
-        v-if="payload.guardians.length < 5"
+        v-if="payload.guardians.length < 4"
         class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium rounded-lg hover:bg-primary-100 dark:hover:bg-primary-800/50 transition-colors text-sm"
       >
         <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
@@ -159,6 +159,59 @@ const handleNext = () => {
               type="text" 
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-shadow"
             />
+          </div>
+        </div>
+
+        <!-- Guardian Contacts -->
+        <div class="mt-6">
+          <div class="flex justify-between items-center mb-3">
+            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <Icon icon="fluent:call-24-regular" class="w-4 h-4 text-gray-400" />
+              ช่องทางติดต่อ
+            </h4>
+            <button
+              type="button"
+              v-if="(guardian.contacts?.length ?? 0) < 3"
+              @click="addGuardianContact(guardian.id!)"
+              class="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+            >
+              <Icon icon="fluent:add-12-regular" class="w-3 h-3" />
+              เพิ่มช่องทาง
+            </button>
+          </div>
+          <div v-if="!guardian.contacts || guardian.contacts.length === 0" class="text-sm text-gray-400 italic">
+            ยังไม่มีช่องทางติดต่อ
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="(contact, cIdx) in guardian.contacts"
+              :key="cIdx"
+              class="flex items-center gap-2"
+            >
+              <select
+                v-model="contact.contact_type"
+                class="w-32 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+              >
+                <option value="mobile">มือถือ</option>
+                <option value="phone">โทรศัพท์</option>
+                <option value="email">Email</option>
+                <option value="line">LINE</option>
+                <option value="other">อื่นๆ</option>
+              </select>
+              <input
+                v-model="contact.contact_value"
+                type="text"
+                :placeholder="contact.contact_type === 'email' ? 'email@example.com' : contact.contact_type === 'line' ? 'LINE ID' : '0xx-xxx-xxxx'"
+                class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+              />
+              <button
+                type="button"
+                @click="removeGuardianContact(guardian.id!, cIdx)"
+                class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <Icon icon="fluent:dismiss-12-regular" class="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 

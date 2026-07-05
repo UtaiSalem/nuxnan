@@ -1,9 +1,9 @@
 import { ref, reactive } from 'vue'
-import { v4 as uuidv4 } from 'uuid'
-import type { 
-  StudentIntakePayload, 
-  StudentIntakeGuardian, 
-  DuplicateCheckMatch 
+import { uuid } from '~/utils/uuid'
+import type {
+  StudentIntakePayload,
+  StudentIntakeGuardian,
+  DuplicateCheckMatch
 } from '../types/studentIntake'
 import { useStudentIntakeService } from '../services/studentIntakeService'
 
@@ -54,12 +54,28 @@ export const useStudentIntake = (academyName?: string) => {
   const service = useStudentIntakeService()
 
   // Guardian Management
+  const addGuardianContact = (guardianId: string) => {
+    const guardian = payload.guardians.find(g => g.id === guardianId)
+    if (!guardian || guardian.contacts.length >= 3) return
+    guardian.contacts.push({ contact_type: 'mobile', contact_value: '', is_primary: false })
+  }
+
+  const removeGuardianContact = (guardianId: string, contactIndex: number) => {
+    const guardian = payload.guardians.find(g => g.id === guardianId)
+    if (!guardian) return
+    const wasPrimary = guardian.contacts[contactIndex]?.is_primary
+    guardian.contacts.splice(contactIndex, 1)
+    if (wasPrimary && guardian.contacts.length > 0) {
+      guardian.contacts[0].is_primary = true
+    }
+  }
+
   const addGuardian = () => {
-    if (payload.guardians.length >= 5) return
+    if (payload.guardians.length >= 4) return
     
     payload.guardians.push({
-      id: uuidv4(),
-      guardian_type: 'parent', // Will be overridden by the form, just a fallback
+      id: uuid(),
+      guardian_type: 'father',
       citizen_id: null,
       title_prefix: null,
       first_name: '',
@@ -70,9 +86,10 @@ export const useStudentIntake = (academyName?: string) => {
       relationship: null,
       status: 'alive',
       nationality: 'ไทย',
-      is_primary_contact: payload.guardians.length === 0, // First guardian is primary by default
-      is_emergency_contact: payload.guardians.length === 0
-    } as any)
+      is_primary_contact: payload.guardians.length === 0,
+      is_emergency_contact: payload.guardians.length === 0,
+      contacts: [{ contact_type: 'mobile', contact_value: '', is_primary: true }]
+    })
   }
 
   const removeGuardian = (id: string) => {
@@ -140,6 +157,7 @@ export const useStudentIntake = (academyName?: string) => {
       // Remove frontend-only IDs from guardians
       cleanPayload.guardians = cleanPayload.guardians.map((g: any) => {
         const { id, ...rest } = g
+        rest.contacts = rest.contacts.filter((contact: { contact_value: string }) => contact.contact_value.trim() !== '')
         return rest
       })
       
@@ -194,6 +212,8 @@ export const useStudentIntake = (academyName?: string) => {
     duplicateMatches,
     addGuardian,
     removeGuardian,
+    addGuardianContact,
+    removeGuardianContact,
     setPrimaryGuardian,
     setEmergencyGuardian,
     checkDuplicate,

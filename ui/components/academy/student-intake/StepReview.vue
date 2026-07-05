@@ -113,15 +113,43 @@ const guardianTypes: Record<string, string> = {
               <span v-if="guardian.is_emergency_contact" class="text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded text-xs">ติดต่อฉุกเฉิน</span>
               <span v-if="guardian.occupation">อาชีพ: {{ guardian.occupation }}</span>
             </div>
+            <div v-if="guardian.contacts?.length" class="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+              <div v-for="(c, ci) in guardian.contacts" :key="ci">
+                {{ { mobile: 'มือถือ', phone: 'โทรศัพท์', email: 'Email', line: 'LINE', other: 'อื่นๆ' }[c.contact_type] }}: {{ c.contact_value }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Account Mode -->
+      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+          การสร้างบัญชีผู้ใช้
+        </h3>
+        <div class="space-y-3">
+          <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 transition-colors" :class="payload.account.mode === 'pending_activation' ? 'ring-2 ring-primary-500/30 border-primary-400' : ''">
+            <input type="radio" v-model="payload.account.mode" value="pending_activation" class="mt-0.5 w-4 h-4 text-primary-600 focus:ring-primary-500" />
+            <div>
+              <span class="text-sm font-medium text-gray-900 dark:text-white">สร้างบัญชีรอ Activation</span>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">นักเรียนจะได้รับรหัสเพื่อ activate บัญชีและเข้าใช้ระบบทีหลัง</p>
+            </div>
+          </label>
+          <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 transition-colors" :class="payload.account.mode === 'none' ? 'ring-2 ring-primary-500/30 border-primary-400' : ''">
+            <input type="radio" v-model="payload.account.mode" value="none" class="mt-0.5 w-4 h-4 text-primary-600 focus:ring-primary-500" />
+            <div>
+              <span class="text-sm font-medium text-gray-900 dark:text-white">ไม่สร้างบัญชี</span>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">บันทึกข้อมูลทะเบียนอย่างเดียว ไม่สร้างบัญชีผู้ใช้</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
     <!-- Actions -->
     <div class="flex justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
-      <button 
-        type="button" 
+      <button
+        type="button"
         class="inline-flex items-center gap-2 px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
         @click="emit('back')"
         :disabled="isSubmitting"

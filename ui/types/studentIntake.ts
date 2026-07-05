@@ -32,6 +32,12 @@ export interface StudentIntakePreviousSchool {
   grade_level: string | null
 }
 
+export interface GuardianContact {
+  contact_type: 'mobile' | 'phone' | 'email' | 'line' | 'other'
+  contact_value: string
+  is_primary: boolean
+}
+
 export interface StudentIntakeGuardian {
   id?: string // for frontend state management
   guardian_type: 'father' | 'mother' | 'guardian' | 'relative' | 'other'
@@ -47,6 +53,7 @@ export interface StudentIntakeGuardian {
   nationality: string | null
   is_primary_contact: boolean
   is_emergency_contact: boolean
+  contacts: GuardianContact[]
 }
 
 export interface StudentIntakeAccount {

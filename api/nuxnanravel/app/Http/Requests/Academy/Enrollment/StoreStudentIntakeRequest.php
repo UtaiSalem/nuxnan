@@ -64,7 +64,7 @@ class StoreStudentIntakeRequest extends FormRequest
             'previous_school.province' => ['nullable', 'string', 'max:100'],
             'previous_school.grade_level' => ['nullable', 'string', 'max:20'],
             'guardians' => ['sometimes', 'array', 'max:4'],
-            'guardians.*.guardian_type' => ['required', Rule::in(['father', 'mother', 'guardian', 'other'])],
+            'guardians.*.guardian_type' => ['required', Rule::in(['father', 'mother', 'guardian', 'relative', 'other'])],
             'guardians.*.citizen_id' => ['nullable', 'digits:13'],
             'guardians.*.title_prefix' => ['nullable', 'string', 'max:20'],
             'guardians.*.first_name' => ['required', 'string', 'max:100'],

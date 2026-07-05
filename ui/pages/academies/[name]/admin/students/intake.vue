@@ -31,6 +31,6 @@ const academyId = inject<Ref<number | null>>('academyId', ref(null))
     </div>
 
     <!-- Wizard Component -->
-    <IntakeWizard :academy-name="String(academyId || '')" />
+    <IntakeWizard :academy-name="academyName" />
   </div>
 </template>

@@ -96,7 +96,7 @@ const handleNext = async () => {
       >
         <Icon v-if="isCheckingDuplicate" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
         <span>ถัดไป</span>
-        <Icon v-else icon="fluent:arrow-right-24-regular" class="w-5 h-5" />
+        <Icon v-if="!isCheckingDuplicate" icon="fluent:arrow-right-24-regular" class="w-5 h-5" />
       </button>
     </div>
   </div>

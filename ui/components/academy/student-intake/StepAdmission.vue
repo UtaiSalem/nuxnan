@@ -42,9 +42,17 @@ onMounted(() => {
   fetchClassrooms(payload.admission.academic_year_id)
 })
 
+const isValid = computed(() => {
+  return !!payload.admission.academic_year_id &&
+         !!payload.admission.classroom_id &&
+         !!payload.admission.enrollment_date
+})
+
 const handleNext = () => {
   isNextClicked.value = true
-  emit('next')
+  if (isValid.value) {
+    emit('next')
+  }
 }
 </script>
 
@@ -67,27 +75,31 @@ const handleNext = () => {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              ปีการศึกษา <span class="text-gray-400 font-normal">(ไม่บังคับ)</span>
+              ปีการศึกษา <span class="text-red-500">*</span>
             </label>
-            <select 
+            <select
               v-model="payload.admission.academic_year_id"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-shadow"
+              class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-shadow"
+              :class="isNextClicked && !payload.admission.academic_year_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'"
             >
-              <option :value="null">ยังไม่ระบุ</option>
+              <option :value="null">— กรุณาเลือก —</option>
               <option v-for="year in academicYears" :key="year.id" :value="year.id">{{ year.name || year.year }}</option>
             </select>
+            <p v-if="isNextClicked && !payload.admission.academic_year_id" class="text-xs text-red-500">กรุณาเลือกปีการศึกษา</p>
           </div>
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              ห้องเรียน <span class="text-gray-400 font-normal">(ไม่บังคับ)</span>
+              ห้องเรียน <span class="text-red-500">*</span>
             </label>
-            <select 
+            <select
               v-model="payload.admission.classroom_id"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-shadow"
+              class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-shadow"
+              :class="isNextClicked && !payload.admission.classroom_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'"
             >
-              <option :value="null">ยังไม่จัดห้อง</option>
+              <option :value="null">— กรุณาเลือก —</option>
               <option v-for="room in classrooms" :key="room.id" :value="room.id">{{ room.display_name || room.name || `${room.grade_level}/${room.section}` }}</option>
             </select>
+            <p v-if="isNextClicked && !payload.admission.classroom_id" class="text-xs text-red-500">กรุณาเลือกห้องเรียน</p>
           </div>
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">เลขที่</label>
@@ -98,12 +110,16 @@ const handleNext = () => {
             />
           </div>
           <div class="space-y-1.5">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">วันที่รับเข้าเรียน</label>
-            <input 
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              วันที่รับเข้าเรียน <span class="text-red-500">*</span>
+            </label>
+            <input
               v-model="payload.admission.enrollment_date"
-              type="date" 
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-shadow"
+              type="date"
+              class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-shadow"
+              :class="isNextClicked && !payload.admission.enrollment_date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'"
             />
+            <p v-if="isNextClicked && !payload.admission.enrollment_date" class="text-xs text-red-500">กรุณาระบุวันที่รับเข้าเรียน</p>
           </div>
         </div>
       </div>
