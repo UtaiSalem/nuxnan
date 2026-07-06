@@ -96,8 +96,7 @@ const formattedIdNumber = computed(() => {
 
 // Computed: Profile image URL
 const studentImageUrl = computed(() => {
-  if (!props.student.profile_image) return null
-  return `/storage/images/students/${props.student.class_level}/${props.student.class_section}/${props.student.profile_image}`
+  return props.student.profile_image_url || null
 })
 
 // Computed: Format dates

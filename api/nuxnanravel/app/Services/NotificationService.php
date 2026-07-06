@@ -3,15 +3,11 @@
 namespace App\Services;
 
 use App\Models\Notification;
-use Illuminate\Support\Collection;
 
 class NotificationService
 {
     /**
      * Send a single notification
-     *
-     * @param array $data
-     * @return Notification
      */
     public function send(array $data): Notification
     {
@@ -30,7 +26,7 @@ class NotificationService
     /**
      * Send bulk notifications
      *
-     * @param array $notifications Array of arrays containing notification fields
+     * @param  array  $notifications  Array of arrays containing notification fields
      * @return int Number of notifications sent
      */
     public function sendBulk(array $notifications): int

@@ -2,39 +2,38 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-
 use App\Traits\Auditable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class StudentHomeVisit extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         // Foreign keys
         'academy_id',
         'student_id',
-        
+
         // Zone Information
         'zone_id',
-        
+
         // Visit Information
         'visit_date',
         'visit_time',
         'visitor_name',
         'visitor_position',
         'visit_status',
-        
+
         // Observations and Notes
         'observations',
         'notes',
-        
+
         // Recommendations
         'recommendations',
         'follow_up',
         'next_visit',
-        
+
         // Audit
         'created_by',
     ];
@@ -50,12 +49,12 @@ class StudentHomeVisit extends Model
     {
         return $query->where('visit_date', '>=', now()->subDays($days));
     }
-    
+
     public function scopeByStudent($query, $studentId)
     {
         return $query->where('student_id', $studentId);
     }
-    
+
     public function scopeByStatus($query, $status)
     {
         return $query->where('visit_status', $status);
@@ -66,7 +65,7 @@ class StudentHomeVisit extends Model
     {
         return $this->visit_date ? $this->visit_date->format('d/m/Y') : null;
     }
-    
+
     public function getFormattedVisitTimeAttribute()
     {
         return $this->visit_time ? date('H:i', strtotime($this->visit_time)) : null;
@@ -84,15 +83,15 @@ class StudentHomeVisit extends Model
     {
         return $this->belongsTo(Academy::class);
     }
-    
+
     /**
      * Relationship to creator (Teacher/User)
      */
     public function creator()
     {
-        return $this->belongsTo(\App\Models\User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by');
     }
-    
+
     /**
      * Create home visit from student
      */
@@ -152,4 +151,3 @@ class StudentHomeVisit extends Model
         return $this->belongsTo(HomeVisitZone::class, 'zone_id');
     }
 }
-

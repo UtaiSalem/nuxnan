@@ -67,6 +67,7 @@ class PostLocation extends Model
                 'lng' => (float) $this->longitude,
             ];
         }
+
         return null;
     }
 
@@ -76,12 +77,12 @@ class PostLocation extends Model
     public function scopeNear($query, float $lat, float $lng, float $radiusKm = 10)
     {
         // Haversine formula for distance calculation
-        $haversine = "(6371 * acos(cos(radians(?)) 
+        $haversine = '(6371 * acos(cos(radians(?)) 
                      * cos(radians(latitude)) 
                      * cos(radians(longitude) - radians(?)) 
                      + sin(radians(?)) 
-                     * sin(radians(latitude))))";
-        
+                     * sin(radians(latitude))))';
+
         return $query
             ->selectRaw("*, {$haversine} AS distance", [$lat, $lng, $lat])
             ->whereRaw("{$haversine} < ?", [$lat, $lng, $lat, $radiusKm])

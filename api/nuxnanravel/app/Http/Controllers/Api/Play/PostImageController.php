@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Api\Play;
 
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Play\PostImageCommentResource;
 use App\Models\Post;
 use App\Models\PostImage;
-use Illuminate\Http\Request;
 use App\Models\PostImageComment;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Play\PostImageCommentResource;
 
-class PostImageController extends \App\Http\Controllers\Controller
+class PostImageController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -64,12 +65,12 @@ class PostImageController extends \App\Http\Controllers\Controller
      */
     public function destroy(Post $post, PostImage $image)
     {
-        Storage::disk('public')->delete('images/posts/'. $image->filename);
+        Storage::disk('public')->delete('images/posts/'.$image->filename);
         $image->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Image deleted'
+            'message' => 'Image deleted',
         ], 200);
     }
 
@@ -77,12 +78,12 @@ class PostImageController extends \App\Http\Controllers\Controller
     public function storeComment(Request $request, PostImage $post_image)
     {
         $request->validate([
-            'content' => 'required|string'
+            'content' => 'required|string',
         ]);
 
         $image_comment = $post_image->image_comments()->create([
             'content' => $request->content,
-            'user_id' => auth()->id()
+            'user_id' => auth()->id(),
         ]);
 
         if ($image_comment) {
@@ -99,7 +100,7 @@ class PostImageController extends \App\Http\Controllers\Controller
         ], 200);
     }
 
-    //get comments
+    // get comments
     public function getComments(PostImage $post_image)
     {
         return response()->json([
@@ -117,16 +118,16 @@ class PostImageController extends \App\Http\Controllers\Controller
         if ($post_image_comment->user_id !== auth()->id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้'
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้',
             ], 403);
         }
 
         $request->validate([
-            'content' => 'required|string'
+            'content' => 'required|string',
         ]);
 
         $post_image_comment->update([
-            'content' => $request->content
+            'content' => $request->content,
         ]);
 
         return response()->json([
@@ -144,23 +145,23 @@ class PostImageController extends \App\Http\Controllers\Controller
         // Check authorization - comment owner or post image owner can delete
         $postImage = $post_image_comment->postImage;
         $postOwnerId = $postImage?->post?->user_id ?? null;
-        
+
         if ($post_image_comment->user_id !== auth()->id() && $postOwnerId !== auth()->id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้'
+                'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้',
             ], 403);
         }
 
         // Detach likes and dislikes
         $post_image_comment->liked()->detach();
         $post_image_comment->disliked()->detach();
-        
+
         // Store reference to post image before delete
         $postImageRef = $post_image_comment->postImage;
-        
+
         $post_image_comment->delete();
-        
+
         // Decrement comments count
         if ($postImageRef) {
             $postImageRef->decrement('comments');
@@ -168,7 +169,7 @@ class PostImageController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบความคิดเห็นสำเร็จ'
+            'message' => 'ลบความคิดเห็นสำเร็จ',
         ], 200);
     }
 }

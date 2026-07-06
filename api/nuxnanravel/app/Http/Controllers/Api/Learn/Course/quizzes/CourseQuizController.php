@@ -17,10 +17,14 @@ use App\Models\CourseQuizResult;
 use App\Models\CourseRemediationEnrollment;
 use App\Models\CourseRemediationSession;
 use App\Models\Question;
+use App\Models\QuestionImage;
 use App\Models\QuestionOption;
 use App\Models\UserAnswerQuestion;
 use App\Services\AttendanceEligibilityService;
 use App\Services\ContentVisibilityService;
+use App\Services\CourseMediaService;
+use App\Services\CourseScoreService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +38,7 @@ class CourseQuizController extends Controller
     private const REMEDIATION_SESSIONS_ENABLED = false;
 
     protected AttendanceEligibilityService $eligibilityService;
+
     protected ContentVisibilityService $visibility;
 
     public function __construct(AttendanceEligibilityService $eligibilityService, ContentVisibilityService $visibility)
@@ -119,7 +124,7 @@ class CourseQuizController extends Controller
         $isCourseAdmin = $course->isAdmin($user);
 
         // Visibility check for student
-        if (!$isCourseAdmin) {
+        if (! $isCourseAdmin) {
             $this->visibility->assertVisibleOrFail($quiz, $user, 404);
         }
 
@@ -305,8 +310,8 @@ class CourseQuizController extends Controller
         try {
             DB::beginTransaction();
 
-            $mediaService = app(\App\Services\CourseMediaService::class);
-            $scoreService = app(\App\Services\CourseScoreService::class);
+            $mediaService = app(CourseMediaService::class);
+            $scoreService = app(CourseScoreService::class);
 
             $questions = $quiz->questions;
             foreach ($questions as $question) {
@@ -314,8 +319,8 @@ class CourseQuizController extends Controller
                 if ($question->images) {
                     foreach ($question->images as $q_image) {
                         $mediaService->deleteIfUnused(
-                            self::QUIZ_IMAGE_PATH . $q_image->filename,
-                            \App\Models\QuestionImage::class,
+                            self::QUIZ_IMAGE_PATH.$q_image->filename,
+                            QuestionImage::class,
                             'filename',
                             $q_image->filename
                         );
@@ -328,8 +333,8 @@ class CourseQuizController extends Controller
                     if ($q_option->images) {
                         foreach ($q_option->images as $q_opt_image) {
                             $mediaService->deleteIfUnused(
-                                self::QUIZ_IMAGE_PATH . $q_opt_image->filename,
-                                \App\Models\QuestionImage::class,
+                                self::QUIZ_IMAGE_PATH.$q_opt_image->filename,
+                                QuestionImage::class,
                                 'filename',
                                 $q_opt_image->filename
                             );
@@ -412,7 +417,7 @@ class CourseQuizController extends Controller
     /**
      * Search quizzes across all courses that user has admin access to
      */
-    public function searchQuizzes(Request $request): \Illuminate\Http\JsonResponse
+    public function searchQuizzes(Request $request): JsonResponse
     {
         $query = $request->input('q', '');
 
@@ -450,7 +455,7 @@ class CourseQuizController extends Controller
         ]);
     }
 
-    public function duplicateQuiz(CourseQuiz $quiz, Request $request): \Illuminate\Http\JsonResponse
+    public function duplicateQuiz(CourseQuiz $quiz, Request $request): JsonResponse
     {
         try {
             DB::beginTransaction();
@@ -652,6 +657,6 @@ class CourseQuizController extends Controller
 
     private function updateCourseTotalScore(CourseQuiz $quiz, int $score): void
     {
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($quiz->course);
+        app(CourseScoreService::class)->syncCourseTotalScore($quiz->course);
     }
 }

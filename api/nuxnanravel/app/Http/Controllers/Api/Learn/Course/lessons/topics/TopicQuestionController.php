@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons\topics;
 
-use App\Models\Topic;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\questions\QuestionResource;
 use App\Models\Question;
+use App\Models\Topic;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\questions\QuestionResource;
 
-class TopicQuestionController extends \App\Http\Controllers\Controller
+class TopicQuestionController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -38,19 +39,20 @@ class TopicQuestionController extends \App\Http\Controllers\Controller
             'points' => $request->points,
         ]);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             $fileNames = [];
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $image, $fileName);
                 $fileNames[] = $fileName;
 
                 $question->images()->create([
-                    'filename' => $fileName
+                    'filename' => $fileName,
                 ]);
             }
         }
+
         return response()->json([
             'question' => new QuestionResource($question),
         ], 200);
@@ -97,7 +99,7 @@ class TopicQuestionController extends \App\Http\Controllers\Controller
             $option->images()->delete();
         }
         $question->options()->delete();
-        
+
         $question->delete();
     }
 }

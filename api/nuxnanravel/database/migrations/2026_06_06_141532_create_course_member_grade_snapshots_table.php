@@ -13,20 +13,20 @@ return new class extends Migration
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_member_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            
+
             $table->decimal('earned_score', 10, 2);
             $table->decimal('max_score', 10, 2);
             $table->decimal('percentage', 5, 2);
             $table->string('letter_grade', 5)->nullable();
             $table->decimal('grade_point', 3, 2)->nullable();
-            
+
             $table->json('breakdown_json')->nullable();
             $table->uuid('published_run_id')->index();
             $table->boolean('is_current')->default(true)->index();
-            
+
             $table->timestamp('published_at')->useCurrent();
             $table->foreignId('published_by')->nullable()->constrained('users')->nullOnDelete();
-            
+
             $table->unique(['course_member_id', 'published_run_id'], 'unique_member_run');
             $table->timestamps();
         });

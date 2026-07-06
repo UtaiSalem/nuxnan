@@ -40,7 +40,7 @@ class AuditLogController extends Controller
 
         // Filter by entity type
         if ($request->filled('entity_type')) {
-            $query->where('entity_type', 'like', '%' . $request->entity_type . '%');
+            $query->where('entity_type', 'like', '%'.$request->entity_type.'%');
         }
 
         // Filter by entity ID
@@ -83,7 +83,7 @@ class AuditLogController extends Controller
                 'last_page' => $logs->lastPage(),
                 'per_page' => $logs->perPage(),
                 'total' => $logs->total(),
-            ]
+            ],
         ]);
     }
 
@@ -100,7 +100,7 @@ class AuditLogController extends Controller
                 ...$auditLog->toArray(),
                 'description' => $auditLog->description,
                 'changed_fields' => $auditLog->changed_fields,
-            ]
+            ],
         ]);
     }
 
@@ -115,7 +115,7 @@ class AuditLogController extends Controller
         ]);
 
         $logs = AuditLog::with('user:id,first_name,last_name,avatar')
-            ->where('entity_type', 'App\\Models\\' . $request->entity_type)
+            ->where('entity_type', 'App\\Models\\'.$request->entity_type)
             ->where('entity_id', $request->entity_id)
             ->orderBy('created_at', 'desc')
             ->limit($request->get('limit', 50))
@@ -128,7 +128,7 @@ class AuditLogController extends Controller
                     ...$log->toArray(),
                     'description' => $log->description,
                 ];
-            })
+            }),
         ]);
     }
 
@@ -149,7 +149,7 @@ class AuditLogController extends Controller
                     ...$log->toArray(),
                     'description' => $log->description,
                 ];
-            })
+            }),
         ]);
     }
 
@@ -165,7 +165,7 @@ class AuditLogController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $actions
+            'data' => $actions,
         ]);
     }
 
@@ -182,7 +182,7 @@ class AuditLogController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $modules
+            'data' => $modules,
         ]);
     }
 
@@ -226,7 +226,7 @@ class AuditLogController extends Controller
                     'start' => $startDate,
                     'end' => $endDate,
                 ],
-            ]
+            ],
         ]);
     }
 
@@ -267,7 +267,7 @@ class AuditLogController extends Controller
             'meta' => [
                 'total' => $logs->count(),
                 'exported_at' => now()->toIso8601String(),
-            ]
+            ],
         ]);
     }
 
@@ -288,7 +288,7 @@ class AuditLogController extends Controller
             'data' => [
                 'deleted_count' => $deleted,
                 'retention_days' => $request->retention_days,
-            ]
+            ],
         ]);
     }
 }

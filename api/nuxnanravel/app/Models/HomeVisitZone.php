@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class HomeVisitZone extends Model
 {
@@ -50,4 +50,3 @@ class HomeVisitZone extends Model
         return $this->homeVisits()->count();
     }
 }
-

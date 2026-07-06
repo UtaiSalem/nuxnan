@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Course;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CourseMember extends Model
 {
@@ -54,7 +52,7 @@ class CourseMember extends Model
         return $this->belongsTo(CourseGroup::class, 'group_id');
     }
 
-    public function members():HasMany
+    public function members(): HasMany
     {
         return $this->hasMany(User::class);
     }
@@ -69,7 +67,7 @@ class CourseMember extends Model
         return $this->hasMany(CoursePermission::class);
     }
 
-    //members accessors sort by order_number
+    // members accessors sort by order_number
     public function getMembersAttribute()
     {
         return $this->members()->orderBy('order_number')->get();
@@ -80,9 +78,9 @@ class CourseMember extends Model
      */
     public function getTotalAchievedScore(): float
     {
-        return (float)($this->achieved_score ?? 0) + 
-               (float)($this->external_score_points ?? 0) + 
-               (float)($this->bonus_points ?? 0);
+        return (float) ($this->achieved_score ?? 0) +
+               (float) ($this->external_score_points ?? 0) +
+               (float) ($this->bonus_points ?? 0);
     }
 
     /**
@@ -90,19 +88,19 @@ class CourseMember extends Model
      */
     public function getPercentageScore(): ?float
     {
-        if (!$this->course || $this->course->total_score <= 0) {
+        if (! $this->course || $this->course->total_score <= 0) {
             return null;
         }
 
         $totalAchieved = $this->getTotalAchievedScore();
         $percentage = ($totalAchieved / $this->course->total_score) * 100;
-        
+
         return min(100, max(0, $percentage));
     }
 
     /**
      * Calculate Thai grade based on percentage score
-     * 
+     *
      /**
      * Calculate Thai grade based on percentage score (Static helper)
      */
@@ -133,7 +131,7 @@ class CourseMember extends Model
     public function getCalculatedGrade(): ?float
     {
         $percentage = $this->getPercentageScore();
-        
+
         if ($percentage === null) {
             return null;
         }
@@ -146,7 +144,7 @@ class CourseMember extends Model
      */
     public static function getGradeNameFromGrade($grade)
     {
-        $gradeStr = (string)$grade;
+        $gradeStr = (string) $grade;
         $gradeNames = [
             '4' => 'A',
             '3.5' => 'B+',
@@ -155,7 +153,7 @@ class CourseMember extends Model
             '2' => 'C',
             '1.5' => 'D+',
             '1' => 'D',
-            '0' => 'F'
+            '0' => 'F',
         ];
 
         return $gradeNames[$gradeStr] ?? null;
@@ -169,6 +167,7 @@ class CourseMember extends Model
         // edited_grade = manual override by teacher (highest priority)
         // Otherwise, always calculate from actual achieved_score (never use stale grade_progress = 0)
         $grade = $this->edited_grade ?? $this->getCalculatedGrade() ?? $this->grade_progress;
+
         return self::getGradeNameFromGrade($grade);
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Requests\Student;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -19,7 +20,7 @@ class UpdateHealthRequest extends FormRequest
             'chronic_diseases' => 'nullable|string|max:1000',
             'medications' => 'nullable|string|max:1000',
             'blood_type' => 'nullable|string|max:10',
-            'rh_factor' => 'nullable|string|max:10'
+            'rh_factor' => 'nullable|string|max:10',
         ];
     }
 }

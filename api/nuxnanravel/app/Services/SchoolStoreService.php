@@ -35,7 +35,7 @@ class SchoolStoreService
             foreach ($items as $item) {
                 $product = StoreProduct::findOrFail($item['product_id']);
 
-                if (!$product->is_active) {
+                if (! $product->is_active) {
                     throw new \Exception("สินค้า '{$product->name}' ไม่พร้อมจำหน่าย");
                 }
 
@@ -66,24 +66,24 @@ class SchoolStoreService
 
             // Validate payment
             if ($paymentMethod === 'points') {
-                if (!$store->allow_points_payment) {
+                if (! $store->allow_points_payment) {
                     throw new \Exception('ร้านค้านี้ไม่รับชำระด้วยพ้อยท์');
                 }
                 if ($user->pp < $totalPoints) {
-                    throw new \Exception('พ้อยท์ไม่เพียงพอ ต้องการ ' . $totalPoints . ' คุณมี ' . $user->pp);
+                    throw new \Exception('พ้อยท์ไม่เพียงพอ ต้องการ '.$totalPoints.' คุณมี '.$user->pp);
                 }
             } elseif ($paymentMethod === 'wallet') {
-                if (!$store->allow_wallet_payment) {
+                if (! $store->allow_wallet_payment) {
                     throw new \Exception('ร้านค้านี้ไม่รับชำระด้วยกระเป๋าเงิน');
                 }
                 if ($user->wallet < $subtotal) {
-                    throw new \Exception('ยอดเงินในกระเป๋าไม่เพียงพอ ต้องการ ' . $subtotal . ' คุณมี ' . $user->wallet);
+                    throw new \Exception('ยอดเงินในกระเป๋าไม่เพียงพอ ต้องการ '.$subtotal.' คุณมี '.$user->wallet);
                 }
             }
 
             // Min order check
             if ($store->min_order_amount > 0 && $subtotal < $store->min_order_amount) {
-                throw new \Exception('ยอดสั่งซื้อขั้นต่ำ ' . $store->min_order_amount . ' บาท');
+                throw new \Exception('ยอดสั่งซื้อขั้นต่ำ '.$store->min_order_amount.' บาท');
             }
 
             // Process payment
@@ -93,11 +93,11 @@ class SchoolStoreService
                     $totalPoints,
                     'store_purchase',
                     null,
-                    'ซื้อสินค้าจากร้าน ' . $store->name,
+                    'ซื้อสินค้าจากร้าน '.$store->name,
                     ['store_id' => $store->id]
                 );
 
-                if (!$transaction) {
+                if (! $transaction) {
                     throw new \Exception('ไม่สามารถหักพ้อยท์ได้');
                 }
             } elseif ($paymentMethod === 'wallet') {
@@ -148,7 +148,7 @@ class SchoolStoreService
     public function confirmOrder(StoreOrder $order, User $processedBy): StoreOrder
     {
         if ($order->status !== StoreOrder::STATUS_PENDING) {
-            throw new \Exception('ไม่สามารถยืนยันคำสั่งซื้อสถานะ ' . $order->status_label);
+            throw new \Exception('ไม่สามารถยืนยันคำสั่งซื้อสถานะ '.$order->status_label);
         }
 
         $order->update([
@@ -170,6 +170,7 @@ class SchoolStoreService
         }
 
         $order->update(['status' => StoreOrder::STATUS_PROCESSING]);
+
         return $order->fresh();
     }
 
@@ -183,6 +184,7 @@ class SchoolStoreService
         }
 
         $order->update(['status' => StoreOrder::STATUS_READY]);
+
         return $order->fresh();
     }
 
@@ -191,8 +193,8 @@ class SchoolStoreService
      */
     public function completeOrder(StoreOrder $order): StoreOrder
     {
-        if (!$order->canBeCompleted()) {
-            throw new \Exception('ไม่สามารถเสร็จสิ้นคำสั่งซื้อสถานะ ' . $order->status_label);
+        if (! $order->canBeCompleted()) {
+            throw new \Exception('ไม่สามารถเสร็จสิ้นคำสั่งซื้อสถานะ '.$order->status_label);
         }
 
         $order->update([
@@ -209,8 +211,8 @@ class SchoolStoreService
     public function cancelOrder(StoreOrder $order, string $reason, User $cancelledBy): StoreOrder
     {
         return DB::transaction(function () use ($order, $reason, $cancelledBy) {
-            if (!$order->canBeCancelled()) {
-                throw new \Exception('ไม่สามารถยกเลิกคำสั่งซื้อได้ สถานะปัจจุบัน: ' . $order->status_label);
+            if (! $order->canBeCancelled()) {
+                throw new \Exception('ไม่สามารถยกเลิกคำสั่งซื้อได้ สถานะปัจจุบัน: '.$order->status_label);
             }
 
             // Refund payment
@@ -223,7 +225,7 @@ class SchoolStoreService
                         $order->points_spent,
                         'store_refund',
                         $order->id,
-                        'คืนพ้อยท์จากยกเลิกคำสั่งซื้อ #' . $order->order_number
+                        'คืนพ้อยท์จากยกเลิกคำสั่งซื้อ #'.$order->order_number
                     );
                 } elseif ($order->payment_method === 'wallet') {
                     $user->increment('wallet', $order->total);
@@ -281,8 +283,12 @@ class SchoolStoreService
     {
         $query = $store->orders()->where('payment_status', StoreOrder::PAYMENT_PAID);
 
-        if ($startDate) $query->where('created_at', '>=', $startDate);
-        if ($endDate) $query->where('created_at', '<=', $endDate);
+        if ($startDate) {
+            $query->where('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->where('created_at', '<=', $endDate);
+        }
 
         $orders = $query->get();
 

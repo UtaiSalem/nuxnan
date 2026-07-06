@@ -2,11 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -165,7 +166,7 @@ class RolePermissionSeeder extends Seeder
             [
                 'name' => 'Super Admin',
                 'password' => Hash::make('password'),
-                'reference_code' => \Illuminate\Support\Str::uuid(),
+                'reference_code' => Str::uuid(),
                 'personal_code' => User::generateReferralCode(),
                 'email_verified_at' => now(),
                 'verified' => true,

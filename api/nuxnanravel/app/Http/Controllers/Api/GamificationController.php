@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\PointStreak;
+use App\Models\User;
 use App\Services\AchievementService;
 use App\Services\ActivitySummaryService;
 use App\Services\GamificationService;
@@ -371,7 +373,7 @@ class GamificationController extends Controller
         try {
             $limit = $request->input('limit', 10);
 
-            $users = \App\Models\User::orderBy('pp', 'desc')
+            $users = User::orderBy('pp', 'desc')
                 ->limit($limit)
                 ->get(['id', 'name', 'pp', 'profile_photo_path'])
                 ->map(function ($user, $index) {
@@ -413,7 +415,7 @@ class GamificationController extends Controller
     {
         $limit = $request->input('limit', 10);
 
-        $streaks = \App\Models\PointStreak::with('user:id,name,profile_photo_path')
+        $streaks = PointStreak::with('user:id,name,profile_photo_path')
             ->orderBy('current_streak', 'desc')
             ->limit($limit)
             ->get()
@@ -443,7 +445,7 @@ class GamificationController extends Controller
     {
         $limit = $request->input('limit', 10);
 
-        $users = \App\Models\User::withCount('userAchievements')
+        $users = User::withCount('userAchievements')
             ->orderBy('user_achievements_count', 'desc')
             ->limit($limit)
             ->get(['id', 'name', 'profile_photo_path'])
@@ -473,7 +475,7 @@ class GamificationController extends Controller
     {
         $limit = $request->input('limit', 10);
 
-        $users = \App\Models\User::orderBy('level', 'desc')
+        $users = User::orderBy('level', 'desc')
             ->orderBy('pp', 'desc')
             ->limit($limit)
             ->get(['id', 'name', 'level', 'profile_photo_path'])
@@ -506,8 +508,8 @@ class GamificationController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'points_rank' => $user ? \App\Models\User::where('pp', '>', $user->pp)->count() + 1 : null,
-                'total_users' => \App\Models\User::count(),
+                'points_rank' => $user ? User::where('pp', '>', $user->pp)->count() + 1 : null,
+                'total_users' => User::count(),
             ],
         ]);
     }

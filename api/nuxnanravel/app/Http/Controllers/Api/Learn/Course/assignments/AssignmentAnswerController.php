@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\assignments;
 
+use App\Enums\UsageEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
 use App\Models\Assignment;
 use App\Models\AssignmentAnswer;
+use App\Models\Course;
 use App\Models\CourseMember;
+use App\Services\ContentVisibilityService;
+use App\Services\CourseScoreService;
+use App\Services\UsageEventService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-
-use App\Services\ContentVisibilityService;
 
 class AssignmentAnswerController extends Controller
 {
@@ -29,15 +33,15 @@ class AssignmentAnswerController extends Controller
     {
         $user = auth()->user();
         $courseId = $request->course_id;
-        
+
         // Try to resolve course from assignment if not provided
         $course = null;
         if ($courseId) {
-            $course = \App\Models\Course::find($courseId);
+            $course = Course::find($courseId);
         } else {
             $lesson = $assignment->getLesson();
-            if ($assignment->assignmentable_type === \App\Models\Course::class) {
-                $course = \App\Models\Course::find($assignment->assignmentable_id);
+            if ($assignment->assignmentable_type === Course::class) {
+                $course = Course::find($assignment->assignmentable_id);
             } elseif ($lesson) {
                 $course = $lesson->course;
             }
@@ -46,7 +50,7 @@ class AssignmentAnswerController extends Controller
         $isCourseAdmin = $course ? $course->isAdmin($user) : false;
 
         // Visibility guard for students
-        if (!$isCourseAdmin) {
+        if (! $isCourseAdmin) {
             $this->visibility->assertVisibleOrFail($assignment, $user, 404);
         }
 
@@ -73,14 +77,14 @@ class AssignmentAnswerController extends Controller
     {
         $user = auth()->user();
         $courseId = $request->course_id;
-        
+
         $course = null;
         if ($courseId) {
-            $course = \App\Models\Course::find($courseId);
+            $course = Course::find($courseId);
         } else {
             $lesson = $assignment->getLesson();
-            if ($assignment->assignmentable_type === \App\Models\Course::class) {
-                $course = \App\Models\Course::find($assignment->assignmentable_id);
+            if ($assignment->assignmentable_type === Course::class) {
+                $course = Course::find($assignment->assignmentable_id);
             } elseif ($lesson) {
                 $course = $lesson->course;
             }
@@ -89,13 +93,13 @@ class AssignmentAnswerController extends Controller
         $isCourseAdmin = $course ? $course->isAdmin($user) : false;
 
         // Visibility guard for students
-        if (!$isCourseAdmin) {
+        if (! $isCourseAdmin) {
             $this->visibility->assertVisibleOrFail($assignment, $user, 403);
         }
 
         // Lifecycle guard: block regular assignment submissions after the course ends.
         if ($course) {
-            $gate = \Illuminate\Support\Facades\Gate::inspect('submitAssignment', $course);
+            $gate = Gate::inspect('submitAssignment', $course);
             if ($gate->denied()) {
                 return response()->json([
                     'success' => false,
@@ -108,7 +112,7 @@ class AssignmentAnswerController extends Controller
         // Completion requirement guard
         $lesson = $assignment->getLesson();
         if ($lesson && $lesson->require_completion_before_exercises) {
-            if (!$lesson->canUserDoExercises($user, $isCourseAdmin)) {
+            if (! $lesson->canUserDoExercises($user, $isCourseAdmin)) {
                 return response()->json([
                     'success' => false,
                     'code' => 'LESSON_COMPLETION_REQUIRED',
@@ -154,7 +158,7 @@ class AssignmentAnswerController extends Controller
             ]);
 
             // Fire gamification event
-            \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::ASSIGNMENT_SUBMIT->value, 'assignment', $assignment->id);
+            UsageEventService::fire(auth()->user(), UsageEventType::ASSIGNMENT_SUBMIT->value, 'assignment', $assignment->id);
         }
 
         if ($request->hasFile('images')) {
@@ -185,9 +189,9 @@ class AssignmentAnswerController extends Controller
     public function destroy(Assignment $assignment, AssignmentAnswer $answer, Request $request)
     {
         $user = auth()->user();
-        
+
         // Ownership check: if student, can only delete their own answer
-        if (!$assignment->course->isAdmin($user)) {
+        if (! $assignment->course->isAdmin($user)) {
             if ($answer->user_id !== $user->id) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
             }
@@ -250,12 +254,12 @@ class AssignmentAnswerController extends Controller
 
         // Only update score if member found (e.g. not admin grading themselves or test data)
         if ($courseMember) {
-            app(\App\Services\CourseScoreService::class)->recompute($courseMember);
+            app(CourseScoreService::class)->recompute($courseMember);
         }
 
         // Fire gamification event
         if ($answer->points > 0) {
-            \App\Services\UsageEventService::fire($answer->user, \App\Enums\UsageEventType::ASSIGNMENT_GRADED->value, 'assignment', $assignment->id, ['points' => $answer->points]);
+            UsageEventService::fire($answer->user, UsageEventType::ASSIGNMENT_GRADED->value, 'assignment', $assignment->id, ['points' => $answer->points]);
         }
 
         return response()->json([

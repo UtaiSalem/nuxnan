@@ -2,14 +2,13 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
+use App\Models\AssignmentImage;
 use App\Models\Course;
 use App\Models\LessonImage;
-use App\Models\TopicImage;
-use App\Models\AssignmentImage;
 use App\Models\QuestionImage;
+use App\Models\TopicImage;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\File;
 
 class AuditCourseMedia extends Command
 {
@@ -64,7 +63,7 @@ class AuditCourseMedia extends Command
                 ->pluck($field);
 
             if ($duplicates->isNotEmpty()) {
-                $this->warn("{$label}: Found " . $duplicates->count() . " filenames used by multiple records.");
+                $this->warn("{$label}: Found ".$duplicates->count().' filenames used by multiple records.');
                 foreach ($duplicates as $filename) {
                     $count = $model::where($field, $filename)->count();
                     $this->line("  - {$filename} (used by {$count} records)");
@@ -93,7 +92,7 @@ class AuditCourseMedia extends Command
             $missingCount = 0;
 
             foreach ($records as $record) {
-                if (!Storage::disk('public')->exists($path . '/' . $record->$field)) {
+                if (! Storage::disk('public')->exists($path.'/'.$record->$field)) {
                     $missingCount++;
                     $this->error("Missing file for {$label} ID {$record->id}: {$path}/{$record->$field}");
                 }
@@ -119,8 +118,8 @@ class AuditCourseMedia extends Command
 
         foreach ($paths as $path => $config) {
             [$model, $field] = $config;
-            
-            if (!Storage::disk('public')->exists($path)) {
+
+            if (! Storage::disk('public')->exists($path)) {
                 continue;
             }
 
@@ -131,7 +130,7 @@ class AuditCourseMedia extends Command
                 $filename = basename($filePath);
                 $existsInDb = $model::where($field, $filename)->exists();
 
-                if (!$existsInDb) {
+                if (! $existsInDb) {
                     $orphanedCount++;
                     $this->warn("Orphaned file: {$filePath}");
                 }

@@ -11,7 +11,7 @@ class UserQuestProgress extends Model
 
     protected $fillable = [
         'user_id', 'quest_id', 'quest_date', 'progress',
-        'is_completed', 'completed_at', 'reward_claimed'
+        'is_completed', 'completed_at', 'reward_claimed',
     ];
 
     protected $casts = [

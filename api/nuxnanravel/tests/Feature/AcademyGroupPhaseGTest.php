@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ActivityType;
 use App\Models\Academy;
 use App\Models\AcademyGroup;
 use App\Models\AcademyGroupMember;
@@ -10,8 +11,6 @@ use App\Models\AcademyMember;
 use App\Models\AcademyPost;
 use App\Models\Activity;
 use App\Models\User;
-use App\Models\UserMutedGroup;
-use App\Enums\ActivityType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,7 +19,9 @@ class AcademyGroupPhaseGTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
+
     protected $student;
+
     protected $academy;
 
     protected function setUp(): void
@@ -31,9 +32,9 @@ class AcademyGroupPhaseGTest extends TestCase
             'name' => 'Admin User',
             'email' => 'admin@test.com',
             'password' => bcrypt('password'),
-            'username' => 'admin_user_' . uniqid(),
-            'reference_code' => 'R' . uniqid(),
-            'personal_code' => 'P' . uniqid(),
+            'username' => 'admin_user_'.uniqid(),
+            'reference_code' => 'R'.uniqid(),
+            'personal_code' => 'P'.uniqid(),
             'pp' => 1000,
         ]);
 
@@ -41,9 +42,9 @@ class AcademyGroupPhaseGTest extends TestCase
             'name' => 'Student User',
             'email' => 'student@test.com',
             'password' => bcrypt('password'),
-            'username' => 'student_user_' . uniqid(),
-            'reference_code' => 'R2' . uniqid(),
-            'personal_code' => 'P2' . uniqid(),
+            'username' => 'student_user_'.uniqid(),
+            'reference_code' => 'R2'.uniqid(),
+            'personal_code' => 'P2'.uniqid(),
             'pp' => 1000,
         ]);
 
@@ -71,8 +72,8 @@ class AcademyGroupPhaseGTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['key', 'label', 'label_en', 'icon', 'color', 'order']
-                ]
+                    '*' => ['key', 'label', 'label_en', 'icon', 'color', 'order'],
+                ],
             ]);
     }
 
@@ -85,8 +86,8 @@ class AcademyGroupPhaseGTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['key', 'label', 'default']
-                ]
+                    '*' => ['key', 'label', 'default'],
+                ],
             ]);
     }
 
@@ -339,7 +340,7 @@ class AcademyGroupPhaseGTest extends TestCase
         $response->assertStatus(200)->assertJsonPath('muted', true);
         $this->assertDatabaseHas('user_muted_groups', [
             'user_id' => $this->admin->id,
-            'academy_group_id' => $group1->id
+            'academy_group_id' => $group1->id,
         ]);
 
         // Call feed after mute -> should not see G1 post (only G2 and Self)
@@ -349,7 +350,7 @@ class AcademyGroupPhaseGTest extends TestCase
         $response->assertStatus(200);
         $activities = $response->json('activities');
         $this->assertCount(2, $activities);
-        
+
         $contents = collect($activities)->pluck('target_resource.content');
         $this->assertContains('Post from G2', $contents);
         $this->assertContains('Post from Self', $contents);

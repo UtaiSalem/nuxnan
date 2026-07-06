@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
+use App\Models\Course;
+use App\Models\CourseGrade;
 use App\Models\GradebookAssessment;
 use App\Models\GradebookScore;
-use App\Models\CourseGrade;
-use App\Models\Course;
 use App\Models\Student;
-use App\Models\GradeScale;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class GradebookController extends Controller
@@ -21,9 +20,9 @@ class GradebookController extends Controller
     public function index(Request $request, int $courseId): JsonResponse
     {
         $course = Course::with(['academy', 'courseMembers.user'])->findOrFail($courseId);
-        
+
         // Check permission
-        if (!$this->canAccessGradebook($course)) {
+        if (! $this->canAccessGradebook($course)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -31,8 +30,8 @@ class GradebookController extends Controller
         $categoryId = $request->query('category_id');
 
         $assessments = GradebookAssessment::where('course_id', $courseId)
-            ->when($semesterId, fn($q) => $q->where('semester_id', $semesterId))
-            ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
+            ->when($semesterId, fn ($q) => $q->where('semester_id', $semesterId))
+            ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
             ->with(['category', 'scores.student', 'assignment', 'quiz'])
             ->orderBy('created_at')
             ->get();
@@ -62,8 +61,8 @@ class GradebookController extends Controller
     public function storeAssessment(Request $request, int $courseId): JsonResponse
     {
         $course = Course::findOrFail($courseId);
-        
-        if (!$this->canManageGradebook($course)) {
+
+        if (! $this->canManageGradebook($course)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -115,8 +114,8 @@ class GradebookController extends Controller
     {
         $course = Course::findOrFail($courseId);
         $assessment = GradebookAssessment::where('course_id', $courseId)->findOrFail($assessmentId);
-        
-        if (!$this->canManageGradebook($course)) {
+
+        if (! $this->canManageGradebook($course)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -147,8 +146,8 @@ class GradebookController extends Controller
     {
         $course = Course::findOrFail($courseId);
         $assessment = GradebookAssessment::where('course_id', $courseId)->findOrFail($assessmentId);
-        
-        if (!$this->canManageGradebook($course)) {
+
+        if (! $this->canManageGradebook($course)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -169,8 +168,8 @@ class GradebookController extends Controller
         $assessment = GradebookAssessment::where('course_id', $courseId)
             ->with(['scores.student', 'scores.grader'])
             ->findOrFail($assessmentId);
-        
-        if (!$this->canAccessGradebook($course)) {
+
+        if (! $this->canAccessGradebook($course)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -196,8 +195,8 @@ class GradebookController extends Controller
     {
         $course = Course::findOrFail($courseId);
         $assessment = GradebookAssessment::where('course_id', $courseId)->findOrFail($assessmentId);
-        
-        if (!$this->canManageGradebook($course)) {
+
+        if (! $this->canManageGradebook($course)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -216,7 +215,9 @@ class GradebookController extends Controller
                     ->where('student_id', $scoreData['student_id'])
                     ->first();
 
-                if (!$score) continue;
+                if (! $score) {
+                    continue;
+                }
 
                 if (isset($scoreData['score']) && $scoreData['score'] !== null) {
                     $score->grade(
@@ -232,7 +233,7 @@ class GradebookController extends Controller
                     }
                 }
             }
-            
+
             DB::commit();
 
             return response()->json([
@@ -242,9 +243,10 @@ class GradebookController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -256,13 +258,13 @@ class GradebookController extends Controller
     {
         $course = Course::findOrFail($courseId);
         $assessment = GradebookAssessment::where('course_id', $courseId)->findOrFail($assessmentId);
-        
-        if (!$this->canManageGradebook($course)) {
+
+        if (! $this->canManageGradebook($course)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
         $validated = $request->validate([
-            'score' => 'nullable|numeric|min:0|max:' . $assessment->max_score,
+            'score' => 'nullable|numeric|min:0|max:'.$assessment->max_score,
             'feedback' => 'nullable|string',
             'status' => 'nullable|in:pending,graded,excused,missing',
         ]);
@@ -296,8 +298,8 @@ class GradebookController extends Controller
     public function getCourseGrades(Request $request, int $courseId): JsonResponse
     {
         $course = Course::with('academy')->findOrFail($courseId);
-        
-        if (!$this->canAccessGradebook($course)) {
+
+        if (! $this->canAccessGradebook($course)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -340,8 +342,8 @@ class GradebookController extends Controller
     public function publishGrades(Request $request, int $courseId): JsonResponse
     {
         $course = Course::findOrFail($courseId);
-        
-        if (!$this->canManageGradebook($course)) {
+
+        if (! $this->canManageGradebook($course)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -352,12 +354,12 @@ class GradebookController extends Controller
         ]);
 
         $query = CourseGrade::where('course_id', $courseId);
-        
-        if (!empty($validated['semester_id'])) {
+
+        if (! empty($validated['semester_id'])) {
             $query->where('semester_id', $validated['semester_id']);
         }
 
-        if (!empty($validated['student_ids'])) {
+        if (! empty($validated['student_ids'])) {
             $query->whereIn('student_id', $validated['student_ids']);
         }
 
@@ -370,7 +372,7 @@ class GradebookController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'เผยแพร่เกรดสำเร็จ ' . $grades->count() . ' รายการ',
+            'message' => 'เผยแพร่เกรดสำเร็จ '.$grades->count().' รายการ',
         ]);
     }
 
@@ -383,13 +385,13 @@ class GradebookController extends Controller
         $course = Course::findOrFail($courseId);
 
         $student = Student::where('user_id', $user->id)->first();
-        if (!$student) {
+        if (! $student) {
             return response()->json(['success' => false, 'message' => 'ไม่พบข้อมูลนักเรียน'], 404);
         }
 
         $assessments = GradebookAssessment::where('course_id', $courseId)
             ->where('is_published', true)
-            ->with(['category', 'scores' => function($q) use ($student) {
+            ->with(['category', 'scores' => function ($q) use ($student) {
                 $q->where('student_id', $student->id);
             }])
             ->get();
@@ -411,7 +413,9 @@ class GradebookController extends Controller
     protected function canAccessGradebook(Course $course): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
         // Owner or instructor
         if ($course->user_id === $user->id || $course->instructor_id === $user->id) {
@@ -434,10 +438,10 @@ class GradebookController extends Controller
 
     protected function getCourseStudents(Course $course)
     {
-        return Student::whereHas('user', function($q) use ($course) {
-            $q->whereHas('courseMembers', function($q2) use ($course) {
+        return Student::whereHas('user', function ($q) use ($course) {
+            $q->whereHas('courseMembers', function ($q2) use ($course) {
                 $q2->where('course_id', $course->id)
-                   ->where('course_member_status', 1);
+                    ->where('course_member_status', 1);
             });
         })->with('user')->get();
     }
@@ -449,7 +453,7 @@ class GradebookController extends Controller
         foreach ($students as $student) {
             $row = [
                 'student_id' => $student->id,
-                'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                'student_name' => $student->first_name_th.' '.$student->last_name_th,
                 'student_number' => $student->student_id,
                 'scores' => [],
                 'total' => 0,
@@ -461,7 +465,7 @@ class GradebookController extends Controller
 
             foreach ($assessments as $assessment) {
                 $score = $assessment->scores->where('student_id', $student->id)->first();
-                
+
                 $row['scores'][$assessment->id] = [
                     'score' => $score?->score,
                     'status' => $score?->status ?? 'pending',

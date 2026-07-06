@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers\Api\Learn\Academy;
 
-use App\Http\Controllers\Controller;
-
-use App\Models\Academy;
-use App\Models\Activity;
-use App\Models\AcademyPost;
-use Illuminate\Http\Request;
 use App\Enums\ActivityType;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Play\ActivityResource;
+use App\Models\Academy;
+use App\Models\AcademyGroup;
+use App\Models\AcademyGroupAdmin;
+use App\Models\AcademyGroupMember;
+use App\Models\AcademyGroupPermission;
+use App\Models\AcademyPost;
+use App\Models\Activity;
+use App\Models\Notification;
+use App\Services\NotificationService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Requests\StoreAcademyPostRequest;
-use App\Http\Requests\UpdateAcademyPostRequest;
 
 class AcademyPostController extends Controller
 {
@@ -49,19 +53,19 @@ class AcademyPostController extends Controller
         }
 
         $validatedData = $request->validate([
-            'content'   => 'nullable|string|max:1000',
-            'images'    => 'array|max:4',
-            'images.*'  => 'image|mimes:jpeg,png,jpg,gif,svg|max:5120',
+            'content' => 'nullable|string|max:1000',
+            'images' => 'array|max:4',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:5120',
             'posted_as_group_id' => 'nullable|integer|exists:academy_groups,id',
-            'post_type'         => 'nullable|string|in:regular,announcement,event,director,attendance,achievement',
-            'target_audience'   => 'nullable|array',
+            'post_type' => 'nullable|string|in:regular,announcement,event,director,attendance,achievement',
+            'target_audience' => 'nullable|array',
             'target_audience.*' => 'string|in:student,teacher,parent,all',
-            'reward_points'     => 'nullable|integer|min:0|max:999',
-            'embed_data'        => 'nullable|array',
-            'is_pinned'         => 'nullable|boolean',
+            'reward_points' => 'nullable|integer|min:0|max:999',
+            'embed_data' => 'nullable|array',
+            'is_pinned' => 'nullable|boolean',
         ]);
 
-        if (empty($validatedData['content']) && !$request->hasFile('images')) {
+        if (empty($validatedData['content']) && ! $request->hasFile('images')) {
             return response()->json(['message' => 'Post cannot be empty.'], 422);
         }
 
@@ -69,32 +73,32 @@ class AcademyPostController extends Controller
         if ($request->filled('posted_as_group_id')) {
             $groupId = $validatedData['posted_as_group_id'];
             $userId = auth()->id();
-            
+
             // 1. ตรวจสอบว่าเป็นสมาชิก หรือ Admin ของกลุ่มนั้นหรือไม่
-            $isMember = \App\Models\AcademyGroupMember::where('academy_group_id', $groupId)
+            $isMember = AcademyGroupMember::where('academy_group_id', $groupId)
                 ->where('user_id', $userId)
                 ->exists();
-            $isAdmin = \App\Models\AcademyGroupAdmin::where('academy_group_id', $groupId)
+            $isAdmin = AcademyGroupAdmin::where('academy_group_id', $groupId)
                 ->where('user_id', $userId)
                 ->exists();
 
-            if (!$isMember && !$isAdmin) {
+            if (! $isMember && ! $isAdmin) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่ใช่สมาชิกของส่วนงานนี้'
+                    'message' => 'คุณไม่ใช่สมาชิกของส่วนงานนี้',
                 ], 403);
             }
 
             // 2. ตรวจสอบสิทธิ์ can_post ของกลุ่ม (STRICT permission check)
-            $canPost = \App\Models\AcademyGroupPermission::where('academy_group_id', $groupId)
+            $canPost = AcademyGroupPermission::where('academy_group_id', $groupId)
                 ->where('permission_key', 'can_post')
                 ->where('enabled', true)
                 ->exists();
 
-            if (!$canPost) {
+            if (! $canPost) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'ส่วนงานนี้ยังไม่ได้เปิดสิทธิ์โพสต์'
+                    'message' => 'ส่วนงานนี้ยังไม่ได้เปิดสิทธิ์โพสต์',
                 ], 403);
             }
         }
@@ -109,7 +113,7 @@ class AcademyPostController extends Controller
         $embedData = $validatedData['embed_data'] ?? null;
         $isPinned = $validatedData['is_pinned'] ?? false;
 
-        if (!$isAcademyAdmin) {
+        if (! $isAcademyAdmin) {
             $postType = 'regular';
             $targetAudience = null;
             $rewardPoints = 0;
@@ -117,7 +121,7 @@ class AcademyPostController extends Controller
             $isPinned = false;
         }
 
-        $post = new AcademyPost();
+        $post = new AcademyPost;
         $post->user_id = auth()->user()->id;
         $post->academy_id = $academy->id;
         $post->content = $content;
@@ -131,11 +135,11 @@ class AcademyPostController extends Controller
         $post->embed_data = $embedData;
         $post->is_pinned = $isPinned;
         $post->save();
-        
-        if($request->hasFile('images')) {
+
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $path = $image->storeAs('images/academies/posts', $fileName, 'public');
 
                 $post->images()->create([
@@ -146,7 +150,7 @@ class AcademyPostController extends Controller
             }
         }
 
-        $activity = new Activity();
+        $activity = new Activity;
         $activity->user_id = $post->user_id;
         $activity->activity_type = ActivityType::CREATE_POST->value;
         $activity->activityable()->associate($post);
@@ -155,13 +159,13 @@ class AcademyPostController extends Controller
         // Dispatch notifications for group post to all group members/admins
         if ($post->posted_as_group_id) {
             $groupId = $post->posted_as_group_id;
-            $group = \App\Models\AcademyGroup::find($groupId);
+            $group = AcademyGroup::find($groupId);
             if ($group) {
-                $memberIds = \App\Models\AcademyGroupMember::where('academy_group_id', $groupId)
+                $memberIds = AcademyGroupMember::where('academy_group_id', $groupId)
                     ->pluck('user_id');
-                $adminIds = \App\Models\AcademyGroupAdmin::where('academy_group_id', $groupId)
+                $adminIds = AcademyGroupAdmin::where('academy_group_id', $groupId)
                     ->pluck('user_id');
-                
+
                 $recipientIds = $memberIds->merge($adminIds)->unique()->filter(function ($id) use ($post) {
                     return $id != $post->user_id;
                 });
@@ -171,13 +175,13 @@ class AcademyPostController extends Controller
                     $notifications[] = [
                         'user_id' => $recipientId,
                         'sender_id' => auth()->id(),
-                        'type' => \App\Models\Notification::TYPE_GROUP_POST_CREATED,
+                        'type' => Notification::TYPE_GROUP_POST_CREATED,
                         'content' => "มีข่าวสารโพสต์ใหม่ในนามกลุ่ม \"{$group->name}\"",
                         'action_url' => "/academies/{$academy->name}/groups/{$groupId}",
                         'related_id' => $post->id,
                     ];
                 }
-                app(\App\Services\NotificationService::class)->sendBulk($notifications);
+                app(NotificationService::class)->sendBulk($notifications);
             }
         }
 
@@ -191,7 +195,7 @@ class AcademyPostController extends Controller
             'success' => true,
             'message' => 'Post created successfully.',
             'post' => $post->load('images', 'user', 'academy'),
-            'activity' => new \App\Http\Resources\Play\ActivityResource($activity),
+            'activity' => new ActivityResource($activity),
         ], 200);
     }
 
@@ -200,7 +204,7 @@ class AcademyPostController extends Controller
      */
     public function show(Academy $academy, AcademyPost $post)
     {
-         return response()->json([
+        return response()->json([
             'success' => true,
             'post' => $post->load('images', 'user', 'comments'),
         ]);
@@ -220,14 +224,14 @@ class AcademyPostController extends Controller
     public function update(Request $request, Academy $academy, AcademyPost $post)
     {
         if ($post->user_id !== auth()->id()) {
-             // Check academy admin?
-             if ($academy->user_id !== auth()->id()) {
-                 return response()->json(['message' => 'Unauthorized'], 403);
-             }
+            // Check academy admin?
+            if ($academy->user_id !== auth()->id()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
         }
 
         $validatedData = $request->validate([
-            'content'   => 'nullable|string|max:1000',
+            'content' => 'nullable|string|max:1000',
         ]);
 
         $content = $validatedData['content'] ?? '';
@@ -250,16 +254,16 @@ class AcademyPostController extends Controller
     public function destroy(Academy $academy, AcademyPost $post)
     {
         if ($post->user_id !== auth()->id()) {
-             // Check academy admin?
-             // For now simple check
-             if ($academy->user_id !== auth()->id()) {
-                 return response()->json(['message' => 'Unauthorized'], 403);
-             }
+            // Check academy admin?
+            // For now simple check
+            if ($academy->user_id !== auth()->id()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
         }
 
         // Delete images
         foreach ($post->images as $image) {
-            Storage::disk('public')->delete('images/academies/posts/' . $image->filename);
+            Storage::disk('public')->delete('images/academies/posts/'.$image->filename);
             $image->delete();
         }
 

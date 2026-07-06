@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Api\Learn\Course\posts;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\User;
+use App\Http\Resources\Learn\Course\posts\CoursePostImageCommentResource;
 use App\Models\Course;
 use App\Models\CoursePost;
-use Illuminate\Http\Request;
 use App\Models\CoursePostImage;
 use App\Models\CoursePostImageComment;
-use App\Http\Resources\Learn\Course\posts\CoursePostImageCommentResource;
+use App\Models\User;
+use Illuminate\Http\Request;
 
 class CoursePostImageCommentController extends Controller
 {
@@ -46,7 +45,7 @@ class CoursePostImageCommentController extends Controller
 
             $newComment = $image->image_comments()->create([
                 'user_id' => auth()->id(),
-                'content' => $validatedData['content']
+                'content' => $validatedData['content'],
             ]);
 
             $image->increment('comments', 1);
@@ -59,7 +58,7 @@ class CoursePostImageCommentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -74,7 +73,7 @@ class CoursePostImageCommentController extends Controller
             if ($comment->user_id !== auth()->id()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้'
+                    'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้',
                 ], 403);
             }
 
@@ -83,19 +82,19 @@ class CoursePostImageCommentController extends Controller
             ]);
 
             $comment->update([
-                'content' => $validatedData['content']
+                'content' => $validatedData['content'],
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'แก้ไขความคิดเห็นสำเร็จ',
-                'comment' => new CoursePostImageCommentResource($comment->fresh()->load('user'))
+                'comment' => new CoursePostImageCommentResource($comment->fresh()->load('user')),
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -110,7 +109,7 @@ class CoursePostImageCommentController extends Controller
             if ($comment->user_id !== auth()->id() && $course_post->user_id !== auth()->id()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้'
+                    'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้',
                 ], 403);
             }
 
@@ -131,7 +130,7 @@ class CoursePostImageCommentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ], 500);
         }
     }

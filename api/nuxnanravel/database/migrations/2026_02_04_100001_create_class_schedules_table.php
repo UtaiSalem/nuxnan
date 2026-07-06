@@ -20,29 +20,29 @@ return new class extends Migration
             $table->foreignId('classroom_id')->constrained()->onDelete('cascade');
             $table->foreignId('subject_id')->constrained()->onDelete('cascade');
             $table->foreignId('teacher_id')->constrained('users')->onDelete('cascade');
-            
+
             // Schedule timing
             $table->unsignedTinyInteger('day_of_week')->index(); // 1=จันทร์, 2=อังคาร, ..., 7=อาทิตย์
             $table->time('start_time');
             $table->time('end_time');
             $table->unsignedTinyInteger('period_number')->nullable(); // คาบที่ (1, 2, 3, ...)
-            
+
             // Room location (can be different from classroom's default room)
             $table->string('room', 50)->nullable();
-            
+
             // Status and notes
             $table->enum('status', ['active', 'cancelled', 'temporary'])->default('active');
             $table->text('notes')->nullable();
-            
+
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-            
+
             // Indexes for common queries
             $table->index(['academic_year_id', 'semester_id']);
             $table->index(['classroom_id', 'day_of_week']);
             $table->index(['teacher_id', 'day_of_week']);
             $table->index(['subject_id', 'semester_id']);
-            
+
             // Unique constraint to prevent double booking
             $table->unique(
                 ['classroom_id', 'semester_id', 'day_of_week', 'start_time'],
@@ -63,18 +63,18 @@ return new class extends Migration
             $table->foreignId('teacher_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('subject_id')->constrained()->onDelete('cascade');
             $table->foreignId('classroom_id')->constrained()->onDelete('cascade');
-            
+
             // Role in this class
             $table->enum('role', ['primary', 'secondary', 'substitute'])->default('primary');
             $table->boolean('is_homeroom')->default(false);
-            
+
             // Hours
             $table->unsignedSmallInteger('weekly_hours')->nullable();
             $table->unsignedSmallInteger('total_periods')->nullable();
-            
+
             $table->text('notes')->nullable();
             $table->timestamps();
-            
+
             // Unique constraint: One primary teacher per subject per classroom per semester
             $table->unique(
                 ['semester_id', 'subject_id', 'classroom_id', 'role'],
@@ -94,7 +94,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('display_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            
+
             $table->unique(['academy_id', 'period_number'], 'unique_period_per_academy');
         });
     }

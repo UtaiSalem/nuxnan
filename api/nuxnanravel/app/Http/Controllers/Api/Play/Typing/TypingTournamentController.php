@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api\Play\Typing;
 
 use App\Http\Controllers\Controller;
+use App\Models\TypingSession;
 use App\Models\TypingTournament;
 use App\Models\TypingTournamentEntry;
-use App\Models\TypingSession;
-use App\Services\TypingScoreService;
 use App\Services\PointsService;
-use Illuminate\Http\Request;
+use App\Services\TypingScoreService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -60,7 +60,7 @@ class TypingTournamentController extends Controller
     public function show(TypingTournament $tournament): JsonResponse
     {
         $leaderboard = $tournament->topEntries(50)->get()
-            ->map(fn($e, $i) => [
+            ->map(fn ($e, $i) => [
                 'rank' => $i + 1,
                 'user_id' => $e->user_id,
                 'name' => $e->user->name,
@@ -100,7 +100,7 @@ class TypingTournamentController extends Controller
      */
     public function attempt(Request $request, TypingTournament $tournament): JsonResponse
     {
-        if (!$tournament->isActive()) {
+        if (! $tournament->isActive()) {
             return response()->json(['success' => false, 'message' => 'Tournament is not active.'], 422);
         }
 
@@ -122,11 +122,11 @@ class TypingTournamentController extends Controller
 
         $wpm = $scoreService->calculateWpm($data['correct_chars'], $data['time_elapsed']);
         $accuracy = $scoreService->calculateAccuracy($data['correct_chars'], $data['total_chars']);
-        
+
         $scoreParams = array_merge($data, [
             'wpm' => $wpm,
             'accuracy' => $accuracy,
-            'difficulty' => $diff
+            'difficulty' => $diff,
         ]);
         $scores = $scoreService->calculateScore($scoreParams);
         $xp = $scoreService->calculateXp($scores['score'], $wpm, $accuracy, $diff);
@@ -172,14 +172,14 @@ class TypingTournamentController extends Controller
             $entry->attempts = ($entry->attempts ?? 0) + 1;
             $entry->last_played_at = now();
 
-            if ($isNewBest || !$entry->exists) {
+            if ($isNewBest || ! $entry->exists) {
                 $entry->best_session_id = $session->id;
                 $entry->best_wpm = $wpm;
                 $entry->best_accuracy = $accuracy;
                 $entry->best_score = $scores['score'];
             }
 
-            $wasNew = !$entry->exists;
+            $wasNew = ! $entry->exists;
             $entry->save();
 
             if ($wasNew) {
@@ -204,7 +204,7 @@ class TypingTournamentController extends Controller
      */
     public function claim(TypingTournament $tournament): JsonResponse
     {
-        if (!$tournament->isFinished()) {
+        if (! $tournament->isFinished()) {
             return response()->json(['success' => false, 'message' => 'Tournament has not finished yet.'], 422);
         }
 

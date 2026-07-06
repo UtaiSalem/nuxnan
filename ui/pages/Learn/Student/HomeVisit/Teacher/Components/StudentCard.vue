@@ -288,8 +288,7 @@ export default {
 
   methods: {
     getProfileImagePath(student) {
-      if (!student.profile_image) return null
-      return `../../storage/images/students/${student.class_level}/${student.class_section}/${student.profile_image}`
+      return student.profile_image_url || null
     },
 
     formatDate(dateString) {

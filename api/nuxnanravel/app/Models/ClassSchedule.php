@@ -39,11 +39,17 @@ class ClassSchedule extends Model
 
     // Day of week constants
     const MONDAY = 1;
+
     const TUESDAY = 2;
+
     const WEDNESDAY = 3;
+
     const THURSDAY = 4;
+
     const FRIDAY = 5;
+
     const SATURDAY = 6;
+
     const SUNDAY = 7;
 
     const DAYS = [
@@ -67,7 +73,9 @@ class ClassSchedule extends Model
     ];
 
     const STATUS_ACTIVE = 'active';
+
     const STATUS_CANCELLED = 'cancelled';
+
     const STATUS_TEMPORARY = 'temporary';
 
     // Relationships
@@ -119,7 +127,7 @@ class ClassSchedule extends Model
 
     public function getTimeRangeAttribute(): string
     {
-        return $this->start_time->format('H:i') . ' - ' . $this->end_time->format('H:i');
+        return $this->start_time->format('H:i').' - '.$this->end_time->format('H:i');
     }
 
     public function getDurationMinutesAttribute(): int

@@ -2,21 +2,18 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\PointsTransaction;
-use App\Models\GamificationRuleLog;
-use App\Models\UserActivitySummary;
 use App\Models\DailyPointLimit;
+use App\Models\GamificationRuleLog;
 use App\Models\LevelDefinition;
+use App\Models\PointsTransaction;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
 
 class UserStatsRecalculationService
 {
     protected $pointsService;
+
     protected $activitySummaryService;
 
     public function __construct(PointsService $pointsService, ActivitySummaryService $activitySummaryService)
@@ -70,8 +67,8 @@ class UserStatsRecalculationService
                 ],
             ],
             'out_of_sync' => [
-                'legacy_level' => (int)$user->level !== (int)$user->xp_level,
-            ]
+                'legacy_level' => (int) $user->level !== (int) $user->xp_level,
+            ],
         ];
 
         return $mismatches;
@@ -148,7 +145,7 @@ class UserStatsRecalculationService
             'pp' => $pp,
             'earned' => $earned,
             'spent' => $spent,
-            'unmapped_conversions' => $unmapped
+            'unmapped_conversions' => $unmapped,
         ];
     }
 
@@ -167,7 +164,7 @@ class UserStatsRecalculationService
 
         $level = $levelDef ? $levelDef->level : 1;
         $nextLevelDef = LevelDefinition::where('level', $level + 1)->first();
-        
+
         $currentLevelXpRequired = $levelDef ? $levelDef->xp_required : 0;
         $currentXp = $totalXp - $currentLevelXpRequired;
         $xpForNextLevel = $nextLevelDef ? ($nextLevelDef->xp_required - $currentLevelXpRequired) : 0;
@@ -230,17 +227,17 @@ class UserStatsRecalculationService
             }
 
             // 3. Rebuild Daily Limits (Optional)
-            if (!empty($options['rebuild_limits'])) {
+            if (! empty($options['rebuild_limits'])) {
                 $this->rebuildDailyLimits($user, $apply);
             }
 
             // 4. Rebuild Summaries (Optional)
-            if (!empty($options['rebuild_summaries'])) {
+            if (! empty($options['rebuild_summaries'])) {
                 $this->rebuildSummaries($user, $apply);
             }
 
             // 5. Clear leaderboard caches (GamificationService key pattern: leaderboard_{type}_{page}_{perPage})
-            if ($apply && !empty($results['changes'])) {
+            if ($apply && ! empty($results['changes'])) {
                 $this->clearLeaderboardCache();
             }
 
@@ -291,7 +288,9 @@ class UserStatsRecalculationService
 
     public function rebuildDailyLimits(User $user, bool $apply): void
     {
-        if (!$apply) return;
+        if (! $apply) {
+            return;
+        }
 
         // Group transactions by date.
         // Mirrors the sign rules in calculateExpectedPoints():
@@ -326,7 +325,9 @@ class UserStatsRecalculationService
 
     public function rebuildSummaries(User $user, bool $apply): void
     {
-        if (!$apply) return;
+        if (! $apply) {
+            return;
+        }
 
         // Find all dates with activity
         $dates = DB::table('user_usage_events')

@@ -14,7 +14,7 @@ class RolesDataTable extends DataTable
     /**
      * Build the DataTable class.
      *
-     * @param QueryBuilder $query Results from query() method.
+     * @param  QueryBuilder  $query  Results from query() method.
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
@@ -35,6 +35,7 @@ class RolesDataTable extends DataTable
                         'color' => 'bg-green-500',
                     ];
                 }
+
                 return [
                     'label' => 'ปิดใช้งาน',
                     'color' => 'bg-gray-500',
@@ -101,6 +102,6 @@ class RolesDataTable extends DataTable
      */
     protected function filename(): string
     {
-        return 'Roles_' . date('YmdHis');
+        return 'Roles_'.date('YmdHis');
     }
 }

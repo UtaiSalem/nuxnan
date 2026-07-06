@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Academy;
-use App\Models\User;
 use App\Models\AcademyMember;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,12 +15,12 @@ class AcademyMemberSecurityTest extends TestCase
     private function makeUser(string $tag = ''): User
     {
         return User::create([
-            'name' => 'U' . $tag,
-            'email' => 'u' . $tag . uniqid() . '@x.test',
+            'name' => 'U'.$tag,
+            'email' => 'u'.$tag.uniqid().'@x.test',
             'password' => bcrypt('password'),
-            'username' => 'u' . $tag . uniqid(),
-            'reference_code' => 'R' . uniqid(),
-            'personal_code' => 'P' . uniqid(),
+            'username' => 'u'.$tag.uniqid(),
+            'reference_code' => 'R'.uniqid(),
+            'personal_code' => 'P'.uniqid(),
         ]);
     }
 
@@ -41,7 +41,7 @@ class AcademyMemberSecurityTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'success' => true
+                'success' => true,
             ]);
     }
 
@@ -65,7 +65,7 @@ class AcademyMemberSecurityTest extends TestCase
         $response->assertStatus(403)
             ->assertJson([
                 'success' => false,
-                'message' => 'Unauthorized access.'
+                'message' => 'Unauthorized access.',
             ]);
     }
 }

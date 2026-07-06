@@ -15,9 +15,9 @@ class TopicImageResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'       => $this->id,
+            'id' => $this->id,
             'filename' => $this->filename,
-            'url'      => $this->image_url,
+            'url' => $this->image_url,
             'full_url' => $this->image_url,
         ];
     }

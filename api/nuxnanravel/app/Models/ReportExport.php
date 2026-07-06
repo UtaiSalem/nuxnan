@@ -30,8 +30,11 @@ class ReportExport extends Model
 
     // Statuses
     const STATUS_PENDING = 'pending';
+
     const STATUS_PROCESSING = 'processing';
+
     const STATUS_COMPLETED = 'completed';
+
     const STATUS_FAILED = 'failed';
 
     const STATUSES = [
@@ -43,7 +46,9 @@ class ReportExport extends Model
 
     // File Types
     const TYPE_PDF = 'pdf';
+
     const TYPE_XLSX = 'xlsx';
+
     const TYPE_CSV = 'csv';
 
     // Relationships
@@ -82,7 +87,7 @@ class ReportExport extends Model
     {
         return $query->where(function ($q) {
             $q->whereNull('expires_at')
-              ->orWhere('expires_at', '>', now());
+                ->orWhere('expires_at', '>', now());
         });
     }
 
@@ -120,6 +125,7 @@ class ReportExport extends Model
         if ($this->status !== self::STATUS_COMPLETED || $this->isExpired()) {
             return null;
         }
-        return asset('storage/' . $this->file_path);
+
+        return asset('storage/'.$this->file_path);
     }
 }

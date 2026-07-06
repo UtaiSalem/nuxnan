@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\AcademyMember;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,7 +16,7 @@ class StudentResource extends JsonResource
     public function toArray(Request $request): array
     {
         $user = $request->user();
-        
+
         // Determine if user has full access to this student's data
         $hasFullAccess = false;
         if ($user) {
@@ -23,7 +24,7 @@ class StudentResource extends JsonResource
                 $hasFullAccess = true;
             } else {
                 // Check if user is staff in the student's academy
-                $hasFullAccess = \App\Models\AcademyMember::where('user_id', $user->id)
+                $hasFullAccess = AcademyMember::where('user_id', $user->id)
                     ->where('academy_id', $this->academy_id)
                     ->whereIn('role', ['admin', 'teacher', 'director'])
                     ->exists();
@@ -32,12 +33,12 @@ class StudentResource extends JsonResource
 
         // Mask citizen ID if not full access. Format keeps Thai national-id grouping: 1-XXXX-XXXXX-XX-X
         $citizenId = $this->citizen_id;
-        if (!$hasFullAccess && $citizenId) {
+        if (! $hasFullAccess && $citizenId) {
             $digits = preg_replace('/\D/', '', $citizenId);
             if (strlen($digits) === 13) {
-                $citizenId = $digits[0] . '-XXXX-XXXXX-XX-' . substr($digits, -1);
+                $citizenId = $digits[0].'-XXXX-XXXXX-XX-'.substr($digits, -1);
             } elseif (strlen($digits) >= 4) {
-                $citizenId = str_repeat('X', max(0, strlen($digits) - 4)) . substr($digits, -4);
+                $citizenId = str_repeat('X', max(0, strlen($digits) - 4)).substr($digits, -4);
             } else {
                 $citizenId = null;
             }
@@ -70,7 +71,7 @@ class StudentResource extends JsonResource
             'enrollment_date' => $this->enrollment_date,
             'class_level' => $this->class_level,
             'class_section' => $this->class_section,
-            
+
             // Sub-tables relationships (Phase 2 shape completion)
             'academic' => $this->whenLoaded('currentAcademicInfo'),
             'card' => $this->whenLoaded('studentCard'),
@@ -79,13 +80,13 @@ class StudentResource extends JsonResource
             'guardians' => $this->whenLoaded('guardians'),
             'health' => $this->whenLoaded('healthInfo'),
             'documents' => $this->whenLoaded('documents'),
-            
+
             // Permissions metadata for frontend
             'permissions' => [
                 'can_edit' => $hasFullAccess || ($user && $user->id === $this->user_id),
                 'can_view_full' => $hasFullAccess,
             ],
-            
+
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

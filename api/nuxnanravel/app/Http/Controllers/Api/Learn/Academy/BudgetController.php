@@ -5,10 +5,9 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Budget;
-use App\Models\Expense;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * BudgetController - จัดการงบประมาณ
@@ -128,7 +127,7 @@ class BudgetController extends Controller
         // If allocated_amount changed, recalculate remaining
         if (isset($validated['allocated_amount']) && $validated['allocated_amount'] != $budget->allocated_amount) {
             $validated['remaining_amount'] = $validated['allocated_amount'] - $budget->spent_amount;
-            
+
             // Check if exceeded
             if ($validated['remaining_amount'] < 0) {
                 $validated['status'] = Budget::STATUS_EXCEEDED;
@@ -236,7 +235,7 @@ class BudgetController extends Controller
                 'exceeded' => (clone $query)->where('status', Budget::STATUS_EXCEEDED)->count(),
                 'closed' => (clone $query)->where('status', Budget::STATUS_CLOSED)->count(),
             ],
-            'budgets_with_usage' => $budgets->map(fn($b) => [
+            'budgets_with_usage' => $budgets->map(fn ($b) => [
                 'id' => $b->id,
                 'name' => $b->name,
                 'allocated' => $b->allocated_amount,
@@ -290,15 +289,15 @@ class BudgetController extends Controller
         ]);
 
         $oldData = $budget->toArray();
-        
+
         $budget->allocated_amount += $validated['amount'];
         $budget->remaining_amount += $validated['amount'];
-        
+
         // If was exceeded and now has funds, set back to active
         if ($budget->status === Budget::STATUS_EXCEEDED && $budget->remaining_amount >= 0) {
             $budget->status = Budget::STATUS_ACTIVE;
         }
-        
+
         $budget->save();
 
         $this->auditService->log(
@@ -321,7 +320,7 @@ class BudgetController extends Controller
     public function transfer(Request $request, Academy $academy, Budget $fromBudget): JsonResponse
     {
         $validated = $request->validate([
-            'to_budget_id' => 'required|exists:budgets,id|different:' . $fromBudget->id,
+            'to_budget_id' => 'required|exists:budgets,id|different:'.$fromBudget->id,
             'amount' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);

@@ -4,8 +4,14 @@ namespace App\Http\Controllers\Api\Learn\Course;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Course\info\MarketplaceCourseResource;
+use App\Models\Academy;
+use App\Models\AcademyAdmin;
 use App\Models\Course;
+use App\Models\CoursePurchase;
+use App\Models\User;
+use App\Models\WalletTransaction;
 use App\Services\CoursePurchaseService;
+use App\Services\PointsService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -165,9 +171,9 @@ class CourseMarketplaceController extends Controller
 
             // Authorization check if purchasing for an academy
             if ($academyId) {
-                $academy = \App\Models\Academy::find($academyId);
+                $academy = Academy::find($academyId);
                 $isOwner = $academy->user_id === $buyer->id;
-                $isAdmin = \App\Models\AcademyAdmin::where('academy_id', $academyId)
+                $isAdmin = AcademyAdmin::where('academy_id', $academyId)
                     ->where('user_id', $buyer->id)
                     ->exists();
 
@@ -261,7 +267,7 @@ class CourseMarketplaceController extends Controller
         $user = auth()->user();
         $perPage = $request->get('per_page', 20);
 
-        $purchases = \App\Models\CoursePurchase::with(['sourceCourse', 'clonedCourse'])
+        $purchases = CoursePurchase::with(['sourceCourse', 'clonedCourse'])
             ->where('purchase_type', 'marketplace')
             ->where('buyer_id', $user->id)
             ->whereIn('status', ['completed', 'pending_clone', 'paid'])
@@ -308,7 +314,7 @@ class CourseMarketplaceController extends Controller
         $user = auth()->user();
 
         // Get sales records
-        $salesQuery = \App\Models\CoursePurchase::where('purchase_type', 'marketplace')
+        $salesQuery = CoursePurchase::where('purchase_type', 'marketplace')
             ->where('seller_id', $user->id)
             ->whereIn('status', ['completed', 'pending_clone', 'paid']);
 
@@ -371,10 +377,10 @@ class CourseMarketplaceController extends Controller
             ], 403);
         }
 
-        $buyerUser = \App\Models\User::find($request->user_id);
+        $buyerUser = User::find($request->user_id);
 
         // Find the record in course_purchases
-        $purchase = \App\Models\CoursePurchase::where('buyer_id', $buyerUser->id)
+        $purchase = CoursePurchase::where('buyer_id', $buyerUser->id)
             ->where('source_course_id', $course->id)
             ->whereIn('status', ['completed', 'pending_clone', 'paid'])
             ->latest()
@@ -401,7 +407,7 @@ class CourseMarketplaceController extends Controller
 
                 // 2. Refund Buyer Points
                 if ($purchase->points_transaction_id) {
-                    $pointsService = app(\App\Services\PointsService::class);
+                    $pointsService = app(PointsService::class);
                     $pointsService->refund(
                         $buyerUser,
                         $purchase->amount_points,
@@ -413,7 +419,7 @@ class CourseMarketplaceController extends Controller
 
                 // 3. Reverse Seller Income
                 if ($purchase->seller_income_transaction_id) {
-                    $incomeTransaction = \App\Models\WalletTransaction::find($purchase->seller_income_transaction_id);
+                    $incomeTransaction = WalletTransaction::find($purchase->seller_income_transaction_id);
                     if ($incomeTransaction && $incomeTransaction->status === 'completed') {
                         $seller = $incomeTransaction->user;
                         $seller->decrement('wallet', $incomeTransaction->amount);

@@ -48,7 +48,7 @@ return new class extends Migration
                 'uniform',      // ค่าชุดนักเรียน
                 'book',         // ค่าหนังสือ
                 'insurance',    // ค่าประกัน
-                'other'         // อื่นๆ
+                'other',         // อื่นๆ
             ])->default('other');
             $table->boolean('is_mandatory')->default(true); // บังคับจ่ายหรือไม่
             $table->boolean('is_refundable')->default(false); // คืนเงินได้หรือไม่
@@ -69,7 +69,7 @@ return new class extends Migration
             $table->foreignId('semester_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('fee_structure_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('classroom_id')->nullable()->constrained()->nullOnDelete();
-            
+
             // Financial details
             $table->string('invoice_number', 50)->unique(); // เลขที่ใบแจ้งหนี้
             $table->decimal('total_amount', 12, 2); // ยอดรวม
@@ -78,12 +78,12 @@ return new class extends Migration
             $table->decimal('net_amount', 12, 2); // ยอดสุทธิที่ต้องชำระ
             $table->decimal('paid_amount', 12, 2)->default(0); // ยอดที่ชำระแล้ว
             $table->decimal('balance_amount', 12, 2); // ยอดค้างชำระ
-            
+
             // Dates
             $table->date('issue_date'); // วันที่ออกใบแจ้งหนี้
             $table->date('due_date'); // วันครบกำหนดชำระ
             $table->date('paid_date')->nullable(); // วันที่ชำระครบ
-            
+
             // Status
             $table->enum('status', [
                 'pending',      // รอชำระ
@@ -91,9 +91,9 @@ return new class extends Migration
                 'paid',         // ชำระครบแล้ว
                 'overdue',      // เกินกำหนด
                 'cancelled',    // ยกเลิก
-                'refunded'      // คืนเงินแล้ว
+                'refunded',      // คืนเงินแล้ว
             ])->default('pending');
-            
+
             $table->text('notes')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
@@ -145,27 +145,27 @@ return new class extends Migration
             $table->foreignId('tuition_fee_id')->constrained()->onDelete('cascade');
             $table->foreignId('payment_method_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); // ผู้ชำระ (parent/guardian)
-            
+
             // Payment details
             $table->string('receipt_number', 50)->unique(); // เลขที่ใบเสร็จ
             $table->decimal('amount', 12, 2); // จำนวนเงินที่ชำระ
             $table->date('payment_date'); // วันที่ชำระ
             $table->string('payment_method_name', 50)->nullable(); // ชื่อวิธีการชำระ
-            
+
             // Bank transfer details
             $table->string('bank_name', 100)->nullable();
             $table->string('bank_account', 50)->nullable();
             $table->string('transfer_reference', 100)->nullable();
             $table->string('slip_image')->nullable(); // รูปสลิป
-            
+
             // Status
             $table->enum('status', [
                 'pending',      // รอตรวจสอบ
                 'confirmed',    // ยืนยันแล้ว
                 'rejected',     // ปฏิเสธ
-                'refunded'      // คืนเงินแล้ว
+                'refunded',      // คืนเงินแล้ว
             ])->default('confirmed');
-            
+
             $table->text('notes')->nullable();
             $table->foreignId('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('confirmed_at')->nullable();
@@ -233,7 +233,7 @@ return new class extends Migration
             $table->enum('applies_to', [
                 'all',          // ทั้งหมด
                 'tuition',      // เฉพาะค่าเล่าเรียน
-                'specific'      // รายการที่ระบุ
+                'specific',      // รายการที่ระบุ
             ])->default('all');
             $table->json('applicable_items')->nullable(); // fee_item_ids ที่ใช้ได้
             $table->date('start_date')->nullable();
@@ -298,7 +298,7 @@ return new class extends Migration
             $table->foreignId('academy_id')->constrained()->onDelete('cascade');
             $table->foreignId('expense_category_id')->constrained()->onDelete('cascade');
             $table->foreignId('academic_year_id')->nullable()->constrained()->nullOnDelete();
-            
+
             $table->string('title');
             $table->text('description')->nullable();
             $table->decimal('amount', 12, 2);
@@ -306,15 +306,15 @@ return new class extends Migration
             $table->string('vendor', 255)->nullable(); // ผู้รับเงิน/ร้านค้า
             $table->string('reference_number', 100)->nullable(); // เลขที่อ้างอิง
             $table->string('receipt_image')->nullable(); // รูปใบเสร็จ
-            
+
             $table->enum('status', [
                 'pending',      // รอการอนุมัติ
                 'approved',     // อนุมัติแล้ว
                 'rejected',     // ปฏิเสธ
                 'paid',         // จ่ายแล้ว
-                'reimbursed'    // เบิกคืนแล้ว
+                'reimbursed',    // เบิกคืนแล้ว
             ])->default('pending');
-            
+
             $table->foreignId('requested_by')->constrained('users')->onDelete('cascade');
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();
@@ -333,7 +333,7 @@ return new class extends Migration
             $table->foreignId('academy_id')->constrained()->onDelete('cascade');
             $table->foreignId('academic_year_id')->constrained()->onDelete('cascade');
             $table->foreignId('expense_category_id')->nullable()->constrained()->nullOnDelete();
-            
+
             $table->string('name');
             $table->text('description')->nullable();
             $table->decimal('allocated_amount', 12, 2); // งบที่จัดสรร

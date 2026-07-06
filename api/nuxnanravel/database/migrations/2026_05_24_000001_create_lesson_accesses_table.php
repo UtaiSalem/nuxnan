@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('course_id');
             $table->unsignedBigInteger('lesson_id');
             $table->enum('access_type', ['free', 'points', 'money', 'manual', 'admin'])
-                  ->default('free');
+                ->default('free');
             $table->unsignedBigInteger('points_transaction_id')->nullable();
             $table->unsignedBigInteger('wallet_transaction_id')->nullable();
             $table->decimal('amount', 10, 2)->unsigned()->default(0);

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,8 +35,11 @@ class MeetingBooking extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_CONFIRMED = 'confirmed';
+
     const STATUS_CANCELLED = 'cancelled';
+
     const STATUS_COMPLETED = 'completed';
 
     const STATUSES = [
@@ -67,10 +71,13 @@ class MeetingBooking extends Model
         return self::STATUSES[$this->status] ?? '';
     }
 
-    public function getMeetingDatetimeAttribute(): ?\Carbon\Carbon
+    public function getMeetingDatetimeAttribute(): ?Carbon
     {
-        if (!$this->slot) return null;
-        return \Carbon\Carbon::parse($this->slot->meeting_date->format('Y-m-d') . ' ' . $this->booked_time);
+        if (! $this->slot) {
+            return null;
+        }
+
+        return Carbon::parse($this->slot->meeting_date->format('Y-m-d').' '.$this->booked_time);
     }
 
     // Methods

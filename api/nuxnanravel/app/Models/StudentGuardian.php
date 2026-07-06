@@ -2,20 +2,19 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-
 /**
  * Student Guardian Model
  */
-use App\Traits\Auditable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class StudentGuardian extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'academy_id',
@@ -33,13 +32,13 @@ class StudentGuardian extends Model
         'status',
         'nationality',
         'is_primary_contact',
-        'is_emergency_contact'
+        'is_emergency_contact',
     ];
 
     protected $casts = [
         'monthly_income' => 'decimal:2',
         'is_primary_contact' => 'boolean',
-        'is_emergency_contact' => 'boolean'
+        'is_emergency_contact' => 'boolean',
     ];
 
     public function student(): BelongsTo
@@ -60,7 +59,7 @@ class StudentGuardian extends Model
     public function primaryContact(): HasOne
     {
         return $this->hasOne(GuardianContact::class, 'guardian_id')
-                    ->where('is_primary', true);
+            ->where('is_primary', true);
     }
 
     public function getFullNameAttribute(): string
@@ -68,9 +67,9 @@ class StudentGuardian extends Model
         $parts = array_filter([
             $this->title_prefix,
             $this->first_name,
-            $this->last_name
+            $this->last_name,
         ]);
-        
+
         return implode(' ', $parts);
     }
 

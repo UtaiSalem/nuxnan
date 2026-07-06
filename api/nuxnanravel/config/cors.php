@@ -16,17 +16,17 @@ return [
     */
 
     'paths' => [
-        'api/*', 
-        'auth/*', 
-        'courses/*', 
-        'users/*', 
-        'profiles/*', 
-        'attendances/*', 
-        'storage/*', 
-        'typing/*', 
+        'api/*',
+        'auth/*',
+        'courses/*',
+        'users/*',
+        'profiles/*',
+        'attendances/*',
+        'storage/*',
+        'typing/*',
         'game/*',
         'admin/*',
-        'sanctum/csrf-cookie'
+        'sanctum/csrf-cookie',
     ],
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

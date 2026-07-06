@@ -20,8 +20,8 @@ return new class extends Migration
             $table->unsignedBigInteger('points')->default(0);
             $table->boolean('is_correct')->default(false);
             $table->timestamps();
-            
-            // Foreign keys if needed, but often skipped for flexibility/speed in prototyping. 
+
+            // Foreign keys if needed, but often skipped for flexibility/speed in prototyping.
             // Let's keep it simple for now, but adding indexes is good practice.
             $table->index(['user_id', 'lesson_id']);
             $table->index(['user_id', 'question_id']);

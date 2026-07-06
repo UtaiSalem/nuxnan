@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Refactor Classroom Enrollment System
@@ -29,28 +29,28 @@ return new class extends Migration
         // ──────────────────────────────────────────────
         // 1. เพิ่ม academy_id + academic_year_id ใน classroom_students
         // ──────────────────────────────────────────────
-        if (!Schema::hasColumn('classroom_students', 'academy_id')) {
+        if (! Schema::hasColumn('classroom_students', 'academy_id')) {
             Schema::table('classroom_students', function (Blueprint $table) {
                 $table->unsignedBigInteger('academy_id')->nullable()->after('id');
             });
 
             Schema::table('classroom_students', function (Blueprint $table) {
                 $table->foreign('academy_id', 'fk_cs_academy_id')
-                      ->references('id')->on('academies')
-                      ->onDelete('cascade');
+                    ->references('id')->on('academies')
+                    ->onDelete('cascade');
                 $table->index('academy_id', 'cs_academy_idx');
             });
         }
 
-        if (!Schema::hasColumn('classroom_students', 'academic_year_id')) {
+        if (! Schema::hasColumn('classroom_students', 'academic_year_id')) {
             Schema::table('classroom_students', function (Blueprint $table) {
                 $table->unsignedBigInteger('academic_year_id')->nullable()->after('academy_id');
             });
 
             Schema::table('classroom_students', function (Blueprint $table) {
                 $table->foreign('academic_year_id', 'fk_cs_academic_year_id')
-                      ->references('id')->on('academic_years')
-                      ->onDelete('set null');
+                    ->references('id')->on('academic_years')
+                    ->onDelete('set null');
                 $table->index(['academic_year_id', 'status'], 'cs_year_status_idx');
             });
         }
@@ -58,45 +58,45 @@ return new class extends Migration
         // ──────────────────────────────────────────────
         // 2. เพิ่ม academy_id + classroom_id ใน student_academic_info
         // ──────────────────────────────────────────────
-        if (!Schema::hasColumn('student_academic_info', 'academy_id')) {
+        if (! Schema::hasColumn('student_academic_info', 'academy_id')) {
             Schema::table('student_academic_info', function (Blueprint $table) {
                 $table->unsignedBigInteger('academy_id')->nullable()->after('student_id');
             });
 
             Schema::table('student_academic_info', function (Blueprint $table) {
                 $table->foreign('academy_id', 'fk_sai_academy_id')
-                      ->references('id')->on('academies')
-                      ->onDelete('set null');
+                    ->references('id')->on('academies')
+                    ->onDelete('set null');
                 $table->index('academy_id', 'sai_academy_idx');
             });
 
             // Populate academy_id from student's academy
             if (DB::getDriverName() === 'mysql') {
-                DB::statement("
+                DB::statement('
                     UPDATE student_academic_info sai
                     INNER JOIN students s ON s.id = sai.student_id
                     SET sai.academy_id = s.academy_id
                     WHERE sai.academy_id IS NULL AND s.academy_id IS NOT NULL
-                ");
+                ');
             } elseif (DB::getDriverName() === 'sqlite') {
-                DB::statement("
+                DB::statement('
                     UPDATE student_academic_info 
                     SET academy_id = (SELECT academy_id FROM students WHERE students.id = student_academic_info.student_id)
                     WHERE academy_id IS NULL 
                     AND EXISTS (SELECT 1 FROM students WHERE students.id = student_academic_info.student_id AND academy_id IS NOT NULL)
-                ");
+                ');
             }
         }
 
-        if (!Schema::hasColumn('student_academic_info', 'classroom_id')) {
+        if (! Schema::hasColumn('student_academic_info', 'classroom_id')) {
             Schema::table('student_academic_info', function (Blueprint $table) {
                 $table->unsignedBigInteger('classroom_id')->nullable()->after('academy_id');
             });
 
             Schema::table('student_academic_info', function (Blueprint $table) {
                 $table->foreign('classroom_id', 'fk_sai_classroom_id')
-                      ->references('id')->on('classrooms')
-                      ->onDelete('set null');
+                    ->references('id')->on('classrooms')
+                    ->onDelete('set null');
                 $table->index('classroom_id', 'sai_classroom_idx');
             });
         }
@@ -104,14 +104,14 @@ return new class extends Migration
         // ──────────────────────────────────────────────
         // 3. เพิ่ม enrolled_at ใน classroom_students (วันที่เข้าห้อง)
         // ──────────────────────────────────────────────
-        if (!Schema::hasColumn('classroom_students', 'enrolled_at')) {
+        if (! Schema::hasColumn('classroom_students', 'enrolled_at')) {
             Schema::table('classroom_students', function (Blueprint $table) {
                 $table->date('enrolled_at')->nullable()->after('status')
-                      ->comment('วันที่เข้าห้องเรียน');
+                    ->comment('วันที่เข้าห้องเรียน');
                 $table->date('left_at')->nullable()->after('enrolled_at')
-                      ->comment('วันที่ออกจากห้อง (ย้าย/จบ)');
+                    ->comment('วันที่ออกจากห้อง (ย้าย/จบ)');
                 $table->string('leave_reason', 100)->nullable()->after('left_at')
-                      ->comment('เหตุผลที่ออก');
+                    ->comment('เหตุผลที่ออก');
             });
         }
 

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Phase 3: Staff System - บุคลากร
- * 
+ *
  * Tables:
  * - staff_profiles: ข้อมูลบุคลากร
  * - positions: ตำแหน่ง
@@ -40,7 +40,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->integer('display_order')->default(0);
             $table->timestamps();
-            
+
             $table->index(['academy_id', 'department_id']);
         });
 
@@ -78,7 +78,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->unique(['academy_id', 'employee_id']);
             $table->unique(['academy_id', 'user_id']);
             $table->index(['academy_id', 'department_id', 'status']);
@@ -102,7 +102,7 @@ return new class extends Migration
             $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
-            
+
             $table->unique(['staff_profile_id', 'attendance_date']);
             $table->index(['attendance_date', 'status']);
         });
@@ -123,7 +123,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->integer('display_order')->default(0);
             $table->timestamps();
-            
+
             $table->unique(['academy_id', 'code']);
         });
 
@@ -145,7 +145,7 @@ return new class extends Migration
             $table->text('rejection_reason')->nullable();
             $table->foreignId('substitute_staff_id')->nullable()->constrained('staff_profiles')->onDelete('set null');
             $table->timestamps();
-            
+
             $table->index(['staff_profile_id', 'status']);
             $table->index(['start_date', 'end_date']);
         });
@@ -192,7 +192,7 @@ return new class extends Migration
             $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
-            
+
             $table->unique(['staff_profile_id', 'payroll_period']);
             $table->index(['academy_id', 'payroll_period', 'status']);
         });
@@ -209,7 +209,7 @@ return new class extends Migration
             $table->boolean('is_taxable')->default(false);
             $table->integer('display_order')->default(0);
             $table->timestamps();
-            
+
             $table->index(['payroll_id', 'type']);
         });
 
@@ -231,7 +231,7 @@ return new class extends Migration
             $table->enum('status', ['draft', 'submitted', 'acknowledged', 'final'])->default('draft');
             $table->timestamp('acknowledged_at')->nullable();
             $table->timestamps();
-            
+
             $table->unique(['staff_profile_id', 'review_period']);
         });
 
@@ -272,7 +272,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
-            
+
             $table->unique(['staff_profile_id', 'training_program_id']);
         });
     }

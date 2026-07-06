@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Classroom;
 use App\Models\ClassroomMember;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -19,10 +20,9 @@ class ClassroomService
     /**
      * List classrooms for a given academy with optional filters.
      *
-     * @param int         $academyId
-     * @param array       $filters  Keys: academic_year_id, academic_year, semester, grade_level, status
-     * @param bool        $withMembers  Eager-load activeMembers with user
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @param  array  $filters  Keys: academic_year_id, academic_year, semester, grade_level, status
+     * @param  bool  $withMembers  Eager-load activeMembers with user
+     * @return Collection
      */
     public function listClassrooms(int $academyId, array $filters = [], bool $withMembers = false)
     {
@@ -43,7 +43,7 @@ class ClassroomService
         ]);
 
         foreach (['academic_year_id', 'academic_year', 'semester', 'grade_level', 'status'] as $key) {
-            if (!empty($filters[$key])) {
+            if (! empty($filters[$key])) {
                 $query->where($key, $filters[$key]);
             }
         }
@@ -53,10 +53,6 @@ class ClassroomService
 
     /**
      * Get a single classroom with members summary.
-     *
-     * @param int $academyId
-     * @param int $classroomId
-     * @return Classroom
      */
     public function getClassroom(int $academyId, int $classroomId): Classroom
     {
@@ -73,9 +69,7 @@ class ClassroomService
     /**
      * Create a new classroom. Auto-generates classroom_code.
      *
-     * @param  int   $academyId
-     * @param  array $data  Validated data
-     * @return Classroom
+     * @param  array  $data  Validated data
      *
      * @throws \InvalidArgumentException if academic_year is missing (BR-4)
      */
@@ -89,7 +83,7 @@ class ClassroomService
             $classroom = Classroom::create($data);
 
             // If homeroom_teacher_id is set, auto-add as teacher member
-            if (!empty($data['homeroom_teacher_id'])) {
+            if (! empty($data['homeroom_teacher_id'])) {
                 $this->addTeacherMember($classroom, $data['homeroom_teacher_id']);
             }
 
@@ -113,6 +107,7 @@ class ClassroomService
     public function archiveClassroom(Classroom $classroom): Classroom
     {
         $classroom->update(['status' => Classroom::STATUS_ARCHIVED, 'is_active' => false]);
+
         return $classroom;
     }
 

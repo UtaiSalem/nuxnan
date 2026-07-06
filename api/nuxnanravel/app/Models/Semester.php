@@ -32,7 +32,9 @@ class Semester extends Model
 
     // Semester Numbers
     const SEMESTER_1 = 1;
+
     const SEMESTER_2 = 2;
+
     const SEMESTER_SUMMER = 3;
 
     // Relationships
@@ -82,12 +84,13 @@ class Semester extends Model
     public function getDisplayNameAttribute(): string
     {
         $yearName = $this->academicYear?->name ?? '';
+
         return "{$this->name} ปีการศึกษา {$yearName}";
     }
 
     public function getShortNameAttribute(): string
     {
-        return match($this->semester_number) {
+        return match ($this->semester_number) {
             self::SEMESTER_1 => 'เทอม 1',
             self::SEMESTER_2 => 'เทอม 2',
             self::SEMESTER_SUMMER => 'ฤดูร้อน',
@@ -97,12 +100,13 @@ class Semester extends Model
 
     public function getDurationAttribute(): string
     {
-        return $this->start_date->format('d/m/Y') . ' - ' . $this->end_date->format('d/m/Y');
+        return $this->start_date->format('d/m/Y').' - '.$this->end_date->format('d/m/Y');
     }
 
     public function getIsActiveAttribute(): bool
     {
         $now = now();
+
         return $now->between($this->start_date, $this->end_date);
     }
 }

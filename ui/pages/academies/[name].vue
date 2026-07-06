@@ -1242,6 +1242,13 @@ watch(() => route.hash, (newHash) => {
             :xp-to-next="gamificationSummary.xp_to_next"
             :progress-pct="gamificationSummary.progress_pct"
           />
+          
+          <SchoolDepartmentsWidget
+            v-if="academy"
+            :academy-id="academy.id"
+            :academy-name="academyName"
+            @view-all="switchTab('groups')"
+          />
         </aside>
 
         <!-- Main Content -->
@@ -2378,6 +2385,12 @@ watch(() => route.hash, (newHash) => {
           :total-xp="gamificationSummary.total_xp"
           :xp-to-next="gamificationSummary.xp_to_next"
           :progress-pct="gamificationSummary.progress_pct"
+        />
+        <SchoolDepartmentsWidget
+          :academy-id="academy.id"
+          :academy-name="academyName"
+          :limit="3"
+          @view-all="() => { switchTab('groups'); showMobileLeftDrawer = false; }"
         />
       </div>
     </CommonSidebarDrawer>

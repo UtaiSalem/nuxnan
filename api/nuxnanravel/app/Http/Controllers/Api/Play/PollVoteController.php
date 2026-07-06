@@ -26,7 +26,7 @@ class PollVoteController extends Controller
         if ($poll->end_date && now()->isAfter($poll->end_date)) {
             return response()->json([
                 'success' => false,
-                'message' => 'โพลนี้สิ้นส่วนแล้ว'
+                'message' => 'โพลนี้สิ้นส่วนแล้ว',
             ], 422);
         }
 
@@ -38,7 +38,7 @@ class PollVoteController extends Controller
         if ($existingVote) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณได้โหวตในโพลนี้ไปแล้ว'
+                'message' => 'คุณได้โหวตในโพลนี้ไปแล้ว',
             ], 422);
         }
 
@@ -48,7 +48,7 @@ class PollVoteController extends Controller
                 $pointsEarned = 0;
                 if ($poll->points_pool > 0 && $poll->points_distributed < $poll->points_pool) {
                     $pointsEarned = $poll->points_per_vote;
-                    
+
                     // Don't distribute more than pool
                     if (($poll->points_distributed + $pointsEarned) > $poll->points_pool) {
                         $pointsEarned = $poll->points_pool - $poll->points_distributed;
@@ -74,17 +74,17 @@ class PollVoteController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => $pointsEarned > 0 
-                        ? "โหวตสำเร็จ! คุณได้รับ {$pointsEarned} แต้ม" 
-                        : "โหวตสำเร็จ!",
+                    'message' => $pointsEarned > 0
+                        ? "โหวตสำเร็จ! คุณได้รับ {$pointsEarned} แต้ม"
+                        : 'โหวตสำเร็จ!',
                     'vote' => $vote,
-                    'points_earned' => $pointsEarned
+                    'points_earned' => $pointsEarned,
                 ]);
             });
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการโหวต: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการโหวต: '.$e->getMessage(),
             ], 500);
         }
     }

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('academy_group_members', function (Blueprint $table) {
             $table->unsignedBigInteger('user_id')->nullable()->change();
-            if (!Schema::hasColumn('academy_group_members', 'student_id')) {
+            if (! Schema::hasColumn('academy_group_members', 'student_id')) {
                 $table->unsignedBigInteger('student_id')->nullable()->after('user_id');
             }
         });

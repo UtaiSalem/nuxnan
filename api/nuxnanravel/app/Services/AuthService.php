@@ -2,22 +2,21 @@
 
 namespace App\Services;
 
+use App\Http\Resources\UserResource;
+use App\Mail\WelcomeEmail;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\WelcomeEmail;
 
 class AuthService
 {
     /**
      * Register a new user with profile and default role.
      *
-     * @param array $data
-     * @return User
      * @throws \Exception
      */
     public function register(array $data): User
@@ -53,7 +52,7 @@ class AuthService
                 Mail::to($user->email)->send(new WelcomeEmail($user));
             } catch (\Exception $e) {
                 // Log error but don't fail registration
-                \Illuminate\Support\Facades\Log::error('Failed to send welcome email: ' . $e->getMessage());
+                Log::error('Failed to send welcome email: '.$e->getMessage());
             }
 
             return $user;
@@ -65,10 +64,6 @@ class AuthService
 
     /**
      * Create user profile.
-     *
-     * @param User $user
-     * @param array $data
-     * @return UserProfile
      */
     protected function createUserProfile(User $user, array $data): UserProfile
     {
@@ -81,9 +76,6 @@ class AuthService
 
     /**
      * Assign default role to user.
-     *
-     * @param User $user
-     * @return void
      */
     public function assignDefaultRole(User $user): void
     {
@@ -96,23 +88,19 @@ class AuthService
 
     /**
      * Generate token response with user data.
-     *
-     * @param string $token
-     * @param User $user
-     * @return array
      */
     public function generateTokenResponse(string $token, User $user): array
     {
         // Load relationships if not already loaded
-        if (!$user->relationLoaded('profile')) {
+        if (! $user->relationLoaded('profile')) {
             $user->load('profile');
         }
-        if (!$user->relationLoaded('roles')) {
+        if (! $user->relationLoaded('roles')) {
             $user->load('roles');
         }
 
         return [
-            'user' => new \App\Http\Resources\UserResource($user),
+            'user' => new UserResource($user),
             'accessToken' => $token,
             'tokenType' => 'bearer',
             'expiresIn' => auth('api')->factory()->getTTL() * 60, // Convert to seconds
@@ -121,13 +109,12 @@ class AuthService
 
     /**
      * Get authenticated user with relationships.
-     *
-     * @return User
      */
     public function getAuthenticatedUser(): User
     {
         $user = auth('api')->user();
         $user->load(['profile', 'roles']);
+
         return $user;
     }
 }

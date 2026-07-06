@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\GroupMember;
 
 /**
  * ClassroomGroup Model - กลุ่มย่อยในห้องเรียน
@@ -31,6 +30,7 @@ class ClassroomGroup extends Model
 
     // Type constants
     const TYPE_STATIC = 'static';
+
     const TYPE_DYNAMIC = 'dynamic';
 
     // ───── Relationships ─────

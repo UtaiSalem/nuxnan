@@ -32,9 +32,13 @@ class ClassroomInvitation extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_ACCEPTED = 'accepted';
+
     const STATUS_DECLINED = 'declined';
+
     const STATUS_EXPIRED = 'expired';
+
     const STATUS_CANCELLED = 'cancelled';
 
     // ───── Relationships ─────
@@ -64,7 +68,7 @@ class ClassroomInvitation extends Model
     public function scopeValid($query)
     {
         return $query->where('status', self::STATUS_PENDING)
-                     ->where('expires_at', '>', now());
+            ->where('expires_at', '>', now());
     }
 
     // ───── Helpers ─────
@@ -76,7 +80,7 @@ class ClassroomInvitation extends Model
 
     public function isPending(): bool
     {
-        return $this->status === self::STATUS_PENDING && !$this->isExpired();
+        return $this->status === self::STATUS_PENDING && ! $this->isExpired();
     }
 
     public function markAccepted(): bool

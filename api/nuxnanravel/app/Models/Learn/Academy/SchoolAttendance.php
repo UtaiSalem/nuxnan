@@ -2,6 +2,7 @@
 
 namespace App\Models\Learn\Academy;
 
+use App\Models\Academy;
 use App\Models\User;
 use App\Traits\HasQrCheckIn;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,7 +26,7 @@ class SchoolAttendance extends Model
 
     public function academy()
     {
-        return $this->belongsTo(\App\Models\Academy::class);
+        return $this->belongsTo(Academy::class);
     }
 
     public function creator()

@@ -88,7 +88,7 @@ return new class extends Migration
                 'ready',
                 'completed',
                 'cancelled',
-                'refunded'
+                'refunded',
             ])->default('pending');
             $table->decimal('subtotal', 10, 2)->default(0);
             $table->decimal('discount_amount', 10, 2)->default(0);

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class MultiFieldLoginTest extends TestCase
 {
@@ -30,13 +30,13 @@ class MultiFieldLoginTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'success',
-                     'access_token',
-                     'token_type',
-                     'expires_in',
-                     'user'
-                 ]);
+            ->assertJsonStructure([
+                'success',
+                'access_token',
+                'token_type',
+                'expires_in',
+                'user',
+            ]);
     }
 
     /**
@@ -58,13 +58,13 @@ class MultiFieldLoginTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'success',
-                     'access_token',
-                     'token_type',
-                     'expires_in',
-                     'user'
-                 ]);
+            ->assertJsonStructure([
+                'success',
+                'access_token',
+                'token_type',
+                'expires_in',
+                'user',
+            ]);
     }
 
     /**
@@ -86,13 +86,13 @@ class MultiFieldLoginTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'success',
-                     'access_token',
-                     'token_type',
-                     'expires_in',
-                     'user'
-                 ]);
+            ->assertJsonStructure([
+                'success',
+                'access_token',
+                'token_type',
+                'expires_in',
+                'user',
+            ]);
     }
 
     /**
@@ -114,13 +114,13 @@ class MultiFieldLoginTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'success',
-                     'access_token',
-                     'token_type',
-                     'expires_in',
-                     'user'
-                 ]);
+            ->assertJsonStructure([
+                'success',
+                'access_token',
+                'token_type',
+                'expires_in',
+                'user',
+            ]);
     }
 
     /**
@@ -134,9 +134,9 @@ class MultiFieldLoginTest extends TestCase
         ]);
 
         $response->assertStatus(401)
-                 ->assertJson([
-                     'success' => false,
-                     'message' => 'Invalid credentials'
-                 ]);
+            ->assertJson([
+                'success' => false,
+                'message' => 'Invalid credentials',
+            ]);
     }
 }

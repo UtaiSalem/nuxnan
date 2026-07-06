@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AcademyRole extends Model
 {
@@ -59,6 +59,7 @@ class AcademyRole extends Model
                 'reports.view', 'reports.export',
                 'announcements.view', 'announcements.create', 'announcements.manage',
                 'home_visits.view', 'home_visits.manage',
+                'behavior.view', 'behavior.record', 'behavior.approve', 'behavior.manage',
             ],
         ],
         'admin' => [
@@ -77,6 +78,7 @@ class AcademyRole extends Model
                 'reports.view',
                 'announcements.view', 'announcements.create', 'announcements.manage',
                 'home_visits.view', 'home_visits.manage',
+                'behavior.view', 'behavior.record', 'behavior.approve', 'behavior.manage',
             ],
         ],
         'teacher' => [
@@ -93,6 +95,7 @@ class AcademyRole extends Model
                 'attendance.manage', 'gradebook.manage',
                 'announcements.view', 'announcements.create.own',
                 'home_visits.view', 'home_visits.create',
+                'behavior.view', 'behavior.record',
             ],
         ],
         'registrar' => [
@@ -108,6 +111,7 @@ class AcademyRole extends Model
                 'students.lifecycle', 'students.activate_account', 'students.export',
                 'reports.view',
                 'announcements.view',
+                'behavior.view',
             ],
         ],
         'staff' => [
@@ -121,6 +125,7 @@ class AcademyRole extends Model
                 'members.view',
                 'students.view',
                 'announcements.view',
+                'behavior.view',
             ],
         ],
         'finance_staff' => [
@@ -150,6 +155,7 @@ class AcademyRole extends Model
                 'grades.view.own',
                 'schedule.view.own',
                 'announcements.view',
+                'behavior.view.own',
             ],
         ],
         'parent' => [
@@ -167,6 +173,7 @@ class AcademyRole extends Model
                 'payments.view', 'payments.pay',
                 'announcements.view',
                 'messages.teacher',
+                'children.behavior.view',
             ],
         ],
         'guest' => [
@@ -216,7 +223,7 @@ class AcademyRole extends Model
 
         // Hierarchical permission check (e.g., 'courses.edit' grants 'courses.edit.own')
         foreach ($permissions as $perm) {
-            if (str_starts_with($permission, $perm . '.')) {
+            if (str_starts_with($permission, $perm.'.')) {
                 return true;
             }
         }
@@ -234,6 +241,7 @@ class AcademyRole extends Model
                 return true;
             }
         }
+
         return false;
     }
 
@@ -243,10 +251,11 @@ class AcademyRole extends Model
     public function hasAllPermissions(array $permissions): bool
     {
         foreach ($permissions as $permission) {
-            if (!$this->hasPermission($permission)) {
+            if (! $this->hasPermission($permission)) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -259,6 +268,7 @@ class AcademyRole extends Model
         if ($locale === 'th' || empty($this->display_name_en)) {
             return $this->display_name_th;
         }
+
         return $this->display_name_en;
     }
 
@@ -285,7 +295,7 @@ class AcademyRole extends Model
     {
         return $query->where(function ($q) use ($academyId) {
             $q->whereNull('academy_id') // System roles
-              ->orWhere('academy_id', $academyId); // Academy-specific roles
+                ->orWhere('academy_id', $academyId); // Academy-specific roles
         });
     }
 

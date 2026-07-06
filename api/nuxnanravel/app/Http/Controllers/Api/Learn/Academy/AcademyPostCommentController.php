@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Academy\AcademyPostCommentResource;
 use App\Models\Academy;
 use App\Models\AcademyPost;
 use App\Models\AcademyPostComment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Academy\AcademyPostCommentResource;
 
 class AcademyPostCommentController extends Controller
 {
@@ -19,7 +19,7 @@ class AcademyPostCommentController extends Controller
     {
         try {
             $perPage = $request->input('per_page', 10);
-            
+
             $comments = AcademyPostComment::where('academy_post_id', $academy_post->id)
                 ->whereNull('parent_comment_id')
                 ->with(['user', 'images', 'replies.user'])
@@ -35,13 +35,13 @@ class AcademyPostCommentController extends Controller
                     'per_page' => $comments->perPage(),
                     'total' => $comments->total(),
                     'has_more' => $comments->hasMorePages(),
-                ]
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error loading comments: ' . $e->getMessage(),
+                'message' => 'Error loading comments: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -67,7 +67,7 @@ class AcademyPostCommentController extends Controller
             if ($request->hasFile('images')) {
                 $commentImages = $request->file('images');
                 foreach ($commentImages as $image) {
-                    $fileName = $academy_post->id . uniqid() . '.' . $image->getClientOriginalExtension();
+                    $fileName = $academy_post->id.uniqid().'.'.$image->getClientOriginalExtension();
                     Storage::disk('public')->putFileAs('images/academies/posts/comments', $image, $fileName);
                     $newComment->images()->create([
                         'filename' => $fileName,
@@ -86,7 +86,7 @@ class AcademyPostCommentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -101,7 +101,7 @@ class AcademyPostCommentController extends Controller
             if ($comment->user_id !== auth()->id()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้'
+                    'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้',
                 ], 403);
             }
 
@@ -110,19 +110,19 @@ class AcademyPostCommentController extends Controller
             ]);
 
             $comment->update([
-                'content' => $validatedData['content']
+                'content' => $validatedData['content'],
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'แก้ไขความคิดเห็นสำเร็จ',
-                'comment' => new AcademyPostCommentResource($comment->fresh()->load(['user', 'images']))
+                'comment' => new AcademyPostCommentResource($comment->fresh()->load(['user', 'images'])),
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -137,7 +137,7 @@ class AcademyPostCommentController extends Controller
             if ($comment->user_id !== auth()->id() && $academy_post->user_id !== auth()->id()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้'
+                    'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้',
                 ], 403);
             }
 
@@ -149,7 +149,7 @@ class AcademyPostCommentController extends Controller
             $images = $comment->images;
             if ($images && $images->count() > 0) {
                 foreach ($images as $image) {
-                    Storage::disk('public')->delete('images/academies/posts/comments/' . $image->filename);
+                    Storage::disk('public')->delete('images/academies/posts/comments/'.$image->filename);
                     $image->delete();
                 }
             }
@@ -159,7 +159,7 @@ class AcademyPostCommentController extends Controller
                 $reply->likes()->detach();
                 $reply->dislikes()->detach();
                 $reply->images()->each(function ($image) {
-                    Storage::disk('public')->delete('images/academies/posts/comments/' . $image->filename);
+                    Storage::disk('public')->delete('images/academies/posts/comments/'.$image->filename);
                     $image->delete();
                 });
                 $reply->delete();
@@ -178,7 +178,7 @@ class AcademyPostCommentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ], 500);
         }
     }

@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Learn\Academy\LibraryBook;
 use App\Models\Learn\Academy\LibraryBorrowing;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class LibraryController extends Controller
@@ -19,10 +19,10 @@ class LibraryController extends Controller
         $query = LibraryBook::where('academy_id', $academy->id);
 
         if ($request->has('search')) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', "%{$request->search}%")
-                  ->orWhere('author', 'like', "%{$request->search}%")
-                  ->orWhere('isbn', 'like', "%{$request->search}%");
+                    ->orWhere('author', 'like', "%{$request->search}%")
+                    ->orWhere('isbn', 'like', "%{$request->search}%");
             });
         }
 

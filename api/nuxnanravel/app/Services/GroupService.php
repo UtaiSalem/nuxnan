@@ -6,6 +6,7 @@ use App\Models\ClassroomGroup;
 use App\Models\ClassroomMember;
 use App\Models\GroupMember;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * GroupService — CRUD for classroom sub-groups and their members.
@@ -53,6 +54,7 @@ class GroupService
     public function updateGroup(ClassroomGroup $group, array $data): ClassroomGroup
     {
         $group->update($data);
+
         return $group->fresh();
     }
 
@@ -68,9 +70,7 @@ class GroupService
      * Add a classroom member to a group.
      * BR-1: The user must already be an active classroom member.
      *
-     * @param  int $groupId
-     * @param  int $memberId  ClassroomMember.id
-     * @return GroupMember
+     * @param  int  $memberId  ClassroomMember.id
      */
     public function addGroupMember(int $groupId, int $memberId): GroupMember
     {
@@ -82,7 +82,7 @@ class GroupService
             ->where('is_active', true)
             ->first();
 
-        if (!$classroomMember) {
+        if (! $classroomMember) {
             abort(422, 'ผู้ใช้ต้องเป็นสมาชิกของห้องเรียนก่อนจึงจะเข้ากลุ่มได้');
         }
 
@@ -104,11 +104,12 @@ class GroupService
             try {
                 $this->addGroupMember($groupId, $memberId);
                 $added++;
-            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            } catch (HttpException $e) {
                 // Skip non-members (BR-1 violation)
                 continue;
             }
         }
+
         return $added;
     }
 

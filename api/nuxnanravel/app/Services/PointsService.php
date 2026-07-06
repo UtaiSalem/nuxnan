@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\PointsTransaction;
+use App\Models\LevelDefinition;
 use App\Models\PointRule;
+use App\Models\PointsTransaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -89,6 +90,7 @@ class PointsService
                     'required' => $amount,
                     'available' => $balanceBefore,
                 ]);
+
                 return null;
             }
 
@@ -278,7 +280,7 @@ class PointsService
                 'balance_before' => $balanceBefore,
                 'balance_after' => $balanceAfter,
                 'source_type' => 'admin_adjust',
-                'description' => $reason ?? "การปรับแต้มจาก Admin",
+                'description' => $reason ?? 'การปรับแต้มจาก Admin',
                 'metadata' => ['admin_action' => $actionType],
                 'status' => 'completed',
             ]);
@@ -303,23 +305,24 @@ class PointsService
     public function awardByRule(User $user, string $ruleKey, ?int $sourceId = null, ?string $description = null, ?array $metadata = null): ?PointsTransaction
     {
         $rule = $this->getRule($ruleKey);
-        
-        if (!$rule) {
+
+        if (! $rule) {
             Log::warning("Point rule not found: {$ruleKey}");
+
             return null;
         }
 
-        if (!$this->canEarnFromRule($user, $rule)) {
+        if (! $this->canEarnFromRule($user, $rule)) {
             return null;
         }
 
         return $this->earn(
-            $user, 
-            $rule->calculateAmount(), 
-            $rule->source_type ?? $ruleKey, 
-            $sourceId, 
-            $description ?? $rule->rule_name, 
-            $metadata, 
+            $user,
+            $rule->calculateAmount(),
+            $rule->source_type ?? $ruleKey,
+            $sourceId,
+            $description ?? $rule->rule_name,
+            $metadata,
             $rule->xp_amount ?? 0
         );
     }
@@ -332,16 +335,16 @@ class PointsService
         $xp = $user->xp;
 
         // Find the highest level where xp_required <= current xp
-        $levelDef = \App\Models\LevelDefinition::where('xp_required', '<=', $xp)
+        $levelDef = LevelDefinition::where('xp_required', '<=', $xp)
             ->orderByDesc('level')
             ->first();
 
         $level = $levelDef ? $levelDef->level : 1;
-        
+
         // Find next level for XP info
-        $nextLevelDef = \App\Models\LevelDefinition::where('level', $level + 1)->first();
+        $nextLevelDef = LevelDefinition::where('level', $level + 1)->first();
         $xpForNextLevel = $nextLevelDef ? $nextLevelDef->xp_required : $xp;
-        
+
         $currentLevelXp = $levelDef ? $levelDef->xp_required : 0;
         $progressXp = $xp - $currentLevelXp;
         $neededXpForNext = $nextLevelDef ? ($nextLevelDef->xp_required - $currentLevelXp) : 0;
@@ -363,7 +366,7 @@ class PointsService
 
         $dailyLimit = $user->dailyPointLimits()->where('date', $today)->first();
 
-        if (!$dailyLimit) {
+        if (! $dailyLimit) {
             $dailyLimit = $user->dailyPointLimits()->create([
                 'date' => $today,
                 'points_earned' => $pointsEarned,
@@ -390,7 +393,7 @@ class PointsService
      */
     public function canEarnFromRule(User $user, PointRule $rule): bool
     {
-        if (!$rule->isActiveNow()) {
+        if (! $rule->isActiveNow()) {
             return false;
         }
 
@@ -450,7 +453,7 @@ class PointsService
             'level' => $user->level,
             'current_xp' => $user->current_xp,
             'xp_for_next_level' => $user->xp_for_next_level,
-            'progress_percentage' => $user->xp_for_next_level > 0 
+            'progress_percentage' => $user->xp_for_next_level > 0
                 ? round(($user->current_xp / $user->xp_for_next_level) * 100, 2)
                 : 100,
         ];
@@ -491,7 +494,7 @@ class PointsService
                 'balance_before' => $pointsBalanceBefore,
                 'balance_after' => $pointsBalanceAfter,
                 'source_type' => 'points_to_wallet',
-                'description' => "แปลง {$points} แต้มเป็น " . number_format($walletAmount, 2) . " บาท",
+                'description' => "แปลง {$points} แต้มเป็น ".number_format($walletAmount, 2).' บาท',
                 'metadata' => [
                     'exchange_rate' => $exchangeRate,
                     'conversion_type' => 'points_to_money',
@@ -501,7 +504,7 @@ class PointsService
             ]);
 
             // Delegate wallet addition to WalletService
-            $walletService = new \App\Services\WalletService();
+            $walletService = new WalletService;
             $walletResult = $walletService->addFromPointsConversion($user, $walletAmount, $points, $exchangeRate);
 
             Log::info('Points converted to wallet', [
@@ -544,7 +547,7 @@ class PointsService
             'balance_before' => $pointsBalanceBefore,
             'balance_after' => $pointsBalanceAfter,
             'source_type' => 'wallet_to_points',
-            'description' => "รับจากการแปลง " . number_format($walletAmount, 2) . " บาท",
+            'description' => 'รับจากการแปลง '.number_format($walletAmount, 2).' บาท',
             'metadata' => [
                 'exchange_rate' => $exchangeRate,
                 'conversion_type' => 'money_to_points',

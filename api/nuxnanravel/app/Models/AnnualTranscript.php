@@ -38,12 +38,16 @@ class AnnualTranscript extends Model
 
     // Promotion Status Constants
     const PROMOTION_PROMOTED = 'promoted';
+
     const PROMOTION_RETAINED = 'retained';
+
     const PROMOTION_CONDITIONAL = 'conditional';
 
     // Status Constants
     const STATUS_DRAFT = 'draft';
+
     const STATUS_PUBLISHED = 'published';
+
     const STATUS_APPROVED = 'approved';
 
     // Relationships
@@ -81,7 +85,7 @@ class AnnualTranscript extends Model
     // Accessors
     public function getPromotionStatusTextAttribute(): string
     {
-        return match($this->promotion_status) {
+        return match ($this->promotion_status) {
             self::PROMOTION_PROMOTED => 'เลื่อนชั้น',
             self::PROMOTION_RETAINED => 'ซ้ำชั้น',
             self::PROMOTION_CONDITIONAL => 'มีเงื่อนไข',
@@ -91,7 +95,7 @@ class AnnualTranscript extends Model
 
     public function getStatusTextAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_DRAFT => 'ร่าง',
             self::STATUS_PUBLISHED => 'เผยแพร่',
             self::STATUS_APPROVED => 'อนุมัติ',
@@ -156,6 +160,7 @@ class AnnualTranscript extends Model
 
         if ($this->total_credits == 0) {
             $this->update(['promotion_status' => null]);
+
             return $this;
         }
 
@@ -170,6 +175,7 @@ class AnnualTranscript extends Model
         }
 
         $this->update(['promotion_status' => $status]);
+
         return $this;
     }
 }

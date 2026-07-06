@@ -94,7 +94,7 @@ class MemberTagController extends Controller
         if ($tag->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบแท็ก'
+                'message' => 'ไม่พบแท็ก',
             ], 404);
         }
 
@@ -130,7 +130,7 @@ class MemberTagController extends Controller
         if ($tag->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบแท็ก'
+                'message' => 'ไม่พบแท็ก',
             ], 404);
         }
 
@@ -151,12 +151,12 @@ class MemberTagController extends Controller
         if ($tag->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบแท็ก'
+                'message' => 'ไม่พบแท็ก',
             ], 404);
         }
 
         $perPage = min($request->get('per_page', 20), 100);
-        
+
         $members = $tag->members()
             ->with(['user:id,name,profile_photo_path,email', 'role:id,name,display_name'])
             ->paginate($perPage);
@@ -203,7 +203,7 @@ class MemberTagController extends Controller
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบสมาชิก'
+                'message' => 'ไม่พบสมาชิก',
             ], 404);
         }
 
@@ -239,7 +239,7 @@ class MemberTagController extends Controller
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบสมาชิก'
+                'message' => 'ไม่พบสมาชิก',
             ], 404);
         }
 
@@ -271,7 +271,7 @@ class MemberTagController extends Controller
         if ($tag->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'แท็กไม่ถูกต้อง'
+                'message' => 'แท็กไม่ถูกต้อง',
             ], 422);
         }
 
@@ -312,7 +312,7 @@ class MemberTagController extends Controller
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบสมาชิก'
+                'message' => 'ไม่พบสมาชิก',
             ], 404);
         }
 

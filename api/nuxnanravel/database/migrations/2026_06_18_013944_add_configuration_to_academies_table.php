@@ -24,9 +24,9 @@ return new class extends Migration
         DB::table('academies')->update([
             'student_editable_fields' => json_encode([
                 'mode' => 'blacklist',
-                'fields' => ['citizen_id', 'student_id', 'academic', 'health']
+                'fields' => ['citizen_id', 'student_id', 'academic', 'health'],
             ]),
-            'approval_flow' => 'single'
+            'approval_flow' => 'single',
         ]);
     }
 

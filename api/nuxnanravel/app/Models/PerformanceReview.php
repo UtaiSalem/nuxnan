@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Traits\Auditable;
 
 /**
  * PerformanceReview Model - การประเมินผลงาน
  */
 class PerformanceReview extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'staff_profile_id',
@@ -40,9 +40,13 @@ class PerformanceReview extends Model
 
     // Rating constants
     const RATING_EXCELLENT = 'excellent';
+
     const RATING_GOOD = 'good';
+
     const RATING_SATISFACTORY = 'satisfactory';
+
     const RATING_NEEDS_IMPROVEMENT = 'needs_improvement';
+
     const RATING_UNSATISFACTORY = 'unsatisfactory';
 
     const RATINGS = [
@@ -55,8 +59,11 @@ class PerformanceReview extends Model
 
     // Status constants
     const STATUS_DRAFT = 'draft';
+
     const STATUS_SUBMITTED = 'submitted';
+
     const STATUS_ACKNOWLEDGED = 'acknowledged';
+
     const STATUS_FINAL = 'final';
 
     const STATUSES = [
@@ -109,13 +116,13 @@ class PerformanceReview extends Model
 
     public function calculateOverallScore(): void
     {
-        if (!$this->criteria_scores || empty($this->criteria_scores)) {
+        if (! $this->criteria_scores || empty($this->criteria_scores)) {
             return;
         }
 
         $scores = collect($this->criteria_scores);
         $totalWeight = $scores->sum('weight');
-        
+
         if ($totalWeight <= 0) {
             $this->overall_score = $scores->avg('score');
         } else {

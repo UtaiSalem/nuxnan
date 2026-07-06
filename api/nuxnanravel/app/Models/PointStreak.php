@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -114,7 +115,7 @@ class PointStreak extends Model
      */
     protected function calculateStreakBonus(int $streak): int
     {
-        return match(true) {
+        return match (true) {
             $streak >= 1 && $streak <= 3 => 10,
             $streak >= 4 && $streak <= 7 => 20,
             $streak >= 8 && $streak <= 14 => 30,
@@ -130,6 +131,7 @@ class PointStreak extends Model
     public function getNextStreakBonus(): int
     {
         $nextStreak = $this->current_streak + 1;
+
         return $this->calculateStreakBonus($nextStreak);
     }
 
@@ -138,7 +140,7 @@ class PointStreak extends Model
      */
     public function getDaysToNextBonus(): int
     {
-        return match(true) {
+        return match (true) {
             $this->current_streak < 3 => 3 - $this->current_streak,
             $this->current_streak < 7 => 7 - $this->current_streak,
             $this->current_streak < 14 => 14 - $this->current_streak,
@@ -160,7 +162,7 @@ class PointStreak extends Model
      */
     public function isActive(): bool
     {
-        if (!$this->last_activity_date) {
+        if (! $this->last_activity_date) {
             return false;
         }
 
@@ -175,11 +177,11 @@ class PointStreak extends Model
      */
     public function getFormattedLastActivityDateAttribute(): string
     {
-        if (!$this->last_activity_date) {
+        if (! $this->last_activity_date) {
             return '-';
         }
 
-        return \Carbon\Carbon::parse($this->last_activity_date)
+        return Carbon::parse($this->last_activity_date)
             ->locale('th')
             ->translatedFormat('j F Y');
     }
@@ -189,7 +191,7 @@ class PointStreak extends Model
      */
     public function getStreakTierAttribute(): string
     {
-        return match(true) {
+        return match (true) {
             $this->current_streak >= 31 => 'ตำนาน (31+ วัน)',
             $this->current_streak >= 15 => 'มหาศาล (15-30 วัน)',
             $this->current_streak >= 8 => 'หายาก (8-14 วัน)',

@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons\topics;
 
-use App\Models\Topic;
-use App\Models\TopicImage;
-use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTopicImageRequest;
 use App\Http\Requests\UpdateTopicImageRequest;
+use App\Models\Topic;
+use App\Models\TopicImage;
 use App\Services\CourseMediaService;
+use Illuminate\Support\Facades\Storage;
 
-class TopicImageController extends \App\Http\Controllers\Controller
+class TopicImageController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -68,21 +69,21 @@ class TopicImageController extends \App\Http\Controllers\Controller
         if ($image->topic_id !== $topic->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Image not found for this topic'
+                'message' => 'Image not found for this topic',
             ], 404);
         }
 
         // 2. Authorization: ต้องเป็น course admin
-        if (!$topic->course->isAdmin(auth()->user())) {
+        if (! $topic->course->isAdmin(auth()->user())) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized'
+                'message' => 'Unauthorized',
             ], 403);
         }
 
         // 3. Safe delete: ใช้ deleteIfUnused กันลบไฟล์ที่ share จาก duplicate course
         $mediaService->deleteIfUnused(
-            'images/courses/lessons/topics/' . $image->filename,
+            'images/courses/lessons/topics/'.$image->filename,
             TopicImage::class,
             'filename',
             $image->filename,
@@ -94,7 +95,7 @@ class TopicImageController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Image deleted'
+            'message' => 'Image deleted',
         ], 200);
     }
 }

@@ -31,8 +31,11 @@ class MessageThread extends Model
 
     // Thread type constants
     const TYPE_DIRECT = 'direct';
+
     const TYPE_GROUP = 'group';
+
     const TYPE_PARENT_TEACHER = 'parent_teacher';
+
     const TYPE_CLASS = 'class';
 
     const TYPES = [
@@ -87,10 +90,14 @@ class MessageThread extends Model
     public function getUnreadCountAttribute(): int
     {
         $userId = auth()->id();
-        if (!$userId) return 0;
+        if (! $userId) {
+            return 0;
+        }
 
         $participant = $this->participants()->where('user_id', $userId)->first();
-        if (!$participant) return 0;
+        if (! $participant) {
+            return 0;
+        }
 
         return $this->messages()
             ->where('created_at', '>', $participant->last_read_at ?? $participant->joined_at)

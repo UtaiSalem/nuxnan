@@ -4,9 +4,15 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\Announcement;
+use App\Models\CourseMember;
+use App\Models\SchoolEvent;
 use App\Models\Student;
+use App\Models\StudentAttendance;
+use App\Models\StudentFee;
 use App\Models\StudentGuardian;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 /**
@@ -20,32 +26,32 @@ class ParentDashboardController extends Controller
     public function getMyChildren(Academy $academy, Request $request)
     {
         $user = $request->user();
-        
+
         // Find students linked to this parent
         // Method 1: Via AcademyMember with parent role
         // Method 2: Via StudentGuardian with linked user_id
-        
+
         // Get students where this user is a guardian
         $studentIds = StudentGuardian::whereHas('student', function ($q) use ($academy) {
             $q->where('academy_id', $academy->id);
         })
-        ->where(function ($q) use ($user) {
-            // Match by citizen_id if available
-            if ($user->citizen_id) {
-                $q->where('citizen_id', $user->citizen_id);
-            }
-            // Or match by phone
-            $q->orWhereHas('contacts', function ($cq) use ($user) {
-                $cq->where('contact_type', 'phone')
-                   ->where('contact_value', $user->phone);
-            });
-            // Or match by email
-            $q->orWhereHas('contacts', function ($cq) use ($user) {
-                $cq->where('contact_type', 'email')
-                   ->where('contact_value', $user->email);
-            });
-        })
-        ->pluck('student_id');
+            ->where(function ($q) use ($user) {
+                // Match by citizen_id if available
+                if ($user->citizen_id) {
+                    $q->where('citizen_id', $user->citizen_id);
+                }
+                // Or match by phone
+                $q->orWhereHas('contacts', function ($cq) use ($user) {
+                    $cq->where('contact_type', 'phone')
+                        ->where('contact_value', $user->phone);
+                });
+                // Or match by email
+                $q->orWhereHas('contacts', function ($cq) use ($user) {
+                    $cq->where('contact_type', 'email')
+                        ->where('contact_value', $user->email);
+                });
+            })
+            ->pluck('student_id');
 
         $students = Student::whereIn('id', $studentIds)
             ->with(['currentClassroom.classroom'])
@@ -57,8 +63,8 @@ class ParentDashboardController extends Controller
                 return [
                     'id' => $student->id,
                     'student_id' => $student->student_id,
-                    'name' => $student->first_name_th . ' ' . $student->last_name_th,
-                    'name_en' => $student->first_name_en . ' ' . $student->last_name_en,
+                    'name' => $student->first_name_th.' '.$student->last_name_th,
+                    'name_en' => $student->first_name_en.' '.$student->last_name_en,
                     'photo' => $student->photo_url,
                     'classroom' => $student->currentClassroom?->classroom?->name ?? 'ไม่มีห้องเรียน',
                     'grade_level' => $student->currentClassroom?->classroom?->grade_level ?? '-',
@@ -76,17 +82,17 @@ class ParentDashboardController extends Controller
     public function getChildDetail(Academy $academy, Student $student, Request $request)
     {
         // Verify parent has access to this student
-        if (!$this->canAccessStudent($request->user(), $student)) {
+        if (! $this->canAccessStudent($request->user(), $student)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนนี้'
+                'message' => 'ไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนนี้',
             ], 403);
         }
 
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบข้อมูลนักเรียน'
+                'message' => 'ไม่พบข้อมูลนักเรียน',
             ], 404);
         }
 
@@ -100,8 +106,8 @@ class ParentDashboardController extends Controller
             'student' => [
                 'id' => $student->id,
                 'student_id' => $student->student_id,
-                'name' => $student->first_name_th . ' ' . $student->last_name_th,
-                'name_en' => $student->first_name_en . ' ' . $student->last_name_en,
+                'name' => $student->first_name_th.' '.$student->last_name_th,
+                'name_en' => $student->first_name_en.' '.$student->last_name_en,
                 'nickname' => $student->nickname,
                 'photo' => $student->photo_url,
                 'birth_date' => $student->birth_date,
@@ -134,15 +140,15 @@ class ParentDashboardController extends Controller
      */
     public function getChildGrades(Academy $academy, Student $student, Request $request)
     {
-        if (!$this->canAccessStudent($request->user(), $student)) {
+        if (! $this->canAccessStudent($request->user(), $student)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนนี้'
+                'message' => 'ไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนนี้',
             ], 403);
         }
 
         // Get course enrollments and grades
-        $enrollments = \App\Models\CourseMember::where('user_id', $student->user_id)
+        $enrollments = CourseMember::where('user_id', $student->user_id)
             ->whereHas('course', function ($q) use ($academy) {
                 $q->where('academy_id', $academy->id);
             })
@@ -169,19 +175,19 @@ class ParentDashboardController extends Controller
      */
     public function getChildAttendance(Academy $academy, Student $student, Request $request)
     {
-        if (!$this->canAccessStudent($request->user(), $student)) {
+        if (! $this->canAccessStudent($request->user(), $student)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนนี้'
+                'message' => 'ไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนนี้',
             ], 403);
         }
 
         $month = $request->get('month', now()->format('Y-m'));
-        $startDate = \Carbon\Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
         // Get student attendance from classroom
-        $attendances = \App\Models\StudentAttendance::where('student_id', $student->id)
+        $attendances = StudentAttendance::where('student_id', $student->id)
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('date')
             ->get();
@@ -201,7 +207,7 @@ class ParentDashboardController extends Controller
             'attendance' => $attendances->map(function ($a) {
                 return [
                     'date' => $a->date,
-                    'day_name' => $a->date ? \Carbon\Carbon::parse($a->date)->locale('th')->dayName : '',
+                    'day_name' => $a->date ? Carbon::parse($a->date)->locale('th')->dayName : '',
                     'status' => $a->status,
                     'note' => $a->note,
                     'check_in' => $a->check_in_time,
@@ -216,12 +222,12 @@ class ParentDashboardController extends Controller
      */
     public function getAnnouncements(Academy $academy, Request $request)
     {
-        $announcements = \App\Models\Announcement::where('academy_id', $academy->id)
+        $announcements = Announcement::where('academy_id', $academy->id)
             ->where('status', 'published')
             ->where(function ($q) {
                 $q->whereNull('target_audience')
-                  ->orWhere('target_audience', 'all')
-                  ->orWhere('target_audience', 'LIKE', '%parent%');
+                    ->orWhere('target_audience', 'all')
+                    ->orWhere('target_audience', 'LIKE', '%parent%');
             })
             ->orderBy('is_pinned', 'desc')
             ->orderBy('published_at', 'desc')
@@ -250,7 +256,7 @@ class ParentDashboardController extends Controller
      */
     public function getUpcomingEvents(Academy $academy, Request $request)
     {
-        $events = \App\Models\SchoolEvent::where('academy_id', $academy->id)
+        $events = SchoolEvent::where('academy_id', $academy->id)
             ->where('start_date', '>=', now())
             ->where('status', 'active')
             ->orderBy('start_date')
@@ -282,7 +288,7 @@ class ParentDashboardController extends Controller
         $user = $request->user();
         $children = $this->getStudentIdsForParent($user, $academy);
 
-        $fees = \App\Models\StudentFee::whereIn('student_id', $children)
+        $fees = StudentFee::whereIn('student_id', $children)
             ->with(['feeStructure', 'payments'])
             ->orderBy('due_date')
             ->get();
@@ -323,7 +329,7 @@ class ParentDashboardController extends Controller
                 }
                 $q->orWhereHas('contacts', function ($cq) use ($user) {
                     $cq->where('contact_value', $user->phone)
-                       ->orWhere('contact_value', $user->email);
+                        ->orWhere('contact_value', $user->email);
                 });
             })
             ->exists();
@@ -339,16 +345,16 @@ class ParentDashboardController extends Controller
         return StudentGuardian::whereHas('student', function ($q) use ($academy) {
             $q->where('academy_id', $academy->id);
         })
-        ->where(function ($q) use ($user) {
-            if ($user->citizen_id) {
-                $q->where('citizen_id', $user->citizen_id);
-            }
-            $q->orWhereHas('contacts', function ($cq) use ($user) {
-                $cq->where('contact_value', $user->phone)
-                   ->orWhere('contact_value', $user->email);
-            });
-        })
-        ->pluck('student_id')
-        ->toArray();
+            ->where(function ($q) use ($user) {
+                if ($user->citizen_id) {
+                    $q->where('citizen_id', $user->citizen_id);
+                }
+                $q->orWhereHas('contacts', function ($cq) use ($user) {
+                    $cq->where('contact_value', $user->phone)
+                        ->orWhere('contact_value', $user->email);
+                });
+            })
+            ->pluck('student_id')
+            ->toArray();
     }
 }

@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\Admin\UserDeletionImpactService;
 use App\Services\Admin\UserDeletionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -26,7 +27,7 @@ class AdminController extends Controller
     /**
      * Display a listing of users with filtering and pagination.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function index(Request $request)
     {
@@ -105,7 +106,7 @@ class AdminController extends Controller
     /**
      * Get users data for DataTables (server-side processing)
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function datatable(Request $request)
     {
@@ -166,7 +167,7 @@ class AdminController extends Controller
     /**
      * Get user statistics
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function statistics()
     {
@@ -203,7 +204,7 @@ class AdminController extends Controller
     /**
      * Store a newly created user in storage.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function store(Request $request)
     {
@@ -300,7 +301,7 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการสร้างผู้ใช้: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาดในการสร้างผู้ใช้: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -309,7 +310,7 @@ class AdminController extends Controller
      * Display the specified user.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function show($id)
     {
@@ -360,7 +361,7 @@ class AdminController extends Controller
      * Update the specified user in storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function update(Request $request, $id)
     {
@@ -478,7 +479,7 @@ class AdminController extends Controller
      * GET /api/admin/users/{id}/delete-impact
      * ตรวจสอบผลกระทบก่อนลบ
      */
-    public function getDeleteImpact(int $id): \Illuminate\Http\JsonResponse
+    public function getDeleteImpact(int $id): JsonResponse
     {
         $user = User::withTrashed()->find($id);
 
@@ -506,7 +507,7 @@ class AdminController extends Controller
      * DELETE /api/admin/users/{id}
      * Soft delete + anonymize user
      */
-    public function destroy(int $id): \Illuminate\Http\JsonResponse
+    public function destroy(int $id): JsonResponse
     {
         $user = User::find($id);
 
@@ -557,7 +558,7 @@ class AdminController extends Controller
      * POST /api/admin/users/{id}/restore
      * Restore user ที่ถูก soft delete
      */
-    public function restoreUser(int $id): \Illuminate\Http\JsonResponse
+    public function restoreUser(int $id): JsonResponse
     {
         $user = User::withTrashed()->find($id);
 
@@ -581,7 +582,7 @@ class AdminController extends Controller
      * POST /api/admin/users/bulk-delete
      * Soft delete หลายคนพร้อมกัน (ไม่รวม Super Admin และตัวเอง)
      */
-    public function bulkDelete(Request $request): \Illuminate\Http\JsonResponse
+    public function bulkDelete(Request $request): JsonResponse
     {
         $request->validate([
             'user_ids' => 'required|array|min:1|max:50',
@@ -656,7 +657,7 @@ class AdminController extends Controller
      * Verify user's email
      *
      * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function verifyEmail($id)
     {
@@ -690,7 +691,7 @@ class AdminController extends Controller
      * Unverify user's email
      *
      * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function unverifyEmail($id)
     {
@@ -724,7 +725,7 @@ class AdminController extends Controller
      * Toggle user ban status
      *
      * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function toggleBan($id)
     {

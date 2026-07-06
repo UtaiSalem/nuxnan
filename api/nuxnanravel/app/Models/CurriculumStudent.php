@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CurriculumStudent extends Model
 {
@@ -37,8 +37,11 @@ class CurriculumStudent extends Model
      * Student status constants
      */
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_GRADUATED = 'graduated';
+
     public const STATUS_DROPPED = 'dropped';
+
     public const STATUS_SUSPENDED = 'suspended';
 
     /**
@@ -90,8 +93,10 @@ class CurriculumStudent extends Model
     public function getProgressPercentageAttribute(): float
     {
         $totalCredits = $this->curriculum->total_credits ?? 0;
-        if ($totalCredits === 0) return 0;
-        
+        if ($totalCredits === 0) {
+            return 0;
+        }
+
         return round(($this->completed_credits / $totalCredits) * 100, 2);
     }
 
@@ -101,6 +106,7 @@ class CurriculumStudent extends Model
     public function getRemainingCreditsAttribute(): int
     {
         $totalCredits = $this->curriculum->total_credits ?? 0;
+
         return max(0, $totalCredits - $this->completed_credits);
     }
 

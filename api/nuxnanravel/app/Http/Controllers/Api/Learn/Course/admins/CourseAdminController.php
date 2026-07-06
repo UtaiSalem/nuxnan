@@ -7,9 +7,11 @@ use App\Http\Resources\UserResource;
 use App\Models\Course;
 use App\Models\CourseInvitation;
 use App\Models\CourseMember;
+use App\Models\CoursePermission;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class CourseAdminController extends Controller
 {
@@ -94,7 +96,7 @@ class CourseAdminController extends Controller
             'success' => true,
             'admins' => $admins,
             'invitations' => $invitations,
-            'available_permissions' => \App\Models\CoursePermission::PERMISSIONS,
+            'available_permissions' => CoursePermission::PERMISSIONS,
         ]);
     }
 
@@ -153,7 +155,7 @@ class CourseAdminController extends Controller
             'user_id' => 'required|exists:users,id',
             'role' => 'required|in:3,4', // 3: Teacher/TA, 4: Admin
             'permissions' => 'nullable|array',
-            'permissions.*' => 'string|in:'.implode(',', array_keys(\App\Models\CoursePermission::PERMISSIONS)),
+            'permissions.*' => 'string|in:'.implode(',', array_keys(CoursePermission::PERMISSIONS)),
         ]);
 
         $userId = $request->user_id;
@@ -198,7 +200,7 @@ class CourseAdminController extends Controller
         }
 
         // Lifecycle guard: delegate to CoursePolicy::enroll.
-        $gate = \Illuminate\Support\Facades\Gate::inspect('enroll', $course);
+        $gate = Gate::inspect('enroll', $course);
         if ($gate->denied()) {
             $invitation->update(['status' => 'expired_by_lifecycle']);
 
@@ -240,7 +242,7 @@ class CourseAdminController extends Controller
             $permissions = json_decode($invitation->permissions ?? '[]', true);
             if (! empty($permissions)) {
                 foreach ($permissions as $permission) {
-                    \App\Models\CoursePermission::create([
+                    CoursePermission::create([
                         'course_member_id' => $member->id,
                         'permission' => $permission,
                         'granted_by' => $invitation->inviter_id,
@@ -298,7 +300,7 @@ class CourseAdminController extends Controller
 
         $request->validate([
             'permissions' => 'required|array',
-            'permissions.*' => 'string|in:'.implode(',', array_keys(\App\Models\CoursePermission::PERMISSIONS)),
+            'permissions.*' => 'string|in:'.implode(',', array_keys(CoursePermission::PERMISSIONS)),
         ]);
 
         DB::transaction(function () use ($member, $request) {
@@ -307,7 +309,7 @@ class CourseAdminController extends Controller
 
             // Add new permissions
             foreach ($request->permissions as $permission) {
-                \App\Models\CoursePermission::create([
+                CoursePermission::create([
                     'course_member_id' => $member->id,
                     'permission' => $permission,
                     'granted_by' => auth()->id(),
@@ -332,7 +334,7 @@ class CourseAdminController extends Controller
         }
 
         $permissions = $member->getPermissions();
-        $availablePermissions = \App\Models\CoursePermission::PERMISSIONS;
+        $availablePermissions = CoursePermission::PERMISSIONS;
 
         return response()->json([
             'success' => true,

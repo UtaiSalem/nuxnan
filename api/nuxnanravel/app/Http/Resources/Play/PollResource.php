@@ -2,10 +2,10 @@
 
 namespace App\Http\Resources\Play;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Resources\UserResource;
 use App\Models\PollVote;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class PollResource extends JsonResource
 {
@@ -36,7 +36,7 @@ class PollResource extends JsonResource
             'options' => $this->options->map(function ($option) {
                 $totalVotes = $this->total_votes ?? $this->options->sum('votes') ?? 0;
                 $optionVotes = $option->votes ?? 0;
-                
+
                 $isUserVote = false;
                 if (auth()->check()) {
                     $isUserVote = PollVote::where('poll_option_id', $option->id)
@@ -71,31 +71,31 @@ class PollResource extends JsonResource
             'comments' => PollCommentResource::collection($this->whenLoaded('comments')),
         ];
     }
-    
+
     /**
      * Calculate time remaining for the poll.
      */
     protected function calculateTimeRemaining(): ?string
     {
-        if (!$this->end_date) {
+        if (! $this->end_date) {
             return null;
         }
-        
+
         $now = now();
         $endDate = $this->end_date;
-        
+
         if ($now->isAfter($endDate)) {
             return null;
         }
-        
+
         $diff = $now->diff($endDate);
-        
+
         if ($diff->d > 0) {
-            return $diff->d . ' วัน';
+            return $diff->d.' วัน';
         } elseif ($diff->h > 0) {
-            return $diff->h . ' ชั่วโมง';
+            return $diff->h.' ชั่วโมง';
         } elseif ($diff->i > 0) {
-            return $diff->i . ' นาที';
+            return $diff->i.' นาที';
         } else {
             return 'ไม่กี่วินาที';
         }

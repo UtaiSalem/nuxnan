@@ -2,8 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\AcademyMember;
+use App\Models\Student;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class FixAcademyMemberUserIdsSeeder extends Seeder
 {
@@ -13,7 +16,7 @@ class FixAcademyMemberUserIdsSeeder extends Seeder
     public function run(): void
     {
         // 1. Get all students that have a student_id
-        $students = \App\Models\Student::whereNotNull('student_id')->get();
+        $students = Student::whereNotNull('student_id')->get();
         $academyId = 1;
 
         $updatedCount = 0;
@@ -21,15 +24,17 @@ class FixAcademyMemberUserIdsSeeder extends Seeder
 
         foreach ($students as $student) {
             $studentId = trim($student->student_id);
-            if (empty($studentId)) continue;
+            if (empty($studentId)) {
+                continue;
+            }
 
             // 2. Find User by Email
             $email = "s{$studentId}@jariyathum.ac.th";
-            $user = \App\Models\User::where('email', $email)->first();
+            $user = User::where('email', $email)->first();
 
             if ($user) {
                 // 3. Update Academy Member
-                $member = \App\Models\AcademyMember::where('academy_id', $academyId)
+                $member = AcademyMember::where('academy_id', $academyId)
                     ->where('student_id', $student->id)
                     ->first();
 
@@ -39,8 +44,8 @@ class FixAcademyMemberUserIdsSeeder extends Seeder
                         $updatedCount++;
                     }
                 } else {
-                     // Create if missing (Safety net)
-                    \App\Models\AcademyMember::create([
+                    // Create if missing (Safety net)
+                    AcademyMember::create([
                         'academy_id' => $academyId,
                         'user_id' => $user->id,
                         'student_id' => $student->id,
@@ -60,18 +65,18 @@ class FixAcademyMemberUserIdsSeeder extends Seeder
             } else {
                 // Option A: Create User from Student Data
                 try {
-                    $name = trim($student->first_name_th . ' ' . $student->last_name_th);
+                    $name = trim($student->first_name_th.' '.$student->last_name_th);
                     if (empty($name)) {
                         $name = $student->full_name_th ?: "Student {$studentId}";
                     }
 
                     // Create New User
-                    $user = \App\Models\User::create([
+                    $user = User::create([
                         'name' => $name,
                         'email' => $email,
                         'password' => \Hash::make("s{$studentId}000"), // Default password pattern
-                        'reference_code' => \Illuminate\Support\Str::random(10),
-                        'personal_code' => \App\Models\User::generateReferralCode(),
+                        'reference_code' => Str::random(10),
+                        'personal_code' => User::generateReferralCode(),
                         'email_verified_at' => now(),
                     ]);
 
@@ -79,14 +84,14 @@ class FixAcademyMemberUserIdsSeeder extends Seeder
                     $student->update(['user_id' => $user->id]);
 
                     // Create/Update Academy Member
-                    $member = \App\Models\AcademyMember::updateOrCreate(
+                    $member = AcademyMember::updateOrCreate(
                         ['academy_id' => $academyId, 'student_id' => $student->id],
                         [
                             'user_id' => $user->id,
                             'member_code' => $studentId,
                             'status' => 2,
                             'role' => 'student',
-                            'enrollment_date' => now(), 
+                            'enrollment_date' => now(),
                         ]
                     );
 
@@ -94,7 +99,7 @@ class FixAcademyMemberUserIdsSeeder extends Seeder
                     $this->command->info("Created User for Student ID: {$studentId}");
 
                 } catch (\Exception $e) {
-                     $this->command->error("Failed to create user for Student ID {$studentId}: " . $e->getMessage());
+                    $this->command->error("Failed to create user for Student ID {$studentId}: ".$e->getMessage());
                 }
             }
         }

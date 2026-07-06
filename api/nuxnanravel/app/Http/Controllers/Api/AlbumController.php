@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Album;
-use Illuminate\Http\Request;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class AlbumController extends Controller
@@ -18,8 +20,8 @@ class AlbumController extends Controller
         if ($identifier) {
             // Get albums for specific user
             $user = $this->getUserByIdentifier($identifier);
-            
-            if (!$user) {
+
+            if (! $user) {
                 return response()->json([
                     'success' => false,
                     'message' => 'User not found',
@@ -58,7 +60,7 @@ class AlbumController extends Controller
             ->withCount('photos')
             ->find($id);
 
-        if (!$album) {
+        if (! $album) {
             return response()->json([
                 'success' => false,
                 'message' => 'Album not found',
@@ -66,7 +68,7 @@ class AlbumController extends Controller
         }
 
         // Check if user can view this album
-        if ($album->user_id !== auth()->id() && !$album->is_public) {
+        if ($album->user_id !== auth()->id() && ! $album->is_public) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to view this album',
@@ -119,7 +121,7 @@ class AlbumController extends Controller
     {
         $album = Album::find($id);
 
-        if (!$album) {
+        if (! $album) {
             return response()->json([
                 'success' => false,
                 'message' => 'Album not found',
@@ -165,7 +167,7 @@ class AlbumController extends Controller
     {
         $album = Album::find($id);
 
-        if (!$album) {
+        if (! $album) {
             return response()->json([
                 'success' => false,
                 'message' => 'Album not found',
@@ -184,13 +186,13 @@ class AlbumController extends Controller
         foreach ($album->photos as $photo) {
             // Delete files from storage
             if ($photo->url) {
-                $path = str_replace(\Illuminate\Support\Facades\Storage::url(''), '', $photo->url);
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+                $path = str_replace(Storage::url(''), '', $photo->url);
+                Storage::disk('public')->delete($path);
             }
 
             if ($photo->thumbnail_url) {
-                $path = str_replace(\Illuminate\Support\Facades\Storage::url(''), '', $photo->thumbnail_url);
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+                $path = str_replace(Storage::url(''), '', $photo->thumbnail_url);
+                Storage::disk('public')->delete($path);
             }
 
             $photo->delete();
@@ -207,9 +209,9 @@ class AlbumController extends Controller
     /**
      * Get user by identifier (ID, reference_code, or username).
      */
-    private function getUserByIdentifier(string $identifier): ?\App\Models\User
+    private function getUserByIdentifier(string $identifier): ?User
     {
-        return \App\Models\User::where('id', $identifier)
+        return User::where('id', $identifier)
             ->orWhere('reference_code', $identifier)
             ->orWhere('username', $identifier)
             ->first();

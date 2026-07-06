@@ -8,6 +8,7 @@ use App\Models\ClassroomMember;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * InvitationService — Create, accept/decline invitations and join-via-code.
@@ -44,9 +45,7 @@ class InvitationService
     /**
      * Create a new invitation.
      *
-     * @param  int        $classroomId
-     * @param  array      $data   Keys: invited_email or invited_user_id, role_to_assign, expires_in_days
-     * @return ClassroomInvitation
+     * @param  array  $data  Keys: invited_email or invited_user_id, role_to_assign, expires_in_days
      */
     public function createInvitation(int $classroomId, array $data): ClassroomInvitation
     {
@@ -67,11 +66,9 @@ class InvitationService
     /**
      * Accept an invitation by token.
      *
-     * @param  string $token
-     * @param  int    $userId  The authenticated user accepting
-     * @return ClassroomMember
+     * @param  int  $userId  The authenticated user accepting
      *
-     * @throws \Symfony\Component\HttpKernel\Exception\HttpException 410 if expired, 422 if capacity
+     * @throws HttpException 410 if expired, 422 if capacity
      */
     public function acceptInvitation(string $token, int $userId): ClassroomMember
     {
@@ -113,6 +110,7 @@ class InvitationService
             ->firstOrFail();
 
         $invitation->markDeclined();
+
         return $invitation;
     }
 
@@ -123,15 +121,14 @@ class InvitationService
     {
         $invitation = ClassroomInvitation::findOrFail($invitationId);
         $invitation->update(['status' => ClassroomInvitation::STATUS_CANCELLED]);
+
         return $invitation;
     }
 
     /**
      * Join a classroom via classroom_code.
      *
-     * @param  string $classroomCode  6-char code
-     * @param  int    $userId
-     * @return ClassroomMember
+     * @param  string  $classroomCode  6-char code
      */
     public function joinViaCode(string $classroomCode, int $userId): ClassroomMember
     {

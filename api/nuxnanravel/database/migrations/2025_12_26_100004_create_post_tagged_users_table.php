@@ -21,20 +21,20 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('post_id')
-                  ->references('id')
-                  ->on('posts')
-                  ->onDelete('cascade');
-            
+                ->references('id')
+                ->on('posts')
+                ->onDelete('cascade');
+
             $table->foreign('user_id')
-                  ->references('id')
-                  ->on('users')
-                  ->onDelete('cascade');
-            
+                ->references('id')
+                ->on('users')
+                ->onDelete('cascade');
+
             $table->foreign('tagged_by')
-                  ->references('id')
-                  ->on('users')
-                  ->onDelete('cascade');
-            
+                ->references('id')
+                ->on('users')
+                ->onDelete('cascade');
+
             $table->unique(['post_id', 'user_id']);
             $table->index('user_id');
         });

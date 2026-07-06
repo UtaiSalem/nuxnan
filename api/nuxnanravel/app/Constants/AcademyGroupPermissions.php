@@ -5,11 +5,11 @@ namespace App\Constants;
 class AcademyGroupPermissions
 {
     public const PERMISSIONS = [
-        'can_post'             => ['label' => 'โพสต์ในนามส่วนงาน',  'default' => false],
-        'can_invite_member'    => ['label' => 'เชิญสมาชิกใหม่',       'default' => true],
-        'can_remove_member'    => ['label' => 'นำสมาชิกออก',          'default' => false],
-        'can_pin_post'         => ['label' => 'ปักหมุดโพสต์',          'default' => false],
-        'can_create_event'     => ['label' => 'สร้างกิจกรรม',          'default' => false],
+        'can_post' => ['label' => 'โพสต์ในนามส่วนงาน',  'default' => false],
+        'can_invite_member' => ['label' => 'เชิญสมาชิกใหม่',       'default' => true],
+        'can_remove_member' => ['label' => 'นำสมาชิกออก',          'default' => false],
+        'can_pin_post' => ['label' => 'ปักหมุดโพสต์',          'default' => false],
+        'can_create_event' => ['label' => 'สร้างกิจกรรม',          'default' => false],
         'can_send_announcement' => ['label' => 'ออกประกาศ',            'default' => false],
     ];
 

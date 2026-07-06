@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\LevelDefinition;
-use App\Models\QuestDefinition;
 use App\Models\PointRule;
+use App\Models\QuestDefinition;
+use Illuminate\Database\Seeder;
 
 class GamificationSeeder extends Seeder
 {
@@ -101,10 +101,19 @@ class GamificationSeeder extends Seeder
 
     protected function getLevelColor(int $level): string
     {
-        if ($level < 10) return '#94a3b8'; // Slate
-        if ($level < 20) return '#4ade80'; // Green
-        if ($level < 30) return '#60a5fa'; // Blue
-        if ($level < 40) return '#a78bfa'; // Violet
+        if ($level < 10) {
+            return '#94a3b8';
+        } // Slate
+        if ($level < 20) {
+            return '#4ade80';
+        } // Green
+        if ($level < 30) {
+            return '#60a5fa';
+        } // Blue
+        if ($level < 40) {
+            return '#a78bfa';
+        } // Violet
+
         return '#f472b6'; // Pink
     }
 }

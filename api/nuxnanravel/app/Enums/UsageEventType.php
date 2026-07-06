@@ -4,7 +4,7 @@ namespace App\Enums;
 
 /**
  * UsageEventType Enum
- * 
+ *
  * Defines all possible usage event types for gamification and tracking.
  */
 enum UsageEventType: string

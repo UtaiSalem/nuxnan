@@ -15,7 +15,7 @@ class GameScoreController extends Controller
     public function index(Request $request)
     {
         $gameType = $request->query('game_type', 'crossmath');
-        
+
         // Get top 20 unique users with their highest score
         $leaderboard = GameScore::with('user:id,name,avatar,profile_photo_url')
             ->where('game_type', $gameType)
@@ -28,7 +28,7 @@ class GameScoreController extends Controller
 
         $userRank = null;
         $userScore = null;
-        
+
         if (Auth::check()) {
             $userScore = GameScore::where('game_type', $gameType)
                 ->where('user_id', Auth::id())

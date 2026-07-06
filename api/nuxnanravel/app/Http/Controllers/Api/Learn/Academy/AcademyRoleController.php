@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\Learn\Academy;
 
+use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\AcademyRole;
 use App\Models\AcademyMember;
 use App\Models\AcademyPermission;
+use App\Models\AcademyRole;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
@@ -19,10 +19,10 @@ class AcademyRoleController extends Controller
     public function index(Academy $academy)
     {
         // Check if user has permission to view roles
-        if (!$this->canManageRoles($academy)) {
+        if (! $this->canManageRoles($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์ดูบทบาท'
+                'message' => 'ไม่มีสิทธิ์ดูบทบาท',
             ], 403);
         }
 
@@ -60,13 +60,13 @@ class AcademyRoleController extends Controller
     public function myRole(Academy $academy)
     {
         $user = Auth::user();
-        
+
         // Check if user is academy owner
         if ($academy->user_id === $user->id) {
             $ownerRole = AcademyRole::where('name', 'owner')
                 ->whereNull('academy_id')
                 ->first();
-            
+
             return response()->json([
                 'success' => true,
                 'role' => $ownerRole,
@@ -82,7 +82,7 @@ class AcademyRoleController extends Controller
             $adminRole = AcademyRole::where('name', 'admin')
                 ->whereNull('academy_id')
                 ->first();
-            
+
             return response()->json([
                 'success' => true,
                 'role' => $adminRole,
@@ -99,7 +99,7 @@ class AcademyRoleController extends Controller
             ->with('academyRole')
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => true,
                 'role' => null,
@@ -111,9 +111,9 @@ class AcademyRoleController extends Controller
         }
 
         $role = $member->academyRole;
-        
+
         // If no role assigned, use default 'student' role
-        if (!$role) {
+        if (! $role) {
             $role = AcademyRole::where('name', 'student')
                 ->whereNull('academy_id')
                 ->first();
@@ -146,10 +146,10 @@ class AcademyRoleController extends Controller
      */
     public function store(Request $request, Academy $academy)
     {
-        if (!$this->canManageRoles($academy)) {
+        if (! $this->canManageRoles($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์สร้างบทบาท'
+                'message' => 'ไม่มีสิทธิ์สร้างบทบาท',
             ], 403);
         }
 
@@ -166,7 +166,7 @@ class AcademyRoleController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -178,7 +178,7 @@ class AcademyRoleController extends Controller
         if ($exists) {
             return response()->json([
                 'success' => false,
-                'message' => 'ชื่อบทบาทนี้มีอยู่แล้ว'
+                'message' => 'ชื่อบทบาทนี้มีอยู่แล้ว',
             ], 422);
         }
 
@@ -210,10 +210,10 @@ class AcademyRoleController extends Controller
      */
     public function update(Request $request, Academy $academy, AcademyRole $role)
     {
-        if (!$this->canManageRoles($academy)) {
+        if (! $this->canManageRoles($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์แก้ไขบทบาท'
+                'message' => 'ไม่มีสิทธิ์แก้ไขบทบาท',
             ], 403);
         }
 
@@ -221,7 +221,7 @@ class AcademyRoleController extends Controller
         if ($role->is_system) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถแก้ไขบทบาทระบบได้'
+                'message' => 'ไม่สามารถแก้ไขบทบาทระบบได้',
             ], 403);
         }
 
@@ -238,7 +238,7 @@ class AcademyRoleController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -264,10 +264,10 @@ class AcademyRoleController extends Controller
      */
     public function destroy(Academy $academy, AcademyRole $role)
     {
-        if (!$this->canManageRoles($academy)) {
+        if (! $this->canManageRoles($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์ลบบทบาท'
+                'message' => 'ไม่มีสิทธิ์ลบบทบาท',
             ], 403);
         }
 
@@ -275,7 +275,7 @@ class AcademyRoleController extends Controller
         if ($role->is_system) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถลบบทบาทระบบได้'
+                'message' => 'ไม่สามารถลบบทบาทระบบได้',
             ], 403);
         }
 
@@ -283,7 +283,7 @@ class AcademyRoleController extends Controller
         if ($role->members()->exists()) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถลบบทบาทที่มีสมาชิกใช้งานอยู่'
+                'message' => 'ไม่สามารถลบบทบาทที่มีสมาชิกใช้งานอยู่',
             ], 422);
         }
 
@@ -300,10 +300,10 @@ class AcademyRoleController extends Controller
      */
     public function assignRole(Request $request, Academy $academy, AcademyMember $member)
     {
-        if (!$this->canManageRoles($academy)) {
+        if (! $this->canManageRoles($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์กำหนดบทบาท'
+                'message' => 'ไม่มีสิทธิ์กำหนดบทบาท',
             ], 403);
         }
 
@@ -314,7 +314,7 @@ class AcademyRoleController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -322,14 +322,14 @@ class AcademyRoleController extends Controller
         $role = AcademyRole::where('id', $request->role_id)
             ->where(function ($q) use ($academy) {
                 $q->whereNull('academy_id')
-                  ->orWhere('academy_id', $academy->id);
+                    ->orWhere('academy_id', $academy->id);
             })
             ->first();
 
-        if (!$role) {
+        if (! $role) {
             return response()->json([
                 'success' => false,
-                'message' => 'บทบาทไม่ถูกต้อง'
+                'message' => 'บทบาทไม่ถูกต้อง',
             ], 422);
         }
 
@@ -350,10 +350,10 @@ class AcademyRoleController extends Controller
      */
     public function bulkAssignRole(Request $request, Academy $academy)
     {
-        if (!$this->canManageRoles($academy)) {
+        if (! $this->canManageRoles($academy)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์กำหนดบทบาท'
+                'message' => 'ไม่มีสิทธิ์กำหนดบทบาท',
             ], 403);
         }
 
@@ -366,21 +366,21 @@ class AcademyRoleController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $role = AcademyRole::where('id', $request->role_id)
             ->where(function ($q) use ($academy) {
                 $q->whereNull('academy_id')
-                  ->orWhere('academy_id', $academy->id);
+                    ->orWhere('academy_id', $academy->id);
             })
             ->first();
 
-        if (!$role) {
+        if (! $role) {
             return response()->json([
                 'success' => false,
-                'message' => 'บทบาทไม่ถูกต้อง'
+                'message' => 'บทบาทไม่ถูกต้อง',
             ], 422);
         }
 

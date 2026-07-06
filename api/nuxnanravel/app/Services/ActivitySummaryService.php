@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\UserUsageEvent;
-use App\Models\UserActivitySummary;
-use App\Models\PointsTransaction;
 use App\Models\GamificationRuleLog;
+use App\Models\User;
+use App\Models\UserActivitySummary;
+use App\Models\UserUsageEvent;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ActivitySummaryService
@@ -51,7 +51,7 @@ class ActivitySummaryService
         UserActivitySummary::updateOrCreate(
             [
                 'user_id' => $user->id,
-                'summary_date' => \Illuminate\Support\Carbon::parse($date)->toDateString(),
+                'summary_date' => Carbon::parse($date)->toDateString(),
                 'period_type' => 'daily',
             ],
             [
@@ -100,6 +100,7 @@ class ActivitySummaryService
     {
         $start = now()->startOfWeek()->toDateString();
         $end = now()->endOfWeek()->toDateString();
+
         return $this->getSummaryBetween($user, $start, $end);
     }
 
@@ -110,6 +111,7 @@ class ActivitySummaryService
     {
         $start = now()->startOfMonth()->toDateString();
         $end = now()->endOfMonth()->toDateString();
+
         return $this->getSummaryBetween($user, $start, $end);
     }
 }

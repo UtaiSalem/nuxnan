@@ -18,12 +18,12 @@ class GuardianContact extends Model
         'contact_type',
         'contact_value',
         'is_primary',
-        'is_verified'
+        'is_verified',
     ];
 
     protected $casts = [
         'is_primary' => 'boolean',
-        'is_verified' => 'boolean'
+        'is_verified' => 'boolean',
     ];
 
     public function guardian(): BelongsTo

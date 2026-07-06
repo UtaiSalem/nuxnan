@@ -133,10 +133,7 @@ const saveStudent = async () => {
 const getProfileImage = () => {
   if (photoPreview.value) return photoPreview.value
   if (!student.value) return '/images/default-avatar.png'
-  if (student.value.profile_image) {
-    return `/storage/images/students/${student.value.class_level}/${student.value.class_section}/${student.value.profile_image}`
-  }
-  return '/images/default-avatar.png'
+  return student.value.profile_image_url || '/images/default-avatar.png'
 }
 
 const levels = ['1', '2', '3', '4', '5', '6']

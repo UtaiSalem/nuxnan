@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\PointStreak;
+use App\Models\User;
 use App\Models\UserAchievement;
 use Illuminate\Support\Facades\DB;
 
@@ -119,8 +119,8 @@ class LeaderboardService
 
         foreach ($achievementCounts as $index => $item) {
             $user = User::find($item->user_id);
-            
-            if (!$user) {
+
+            if (! $user) {
                 continue;
             }
 
@@ -203,7 +203,7 @@ class LeaderboardService
     {
         $userStreak = PointStreak::where('user_id', $userId)->first();
 
-        if (!$userStreak) {
+        if (! $userStreak) {
             return 0;
         }
 
@@ -239,7 +239,7 @@ class LeaderboardService
     {
         $user = User::find($userId);
 
-        if (!$user) {
+        if (! $user) {
             return 0;
         }
 

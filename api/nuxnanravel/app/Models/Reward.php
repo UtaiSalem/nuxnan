@@ -82,7 +82,7 @@ class Reward extends Model
      */
     public function isAvailable(): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 
@@ -108,7 +108,7 @@ class Reward extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->type) {
+        return match ($this->type) {
             'points' => 'แต้ม',
             'wallet' => 'เงิน',
             'badge' => 'Badge',
@@ -123,7 +123,7 @@ class Reward extends Model
      */
     public function getFormattedPointsCostAttribute(): string
     {
-        return number_format($this->points_cost) . ' แต้ม';
+        return number_format($this->points_cost).' แต้ม';
     }
 
     /**
@@ -131,10 +131,10 @@ class Reward extends Model
      */
     public function getFormattedValueAttribute(): string
     {
-        return match($this->type) {
-            'points', 'wallet' => number_format($this->value, 2) . ' บาท',
+        return match ($this->type) {
+            'points', 'wallet' => number_format($this->value, 2).' บาท',
             'badge', 'feature' => $this->value,
-            'discount' => number_format($this->value, 2) . '%',
+            'discount' => number_format($this->value, 2).'%',
             default => $this->value,
         };
     }

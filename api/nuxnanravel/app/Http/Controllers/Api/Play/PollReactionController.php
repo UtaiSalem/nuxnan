@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\Play;
 
 use App\Http\Controllers\Controller;
-use App\Models\Poll;
-use App\Models\LikedPoll;
+use App\Http\Resources\Play\PollCommentResource;
 use App\Models\DislikedPoll;
+use App\Models\LikedPoll;
+use App\Models\Poll;
 use App\Models\PollComment;
 use App\Models\User;
-use App\Http\Resources\Play\PollCommentResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -20,13 +20,13 @@ class PollReactionController extends Controller
         $userId = $user->id;
         $hasLiked = LikedPoll::where('poll_id', $poll->id)->where('user_id', $userId)->exists();
         $hasDisliked = DislikedPoll::where('poll_id', $poll->id)->where('user_id', $userId)->exists();
-        
+
         $requiredPoints = $hasLiked ? 12 : 24;
-        
+
         if ($user->pp < $requiredPoints) {
             return response()->json([
                 'success' => false,
-                'message' => $hasLiked 
+                'message' => $hasLiked
                     ? 'คุณไม่มีพ้อยท์เพียงพอในการยกเลิกไลค์ (ต้องการ 12 แต้ม)'
                     : 'คุณไม่มีพ้อยท์เพียงพอในการกดถูกใจ (ต้องการ 24 แต้ม)',
             ], 422);
@@ -76,7 +76,7 @@ class PollReactionController extends Controller
         $userId = $user->id;
         $hasLiked = LikedPoll::where('poll_id', $poll->id)->where('user_id', $userId)->exists();
         $hasDisliked = DislikedPoll::where('poll_id', $poll->id)->where('user_id', $userId)->exists();
-        
+
         if ($user->pp < 12) {
             return response()->json([
                 'success' => false,
@@ -153,7 +153,7 @@ class PollReactionController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'comment' => new PollCommentResource($comment->load('user'))
+                    'comment' => new PollCommentResource($comment->load('user')),
                 ]);
             });
         } catch (\Exception $e) {
@@ -167,7 +167,7 @@ class PollReactionController extends Controller
     public function updateComment(Request $request, PollComment $comment)
     {
         $user = auth()->user();
-        
+
         // Only comment author can update
         if ($user->id !== $comment->user_id) {
             return response()->json([
@@ -180,13 +180,13 @@ class PollReactionController extends Controller
 
         try {
             $comment->update([
-                'content' => $request->content
+                'content' => $request->content,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'แก้ไขความคิดเห็นสำเร็จ',
-                'comment' => new PollCommentResource($comment->fresh()->load('user'))
+                'comment' => new PollCommentResource($comment->fresh()->load('user')),
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -200,7 +200,7 @@ class PollReactionController extends Controller
     {
         $user = auth()->user();
         $poll = $comment->poll;
-        
+
         // Only comment author or poll author can delete
         if ($user->id !== $comment->user_id && $user->id !== $poll->user_id) {
             return response()->json([
@@ -211,15 +211,15 @@ class PollReactionController extends Controller
 
         try {
             $comment->delete();
-            
+
             // Decrement poll comments count if exists
             if ($poll && isset($poll->comments_count)) {
                 $poll->decrement('comments_count');
             }
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'ลบความคิดเห็นสำเร็จ'
+                'message' => 'ลบความคิดเห็นสำเร็จ',
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);

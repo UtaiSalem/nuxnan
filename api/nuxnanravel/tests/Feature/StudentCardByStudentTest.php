@@ -17,12 +17,12 @@ class StudentCardByStudentTest extends TestCase
     private function makeUser(string $tag = ''): User
     {
         return User::create([
-            'name' => 'U' . $tag,
-            'email' => 'u' . $tag . uniqid() . '@x.test',
+            'name' => 'U'.$tag,
+            'email' => 'u'.$tag.uniqid().'@x.test',
             'password' => bcrypt('x'),
-            'username' => 'u' . $tag . uniqid(),
-            'reference_code' => 'R' . uniqid(),
-            'personal_code' => 'P' . uniqid(),
+            'username' => 'u'.$tag.uniqid(),
+            'reference_code' => 'R'.uniqid(),
+            'personal_code' => 'P'.uniqid(),
         ]);
     }
 
@@ -30,17 +30,17 @@ class StudentCardByStudentTest extends TestCase
     {
         $owner = $this->makeUser('owner');
         $admin = $this->makeUser('adm');
-        
+
         $academy = Academy::create([
-            'name' => 'TestAcademy_' . uniqid(),
-            'user_id' => $admin->id
+            'name' => 'TestAcademy_'.uniqid(),
+            'user_id' => $admin->id,
         ]);
 
         AcademyMember::create([
             'user_id' => $admin->id,
             'academy_id' => $academy->id,
             'role' => 'admin',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         $student = Student::create([
@@ -50,14 +50,14 @@ class StudentCardByStudentTest extends TestCase
             'citizen_id' => '1234567890123',
             'first_name_th' => 'สมปอง',
             'last_name_th' => 'ใจดี',
-            'status' => 'studying'
+            'status' => 'studying',
         ]);
 
         AcademyMember::create([
             'user_id' => $owner->id,
             'academy_id' => $academy->id,
             'role' => 'student',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         return [$owner, $admin, $academy, $student];
@@ -90,7 +90,7 @@ class StudentCardByStudentTest extends TestCase
                     'id' => $card->id,
                     'student_number' => 'STU1001',
                     'full_name_thai' => 'เด็กชาย สมปอง ใจดี',
-                ]
+                ],
             ]);
     }
 
@@ -105,7 +105,7 @@ class StudentCardByStudentTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'student' => null
+                'student' => null,
             ]);
     }
 }

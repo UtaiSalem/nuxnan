@@ -66,6 +66,7 @@ class PostLinkPreview extends Model
     public function getDomainAttribute(): ?string
     {
         $parsed = parse_url($this->url);
+
         return $parsed['host'] ?? null;
     }
 }

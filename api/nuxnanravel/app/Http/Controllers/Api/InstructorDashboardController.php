@@ -4,19 +4,18 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\CourseMember;
-use App\Models\CourseAssignment;
 use App\Models\CourseAttendance;
-use App\Models\GradeAppeal;
 use App\Models\CourseCertificate;
+use App\Models\CourseMember;
+use App\Models\GradeAppeal;
 use App\Services\CourseGradingService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Instructor Dashboard Controller
- * 
+ *
  * ให้ข้อมูลสรุปภาพรวมสำหรับผู้สอน
  */
 class InstructorDashboardController extends Controller
@@ -629,6 +628,7 @@ class InstructorDashboardController extends Controller
     protected function getComputedMaxTotal(Course $course): float
     {
         $lessons = $course->courseLessons()->with(['assignments', 'questions'])->get();
+
         return $course->courseAssignments->sum('points')
             + $lessons->flatMap->assignments->sum('points')
             + $course->courseQuizzes->sum('total_score')

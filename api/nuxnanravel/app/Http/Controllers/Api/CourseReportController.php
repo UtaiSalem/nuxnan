@@ -2,27 +2,28 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Course;
-use App\Models\CourseMember;
-use App\Models\CourseAttendance;
-use App\Models\AttendanceDetail;
-use App\Models\GradeAppeal;
-use App\Models\CourseCertificate;
-use App\Services\CourseGradingService;
-use App\Exports\CourseGradesExport;
 use App\Exports\CourseAttendanceExport;
+use App\Exports\CourseCertificatesExport;
 use App\Exports\CourseFullReportExport;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\CourseGradesExport;
+use App\Exports\CourseProgressExport;
+use App\Http\Controllers\Controller;
+use App\Models\AttendanceDetail;
+use App\Models\Course;
+use App\Models\CourseAttendance;
+use App\Models\CourseCertificate;
+use App\Models\CourseMember;
+use App\Services\CourseGradingService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * Course Report Export Controller
- * 
+ *
  * สร้างรายงานและ Export ข้อมูลรายวิชา
  */
 class CourseReportController extends Controller
@@ -105,7 +106,7 @@ class CourseReportController extends Controller
         // Calculate grades for each member
         $data = $this->prepareGradesData($course, $members);
 
-        $filename = "grades-{$course->code}-" . now()->format('Ymd');
+        $filename = "grades-{$course->code}-".now()->format('Ymd');
 
         if ($format === 'pdf') {
             return $this->generateGradesPdf($course, $data, $filename);
@@ -157,7 +158,7 @@ class CourseReportController extends Controller
         // Prepare data
         $data = $this->prepareAttendanceData($attendances, $members);
 
-        $filename = "attendance-{$course->code}-" . now()->format('Ymd');
+        $filename = "attendance-{$course->code}-".now()->format('Ymd');
 
         if ($format === 'pdf') {
             return $this->generateAttendancePdf($course, $data, $attendances, $filename);
@@ -189,10 +190,10 @@ class CourseReportController extends Controller
 
         $data = $this->prepareProgressData($course, $members);
 
-        $filename = "progress-{$course->code}-" . now()->format('Ymd');
+        $filename = "progress-{$course->code}-".now()->format('Ymd');
 
         return Excel::download(
-            new \App\Exports\CourseProgressExport($data, $course),
+            new CourseProgressExport($data, $course),
             "{$filename}.xlsx"
         );
     }
@@ -219,7 +220,7 @@ class CourseReportController extends Controller
         // Prepare all data
         $gradesData = $this->prepareGradesData($course, $members);
         $attendances = CourseAttendance::where('course_id', $course->id)
-            ->when($groupId, fn($q) => $q->where('group_id', $groupId))
+            ->when($groupId, fn ($q) => $q->where('group_id', $groupId))
             ->orderBy('date')
             ->get();
         $attendanceData = $this->prepareAttendanceData($attendances, $members);
@@ -228,7 +229,7 @@ class CourseReportController extends Controller
         // Statistics
         $stats = $this->gradingService->calculateGradeStatistics($course);
 
-        $filename = "full-report-{$course->code}-" . now()->format('Ymd');
+        $filename = "full-report-{$course->code}-".now()->format('Ymd');
 
         if ($format === 'pdf') {
             return $this->generateFullReportPdf($course, [
@@ -271,10 +272,10 @@ class CourseReportController extends Controller
             ];
         })->toArray();
 
-        $filename = "certificates-{$course->code}-" . now()->format('Ymd');
+        $filename = "certificates-{$course->code}-".now()->format('Ymd');
 
         return Excel::download(
-            new \App\Exports\CourseCertificatesExport($data, $course),
+            new CourseCertificatesExport($data, $course),
             "{$filename}.xlsx"
         );
     }
@@ -335,14 +336,14 @@ class CourseReportController extends Controller
 
         foreach ($members as $member) {
             $memberDetails = $details[$member->id] ?? collect();
-            
+
             $present = $memberDetails->where('status', 1)->count();
             $late = $memberDetails->where('status', 2)->count();
             $absent = $memberDetails->where('status', 0)->count();
             $leave = $memberDetails->where('status', 3)->count();
             $total = $attendances->count();
 
-            $rate = $total > 0 
+            $rate = $total > 0
                 ? round((($present + ($late * 0.5)) / $total) * 100, 1)
                 : 0;
 
@@ -394,8 +395,8 @@ class CourseReportController extends Controller
             $userId = $member->user_id;
 
             $lessonsCompleted = isset($lessonProgress[$userId]) ? $lessonProgress[$userId]->count() : 0;
-            $assignmentsCompleted = isset($assignmentSubmissions[$userId]) 
-                ? $assignmentSubmissions[$userId]->unique('course_assignment_id')->count() 
+            $assignmentsCompleted = isset($assignmentSubmissions[$userId])
+                ? $assignmentSubmissions[$userId]->unique('course_assignment_id')->count()
                 : 0;
             $quizzesCompleted = isset($quizAttempts[$userId]) ? $quizAttempts[$userId]->count() : 0;
 

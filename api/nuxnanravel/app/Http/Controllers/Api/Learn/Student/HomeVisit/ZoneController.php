@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\HomeVisitZone;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
 class ZoneController extends Controller
 {
@@ -35,7 +34,7 @@ class ZoneController extends Controller
      */
     public function list(Request $request)
     {
-        if (!session('homevisit_admin_authenticated')) {
+        if (! session('homevisit_admin_authenticated')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -43,10 +42,10 @@ class ZoneController extends Controller
 
         // Search
         if ($request->search) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $q->where('zone_name', 'like', "%{$request->search}%")
-                  ->orWhere('zone_code', 'like', "%{$request->search}%")
-                  ->orWhere('description', 'like', "%{$request->search}%");
+                    ->orWhere('zone_code', 'like', "%{$request->search}%")
+                    ->orWhere('description', 'like', "%{$request->search}%");
             });
         }
 
@@ -68,7 +67,7 @@ class ZoneController extends Controller
      */
     public function show($id)
     {
-        if (!session('homevisit_admin_authenticated')) {
+        if (! session('homevisit_admin_authenticated')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -85,7 +84,7 @@ class ZoneController extends Controller
      */
     public function store(Request $request)
     {
-        if (!session('homevisit_admin_authenticated')) {
+        if (! session('homevisit_admin_authenticated')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -105,7 +104,7 @@ class ZoneController extends Controller
         }
 
         $data = $validator->validated();
-        
+
         // Generate zone_code from zone_name
         $data['zone_code'] = $this->generateZoneCode($data['zone_name']);
 
@@ -123,7 +122,7 @@ class ZoneController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (!session('homevisit_admin_authenticated')) {
+        if (! session('homevisit_admin_authenticated')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -145,7 +144,7 @@ class ZoneController extends Controller
         }
 
         $data = $validator->validated();
-        
+
         // Update zone_code if zone_name changed
         if ($data['zone_name'] !== $zone->zone_name) {
             $data['zone_code'] = $this->generateZoneCode($data['zone_name']);
@@ -165,7 +164,7 @@ class ZoneController extends Controller
      */
     public function destroy($id)
     {
-        if (!session('homevisit_admin_authenticated')) {
+        if (! session('homevisit_admin_authenticated')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -192,12 +191,12 @@ class ZoneController extends Controller
      */
     public function toggleStatus($id)
     {
-        if (!session('homevisit_admin_authenticated')) {
+        if (! session('homevisit_admin_authenticated')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $zone = HomeVisitZone::findOrFail($id);
-        $zone->is_active = !$zone->is_active;
+        $zone->is_active = ! $zone->is_active;
         $zone->save();
 
         return response()->json([
@@ -212,7 +211,7 @@ class ZoneController extends Controller
      */
     public function reorder(Request $request)
     {
-        if (!session('homevisit_admin_authenticated')) {
+        if (! session('homevisit_admin_authenticated')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -248,20 +247,19 @@ class ZoneController extends Controller
         // Remove special characters and convert to uppercase
         $baseCode = strtoupper(preg_replace('/[^a-zA-Z0-9\s]/', '', $zoneName));
         $baseCode = preg_replace('/\s+/', '_', trim($baseCode));
-        
+
         // Limit to 50 characters
         $baseCode = substr($baseCode, 0, 50);
-        
+
         // Check if code exists
         $code = $baseCode;
         $counter = 1;
-        
+
         while (HomeVisitZone::where('zone_code', $code)->exists()) {
-            $code = $baseCode . '_' . $counter;
+            $code = $baseCode.'_'.$counter;
             $counter++;
         }
-        
+
         return $code;
     }
 }
-

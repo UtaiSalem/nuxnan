@@ -40,8 +40,11 @@ class CourseGrade extends Model
 
     // Status Constants
     const STATUS_IN_PROGRESS = 'in_progress';
+
     const STATUS_COMPLETED = 'completed';
+
     const STATUS_WITHDRAWN = 'withdrawn';
+
     const STATUS_INCOMPLETE = 'incomplete';
 
     // Relationships
@@ -104,7 +107,7 @@ class CourseGrade extends Model
     // Accessors
     public function getStatusTextAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_IN_PROGRESS => 'กำลังเรียน',
             self::STATUS_COMPLETED => 'เสร็จสิ้น',
             self::STATUS_WITHDRAWN => 'ถอนวิชา',
@@ -121,6 +124,7 @@ class CourseGrade extends Model
         if ($this->status === self::STATUS_INCOMPLETE) {
             return 'I';
         }
+
         return $this->letter_grade ?? '-';
     }
 
@@ -136,11 +140,11 @@ class CourseGrade extends Model
     public function calculateFromScores(): self
     {
         $assessments = GradebookAssessment::where('course_id', $this->course_id)
-            ->when($this->semester_id, function($q) {
+            ->when($this->semester_id, function ($q) {
                 $q->where('semester_id', $this->semester_id);
             })
             ->where('is_included_in_grade', true)
-            ->with(['scores' => function($q) {
+            ->with(['scores' => function ($q) {
                 $q->where('student_id', $this->student_id)
                     ->whereIn('status', ['graded', 'missing']);
             }])
@@ -160,8 +164,8 @@ class CourseGrade extends Model
         }
 
         // Calculate final percentage
-        $finalPercentage = $totalWeight > 0 
-            ? ($totalWeightedScore / $totalWeight) * 100 
+        $finalPercentage = $totalWeight > 0
+            ? ($totalWeightedScore / $totalWeight) * 100
             : 0;
 
         $this->update([
@@ -182,14 +186,14 @@ class CourseGrade extends Model
         }
 
         // Get grade scale
-        if (!$gradeScale) {
+        if (! $gradeScale) {
             $academyId = $this->course?->academy_id;
             $gradeScale = GradeScale::where('academy_id', $academyId)
                 ->where('is_default', true)
                 ->first();
         }
 
-        if (!$gradeScale) {
+        if (! $gradeScale) {
             return $this;
         }
 
@@ -213,7 +217,7 @@ class CourseGrade extends Model
         $this->calculateFromScores();
         $this->assignLetterGrade();
         $this->update(['status' => self::STATUS_COMPLETED]);
-        
+
         return $this;
     }
 

@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useStudentAccountService } from '../../../../services/studentAccountService'
+import { useStudentAccountService } from '~/services/studentAccountService'
 
 const props = defineProps<{
   modelValue: boolean

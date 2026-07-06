@@ -9,7 +9,7 @@ class UserUsageEvent extends Model
 {
     protected $fillable = [
         'user_id', 'event_type', 'source_type', 'source_id',
-        'context', 'occurred_at', 'idempotency_key', 'ip_hash', 'processed_at'
+        'context', 'occurred_at', 'idempotency_key', 'ip_hash', 'processed_at',
     ];
 
     protected $casts = [

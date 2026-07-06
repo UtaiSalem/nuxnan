@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\StaffProfile;
 use App\Models\StaffAttendance;
+use App\Models\StaffProfile;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class StaffAttendanceController extends Controller
 {
@@ -51,7 +51,7 @@ class StaffAttendanceController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $attendances
+            'data' => $attendances,
         ]);
     }
 
@@ -66,7 +66,7 @@ class StaffAttendanceController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $attendance
+            'data' => $attendance,
         ]);
     }
 
@@ -83,7 +83,7 @@ class StaffAttendanceController extends Controller
         ]);
 
         $staffProfile = StaffProfile::findOrFail($validated['staff_profile_id']);
-        
+
         if ($staffProfile->academy_id !== $academy->id) {
             return response()->json(['success' => false, 'message' => 'Staff not found'], 404);
         }
@@ -98,11 +98,11 @@ class StaffAttendanceController extends Controller
         if ($existing) {
             return response()->json([
                 'success' => false,
-                'message' => 'ลงเวลาเข้างานวันนี้แล้ว'
+                'message' => 'ลงเวลาเข้างานวันนี้แล้ว',
             ], 400);
         }
 
-        $checkInTime = $validated['check_in_time'] 
+        $checkInTime = $validated['check_in_time']
             ? Carbon::createFromFormat('H:i', $validated['check_in_time'])
             : now();
 
@@ -126,7 +126,7 @@ class StaffAttendanceController extends Controller
         return response()->json([
             'success' => true,
             'data' => $attendance,
-            'message' => 'ลงเวลาเข้างานเรียบร้อยแล้ว'
+            'message' => 'ลงเวลาเข้างานเรียบร้อยแล้ว',
         ], 201);
     }
 
@@ -143,7 +143,7 @@ class StaffAttendanceController extends Controller
         ]);
 
         $staffProfile = StaffProfile::findOrFail($validated['staff_profile_id']);
-        
+
         if ($staffProfile->academy_id !== $academy->id) {
             return response()->json(['success' => false, 'message' => 'Staff not found'], 404);
         }
@@ -154,29 +154,29 @@ class StaffAttendanceController extends Controller
             ->where('attendance_date', $today)
             ->first();
 
-        if (!$attendance) {
+        if (! $attendance) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบการลงเวลาเข้างานวันนี้'
+                'message' => 'ไม่พบการลงเวลาเข้างานวันนี้',
             ], 400);
         }
 
         if ($attendance->check_out_time) {
             return response()->json([
                 'success' => false,
-                'message' => 'ลงเวลาออกงานวันนี้แล้ว'
+                'message' => 'ลงเวลาออกงานวันนี้แล้ว',
             ], 400);
         }
 
-        $checkOutTime = $validated['check_out_time'] 
+        $checkOutTime = $validated['check_out_time']
             ? Carbon::createFromFormat('H:i', $validated['check_out_time'])
             : now();
 
         $attendance->update([
             'check_out_time' => $checkOutTime->format('H:i:s'),
             'check_out_location' => $validated['check_out_location'] ?? null,
-            'notes' => $attendance->notes 
-                ? $attendance->notes . "\n" . ($validated['notes'] ?? '')
+            'notes' => $attendance->notes
+                ? $attendance->notes."\n".($validated['notes'] ?? '')
                 : ($validated['notes'] ?? null),
         ]);
 
@@ -190,14 +190,14 @@ class StaffAttendanceController extends Controller
             'academy',
             [
                 'check_out_time' => $checkOutTime->format('H:i'),
-                'work_hours' => $attendance->work_hours
+                'work_hours' => $attendance->work_hours,
             ]
         );
 
         return response()->json([
             'success' => true,
             'data' => $attendance->fresh(),
-            'message' => 'ลงเวลาออกงานเรียบร้อยแล้ว'
+            'message' => 'ลงเวลาออกงานเรียบร้อยแล้ว',
         ]);
     }
 
@@ -216,7 +216,7 @@ class StaffAttendanceController extends Controller
         ]);
 
         $staffProfile = StaffProfile::findOrFail($validated['staff_profile_id']);
-        
+
         if ($staffProfile->academy_id !== $academy->id) {
             return response()->json(['success' => false, 'message' => 'Staff not found'], 404);
         }
@@ -229,7 +229,7 @@ class StaffAttendanceController extends Controller
         if ($existing) {
             return response()->json([
                 'success' => false,
-                'message' => 'มีการลงเวลาวันนี้แล้ว'
+                'message' => 'มีการลงเวลาวันนี้แล้ว',
             ], 400);
         }
 
@@ -257,7 +257,7 @@ class StaffAttendanceController extends Controller
         return response()->json([
             'success' => true,
             'data' => $attendance,
-            'message' => 'บันทึกการลงเวลาเรียบร้อยแล้ว'
+            'message' => 'บันทึกการลงเวลาเรียบร้อยแล้ว',
         ], 201);
     }
 
@@ -292,7 +292,7 @@ class StaffAttendanceController extends Controller
         return response()->json([
             'success' => true,
             'data' => $attendance->fresh(),
-            'message' => 'แก้ไขการลงเวลาเรียบร้อยแล้ว'
+            'message' => 'แก้ไขการลงเวลาเรียบร้อยแล้ว',
         ]);
     }
 
@@ -315,7 +315,7 @@ class StaffAttendanceController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบการลงเวลาเรียบร้อยแล้ว'
+            'message' => 'ลบการลงเวลาเรียบร้อยแล้ว',
         ]);
     }
 
@@ -337,6 +337,7 @@ class StaffAttendanceController extends Controller
 
         $report = $allStaff->map(function ($staff) use ($attendances) {
             $attendance = $attendances->get($staff->id);
+
             return [
                 'staff' => [
                     'id' => $staff->id,
@@ -366,8 +367,8 @@ class StaffAttendanceController extends Controller
             'success' => true,
             'data' => [
                 'summary' => $summary,
-                'staff' => $report
-            ]
+                'staff' => $report,
+            ],
         ]);
     }
 
@@ -404,8 +405,8 @@ class StaffAttendanceController extends Controller
             'data' => [
                 'staff' => $staff->only(['id', 'employee_id']),
                 'summary' => $summary,
-                'attendances' => $attendances
-            ]
+                'attendances' => $attendances,
+            ],
         ]);
     }
 

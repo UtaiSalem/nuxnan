@@ -213,13 +213,13 @@ class Academy extends Model
         return url('storage/images/academies/logos/'.$cleanPath);
     }
 
-    public function rolloverBatches(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function rolloverBatches(): HasMany
     {
-        return $this->hasMany(\App\Models\RolloverBatch::class);
+        return $this->hasMany(RolloverBatch::class);
     }
 
-    public function batches(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function batches(): HasMany
     {
-        return $this->hasMany(\App\Models\RolloverBatch::class);
+        return $this->hasMany(RolloverBatch::class);
     }
 }

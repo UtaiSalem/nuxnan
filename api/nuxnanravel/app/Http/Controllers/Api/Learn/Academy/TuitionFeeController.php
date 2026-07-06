@@ -4,14 +4,13 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\FeeDiscount;
+use App\Models\FeeStructure;
 use App\Models\TuitionFee;
 use App\Models\TuitionFeeItem;
-use App\Models\FeeStructure;
-use App\Models\FeeItem;
-use App\Models\FeeDiscount;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -176,6 +175,7 @@ class TuitionFeeController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้',
@@ -205,7 +205,7 @@ class TuitionFeeController extends Controller
 
             // Get students in classroom (via academy members with classroom)
             $students = $academy->members()
-                ->whereHas('courseMember', function ($q) use ($validated) {
+                ->whereHas('courseMember', function ($q) {
                     // This may need adjustment based on your actual classroom-student relationship
                 })
                 ->get();
@@ -231,6 +231,7 @@ class TuitionFeeController extends Controller
 
                 if ($exists) {
                     $skipped++;
+
                     continue;
                 }
 
@@ -293,6 +294,7 @@ class TuitionFeeController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้',

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\Learn\Course\assignments;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\AssignmentImage;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,6 +14,6 @@ class AssignmentImageController extends Controller
         Storage::disk('public')->delete('images/courses/assignments/'.$image->image_url);
         $asmimage->delete();
 
-        return response()->json(['success' => true ], 200);
+        return response()->json(['success' => true], 200);
     }
 }

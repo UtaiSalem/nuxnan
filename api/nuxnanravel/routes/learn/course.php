@@ -14,7 +14,6 @@ use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupMemberController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseActivityController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseSettingController;
-use App\Http\Controllers\Api\Learn\Course\LessonScoreResetController;
 use App\Http\Controllers\Api\Learn\Course\lessons\assignments\LessonAssignmentController;
 use App\Http\Controllers\Api\Learn\Course\lessons\comments\LessonCommentController;
 use App\Http\Controllers\Api\Learn\Course\lessons\comments\LessonCommentReactionController;
@@ -28,6 +27,7 @@ use App\Http\Controllers\Api\Learn\Course\lessons\questions\LessonQuestionContro
 use App\Http\Controllers\Api\Learn\Course\lessons\topics\TopicController;
 use App\Http\Controllers\Api\Learn\Course\lessons\topics\TopicImageController;
 use App\Http\Controllers\Api\Learn\Course\lessons\topics\TopicReadProgressController;
+use App\Http\Controllers\Api\Learn\Course\LessonScoreResetController;
 use App\Http\Controllers\Api\Learn\Course\members\CourseMemberController;
 use App\Http\Controllers\Api\Learn\Course\members\CourseMemberGradeProgressController;
 use App\Http\Controllers\Api\Learn\Course\points\CoursePointAccountController;

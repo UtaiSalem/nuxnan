@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\Learn\Academy\SchoolAsset;
 use App\Models\Learn\Academy\AssetMaintenanceLog;
-use Illuminate\Http\Request;
+use App\Models\Learn\Academy\SchoolAsset;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AssetController extends Controller

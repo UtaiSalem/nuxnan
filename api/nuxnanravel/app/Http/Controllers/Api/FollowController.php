@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class FollowController extends Controller
@@ -17,7 +17,7 @@ class FollowController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -25,13 +25,13 @@ class FollowController extends Controller
         }
 
         $validated = $request->validate([
-            'user_id' => 'required|integer|exists:users,id|different:' . $user->id,
+            'user_id' => 'required|integer|exists:users,id|different:'.$user->id,
         ]);
 
         try {
             $targetUser = User::find($validated['user_id']);
 
-            if (!$targetUser) {
+            if (! $targetUser) {
                 return response()->json([
                     'success' => false,
                     'message' => 'User not found',
@@ -63,7 +63,7 @@ class FollowController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -72,7 +72,7 @@ class FollowController extends Controller
 
         $targetUser = User::find($userId);
 
-        if (!$targetUser) {
+        if (! $targetUser) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -88,6 +88,7 @@ class FollowController extends Controller
 
         $followersData = $followers->map(function ($follow) use ($user) {
             $follower = $follow->follower;
+
             return [
                 'id' => $follower->id,
                 'username' => $follower->username,
@@ -117,7 +118,7 @@ class FollowController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -126,7 +127,7 @@ class FollowController extends Controller
 
         $targetUser = User::find($userId);
 
-        if (!$targetUser) {
+        if (! $targetUser) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -142,6 +143,7 @@ class FollowController extends Controller
 
         $followingData = $following->map(function ($follow) use ($user) {
             $followed = $follow->followed;
+
             return [
                 'id' => $followed->id,
                 'username' => $followed->username,
@@ -171,7 +173,7 @@ class FollowController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -180,7 +182,7 @@ class FollowController extends Controller
 
         $targetUser = User::find($userId);
 
-        if (!$targetUser) {
+        if (! $targetUser) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -205,7 +207,7 @@ class FollowController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',

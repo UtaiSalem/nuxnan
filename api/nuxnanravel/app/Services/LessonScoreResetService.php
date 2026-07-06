@@ -2,13 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Course;
+use App\Events\LessonScoreResetEvent;
+use App\Models\AssignmentAnswer;
 use App\Models\CourseMember;
 use App\Models\Lesson;
-use App\Models\LessonScoreReset;
-use App\Models\AssignmentAnswer;
 use App\Models\LessonAnswerQuestion;
-use App\Events\LessonScoreResetEvent;
+use App\Models\LessonScoreReset;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -28,21 +27,21 @@ class LessonScoreResetService
     {
         return DB::transaction(function () use ($member, $lesson, $adminId, $reason) {
             $userId = $member->user_id;
-            
+
             // Snapshot old scores
             $oldScores = LessonAnswerQuestion::where('user_id', $userId)
-                ->whereHas('question', function($q) use ($lesson) {
+                ->whereHas('question', function ($q) use ($lesson) {
                     $q->where('questionable_id', $lesson->id)
-                      ->where('questionable_type', Lesson::class);
+                        ->where('questionable_type', Lesson::class);
                 })
                 ->get()
                 ->toArray();
 
             // Delete answers
             LessonAnswerQuestion::where('user_id', $userId)
-                ->whereHas('question', function($q) use ($lesson) {
+                ->whereHas('question', function ($q) use ($lesson) {
                     $q->where('questionable_id', $lesson->id)
-                      ->where('questionable_type', Lesson::class);
+                        ->where('questionable_type', Lesson::class);
                 })
                 ->delete();
 
@@ -72,11 +71,11 @@ class LessonScoreResetService
     {
         return DB::transaction(function () use ($member, $lesson, $adminId, $reason) {
             $userId = $member->user_id;
-            
+
             $answers = AssignmentAnswer::where('user_id', $userId)
-                ->whereHas('assignment', function($q) use ($lesson) {
+                ->whereHas('assignment', function ($q) use ($lesson) {
                     $q->where('assignmentable_id', $lesson->id)
-                      ->where('assignmentable_type', Lesson::class);
+                        ->where('assignmentable_type', Lesson::class);
                 })
                 ->get();
 
@@ -115,12 +114,12 @@ class LessonScoreResetService
     {
         return DB::transaction(function () use ($member, $lesson, $adminId, $reason) {
             $userId = $member->user_id;
-            
+
             $answers = AssignmentAnswer::with('images')
                 ->where('user_id', $userId)
-                ->whereHas('assignment', function($q) use ($lesson) {
+                ->whereHas('assignment', function ($q) use ($lesson) {
                     $q->where('assignmentable_id', $lesson->id)
-                      ->where('assignmentable_type', Lesson::class);
+                        ->where('assignmentable_type', Lesson::class);
                 })
                 ->get();
 
@@ -128,14 +127,14 @@ class LessonScoreResetService
 
             foreach ($answers as $answer) {
                 // 1. Delete single attachment file (attachment_path is relative to public disk)
-                if (!empty($answer->attachment_path)) {
+                if (! empty($answer->attachment_path)) {
                     Storage::disk('public')->delete($answer->attachment_path);
                 }
 
                 // 2. Delete image files + rows (filename stored on public disk under images/courses/assignments/answers/)
                 foreach ($answer->images as $image) {
-                    if (!empty($image->filename)) {
-                        Storage::disk('public')->delete('images/courses/assignments/answers/' . $image->filename);
+                    if (! empty($image->filename)) {
+                        Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
                     }
                     $image->delete();
                 }

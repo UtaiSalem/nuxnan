@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * StudentPaymentPlan Model - แผนผ่อนชำระของนักเรียน
@@ -35,8 +34,11 @@ class StudentPaymentPlan extends Model
 
     // Status constants
     const STATUS_ACTIVE = 'active';
+
     const STATUS_COMPLETED = 'completed';
+
     const STATUS_OVERDUE = 'overdue';
+
     const STATUS_CANCELLED = 'cancelled';
 
     const STATUSES = [
@@ -66,6 +68,7 @@ class StudentPaymentPlan extends Model
     public function getPaidInstallmentsAttribute(): int
     {
         $data = $this->installments_data ?? [];
+
         return collect($data)->where('paid', true)->count();
     }
 
@@ -83,7 +86,7 @@ class StudentPaymentPlan extends Model
         // Update installments data
         $installments = $this->installments_data ?? [];
         foreach ($installments as &$installment) {
-            if (!($installment['paid'] ?? false) && $amount >= $installment['amount']) {
+            if (! ($installment['paid'] ?? false) && $amount >= $installment['amount']) {
                 $installment['paid'] = true;
                 $installment['paid_at'] = now()->toDateTimeString();
                 $amount -= $installment['amount'];
@@ -106,8 +109,9 @@ class StudentPaymentPlan extends Model
     {
         $installments = $this->installments_data ?? [];
         foreach ($installments as $installment) {
-            if (!($installment['paid'] ?? false) && isset($installment['due_date'])) {
+            if (! ($installment['paid'] ?? false) && isset($installment['due_date'])) {
                 $this->next_due_date = $installment['due_date'];
+
                 return;
             }
         }
@@ -116,8 +120,8 @@ class StudentPaymentPlan extends Model
 
     public function checkOverdue(): void
     {
-        if ($this->status === self::STATUS_ACTIVE && 
-            $this->next_due_date && 
+        if ($this->status === self::STATUS_ACTIVE &&
+            $this->next_due_date &&
             $this->next_due_date < now()->toDateString()) {
             $this->update(['status' => self::STATUS_OVERDUE]);
         }

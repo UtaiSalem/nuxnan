@@ -26,7 +26,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'maintenance', 'retired', 'lost'])->default('active');
             $table->string('condition')->nullable(); // new, good, fair, poor
             $table->timestamps();
-            
+
             $table->index(['academy_id', 'category']);
             $table->index('asset_code');
         });

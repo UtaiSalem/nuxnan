@@ -47,15 +47,22 @@ class ExamEligibilityOverride extends Model
 
     // Unlock methods
     const METHOD_POINTS = 'points';
+
     const METHOD_READING = 'reading';
+
     const METHOD_ADMIN = 'admin';
+
     const METHOD_APPEAL = 'appeal';
+
     const METHOD_SELF = 'self';
 
     // Status
     const STATUS_PENDING = 'pending';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
+
     const STATUS_EXPIRED = 'expired';
 
     /**
@@ -130,7 +137,7 @@ class ExamEligibilityOverride extends Model
         return $query->where('status', self::STATUS_APPROVED)
             ->where(function ($q) {
                 $q->whereNull('expires_at')
-                  ->orWhere('expires_at', '>', now());
+                    ->orWhere('expires_at', '>', now());
             });
     }
 
@@ -139,7 +146,7 @@ class ExamEligibilityOverride extends Model
      */
     public function getMethodLabelAttribute(): string
     {
-        return match($this->unlock_method) {
+        return match ($this->unlock_method) {
             self::METHOD_POINTS => 'ใช้ Points',
             self::METHOD_READING => 'อ่านเพิ่มเติม',
             self::METHOD_ADMIN => 'Admin อนุมัติ',

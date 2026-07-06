@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -15,8 +16,7 @@ class AdminRoleController extends Controller
     /**
      * Display a listing of roles.
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function index(Request $request)
     {
@@ -44,9 +44,10 @@ class AdminRoleController extends Controller
         // Pagination or all
         if ($request->has('all') && $request->all === 'true') {
             $roles = $query->get();
+
             return response()->json([
                 'success' => true,
-                'data' => $roles
+                'data' => $roles,
             ]);
         }
 
@@ -61,15 +62,14 @@ class AdminRoleController extends Controller
                 'last_page' => $roles->lastPage(),
                 'per_page' => $roles->perPage(),
                 'total' => $roles->total(),
-            ]
+            ],
         ]);
     }
 
     /**
      * Get roles data for DataTables (server-side processing)
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function datatable(Request $request)
     {
@@ -89,10 +89,12 @@ class AdminRoleController extends Controller
                     'INSTRUCTOR' => 'green',
                     'STUDENT' => 'gray',
                 ];
+
                 return $colors[$role->name] ?? 'indigo';
             })
             ->addColumn('is_system', function ($role) {
                 $systemRoles = ['SUPER_ADMIN', 'ADMIN', 'STUDENT'];
+
                 return in_array($role->name, $systemRoles);
             })
             ->editColumn('status', function ($role) {
@@ -111,8 +113,7 @@ class AdminRoleController extends Controller
     /**
      * Store a newly created role.
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function store(Request $request)
     {
@@ -128,7 +129,7 @@ class AdminRoleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -147,48 +148,47 @@ class AdminRoleController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'สร้าง Role สำเร็จ',
-            'data' => $role->load('permissions')
+            'data' => $role->load('permissions'),
         ], 201);
     }
 
     /**
      * Display the specified role.
      *
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @param  int  $id
+     * @return JsonResponse
      */
     public function show($id)
     {
         $role = Role::with('permissions')->withCount(['users', 'permissions'])->find($id);
 
-        if (!$role) {
+        if (! $role) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบ Role'
+                'message' => 'ไม่พบ Role',
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $role
+            'data' => $role,
         ]);
     }
 
     /**
      * Update the specified role.
      *
-     * @param Request $request
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @param  int  $id
+     * @return JsonResponse
      */
     public function update(Request $request, $id)
     {
         $role = Role::find($id);
 
-        if (!$role) {
+        if (! $role) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบ Role'
+                'message' => 'ไม่พบ Role',
             ], 404);
         }
 
@@ -197,7 +197,7 @@ class AdminRoleController extends Controller
         if (in_array($role->name, $systemRoles) && $request->has('name') && $request->name !== $role->name) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถเปลี่ยนชื่อ Role ระบบได้'
+                'message' => 'ไม่สามารถเปลี่ยนชื่อ Role ระบบได้',
             ], 403);
         }
 
@@ -214,17 +214,17 @@ class AdminRoleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         // Update role
         $role->fill($request->only(['display_name', 'description', 'status']));
-        
-        if ($request->has('name') && !in_array($role->name, $systemRoles)) {
+
+        if ($request->has('name') && ! in_array($role->name, $systemRoles)) {
             $role->name = strtoupper($request->name);
         }
-        
+
         $role->save();
 
         // Update permissions (except for SUPER_ADMIN)
@@ -235,24 +235,24 @@ class AdminRoleController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'อัปเดต Role สำเร็จ',
-            'data' => $role->load('permissions')
+            'data' => $role->load('permissions'),
         ]);
     }
 
     /**
      * Remove the specified role.
      *
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @param  int  $id
+     * @return JsonResponse
      */
     public function destroy($id)
     {
         $role = Role::withCount('users')->find($id);
 
-        if (!$role) {
+        if (! $role) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบ Role'
+                'message' => 'ไม่พบ Role',
             ], 404);
         }
 
@@ -261,7 +261,7 @@ class AdminRoleController extends Controller
         if (in_array($role->name, $systemRoles)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถลบ Role ระบบได้'
+                'message' => 'ไม่สามารถลบ Role ระบบได้',
             ], 403);
         }
 
@@ -269,25 +269,25 @@ class AdminRoleController extends Controller
         if ($role->users_count > 0) {
             return response()->json([
                 'success' => false,
-                'message' => "ไม่สามารถลบได้ เนื่องจากมีผู้ใช้ {$role->users_count} คน ใช้ Role นี้อยู่"
+                'message' => "ไม่สามารถลบได้ เนื่องจากมีผู้ใช้ {$role->users_count} คน ใช้ Role นี้อยู่",
             ], 400);
         }
 
         // Detach all permissions
         $role->permissions()->detach();
-        
+
         $role->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบ Role สำเร็จ'
+            'message' => 'ลบ Role สำเร็จ',
         ]);
     }
 
     /**
      * Get all available permissions grouped
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function permissions()
     {
@@ -295,7 +295,7 @@ class AdminRoleController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $permissions
+            'data' => $permissions,
         ]);
     }
 }

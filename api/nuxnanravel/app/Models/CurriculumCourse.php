@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CurriculumCourse extends Model
 {
@@ -36,7 +36,9 @@ class CurriculumCourse extends Model
      * Course types
      */
     public const TYPE_REQUIRED = 'required';   // วิชาบังคับ
+
     public const TYPE_ELECTIVE = 'elective';   // วิชาเลือก
+
     public const TYPE_GENERAL = 'general';     // วิชาพื้นฐาน
 
     /**
@@ -63,7 +65,7 @@ class CurriculumCourse extends Model
         if (empty($this->prerequisites)) {
             return collect();
         }
-        
+
         return Course::whereIn('id', $this->prerequisites)->get();
     }
 

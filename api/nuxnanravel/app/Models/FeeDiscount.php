@@ -30,9 +30,13 @@ class FeeDiscount extends Model
 
     // Discount types
     const TYPE_SCHOLARSHIP = 'scholarship';
+
     const TYPE_SIBLING = 'sibling';
+
     const TYPE_EARLY_PAYMENT = 'early_payment';
+
     const TYPE_PROMOTION = 'promotion';
+
     const TYPE_OTHER = 'other';
 
     const TYPES = [

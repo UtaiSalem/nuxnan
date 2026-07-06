@@ -32,7 +32,7 @@ class StudentCard extends Model
         'profile_image',
     ];
 
-    protected $appends = ['qr_content', 'qr_url'];
+    protected $appends = ['qr_content', 'qr_url', 'profile_image_url'];
 
     /**
      * Get the corresponding student from normalized database
@@ -78,6 +78,33 @@ class StudentCard extends Model
     {
         // DEPRECATED: This method is no longer used
         // Use the getStudentAttribute() method instead for normalized data
+        return null;
+    }
+
+    /**
+     * Get the profile image URL for student card.
+     */
+    public function getProfileImageUrlAttribute(): ?string
+    {
+        if (! $this->profile_image) {
+            return null;
+        }
+
+        if (str_starts_with($this->profile_image, 'images/')) {
+            return asset('storage/'.$this->profile_image);
+        }
+
+        if ($this->student_id && $rel = $this->student) {
+            return $rel->profile_image_url;
+        }
+
+        if ($this->class_level && $this->class_section) {
+            $level = (int) str_replace('ม.', '', $this->class_level);
+            $section = (int) $this->class_section;
+
+            return asset("storage/images/students/{$level}/{$section}/{$this->profile_image}");
+        }
+
         return null;
     }
 }

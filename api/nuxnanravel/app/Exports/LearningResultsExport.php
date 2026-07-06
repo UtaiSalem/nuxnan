@@ -3,15 +3,16 @@
 namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class LearningResultsExport implements FromArray, WithHeadings, WithTitle, ShouldAutoSize, WithStyles
+class LearningResultsExport implements FromArray, ShouldAutoSize, WithHeadings, WithStyles, WithTitle
 {
     protected $data;
+
     protected $courseName;
 
     public function __construct(array $data, string $courseName)
@@ -37,9 +38,10 @@ class LearningResultsExport implements FromArray, WithHeadings, WithTitle, Shoul
                 $scores['bonus_points'] ?? 0,
                 $scores['total_score'],
                 (int) $scores['percentage'],
-                $scores['grade_progress'] . ' (' . $scores['grade_name'] . ')',
+                $scores['grade_progress'].' ('.$scores['grade_name'].')',
             ];
         }
+
         return $rows;
     }
 
@@ -57,12 +59,12 @@ class LearningResultsExport implements FromArray, WithHeadings, WithTitle, Shoul
             'รหัสนักศึกษา',
             'ชื่อ-นามสกุล',
             'การเข้าเรียน (%)',
-            'งานบทเรียน (' . $maxLA . ')',
-            'ทดสอบบทเรียน (' . $maxLQ . ')',
-            'งานรายวิชา (' . $maxCA . ')',
-            'ทดสอบรายวิชา (' . $maxCQ . ')',
+            'งานบทเรียน ('.$maxLA.')',
+            'ทดสอบบทเรียน ('.$maxLQ.')',
+            'งานรายวิชา ('.$maxCA.')',
+            'ทดสอบรายวิชา ('.$maxCQ.')',
             'คะแนนพิเศษ',
-            'คะแนนรวม (' . $maxTotal . ')',
+            'คะแนนรวม ('.$maxTotal.')',
             'ร้อยละ',
             'เกรด',
         ];

@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Coupon;
 use App\Services\CouponService;
+use Illuminate\Console\Command;
 
 class GenerateCouponQRCodes extends Command
 {
@@ -33,8 +33,9 @@ class GenerateCouponQRCodes extends Command
             // Check if QR file exists (since we removed qr_code_path column)
             $this->info('Generating QR codes for coupons without QR files...');
             $coupons = $query->get()->filter(function ($coupon) {
-                $path = storage_path('app/public/qr-codes/' . $coupon->coupon_code . '.svg');
-                return !file_exists($path);
+                $path = storage_path('app/public/qr-codes/'.$coupon->coupon_code.'.svg');
+
+                return ! file_exists($path);
             });
         } elseif ($this->option('all')) {
             $this->info('Regenerating QR codes for all coupons with new Universal format (COUPON:code)...');
@@ -49,6 +50,7 @@ class GenerateCouponQRCodes extends Command
 
         if ($count === 0) {
             $this->info('No coupons found that need QR codes.');
+
             return 0;
         }
 
@@ -65,7 +67,7 @@ class GenerateCouponQRCodes extends Command
                 $success++;
             } catch (\Exception $e) {
                 $failed++;
-                $this->error("\nFailed to generate QR for coupon {$coupon->id}: " . $e->getMessage());
+                $this->error("\nFailed to generate QR for coupon {$coupon->id}: ".$e->getMessage());
             }
             $bar->advance();
         }

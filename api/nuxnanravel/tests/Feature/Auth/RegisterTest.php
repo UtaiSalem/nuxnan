@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,7 +14,7 @@ class RegisterTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(RoleSeeder::class);
     }
 
     public function test_user_can_register()
@@ -41,9 +42,9 @@ class RegisterTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
             'username' => 'สมชาย ใจดี',
-            'name' => 'สมชาย ใจดี'
+            'name' => 'สมชาย ใจดี',
         ]);
-        
+
         $user = User::where('email', 'test@example.com')->first();
         // $this->assertTrue($user->hasRole('STUDENT'));
     }

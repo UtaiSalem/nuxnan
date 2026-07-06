@@ -19,6 +19,9 @@ use App\Http\Controllers\Api\Learn\Academy\ActivitySessionController;
 use App\Http\Controllers\Api\Learn\Academy\AnalyticsController;
 use App\Http\Controllers\Api\Learn\Academy\AnnouncementController;
 use App\Http\Controllers\Api\Learn\Academy\AssetController;
+use App\Http\Controllers\Api\Learn\Academy\BehaviorCategoryController;
+use App\Http\Controllers\Api\Learn\Academy\BehaviorRecordController;
+use App\Http\Controllers\Api\Learn\Academy\BehaviorSessionController;
 use App\Http\Controllers\Api\Learn\Academy\BudgetController;
 use App\Http\Controllers\Api\Learn\Academy\ClassroomController;
 use App\Http\Controllers\Api\Learn\Academy\ClassroomGroupController;
@@ -48,8 +51,9 @@ use App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolEventController;
 use App\Http\Controllers\Api\Learn\Academy\StaffAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\StaffController;
-use App\Http\Controllers\Api\Learn\Academy\StudentIntakeController;
+use App\Http\Controllers\Api\Learn\Academy\StudentAccountController;
 use App\Http\Controllers\Api\Learn\Academy\StudentImportController;
+use App\Http\Controllers\Api\Learn\Academy\StudentIntakeController;
 use App\Http\Controllers\Api\Learn\Academy\StudentLifecycleController;
 use App\Http\Controllers\Api\Learn\Academy\TuitionFeeController;
 use Illuminate\Support\Facades\Route;
@@ -253,9 +257,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         ->name('api.academy.student-intakes.store');
 
     // Student Account Activation routes
-    Route::post('{academy}/students/{student}/invite', [\App\Http\Controllers\Api\Learn\Academy\StudentAccountController::class, 'invite'])
+    Route::post('{academy}/students/{student}/invite', [StudentAccountController::class, 'invite'])
         ->middleware('academy.permission:students.activate_account');
-    Route::get('{academy}/student-invitations/export', [\App\Http\Controllers\Api\Learn\Academy\StudentAccountController::class, 'exportInvitations'])
+    Route::get('{academy}/student-invitations/export', [StudentAccountController::class, 'exportInvitations'])
         ->middleware('academy.permission:students.export');
 
     Route::prefix('{academy}/student-imports')->group(function () {
@@ -883,5 +887,37 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::prefix('{academy}/audit-logs')->group(function () {
         Route::get('/', [AuditLogController::class, 'index'])->name('api.academy.audit-logs.index');
         Route::get('/entity', [AuditLogController::class, 'getEntityLogs'])->name('api.academy.audit-logs.entity');
+    });
+
+    // ============================================================
+    // Behavior / Discipline (ระบบความประพฤติ)
+    // ============================================================
+    Route::prefix('{academy}/behavior')->group(function () {
+        // Categories
+        Route::get('/categories', [BehaviorCategoryController::class, 'index']);
+        Route::post('/categories', [BehaviorCategoryController::class, 'store']);
+        Route::put('/categories/{category}', [BehaviorCategoryController::class, 'update']);
+        Route::delete('/categories/{category}', [BehaviorCategoryController::class, 'destroy']);
+
+        // Records
+        Route::get('/records', [BehaviorRecordController::class, 'index']);
+        Route::post('/records', [BehaviorRecordController::class, 'store']);
+        Route::get('/records/pending', [BehaviorRecordController::class, 'pendingApprovals']);
+        Route::get('/records/{record}', [BehaviorRecordController::class, 'show']);
+        Route::put('/records/{record}', [BehaviorRecordController::class, 'update']);
+        Route::delete('/records/{record}', [BehaviorRecordController::class, 'destroy']);
+        Route::post('/records/{record}/approve', [BehaviorRecordController::class, 'approve']);
+        Route::post('/records/{record}/reject', [BehaviorRecordController::class, 'reject']);
+
+        // Student behavior
+        Route::get('/students/{student}/history', [BehaviorRecordController::class, 'studentHistory']);
+        Route::get('/students/{student}/score', [BehaviorRecordController::class, 'studentScore']);
+
+        // Sessions
+        Route::get('/sessions', [BehaviorSessionController::class, 'index']);
+        Route::post('/sessions', [BehaviorSessionController::class, 'store']);
+        Route::get('/sessions/{session}', [BehaviorSessionController::class, 'show']);
+        Route::post('/sessions/{session}/records', [BehaviorSessionController::class, 'storeRecords']);
+        Route::post('/sessions/{session}/close', [BehaviorSessionController::class, 'close']);
     });
 });

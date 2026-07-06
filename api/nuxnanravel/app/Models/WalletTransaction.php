@@ -101,7 +101,7 @@ class WalletTransaction extends Model
      */
     public function getFormattedAmountAttribute(): string
     {
-        return number_format($this->amount, 2) . ' บาท';
+        return number_format($this->amount, 2).' บาท';
     }
 
     /**
@@ -109,7 +109,7 @@ class WalletTransaction extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->transaction_type) {
+        return match ($this->transaction_type) {
             'deposit' => 'การฝากเงิน',
             'withdraw' => 'การถอนเงิน',
             'transfer' => 'การโอนเงิน',
@@ -125,7 +125,7 @@ class WalletTransaction extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'รอดำเนินการ',
             'completed' => 'เสร็จสิ้น',
             'failed' => 'ล้มเหลว',
@@ -139,6 +139,6 @@ class WalletTransaction extends Model
      */
     public function getFormattedCurrencyAttribute(): string
     {
-        return $this->currency . ' ' . number_format($this->amount, 2);
+        return $this->currency.' '.number_format($this->amount, 2);
     }
 }

@@ -84,6 +84,6 @@ class AcademicYear extends Model
 
     public function getDurationAttribute(): string
     {
-        return $this->start_date->format('d/m/Y') . ' - ' . $this->end_date->format('d/m/Y');
+        return $this->start_date->format('d/m/Y').' - '.$this->end_date->format('d/m/Y');
     }
 }

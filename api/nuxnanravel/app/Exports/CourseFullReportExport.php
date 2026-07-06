@@ -8,9 +8,13 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 class CourseFullReportExport implements WithMultipleSheets
 {
     protected Course $course;
+
     protected array $gradesData;
+
     protected array $attendanceData;
+
     protected array $progressData;
+
     protected array $stats;
 
     public function __construct(

@@ -2,19 +2,19 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\Auditable;
 
 /**
  * StaffProfile Model - ข้อมูลบุคลากร
  */
 class StaffProfile extends Model
 {
-    use HasFactory, SoftDeletes, Auditable;
+    use Auditable, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'academy_id',
@@ -62,9 +62,13 @@ class StaffProfile extends Model
 
     // Status constants
     const STATUS_ACTIVE = 'active';
+
     const STATUS_ON_LEAVE = 'on_leave';
+
     const STATUS_SUSPENDED = 'suspended';
+
     const STATUS_RESIGNED = 'resigned';
+
     const STATUS_TERMINATED = 'terminated';
 
     const STATUSES = [
@@ -77,8 +81,11 @@ class StaffProfile extends Model
 
     // Employment type constants
     const TYPE_FULL_TIME = 'full_time';
+
     const TYPE_PART_TIME = 'part_time';
+
     const TYPE_CONTRACT = 'contract';
+
     const TYPE_TEMPORARY = 'temporary';
 
     const EMPLOYMENT_TYPES = [
@@ -137,8 +144,9 @@ class StaffProfile extends Model
     // Accessors
     public function getFullNameAttribute(): string
     {
-        $prefix = $this->title_prefix ? $this->title_prefix . ' ' : '';
-        return $prefix . $this->first_name . ' ' . $this->last_name;
+        $prefix = $this->title_prefix ? $this->title_prefix.' ' : '';
+
+        return $prefix.$this->first_name.' '.$this->last_name;
     }
 
     public function getStatusNameAttribute(): string
@@ -154,6 +162,7 @@ class StaffProfile extends Model
     public function getYearsOfServiceAttribute(): float
     {
         $endDate = $this->resignation_date ?? now();
+
         return round($this->hire_date->diffInDays($endDate) / 365, 1);
     }
 
@@ -162,7 +171,7 @@ class StaffProfile extends Model
     {
         $prefix = 'EMP';
         $year = date('y');
-        
+
         $lastEmployee = static::where('academy_id', $academyId)
             ->where('employee_id', 'like', "{$prefix}{$year}%")
             ->orderBy('employee_id', 'desc')
@@ -175,15 +184,15 @@ class StaffProfile extends Model
             $newNumber = 1;
         }
 
-        return $prefix . $year . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+        return $prefix.$year.str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
     public function getLeaveBalance(int $leaveTypeId, ?int $year = null): array
     {
         $year = $year ?? date('Y');
-        
+
         $leaveType = LeaveType::find($leaveTypeId);
-        if (!$leaveType) {
+        if (! $leaveType) {
             return ['total' => 0, 'used' => 0, 'remaining' => 0];
         }
 

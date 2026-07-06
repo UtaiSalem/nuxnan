@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Photo;
 use App\Models\Album;
-use Illuminate\Http\Request;
+use App\Models\Photo;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 
 class PhotoController extends Controller
 {
@@ -24,8 +24,8 @@ class PhotoController extends Controller
         if ($identifier) {
             // Get photos for specific user
             $user = $this->getUserByIdentifier($identifier);
-            
-            if (!$user) {
+
+            if (! $user) {
                 return response()->json([
                     'success' => false,
                     'message' => 'User not found',
@@ -68,7 +68,7 @@ class PhotoController extends Controller
 
         $album = Album::with('user')->find($albumId);
 
-        if (!$album) {
+        if (! $album) {
             return response()->json([
                 'success' => false,
                 'message' => 'Album not found',
@@ -76,7 +76,7 @@ class PhotoController extends Controller
         }
 
         // Check if user can view this album
-        if ($album->user_id !== auth()->id() && !$album->is_public) {
+        if ($album->user_id !== auth()->id() && ! $album->is_public) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to view this album',
@@ -168,7 +168,7 @@ class PhotoController extends Controller
         $photo = Photo::with(['user:id,name,username,avatar', 'album'])
             ->find($id);
 
-        if (!$photo) {
+        if (! $photo) {
             return response()->json([
                 'success' => false,
                 'message' => 'Photo not found',
@@ -176,7 +176,7 @@ class PhotoController extends Controller
         }
 
         // Check if user can view this photo
-        if ($photo->user_id !== auth()->id() && !$photo->is_public) {
+        if ($photo->user_id !== auth()->id() && ! $photo->is_public) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to view this photo',
@@ -196,7 +196,7 @@ class PhotoController extends Controller
     {
         $photo = Photo::find($id);
 
-        if (!$photo) {
+        if (! $photo) {
             return response()->json([
                 'success' => false,
                 'message' => 'Photo not found',
@@ -241,7 +241,7 @@ class PhotoController extends Controller
     {
         $photo = Photo::find($id);
 
-        if (!$photo) {
+        if (! $photo) {
             return response()->json([
                 'success' => false,
                 'message' => 'Photo not found',
@@ -282,7 +282,7 @@ class PhotoController extends Controller
     {
         $photo = Photo::find($id);
 
-        if (!$photo) {
+        if (! $photo) {
             return response()->json([
                 'success' => false,
                 'message' => 'Photo not found',
@@ -314,7 +314,7 @@ class PhotoController extends Controller
     {
         $photo = Photo::find($id);
 
-        if (!$photo) {
+        if (! $photo) {
             return response()->json([
                 'success' => false,
                 'message' => 'Photo not found',
@@ -323,7 +323,7 @@ class PhotoController extends Controller
 
         $like = $photo->likes()->where('user_id', auth()->id())->first();
 
-        if (!$like) {
+        if (! $like) {
             return response()->json([
                 'success' => false,
                 'message' => 'You have not liked this photo',
@@ -347,8 +347,9 @@ class PhotoController extends Controller
             // This is a simplified version
             // In production, you would use Intervention Image or similar library
             // to generate actual thumbnails
-            
+
             $path = $file->store('photos/thumbnails', 'public');
+
             return $path;
         } catch (\Exception $e) {
             return null;
@@ -358,9 +359,9 @@ class PhotoController extends Controller
     /**
      * Get user by identifier (ID, reference_code, or username).
      */
-    private function getUserByIdentifier(string $identifier): ?\App\Models\User
+    private function getUserByIdentifier(string $identifier): ?User
     {
-        return \App\Models\User::where('id', $identifier)
+        return User::where('id', $identifier)
             ->orWhere('reference_code', $identifier)
             ->orWhere('username', $identifier)
             ->first();

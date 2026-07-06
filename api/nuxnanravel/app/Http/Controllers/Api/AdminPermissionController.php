@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -13,8 +14,7 @@ class AdminPermissionController extends Controller
     /**
      * Display a listing of permissions.
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function index(Request $request)
     {
@@ -42,9 +42,10 @@ class AdminPermissionController extends Controller
         // Pagination or all
         if ($request->has('all') && $request->all === 'true') {
             $permissions = $query->get();
+
             return response()->json([
                 'success' => true,
-                'data' => $permissions
+                'data' => $permissions,
             ]);
         }
 
@@ -59,14 +60,14 @@ class AdminPermissionController extends Controller
                 'last_page' => $permissions->lastPage(),
                 'per_page' => $permissions->perPage(),
                 'total' => $permissions->total(),
-            ]
+            ],
         ]);
     }
 
     /**
      * Get permissions grouped by group name
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function groups()
     {
@@ -75,15 +76,14 @@ class AdminPermissionController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $grouped
+            'data' => $grouped,
         ]);
     }
 
     /**
      * Store a newly created permission.
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function store(Request $request)
     {
@@ -98,7 +98,7 @@ class AdminPermissionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -112,15 +112,14 @@ class AdminPermissionController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'สร้าง Permission สำเร็จ',
-            'data' => $permission
+            'data' => $permission,
         ], 201);
     }
 
     /**
      * Bulk create permissions
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function bulkCreate(Request $request)
     {
@@ -136,7 +135,7 @@ class AdminPermissionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -153,49 +152,48 @@ class AdminPermissionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'สร้าง ' . count($created) . ' Permissions สำเร็จ',
-            'data' => $created
+            'message' => 'สร้าง '.count($created).' Permissions สำเร็จ',
+            'data' => $created,
         ], 201);
     }
 
     /**
      * Display the specified permission.
      *
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @param  int  $id
+     * @return JsonResponse
      */
     public function show($id)
     {
         $permission = Permission::with('roles')->find($id);
 
-        if (!$permission) {
+        if (! $permission) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบ Permission'
+                'message' => 'ไม่พบ Permission',
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $permission
+            'data' => $permission,
         ]);
     }
 
     /**
      * Update the specified permission.
      *
-     * @param Request $request
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @param  int  $id
+     * @return JsonResponse
      */
     public function update(Request $request, $id)
     {
         $permission = Permission::find($id);
 
-        if (!$permission) {
+        if (! $permission) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบ Permission'
+                'message' => 'ไม่พบ Permission',
             ], 404);
         }
 
@@ -210,7 +208,7 @@ class AdminPermissionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -232,24 +230,24 @@ class AdminPermissionController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'อัปเดต Permission สำเร็จ',
-            'data' => $permission
+            'data' => $permission,
         ]);
     }
 
     /**
      * Remove the specified permission.
      *
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @param  int  $id
+     * @return JsonResponse
      */
     public function destroy($id)
     {
         $permission = Permission::withCount('roles')->find($id);
 
-        if (!$permission) {
+        if (! $permission) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบ Permission'
+                'message' => 'ไม่พบ Permission',
             ], 404);
         }
 
@@ -257,7 +255,7 @@ class AdminPermissionController extends Controller
         if ($permission->roles_count > 0) {
             return response()->json([
                 'success' => false,
-                'message' => "ไม่สามารถลบได้ เนื่องจากมี {$permission->roles_count} Role ใช้ Permission นี้อยู่"
+                'message' => "ไม่สามารถลบได้ เนื่องจากมี {$permission->roles_count} Role ใช้ Permission นี้อยู่",
             ], 400);
         }
 
@@ -265,7 +263,7 @@ class AdminPermissionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบ Permission สำเร็จ'
+            'message' => 'ลบ Permission สำเร็จ',
         ]);
     }
 }

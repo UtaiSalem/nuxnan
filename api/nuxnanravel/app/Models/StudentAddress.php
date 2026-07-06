@@ -2,18 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
 /**
  * Student Address Model
  */
-use App\Traits\Auditable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StudentAddress extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $table = 'student_addresses';
 
@@ -30,11 +29,11 @@ class StudentAddress extends Model
         'district',
         'province',
         'postal_code',
-        'is_current'
+        'is_current',
     ];
 
     protected $casts = [
-        'is_current' => 'boolean'
+        'is_current' => 'boolean',
     ];
 
     public function student(): BelongsTo
@@ -49,7 +48,9 @@ class StudentAddress extends Model
 
     // Address type constants
     const TYPE_CURRENT = 'current';
+
     const TYPE_PERMANENT = 'permanent';
+
     const TYPE_TEMPORARY = 'temporary';
 
     public static function getAddressTypes()
@@ -57,56 +58,57 @@ class StudentAddress extends Model
         return [
             self::TYPE_CURRENT => 'ปัจจุบัน',
             self::TYPE_PERMANENT => 'ตามทะเบียนบ้าน',
-            self::TYPE_TEMPORARY => 'ชั่วคราว'
+            self::TYPE_TEMPORARY => 'ชั่วคราว',
         ];
     }
 
     public function getAddressTypeTextAttribute()
     {
         $types = self::getAddressTypes();
+
         return $types[$this->address_type] ?? $this->address_type;
     }
 
     public function getFullAddressAttribute(): string
     {
         $parts = [];
-        
+
         if ($this->house_number) {
             $parts[] = "เลขที่ {$this->house_number}";
         }
-        
+
         if ($this->village_number) {
             $parts[] = "หมู่ {$this->village_number}";
         }
-        
+
         if ($this->village_name) {
             $parts[] = $this->village_name;
         }
-        
+
         if ($this->alley) {
             $parts[] = "ซอย {$this->alley}";
         }
-        
+
         if ($this->road) {
             $parts[] = "ถ. {$this->road}";
         }
-        
+
         if ($this->subdistrict) {
             $parts[] = "ต. {$this->subdistrict}";
         }
-        
+
         if ($this->district) {
             $parts[] = "อ. {$this->district}";
         }
-        
+
         if ($this->province) {
             $parts[] = "จ. {$this->province}";
         }
-        
+
         if ($this->postal_code) {
             $parts[] = $this->postal_code;
         }
-        
+
         return implode(' ', $parts);
     }
 

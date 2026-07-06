@@ -24,21 +24,21 @@ return new class extends Migration
             $table->string('transfer_time')->nullable(); // เวลาที่โอน
             $table->string('reference_number')->nullable(); // เลขอ้างอิงการโอน
             $table->text('note')->nullable(); // หมายเหตุจากผู้ใช้
-            
+
             // Status: pending, approved, rejected
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            
+
             // Admin review
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();
             $table->text('admin_note')->nullable(); // หมายเหตุจาก Admin
             $table->string('rejection_reason')->nullable(); // เหตุผลที่ปฏิเสธ
-            
+
             // Transaction reference (when approved)
             $table->foreignId('wallet_transaction_id')->nullable()->constrained('wallet_transactions')->nullOnDelete();
-            
+
             $table->timestamps();
-            
+
             // Indexes
             $table->index('status');
             $table->index('created_at');

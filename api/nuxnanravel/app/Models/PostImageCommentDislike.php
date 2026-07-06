@@ -13,11 +13,11 @@ class PostImageCommentDislike extends Model
 
     protected $fillable = [
         'user_id',
-        'post_image_comment_id'
+        'post_image_comment_id',
     ];
 
     protected $casts = [
         'user_id' => 'integer',
-        'post_image_comment_id' => 'integer'
+        'post_image_comment_id' => 'integer',
     ];
 }

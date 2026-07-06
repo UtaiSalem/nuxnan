@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Learn;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class StudentAnalyticsController extends Controller
@@ -10,8 +11,7 @@ class StudentAnalyticsController extends Controller
     /**
      * Get analytics data for the student dashboard.
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getDashboardAnalytics(Request $request)
     {
@@ -25,8 +25,8 @@ class StudentAnalyticsController extends Controller
                     'borderColor' => '#4F46E5',
                     'backgroundColor' => 'rgba(79, 70, 229, 0.1)',
                     'fill' => true,
-                ]
-            ]
+                ],
+            ],
         ];
 
         // Dummy data for student vs class average comparison
@@ -46,8 +46,8 @@ class StudentAnalyticsController extends Controller
                     'backgroundColor' => 'rgba(209, 213, 219, 0.2)',
                     'borderColor' => '#9CA3AF',
                     'pointBackgroundColor' => '#9CA3AF',
-                ]
-            ]
+                ],
+            ],
         ];
 
         return response()->json([

@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Constants\AcademyGroupTypes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AcademyGroup extends Model
 {
@@ -35,13 +36,13 @@ class AcademyGroup extends Model
      */
     public function getTypeMetaAttribute(): ?array
     {
-        return $this->type ? \App\Constants\AcademyGroupTypes::get($this->type) : null;
+        return $this->type ? AcademyGroupTypes::get($this->type) : null;
     }
 
     protected static function booted()
     {
         static::creating(function ($group) {
-            if (!$group->sort_order) {
+            if (! $group->sort_order) {
                 $group->sort_order = static::where('academy_id', $group->academy_id)->max('sort_order') + 1;
             }
         });

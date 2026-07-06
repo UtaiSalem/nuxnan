@@ -17,45 +17,45 @@ return new class extends Migration
             $table->foreignId('course_member_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
             $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
-            
+
             // Appeal details
             $table->enum('appeal_type', [
                 'score_error',          // คะแนนผิดพลาด
                 'attendance_error',     // การเข้าเรียนผิดพลาด
                 'grading_criteria',     // เกณฑ์การให้เกรด
                 'special_circumstance', // กรณีพิเศษ
-                'other'
+                'other',
             ]);
-            
+
             $table->text('reason')->comment('เหตุผลในการอุทธรณ์');
             $table->json('evidence')->nullable()->comment('หลักฐานประกอบ');
-            
+
             // Original vs Requested
             $table->string('original_grade', 2);
             $table->decimal('original_score', 8, 2)->nullable();
             $table->string('requested_grade', 2)->nullable()
                 ->comment('เกรดที่ขอ (ถ้ามี)');
-            
+
             // Processing
             $table->enum('status', ['pending', 'reviewing', 'approved', 'rejected', 'withdrawn'])
                 ->default('pending');
             $table->foreignId('reviewed_by')->nullable()
                 ->constrained('users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();
-            
+
             // Result
             $table->string('new_grade', 2)->nullable();
             $table->decimal('new_score', 8, 2)->nullable();
             $table->text('reviewer_notes')->nullable();
             $table->text('rejection_reason')->nullable();
-            
+
             // Deadline tracking
             $table->timestamp('deadline_at')->nullable()
                 ->comment('กำหนดยื่นอุทธรณ์');
             $table->boolean('is_late_appeal')->default(false);
-            
+
             $table->timestamps();
-            
+
             $table->index(['course_id', 'status'], 'ga_course_status_idx');
             $table->index(['student_id', 'status'], 'ga_student_status_idx');
         });

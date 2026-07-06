@@ -96,7 +96,7 @@ class UserReward extends Model
      */
     public function isExpired(): bool
     {
-        return $this->status === 'expired' || 
+        return $this->status === 'expired' ||
                ($this->expires_at && $this->expires_at <= now());
     }
 
@@ -113,7 +113,7 @@ class UserReward extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'รอดำเนินการ',
             'claimed' => 'ได้รับแล้ว',
             'expired' => 'หมดอายุ',
@@ -127,7 +127,7 @@ class UserReward extends Model
      */
     public function getFormattedPointsSpentAttribute(): string
     {
-        return number_format($this->points_spent) . ' แต้ม';
+        return number_format($this->points_spent).' แต้ม';
     }
 
     /**
@@ -135,7 +135,7 @@ class UserReward extends Model
      */
     public function getFormattedRedeemedAtAttribute(): string
     {
-        if (!$this->redeemed_at) {
+        if (! $this->redeemed_at) {
             return '-';
         }
 
@@ -147,7 +147,7 @@ class UserReward extends Model
      */
     public function getFormattedExpiresAtAttribute(): string
     {
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return '-';
         }
 

@@ -17,7 +17,7 @@ trait HandlesStudentUpdates
     protected function applyUpdate(Student $student, string $modelType, $modelId, string $field, $newValue, $oldValue = null)
     {
         $userId = auth()->id();
-        if (!$userId) {
+        if (! $userId) {
             abort(401, 'Unauthorized to create change request');
         }
 
@@ -29,7 +29,7 @@ trait HandlesStudentUpdates
         $academy = $student->academy;
         $settings = $academy->student_editable_fields ?? [
             'mode' => 'blacklist',
-            'fields' => ['citizen_id', 'student_id', 'academic', 'health']
+            'fields' => ['citizen_id', 'student_id', 'academic', 'health'],
         ];
 
         if ($this->needsApproval($field, $settings)) {
@@ -76,7 +76,7 @@ trait HandlesStudentUpdates
             }
         }
 
-        if (!empty($directApply) && $model) {
+        if (! empty($directApply) && $model) {
             $model->update($directApply);
         }
 
@@ -110,7 +110,7 @@ trait HandlesStudentUpdates
                     return $mode === 'blacklist';
                 }
             }
-            if ($field === $pattern || str_starts_with($field, $pattern . '.')) {
+            if ($field === $pattern || str_starts_with($field, $pattern.'.')) {
                 return $mode === 'blacklist';
             }
         }

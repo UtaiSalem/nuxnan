@@ -36,7 +36,9 @@ class ExportSchema extends Command
 
         $schema = [];
         foreach ($tableNames as $table) {
-            if ($table === 'migrations') continue;
+            if ($table === 'migrations') {
+                continue;
+            }
             try {
                 $columns = Schema::getColumnListing($table);
                 $tableSchema = [];
@@ -46,7 +48,7 @@ class ExportSchema extends Command
                 }
                 $schema[$table] = $tableSchema;
             } catch (\Exception $e) {
-                $this->error("Error processing table $table: " . $e->getMessage());
+                $this->error("Error processing table $table: ".$e->getMessage());
             }
         }
 

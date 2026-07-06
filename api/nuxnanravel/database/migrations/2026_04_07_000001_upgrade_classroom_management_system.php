@@ -27,11 +27,11 @@ return new class extends Migration
         // ──────────────────────────────────────────────
         Schema::table('classrooms', function (Blueprint $table) {
             $table->string('classroom_code', 6)->nullable()->unique()->after('id')
-                  ->comment('6-char alphanumeric auto-generated code for join');
+                ->comment('6-char alphanumeric auto-generated code for join');
             $table->string('academic_year', 10)->nullable()->after('academic_year_id')
-                  ->comment('ปีการศึกษา format: 2567 or 2024');
+                ->comment('ปีการศึกษา format: 2567 or 2024');
             $table->unsignedTinyInteger('semester')->nullable()->after('academic_year')
-                  ->comment('1 or 2');
+                ->comment('1 or 2');
             $table->enum('status', ['active', 'archived'])->default('active')->after('is_active');
             $table->unsignedBigInteger('created_by')->nullable()->after('status');
 

@@ -34,7 +34,7 @@ class CourseGroup extends Model
     protected static function booted()
     {
         static::creating(function ($group) {
-            if (!$group->sort_order) {
+            if (! $group->sort_order) {
                 $group->sort_order = static::where('course_id', $group->course_id)->max('sort_order') + 1;
             }
         });

@@ -13,12 +13,12 @@ return new class extends Migration
     {
         // ก่อน drop ต้องปรับ collation ให้ตรงกับ users.phone_number ก่อน
         // เผื่อมี data ตกหล่นที่ต้องย้ายไป users ก่อน drop (ปัจจุบันตรวจแล้วเป็น NULL ทั้งหมด)
-        \DB::table('user_profiles')
+        DB::table('user_profiles')
             ->join('users', 'user_profiles.user_id', '=', 'users.id')
             ->whereNotNull('user_profiles.phone_number')
             ->whereNull('users.phone_number')
             ->update([
-                'users.phone_number' => \DB::raw('user_profiles.phone_number')
+                'users.phone_number' => DB::raw('user_profiles.phone_number'),
             ]);
 
         Schema::table('user_profiles', function (Blueprint $table) {

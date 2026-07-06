@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
-use App\Models\Semester;
 use App\Models\Academy;
-use Illuminate\Http\Request;
+use App\Models\Semester;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AcademicYearController extends Controller
 {
@@ -33,8 +33,8 @@ class AcademicYearController extends Controller
     public function store(Request $request, int $academyId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -76,8 +76,8 @@ class AcademicYearController extends Controller
     public function update(Request $request, int $academyId, int $id): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -109,8 +109,8 @@ class AcademicYearController extends Controller
     public function destroy(int $academyId, int $id): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -148,8 +148,8 @@ class AcademicYearController extends Controller
     public function storeSemester(Request $request, int $academyId, int $academicYearId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -186,8 +186,8 @@ class AcademicYearController extends Controller
     public function updateSemester(Request $request, int $academyId, int $academicYearId, int $semesterId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -218,7 +218,9 @@ class AcademicYearController extends Controller
     protected function canManage(Academy $academy): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
         if ($academy->user_id === $user->id) {
             return true;
@@ -234,7 +236,7 @@ class AcademicYearController extends Controller
     {
         $startDate = $academicYear->start_date;
         $endDate = $academicYear->end_date;
-        
+
         // Calculate midpoint for semester split
         $totalDays = $startDate->diffInDays($endDate);
         $midDate = $startDate->copy()->addDays(intval($totalDays / 2));

@@ -33,14 +33,16 @@ class SyncStudentRelatedTables extends Command
         $summary = [];
 
         foreach ($tables as $table) {
-            if (!Schema::hasTable($table)) {
+            if (! Schema::hasTable($table)) {
                 $this->line("{$table}: TABLE NOT FOUND — skipped");
+
                 continue;
             }
 
             $columns = Schema::getColumnListing($table);
-            if (!in_array('student_id', $columns) || !in_array('academy_id', $columns)) {
+            if (! in_array('student_id', $columns) || ! in_array('academy_id', $columns)) {
                 $this->line("{$table}: missing student_id or academy_id column — skipped");
+
                 continue;
             }
 
@@ -55,12 +57,13 @@ class SyncStudentRelatedTables extends Command
             if ($needsUpdate === 0) {
                 $this->line("{$table}: already up to date");
                 $summary[] = [$table, 0, 'OK'];
+
                 continue;
             }
 
             $this->info("{$table}: {$needsUpdate} records to update");
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 DB::statement("
                     UPDATE `{$table}` t
                     INNER JOIN students s ON s.id = t.student_id
@@ -69,7 +72,7 @@ class SyncStudentRelatedTables extends Command
                       AND s.academy_id IS NOT NULL
                 ");
 
-                $this->info("  -> Updated!");
+                $this->info('  -> Updated!');
             }
 
             $summary[] = [$table, $needsUpdate, $dryRun ? 'DRY RUN' : 'UPDATED'];
@@ -85,13 +88,13 @@ class SyncStudentRelatedTables extends Command
 
             if ($cardsNeedUpdate > 0) {
                 $this->info("student_cards: {$cardsNeedUpdate} records — setting academy_id = 1 (single academy)");
-                if (!$dryRun) {
+                if (! $dryRun) {
                     DB::table('student_cards')
                         ->where(function ($q) {
                             $q->whereNull('academy_id')->orWhere('academy_id', 0);
                         })
                         ->update(['academy_id' => 1]);
-                    $this->info("  -> Updated!");
+                    $this->info('  -> Updated!');
                 }
                 $summary[] = ['student_cards', $cardsNeedUpdate, $dryRun ? 'DRY RUN' : 'UPDATED'];
             } else {

@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\PointRule;
+use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Services\PointsService;
-use App\Models\PointsTransaction;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AdminPointsController extends Controller
@@ -26,7 +27,7 @@ class AdminPointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -79,14 +80,14 @@ class AdminPointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 403);
         }
 
-        $rules = \App\Models\PointRule::withTrashed()->get();
+        $rules = PointRule::withTrashed()->get();
 
         return response()->json([
             'success' => true,
@@ -103,7 +104,7 @@ class AdminPointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -126,7 +127,7 @@ class AdminPointsController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        $rule = \App\Models\PointRule::create($validated);
+        $rule = PointRule::create($validated);
 
         return response()->json([
             'success' => true,
@@ -144,16 +145,16 @@ class AdminPointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 403);
         }
 
-        $rule = \App\Models\PointRule::find($id);
+        $rule = PointRule::find($id);
 
-        if (!$rule) {
+        if (! $rule) {
             return response()->json([
                 'success' => false,
                 'message' => 'Rule not found',
@@ -191,16 +192,16 @@ class AdminPointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 403);
         }
 
-        $rule = \App\Models\PointRule::find($id);
+        $rule = PointRule::find($id);
 
-        if (!$rule) {
+        if (! $rule) {
             return response()->json([
                 'success' => false,
                 'message' => 'Rule not found',
@@ -222,7 +223,7 @@ class AdminPointsController extends Controller
     {
         $adminUser = Auth::user();
 
-        if (!$adminUser || !$adminUser->isSuperAdmin()) {
+        if (! $adminUser || ! $adminUser->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -231,7 +232,7 @@ class AdminPointsController extends Controller
 
         $targetUser = User::find($userId);
 
-        if (!$targetUser) {
+        if (! $targetUser) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -269,7 +270,7 @@ class AdminPointsController extends Controller
     {
         $adminUser = Auth::user();
 
-        if (!$adminUser || !$adminUser->isSuperAdmin()) {
+        if (! $adminUser || ! $adminUser->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -278,7 +279,7 @@ class AdminPointsController extends Controller
 
         $user = User::find($userId);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -329,7 +330,7 @@ class AdminPointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -352,9 +353,9 @@ class AdminPointsController extends Controller
                         ->where('created_at', '>=', now()->startOfWeek())
                         ->where('created_at', '<=', now()->endOfWeek());
                 }])
-                ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as weekly_points')
-                ->groupBy('users.id')
-                ->orderByDesc('weekly_points');
+                    ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as weekly_points')
+                    ->groupBy('users.id')
+                    ->orderByDesc('weekly_points');
                 break;
             case 'monthly':
                 $query->with(['pointsTransactions' => function ($query) {
@@ -362,9 +363,9 @@ class AdminPointsController extends Controller
                         ->where('created_at', '>=', now()->startOfMonth())
                         ->where('created_at', '<=', now()->endOfMonth());
                 }])
-                ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as monthly_points')
-                ->groupBy('users.id')
-                ->orderByDesc('monthly_points');
+                    ->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as monthly_points')
+                    ->groupBy('users.id')
+                    ->orderByDesc('monthly_points');
                 break;
             default:
                 $query->orderByDesc('pp');
@@ -382,7 +383,7 @@ class AdminPointsController extends Controller
                 'user_id' => $userItem->id,
                 'username' => $userItem->username,
                 'avatar' => $userItem->avatar,
-                'score' => match($type) {
+                'score' => match ($type) {
                     'points' => $userItem->pp,
                     'weekly' => $userItem->weekly_points ?? $userItem->pp,
                     'monthly' => $userItem->monthly_points ?? $userItem->pp,
@@ -414,7 +415,7 @@ class AdminPointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -440,7 +441,7 @@ class AdminPointsController extends Controller
             ->groupBy('date')
             ->orderBy('date')
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'date' => $item->date,
                 'total' => (float) $item->total,
             ]);
@@ -450,7 +451,7 @@ class AdminPointsController extends Controller
             ->where('transaction_type', 'earn')
             ->groupBy('source_type')
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'source_type' => $item->source_type,
                 'total' => (float) $item->total,
             ]);

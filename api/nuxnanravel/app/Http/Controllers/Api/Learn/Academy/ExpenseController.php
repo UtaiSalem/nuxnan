@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\Budget;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
-use App\Models\Budget;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 /**
  * ExpenseController - จัดการรายจ่าย
@@ -103,12 +102,12 @@ class ExpenseController extends Controller
         ]);
 
         // Check budget availability if linked
-        if (!empty($validated['budget_id'])) {
+        if (! empty($validated['budget_id'])) {
             $budget = Budget::find($validated['budget_id']);
-            if ($budget && !$budget->canSpend($validated['amount'])) {
+            if ($budget && ! $budget->canSpend($validated['amount'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'งบประมาณไม่เพียงพอ (เหลือ ' . number_format($budget->remaining_amount, 2) . ' บาท)',
+                    'message' => 'งบประมาณไม่เพียงพอ (เหลือ '.number_format($budget->remaining_amount, 2).' บาท)',
                 ], 400);
             }
         }
@@ -296,7 +295,7 @@ class ExpenseController extends Controller
                 ->with('category:id,name')
                 ->groupBy('category_id')
                 ->get()
-                ->map(fn($item) => [
+                ->map(fn ($item) => [
                     'category' => $item->category?->name ?? 'ไม่ระบุ',
                     'amount' => $item->total,
                 ]),

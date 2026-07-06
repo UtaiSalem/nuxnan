@@ -27,7 +27,7 @@ class AcademyGroupPermissionController extends Controller
         if ($department->academy_id !== $academy->id || $department->type !== 'department') {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid group or not a department.'
+                'message' => 'Invalid group or not a department.',
             ], 404);
         }
 
@@ -38,7 +38,7 @@ class AcademyGroupPermissionController extends Controller
             'data' => [
                 'permissions' => $permissions,
                 'enabled_keys' => $permissions->where('enabled', true)->pluck('permission_key'),
-            ]
+            ],
         ]);
     }
 
@@ -50,7 +50,7 @@ class AcademyGroupPermissionController extends Controller
         if ($department->academy_id !== $academy->id || $department->type !== 'department') {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid group or not a department.'
+                'message' => 'Invalid group or not a department.',
             ], 404);
         }
 
@@ -66,7 +66,7 @@ class AcademyGroupPermissionController extends Controller
             'message' => 'Permissions updated successfully.',
             'data' => [
                 'enabled_keys' => $this->permissionService->getEnabledPermissions($department),
-            ]
+            ],
         ]);
     }
 }

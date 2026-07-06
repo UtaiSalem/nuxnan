@@ -1,12 +1,11 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\Api\Learn\Academy\AcademyStoreController;
 use App\Http\Controllers\Api\Learn\Academy\StoreCategoryController;
-use App\Http\Controllers\Api\Learn\Academy\StoreProductController;
 use App\Http\Controllers\Api\Learn\Academy\StoreOrderController;
+use App\Http\Controllers\Api\Learn\Academy\StoreProductController;
 use App\Http\Controllers\Api\Learn\Academy\StoreReviewController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------

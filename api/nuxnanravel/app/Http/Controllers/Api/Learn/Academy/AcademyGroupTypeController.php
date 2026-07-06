@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Learn\Academy;
 
+use App\Constants\AcademyGroupPermissions;
 use App\Constants\AcademyGroupTypes;
 use App\Http\Controllers\Controller;
 
@@ -11,7 +12,7 @@ class AcademyGroupTypeController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data'    => AcademyGroupTypes::all(),
+            'data' => AcademyGroupTypes::all(),
         ]);
     }
 
@@ -19,7 +20,7 @@ class AcademyGroupTypeController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data'    => \App\Constants\AcademyGroupPermissions::all(),
+            'data' => AcademyGroupPermissions::all(),
         ]);
     }
 }

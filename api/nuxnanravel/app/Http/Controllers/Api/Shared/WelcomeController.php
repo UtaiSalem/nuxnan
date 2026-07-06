@@ -2,40 +2,41 @@
 
 namespace App\Http\Controllers\Api\Shared;
 
-use App\Models\Post;
-use App\Models\User;
-
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Earn\DonateResource;
+use App\Http\Resources\Shared\UserResource;
 use App\Models\Course;
 use App\Models\Donate;
 use App\Models\Lesson;
+use App\Models\Post;
+use App\Models\User;
 use App\Models\VisitorCounter;
-use App\Http\Resources\Shared\UserResource;
-use Illuminate\Support\Facades\Route;
-use App\Http\Resources\Earn\DonateResource;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Route;
 
-class WelcomeController extends \App\Http\Controllers\Controller
+class WelcomeController extends Controller
 {
-    public function index(){
+    public function index()
+    {
         VisitorCounter::first()->increment('visitor_counter');
         $visitorCounter = VisitorCounter::pluck('visitor_counter')->first();
 
         return response()->json([
-            'canLogin'          => Route::has('login'),
-            'canRegister'       => Route::has('register'),
-            'laravelVersion'    => Application::VERSION,
-            'phpVersion'        => PHP_VERSION,
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+            'laravelVersion' => Application::VERSION,
+            'phpVersion' => PHP_VERSION,
 
-            'usersCount'        => User::count(),
-            'coursesCount'      => Course::count(),
-            'lessonsCount'      => Lesson::count(),
-            'postsCount'        => Post::count(),
-            'visitorCounter'    => $visitorCounter,
+            'usersCount' => User::count(),
+            'coursesCount' => Course::count(),
+            'lessonsCount' => Lesson::count(),
+            'postsCount' => Post::count(),
+            'visitorCounter' => $visitorCounter,
 
-            'donates'           => DonateResource::collection(Donate::with('donor')->whereNotIn('status',[2])->orderBy('remaining_points', 'DESC')->latest()->paginate(8)),
-            'donateRecipients'  => UserResource::collection(User::whereNotIn('id',[1])->orderBy('pp', 'DESC')->latest()->paginate(12)),    
+            'donates' => DonateResource::collection(Donate::with('donor')->whereNotIn('status', [2])->orderBy('remaining_points', 'DESC')->latest()->paginate(8)),
+            'donateRecipients' => UserResource::collection(User::whereNotIn('id', [1])->orderBy('pp', 'DESC')->latest()->paginate(12)),
 
-            'ceo'               => User::find(1) ? new UserResource(User::find(1)) : null,
+            'ceo' => User::find(1) ? new UserResource(User::find(1)) : null,
 
             'meta' => [
                 'title' => 'Welcome to Plearnd',

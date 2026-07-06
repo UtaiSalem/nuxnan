@@ -4,25 +4,25 @@ namespace App\Http\Controllers\Api\Play\Typing\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TypingWord;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AdminTypingWordController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $words = TypingWord::when($request->search, function($q, $search) {
-                $q->where('text', 'like', "%{$search}%");
-            })
-            ->when($request->language, fn($q, $l) => $q->where('language', $l))
-            ->when($request->difficulty, fn($q, $d) => $q->where('difficulty', $d))
+        $words = TypingWord::when($request->search, function ($q, $search) {
+            $q->where('text', 'like', "%{$search}%");
+        })
+            ->when($request->language, fn ($q, $l) => $q->where('language', $l))
+            ->when($request->difficulty, fn ($q, $d) => $q->where('difficulty', $d))
             ->latest()
             ->paginate($request->get('limit', 20));
 
         return response()->json([
             'success' => true,
-            'data' => $words
+            'data' => $words,
         ]);
     }
 
@@ -35,17 +35,17 @@ class AdminTypingWordController extends Controller
             'category' => 'nullable|string|max:50',
             'pronunciation' => 'nullable|string|max:255',
             'meaning' => 'nullable|string|max:500',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
         ]);
 
         $word = TypingWord::create([
             ...$data,
-            'created_by' => Auth::id()
+            'created_by' => Auth::id(),
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $word
+            'data' => $word,
         ]);
     }
 
@@ -58,20 +58,21 @@ class AdminTypingWordController extends Controller
             'category' => 'nullable|string|max:50',
             'pronunciation' => 'nullable|string|max:255',
             'meaning' => 'nullable|string|max:500',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
         ]);
 
         $word->update($data);
 
         return response()->json([
             'success' => true,
-            'data' => $word
+            'data' => $word,
         ]);
     }
 
     public function destroy(TypingWord $word): JsonResponse
     {
         $word->delete();
+
         return response()->json(['success' => true]);
     }
 

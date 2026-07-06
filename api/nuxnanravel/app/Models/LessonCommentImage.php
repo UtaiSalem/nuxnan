@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\LessonComment;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class LessonCommentImage extends Model
 {
@@ -18,5 +17,4 @@ class LessonCommentImage extends Model
     {
         return $this->belongsTo(LessonComment::class);
     }
-
 }

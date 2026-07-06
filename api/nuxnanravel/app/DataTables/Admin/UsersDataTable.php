@@ -14,7 +14,7 @@ class UsersDataTable extends DataTable
     /**
      * Build the DataTable class.
      *
-     * @param QueryBuilder $query Results from query() method.
+     * @param  QueryBuilder  $query  Results from query() method.
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
@@ -35,6 +35,7 @@ class UsersDataTable extends DataTable
                         'STUDENT' => 'bg-gray-500',
                     ];
                     $color = $colors[$role->name] ?? 'bg-gray-500';
+
                     return [
                         'name' => $role->name,
                         'display_name' => $role->display_name ?? $role->name,
@@ -46,6 +47,7 @@ class UsersDataTable extends DataTable
                 if ($user->email_verified_at) {
                     return 'verified';
                 }
+
                 return 'unverified';
             })
             ->addColumn('status_badge', function ($user) {
@@ -55,6 +57,7 @@ class UsersDataTable extends DataTable
                         'color' => 'bg-green-500',
                     ];
                 }
+
                 return [
                     'label' => 'รอยืนยัน',
                     'color' => 'bg-yellow-500',
@@ -132,6 +135,6 @@ class UsersDataTable extends DataTable
      */
     protected function filename(): string
     {
-        return 'Users_' . date('YmdHis');
+        return 'Users_'.date('YmdHis');
     }
 }

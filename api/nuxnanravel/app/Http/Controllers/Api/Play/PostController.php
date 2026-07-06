@@ -2,35 +2,33 @@
 
 namespace App\Http\Controllers\Api\Play;
 
-use App\Models\Post;
-use App\Models\Share;
-use App\Models\Activity;
-use App\Models\PostImage;
-use App\Models\PostBackground;
-use App\Models\Feeling;
-use App\Models\ActivityTypeModel;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use App\Enums\ActivityType;
-use App\Services\PostService;
-use App\Services\PostMediaService;
-use App\Services\LocationService;
-use App\Services\MentionService;
-use App\Services\TaggingService;
-use App\Services\LinkPreviewService;
-use App\Http\Resources\Play\PostResource;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Enums\UsageEventType;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
-use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\Play\ActivityResource;
+use App\Http\Resources\Play\PostResource;
+use App\Models\Activity;
+use App\Models\ActivityTypeModel;
+use App\Models\Feeling;
+use App\Models\Post;
+use App\Models\PostBackground;
+use App\Models\PostImage;
+use App\Services\LocationService;
+use App\Services\PostMediaService;
+use App\Services\PostService;
+use App\Services\UsageEventService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
-class PostController extends \App\Http\Controllers\Controller
+class PostController extends Controller
 {
     protected PostService $postService;
+
     protected PostMediaService $mediaService;
+
     protected LocationService $locationService;
 
     public function __construct(
@@ -50,7 +48,7 @@ class PostController extends \App\Http\Controllers\Controller
     {
         $user = auth()->user();
         $perPage = $request->get('per_page', 15);
-        
+
         $query = Post::query()
             ->with([
                 'user',
@@ -65,24 +63,24 @@ class PostController extends \App\Http\Controllers\Controller
             ])
             ->where('is_published', true)
             ->latest();
-        
+
         // Filter by user if specified
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
-        
+
         // Filter by post type
         if ($request->has('post_type')) {
             $query->where('post_type', $request->post_type);
         }
-        
+
         // Filter by hashtag
         if ($request->has('hashtag')) {
             $query->whereJsonContains('hashtags', $request->hashtag);
         }
-        
+
         $posts = $query->paginate($perPage);
-        
+
         return response()->json([
             'success' => true,
             'posts' => PostResource::collection($posts),
@@ -149,7 +147,7 @@ class PostController extends \App\Http\Controllers\Controller
             }
 
             // Handle background template if background_id is provided
-            if (!empty($validatedData['background_id'])) {
+            if (! empty($validatedData['background_id'])) {
                 $background = PostBackground::find($validatedData['background_id']);
                 if ($background) {
                     $validatedData['background_color'] = $background->background_color;
@@ -158,12 +156,12 @@ class PostController extends \App\Http\Controllers\Controller
                     $validatedData['text_color'] = $background->text_color;
                 }
             }
-            
+
             // Clean content whitespace
-            if (!empty($validatedData['content'])) {
+            if (! empty($validatedData['content'])) {
                 $validatedData['content'] = preg_replace('/\s+/', ' ', trim($validatedData['content']));
             }
-            
+
             // Handle file uploads
             if ($request->hasFile('images')) {
                 $validatedData['images'] = $request->file('images');
@@ -173,17 +171,17 @@ class PostController extends \App\Http\Controllers\Controller
             $post = $this->postService->createPost($validatedData, auth()->id());
 
             // Fire gamification event
-            \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::POST_CREATE->value, 'post', $post->id);
+            UsageEventService::fire(auth()->user(), UsageEventType::POST_CREATE->value, 'post', $post->id);
 
             // Get the activity for response with all necessary relationships
             $activity = $post->activity;
             $activity->load([
-                'user', 
-                'activityable.user', 
+                'user',
+                'activityable.user',
                 'activityable.postImages',
                 'activityable.poll.options',
                 'activityable.poll.user',
-                'activityable.poll.comments.user'
+                'activityable.poll.comments.user',
             ]);
 
             // Deduct points
@@ -200,7 +198,7 @@ class PostController extends \App\Http\Controllers\Controller
                 'error' => $th->getMessage(),
                 'trace' => $th->getTraceAsString(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการสร้างโพสต์ / Error creating post',
@@ -216,7 +214,7 @@ class PostController extends \App\Http\Controllers\Controller
     {
         // Check if user can view this post
         $user = auth()->user();
-        
+
         // Private post - only owner can view
         if ($post->privacy_settings == 1 && $post->user_id !== $user?->id) {
             return response()->json([
@@ -224,7 +222,7 @@ class PostController extends \App\Http\Controllers\Controller
                 'message' => 'You do not have permission to view this post.',
             ], 403);
         }
-        
+
         // Increment views
         $post->increment('views');
 
@@ -291,30 +289,30 @@ class PostController extends \App\Http\Controllers\Controller
     {
         try {
             $validatedData = $request->validated();
-            
+
             // Clean content whitespace
-            if (!empty($validatedData['content'])) {
+            if (! empty($validatedData['content'])) {
                 $validatedData['content'] = preg_replace('/\s+/', ' ', trim($validatedData['content']));
             }
-            
+
             // Handle removing feeling
-            if (!empty($validatedData['remove_feeling'])) {
+            if (! empty($validatedData['remove_feeling'])) {
                 $validatedData['feeling'] = null;
                 $validatedData['feeling_icon'] = null;
                 $validatedData['activity_type'] = null;
                 $validatedData['activity_text'] = null;
             }
-            
+
             // Handle removing background
-            if (!empty($validatedData['remove_background'])) {
+            if (! empty($validatedData['remove_background'])) {
                 $validatedData['background_color'] = null;
                 $validatedData['background_gradient'] = null;
                 $validatedData['background_image'] = null;
                 $validatedData['text_color'] = null;
             }
-            
+
             // Delete specified images
-            if (!empty($validatedData['delete_images'])) {
+            if (! empty($validatedData['delete_images'])) {
                 foreach ($validatedData['delete_images'] as $imageId) {
                     $image = PostImage::where('id', $imageId)
                         ->where('post_id', $post->id)
@@ -324,12 +322,12 @@ class PostController extends \App\Http\Controllers\Controller
                     }
                 }
             }
-            
+
             // Reorder images if specified
-            if (!empty($validatedData['image_order'])) {
+            if (! empty($validatedData['image_order'])) {
                 $this->mediaService->reorderImages($post, $validatedData['image_order']);
             }
-            
+
             // Handle new file uploads
             if ($request->hasFile('images')) {
                 $validatedData['images'] = $request->file('images');
@@ -348,7 +346,7 @@ class PostController extends \App\Http\Controllers\Controller
                 'post_id' => $post->id,
                 'error' => $th->getMessage(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการแก้ไขโพสต์',
@@ -366,7 +364,7 @@ class PostController extends \App\Http\Controllers\Controller
         $isOwner = (int) $post->user_id === (int) $user->id;
         $isAdmin = $user->isSuperAdmin() || $user->hasAnyRole(['ADMIN', 'MODERATOR']) || $user->isPlearndAdmin();
 
-        if (!$isOwner && !$isAdmin) {
+        if (! $isOwner && ! $isAdmin) {
             return response()->json([
                 'success' => false,
                 'message' => 'คุณไม่มีสิทธิ์ลบโพสต์นี้ / You do not have permission to delete this post',
@@ -431,8 +429,8 @@ class PostController extends \App\Http\Controllers\Controller
         return response()->json([
             'success' => true,
             'is_pinned' => $post->is_pinned,
-            'message' => $post->is_pinned 
-                ? 'ปักหมุดโพสต์แล้ว / Post pinned' 
+            'message' => $post->is_pinned
+                ? 'ปักหมุดโพสต์แล้ว / Post pinned'
                 : 'ยกเลิกปักหมุดแล้ว / Post unpinned',
         ]);
     }
@@ -454,8 +452,8 @@ class PostController extends \App\Http\Controllers\Controller
         return response()->json([
             'success' => true,
             'comments_disabled' => $post->comments_disabled,
-            'message' => $post->comments_disabled 
-                ? 'ปิดคอมเมนต์แล้ว / Comments disabled' 
+            'message' => $post->comments_disabled
+                ? 'ปิดคอมเมนต์แล้ว / Comments disabled'
                 : 'เปิดคอมเมนต์แล้ว / Comments enabled',
         ]);
     }
@@ -510,7 +508,7 @@ class PostController extends \App\Http\Controllers\Controller
     public function pinnedPosts(Request $request): JsonResponse
     {
         $userId = $request->get('user_id', auth()->id());
-        
+
         $posts = Post::where('user_id', $userId)
             ->where('is_pinned', true)
             ->where('is_published', true)
@@ -598,11 +596,11 @@ class PostController extends \App\Http\Controllers\Controller
     {
         $posts = Post::whereHas('postTaggedUsers', function ($query) {
             $query->where('user_id', auth()->id())
-                  ->where('is_approved', true);
+                ->where('is_approved', true);
         })
-        ->with(['user', 'postImages'])
-        ->latest()
-        ->paginate(15);
+            ->with(['user', 'postImages'])
+            ->latest()
+            ->paginate(15);
 
         return response()->json([
             'success' => true,
@@ -619,7 +617,7 @@ class PostController extends \App\Http\Controllers\Controller
             ->where('user_id', auth()->id())
             ->first();
 
-        if (!$tag) {
+        if (! $tag) {
             return response()->json([
                 'success' => false,
                 'message' => 'Tag not found.',
@@ -643,7 +641,7 @@ class PostController extends \App\Http\Controllers\Controller
             ->where('user_id', auth()->id())
             ->delete();
 
-        if (!$deleted) {
+        if (! $deleted) {
             return response()->json([
                 'success' => false,
                 'message' => 'Tag not found.',

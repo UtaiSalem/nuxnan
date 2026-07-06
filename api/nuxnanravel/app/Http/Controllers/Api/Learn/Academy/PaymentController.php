@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Payment;
-use App\Models\TuitionFee;
 use App\Models\PaymentMethod;
+use App\Models\TuitionFee;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -117,7 +117,7 @@ class PaymentController extends Controller
         if ($validated['amount'] > $tuitionFee->remaining_amount) {
             return response()->json([
                 'success' => false,
-                'message' => 'จำนวนเงินเกินยอดค้างชำระ (เหลือ ' . number_format($tuitionFee->remaining_amount, 2) . ' บาท)',
+                'message' => 'จำนวนเงินเกินยอดค้างชำระ (เหลือ '.number_format($tuitionFee->remaining_amount, 2).' บาท)',
             ], 400);
         }
 
@@ -156,6 +156,7 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการบันทึกการชำระเงิน',
@@ -202,6 +203,7 @@ class PaymentController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการยืนยัน',
@@ -307,7 +309,7 @@ class PaymentController extends Controller
             'total_transactions' => $payments->count(),
             'total_amount' => $payments->sum('amount'),
             'by_method' => $payments->groupBy('payment_method_name')
-                ->map(fn($group) => [
+                ->map(fn ($group) => [
                     'count' => $group->count(),
                     'amount' => $group->sum('amount'),
                 ]),

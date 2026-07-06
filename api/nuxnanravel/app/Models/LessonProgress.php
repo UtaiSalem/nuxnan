@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class LessonProgress extends Model
 {
@@ -31,7 +31,9 @@ class LessonProgress extends Model
      * Status constants
      */
     const STATUS_NOT_STARTED = 'not_started';
+
     const STATUS_IN_PROGRESS = 'in_progress';
+
     const STATUS_COMPLETED = 'completed';
 
     public function user(): BelongsTo

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
-use App\Models\Subject;
 use App\Models\Academy;
-use Illuminate\Http\Request;
+use App\Models\Subject;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class SubjectController extends Controller
 {
@@ -30,10 +30,10 @@ class SubjectController extends Controller
         }
 
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name_th', 'like', "%{$search}%")
-                  ->orWhere('name_en', 'like', "%{$search}%")
-                  ->orWhere('subject_code', 'like', "%{$search}%");
+                    ->orWhere('name_en', 'like', "%{$search}%")
+                    ->orWhere('subject_code', 'like', "%{$search}%");
             });
         }
 
@@ -69,8 +69,8 @@ class SubjectController extends Controller
     public function store(Request $request, int $academyId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -104,8 +104,8 @@ class SubjectController extends Controller
     public function update(Request $request, int $academyId, int $id): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -139,8 +139,8 @@ class SubjectController extends Controller
     public function destroy(int $academyId, int $id): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -168,7 +168,9 @@ class SubjectController extends Controller
     protected function canManage(Academy $academy): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
         if ($academy->user_id === $user->id) {
             return true;

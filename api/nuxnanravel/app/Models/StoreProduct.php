@@ -65,7 +65,7 @@ class StoreProduct extends Model
 
         static::creating(function ($product) {
             if (empty($product->slug)) {
-                $product->slug = Str::slug($product->name) . '-' . Str::random(5);
+                $product->slug = Str::slug($product->name).'-'.Str::random(5);
             }
         });
     }
@@ -138,8 +138,8 @@ class StoreProduct extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%")
-              ->orWhere('sku', 'like', "%{$search}%");
+                ->orWhere('description', 'like', "%{$search}%")
+                ->orWhere('sku', 'like', "%{$search}%");
         });
     }
 
@@ -150,19 +150,28 @@ class StoreProduct extends Model
     public function getFirstImageUrlAttribute(): ?string
     {
         $images = $this->images;
-        if (empty($images) || !is_array($images)) return null;
+        if (empty($images) || ! is_array($images)) {
+            return null;
+        }
 
         $first = $images[0];
-        if (str_starts_with($first, 'http')) return $first;
-        return asset('storage/' . $first);
+        if (str_starts_with($first, 'http')) {
+            return $first;
+        }
+
+        return asset('storage/'.$first);
     }
 
     public function getImageUrlsAttribute(): array
     {
         $images = $this->images ?? [];
+
         return array_map(function ($img) {
-            if (str_starts_with($img, 'http')) return $img;
-            return asset('storage/' . $img);
+            if (str_starts_with($img, 'http')) {
+                return $img;
+            }
+
+            return asset('storage/'.$img);
         }, $images);
     }
 
@@ -173,7 +182,10 @@ class StoreProduct extends Model
 
     public function getDiscountPercentAttribute(): ?int
     {
-        if (!$this->is_on_sale || $this->compare_price == 0) return null;
+        if (! $this->is_on_sale || $this->compare_price == 0) {
+            return null;
+        }
+
         return (int) round((($this->compare_price - $this->price) / $this->compare_price) * 100);
     }
 
@@ -193,10 +205,13 @@ class StoreProduct extends Model
 
     public function decrementStock(int $quantity = 1): bool
     {
-        if ($this->stock_quantity < $quantity) return false;
+        if ($this->stock_quantity < $quantity) {
+            return false;
+        }
 
         $this->decrement('stock_quantity', $quantity);
         $this->increment('total_sold', $quantity);
+
         return true;
     }
 

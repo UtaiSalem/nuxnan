@@ -13,8 +13,11 @@ class AcademyGroupReorderTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
+
     protected $student;
+
     protected $academy;
+
     protected $groups;
 
     protected function setUp(): void
@@ -45,7 +48,7 @@ class AcademyGroupReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/academies/{$this->academy->id}/groups/reorder", [
-                'groups' => $newOrder
+                'groups' => $newOrder,
             ]);
 
         $response->assertStatus(200);
@@ -59,10 +62,10 @@ class AcademyGroupReorderTest extends TestCase
     public function non_admin_cannot_reorder_academy_groups()
     {
         $groupIds = $this->groups->pluck('id')->toArray();
-        
+
         $response = $this->actingAs($this->student, 'api')
             ->patchJson("/api/academies/{$this->academy->id}/groups/reorder", [
-                'groups' => $groupIds
+                'groups' => $groupIds,
             ]);
 
         $response->assertStatus(403);
@@ -79,7 +82,7 @@ class AcademyGroupReorderTest extends TestCase
         $otherGroup = AcademyGroup::create([
             'academy_id' => $otherAcademy->id,
             'name' => 'Other Group',
-            'type' => 'classroom'
+            'type' => 'classroom',
         ]);
 
         $groupIds = $this->groups->pluck('id')->toArray();
@@ -87,7 +90,7 @@ class AcademyGroupReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/academies/{$this->academy->id}/groups/reorder", [
-                'groups' => $invalidOrder
+                'groups' => $invalidOrder,
             ]);
 
         $response->assertStatus(422);
@@ -97,11 +100,11 @@ class AcademyGroupReorderTest extends TestCase
     public function creating_academy_group_sets_sort_order_to_max_plus_one()
     {
         $maxSortOrder = $this->groups->max('sort_order');
-        
+
         $newGroup = AcademyGroup::create([
             'academy_id' => $this->academy->id,
             'name' => 'New Group',
-            'type' => 'classroom'
+            'type' => 'classroom',
         ]);
 
         $this->assertEquals($maxSortOrder + 1, $newGroup->sort_order);
@@ -136,9 +139,9 @@ class AcademyGroupReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/academies/{$this->academy->id}/groups/reorder", [
-                'groups' => $subset
+                'groups' => $subset,
             ]);
-            
+
         $response->assertStatus(422);
     }
 
@@ -150,7 +153,7 @@ class AcademyGroupReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/academies/{$this->academy->id}/groups/reorder", [
-                'groups' => $duplicates
+                'groups' => $duplicates,
             ]);
 
         $response->assertStatus(422);

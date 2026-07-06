@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\AdminUserDeletionAudit;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,6 +12,7 @@ class AdminUserDeletionTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $targetUser;
 
     protected function setUp(): void
@@ -19,8 +20,8 @@ class AdminUserDeletionTest extends TestCase
         parent::setUp();
 
         // Create roles needed for the test
-        \App\Models\Role::firstOrCreate(['name' => 'SUPER_ADMIN']);
-        \App\Models\Role::firstOrCreate(['name' => 'STUDENT']);
+        Role::firstOrCreate(['name' => 'SUPER_ADMIN']);
+        Role::firstOrCreate(['name' => 'STUDENT']);
 
         // สร้าง admin สำหรับ auth
         $this->admin = User::factory()->create(['email' => 'admin@test.com']);
@@ -46,14 +47,14 @@ class AdminUserDeletionTest extends TestCase
 
         // ตรวจ email ถูก anonymize
         $this->assertDatabaseHas('users', [
-            'id'    => $this->targetUser->id,
+            'id' => $this->targetUser->id,
             'email' => "deleted_{$this->targetUser->id}@nuxnan.del",
         ]);
 
         // ตรวจ audit สร้างแล้ว
         $this->assertDatabaseHas('admin_user_deletion_audits', [
             'deleted_user_id' => $this->targetUser->id,
-            'mode'            => 'soft_delete',
+            'mode' => 'soft_delete',
         ]);
     }
 
@@ -89,7 +90,7 @@ class AdminUserDeletionTest extends TestCase
 
         // User soft deleted → auth:api ควร reject
         $loginResponse = $this->postJson('/api/login', [
-            'login'    => 'target@test.com', // email เดิม (anonymized แล้ว)
+            'login' => 'target@test.com', // email เดิม (anonymized แล้ว)
             'password' => 'password',
         ]);
 
@@ -130,14 +131,14 @@ class AdminUserDeletionTest extends TestCase
 
         // ตรวจว่า deleted_at หาย
         $this->assertDatabaseHas('users', [
-            'id'         => $this->targetUser->id,
+            'id' => $this->targetUser->id,
             'deleted_at' => null,
         ]);
 
         // ตรวจ audit restore
         $this->assertDatabaseHas('admin_user_deletion_audits', [
             'deleted_user_id' => $this->targetUser->id,
-            'mode'            => 'restore',
+            'mode' => 'restore',
         ]);
     }
 
@@ -146,12 +147,12 @@ class AdminUserDeletionTest extends TestCase
     {
         // สร้าง wallet transaction ให้ target user
         \DB::table('wallet_transactions')->insert([
-            'user_id'    => $this->targetUser->id,
+            'user_id' => $this->targetUser->id,
             'transaction_type' => 'deposit',
-            'amount'     => 100,
+            'amount' => 100,
             'balance_before' => 0,
-            'balance_after'  => 100,
-            'status'     => 'completed',
+            'balance_after' => 100,
+            'status' => 'completed',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -173,10 +174,10 @@ class AdminUserDeletionTest extends TestCase
     {
         // สร้าง course ของ target user (ไม่มี FK cascade)
         \DB::table('courses')->insert([
-            'user_id'    => $this->targetUser->id,
+            'user_id' => $this->targetUser->id,
             'instructor_id' => 1,
-            'name'      => 'Test Course',
-            'slug'       => 'test-course-' . $this->targetUser->id,
+            'name' => 'Test Course',
+            'slug' => 'test-course-'.$this->targetUser->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

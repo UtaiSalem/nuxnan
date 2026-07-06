@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Course;
+use App\Models\CourseQuiz;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CourseQuiz>
+ * @extends Factory<CourseQuiz>
  */
 class CourseQuizFactory extends Factory
 {

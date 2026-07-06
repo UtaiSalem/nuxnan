@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Student;
+use App\Models\StudentCard;
 use Illuminate\Console\Command;
 
 class StudentsBackfillCardLink extends Command
@@ -26,20 +28,20 @@ class StudentsBackfillCardLink extends Command
     public function handle()
     {
         $this->info('Starting backfill of student-card links...');
-        
-        $cards = \App\Models\StudentCard::whereNull('student_id')->get();
+
+        $cards = StudentCard::whereNull('student_id')->get();
         $this->info("Found {$cards->count()} cards to process.");
-        
+
         $matched = 0;
         $failed = 0;
-        
+
         foreach ($cards as $card) {
-            $student = \App\Models\Student::where('student_id', $card->student_number)
+            $student = Student::where('student_id', $card->student_number)
                 ->orWhere('citizen_id', $card->national_id)
                 ->first();
-            
+
             if ($student) {
-                if (!$this->option('dry-run')) {
+                if (! $this->option('dry-run')) {
                     $card->student_id = $student->id;
                     $card->save();
                 }
@@ -50,11 +52,11 @@ class StudentsBackfillCardLink extends Command
                 $this->warn("Failed: No student found for Card #{$card->id} ($card->student_number / $card->national_id)");
             }
         }
-        
+
         $this->info('Backfill completed.');
         $this->info("Total matched: {$matched}");
         $this->info("Total failed: {$failed}");
-        
+
         if ($this->option('dry-run')) {
             $this->warn('This was a DRY RUN. No changes were made.');
         }

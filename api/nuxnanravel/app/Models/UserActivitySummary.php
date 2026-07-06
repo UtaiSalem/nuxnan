@@ -10,7 +10,7 @@ class UserActivitySummary extends Model
     protected $fillable = [
         'user_id', 'summary_date', 'period_type', 'event_counts',
         'points_earned', 'xp_earned', 'active_minutes',
-        'lessons_completed', 'quizzes_completed', 'streak_day'
+        'lessons_completed', 'quizzes_completed', 'streak_day',
     ];
 
     protected $casts = [

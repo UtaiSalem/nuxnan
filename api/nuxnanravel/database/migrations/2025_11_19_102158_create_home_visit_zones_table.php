@@ -20,7 +20,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true)->comment('สถานะใช้งาน');
             $table->integer('display_order')->default(0)->comment('ลำดับการแสดง');
             $table->timestamps();
-            
+
             $table->index(['is_active', 'display_order']);
         });
     }

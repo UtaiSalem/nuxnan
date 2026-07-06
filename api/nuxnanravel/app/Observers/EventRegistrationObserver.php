@@ -13,7 +13,7 @@ class EventRegistrationObserver
     {
         if ($registration->isDirty('status') && $registration->status === 'attended') {
             $event = $registration->event;
-            if (!$event) {
+            if (! $event) {
                 return;
             }
 
@@ -27,7 +27,7 @@ class EventRegistrationObserver
                     null,
                     [
                         'event_id' => $event->id,
-                        'title'    => $event->title,
+                        'title' => $event->title,
                     ]
                 );
             }

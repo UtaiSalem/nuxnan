@@ -71,16 +71,26 @@ class AcademyStore extends Model
 
     public function getLogoUrlAttribute(): ?string
     {
-        if (!$this->logo) return null;
-        if (str_starts_with($this->logo, 'http')) return $this->logo;
-        return asset('storage/' . $this->logo);
+        if (! $this->logo) {
+            return null;
+        }
+        if (str_starts_with($this->logo, 'http')) {
+            return $this->logo;
+        }
+
+        return asset('storage/'.$this->logo);
     }
 
     public function getBannerUrlAttribute(): ?string
     {
-        if (!$this->banner_image) return null;
-        if (str_starts_with($this->banner_image, 'http')) return $this->banner_image;
-        return asset('storage/' . $this->banner_image);
+        if (! $this->banner_image) {
+            return null;
+        }
+        if (str_starts_with($this->banner_image, 'http')) {
+            return $this->banner_image;
+        }
+
+        return asset('storage/'.$this->banner_image);
     }
 
     // ============================================================

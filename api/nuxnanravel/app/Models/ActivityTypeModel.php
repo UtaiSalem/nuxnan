@@ -51,6 +51,7 @@ class ActivityTypeModel extends Model
         if (app()->getLocale() === 'th' && $this->name_th) {
             return $this->name_th;
         }
+
         return $this->name;
     }
 
@@ -62,6 +63,7 @@ class ActivityTypeModel extends Model
         if (app()->getLocale() === 'th' && $this->preposition_th) {
             return $this->preposition_th;
         }
+
         return $this->preposition;
     }
 }

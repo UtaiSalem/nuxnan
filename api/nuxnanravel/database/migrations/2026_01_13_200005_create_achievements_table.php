@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('badge_url')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            
+
             // Indexes
             $table->index('type');
             $table->index('is_active');

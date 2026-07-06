@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Api\Learn\Course\info;
 
 use App\Http\Controllers\Controller;
-
-
-use App\Models\MentalMath;
 use App\Http\Requests\StoreMentalMathRequest;
 use App\Http\Requests\UpdateMentalMathRequest;
+use App\Models\MentalMath;
 
 class MentalMathController extends Controller
 {
@@ -66,5 +64,4 @@ class MentalMathController extends Controller
     {
         //
     }
-
 }

@@ -79,6 +79,7 @@ class DailyPointLimit extends Model
     public function incrementPointsEarned(int $amount): bool
     {
         $this->points_earned += $amount;
+
         return $this->save();
     }
 
@@ -88,6 +89,7 @@ class DailyPointLimit extends Model
     public function incrementPointsSpent(int $amount): bool
     {
         $this->points_spent += $amount;
+
         return $this->save();
     }
 
@@ -152,7 +154,7 @@ class DailyPointLimit extends Model
      */
     public function getFormattedPointsEarnedAttribute(): string
     {
-        return number_format($this->points_earned) . ' แต้ม';
+        return number_format($this->points_earned).' แต้ม';
     }
 
     /**
@@ -160,7 +162,7 @@ class DailyPointLimit extends Model
      */
     public function getFormattedPointsSpentAttribute(): string
     {
-        return number_format($this->points_spent) . ' แต้ม';
+        return number_format($this->points_spent).' แต้ม';
     }
 
     /**

@@ -2,34 +2,35 @@
 
 namespace Tests\Api;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Academy;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\User;
+use Tests\TestCase;
 
 /**
  * School Management System API Tests
- * 
+ *
  * วิธีรัน:
  * php artisan test tests/Api/SchoolManagementApiTest.php
- * 
+ *
  * หรือรันเฉพาะ test:
  * php artisan test --filter=test_can_list_departments
  */
 class SchoolManagementApiTest extends TestCase
 {
     protected $user;
+
     protected $academy;
+
     protected $token;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // สร้าง user สำหรับ test
         $this->user = User::first() ?? User::factory()->create();
         $this->academy = Academy::first();
-        
+
         // สร้าง token (ถ้าใช้ Passport/Sanctum)
         // $this->token = $this->user->createToken('test')->accessToken;
     }

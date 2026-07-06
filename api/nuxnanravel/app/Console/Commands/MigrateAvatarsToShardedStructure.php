@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\User;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 
 class MigrateAvatarsToShardedStructure extends Command
 {
@@ -29,7 +28,7 @@ class MigrateAvatarsToShardedStructure extends Command
     public function handle()
     {
         $this->info('Starting avatar migration to sharded structure...');
-        
+
         $isDryRun = $this->option('dry-run');
         if ($isDryRun) {
             $this->warn('Running in DRY-RUN mode. No changes will be saved.');
@@ -51,32 +50,35 @@ class MigrateAvatarsToShardedStructure extends Command
             if (filter_var($currentPath, FILTER_VALIDATE_URL)) {
                 $skipped++;
                 $bar->advance();
+
                 continue;
             }
-            
+
             // Determine Hashed Path
             // md5(1) = c4ca... -> avatars/c4/ca/filename.jpg
             $hash = md5($user->id);
             $folder1 = substr($hash, 0, 2);
             $folder2 = substr($hash, 2, 2);
             $shardedFolder = "avatars/{$folder1}/{$folder2}";
-            
+
             // Check if ALREADY in correct sharded format
             // Regex to match avatars/xx/xx/userid_...
             $regex = "#^avatars/{$folder1}/{$folder2}/\d+_\d+_[a-z0-9]+\.[a-z]+$#i";
             if (preg_match($regex, $currentPath)) {
                 $skipped++;
                 $bar->advance();
+
                 continue;
             }
 
             // Check if file exists in public disk
-            if (!Storage::disk('public')->exists($currentPath)) {
+            if (! Storage::disk('public')->exists($currentPath)) {
                 // Try checking without potential leading slashes or storage prefix just in case
                 $cleanPath = preg_replace('#^/?(storage/)?#', '', $currentPath);
-                if (!Storage::disk('public')->exists($cleanPath)) {
+                if (! Storage::disk('public')->exists($cleanPath)) {
                     $missing++;
                     $bar->advance();
+
                     continue;
                 }
                 $currentPath = $cleanPath;
@@ -84,10 +86,12 @@ class MigrateAvatarsToShardedStructure extends Command
 
             // Determine extension
             $extension = pathinfo($currentPath, PATHINFO_EXTENSION);
-            if (!$extension) $extension = 'jpg'; // Default fallback
+            if (! $extension) {
+                $extension = 'jpg';
+            } // Default fallback
 
             // Generate new filename and path
-            $newFilename = $user->id . '_' . time() . '_' . uniqid() . '.' . $extension;
+            $newFilename = $user->id.'_'.time().'_'.uniqid().'.'.$extension;
             $newPath = "{$shardedFolder}/{$newFilename}";
 
             if ($isDryRun) {
@@ -97,18 +101,19 @@ class MigrateAvatarsToShardedStructure extends Command
                     // Create directory if not exists (Storage facade handles this recursively usually on put, but not move)
                     // Ensure directories exist
                     // Note: move() usually creates parent dirs in local driver, but let's be safe.
-                    
+
                     // Move file
                     Storage::disk('public')->move($currentPath, $newPath);
-                    
+
                     // Update Database
                     $user->profile_photo_path = $newPath;
                     $user->saveQuietly(); // Don't trigger events
-                    
+
                     $migrated++;
                 } catch (\Exception $e) {
-                    $this->error("Error moving file for user {$user->id}: " . $e->getMessage());
+                    $this->error("Error moving file for user {$user->id}: ".$e->getMessage());
                     $bar->advance();
+
                     continue;
                 }
             }
@@ -121,7 +126,7 @@ class MigrateAvatarsToShardedStructure extends Command
         $bar->finish();
         $this->newLine(2);
 
-        $this->info("Migration completed.");
+        $this->info('Migration completed.');
         $this->table(
             ['Metric', 'Count'],
             [

@@ -8,7 +8,7 @@ use App\Models\LessonImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-class LessonImageController extends \App\Http\Controllers\Controller
+class LessonImageController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -33,10 +33,10 @@ class LessonImageController extends \App\Http\Controllers\Controller
     {
         try {
             // Check if user is course admin
-            if (!$lesson->course->isAdmin(auth()->user())) {
+            if (! $lesson->course->isAdmin(auth()->user())) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์เพิ่มรูปภาพ'
+                    'message' => 'คุณไม่มีสิทธิ์เพิ่มรูปภาพ',
                 ], 403);
             }
 
@@ -45,7 +45,7 @@ class LessonImageController extends \App\Http\Controllers\Controller
             if ($request->hasFile('images')) {
                 $images = $request->file('images');
                 foreach ($images as $image) {
-                    $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                    $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                     Storage::disk('public')->putFileAs('images/courses/lessons', $image, $fileName);
                     $newImage = $lesson->images()->create([
                         'filename' => $fileName,
@@ -57,13 +57,14 @@ class LessonImageController extends \App\Http\Controllers\Controller
             return response()->json([
                 'success' => true,
                 'message' => 'อัปโหลดรูปภาพสำเร็จ',
-                'images' => $uploadedImages
+                'images' => $uploadedImages,
             ], 200);
         } catch (\Exception $e) {
-            \Log::error('Error uploading lesson images: ' . $e->getMessage());
+            \Log::error('Error uploading lesson images: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ'
+                'message' => 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ',
             ], 500);
         }
     }
@@ -100,10 +101,10 @@ class LessonImageController extends \App\Http\Controllers\Controller
         try {
             // Check if user is course admin (not just lesson creator)
             // This allows any course admin to manage lesson images
-            if (!$lesson->course->isAdmin(auth()->user())) {
+            if (! $lesson->course->isAdmin(auth()->user())) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์ลบรูปภาพนี้'
+                    'message' => 'คุณไม่มีสิทธิ์ลบรูปภาพนี้',
                 ], 403);
             }
 
@@ -111,22 +112,23 @@ class LessonImageController extends \App\Http\Controllers\Controller
             if ($image->lesson_id !== $lesson->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'รูปภาพนี้ไม่ได้อยู่ในบทเรียนที่ระบุ'
+                    'message' => 'รูปภาพนี้ไม่ได้อยู่ในบทเรียนที่ระบุ',
                 ], 404);
             }
 
-            Storage::disk('public')->delete('images/courses/lessons/' . $image->filename);
+            Storage::disk('public')->delete('images/courses/lessons/'.$image->filename);
             $image->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => 'ลบรูปภาพสำเร็จ'
+                'message' => 'ลบรูปภาพสำเร็จ',
             ], 200);
         } catch (\Exception $e) {
-            \Log::error('Error deleting lesson image: ' . $e->getMessage());
+            \Log::error('Error deleting lesson image: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการลบรูปภาพ'
+                'message' => 'เกิดข้อผิดพลาดในการลบรูปภาพ',
             ], 500);
         }
     }

@@ -2,9 +2,8 @@
 
 namespace App\Http\Resources\Play;
 
-use App\Models\User;
-use Illuminate\Http\Request;
 use App\Http\Resources\UserResource;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class FriendshipResource extends JsonResource

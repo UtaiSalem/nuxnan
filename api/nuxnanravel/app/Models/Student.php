@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StudentPhotoService;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,8 @@ class Student extends Model
     use Auditable, HasFactory;
 
     protected $guarded = [];
+
+    protected $appends = ['profile_image_url'];
 
     public function academy(): BelongsTo
     {
@@ -213,6 +216,16 @@ class Student extends Model
         return $this->hasMany(StudentDocument::class);
     }
 
+    public function behaviorRecords(): HasMany
+    {
+        return $this->hasMany(Learn\Academy\BehaviorRecord::class);
+    }
+
+    public function behaviorScores(): HasMany
+    {
+        return $this->hasMany(Learn\Academy\BehaviorScore::class);
+    }
+
     public function homeVisits(): HasMany
     {
         return $this->hasMany(StudentHomeVisit::class);
@@ -381,5 +394,13 @@ class Student extends Model
         return $this->guardians()
             ->where('is_emergency_contact', true)
             ->first();
+    }
+
+    /**
+     * Get the student's profile image URL.
+     */
+    public function getProfileImageUrlAttribute(): ?string
+    {
+        return app(StudentPhotoService::class)->url($this);
     }
 }

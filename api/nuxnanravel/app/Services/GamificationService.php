@@ -3,10 +3,13 @@
 namespace App\Services;
 
 use App\Models\GamificationRuleLog;
+use App\Models\LevelDefinition;
+use App\Models\PointsTransaction;
 use App\Models\PointStreak;
+use App\Models\QuestDefinition;
 use App\Models\User;
-use App\Services\PointsService;
-use App\Services\AchievementService;
+use App\Models\UserActivitySummary;
+use App\Models\UserQuestProgress;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 class GamificationService
 {
     protected PointsService $pointsService;
+
     protected AchievementService $achievementService;
 
     public function __construct(
@@ -94,7 +98,7 @@ class GamificationService
         $streak = $this->getUserStreak($user);
 
         // Find next milestone (next level)
-        $nextLevel = \App\Models\LevelDefinition::where('level', $user->level + 1)->first();
+        $nextLevel = LevelDefinition::where('level', $user->level + 1)->first();
 
         return [
             'level' => $level['level'],
@@ -120,12 +124,12 @@ class GamificationService
     public function getDashboardSummary(User $user): array
     {
         $today = now()->toDateString();
-        
-        $todaySummary = \App\Models\UserActivitySummary::where('user_id', $user->id)
+
+        $todaySummary = UserActivitySummary::where('user_id', $user->id)
             ->where('summary_date', $today)
             ->first();
 
-        $weeklySummary = \App\Models\UserActivitySummary::where('user_id', $user->id)
+        $weeklySummary = UserActivitySummary::where('user_id', $user->id)
             ->whereBetween('summary_date', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()])
             ->selectRaw('SUM(points_earned) as points, SUM(xp_earned) as xp')
             ->first();
@@ -174,13 +178,13 @@ class GamificationService
     public function getUserQuests(User $user): array
     {
         $today = now()->toDateString();
-        
-        $quests = \App\Models\QuestDefinition::where('is_active', true)
+
+        $quests = QuestDefinition::where('is_active', true)
             ->orderBy('sort_order')
             ->get();
 
         return $quests->map(function ($quest) use ($user, $today) {
-            $progress = \App\Models\UserQuestProgress::where('user_id', $user->id)
+            $progress = UserQuestProgress::where('user_id', $user->id)
                 ->where('quest_id', $quest->id)
                 ->where('quest_date', $today)
                 ->first();
@@ -210,17 +214,17 @@ class GamificationService
     public function claimQuestReward(User $user, int $questId): array
     {
         $today = now()->toDateString();
-        
-        $progress = \App\Models\UserQuestProgress::where('user_id', $user->id)
+
+        $progress = UserQuestProgress::where('user_id', $user->id)
             ->where('quest_id', $questId)
             ->where('quest_date', $today)
             ->first();
 
-        if (!$progress) {
+        if (! $progress) {
             return ['success' => false, 'message' => 'ไม่พบข้อมูลภารกิจ'];
         }
 
-        if (!$progress->is_completed) {
+        if (! $progress->is_completed) {
             return ['success' => false, 'message' => 'คุณยังทำภารกิจไม่สำเร็จ'];
         }
 
@@ -233,7 +237,7 @@ class GamificationService
         // Rewards are already given when quest is completed in GamificationRuleEngine
         // But if we want a "claim" step, we should move the award logic here.
         // For now, I'll follow the RuleEngine award logic and just mark as claimed.
-        
+
         return ['success' => true, 'message' => 'รับรางวัลสำเร็จ'];
     }
 
@@ -253,25 +257,25 @@ class GamificationService
                     break;
                 case 'weekly':
                     $query->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as weekly_points')
-                    ->leftJoin('points_transactions', function ($join) {
-                        $join->on('users.id', '=', 'points_transactions.user_id')
-                            ->where('points_transactions.transaction_type', '=', 'earn')
-                            ->where('points_transactions.created_at', '>=', now()->startOfWeek())
-                            ->where('points_transactions.created_at', '<=', now()->endOfWeek());
-                    })
-                    ->groupBy('users.id')
-                    ->orderByDesc('weekly_points');
+                        ->leftJoin('points_transactions', function ($join) {
+                            $join->on('users.id', '=', 'points_transactions.user_id')
+                                ->where('points_transactions.transaction_type', '=', 'earn')
+                                ->where('points_transactions.created_at', '>=', now()->startOfWeek())
+                                ->where('points_transactions.created_at', '<=', now()->endOfWeek());
+                        })
+                        ->groupBy('users.id')
+                        ->orderByDesc('weekly_points');
                     break;
                 case 'monthly':
                     $query->selectRaw('users.*, COALESCE(SUM(points_transactions.amount), 0) as monthly_points')
-                    ->leftJoin('points_transactions', function ($join) {
-                        $join->on('users.id', '=', 'points_transactions.user_id')
-                            ->where('points_transactions.transaction_type', '=', 'earn')
-                            ->where('points_transactions.created_at', '>=', now()->startOfMonth())
-                            ->where('points_transactions.created_at', '<=', now()->endOfMonth());
-                    })
-                    ->groupBy('users.id')
-                    ->orderByDesc('monthly_points');
+                        ->leftJoin('points_transactions', function ($join) {
+                            $join->on('users.id', '=', 'points_transactions.user_id')
+                                ->where('points_transactions.transaction_type', '=', 'earn')
+                                ->where('points_transactions.created_at', '>=', now()->startOfMonth())
+                                ->where('points_transactions.created_at', '<=', now()->endOfMonth());
+                        })
+                        ->groupBy('users.id')
+                        ->orderByDesc('monthly_points');
                     break;
                 case 'streak':
                     $query->with('pointStreak')
@@ -281,7 +285,7 @@ class GamificationService
                     $query->withCount(['userAchievements' => function ($query) {
                         $query->where('is_completed', true);
                     }])
-                    ->orderByDesc('user_achievements_count');
+                        ->orderByDesc('user_achievements_count');
                     break;
                 default:
                     $query->orderByDesc('pp');
@@ -299,7 +303,7 @@ class GamificationService
                     'user_id' => $userItem->id,
                     'username' => $userItem->username,
                     'avatar' => $userItem->avatar,
-                    'score' => match($type) {
+                    'score' => match ($type) {
                         'points' => (float) $userItem->pp,
                         'weekly' => (float) ($userItem->weekly_points ?? 0),
                         'monthly' => (float) ($userItem->monthly_points ?? 0),
@@ -335,8 +339,8 @@ class GamificationService
             case 'weekly':
                 $startOfWeek = now()->startOfWeek();
                 $endOfWeek = now()->endOfWeek();
-                
-                $userPoints = \App\Models\PointsTransaction::where('user_id', $user->id)
+
+                $userPoints = PointsTransaction::where('user_id', $user->id)
                     ->where('transaction_type', 'earn')
                     ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
                     ->sum('amount');
@@ -353,8 +357,8 @@ class GamificationService
             case 'monthly':
                 $startOfMonth = now()->startOfMonth();
                 $endOfMonth = now()->endOfMonth();
-                
-                $userPoints = \App\Models\PointsTransaction::where('user_id', $user->id)
+
+                $userPoints = PointsTransaction::where('user_id', $user->id)
                     ->where('transaction_type', 'earn')
                     ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
                     ->sum('amount');
@@ -370,14 +374,15 @@ class GamificationService
 
             case 'streak':
                 $userStreak = $user->pointStreak ? $user->pointStreak->current_streak : 0;
-                return \App\Models\PointStreak::where('current_streak', '>', $userStreak)->count() + 1;
+
+                return PointStreak::where('current_streak', '>', $userStreak)->count() + 1;
 
             case 'achievements':
                 $userAchievementsCount = $user->userAchievements()->where('is_completed', true)->count();
-                
-                return User::whereHas('userAchievements', function($query) {
-                        $query->where('is_completed', true);
-                    }, '>', $userAchievementsCount)
+
+                return User::whereHas('userAchievements', function ($query) {
+                    $query->where('is_completed', true);
+                }, '>', $userAchievementsCount)
                     ->count() + 1;
 
             default:
@@ -413,7 +418,7 @@ class GamificationService
         $this->achievementService->createDefaultAchievements();
 
         // Create default rewards
-        $rewardService = new \App\Services\RewardService($this->pointsService);
+        $rewardService = new RewardService($this->pointsService);
         $rewardService->createDefaultRewards();
 
         Log::info('Default gamification data initialized');

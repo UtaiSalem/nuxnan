@@ -13,15 +13,15 @@ return new class extends Migration
     {
         Schema::table('post_images', function (Blueprint $table) {
             // Add thumbnail column after filename if not exists
-            if (!Schema::hasColumn('post_images', 'thumbnail')) {
+            if (! Schema::hasColumn('post_images', 'thumbnail')) {
                 $table->string('thumbnail')->nullable()->after('filename');
             }
             // Add size column if not exists
-            if (!Schema::hasColumn('post_images', 'size')) {
+            if (! Schema::hasColumn('post_images', 'size')) {
                 $table->unsignedBigInteger('size')->nullable()->after('order');
             }
             // Add mime_type column if not exists
-            if (!Schema::hasColumn('post_images', 'mime_type')) {
+            if (! Schema::hasColumn('post_images', 'mime_type')) {
                 $table->string('mime_type')->nullable()->after('size');
             }
         });

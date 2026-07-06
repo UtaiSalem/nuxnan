@@ -19,11 +19,11 @@ class AcademyStoreController extends Controller
     {
         $store = AcademyStore::where('academy_id', $academy->id)->first();
 
-        if (!$store) {
+        if (! $store) {
             return response()->json([
                 'success' => true,
                 'data' => null,
-                'message' => 'ยังไม่มีร้านค้า'
+                'message' => 'ยังไม่มีร้านค้า',
             ]);
         }
 
@@ -42,7 +42,7 @@ class AcademyStoreController extends Controller
                 'min_order_amount' => $store->min_order_amount,
                 'settings' => $store->settings,
                 'stats' => $store->getStats(),
-            ]
+            ],
         ]);
     }
 
@@ -52,7 +52,7 @@ class AcademyStoreController extends Controller
     public function store(Request $request, Academy $academy): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -80,7 +80,7 @@ class AcademyStoreController extends Controller
         return response()->json([
             'success' => true,
             'data' => $store,
-            'message' => 'บันทึกร้านค้าเรียบร้อย'
+            'message' => 'บันทึกร้านค้าเรียบร้อย',
         ]);
     }
 
@@ -90,7 +90,7 @@ class AcademyStoreController extends Controller
     public function update(Request $request, Academy $academy): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -115,7 +115,7 @@ class AcademyStoreController extends Controller
         return response()->json([
             'success' => true,
             'data' => $store->fresh(),
-            'message' => 'อัพเดทร้านค้าเรียบร้อย'
+            'message' => 'อัพเดทร้านค้าเรียบร้อย',
         ]);
     }
 
@@ -125,7 +125,7 @@ class AcademyStoreController extends Controller
     public function uploadLogo(Request $request, Academy $academy): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -146,7 +146,7 @@ class AcademyStoreController extends Controller
         return response()->json([
             'success' => true,
             'data' => ['logo' => $store->logo_url],
-            'message' => 'อัพโหลดโลโก้เรียบร้อย'
+            'message' => 'อัพโหลดโลโก้เรียบร้อย',
         ]);
     }
 
@@ -156,7 +156,7 @@ class AcademyStoreController extends Controller
     public function uploadBanner(Request $request, Academy $academy): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -176,7 +176,7 @@ class AcademyStoreController extends Controller
         return response()->json([
             'success' => true,
             'data' => ['banner_image' => $store->banner_url],
-            'message' => 'อัพโหลดแบนเนอร์เรียบร้อย'
+            'message' => 'อัพโหลดแบนเนอร์เรียบร้อย',
         ]);
     }
 
@@ -187,16 +187,16 @@ class AcademyStoreController extends Controller
     {
         $store = AcademyStore::where('academy_id', $academy->id)->first();
 
-        if (!$store) {
+        if (! $store) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบร้านค้า'
+                'message' => 'ไม่พบร้านค้า',
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $store->getStats()
+            'data' => $store->getStats(),
         ]);
     }
 }

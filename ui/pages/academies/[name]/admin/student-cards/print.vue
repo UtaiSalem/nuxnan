@@ -116,10 +116,7 @@ const printCards = () => {
 }
 
 const getProfileImage = (student: any) => {
-  if (student.profile_image) {
-    return `/storage/images/students/${student.class_level}/${student.class_section}/${student.profile_image}`
-  }
-  return '/images/default-avatar.png'
+  return student.profile_image_url || '/images/default-avatar.png'
 }
 
 const roomsForLevel = computed(() => {

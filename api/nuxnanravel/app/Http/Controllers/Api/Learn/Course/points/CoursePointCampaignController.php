@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\Learn\Course\points;
 
 use App\Http\Controllers\Controller;
@@ -18,6 +19,7 @@ class CoursePointCampaignController extends Controller
     {
         $campaigns = CoursePointCampaign::where('course_id', $course->id)
             ->latest()->get();
+
         return response()->json(['data' => $campaigns]);
     }
 
@@ -26,15 +28,16 @@ class CoursePointCampaignController extends Controller
     {
         $this->authorizeCourseAdmin($course);
         $data = $request->validate([
-            'title'           => 'required|string|max:255',
-            'description'     => 'nullable|string',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'points_per_claim' => 'required|integer|min:1',
-            'max_claims'      => 'nullable|integer|min:1',
-            'starts_at'       => 'nullable|date',
-            'ends_at'         => 'nullable|date|after:starts_at',
+            'max_claims' => 'nullable|integer|min:1',
+            'starts_at' => 'nullable|date',
+            'ends_at' => 'nullable|date|after:starts_at',
         ]);
 
         $result = $this->service->createCampaign($course->id, $data, $request->user()->id);
+
         return response()->json($result, $result['success'] ? 201 : 422);
     }
 
@@ -45,6 +48,7 @@ class CoursePointCampaignController extends Controller
         abort_if($campaign->course_id !== $course->id, 404);
 
         $result = $this->service->claimCampaign($campaign->id, auth()->user());
+
         return response()->json($result, $result['success'] ? 200 : 422);
     }
 
@@ -52,6 +56,7 @@ class CoursePointCampaignController extends Controller
     {
         $this->authorizeCourseAdmin($course);
         $campaign->update(['status' => CoursePointCampaign::STATUS_PAUSED]);
+
         return response()->json(['success' => true]);
     }
 
@@ -59,6 +64,7 @@ class CoursePointCampaignController extends Controller
     {
         $this->authorizeCourseAdmin($course);
         $campaign->update(['status' => CoursePointCampaign::STATUS_ENDED]);
+
         return response()->json(['success' => true]);
     }
 

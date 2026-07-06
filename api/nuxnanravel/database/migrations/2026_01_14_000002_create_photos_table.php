@@ -21,7 +21,7 @@ return new class extends Migration
             $table->boolean('is_public')->default(true);
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->index(['user_id', 'created_at']);
             $table->index(['album_id', 'created_at']);
         });

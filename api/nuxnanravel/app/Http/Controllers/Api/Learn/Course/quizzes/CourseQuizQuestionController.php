@@ -3,42 +3,43 @@
 namespace App\Http\Controllers\Api\Learn\Course\quizzes;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\questions\QuestionResource;
 use App\Models\Course;
-use App\Models\Question;
 use App\Models\CourseQuiz;
+use App\Models\Question;
+use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\questions\QuestionResource;
 
 class CourseQuizQuestionController extends Controller
 {
     public function store(Course $course, CourseQuiz $quiz, Request $request)
     {
         $validatedData = $request->validate([
-            'text' =>'required|string',
-            'points' =>'required|integer',
+            'text' => 'required|string',
+            'points' => 'required|integer',
             'pp_fine' => 'nullable|integer',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         $new_question = $quiz->questions()->create([
-            'user_id'   => auth()->id(),
+            'user_id' => auth()->id(),
             'course_id' => $course->id,
-            'text'      => $request->text,
-            'points'    => $request->points,
-            'pp_fine'  => $request->pp_fine ?? 0,
+            'text' => $request->text,
+            'points' => $request->points,
+            'pp_fine' => $request->pp_fine ?? 0,
         ]);
 
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
         $quiz->increment('total_score', $request->points);
         $quiz->increment('total_questions');
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $q_images = $request->file('images');
             foreach ($q_images as $q_image) {
-                $q_img_filename = uniqid() . '.' . $q_image->getClientOriginalExtension();
+                $q_img_filename = uniqid().'.'.$q_image->getClientOriginalExtension();
                 $image_path = Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $q_image, $q_img_filename);
                 $new_question->images()->create([
                     'filename' => $q_img_filename,
@@ -82,7 +83,7 @@ class CourseQuizQuestionController extends Controller
 
         //                     $new_q_option->images()->create([
         //                         'filename' => $new_opt_img_filename
-        //                     ]);              
+        //                     ]);
         //                 }
         //             }
         //         }
@@ -97,12 +98,12 @@ class CourseQuizQuestionController extends Controller
 
     public function update(Course $course, CourseQuiz $quiz, Question $question, Request $request)
     {
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
         $quiz->decrement('total_score', $question->points);
 
         $validatedData = $request->validate([
-            'text' =>'required|string',
-            'points' =>'required|integer',
+            'text' => 'required|string',
+            'points' => 'required|integer',
             'pp_fine' => 'nullable|integer',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
@@ -114,13 +115,13 @@ class CourseQuizQuestionController extends Controller
             'pp_fine' => $request->pp_fine ?? 0,
         ]);
 
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
-        $quiz->increment('total_score', $request->points);     
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
+        $quiz->increment('total_score', $request->points);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $q_images = $request->file('images');
             foreach ($q_images as $q_image) {
-                $q_img_filename = uniqid() . '.' . $q_image->getClientOriginalExtension();
+                $q_img_filename = uniqid().'.'.$q_image->getClientOriginalExtension();
                 $image_path = Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $q_image, $q_img_filename);
                 $question->images()->create([
                     'filename' => $q_img_filename,
@@ -139,7 +140,7 @@ class CourseQuizQuestionController extends Controller
     {
         if ($question->images) {
             foreach ($question->images as $q_image) {
-                Storage::disk('public')->delete('images/courses/quizzes/questions/'. $q_image->filename);
+                Storage::disk('public')->delete('images/courses/quizzes/questions/'.$q_image->filename);
             }
             $question->images()->delete();
         }
@@ -148,24 +149,24 @@ class CourseQuizQuestionController extends Controller
             foreach ($question->options as $q_option) {
                 if ($q_option->images) {
                     foreach ($q_option->images as $q_opt_image) {
-                        Storage::disk('public')->delete('images/courses/quizzes/questions/'. $q_opt_image->filename);
+                        Storage::disk('public')->delete('images/courses/quizzes/questions/'.$q_opt_image->filename);
                     }
                     $q_option->images()->delete();
                 }
             }
             $question->options()->delete();
         }
-        
-        // $userAnswerQuestion 
+
+        // $userAnswerQuestion
         $userAnswerQuestion = $question->userAnswers;
         foreach ($userAnswerQuestion as $answer) {
             $answer->delete();
         }
-        
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
+
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
         $quiz->decrement('total_score', $question->points);
         $quiz->decrement('total_questions');
-        
+
         $question->delete();
 
         return response()->json([

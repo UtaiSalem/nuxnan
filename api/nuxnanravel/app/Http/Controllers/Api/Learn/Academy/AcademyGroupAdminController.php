@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AcademyGroup;
 use App\Models\AcademyGroupAdmin;
 use App\Models\AcademyMember;
+use App\Models\Notification;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class AcademyGroupAdminController extends Controller
@@ -38,7 +40,7 @@ class AcademyGroupAdminController extends Controller
             ->where('status', 2)
             ->exists();
 
-        if (!$isAcademyMember) {
+        if (! $isAcademyMember) {
             return response()->json([
                 'success' => false,
                 'message' => 'ผู้ใช้รายนี้ยังไม่ได้เป็นสมาชิกที่ได้รับการอนุมัติของสถาบันการศึกษา',
@@ -68,10 +70,10 @@ class AcademyGroupAdminController extends Controller
 
         $academyGroup->load('academy');
         $academyName = $academyGroup->academy?->name ?? 'academy';
-        app(\App\Services\NotificationService::class)->send([
+        app(NotificationService::class)->send([
             'user_id' => $validated['user_id'],
             'sender_id' => auth()->id(),
-            'type' => \App\Models\Notification::TYPE_GROUP_ADMIN_ADDED,
+            'type' => Notification::TYPE_GROUP_ADMIN_ADDED,
             'content' => "คุณได้รับการแต่งตั้งเป็นหัวหน้าของส่วนงาน \"{$academyGroup->name}\"",
             'action_url' => "/academies/{$academyName}/groups/{$academyGroup->id}",
             'related_id' => $academyGroup->id,
@@ -96,7 +98,7 @@ class AcademyGroupAdminController extends Controller
             ->where('user_id', $validated['user_id'])
             ->first();
 
-        if (!$admin) {
+        if (! $admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบหัวหน้าของส่วนงานนี้',
@@ -125,7 +127,7 @@ class AcademyGroupAdminController extends Controller
             ->where('user_id', $validated['user_id'])
             ->delete();
 
-        if (!$deleted) {
+        if (! $deleted) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบหัวหน้ารายนี้ในส่วนงาน',
@@ -143,7 +145,7 @@ class AcademyGroupAdminController extends Controller
         $academy = $academyGroup->academy;
         $user = auth()->user();
 
-        if (!$academy || !$user || !$academy->isAdmin($user)) {
+        if (! $academy || ! $user || ! $academy->isAdmin($user)) {
             abort(response()->json([
                 'success' => false,
                 'message' => 'คุณไม่มีสิทธิ์จัดการหัวหน้าส่วนงานนี้',

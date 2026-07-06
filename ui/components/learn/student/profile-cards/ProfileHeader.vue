@@ -46,13 +46,7 @@ const genderIcon = computed(() => {
 })
 
 const profileImageUrl = computed(() => {
-  if (!props.student.profile_image) return null
-  const level = props.student.class_level
-  const section = props.student.class_section
-  if (level && section) {
-    return `/storage/images/students/${level}/${section}/${props.student.profile_image}`
-  }
-  return null
+  return props.student.profile_image_url || null
 })
 </script>
 

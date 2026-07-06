@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('academy_members', function (Blueprint $table) {
-            if (!Schema::hasColumn('academy_members', 'invited_by')) {
+            if (! Schema::hasColumn('academy_members', 'invited_by')) {
                 $table->unsignedBigInteger('invited_by')->nullable()->after('status');
                 $table->foreign('invited_by')->references('id')->on('users')->nullOnDelete();
             }
-            if (!Schema::hasColumn('academy_members', 'invited_at')) {
+            if (! Schema::hasColumn('academy_members', 'invited_at')) {
                 $table->timestamp('invited_at')->nullable()->after('invited_by');
             }
         });

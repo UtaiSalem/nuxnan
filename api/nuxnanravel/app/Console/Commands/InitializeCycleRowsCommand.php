@@ -4,13 +4,14 @@ namespace App\Console\Commands;
 
 use App\Models\Academy;
 use App\Models\AcademyGroup;
-use App\Services\Gamification\XpService;
 use App\Services\Gamification\ClassroomPointsService;
+use App\Services\Gamification\XpService;
 use Illuminate\Console\Command;
 
 class InitializeCycleRowsCommand extends Command
 {
     protected $signature = 'gamification:init-cycles';
+
     protected $description = 'Pre-create gamification cycle rows for academies and classrooms';
 
     public function handle(XpService $xpService, ClassroomPointsService $classroomPointsService): void

@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Course;
-use App\Models\Lesson;
 use App\Models\Assignment;
-use App\Models\CourseQuiz;
+use App\Models\Course;
 use App\Models\CourseMember;
+use App\Models\CourseQuiz;
+use App\Models\Lesson;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,6 +16,7 @@ class DraftLockdownTest extends TestCase
     use RefreshDatabase;
 
     private User $student;
+
     private Course $course;
 
     protected function setUp(): void
@@ -23,7 +24,7 @@ class DraftLockdownTest extends TestCase
         parent::setUp();
         $this->student = User::factory()->create();
         $this->course = Course::factory()->create();
-        
+
         // Enroll student in course
         CourseMember::create([
             'course_id' => $this->course->id,
@@ -46,7 +47,7 @@ class DraftLockdownTest extends TestCase
         // 1. Show Lesson
         $response = $this->actingAs($this->student, 'api')
             ->getJson("/api/courses/{$this->course->id}/lessons/{$lesson->id}");
-        
+
         // Note: CourseLessonController::show currently might return 401 if not enough points,
         // or 404 if not found. My new service should trigger 404 for drafts in show().
         $response->assertStatus(404);
@@ -118,7 +119,7 @@ class DraftLockdownTest extends TestCase
 
         $response = $this->actingAs($admin, 'api')
             ->getJson("/api/courses/{$this->course->id}/lessons/{$lesson->id}");
-        
+
         $response->assertStatus(200);
     }
 }

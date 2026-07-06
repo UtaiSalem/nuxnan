@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Services\GamificationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Services\GamificationService;
 
 /**
  * GradebookScore Model - คะแนนนักเรียน
@@ -39,8 +39,11 @@ class GradebookScore extends Model
 
     // Status Constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_GRADED = 'graded';
+
     const STATUS_EXCUSED = 'excused';
+
     const STATUS_MISSING = 'missing';
 
     // Relationships
@@ -94,15 +97,16 @@ class GradebookScore extends Model
     public function getPercentageAttribute(): ?float
     {
         $maxScore = $this->assessment?->max_score;
-        if (!$maxScore || $maxScore == 0 || $this->score === null) {
+        if (! $maxScore || $maxScore == 0 || $this->score === null) {
             return null;
         }
+
         return round(($this->score / $maxScore) * 100, 2);
     }
 
     public function getStatusTextAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'รอตรวจ',
             self::STATUS_GRADED => 'ตรวจแล้ว',
             self::STATUS_EXCUSED => 'ได้รับการยกเว้น',
@@ -113,7 +117,7 @@ class GradebookScore extends Model
 
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'yellow',
             self::STATUS_GRADED => 'green',
             self::STATUS_EXCUSED => 'blue',
@@ -147,7 +151,9 @@ class GradebookScore extends Model
      */
     protected function awardGamificationPoints(): void
     {
-        if (!$this->user_id || !$this->percentage) return;
+        if (! $this->user_id || ! $this->percentage) {
+            return;
+        }
 
         $points = 0;
         $percentage = $this->percentage;
@@ -164,7 +170,7 @@ class GradebookScore extends Model
         }
 
         // Bonus for not being late
-        if (!$this->is_late && $points > 0) {
+        if (! $this->is_late && $points > 0) {
             $points += 5;
         }
 
@@ -177,11 +183,11 @@ class GradebookScore extends Model
                     'gradebook_score',
                     "ได้รับคะแนน {$this->score}/{$this->assessment->max_score} ในการประเมิน {$this->assessment->name}"
                 );
-                
+
                 $this->update(['points_awarded' => $points]);
             } catch (\Exception $e) {
                 // Log error but don't fail the grading
-                \Log::error('Failed to award gamification points: ' . $e->getMessage());
+                \Log::error('Failed to award gamification points: '.$e->getMessage());
             }
         }
     }

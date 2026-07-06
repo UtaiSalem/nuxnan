@@ -20,7 +20,6 @@ class AcademyPostCommentImage extends Model
 
     public function getUrlAttribute(): string
     {
-        return asset('storage/images/academies/posts/comments/images/' . $this->filename);
+        return asset('storage/images/academies/posts/comments/images/'.$this->filename);
     }
-    
 }

@@ -1,8 +1,5 @@
 <?php
 
-use App\Http\Controllers\Api\Learn\Student\Card\StudentCardController;
-use Inertia\Inertia;
-
 use App\Http\Controllers\Api\Learn\StudentAnalyticsController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Student Management Routes
 |--------------------------------------------------------------------------
-| 
+|
 | Routes for managing student-related functionality including:
 | - Student Cards (CRUD operations, photo management)
 | - Student Analytics
@@ -24,7 +21,7 @@ Route::middleware(['auth:api'])->group(function () {
 });
 
 // =====================================
-// STUDENT ROUTES GROUP  
+// STUDENT ROUTES GROUP
 // =====================================
 // Note: Student Card routes have been moved to /routes/studentcard/studentcard.php with independent authentication
 

@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\AcademyRole;
 use App\Models\AcademyPermission;
+use App\Models\AcademyRole;
 use Illuminate\Database\Seeder;
 
 class AcademyRoleSeeder extends Seeder
@@ -35,7 +35,7 @@ class AcademyRoleSeeder extends Seeder
             );
         }
 
-        $this->command->info('Academy permissions seeded: ' . count($permissions) . ' permissions');
+        $this->command->info('Academy permissions seeded: '.count($permissions).' permissions');
     }
 
     /**
@@ -64,6 +64,6 @@ class AcademyRoleSeeder extends Seeder
             );
         }
 
-        $this->command->info('Academy system roles seeded: ' . count($systemRoles) . ' roles');
+        $this->command->info('Academy system roles seeded: '.count($systemRoles).' roles');
     }
 }

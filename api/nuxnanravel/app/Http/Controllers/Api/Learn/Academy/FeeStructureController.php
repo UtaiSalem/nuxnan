@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\FeeStructure;
 use App\Models\FeeItem;
+use App\Models\FeeStructure;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -124,6 +124,7 @@ class FeeStructureController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการสร้างโครงสร้างค่าธรรมเนียม',
@@ -249,7 +250,7 @@ class FeeStructureController extends Controller
         }
 
         $this->auditService->logDelete($feeStructure, request());
-        
+
         $feeStructure->items()->delete();
         $feeStructure->delete();
 
@@ -295,6 +296,7 @@ class FeeStructureController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการคัดลอก',

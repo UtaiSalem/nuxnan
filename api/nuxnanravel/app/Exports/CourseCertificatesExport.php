@@ -4,15 +4,17 @@ namespace App\Exports;
 
 use App\Models\Course;
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CourseCertificatesExport implements FromArray, WithHeadings, WithTitle, ShouldAutoSize, WithStyles
+class CourseCertificatesExport implements FromArray, ShouldAutoSize, WithHeadings, WithStyles, WithTitle
 {
     protected array $data;
+
     protected Course $course;
 
     public function __construct(array $data, Course $course)
@@ -63,7 +65,7 @@ class CourseCertificatesExport implements FromArray, WithHeadings, WithTitle, Sh
         $sheet->getStyle('A1:I1')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'fillType' => Fill::FILL_SOLID,
                 'startColor' => ['rgb' => 'E5E7EB'],
             ],
         ]);
@@ -73,7 +75,7 @@ class CourseCertificatesExport implements FromArray, WithHeadings, WithTitle, Sh
 
     protected function getStatusLabel(string $status): string
     {
-        return match($status) {
+        return match ($status) {
             'issued' => 'ออกแล้ว',
             'downloaded' => 'ดาวน์โหลดแล้ว',
             'revoked' => 'ถูกเพิกถอน',

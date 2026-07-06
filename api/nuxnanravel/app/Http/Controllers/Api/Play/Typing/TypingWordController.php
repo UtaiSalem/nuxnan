@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Play\Typing;
 
 use App\Http\Controllers\Controller;
-use App\Models\TypingWord;
 use App\Models\TypingSentence;
-use Illuminate\Http\Request;
+use App\Models\TypingWord;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class TypingWordController extends Controller
 {
@@ -26,6 +26,7 @@ class TypingWordController extends Controller
         if ($request->has('ids')) {
             $ids = array_filter(array_map('intval', explode(',', $request->ids)));
             $words = TypingWord::whereIn('id', $ids)->get();
+
             return response()->json(['success' => true, 'data' => $words]);
         }
 
@@ -48,7 +49,7 @@ class TypingWordController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $words
+            'data' => $words,
         ]);
     }
 
@@ -69,9 +70,10 @@ class TypingWordController extends Controller
         if ($request->has('ids')) {
             $ids = explode(',', $request->ids);
             $sentences = TypingSentence::whereIn('id', $ids)->get();
+
             return response()->json([
                 'success' => true,
-                'data' => $sentences
+                'data' => $sentences,
             ]);
         }
 
@@ -88,7 +90,7 @@ class TypingWordController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $sentences
+            'data' => $sentences,
         ]);
     }
 }

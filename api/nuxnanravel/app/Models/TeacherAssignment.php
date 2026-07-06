@@ -35,7 +35,9 @@ class TeacherAssignment extends Model
 
     // Role constants
     const ROLE_PRIMARY = 'primary';
+
     const ROLE_SECONDARY = 'secondary';
+
     const ROLE_SUBSTITUTE = 'substitute';
 
     // Relationships

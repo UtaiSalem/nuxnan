@@ -8,6 +8,7 @@ use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Academy;
 use App\Models\Course;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -144,7 +145,7 @@ class AcademyCourseController extends Controller
         return $this->respondWithCourses($academy, $request, true);
     }
 
-    protected function respondWithCourses(Academy $academy, Request $request, bool $includeSuccess): \Illuminate\Http\JsonResponse
+    protected function respondWithCourses(Academy $academy, Request $request, bool $includeSuccess): JsonResponse
     {
         $perPage = max(1, min($request->integer('per_page', 15), 100));
         $courses = $this->buildCourseQuery($academy, $request)

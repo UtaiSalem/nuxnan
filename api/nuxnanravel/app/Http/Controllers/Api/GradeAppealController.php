@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\GradeAppeal;
+use App\Models\GradeEditLog;
 use App\Services\CourseGradingService;
 use App\Services\GradingNotificationService;
 use Illuminate\Http\JsonResponse;
@@ -232,7 +233,7 @@ class GradeAppealController extends Controller
             $request->new_grade,
             $request->new_score,
             'ผลอุทธรณ์: '.($request->notes ?? 'อนุมัติ'),
-            \App\Models\GradeEditLog::TYPE_APPEAL_RESULT
+            GradeEditLog::TYPE_APPEAL_RESULT
         );
 
         // Notify student

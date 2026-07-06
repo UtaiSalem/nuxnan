@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Carbon\Carbon;
 
 class Coupon extends Model
 {
@@ -101,7 +101,7 @@ class Coupon extends Model
     {
         return $query->where(function ($q) {
             $q->whereNull('expires_at')
-              ->orWhere('expires_at', '>', Carbon::now());
+                ->orWhere('expires_at', '>', Carbon::now());
         });
     }
 
@@ -126,7 +126,7 @@ class Coupon extends Model
      */
     public function canRedeem(): bool
     {
-        return $this->status === 'active' && !$this->isExpired();
+        return $this->status === 'active' && ! $this->isExpired();
     }
 
     /**
@@ -142,7 +142,7 @@ class Coupon extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'active' => 'ใช้งานได้',
             'redeemed' => 'ใช้แล้ว',
             'expired' => 'หมดอายุ',
@@ -156,7 +156,7 @@ class Coupon extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->coupon_type) {
+        return match ($this->coupon_type) {
             'points' => 'คูปองแต้ม',
             'wallet' => 'คูปองเงิน',
             default => $this->coupon_type,
@@ -168,7 +168,7 @@ class Coupon extends Model
      */
     public function getQrCodePathAttribute(): string
     {
-        return 'qr-codes/' . $this->coupon_code . '.svg';
+        return 'qr-codes/'.$this->coupon_code.'.svg';
     }
 
     /**
@@ -176,7 +176,7 @@ class Coupon extends Model
      */
     public function getQrCodeUrlAttribute(): string
     {
-        return url('storage/' . $this->qr_code_path);
+        return url('storage/'.$this->qr_code_path);
     }
 
     /**
@@ -185,7 +185,8 @@ class Coupon extends Model
     public function getFormattedAmountAttribute(): string
     {
         $unit = $this->coupon_type === 'points' ? 'แต้ม' : 'บาท';
-        return number_format($this->amount, $this->coupon_type === 'wallet' ? 2 : 0) . ' ' . $unit;
+
+        return number_format($this->amount, $this->coupon_type === 'wallet' ? 2 : 0).' '.$unit;
     }
 
     /**
@@ -215,9 +216,10 @@ class Coupon extends Model
      */
     public function markExpired(): bool
     {
-        if (!$this->isExpired()) {
+        if (! $this->isExpired()) {
             return false;
         }
+
         return $this->update([
             'status' => 'expired',
         ]);

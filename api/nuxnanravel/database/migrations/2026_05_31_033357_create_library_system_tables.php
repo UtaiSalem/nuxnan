@@ -27,7 +27,7 @@ return new class extends Migration
             $table->string('cover_image')->nullable();
             $table->enum('status', ['available', 'archived', 'lost'])->default('available');
             $table->timestamps();
-            
+
             $table->index(['academy_id', 'title']);
             $table->index('isbn');
         });
@@ -47,7 +47,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->foreignId('handled_by')->constrained('users'); // staff who processed
             $table->timestamps();
-            
+
             $table->index(['academy_id', 'status']);
             $table->index('user_id');
         });

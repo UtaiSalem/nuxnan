@@ -2,10 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\Donate;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Donate>
+ * @extends Factory<Donate>
  */
 class DonateFactory extends Factory
 {
@@ -17,7 +19,7 @@ class DonateFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => \App\Models\User::factory(),
+            'user_id' => User::factory(),
             'donor_id' => null,
             'donor_name' => $this->faker->name,
             'amounts' => $this->faker->randomFloat(2, 100, 5000),

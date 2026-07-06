@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -15,7 +13,7 @@ return new class extends Migration
         // Check if SUPER_ADMIN role already exists
         $existingRole = DB::table('roles')->where('name', 'SUPER_ADMIN')->first();
 
-        if (!$existingRole) {
+        if (! $existingRole) {
             // Insert SUPER_ADMIN role
             DB::table('roles')->insert([
                 'name' => 'SUPER_ADMIN',

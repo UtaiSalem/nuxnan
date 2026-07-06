@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('course_group_members', function (Blueprint $table) {
-            if (!Schema::hasColumn('course_group_members', 'role')) {
+            if (! Schema::hasColumn('course_group_members', 'role')) {
                 $table->enum('role', ['admin', 'moderator', 'member'])->default('member')->after('user_id');
             }
-            if (!Schema::hasColumn('course_group_members', 'request_status')) {
+            if (! Schema::hasColumn('course_group_members', 'request_status')) {
                 $table->enum('request_status', ['pending', 'approved', 'rejected'])->default('approved')->after('role');
             }
         });

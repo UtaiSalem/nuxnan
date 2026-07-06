@@ -2,14 +2,13 @@
 
 namespace Tests\Feature\Course;
 
+use App\Models\Assignment;
+use App\Models\AssignmentAnswer;
 use App\Models\Course;
 use App\Models\CourseMember;
-use App\Models\User;
 use App\Models\Lesson;
-use App\Models\Assignment;
-use App\Models\CourseQuiz;
-use App\Models\AssignmentAnswer;
-use App\Models\CourseQuizResult;
+use App\Models\Topic;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -24,7 +23,7 @@ class CourseMemberProgressTest extends TestCase
         $student = User::factory()->create();
 
         $course = Course::factory()->create(['user_id' => $teacher->id]);
-        
+
         $member = CourseMember::create([
             'course_id' => $course->id,
             'user_id' => $student->id,
@@ -34,17 +33,17 @@ class CourseMemberProgressTest extends TestCase
         $lesson = Lesson::factory()->create([
             'course_id' => $course->id,
             'title' => 'Test Lesson',
-            'order' => 1
+            'order' => 1,
         ]);
 
-        $topic = \App\Models\Topic::factory()->create([
+        $topic = Topic::factory()->create([
             'lesson_id' => $lesson->id,
             'title' => 'Test Topic',
         ]);
 
         $assignment = Assignment::factory()->create([
             'assignmentable_id' => $topic->id,
-            'assignmentable_type' => \App\Models\Topic::class,
+            'assignmentable_type' => Topic::class,
             'status' => 1,
             'points' => 10,
         ]);
@@ -58,7 +57,7 @@ class CourseMemberProgressTest extends TestCase
 
         // Check as student
         $this->actingAs($student, 'api');
-        
+
         DB::enableQueryLog();
 
         $response = $this->getJson("/api/courses/{$course->id}/members/{$member->id}/progress");
@@ -77,8 +76,8 @@ class CourseMemberProgressTest extends TestCase
                     'score',
                     'max_score',
                     'activity_counts',
-                ]
-            ]
+                ],
+            ],
         ]);
 
         $lessonsData = $response->json('lessons');

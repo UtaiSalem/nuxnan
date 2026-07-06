@@ -26,7 +26,7 @@ class StoreOrderController extends Controller
     public function index(Request $request, Academy $academy): JsonResponse
     {
         $store = AcademyStore::where('academy_id', $academy->id)->first();
-        if (!$store) {
+        if (! $store) {
             return response()->json(['success' => false, 'message' => 'ไม่พบร้านค้า'], 404);
         }
 
@@ -49,7 +49,7 @@ class StoreOrderController extends Controller
         // Search by order number
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('order_number', 'like', '%' . $request->search . '%');
+                $q->where('order_number', 'like', '%'.$request->search.'%');
             });
         }
 
@@ -58,13 +58,13 @@ class StoreOrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => collect($orders->items())->map(fn($o) => $this->formatOrder($o)),
+            'data' => collect($orders->items())->map(fn ($o) => $this->formatOrder($o)),
             'meta' => [
                 'current_page' => $orders->currentPage(),
                 'last_page' => $orders->lastPage(),
                 'per_page' => $orders->perPage(),
                 'total' => $orders->total(),
-            ]
+            ],
         ]);
     }
 
@@ -74,12 +74,12 @@ class StoreOrderController extends Controller
     public function myOrders(Request $request, Academy $academy): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         $store = AcademyStore::where('academy_id', $academy->id)->first();
-        if (!$store) {
+        if (! $store) {
             return response()->json(['success' => false, 'message' => 'ไม่พบร้านค้า'], 404);
         }
 
@@ -91,13 +91,13 @@ class StoreOrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => collect($orders->items())->map(fn($o) => $this->formatOrder($o)),
+            'data' => collect($orders->items())->map(fn ($o) => $this->formatOrder($o)),
             'meta' => [
                 'current_page' => $orders->currentPage(),
                 'last_page' => $orders->lastPage(),
                 'per_page' => $orders->perPage(),
                 'total' => $orders->total(),
-            ]
+            ],
         ]);
     }
 
@@ -124,12 +124,12 @@ class StoreOrderController extends Controller
     public function store(Request $request, Academy $academy): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         $store = AcademyStore::where('academy_id', $academy->id)->first();
-        if (!$store || !$store->is_active) {
+        if (! $store || ! $store->is_active) {
             return response()->json(['success' => false, 'message' => 'ร้านค้าไม่เปิดให้บริการ'], 404);
         }
 
@@ -153,12 +153,12 @@ class StoreOrderController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $this->formatOrder($order),
-                'message' => 'สั่งซื้อเรียบร้อย'
+                'message' => 'สั่งซื้อเรียบร้อย',
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 422);
         }
     }
@@ -169,16 +169,17 @@ class StoreOrderController extends Controller
     public function confirm(Academy $academy, StoreOrder $order): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         try {
             $order = $this->storeService->confirmOrder($order, $user);
+
             return response()->json([
                 'success' => true,
                 'data' => $this->formatOrder($order),
-                'message' => 'ยืนยันคำสั่งซื้อเรียบร้อย'
+                'message' => 'ยืนยันคำสั่งซื้อเรียบร้อย',
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -191,16 +192,17 @@ class StoreOrderController extends Controller
     public function process(Academy $academy, StoreOrder $order): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         try {
             $order = $this->storeService->processOrder($order);
+
             return response()->json([
                 'success' => true,
                 'data' => $this->formatOrder($order),
-                'message' => 'เปลี่ยนสถานะเป็นกำลังดำเนินการ'
+                'message' => 'เปลี่ยนสถานะเป็นกำลังดำเนินการ',
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -213,16 +215,17 @@ class StoreOrderController extends Controller
     public function markReady(Academy $academy, StoreOrder $order): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         try {
             $order = $this->storeService->markReady($order);
+
             return response()->json([
                 'success' => true,
                 'data' => $this->formatOrder($order),
-                'message' => 'สินค้าพร้อมรับแล้ว'
+                'message' => 'สินค้าพร้อมรับแล้ว',
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -235,16 +238,17 @@ class StoreOrderController extends Controller
     public function complete(Academy $academy, StoreOrder $order): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         try {
             $order = $this->storeService->completeOrder($order);
+
             return response()->json([
                 'success' => true,
                 'data' => $this->formatOrder($order),
-                'message' => 'เสร็จสิ้นคำสั่งซื้อ'
+                'message' => 'เสร็จสิ้นคำสั่งซื้อ',
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -257,7 +261,7 @@ class StoreOrderController extends Controller
     public function cancel(Request $request, Academy $academy, StoreOrder $order): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -267,10 +271,11 @@ class StoreOrderController extends Controller
 
         try {
             $order = $this->storeService->cancelOrder($order, $request->reason, $user);
+
             return response()->json([
                 'success' => true,
                 'data' => $this->formatOrder($order),
-                'message' => 'ยกเลิกคำสั่งซื้อเรียบร้อย'
+                'message' => 'ยกเลิกคำสั่งซื้อเรียบร้อย',
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -283,7 +288,7 @@ class StoreOrderController extends Controller
     public function salesReport(Request $request, Academy $academy): JsonResponse
     {
         $store = AcademyStore::where('academy_id', $academy->id)->first();
-        if (!$store) {
+        if (! $store) {
             return response()->json(['success' => false, 'message' => 'ไม่พบร้านค้า'], 404);
         }
 
@@ -317,7 +322,7 @@ class StoreOrderController extends Controller
             'points_spent' => $order->points_spent,
             'payment_status' => $order->payment_status,
             'items_count' => $order->items->count(),
-            'items' => $order->items->map(fn($item) => [
+            'items' => $order->items->map(fn ($item) => [
                 'id' => $item->id,
                 'product_name' => $item->product_name,
                 'quantity' => $item->quantity,

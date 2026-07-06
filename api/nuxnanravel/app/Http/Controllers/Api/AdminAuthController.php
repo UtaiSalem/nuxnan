@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -14,8 +15,7 @@ class AdminAuthController extends Controller
     /**
      * Admin Login - Only users with admin roles can login
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function login(Request $request)
     {
@@ -28,7 +28,7 @@ class AdminAuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -42,27 +42,27 @@ class AdminAuthController extends Controller
             ->orWhere('name', $loginInput)
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบบัญชีผู้ใช้นี้ในระบบ'
+                'message' => 'ไม่พบบัญชีผู้ใช้นี้ในระบบ',
             ], 401);
         }
 
         // Check if user has admin role
         $adminRoles = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'INSTRUCTOR'];
-        if (!$user->hasAnyRole($adminRoles)) {
+        if (! $user->hasAnyRole($adminRoles)) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์เข้าใช้งานระบบ Admin'
+                'message' => 'คุณไม่มีสิทธิ์เข้าใช้งานระบบ Admin',
             ], 403);
         }
 
         // Attempt to authenticate
-        if (!Auth::guard('api')->attempt(['email' => $user->email, 'password' => $password])) {
+        if (! Auth::guard('api')->attempt(['email' => $user->email, 'password' => $password])) {
             return response()->json([
                 'success' => false,
-                'message' => 'รหัสผ่านไม่ถูกต้อง'
+                'message' => 'รหัสผ่านไม่ถูกต้อง',
             ], 401);
         }
 
@@ -85,27 +85,28 @@ class AdminAuthController extends Controller
                 'token' => $token,
                 'token_type' => 'bearer',
                 'expires_in' => config('jwt.ttl') * 60,
-            ]
+            ],
         ]);
     }
 
     /**
      * Logout
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function logout()
     {
         try {
             JWTAuth::invalidate(JWTAuth::getToken());
+
             return response()->json([
                 'success' => true,
-                'message' => 'ออกจากระบบสำเร็จ'
+                'message' => 'ออกจากระบบสำเร็จ',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถออกจากระบบได้'
+                'message' => 'ไม่สามารถออกจากระบบได้',
             ], 500);
         }
     }
@@ -113,24 +114,25 @@ class AdminAuthController extends Controller
     /**
      * Refresh token
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function refresh()
     {
         try {
             $token = JWTAuth::refresh(JWTAuth::getToken());
+
             return response()->json([
                 'success' => true,
                 'data' => [
                     'token' => $token,
                     'token_type' => 'bearer',
                     'expires_in' => config('jwt.ttl') * 60,
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถ refresh token ได้'
+                'message' => 'ไม่สามารถ refresh token ได้',
             ], 401);
         }
     }
@@ -138,16 +140,16 @@ class AdminAuthController extends Controller
     /**
      * Get current admin user info
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function me()
     {
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthenticated'
+                'message' => 'Unauthenticated',
             ], 401);
         }
 
@@ -162,7 +164,7 @@ class AdminAuthController extends Controller
                 'permissions' => $user->getAllPermissions(),
                 'is_super_admin' => $user->isSuperAdmin(),
                 'is_plearnd_admin' => $user->is_plearnd_admin ?? false,
-            ]
+            ],
         ]);
     }
 }

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PointRule;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PointRuleController extends Controller
 {
@@ -15,7 +15,7 @@ class PointRuleController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = auth()->user();
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -35,7 +35,7 @@ class PointRuleController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = auth()->user();
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -73,12 +73,12 @@ class PointRuleController extends Controller
     public function show(int $id): JsonResponse
     {
         $user = auth()->user();
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $rule = PointRule::find($id);
-        if (!$rule) {
+        if (! $rule) {
             return response()->json(['success' => false, 'message' => 'Rule not found'], 404);
         }
 
@@ -96,12 +96,12 @@ class PointRuleController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $user = auth()->user();
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $rule = PointRule::find($id);
-        if (!$rule) {
+        if (! $rule) {
             return response()->json(['success' => false, 'message' => 'Rule not found'], 404);
         }
 
@@ -136,12 +136,12 @@ class PointRuleController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $user = auth()->user();
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $rule = PointRule::find($id);
-        if (!$rule) {
+        if (! $rule) {
             return response()->json(['success' => false, 'message' => 'Rule not found'], 404);
         }
 
@@ -159,16 +159,16 @@ class PointRuleController extends Controller
     public function toggle(int $id): JsonResponse
     {
         $user = auth()->user();
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $rule = PointRule::find($id);
-        if (!$rule) {
+        if (! $rule) {
             return response()->json(['success' => false, 'message' => 'Rule not found'], 404);
         }
 
-        $rule->update(['is_active' => !$rule->is_active]);
+        $rule->update(['is_active' => ! $rule->is_active]);
 
         return response()->json([
             'success' => true,

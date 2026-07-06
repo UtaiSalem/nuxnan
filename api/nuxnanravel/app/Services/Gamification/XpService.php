@@ -24,14 +24,14 @@ class XpService
     ): XpEvent {
         // 1. Log immutable event
         $event = XpEvent::create([
-            'academy_id'         => $academy->id,
-            'user_id'            => $userId,
+            'academy_id' => $academy->id,
+            'user_id' => $userId,
             'classroom_group_id' => $classroomGroupId,
-            'source'             => $source,
-            'xp'                 => $xp,
-            'classroom_pts'      => 0,
-            'metadata'           => $metadata,
-            'occurred_at'        => now(),
+            'source' => $source,
+            'xp' => $xp,
+            'classroom_pts' => 0,
+            'metadata' => $metadata,
+            'occurred_at' => now(),
         ]);
 
         // 2. Update aggregates for active cycles (week, month, all_time)
@@ -40,19 +40,19 @@ class XpService
                 [
                     'academy_id' => $academy->id,
                     'cycle_type' => $cycle['type'],
-                    'cycle_key'  => $cycle['key'],
+                    'cycle_key' => $cycle['key'],
                 ],
                 [
                     'cycle_start' => $cycle['start'],
-                    'cycle_end'   => $cycle['end'],
-                    'total_xp'    => 0,
-                    'level'       => 1,
+                    'cycle_end' => $cycle['end'],
+                    'total_xp' => 0,
+                    'level' => 1,
                 ]
             );
-            
+
             // Increment total_xp atomically
             $row->increment('total_xp', $xp);
-            
+
             // Recalculate level based on updated total_xp
             $row->level = $this->levelFromXp($row->total_xp);
             $row->save();
@@ -69,6 +69,7 @@ class XpService
     public function xpToNextLevel(int $xp): int
     {
         $level = $this->levelFromXp($xp);
+
         return ($level + 1) ** 2 * 1000;
     }
 
@@ -82,13 +83,13 @@ class XpService
                 [
                     'academy_id' => $academy->id,
                     'cycle_type' => $cycle['type'],
-                    'cycle_key'  => $cycle['key'],
+                    'cycle_key' => $cycle['key'],
                 ],
                 [
                     'cycle_start' => $cycle['start'],
-                    'cycle_end'   => $cycle['end'],
-                    'total_xp'    => 0,
-                    'level'       => 1,
+                    'cycle_end' => $cycle['end'],
+                    'total_xp' => 0,
+                    'level' => 1,
                 ]
             );
         }
@@ -97,7 +98,7 @@ class XpService
     public function summary(Academy $academy, string $cycleType = 'all_time'): array
     {
         $key = match ($cycleType) {
-            'week'  => Carbon::now()->format('o-\WW'),
+            'week' => Carbon::now()->format('o-\WW'),
             'month' => Carbon::now()->format('Y-m'),
             default => 'all',
         };
@@ -109,17 +110,17 @@ class XpService
 
         $total = $row?->total_xp ?? 0;
         $level = $this->levelFromXp($total);
-        $next  = $this->xpToNextLevel($total);
-        $prev  = $level ** 2 * 1000;
-        $pct   = $next > $prev ? (int) (100 * ($total - $prev) / ($next - $prev)) : 0;
+        $next = $this->xpToNextLevel($total);
+        $prev = $level ** 2 * 1000;
+        $pct = $next > $prev ? (int) (100 * ($total - $prev) / ($next - $prev)) : 0;
 
         return [
-            'cycle_type'   => $cycleType,
-            'cycle_key'    => $key,
-            'total_xp'     => $total,
-            'level'        => $level,
-            'next_level'   => $level + 1,
-            'xp_to_next'   => max(0, $next - $total),
+            'cycle_type' => $cycleType,
+            'cycle_key' => $key,
+            'total_xp' => $total,
+            'level' => $level,
+            'next_level' => $level + 1,
+            'xp_to_next' => max(0, $next - $total),
             'progress_pct' => max(0, min(100, $pct)),
         ];
     }

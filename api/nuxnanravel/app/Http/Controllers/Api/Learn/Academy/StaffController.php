@@ -4,12 +4,11 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\StaffProfile;
 use App\Models\Position;
-use App\Models\User;
+use App\Models\StaffProfile;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class StaffController extends Controller
 {
@@ -64,7 +63,7 @@ class StaffController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $staff
+            'data' => $staff,
         ]);
     }
 
@@ -80,14 +79,14 @@ class StaffController extends Controller
             'position',
             'department',
             'supervisor.user:id,name',
-            'attendances' => fn($q) => $q->latest()->limit(30),
-            'leaveRequests' => fn($q) => $q->latest()->limit(10),
-            'performanceReviews' => fn($q) => $q->latest()->limit(5),
+            'attendances' => fn ($q) => $q->latest()->limit(30),
+            'leaveRequests' => fn ($q) => $q->latest()->limit(10),
+            'performanceReviews' => fn ($q) => $q->latest()->limit(5),
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $staff
+            'data' => $staff,
         ]);
     }
 
@@ -116,7 +115,7 @@ class StaffController extends Controller
 
         $validated['academy_id'] = $academy->id;
         $validated['status'] = StaffProfile::STATUS_ACTIVE;
-        
+
         // Generate employee ID
         $validated['employee_id'] = $this->generateEmployeeId($academy);
 
@@ -133,7 +132,7 @@ class StaffController extends Controller
         return response()->json([
             'success' => true,
             'data' => $staff->load(['user', 'position', 'department']),
-            'message' => 'สร้างข้อมูลบุคลากรเรียบร้อยแล้ว'
+            'message' => 'สร้างข้อมูลบุคลากรเรียบร้อยแล้ว',
         ], 201);
     }
 
@@ -174,7 +173,7 @@ class StaffController extends Controller
         return response()->json([
             'success' => true,
             'data' => $staff->fresh(['user', 'position', 'department']),
-            'message' => 'อัปเดตข้อมูลบุคลากรเรียบร้อยแล้ว'
+            'message' => 'อัปเดตข้อมูลบุคลากรเรียบร้อยแล้ว',
         ]);
     }
 
@@ -209,14 +208,14 @@ class StaffController extends Controller
             [
                 'old_status' => $oldStatus,
                 'new_status' => $validated['status'],
-                'reason' => $validated['reason'] ?? null
+                'reason' => $validated['reason'] ?? null,
             ]
         );
 
         return response()->json([
             'success' => true,
             'data' => $staff->fresh(),
-            'message' => 'เปลี่ยนสถานะบุคลากรเรียบร้อยแล้ว'
+            'message' => 'เปลี่ยนสถานะบุคลากรเรียบร้อยแล้ว',
         ]);
     }
 
@@ -239,7 +238,7 @@ class StaffController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบข้อมูลบุคลากรเรียบร้อยแล้ว'
+            'message' => 'ลบข้อมูลบุคลากรเรียบร้อยแล้ว',
         ]);
     }
 
@@ -262,7 +261,7 @@ class StaffController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $positions
+            'data' => $positions,
         ]);
     }
 
@@ -299,7 +298,7 @@ class StaffController extends Controller
         return response()->json([
             'success' => true,
             'data' => $position,
-            'message' => 'สร้างตำแหน่งเรียบร้อยแล้ว'
+            'message' => 'สร้างตำแหน่งเรียบร้อยแล้ว',
         ], 201);
     }
 
@@ -314,7 +313,7 @@ class StaffController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'code' => 'nullable|string|max:50|unique:positions,code,' . $position->id,
+            'code' => 'nullable|string|max:50|unique:positions,code,'.$position->id,
             'department_id' => 'nullable|exists:departments,id',
             'description' => 'nullable|string',
             'min_salary' => 'nullable|numeric|min:0',
@@ -330,7 +329,7 @@ class StaffController extends Controller
         return response()->json([
             'success' => true,
             'data' => $position->fresh(),
-            'message' => 'อัปเดตตำแหน่งเรียบร้อยแล้ว'
+            'message' => 'อัปเดตตำแหน่งเรียบร้อยแล้ว',
         ]);
     }
 
@@ -347,7 +346,7 @@ class StaffController extends Controller
         if ($position->staffProfiles()->exists()) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถลบตำแหน่งที่มีบุคลากรอยู่ได้'
+                'message' => 'ไม่สามารถลบตำแหน่งที่มีบุคลากรอยู่ได้',
             ], 400);
         }
 
@@ -355,7 +354,7 @@ class StaffController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบตำแหน่งเรียบร้อยแล้ว'
+            'message' => 'ลบตำแหน่งเรียบร้อยแล้ว',
         ]);
     }
 
@@ -373,7 +372,7 @@ class StaffController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $staff
+            'data' => $staff,
         ]);
     }
 
@@ -383,7 +382,7 @@ class StaffController extends Controller
     public function summary(Academy $academy): JsonResponse
     {
         $totalStaff = StaffProfile::where('academy_id', $academy->id)->count();
-        
+
         $byStatus = StaffProfile::where('academy_id', $academy->id)
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
@@ -399,9 +398,9 @@ class StaffController extends Controller
             ->selectRaw('department_id, COUNT(*) as count')
             ->groupBy('department_id')
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'department' => $item->department?->name ?? 'ไม่ระบุ',
-                'count' => $item->count
+                'count' => $item->count,
             ]);
 
         return response()->json([
@@ -410,8 +409,8 @@ class StaffController extends Controller
                 'total' => $totalStaff,
                 'by_status' => $byStatus,
                 'by_type' => $byType,
-                'by_department' => $byDepartment
-            ]
+                'by_department' => $byDepartment,
+            ],
         ]);
     }
 
@@ -427,7 +426,7 @@ class StaffController extends Controller
     {
         $prefix = 'EMP';
         $year = date('Y');
-        
+
         $lastStaff = StaffProfile::where('academy_id', $academy->id)
             ->where('employee_id', 'like', "{$prefix}{$year}%")
             ->orderByRaw('CAST(SUBSTRING(employee_id, 8) AS UNSIGNED) DESC')

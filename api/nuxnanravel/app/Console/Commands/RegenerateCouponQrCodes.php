@@ -49,13 +49,13 @@ class RegenerateCouponQrCodes extends Command
 
         $bar->finish();
         $this->newLine();
-        
+
         $this->info("Completed! Generated: {$success}, Failed: {$failed}");
-        
+
         if ($failed > 0) {
             return 1;
         }
-        
+
         return 0;
     }
 }

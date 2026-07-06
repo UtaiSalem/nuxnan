@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
 
 class FixUuidReferenceCodes extends Command
 {
@@ -23,13 +23,14 @@ class FixUuidReferenceCodes extends Command
         $uuidPattern = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 
         // Find latest users with UUID-format reference_code
-        $users = User::whereRaw("reference_code REGEXP ?", [$uuidPattern])
+        $users = User::whereRaw('reference_code REGEXP ?', [$uuidPattern])
             ->latest()
             ->limit($count)
             ->get(['id', 'name', 'email', 'reference_code', 'created_at']);
 
         if ($users->isEmpty()) {
             $this->info('No users found with UUID-format reference_codes.');
+
             return self::SUCCESS;
         }
 
@@ -47,7 +48,7 @@ class FixUuidReferenceCodes extends Command
                 'Email' => $user->email,
                 'Old Code' => $user->reference_code,
                 'New Code' => $newCode,
-                'Created' => \Illuminate\Support\Carbon::parse($user->created_at)->format('Y-m-d H:i'),
+                'Created' => Carbon::parse($user->created_at)->format('Y-m-d H:i'),
             ];
 
             if (! $dryRun) {

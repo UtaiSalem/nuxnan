@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\Learn\Course\reviews;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\reviews\CourseReviewResource;
 use App\Models\Course;
-use App\Models\CourseReview;
 use App\Models\CourseMember;
+use App\Models\CourseReview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Resources\Learn\Course\reviews\CourseReviewResource;
 
 class CourseReviewController extends Controller
 {
@@ -18,7 +18,7 @@ class CourseReviewController extends Controller
     public function index(Course $course, Request $request)
     {
         $perPage = $request->input('per_page', 10);
-        
+
         $reviews = $course->reviews()
             ->approved()
             ->with('user:id,name,profile_photo_path,reference_code')
@@ -69,7 +69,7 @@ class CourseReviewController extends Controller
             ->where('course_member_status', 1) // 1 = active member
             ->exists();
 
-        if (!$isMember) {
+        if (! $isMember) {
             return response()->json([
                 'success' => false,
                 'message' => 'คุณต้องเป็นสมาชิกของรายวิชานี้เพื่อรีวิว',
@@ -174,7 +174,7 @@ class CourseReviewController extends Controller
             ->where('role', 'admin')
             ->exists();
 
-        if ($review->user_id !== $user->id && !$isCourseAdmin && $course->user_id !== $user->id) {
+        if ($review->user_id !== $user->id && ! $isCourseAdmin && $course->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'คุณไม่มีสิทธิ์ลบรีวิวนี้',
@@ -203,7 +203,7 @@ class CourseReviewController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$review) {
+        if (! $review) {
             return response()->json([
                 'success' => true,
                 'review' => null,

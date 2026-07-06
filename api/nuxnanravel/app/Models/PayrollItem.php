@@ -31,6 +31,7 @@ class PayrollItem extends Model
 
     // Type constants
     const TYPE_EARNING = 'earning';
+
     const TYPE_DEDUCTION = 'deduction';
 
     // Relationships

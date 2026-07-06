@@ -88,15 +88,7 @@ async function fetchStudentCard() {
 
 function getProfileImage() {
   if (!student.value) return '/images/default-avatar.png'
-  if (student.value.profile_image) {
-    // Check if it's already a full URL
-    if (student.value.profile_image.startsWith('http')) {
-      return student.value.profile_image
-    }
-    return `/storage/images/students/${student.value.class_level}/${student.value.class_section}/${student.value.profile_image}`
-  }
-  // Fallback to member avatar
-  return props.member?.member_avatar || '/images/default-avatar.png'
+  return student.value.profile_image_url || props.member?.member_avatar || '/images/default-avatar.png'
 }
 
 function closeModal() {

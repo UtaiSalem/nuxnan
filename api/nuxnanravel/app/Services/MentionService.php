@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Post;
-use App\Models\User;
 use App\Models\PostMention;
+use App\Models\User;
 use App\Notifications\PostMentionNotification;
 use Illuminate\Support\Facades\Log;
 
@@ -20,7 +20,7 @@ class MentionService
 
         foreach ($mentions as $mention) {
             $user = User::where('name', $mention['username'])->first();
-            
+
             if ($user && $user->id !== $mentionedBy) {
                 $savedMention = PostMention::updateOrCreate(
                     [
@@ -33,7 +33,7 @@ class MentionService
                         'position' => $mention['position'],
                     ]
                 );
-                
+
                 $savedMentions[] = $savedMention;
             }
         }
@@ -49,9 +49,9 @@ class MentionService
     {
         $pattern = '/@([a-zA-Z0-9_]+)/';
         $mentions = [];
-        
+
         preg_match_all($pattern, $content, $matches, PREG_OFFSET_CAPTURE);
-        
+
         foreach ($matches[1] as $match) {
             $mentions[] = [
                 'username' => $match[0],
@@ -68,17 +68,17 @@ class MentionService
     public function sendMentionNotifications(Post $post): void
     {
         $unnotifiedMentions = $post->postMentions()->unnotified()->with('user')->get();
-        
+
         foreach ($unnotifiedMentions as $mention) {
             try {
                 // Send notification (you'll need to create this notification class)
                 // $mention->user->notify(new PostMentionNotification($post, $mention));
-                
+
                 $mention->markAsNotified();
             } catch (\Exception $e) {
                 Log::error('Failed to send mention notification', [
                     'mention_id' => $mention->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -99,7 +99,7 @@ class MentionService
     {
         // Remove existing mentions
         $this->removeMentions($post);
-        
+
         // Extract and save new mentions
         return $this->extractAndSaveMentions($post, $newContent, $mentionedBy);
     }
@@ -110,16 +110,16 @@ class MentionService
     public function convertMentionsToLinks(string $content, string $baseUrl = '/profile/'): string
     {
         $pattern = '/@([a-zA-Z0-9_]+)/';
-        
+
         return preg_replace_callback($pattern, function ($matches) use ($baseUrl) {
             $username = $matches[1];
             $user = User::where('name', $username)->first();
-            
+
             if ($user) {
-                return '<a href="' . $baseUrl . $username . '" class="mention">@' . $username . '</a>';
+                return '<a href="'.$baseUrl.$username.'" class="mention">@'.$username.'</a>';
             }
-            
-            return '@' . $username;
+
+            return '@'.$username;
         }, $content);
     }
 }

@@ -2,19 +2,19 @@
 
 namespace App\Services;
 
-use App\Models\Course;
-use App\Models\CourseMember;
-use App\Models\User;
-use App\Models\CoursePurchase;
-use App\Models\CourseGroupMember;
-use App\Models\UserAnswerQuestion;
-use App\Models\CourseQuizResult;
 use App\Models\AssignmentAnswer;
 use App\Models\AuditLog;
+use App\Models\Course;
+use App\Models\CourseGroupMember;
+use App\Models\CourseMember;
+use App\Models\CoursePurchase;
+use App\Models\CourseQuizResult;
 use App\Models\Notification;
+use App\Models\User;
+use App\Models\UserAnswerQuestion;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class CourseMemberRemovalService
 {
@@ -24,14 +24,14 @@ class CourseMemberRemovalService
     public function preview(Course $course, CourseMember $member, User $actor): array
     {
         $isSelf = $actor->id === $member->user_id;
-        
+
         // Find payment record
         $purchase = CoursePurchase::where('course_member_id', $member->id)
             ->where('purchase_type', 'enrollment')
             ->where('status', 'completed')
             ->first();
-            
-        if (!$purchase) {
+
+        if (! $purchase) {
             // Fallback for legacy data or marketplace purchases
             $purchase = CoursePurchase::where('buyer_id', $member->user_id)
                 ->where('source_course_id', $course->id)
@@ -41,19 +41,19 @@ class CourseMemberRemovalService
 
         $canRefund = false;
         $refundAmount = 0;
-        
+
         if ($purchase) {
             $refundAmount = $purchase->amount_wallet;
             // Admin remove or cancel request can refund
             // v1 policy: self-leave = no refund
-            $canRefund = true; 
+            $canRefund = true;
         }
 
         // Count data to be deleted (Tier A & B)
         $quizResultsCount = CourseQuizResult::where('course_id', $course->id)->where('user_id', $member->user_id)->count();
         $answerCount = UserAnswerQuestion::where('course_id', $course->id)->where('user_id', $member->user_id)->count();
-        
-        $assignmentAnswerCount = AssignmentAnswer::whereHas('assignment', function($q) use ($course) {
+
+        $assignmentAnswerCount = AssignmentAnswer::whereHas('assignment', function ($q) use ($course) {
             $q->where('course_id', $course->id);
         })->where('user_id', $member->user_id)->count();
 
@@ -77,8 +77,8 @@ class CourseMemberRemovalService
             'warnings' => [
                 'irreversible' => true,
                 'self_leave_no_refund' => $isSelf && $purchase !== null,
-                'admin_remove_refund' => !$isSelf && $purchase !== null,
-            ]
+                'admin_remove_refund' => ! $isSelf && $purchase !== null,
+            ],
         ];
     }
 
@@ -89,12 +89,14 @@ class CourseMemberRemovalService
     {
         return DB::transaction(function () use ($course, $member, $actor, $mode, $reason) {
             $isSelf = $actor->id === $member->user_id;
-            
+
             // 1. Authorization
             if ($mode === 'self_leave') {
-                if (!$isSelf) throw new \Exception('Unauthorized mode for this actor');
+                if (! $isSelf) {
+                    throw new \Exception('Unauthorized mode for this actor');
+                }
             } else {
-                if (!$course->hasPermission($actor, 'remove_members')) {
+                if (! $course->hasPermission($actor, 'remove_members')) {
                     throw new \Exception('Unauthorized');
                 }
             }
@@ -102,14 +104,14 @@ class CourseMemberRemovalService
             // 2. Refund logic (v1 policy)
             $refunded = false;
             $refundAmount = 0;
-            
+
             if ($mode === 'admin_remove' || $mode === 'cancel_request') {
                 $purchase = CoursePurchase::where('course_member_id', $member->id)
                     ->where('purchase_type', 'enrollment')
                     ->where('status', 'completed')
                     ->first();
-                
-                if (!$purchase) {
+
+                if (! $purchase) {
                     // Fallback for marketplace
                     $purchase = CoursePurchase::where('buyer_id', $member->user_id)
                         ->where('source_course_id', $course->id)
@@ -120,22 +122,22 @@ class CourseMemberRemovalService
 
                 if ($purchase && $purchase->amount_wallet > 0) {
                     $walletService = app(WalletService::class);
-                    $walletService->refundCoursePurchase($member->user, $course, $purchase->amount_wallet, $reason ?? "Removed by admin");
-                    
+                    $walletService->refundCoursePurchase($member->user, $course, $purchase->amount_wallet, $reason ?? 'Removed by admin');
+
                     $purchase->update([
                         'status' => 'refunded',
                         'refunded_at' => now(),
                     ]);
-                    
+
                     $refunded = true;
                     $refundAmount = $purchase->amount_wallet;
                 }
             }
 
             // 3. Cleanup Tier A & B
-            
+
             // Assignments cleanup (files)
-            $assignmentAnswers = AssignmentAnswer::whereHas('assignment', function($q) use ($course) {
+            $assignmentAnswers = AssignmentAnswer::whereHas('assignment', function ($q) use ($course) {
                 $q->where('course_id', $course->id);
             })->where('user_id', $member->user_id)->get();
 
@@ -152,7 +154,7 @@ class CourseMemberRemovalService
             // Other cleanup
             UserAnswerQuestion::where('course_id', $course->id)->where('user_id', $member->user_id)->delete();
             CourseQuizResult::where('course_id', $course->id)->where('user_id', $member->user_id)->delete();
-            
+
             // Delete ALL membership rows for this user in this course
             CourseGroupMember::where('course_id', $course->id)
                 ->where('user_id', $member->user_id)
@@ -175,7 +177,7 @@ class CourseMemberRemovalService
                     'mode' => $mode,
                     'reason' => $reason,
                     'refunded' => $refunded,
-                    'refund_amount' => $refundAmount
+                    'refund_amount' => $refundAmount,
                 ],
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
@@ -195,12 +197,12 @@ class CourseMemberRemovalService
             } else {
                 Notification::create([
                     'user_id' => $member->user_id,
-                    'content' => "คุณถูกนำออกจากรายวิชา {$course->name}" . ($reason ? " เนื่องจาก: {$reason}" : ""),
+                    'content' => "คุณถูกนำออกจากรายวิชา {$course->name}".($reason ? " เนื่องจาก: {$reason}" : ''),
                     'type' => Notification::TYPE_COURSE_MEMBER_REMOVED,
                     'sender_id' => $actor->id,
                     'related_id' => $course->id,
                 ]);
-                
+
                 if ($refunded) {
                     Notification::create([
                         'user_id' => $member->user_id,
@@ -218,7 +220,7 @@ class CourseMemberRemovalService
                 'actor_id' => $actor->id,
                 'mode' => $mode,
                 'refunded' => $refunded,
-                'amount' => $refundAmount
+                'amount' => $refundAmount,
             ]);
 
             return [

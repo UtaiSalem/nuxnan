@@ -45,9 +45,9 @@ class StudentIntakeController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('first_name_th', 'like', "%{$search}%")
-                  ->orWhere('last_name_th', 'like', "%{$search}%")
-                  ->orWhere('student_id', 'like', "%{$search}%")
-                  ->orWhere('citizen_id', 'like', "%{$search}%");
+                    ->orWhere('last_name_th', 'like', "%{$search}%")
+                    ->orWhere('student_id', 'like', "%{$search}%")
+                    ->orWhere('citizen_id', 'like', "%{$search}%");
             });
         }
 
@@ -56,7 +56,7 @@ class StudentIntakeController extends Controller
         }
 
         if ($classroomId = $request->input('classroom_id')) {
-            $query->whereHas('classroomEnrollments', fn($q) => $q->where('classroom_id', $classroomId)->where('status', 'active'));
+            $query->whereHas('classroomEnrollments', fn ($q) => $q->where('classroom_id', $classroomId)->where('status', 'active'));
         }
 
         if ($accountStatus = $request->input('account_status')) {
@@ -71,7 +71,7 @@ class StudentIntakeController extends Controller
         }
 
         $perPage = max(1, min($request->integer('per_page', 15), 100));
-        $students = $query->with(['classroomEnrollments' => fn($q) => $q->where('status', 'active')->with('classroom')])
+        $students = $query->with(['classroomEnrollments' => fn ($q) => $q->where('status', 'active')->with('classroom')])
             ->paginate($perPage);
 
         return response()->json($students);
@@ -82,7 +82,7 @@ class StudentIntakeController extends Controller
         return response()->json(['stats' => [
             'totalStudents' => Student::where('academy_id', $academy->id)->where('status', 'active')->count(),
             'newIntakes' => Student::where('academy_id', $academy->id)->where('created_at', '>=', now()->subMonths(6))->count(),
-            'unassigned' => Student::where('academy_id', $academy->id)->whereDoesntHave('classroomEnrollments', fn($q) => $q->where('status', 'active'))->count(),
+            'unassigned' => Student::where('academy_id', $academy->id)->whereDoesntHave('classroomEnrollments', fn ($q) => $q->where('status', 'active'))->count(),
             'pendingActivation' => Student::where('academy_id', $academy->id)->where('account_status', 'pending_activation')->count(),
         ]]);
     }
@@ -90,23 +90,24 @@ class StudentIntakeController extends Controller
     public function export(Academy $academy)
     {
         $headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=students_export.csv",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
+            'Content-type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=students_export.csv',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
         ];
-        
-        $callback = function() use ($academy) {
+
+        $callback = function () use ($academy) {
             $file = fopen('php://output', 'w');
             // Adding UTF-8 BOM for Excel compatibility
-            fputs($file, "\xEF\xBB\xBF");
+            fwrite($file, "\xEF\xBB\xBF");
             fputcsv($file, ['รหัสนักเรียน', 'คำนำหน้า', 'ชื่อ', 'นามสกุล', 'เลขประชาชน', 'สถานะ']);
-            
-            $sanitize = function($val) {
+
+            $sanitize = function ($val) {
                 if ($val !== null && preg_match('/^[=\-+@]/', $val)) {
-                    return "'" . $val;
+                    return "'".$val;
                 }
+
                 return $val;
             };
 
@@ -117,12 +118,12 @@ class StudentIntakeController extends Controller
                     $sanitize($student->first_name_th),
                     $sanitize($student->last_name_th),
                     $sanitize($student->citizen_id),
-                    $sanitize($student->status)
+                    $sanitize($student->status),
                 ]);
             }
             fclose($file);
         };
-        
+
         return response()->stream($callback, 200, $headers);
     }
 }

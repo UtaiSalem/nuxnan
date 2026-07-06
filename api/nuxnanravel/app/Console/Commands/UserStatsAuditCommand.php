@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\User;
 use App\Services\UserStatsRecalculationService;
+use Illuminate\Console\Command;
 
 class UserStatsAuditCommand extends Command
 {
@@ -37,7 +37,7 @@ class UserStatsAuditCommand extends Command
                 $report = $recalcService->auditUser($user);
                 $hasMismatch = $this->hasMismatch($report);
 
-                if ($mismatchOnly && !$hasMismatch) {
+                if ($mismatchOnly && ! $hasMismatch) {
                     continue;
                 }
 
@@ -67,9 +67,9 @@ class UserStatsAuditCommand extends Command
 
     protected function displayReport(User $user, array $report)
     {
-        $this->line("--------------------------------------------------");
+        $this->line('--------------------------------------------------');
         $this->info("User #{$user->id}: {$user->name} ({$user->email})");
-        
+
         $points = $report['points'];
         $this->table(
             ['Point Metric', 'Stored', 'Calculated', 'Diff'],

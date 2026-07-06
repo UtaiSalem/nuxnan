@@ -12,13 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('academy_group_members', function (Blueprint $table) {
-            if (!Schema::hasColumn('academy_group_members', 'academy_group_id')) {
+            if (! Schema::hasColumn('academy_group_members', 'academy_group_id')) {
                 $table->foreignId('academy_group_id')->after('id')->constrained()->onDelete('cascade');
             }
-            if (!Schema::hasColumn('academy_group_members', 'user_id')) {
+            if (! Schema::hasColumn('academy_group_members', 'user_id')) {
                 $table->foreignId('user_id')->after('academy_group_id')->constrained()->onDelete('cascade');
             }
-            if (!Schema::hasColumn('academy_group_members', 'role')) {
+            if (! Schema::hasColumn('academy_group_members', 'role')) {
                 $table->string('role')->default('student')->after('user_id');
             }
         });

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -8,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class CoursePointAccount extends Model
 {
     protected $guarded = [];
+
     protected $casts = ['commission_rate' => 'decimal:4'];
+
     protected $appends = ['available_balance'];
 
     const MINIMUM_WITHDRAWAL = 24000; // 20 THB

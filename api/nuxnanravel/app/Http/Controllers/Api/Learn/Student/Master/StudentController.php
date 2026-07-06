@@ -3,19 +3,25 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Student;
-use App\Models\StudentCard;
-use App\Models\StudentHomeVisit;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\StudentResource;
-use App\Traits\HandlesStudentUpdates;
-use App\Models\Academy;
 use App\Http\Requests\Student\UpdatePersonalRequest;
+use App\Http\Resources\StudentResource;
+use App\Models\Academy;
+use App\Models\Student;
+use App\Models\StudentAcademicInfo;
+use App\Models\StudentAddress;
+use App\Models\StudentCard;
+use App\Models\StudentChangeRequest;
+use App\Models\StudentContact;
+use App\Models\StudentGuardian;
+use App\Models\StudentHealthInfo;
+use App\Models\StudentHomeVisit;
+use App\Traits\HandlesStudentUpdates;
+use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
     use HandlesStudentUpdates;
+
     /**
      * Display a listing of students with unified master data.
      */
@@ -23,10 +29,10 @@ class StudentController extends Controller
     {
         // Enforce academy scope at the route layer: require academy_id and authorize.
         $academyId = $request->input('academy_id');
-        if (!$academyId) {
+        if (! $academyId) {
             return response()->json([
                 'success' => false,
-                'message' => 'academy_id is required to list students'
+                'message' => 'academy_id is required to list students',
             ], 422);
         }
         $this->authorize('viewAny', [Student::class, $academyId]);
@@ -51,17 +57,17 @@ class StudentController extends Controller
         // Search by Name or ID
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('first_name_th', 'like', "%{$search}%")
-                  ->orWhere('last_name_th', 'like', "%{$search}%")
-                  ->orWhere('student_id', 'like', "%{$search}%")
-                  ->orWhere('citizen_id', 'like', "%{$search}%");
+                    ->orWhere('last_name_th', 'like', "%{$search}%")
+                    ->orWhere('student_id', 'like', "%{$search}%")
+                    ->orWhere('citizen_id', 'like', "%{$search}%");
             });
         }
 
         // Eager load important relations
         $students = $query->with(['currentAcademicInfo', 'studentCard'])
-                         ->paginate($request->get('per_page', 15));
+            ->paginate($request->get('per_page', 15));
 
         return StudentResource::collection($students);
     }
@@ -75,13 +81,13 @@ class StudentController extends Controller
 
         $student->load([
             'currentAcademicInfo',
-            'academicInfos' => fn($q) => $q->orderBy('academic_year', 'desc'),
+            'academicInfos' => fn ($q) => $q->orderBy('academic_year', 'desc'),
             'addresses',
             'contacts',
             'guardians.contacts',
             'healthInfo',
             'documents',
-            'studentCard'
+            'studentCard',
         ]);
 
         return new StudentResource($student);
@@ -94,10 +100,10 @@ class StudentController extends Controller
     {
         $student = $request->user()->student;
 
-        if (!$student) {
+        if (! $student) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบข้อมูลนักเรียนสำหรับผู้ใช้งานนี้'
+                'message' => 'ไม่พบข้อมูลนักเรียนสำหรับผู้ใช้งานนี้',
             ], 404);
         }
 
@@ -110,15 +116,15 @@ class StudentController extends Controller
     public function listRequests(Request $request)
     {
         $academyId = $request->input('academy_id');
-        if (!$academyId) {
+        if (! $academyId) {
             return response()->json([
                 'success' => false,
-                'message' => 'academy_id is required'
+                'message' => 'academy_id is required',
             ], 422);
         }
         $this->authorize('approveRequests', [Student::class, $academyId]);
 
-        $query = \App\Models\StudentChangeRequest::with(['student', 'requester'])
+        $query = StudentChangeRequest::with(['student', 'requester'])
             ->where('academy_id', $academyId);
 
         if ($request->has('status')) {
@@ -129,7 +135,7 @@ class StudentController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $query->latest()->paginate($request->get('per_page', 20))
+            'data' => $query->latest()->paginate($request->get('per_page', 20)),
         ]);
     }
 
@@ -138,7 +144,7 @@ class StudentController extends Controller
      */
     public function approveRequest(Request $request, $id)
     {
-        $changeRequest = \App\Models\StudentChangeRequest::findOrFail($id);
+        $changeRequest = StudentChangeRequest::findOrFail($id);
         $this->authorize('approveRequests', [Student::class, $changeRequest->academy_id]);
 
         if ($changeRequest->status !== 'pending') {
@@ -147,15 +153,15 @@ class StudentController extends Controller
 
         // Whitelist allowed models to prevent dynamic class instantiation vulnerability
         $allowedModels = [
-            'Student' => \App\Models\Student::class,
-            'StudentAddress' => \App\Models\StudentAddress::class,
-            'StudentContact' => \App\Models\StudentContact::class,
-            'StudentGuardian' => \App\Models\StudentGuardian::class,
-            'StudentHealthInfo' => \App\Models\StudentHealthInfo::class,
-            'StudentAcademicInfo' => \App\Models\StudentAcademicInfo::class,
+            'Student' => Student::class,
+            'StudentAddress' => StudentAddress::class,
+            'StudentContact' => StudentContact::class,
+            'StudentGuardian' => StudentGuardian::class,
+            'StudentHealthInfo' => StudentHealthInfo::class,
+            'StudentAcademicInfo' => StudentAcademicInfo::class,
         ];
 
-        if (!array_key_exists($changeRequest->model_type, $allowedModels)) {
+        if (! array_key_exists($changeRequest->model_type, $allowedModels)) {
             return response()->json(['error' => 'ประเภทข้อมูลไม่ถูกต้อง'], 400);
         }
 
@@ -175,7 +181,7 @@ class StudentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'อนุมัติคำขอสำเร็จแล้วและอัปเดตข้อมูลแล้ว'
+            'message' => 'อนุมัติคำขอสำเร็จแล้วและอัปเดตข้อมูลแล้ว',
         ]);
     }
 
@@ -184,7 +190,7 @@ class StudentController extends Controller
      */
     public function rejectRequest(Request $request, $id)
     {
-        $changeRequest = \App\Models\StudentChangeRequest::findOrFail($id);
+        $changeRequest = StudentChangeRequest::findOrFail($id);
         $this->authorize('approveRequests', [Student::class, $changeRequest->academy_id]);
 
         if ($changeRequest->status !== 'pending') {
@@ -202,7 +208,7 @@ class StudentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ปฏิเสธคำขอเรียบร้อยแล้ว'
+            'message' => 'ปฏิเสธคำขอเรียบร้อยแล้ว',
         ]);
     }
 
@@ -224,8 +230,8 @@ class StudentController extends Controller
                     ->first();
             }
         }
-            
-        if (!$student) {
+
+        if (! $student) {
             return response()->json(['error' => 'ไม่พบข้อมูลนักเรียนในระบบ'], 404);
         }
 
@@ -248,8 +254,10 @@ class StudentController extends Controller
         $directUpdates = [];
 
         foreach ($validatedData as $field => $value) {
-            if ($value === $student->$field) continue;
-            
+            if ($value === $student->$field) {
+                continue;
+            }
+
             $changeRequest = $this->applyUpdate($student, 'Student', $student->id, $field, $value, $student->$field);
             if ($changeRequest) {
                 $needsApproval = true;
@@ -258,7 +266,7 @@ class StudentController extends Controller
             }
         }
 
-        if (!empty($directUpdates)) {
+        if (! empty($directUpdates)) {
             $student->update($directUpdates);
         }
 
@@ -267,14 +275,14 @@ class StudentController extends Controller
                 'success' => true,
                 'message' => 'ส่งคำขอแก้ไขบางข้อมูลแล้ว รอการอนุมัติ ส่วนข้อมูลที่ไม่ต้องอนุมัติถูกอัปเดตแล้ว',
                 'needs_approval' => true,
-                'student' => new StudentResource($student->fresh()->load(['addresses', 'contacts', 'guardians', 'healthInfo']))
+                'student' => new StudentResource($student->fresh()->load(['addresses', 'contacts', 'guardians', 'healthInfo'])),
             ]);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'อัปเดตข้อมูลสำเร็จแล้ว',
-            'student' => new StudentResource($student->fresh()->load(['addresses', 'contacts', 'guardians', 'healthInfo']))
+            'student' => new StudentResource($student->fresh()->load(['addresses', 'contacts', 'guardians', 'healthInfo'])),
         ]);
     }
 
@@ -286,7 +294,7 @@ class StudentController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -317,7 +325,7 @@ class StudentController extends Controller
             'gender' => 'required|string|in:ชาย,หญิง',
             'student_id' => 'required|integer|exists:students,id',
             'phone' => 'required|string|max:15',
-            
+
             // Address Information
             'house_number' => 'required|string|max:20',
             'village_number' => 'nullable|string|max:10',
@@ -326,7 +334,7 @@ class StudentController extends Controller
             'district' => 'required|string|max:100',
             'subdistrict' => 'required|string|max:100',
             'postal_code' => 'required|string|max:5',
-            
+
             // Family Information
             'father_name' => 'nullable|string|max:255',
             'father_age' => 'nullable|integer|min:0|max:150',
@@ -338,14 +346,14 @@ class StudentController extends Controller
             'guardian_relationship' => 'nullable|string|max:100',
             'siblings_count' => 'nullable|integer|min:0',
             'sibling_position' => 'nullable|integer|min:0',
-            
+
             // Home Environment
             'house_type' => 'nullable|string|max:100',
             'ownership_status' => 'nullable|string|max:100',
             'utilities' => 'nullable|array',
             'study_space' => 'nullable|string|max:100',
             'internet_access' => 'nullable|boolean',
-            
+
             // Student Behavior and Learning
             'learning_behavior' => 'nullable|string',
             'home_responsibilities' => 'nullable|string',
@@ -353,18 +361,18 @@ class StudentController extends Controller
             'academic_support' => 'nullable|string',
             'challenges' => 'nullable|string',
             'family_expectations' => 'nullable|string',
-            
+
             // Visit Information
             'visit_date' => 'required|date',
             'visit_time' => 'required|string',
             'visitor_name' => 'required|string|max:255',
             'visitor_position' => 'required|string|max:255',
-            
+
             // Recommendations
             'recommendations' => 'nullable|string',
             'follow_up' => 'nullable|string',
             'next_visit' => 'nullable|date',
-            
+
             // Photos and signatures
             'photos' => 'nullable|array',
             'photos.*' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
@@ -374,12 +382,12 @@ class StudentController extends Controller
 
         try {
             // Resolve the student instance (Phase 1.5 fix)
-            $student = $request->user()?->student ?? \App\Models\Student::find($validatedData['student_id']);
-            
-            if (!$student) {
+            $student = $request->user()?->student ?? Student::find($validatedData['student_id']);
+
+            if (! $student) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'ไม่พบข้อมูลนักเรียน'
+                    'message' => 'ไม่พบข้อมูลนักเรียน',
                 ], 404);
             }
 
@@ -399,13 +407,13 @@ class StudentController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'บันทึกข้อมูลการเยี่ยมบ้านเรียบร้อยแล้ว',
-                'data' => $homeVisit
+                'data' => $homeVisit,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -429,21 +437,21 @@ class StudentController extends Controller
             }
         }
 
-        if (!$student) {
+        if (! $student) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         $request->validate([
             'photos' => 'required|array',
             'photos.*' => 'image|mimes:jpeg,png,jpg|max:5120',
-            'description' => 'nullable|string|max:500'
+            'description' => 'nullable|string|max:500',
         ]);
 
         try {
             $photoPaths = [];
-            
+
             foreach ($request->file('photos') as $photo) {
-                $path = $photo->store('homevisit/student-photos/' . $student->id, 'public');
+                $path = $photo->store('homevisit/student-photos/'.$student->id, 'public');
                 $photoPaths[] = $path;
             }
 
@@ -463,13 +471,13 @@ class StudentController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'อัปโหลดรูปภาพสำเร็จแล้ว',
-                'photos' => $photoPaths
+                'photos' => $photoPaths,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ: '.$e->getMessage(),
             ], 500);
         }
     }

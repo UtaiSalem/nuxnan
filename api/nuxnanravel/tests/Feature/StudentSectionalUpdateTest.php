@@ -6,12 +6,8 @@ use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\Student;
 use App\Models\StudentAddress;
-use App\Models\StudentContact;
-use App\Models\StudentGuardian;
-use App\Models\GuardianContact;
-use App\Models\StudentHealthInfo;
-use App\Models\StudentAcademicInfo;
 use App\Models\StudentChangeRequest;
+use App\Models\StudentHealthInfo;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -23,12 +19,12 @@ class StudentSectionalUpdateTest extends TestCase
     private function makeUser(string $tag = ''): User
     {
         return User::create([
-            'name' => 'U' . $tag,
-            'email' => 'u' . $tag . uniqid() . '@x.test',
+            'name' => 'U'.$tag,
+            'email' => 'u'.$tag.uniqid().'@x.test',
             'password' => bcrypt('x'),
-            'username' => 'u' . $tag . uniqid(),
-            'reference_code' => 'R' . uniqid(),
-            'personal_code' => 'P' . uniqid(),
+            'username' => 'u'.$tag.uniqid(),
+            'reference_code' => 'R'.uniqid(),
+            'personal_code' => 'P'.uniqid(),
         ]);
     }
 
@@ -36,14 +32,14 @@ class StudentSectionalUpdateTest extends TestCase
     {
         $owner = $this->makeUser('owner');
         $admin = $this->makeUser('adm');
-        
+
         $academy = Academy::create([
-            'name' => 'TestAcademy_' . uniqid(),
+            'name' => 'TestAcademy_'.uniqid(),
             'user_id' => $admin->id,
             'student_editable_fields' => [
                 'mode' => 'blacklist',
-                'fields' => ['citizen_id', 'student_id', 'academic', 'health']
-            ]
+                'fields' => ['citizen_id', 'student_id', 'academic', 'health'],
+            ],
         ]);
 
         AcademyMember::create([
@@ -56,7 +52,7 @@ class StudentSectionalUpdateTest extends TestCase
         $student = Student::create([
             'academy_id' => $academy->id,
             'user_id' => $owner->id,
-            'student_id' => 'S' . uniqid(),
+            'student_id' => 'S'.uniqid(),
             'citizen_id' => '1234567890123',
             'first_name_th' => 'สมชาย',
             'last_name_th' => 'ใจดี',
@@ -76,14 +72,14 @@ class StudentSectionalUpdateTest extends TestCase
         $response = $this->actingAs($owner, 'api')
             ->patchJson("/api/academies/{$academy->id}/students/{$student->id}/personal", [
                 'nickname' => 'สมชายหล่อ',
-                'religion' => 'พุทธ'
+                'religion' => 'พุทธ',
             ]);
 
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
         $this->assertEquals('สมชายหล่อ', $student->fresh()->nickname);
         $this->assertEquals('พุทธ', $student->fresh()->religion);
-        
+
         // Assert no change requests created
         $this->assertEquals(0, StudentChangeRequest::count());
     }
@@ -116,15 +112,15 @@ class StudentSectionalUpdateTest extends TestCase
         $response = $this->actingAs($owner, 'api')
             ->putJson("/api/academies/{$academy->id}/students/{$student->id}/health/{$health->id}", [
                 'height' => 175,
-                'weight' => 65
+                'weight' => 65,
             ]);
 
         $response->assertStatus(200);
         $response->assertJsonPath('status', 'success');
-        
+
         // Assert original data remains unchanged
         $this->assertEquals(170, $health->fresh()->height_cm);
-        
+
         // Assert change requests are created for height and weight
         $this->assertEquals(2, StudentChangeRequest::where('status', 'pending')->count());
     }
@@ -145,15 +141,15 @@ class StudentSectionalUpdateTest extends TestCase
         $response = $this->actingAs($admin, 'api')
             ->putJson("/api/academies/{$academy->id}/students/{$student->id}/health/{$health->id}", [
                 'height' => 180,
-                'weight' => 70
+                'weight' => 70,
             ]);
 
         $response->assertStatus(200);
-        
+
         // Assert direct update occurred
         $this->assertEquals(180, $health->fresh()->height_cm);
         $this->assertEquals(70, $health->fresh()->weight_kg);
-        
+
         // Assert no change requests created
         $this->assertEquals(0, StudentChangeRequest::count());
     }
@@ -182,7 +178,7 @@ class StudentSectionalUpdateTest extends TestCase
             'old_value' => 170,
             'new_value' => 190,
             'status' => 'pending',
-            'requested_by' => $owner->id
+            'requested_by' => $owner->id,
         ]);
 
         // stranger cannot approve
@@ -194,7 +190,7 @@ class StudentSectionalUpdateTest extends TestCase
         // admin can approve
         $response = $this->actingAs($admin, 'api')
             ->patchJson("/api/academies/{$academy->id}/students/{$student->id}/change-requests/{$changeRequest->id}/approve");
-        
+
         $response->assertStatus(200);
         $this->assertEquals(190, $health->fresh()->height_cm);
         $this->assertEquals('approved', $changeRequest->fresh()->status);

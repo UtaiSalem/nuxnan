@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Badge;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -19,7 +20,7 @@ class UserProfileResource extends JsonResource
 
         // Generate avatar URL
         $avatarUrl = $this->getAvatarUrl($user);
-        
+
         // Generate cover URL
         $coverUrl = $this->getCoverUrl();
 
@@ -43,62 +44,62 @@ class UserProfileResource extends JsonResource
         $canViewPrivate = $isOwner || $isFriend;
 
         return [
-            'id'                => $this->id,
-            'user_id'           => $this->user_id,
-            
+            'id' => $this->id,
+            'user_id' => $this->user_id,
+
             // User basic info
-            'username'          => $user->username ?? $user->name,
-            'display_name'      => $user->name,
-            'email'             => $this->when($isOwner || ($this->show_email && $isFriend), $user->email),
-            'phone'             => $this->when($isOwner || ($this->show_phone && $isFriend), $user->phone_number),
-            'personal_code'     => $this->when($isOwner, $user->personal_code),
-            'reference_code'    => $user->reference_code,
-            
+            'username' => $user->username ?? $user->name,
+            'display_name' => $user->name,
+            'email' => $this->when($isOwner || ($this->show_email && $isFriend), $user->email),
+            'phone' => $this->when($isOwner || ($this->show_phone && $isFriend), $user->phone_number),
+            'personal_code' => $this->when($isOwner, $user->personal_code),
+            'reference_code' => $user->reference_code,
+
             // Profile info
-            'first_name'        => $this->first_name,
-            'last_name'         => $this->last_name,
-            'full_name'         => trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? '')) ?: $user->name,
-            'bio'               => $this->bio,
-            'birthdate'         => $this->when($isOwner || ($this->show_birthdate && $isFriend), $this->birthdate),
-            'gender'            => $this->gender,
-            'location'          => $this->when($isOwner || ($this->show_location && $isFriend), $this->location),
-            'website'           => $this->website,
-            'interests'         => $this->interests,
-            'skills'            => $this->skills,
-            
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'full_name' => trim(($this->first_name ?? '').' '.($this->last_name ?? '')) ?: $user->name,
+            'bio' => $this->bio,
+            'birthdate' => $this->when($isOwner || ($this->show_birthdate && $isFriend), $this->birthdate),
+            'gender' => $this->gender,
+            'location' => $this->when($isOwner || ($this->show_location && $isFriend), $this->location),
+            'website' => $this->website,
+            'interests' => $this->interests,
+            'skills' => $this->skills,
+
             // Images
-            'avatar'            => $avatarUrl,
-            'cover_image'       => $coverUrl,
-            
+            'avatar' => $avatarUrl,
+            'cover_image' => $coverUrl,
+
             // Social
-            'social_media_links'=> $this->social_media_links ? json_decode($this->social_media_links, true) : [],
-            
+            'social_media_links' => $this->social_media_links ? json_decode($this->social_media_links, true) : [],
+
             // Stats
-            'followers'         => $this->followers ?? 0,
-            'following'         => $this->following ?? 0,
-            'friends'           => $this->friends ?? 0,
-            'friends_count'     => $this->friends ?? 0,
-            'posts_count'       => $user->activities()
+            'followers' => $this->followers ?? 0,
+            'following' => $this->following ?? 0,
+            'friends' => $this->friends ?? 0,
+            'friends_count' => $this->friends ?? 0,
+            'posts_count' => $user->activities()
                 ->whereHasMorph('activityable', ['App\Models\Post', 'App\Models\CoursePost'],
-                    function($q) use ($canViewPrivate) {
+                    function ($q) use ($canViewPrivate) {
                         $q->whereIn('privacy_settings', $canViewPrivate ? [1, 2, 3] : [3]);
                     }
                 )->count(),
-            'visits'            => $this->visits ?? 0,
-            'visits_count'      => $this->visits ?? 0,
-            
+            'visits' => $this->visits ?? 0,
+            'visits_count' => $this->visits ?? 0,
+
             // Level & Experience (from actual XP system, consistent with auth/sidebar)
-            'level'             => $xpLevel,
-            'grade'             => $this->getStudentGrade($user),
-            'experience'        => $currentXp,
+            'level' => $xpLevel,
+            'grade' => $this->getStudentGrade($user),
+            'experience' => $currentXp,
             'experience_to_next_level' => $xpForNextLevel,
-            'total_experience'  => (int) ($user->xp ?? 0),
-            'level_progress'    => $levelProgress,
-            
+            'total_experience' => (int) ($user->xp ?? 0),
+            'level_progress' => $levelProgress,
+
             // Badges Gamification
-            'badges_unlocked'   => $user->badges()->count(),
-            'badges_total'      => \App\Models\Badge::count(),
-            'badges'            => $user->badges->map(function($badge) {
+            'badges_unlocked' => $user->badges()->count(),
+            'badges_total' => Badge::count(),
+            'badges' => $user->badges->map(function ($badge) {
                 return [
                     'id' => $badge->id,
                     'name' => $badge->name,
@@ -110,7 +111,7 @@ class UserProfileResource extends JsonResource
             }),
 
             // Friends Preview
-            'friends_preview'   => $user->getFriends(6)->map(function($friend) {
+            'friends_preview' => $user->getFriends(6)->map(function ($friend) {
                 return [
                     'id' => $friend->id,
                     'name' => $friend->name,
@@ -118,31 +119,31 @@ class UserProfileResource extends JsonResource
                     'reference_code' => $friend->reference_code,
                 ];
             }),
-            
+
             // Points & Wallet
-            'points'            => $user->pp ?? 0,
-            'wallet'            => $user->wallet ?? 0,
-            
+            'points' => $user->pp ?? 0,
+            'wallet' => $user->wallet ?? 0,
+
             // Settings
-            'privacy_settings'  => $this->privacy_settings ?? 'public',
+            'privacy_settings' => $this->privacy_settings ?? 'public',
 
             // Permission Flags
             'can_view_full_profile' => $canViewPrivate,
             'is_own_profile' => $isOwner,
             'is_friend' => $isFriend,
-            
+
             // Profile Completion
-            'profile_completion'=> $completion,
-            
+            'profile_completion' => $completion,
+
             // Dates
-            'join_date'         => $this->join_date ?? $user->created_at,
-            'last_login'        => $this->last_login,
-            'created_at'        => $this->created_at,
-            'updated_at'        => $this->updated_at,
-            
+            'join_date' => $this->join_date ?? $user->created_at,
+            'last_login' => $this->last_login,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+
             // Additional user info
-            'is_verified'       => $user->hasVerifiedEmail(),
-            'is_plearnd_admin'  => $user->isPlearndAdmin(),
+            'is_verified' => $user->hasVerifiedEmail(),
+            'is_plearnd_admin' => $user->isPlearndAdmin(),
         ];
     }
 
@@ -155,8 +156,9 @@ class UserProfileResource extends JsonResource
             if (filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
                 return $user->profile_photo_path;
             }
+
             // Use the standard accessor logic from User model if path exists
-             return $user->avatar;
+            return $user->avatar;
         }
 
         // Legacy Support: Check profile picture in UserProfile table
@@ -165,12 +167,14 @@ class UserProfileResource extends JsonResource
             if (filter_var($this->profile_picture, FILTER_VALIDATE_URL)) {
                 return $this->profile_picture;
             }
+
             return url(Storage::url($this->profile_picture));
         }
 
         // Fallback to UI Avatars
-        $name = trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? '')) ?: $user->name;
-        return 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&color=7F9CF5&background=EBF4FF&size=200';
+        $name = trim(($this->first_name ?? '').' '.($this->last_name ?? '')) ?: $user->name;
+
+        return 'https://ui-avatars.com/api/?name='.urlencode($name).'&color=7F9CF5&background=EBF4FF&size=200';
     }
 
     /**
@@ -179,14 +183,15 @@ class UserProfileResource extends JsonResource
     private function getCoverUrl(): ?string
     {
         $coverPath = $this->cover_image ?? $this->cover_image_url;
-        
+
         if ($coverPath) {
             if (filter_var($coverPath, FILTER_VALIDATE_URL)) {
                 return $coverPath;
             }
+
             return url(Storage::url($coverPath));
         }
-        
+
         return null;
     }
 
@@ -196,17 +201,17 @@ class UserProfileResource extends JsonResource
     private function calculateProfileCompletion($user): array
     {
         $fields = [
-            'avatar'        => ['weight' => 15, 'completed' => !empty($user->profile_photo_path) || !empty($this->profile_picture)],
-            'cover'         => ['weight' => 10, 'completed' => !empty($this->cover_image) || !empty($this->cover_image_url)],
-            'first_name'    => ['weight' => 10, 'completed' => !empty($this->first_name)],
-            'last_name'     => ['weight' => 10, 'completed' => !empty($this->last_name)],
-            'bio'           => ['weight' => 15, 'completed' => !empty($this->bio)],
-            'birthdate'     => ['weight' => 5, 'completed' => !empty($this->birthdate)],
-            'gender'        => ['weight' => 5, 'completed' => !empty($this->gender)],
-            'location'      => ['weight' => 10, 'completed' => !empty($this->location)],
-            'website'       => ['weight' => 5, 'completed' => !empty($this->website)],
-            'interests'     => ['weight' => 10, 'completed' => !empty($this->interests)],
-            'social_media'  => ['weight' => 5, 'completed' => !empty($this->social_media_links)],
+            'avatar' => ['weight' => 15, 'completed' => ! empty($user->profile_photo_path) || ! empty($this->profile_picture)],
+            'cover' => ['weight' => 10, 'completed' => ! empty($this->cover_image) || ! empty($this->cover_image_url)],
+            'first_name' => ['weight' => 10, 'completed' => ! empty($this->first_name)],
+            'last_name' => ['weight' => 10, 'completed' => ! empty($this->last_name)],
+            'bio' => ['weight' => 15, 'completed' => ! empty($this->bio)],
+            'birthdate' => ['weight' => 5, 'completed' => ! empty($this->birthdate)],
+            'gender' => ['weight' => 5, 'completed' => ! empty($this->gender)],
+            'location' => ['weight' => 10, 'completed' => ! empty($this->location)],
+            'website' => ['weight' => 5, 'completed' => ! empty($this->website)],
+            'interests' => ['weight' => 10, 'completed' => ! empty($this->interests)],
+            'social_media' => ['weight' => 5, 'completed' => ! empty($this->social_media_links)],
         ];
 
         $totalWeight = 0;
@@ -229,11 +234,11 @@ class UserProfileResource extends JsonResource
         $percentage = $totalWeight > 0 ? round(($completedWeight / $totalWeight) * 100) : 0;
 
         return [
-            'percentage'        => $percentage,
-            'completed_weight'  => $completedWeight,
-            'total_weight'      => $totalWeight,
-            'missing_fields'    => $missingFields,
-            'is_complete'       => $percentage >= 100,
+            'percentage' => $percentage,
+            'completed_weight' => $completedWeight,
+            'total_weight' => $totalWeight,
+            'missing_fields' => $missingFields,
+            'is_complete' => $percentage >= 100,
         ];
     }
 
@@ -243,17 +248,17 @@ class UserProfileResource extends JsonResource
     private function getFieldLabel(string $field): string
     {
         $labels = [
-            'avatar'        => 'อัพโหลดรูปโปรไฟล์',
-            'cover'         => 'อัพโหลดรูปปก',
-            'first_name'    => 'เพิ่มชื่อจริง',
-            'last_name'     => 'เพิ่มนามสกุล',
-            'bio'           => 'เพิ่มประวัติย่อ',
-            'birthdate'     => 'เพิ่มวันเกิด',
-            'gender'        => 'ระบุเพศ',
-            'location'      => 'เพิ่มที่อยู่',
-            'website'       => 'เพิ่มเว็บไซต์',
-            'interests'     => 'เพิ่มความสนใจ',
-            'social_media'  => 'เชื่อมต่อโซเชียลมีเดีย',
+            'avatar' => 'อัพโหลดรูปโปรไฟล์',
+            'cover' => 'อัพโหลดรูปปก',
+            'first_name' => 'เพิ่มชื่อจริง',
+            'last_name' => 'เพิ่มนามสกุล',
+            'bio' => 'เพิ่มประวัติย่อ',
+            'birthdate' => 'เพิ่มวันเกิด',
+            'gender' => 'ระบุเพศ',
+            'location' => 'เพิ่มที่อยู่',
+            'website' => 'เพิ่มเว็บไซต์',
+            'interests' => 'เพิ่มความสนใจ',
+            'social_media' => 'เชื่อมต่อโซเชียลมีเดีย',
         ];
 
         return $labels[$field] ?? $field;
@@ -262,10 +267,10 @@ class UserProfileResource extends JsonResource
     /**
      * Calculate user level from points
      * Level formula: Points needed = 100 * level^1.5
-     * 
+     *
      * Level Tiers & Border Colors:
      * 1-4:   Gray (#969696)     - Beginner
-     * 5-9:   Green (#4fc35b)    - Novice  
+     * 5-9:   Green (#4fc35b)    - Novice
      * 10-19: Teal (#1bc5bd)     - Apprentice
      * 20-29: Cyan (#23d2e2)     - Journeyman
      * 30-39: Blue (#3b82f6)     - Expert
@@ -292,19 +297,19 @@ class UserProfileResource extends JsonResource
         $currentLevelXp = $points - $totalXpForCurrentLevel;
         $xpNeededForNextLevel = $totalXpForNextLevel - $totalXpForCurrentLevel;
         $xpToNext = max(0, $totalXpForNextLevel - $points);
-        
+
         // Progress percentage within current level
-        $progress = $xpNeededForNextLevel > 0 
-            ? round(($currentLevelXp / $xpNeededForNextLevel) * 100) 
+        $progress = $xpNeededForNextLevel > 0
+            ? round(($currentLevelXp / $xpNeededForNextLevel) * 100)
             : 100;
 
         return [
-            'level'         => $level,
-            'current_xp'    => $points,
-            'level_xp'      => $currentLevelXp,
-            'xp_to_next'    => $xpToNext,
-            'xp_for_level'  => $xpNeededForNextLevel,
-            'progress'      => min(100, $progress),
+            'level' => $level,
+            'current_xp' => $points,
+            'level_xp' => $currentLevelXp,
+            'xp_to_next' => $xpToNext,
+            'xp_for_level' => $xpNeededForNextLevel,
+            'progress' => min(100, $progress),
         ];
     }
 
@@ -345,13 +350,24 @@ class UserProfileResource extends JsonResource
         $points = $user->pp ?? 0;
         $levelData = $this->calculateLevel($points);
         $userLevel = $levelData['level'];
-        
+
         // Map user level to grade
-        if ($userLevel >= 50) return 6;
-        if ($userLevel >= 40) return 5;
-        if ($userLevel >= 30) return 4;
-        if ($userLevel >= 20) return 3;
-        if ($userLevel >= 10) return 2;
+        if ($userLevel >= 50) {
+            return 6;
+        }
+        if ($userLevel >= 40) {
+            return 5;
+        }
+        if ($userLevel >= 30) {
+            return 4;
+        }
+        if ($userLevel >= 20) {
+            return 3;
+        }
+        if ($userLevel >= 10) {
+            return 2;
+        }
+
         return 1;
     }
 }

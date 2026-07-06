@@ -2,11 +2,11 @@
 
 namespace App\Http\Resources\Play;
 
-use Illuminate\Http\Request;
-use App\Http\Resources\UserResource;
-use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Resources\Learn\Academy\AcademyPostResource;
 use App\Http\Resources\Learn\Course\posts\CoursePostResource;
+use App\Http\Resources\UserResource;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class ShareResource extends JsonResource
 {
@@ -48,15 +48,16 @@ class ShareResource extends JsonResource
             'shareable_type' => $this->shareable_type,
             'shareable_id' => $this->shareable_id,
             'relation_loaded' => $this->relationLoaded('shareable'),
-            'shareable_exists' => !is_null($this->shareable),
+            'shareable_exists' => ! is_null($this->shareable),
         ]);
 
         // Check if shareable relationship is loaded and has value
-        if (!$this->relationLoaded('shareable') || !$this->shareable) {
+        if (! $this->relationLoaded('shareable') || ! $this->shareable) {
             \Log::warning('ShareResource: shareable not loaded or null', [
                 'share_id' => $this->id,
                 'relation_loaded' => $this->relationLoaded('shareable'),
             ]);
+
             return null;
         }
 
@@ -86,11 +87,11 @@ class ShareResource extends JsonResource
     private function getShareComments()
     {
         // Use loaded comments if available, otherwise query fresh
-        $comments = $this->relationLoaded('shareComments') 
-            ? $this->shareComments 
+        $comments = $this->relationLoaded('shareComments')
+            ? $this->shareComments
             : $this->getComments();
 
-        return $comments->map(function($comment) {
+        return $comments->map(function ($comment) {
             return [
                 'id' => $comment->id,
                 'user' => new UserResource($comment->user),

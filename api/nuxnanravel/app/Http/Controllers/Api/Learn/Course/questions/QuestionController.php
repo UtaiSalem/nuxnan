@@ -3,26 +3,27 @@
 namespace App\Http\Controllers\Api\Learn\Course\questions;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\questions\QuestionResource;
+use App\Models\Course;
 use App\Models\Question;
+use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\questions\QuestionResource;
 
 class QuestionController extends Controller
 {
-
     public function getUserQuestions(Request $request)
     {
         $searchText = $request->input('text');
-    
+
         $questions = Question::where('user_id', auth()->id())
-            ->where('text', 'like', '%' . $searchText . '%')
+            ->where('text', 'like', '%'.$searchText.'%')
             ->with(['course', 'images', 'options'])
             ->limit(10)
             ->latest()
             ->get();
-    
+
         return response()->json([
             'success' => true,
             'questions' => $questions,
@@ -35,14 +36,14 @@ class QuestionController extends Controller
      */
     public function store(Request $request)
     {
-        $course = \App\Models\Course::find($request->course_id);
-        if (!$course || !$course->isAdmin(auth()->user())) {
+        $course = Course::find($request->course_id);
+        if (! $course || ! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validatedData = $request->validate([
-            'text' =>'required|string',
-            'points' =>'required|integer',
+            'text' => 'required|string',
+            'points' => 'required|integer',
             'pp_fine' => 'nullable|integer',
             'course_id' => 'required|integer',
             'images' => 'nullable|array',
@@ -50,17 +51,17 @@ class QuestionController extends Controller
         ]);
 
         $new_question = Question::create([
-            'user_id'   => auth()->id(),
+            'user_id' => auth()->id(),
             'course_id' => $request->course_id,
-            'text'      => $request->text,
-            'points'    => $request->points,
-            'pp_fine'  => $request->pp_fine ?? 0,
+            'text' => $request->text,
+            'points' => $request->points,
+            'pp_fine' => $request->pp_fine ?? 0,
         ]);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $q_images = $request->file('images');
             foreach ($q_images as $q_image) {
-                $q_img_filename = uniqid() . '.' . $q_image->getClientOriginalExtension();
+                $q_img_filename = uniqid().'.'.$q_image->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/courses/questions', $q_image, $q_img_filename);
                 $new_question->images()->create([
                     'filename' => $q_img_filename,
@@ -79,28 +80,28 @@ class QuestionController extends Controller
      */
     public function update(Question $question, Request $request)
     {
-        if (!$question->course->isAdmin(auth()->user())) {
+        if (! $question->course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validatedData = $request->validate([
-            'text' =>'required|string',
-            'points' =>'required|integer',
+            'text' => 'required|string',
+            'points' => 'required|integer',
             'pp_fine' => 'nullable|integer',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         $question->update([
-            'text'      => $request->text,
-            'points'    => $request->points,
-            'pp_fine'  => $request->pp_fine ?? 0,
+            'text' => $request->text,
+            'points' => $request->points,
+            'pp_fine' => $request->pp_fine ?? 0,
         ]);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $q_images = $request->file('images');
             foreach ($q_images as $q_image) {
-                $q_img_filename = uniqid() . '.' . $q_image->getClientOriginalExtension();
+                $q_img_filename = uniqid().'.'.$q_image->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/courses/questions', $q_image, $q_img_filename);
                 $question->images()->create([
                     'filename' => $q_img_filename,
@@ -119,16 +120,16 @@ class QuestionController extends Controller
         ], 200);
     }
 
-    public function set_correct_option(Question $question, Request $request, )
+    public function set_correct_option(Question $question, Request $request)
     {
         $q_options = $question->options;
 
         $q_options->each(function ($q_option) {
             $q_option->update([
                 'is_correct' => 0,
-                ]);
-            });
-            
+            ]);
+        });
+
         $q_option = $q_options->find($request->answer)->update([
             'is_correct' => 1,
         ]);
@@ -140,7 +141,7 @@ class QuestionController extends Controller
         $question->update([
             'correct_option_id' => $request->answer,
             'correct_answers' => $request->answer,
-        ]);        
+        ]);
     }
 
     /**
@@ -148,13 +149,13 @@ class QuestionController extends Controller
      */
     public function destroy(Question $question)
     {
-        if (!$question->course->isAdmin(auth()->user())) {
+        if (! $question->course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         if ($question->images) {
             foreach ($question->images as $q_image) {
-                Storage::disk('public')->delete('images/courses/questions/' . $q_image->filename);
+                Storage::disk('public')->delete('images/courses/questions/'.$q_image->filename);
             }
             $question->images()->delete();
         }
@@ -163,7 +164,7 @@ class QuestionController extends Controller
             foreach ($question->options as $option) {
                 if ($option->images) {
                     foreach ($option->images as $o_image) {
-                        Storage::disk('public')->delete('images/courses/questions/' . $o_image->filename);
+                        Storage::disk('public')->delete('images/courses/questions/'.$o_image->filename);
                     }
                     $option->images()->delete();
                 }
@@ -194,28 +195,28 @@ class QuestionController extends Controller
             $quiz->increment('total_questions');
 
             $course = $quiz->course;
-            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
+            app(CourseScoreService::class)->syncCourseTotalScore($course);
         }
 
-        if($question->images){
+        if ($question->images) {
             foreach ($question->images as $old_q_image) {
                 // $q_img_file_extention = File::extension($old_q_image->url);
                 // $new_q_img_filename = uniqid() . '.' . $q_img_file_extention;
                 // $new_q_image_url = 'images/courses/quizzes/questions/'. $new_q_img_filename;
-                
+
                 // $new_q_image = $new_question->images()->create([
                 //     'filename' => $new_q_img_filename,
                 // ]);
                 // Storage::disk('public')->move($old_q_image->url, $new_q_image_url);
-                
+
                 $new_q_image = $old_q_image->replicate();
                 $new_q_image->imageable_id = $new_question->id;
-                
+
                 $new_q_image_file_extention = File::extension($old_q_image->url);
-                $new_q_image_filename = uniqid() . '.' . $new_q_image_file_extention;
-                $new_q_image_url = 'images/courses/quizzes/questions/'. $new_q_image_filename;
-                Storage::disk('public')->copy('images/courses/quizzes/questions/'. $old_q_image->filename, $new_q_image_url);
-                
+                $new_q_image_filename = uniqid().'.'.$new_q_image_file_extention;
+                $new_q_image_url = 'images/courses/quizzes/questions/'.$new_q_image_filename;
+                Storage::disk('public')->copy('images/courses/quizzes/questions/'.$old_q_image->filename, $new_q_image_url);
+
                 $new_q_image->filename = $new_q_image_filename;
 
                 $new_q_image->save();
@@ -223,7 +224,7 @@ class QuestionController extends Controller
 
         }
 
-        if($question->options){
+        if ($question->options) {
             foreach ($question->options as $old_q_option) {
 
                 $new_q_option = $old_q_option->replicate();
@@ -235,24 +236,24 @@ class QuestionController extends Controller
                         'correct_option_id' => $new_q_option->id,
                         'correct_answers' => $new_q_option->id,
                     ]);
-                }else {
+                } else {
                     $new_question->update([
                         'correct_option_id' => null,
-                        'correct_answers'   => null
+                        'correct_answers' => null,
                     ]);
                 }
 
-                if($old_q_option->images){
+                if ($old_q_option->images) {
 
                     foreach ($old_q_option->images as $old_q_opt_image) {
                         $opt_img_file_extention = File::extension($old_q_opt_image->url);
-                        $new_opt_img_filename = uniqid() . '.' . $opt_img_file_extention;
-                        $new_opt_image_url = 'images/courses/quizzes/questions/'. $new_opt_img_filename;
+                        $new_opt_img_filename = uniqid().'.'.$opt_img_file_extention;
+                        $new_opt_image_url = 'images/courses/quizzes/questions/'.$new_opt_img_filename;
 
-                        Storage::disk('public')->copy('images/courses/quizzes/questions/'. $old_q_opt_image->filename, $new_opt_image_url);
+                        Storage::disk('public')->copy('images/courses/quizzes/questions/'.$old_q_opt_image->filename, $new_opt_image_url);
 
                         $new_q_option->images()->create([
-                            'filename' => $new_opt_img_filename
+                            'filename' => $new_opt_img_filename,
                         ]);
                     }
 
@@ -277,7 +278,7 @@ class QuestionController extends Controller
 
         //                 $new_q_option->images()->create([
         //                     'filename' => $new_opt_img_filename
-        //                 ]);              
+        //                 ]);
         //             }
         //         }
         //     }
@@ -287,7 +288,7 @@ class QuestionController extends Controller
 
         return response()->json([
             'success' => true,
-            'question' => new QuestionResource($new_question)
+            'question' => new QuestionResource($new_question),
             // 'question' => new QuestionResource($question)
         ], 200);
 

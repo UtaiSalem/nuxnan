@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 
 class RefreshLeaderboardCache implements ShouldQueue
 {
@@ -28,12 +29,12 @@ class RefreshLeaderboardCache implements ShouldQueue
     {
         // Refresh common leaderboard types
         $types = ['points', 'weekly', 'monthly', 'streak', 'achievements'];
-        
+
         foreach ($types as $type) {
             // We can't easily force refresh Cache::remember without the key,
             // but we can call the service which will update it if expired,
             // or we could use Cache::forget first.
-            \Illuminate\Support\Facades\Cache::forget("leaderboard_{$type}_1_20");
+            Cache::forget("leaderboard_{$type}_1_20");
             $service->getLeaderboard($type, 1, 20);
         }
     }

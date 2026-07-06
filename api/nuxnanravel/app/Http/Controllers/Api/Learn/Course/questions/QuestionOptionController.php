@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Api\Learn\Course\questions;
 
 use App\Http\Controllers\Controller;
-
+use App\Http\Resources\Learn\Course\questions\QuestionOptionResource;
 use App\Models\Question;
-use Illuminate\Http\Request;
 use App\Models\QuestionOption;
 use App\Models\UserAnswerQuestion;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\questions\QuestionOptionResource;
 
 class QuestionOptionController extends Controller
 {
@@ -39,15 +38,15 @@ class QuestionOptionController extends Controller
             'is_correct' => $request->is_correct ? true : false,
         ]);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             // $fileNames = [];
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $image, $fileName);
                 // $fileNames[] = $fileName;
                 $option->images()->create([
-                    'filename' => $fileName
+                    'filename' => $fileName,
                 ]);
             }
         }
@@ -77,7 +76,7 @@ class QuestionOptionController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Question $question = null, QuestionOption $option)
+    public function update(Request $request, ?Question $question, QuestionOption $option)
     {
         $option->update([
             'text' => $request->text ?? $option->text,
@@ -97,20 +96,20 @@ class QuestionOptionController extends Controller
     {
         $question = $option->optionable;
         $userAnswers = UserAnswerQuestion::where('question_id', $question->id)
-                                        ->where('answer_id', $option->id)
-                                        ->get();
+            ->where('answer_id', $option->id)
+            ->get();
         // if ($userAnswers) {
-            foreach ($userAnswers as $answer) {
-                $answer->delete();
-            }
+        foreach ($userAnswers as $answer) {
+            $answer->delete();
+        }
         // }
 
-        if($question->correct_option_id === $option->id){
+        if ($question->correct_option_id === $option->id) {
             $question->update([
                 'correct_option_id' => null,
                 'correct_answers' => null,
             ]);
-        };
+        }
 
         foreach ($option->images as $image) {
             Storage::disk('public')->delete($image->image_url);

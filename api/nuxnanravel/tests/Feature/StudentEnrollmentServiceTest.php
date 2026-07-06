@@ -2,6 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Events\Enrollment\StudentDropped;
+use App\Events\Enrollment\StudentEnrolled;
+use App\Events\Enrollment\StudentGraduated;
+use App\Events\Enrollment\StudentPromoted;
+use App\Events\Enrollment\StudentRepeated;
+use App\Events\Enrollment\StudentTransferred;
 use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\Classroom;
@@ -314,32 +320,32 @@ class StudentEnrollmentServiceTest extends TestCase
 
         // 1. Enroll
         $enrollment = $this->service->enrollStudent($this->student, $this->classroomA, 10);
-        Event::assertDispatched(\App\Events\Enrollment\StudentEnrolled::class);
+        Event::assertDispatched(StudentEnrolled::class);
 
         // 2. Transfer
         $this->service->transferStudent($this->student, $this->classroomA, $this->classroomB);
-        Event::assertDispatched(\App\Events\Enrollment\StudentTransferred::class);
+        Event::assertDispatched(StudentTransferred::class);
 
         // 3. Promote (Requires cross-year)
         $this->service->promoteStudent($this->student, $this->classroomB, $this->classroomC);
-        Event::assertDispatched(\App\Events\Enrollment\StudentPromoted::class);
+        Event::assertDispatched(StudentPromoted::class);
 
         // Setup active again for graduate/drop/repeat
         $enrollment2 = $this->service->enrollStudent($this->student, $this->classroomA, 10);
 
         // 4. Repeat
         $this->service->repeatStudent($this->student, $this->classroomB);
-        Event::assertDispatched(\App\Events\Enrollment\StudentRepeated::class);
+        Event::assertDispatched(StudentRepeated::class);
 
         // 5. Graduate
         $this->service->graduateStudent($this->student);
-        Event::assertDispatched(\App\Events\Enrollment\StudentGraduated::class);
+        Event::assertDispatched(StudentGraduated::class);
 
         // Setup active again
         $this->service->enrollStudent($this->student, $this->classroomA, 10);
 
         // 6. Drop
         $this->service->dropStudent($this->student);
-        Event::assertDispatched(\App\Events\Enrollment\StudentDropped::class);
+        Event::assertDispatched(StudentDropped::class);
     }
 }

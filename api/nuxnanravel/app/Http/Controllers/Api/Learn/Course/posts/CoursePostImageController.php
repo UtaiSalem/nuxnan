@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api\Learn\Course\posts;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Course;
 use App\Models\CoursePost;
-use Illuminate\Http\Request;
 use App\Models\CoursePostImage;
+use App\Models\User;
+use Illuminate\Http\Request;
 
 class CoursePostImageController extends Controller
 {
@@ -17,6 +17,7 @@ class CoursePostImageController extends Controller
     {
         $this->plearndAdmin = User::find(1);
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -73,32 +74,29 @@ class CoursePostImageController extends Controller
         //
     }
 
-    //toggle like image
+    // toggle like image
     public function toggleLike(Course $course, CoursePost $course_post, CoursePostImage $image)
     {
-        
+
         try {
 
-            if(auth()->user()->pp > 24){
+            if (auth()->user()->pp > 24) {
                 $image->postImageLikes()->toggle(auth()->id());
-                if($image->postImageLikes()->where('user_id', auth()->id())->exists())
-                {
+                if ($image->postImageLikes()->where('user_id', auth()->id())->exists()) {
                     $image->increment('likes');
                     auth()->user()->decrement('pp', 24);
-                    $course_post->user()->increment('pp',12);
+                    $course_post->user()->increment('pp', 12);
                     $this->plearndAdmin->increment('pp', 12);
-                }
-                else
-                {
+                } else {
                     $image->decrement('likes');
                     auth()->user()->decrement('pp', 12);
                     $this->plearndAdmin->increment('pp', 12);
-                };
+                }
 
                 return response()->json([
                     'success' => true,
                 ]);
-            }else{
+            } else {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have enough points to like this post. / คุณไม่มีพ้อยท์เพียงพอในการกดถูกใจโพสต์นี้ กรุณาสะสมแต้มเพิ่มเติม',
@@ -108,33 +106,32 @@ class CoursePostImageController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ], 404);
         }
     }
 
-    //toggle dislike image
+    // toggle dislike image
     public function toggleDislike(Course $course, CoursePost $course_post, CoursePostImage $image)
     {
         try {
-            if(auth()->user()->pp > 24){
+            if (auth()->user()->pp > 24) {
                 $image->postImageDislikes()->toggle(auth()->id());
-                if($image->postImageDislikes()->where('user_id', auth()->id())->exists()){
+                if ($image->postImageDislikes()->where('user_id', auth()->id())->exists()) {
                     $image->increment('dislikes');
                     auth()->user()->decrement('pp', 12);
                     $course_post->user()->decrement('pp', 12);
                     $this->plearndAdmin->increment('pp', 24);
-                }
-                else{
+                } else {
                     $image->decrement('dislikes');
                     auth()->user()->decrement('pp', 12);
                     $this->plearndAdmin->increment('pp', 12);
-                };
+                }
 
                 return response()->json([
                     'success' => true,
                 ]);
-            }else{
+            } else {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have enough points to dislike this post. / คุณไม่มีพ้อยท์เพียงพอในการกดไม่ถูกใจโพสต์นี้ กรุณาสะสมแต้มเพิ่มเติม',
@@ -143,7 +140,7 @@ class CoursePostImageController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ], 404);
         }
     }

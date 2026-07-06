@@ -5,14 +5,16 @@ namespace App\Services;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class CouponService
 {
     protected PointsService $pointsService;
+
     protected WalletService $walletService;
 
     public function __construct(PointsService $pointsService, WalletService $walletService)
@@ -60,7 +62,7 @@ class CouponService
                 ['coupon_type' => 'points', 'quantity' => $quantity]
             );
 
-            if (!$transaction) {
+            if (! $transaction) {
                 return [
                     'success' => false,
                     'message' => 'ไม่สามารถหักแต้มได้',
@@ -128,7 +130,7 @@ class CouponService
                 $description ?? "สร้างคูปองเงิน {$quantity} ใบ"
             );
 
-            if (!$transaction) {
+            if (! $transaction) {
                 return [
                     'success' => false,
                     'message' => 'ไม่สามารถหักเงินได้',
@@ -177,7 +179,7 @@ class CouponService
             $coupon = Coupon::where('coupon_code', $couponCode)->first();
 
             // Check if coupon exists
-            if (!$coupon) {
+            if (! $coupon) {
                 return [
                     'success' => false,
                     'message' => 'ไม่พบคูปองที่มีรหัสนี้',
@@ -239,7 +241,7 @@ class CouponService
                 $result = $this->redeemWalletCoupon($coupon, $user);
             }
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return $result;
             }
 
@@ -263,8 +265,8 @@ class CouponService
 
             return [
                 'success' => true,
-                'message' => $coupon->coupon_type === 'points' 
-                    ? 'รับแต้มสำเร็จ' 
+                'message' => $coupon->coupon_type === 'points'
+                    ? 'รับแต้มสำเร็จ'
                     : 'รับเงินสำเร็จ',
                 'type' => $coupon->coupon_type,
                 'amount' => $coupon->amount,
@@ -377,7 +379,7 @@ class CouponService
     /**
      * Get user coupons with filters.
      */
-    public function getUserCoupons(User $user, array $filters = []): \Illuminate\Database\Eloquent\Collection
+    public function getUserCoupons(User $user, array $filters = []): Collection
     {
         $query = $user->coupons();
 
@@ -413,18 +415,18 @@ class CouponService
     {
         // QR data uses Universal format: COUPON:code
         // This allows the scanner to detect the type automatically
-        $qrData = 'COUPON:' . $coupon->coupon_code;
+        $qrData = 'COUPON:'.$coupon->coupon_code;
 
-        $fileName = 'qr-codes/' . $coupon->coupon_code . '.svg';
-        $path = storage_path('app/public/' . $fileName);
+        $fileName = 'qr-codes/'.$coupon->coupon_code.'.svg';
+        $path = storage_path('app/public/'.$fileName);
 
         // Ensure directory exists
-        if (!file_exists(dirname($path))) {
+        if (! file_exists(dirname($path))) {
             mkdir(dirname($path), 0755, true);
         }
 
         // Generate QR code using simple-qrcode (SVG format - no imagick needed)
-        $qrCode = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+        $qrCode = QrCode::format('svg')
             ->size(300)
             ->margin(2)
             ->generate($qrData);

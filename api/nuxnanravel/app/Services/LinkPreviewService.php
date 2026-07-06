@@ -4,13 +4,14 @@ namespace App\Services;
 
 use App\Models\Post;
 use App\Models\PostLinkPreview;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class LinkPreviewService
 {
     protected int $timeout = 5;
+
     protected int $cacheMinutes = 60;
 
     /**
@@ -19,24 +20,25 @@ class LinkPreviewService
     public function extractAndSaveLinkPreview(Post $post, string $content): ?PostLinkPreview
     {
         $url = $this->extractFirstUrl($content);
-        
-        if (!$url) {
+
+        if (! $url) {
             return null;
         }
 
         // Check cache first
-        $cacheKey = 'link_preview_' . md5($url);
+        $cacheKey = 'link_preview_'.md5($url);
         $cachedData = Cache::get($cacheKey);
-        
+
         if ($cachedData) {
             return $this->saveLinkPreview($post, $cachedData);
         }
 
         // Fetch and parse the URL
         $data = $this->fetchLinkPreview($url);
-        
+
         if ($data) {
             Cache::put($cacheKey, $data, now()->addMinutes($this->cacheMinutes));
+
             return $this->saveLinkPreview($post, $data);
         }
 
@@ -49,7 +51,7 @@ class LinkPreviewService
     public function extractFirstUrl(string $content): ?string
     {
         $pattern = '/https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)/';
-        
+
         if (preg_match($pattern, $content, $matches)) {
             return $matches[0];
         }
@@ -63,9 +65,9 @@ class LinkPreviewService
     public function extractAllUrls(string $content): array
     {
         $pattern = '/https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)/';
-        
+
         preg_match_all($pattern, $content, $matches);
-        
+
         return $matches[0] ?? [];
     }
 
@@ -82,17 +84,19 @@ class LinkPreviewService
                 ])
                 ->get($url);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 return null;
             }
 
             $html = $response->body();
+
             return $this->parseHtml($html, $url);
         } catch (\Exception $e) {
             Log::warning('Failed to fetch link preview', [
                 'url' => $url,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -102,15 +106,15 @@ class LinkPreviewService
      */
     protected function parseHtml(string $html, string $url): array
     {
-        $doc = new \DOMDocument();
+        $doc = new \DOMDocument;
         @$doc->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
         $xpath = new \DOMXPath($doc);
 
         $data = [
             'url' => $url,
-            'title' => $this->getMetaContent($xpath, 'og:title') 
+            'title' => $this->getMetaContent($xpath, 'og:title')
                        ?? $this->getTitle($xpath),
-            'description' => $this->getMetaContent($xpath, 'og:description') 
+            'description' => $this->getMetaContent($xpath, 'og:description')
                              ?? $this->getMetaContent($xpath, 'description'),
             'image_url' => $this->resolveUrl(
                 $this->getMetaContent($xpath, 'og:image'),
@@ -122,9 +126,9 @@ class LinkPreviewService
         ];
 
         // Video data for video types (YouTube, Vimeo, etc.)
-        $videoUrl = $this->getMetaContent($xpath, 'og:video:url') 
+        $videoUrl = $this->getMetaContent($xpath, 'og:video:url')
                     ?? $this->getMetaContent($xpath, 'og:video');
-        
+
         if ($videoUrl) {
             $data['video_url'] = $videoUrl;
             $data['video_type'] = $this->getMetaContent($xpath, 'og:video:type');
@@ -133,9 +137,9 @@ class LinkPreviewService
         }
 
         // Author information
-        $data['author_name'] = $this->getMetaContent($xpath, 'article:author') 
+        $data['author_name'] = $this->getMetaContent($xpath, 'article:author')
                                ?? $this->getMetaContent($xpath, 'author');
-        
+
         // Provider information (for Twitter cards)
         $data['provider_name'] = $this->getMetaContent($xpath, 'twitter:site');
 
@@ -168,6 +172,7 @@ class LinkPreviewService
     protected function getTitle(\DOMXPath $xpath): ?string
     {
         $node = $xpath->query('//title')->item(0);
+
         return $node ? trim($node->nodeValue) : null;
     }
 
@@ -191,7 +196,8 @@ class LinkPreviewService
 
         // Default to /favicon.ico
         $parsed = parse_url($baseUrl);
-        return ($parsed['scheme'] ?? 'https') . '://' . ($parsed['host'] ?? '') . '/favicon.ico';
+
+        return ($parsed['scheme'] ?? 'https').'://'.($parsed['host'] ?? '').'/favicon.ico';
     }
 
     /**
@@ -199,7 +205,7 @@ class LinkPreviewService
      */
     protected function resolveUrl(?string $url, string $baseUrl): ?string
     {
-        if (!$url) {
+        if (! $url) {
             return null;
         }
 
@@ -213,17 +219,17 @@ class LinkPreviewService
         $host = $parsed['host'] ?? '';
 
         if (str_starts_with($url, '//')) {
-            return $scheme . ':' . $url;
+            return $scheme.':'.$url;
         }
 
         if (str_starts_with($url, '/')) {
-            return $scheme . '://' . $host . $url;
+            return $scheme.'://'.$host.$url;
         }
 
         $path = $parsed['path'] ?? '/';
         $dir = dirname($path);
-        
-        return $scheme . '://' . $host . $dir . '/' . $url;
+
+        return $scheme.'://'.$host.$dir.'/'.$url;
     }
 
     /**

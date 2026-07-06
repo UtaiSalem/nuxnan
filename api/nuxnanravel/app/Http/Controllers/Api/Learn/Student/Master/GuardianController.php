@@ -3,15 +3,13 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Student\UpdateGuardianRequest;
 use App\Models\Academy;
+use App\Models\GuardianContact;
 use App\Models\Student;
 use App\Models\StudentGuardian;
-use App\Models\GuardianContact;
-use App\Http\Requests\Student\UpdateGuardianRequest;
 use App\Traits\HandlesStudentUpdates;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class GuardianController extends Controller
 {
@@ -25,7 +23,7 @@ class GuardianController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -36,20 +34,20 @@ class GuardianController extends Controller
             $guardians = StudentGuardian::where('student_id', $student->id)
                 ->with('contacts')
                 ->get();
-            
+
             // Get primary guardian or first guardian
             $guardian = $guardians->first();
-            
-            if (!$guardian) {
+
+            if (! $guardian) {
                 return response()->json([
                     'success' => true,
                     'data' => null,
-                    'message' => 'ไม่พบข้อมูลผู้ปกครอง'
+                    'message' => 'ไม่พบข้อมูลผู้ปกครอง',
                 ]);
             }
 
             // Get primary contact for this guardian
-            $contact = $guardian->contacts->where('is_primary', true)->first() 
+            $contact = $guardian->contacts->where('is_primary', true)->first()
                      ?? $guardian->contacts->first();
 
             return response()->json([
@@ -70,22 +68,22 @@ class GuardianController extends Controller
                         'status' => $guardian->status,
                         'nationality' => $guardian->nationality,
                         'is_primary_contact' => $guardian->is_primary_contact,
-                        'is_emergency_contact' => $guardian->is_emergency_contact
+                        'is_emergency_contact' => $guardian->is_emergency_contact,
                     ],
                     'contact' => $contact ? [
                         'id' => $contact->id,
                         'contact_type' => $contact->contact_type,
                         'contact_value' => $contact->contact_value,
                         'is_primary' => $contact->is_primary,
-                        'is_verified' => $contact->is_verified
-                    ] : null
-                ]
+                        'is_verified' => $contact->is_verified,
+                    ] : null,
+                ],
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการดึงข้อมูลผู้ปกครอง: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการดึงข้อมูลผู้ปกครอง: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -98,7 +96,7 @@ class GuardianController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -106,17 +104,18 @@ class GuardianController extends Controller
 
         try {
             $validatedData = $request->validated();
-            
+
             DB::beginTransaction();
 
             // Create guardian (always blacklist under normal settings, so owner goes pending)
             $changeRequest = $this->applyUpdate($student, 'StudentGuardian', null, 'guardian.create', $validatedData);
             if ($changeRequest) {
                 DB::commit();
+
                 return response()->json([
                     'success' => true,
                     'message' => 'ส่งคำขอเพิ่มข้อมูลผู้ปกครองแล้ว รอการอนุมัติ',
-                    'needs_approval' => true
+                    'needs_approval' => true,
                 ]);
             }
 
@@ -136,7 +135,7 @@ class GuardianController extends Controller
                 'is_primary_contact' => $validatedData['guardian']['is_primary_contact'] ?? false,
                 'is_emergency_contact' => $validatedData['guardian']['is_emergency_contact'] ?? false,
                 'status' => 'alive',
-                'nationality' => 'ไทย'
+                'nationality' => 'ไทย',
             ]);
 
             // Create contact for guardian
@@ -145,7 +144,7 @@ class GuardianController extends Controller
                 'contact_type' => $validatedData['contact']['contact_type'],
                 'contact_value' => $validatedData['contact']['contact_value'],
                 'is_primary' => $validatedData['contact']['is_primary'] ?? true,
-                'is_verified' => false
+                'is_verified' => false,
             ]);
 
             DB::commit();
@@ -154,16 +153,17 @@ class GuardianController extends Controller
                 'success' => true,
                 'data' => [
                     'guardian' => $guardian->fresh(),
-                    'contact' => $contact
+                    'contact' => $contact,
                 ],
-                'message' => 'บันทึกข้อมูลผู้ปกครองสำเร็จ'
+                'message' => 'บันทึกข้อมูลผู้ปกครองสำเร็จ',
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -176,7 +176,7 @@ class GuardianController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -185,14 +185,14 @@ class GuardianController extends Controller
         try {
             // Load existing guardian
             $guardian = StudentGuardian::where('student_id', $student->id)->first();
-            
-            if (!$guardian) {
+
+            if (! $guardian) {
                 // If no guardian exists, create new one
                 return $this->store($request, $academy, $student);
             }
 
             $validatedData = $request->validated();
-            
+
             DB::beginTransaction();
 
             // Route through approval flow
@@ -212,7 +212,7 @@ class GuardianController extends Controller
             $guardianResult = $this->processFieldUpdates($student, $guardian, 'StudentGuardian', 'guardian', $guardianFields);
 
             // Get or create primary contact
-            $contact = $guardian->contacts->where('is_primary', true)->first() 
+            $contact = $guardian->contacts->where('is_primary', true)->first()
                      ?? $guardian->contacts->first();
 
             // Let's also check approval for contacts if needed, but per-spec contacts update directly or can be updated directly.
@@ -229,7 +229,7 @@ class GuardianController extends Controller
                     'contact_type' => $validatedData['contact']['contact_type'],
                     'contact_value' => $validatedData['contact']['contact_value'],
                     'is_primary' => $validatedData['contact']['is_primary'] ?? true,
-                    'is_verified' => false
+                    'is_verified' => false,
                 ]);
             }
 
@@ -249,9 +249,10 @@ class GuardianController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }

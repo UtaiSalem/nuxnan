@@ -27,7 +27,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->json('settings')->nullable(); // ตั้งค่าเพิ่มเติม
             $table->timestamps();
-            
+
             $table->index(['academy_id', 'academic_year']);
             $table->index('is_active');
         });
@@ -45,7 +45,7 @@ return new class extends Migration
             $table->boolean('is_required')->default(true); // บังคับเรียนหรือไม่
             $table->json('prerequisites')->nullable(); // รายวิชาที่ต้องผ่านก่อน (course_ids)
             $table->timestamps();
-            
+
             $table->unique(['curriculum_id', 'course_id']);
             $table->index(['curriculum_id', 'course_type']);
             $table->index('year_level');
@@ -64,7 +64,7 @@ return new class extends Migration
             $table->date('graduated_at')->nullable();
             $table->integer('completed_credits')->default(0);
             $table->timestamps();
-            
+
             $table->unique(['curriculum_id', 'user_id']);
             $table->index('status');
             $table->foreign('academy_member_id')->references('id')->on('academy_members')->onDelete('set null');

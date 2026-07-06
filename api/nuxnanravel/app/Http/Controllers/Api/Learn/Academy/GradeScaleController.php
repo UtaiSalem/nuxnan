@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
-use App\Models\GradeScale;
-use App\Models\GradeScaleItem;
-use App\Models\AssessmentCategory;
 use App\Models\Academy;
-use Illuminate\Http\Request;
+use App\Models\AssessmentCategory;
+use App\Models\GradeScale;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class GradeScaleController extends Controller
 {
@@ -54,8 +53,8 @@ class GradeScaleController extends Controller
     public function store(Request $request, int $academyId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -107,8 +106,8 @@ class GradeScaleController extends Controller
     public function update(Request $request, int $academyId, int $id): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -134,10 +133,10 @@ class GradeScaleController extends Controller
         ]);
 
         // Update items if provided
-        if (!empty($validated['items'])) {
+        if (! empty($validated['items'])) {
             // Delete existing items
             $gradeScale->items()->delete();
-            
+
             // Create new items
             foreach ($validated['items'] as $index => $item) {
                 $gradeScale->items()->create([
@@ -169,13 +168,13 @@ class GradeScaleController extends Controller
     public function destroy(int $academyId, int $id): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
         $gradeScale = GradeScale::where('academy_id', $academyId)->findOrFail($id);
-        
+
         if ($gradeScale->is_default) {
             return response()->json([
                 'success' => false,
@@ -222,8 +221,8 @@ class GradeScaleController extends Controller
     public function storeCategory(Request $request, int $academyId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManage($academy)) {
+
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -259,7 +258,9 @@ class GradeScaleController extends Controller
     protected function canManage(Academy $academy): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
         if ($academy->user_id === $user->id) {
             return true;

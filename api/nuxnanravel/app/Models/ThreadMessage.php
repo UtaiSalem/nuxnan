@@ -34,8 +34,11 @@ class ThreadMessage extends Model
 
     // Message type constants
     const TYPE_TEXT = 'text';
+
     const TYPE_FILE = 'file';
+
     const TYPE_IMAGE = 'image';
+
     const TYPE_SYSTEM = 'system';
 
     // Relationships

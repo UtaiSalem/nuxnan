@@ -4,16 +4,19 @@ namespace App\Exports;
 
 use App\Models\Course;
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CourseAttendanceExport implements FromArray, WithHeadings, WithTitle, ShouldAutoSize, WithStyles
+class CourseAttendanceExport implements FromArray, ShouldAutoSize, WithHeadings, WithStyles, WithTitle
 {
     protected array $data;
+
     protected Course $course;
+
     protected $attendances;
 
     public function __construct(array $data, Course $course, $attendances)
@@ -35,7 +38,7 @@ class CourseAttendanceExport implements FromArray, WithHeadings, WithTitle, Shou
                 $row['absent'],
                 $row['leave'],
                 $row['total_sessions'],
-                $row['attendance_rate'] . '%',
+                $row['attendance_rate'].'%',
             ];
         }, $this->data);
     }
@@ -66,7 +69,7 @@ class CourseAttendanceExport implements FromArray, WithHeadings, WithTitle, Shou
         $sheet->getStyle('A1:I1')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'fillType' => Fill::FILL_SOLID,
                 'startColor' => ['rgb' => 'E5E7EB'],
             ],
         ]);
@@ -75,7 +78,7 @@ class CourseAttendanceExport implements FromArray, WithHeadings, WithTitle, Shou
         $lastRow = count($this->data) + 1;
         for ($row = 2; $row <= $lastRow; $row++) {
             $rate = floatval(str_replace('%', '', $sheet->getCell("I{$row}")->getValue()));
-            
+
             if ($rate >= 80) {
                 $color = '10B981'; // Green
             } elseif ($rate >= 60) {
@@ -83,7 +86,7 @@ class CourseAttendanceExport implements FromArray, WithHeadings, WithTitle, Shou
             } else {
                 $color = 'EF4444'; // Red
             }
-            
+
             $sheet->getStyle("I{$row}")->applyFromArray([
                 'font' => ['color' => ['rgb' => $color], 'bold' => true],
             ]);

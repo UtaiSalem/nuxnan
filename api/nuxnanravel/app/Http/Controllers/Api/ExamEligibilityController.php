@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseMember;
+use App\Models\EligibilityAuditLog;
 use App\Models\ExamEligibilityOverride;
 use App\Services\AttendanceEligibilityService;
 use App\Services\PointsService;
@@ -550,10 +551,10 @@ class ExamEligibilityController extends Controller
             'absent_sessions_at_unlock' => $stats['absent'],
         ]);
 
-        \App\Models\EligibilityAuditLog::log(
+        EligibilityAuditLog::log(
             $member,
             'unlocked',
-            \App\Models\EligibilityAuditLog::TYPE_ADMIN_UNLOCK,
+            EligibilityAuditLog::TYPE_ADMIN_UNLOCK,
             $request->user()->id,
             $reason,
             ['override_id' => $override->id]

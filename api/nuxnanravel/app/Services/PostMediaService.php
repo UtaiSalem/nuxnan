@@ -5,18 +5,24 @@ namespace App\Services;
 use App\Models\Post;
 use App\Models\PostImage;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
 
 class PostMediaService
 {
     protected string $disk = 'public';
+
     protected string $basePath = 'images/posts';
+
     protected int $maxWidth = 2048;
+
     protected int $maxHeight = 2048;
+
     protected int $thumbnailWidth = 400;
+
     protected int $thumbnailHeight = 400;
+
     protected int $quality = 85;
 
     /**
@@ -32,7 +38,7 @@ class PostMediaService
                 $order++;
                 $caption = $captions[$index] ?? null;
                 $savedImage = $this->uploadSingleImage($post, $image, $order, $caption);
-                
+
                 if ($savedImage) {
                     $savedImages[] = $savedImage;
                 }
@@ -46,15 +52,15 @@ class PostMediaService
      * Upload a single image for a post.
      */
     public function uploadSingleImage(
-        Post $post, 
-        UploadedFile $image, 
-        int $order = 0, 
+        Post $post,
+        UploadedFile $image,
+        int $order = 0,
         ?string $caption = null
     ): ?PostImage {
         try {
             $extension = $image->getClientOriginalExtension();
             $filename = $this->generateFilename($post->id, $extension);
-            
+
             // Store original image
             $path = Storage::disk($this->disk)->putFileAs(
                 $this->basePath,
@@ -62,13 +68,13 @@ class PostMediaService
                 $filename
             );
 
-            if (!$path) {
+            if (! $path) {
                 throw new \Exception('Failed to store image');
             }
 
             // Try to create optimized version (requires intervention/image package)
             $this->optimizeImage($path);
-            
+
             // Create thumbnail
             $thumbnailFilename = $this->createThumbnail($path, $filename);
 
@@ -84,8 +90,9 @@ class PostMediaService
         } catch (\Exception $e) {
             Log::error('Failed to upload post image', [
                 'post_id' => $post->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -95,7 +102,7 @@ class PostMediaService
      */
     protected function generateFilename(int $postId, string $extension): string
     {
-        return $postId . '_' . uniqid() . '_' . time() . '.' . $extension;
+        return $postId.'_'.uniqid().'_'.time().'.'.$extension;
     }
 
     /**
@@ -106,11 +113,11 @@ class PostMediaService
         try {
             // This requires intervention/image package
             // Install with: composer require intervention/image
-            
+
             /*
             $fullPath = Storage::disk($this->disk)->path($path);
             $image = Image::make($fullPath);
-            
+
             // Resize if larger than max dimensions
             if ($image->width() > $this->maxWidth || $image->height() > $this->maxHeight) {
                 $image->resize($this->maxWidth, $this->maxHeight, function ($constraint) {
@@ -118,13 +125,13 @@ class PostMediaService
                     $constraint->upsize();
                 });
             }
-            
+
             $image->save($fullPath, $this->quality);
             */
         } catch (\Exception $e) {
             Log::warning('Failed to optimize image', [
                 'path' => $path,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -136,26 +143,27 @@ class PostMediaService
     {
         try {
             // This requires intervention/image package
-            
+
             /*
             $fullPath = Storage::disk($this->disk)->path($path);
             $thumbnailFilename = 'thumb_' . $filename;
             $thumbnailPath = $this->basePath . '/thumbnails/' . $thumbnailFilename;
-            
+
             $image = Image::make($fullPath);
             $image->fit($this->thumbnailWidth, $this->thumbnailHeight);
-            
+
             Storage::disk($this->disk)->put($thumbnailPath, $image->encode());
-            
+
             return $thumbnailFilename;
             */
-            
+
             return null;
         } catch (\Exception $e) {
             Log::warning('Failed to create thumbnail', [
                 'path' => $path,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -167,11 +175,11 @@ class PostMediaService
     {
         try {
             // Delete files from storage
-            Storage::disk($this->disk)->delete($this->basePath . '/' . $image->filename);
-            
+            Storage::disk($this->disk)->delete($this->basePath.'/'.$image->filename);
+
             if ($image->thumbnail) {
                 Storage::disk($this->disk)->delete(
-                    $this->basePath . '/thumbnails/' . $image->thumbnail
+                    $this->basePath.'/thumbnails/'.$image->thumbnail
                 );
             }
 
@@ -180,8 +188,9 @@ class PostMediaService
         } catch (\Exception $e) {
             Log::error('Failed to delete post image', [
                 'image_id' => $image->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -192,7 +201,7 @@ class PostMediaService
     public function deleteAllImages(Post $post): bool
     {
         $images = $post->postImages;
-        
+
         foreach ($images as $image) {
             $this->deleteImage($image);
         }
@@ -211,12 +220,14 @@ class PostMediaService
                     ->where('id', $imageId)
                     ->update(['order' => $order + 1]);
             }
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to reorder images', [
                 'post_id' => $post->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -234,7 +245,7 @@ class PostMediaService
      */
     public function getImageUrl(PostImage $image): string
     {
-        return Storage::disk($this->disk)->url($this->basePath . '/' . $image->filename);
+        return Storage::disk($this->disk)->url($this->basePath.'/'.$image->filename);
     }
 
     /**
@@ -242,12 +253,12 @@ class PostMediaService
      */
     public function getThumbnailUrl(PostImage $image): ?string
     {
-        if (!$image->thumbnail) {
+        if (! $image->thumbnail) {
             return null;
         }
-        
+
         return Storage::disk($this->disk)->url(
-            $this->basePath . '/thumbnails/' . $image->thumbnail
+            $this->basePath.'/thumbnails/'.$image->thumbnail
         );
     }
 }

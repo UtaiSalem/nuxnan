@@ -2,15 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Course;
-use App\Models\CourseGroup;
-use App\Models\AttendanceDetail;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class CourseAttendance extends Model
 {
@@ -18,7 +14,7 @@ class CourseAttendance extends Model
 
     protected $guarded = [];
 
-    //belongsto user
+    // belongsto user
     public function instructor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'instructor_id');

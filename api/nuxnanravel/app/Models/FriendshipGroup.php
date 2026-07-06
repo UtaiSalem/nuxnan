@@ -15,12 +15,12 @@ class FriendshipGroup extends Model
         'friendship_id',
         'friend_type',
         'friend_id',
-        'group_id'
+        'group_id',
     ];
 
     protected $casts = [
         'friendship_id' => 'integer',
         'friend_id' => 'integer',
-        'group_id' => 'integer'
+        'group_id' => 'integer',
     ];
 }

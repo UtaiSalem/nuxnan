@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Api\Play;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\Image;
 use App\Http\Requests\StoreImageRequest;
 use App\Http\Requests\UpdateImageRequest;
+use App\Models\Image;
 
 class ImageController extends Controller
 {

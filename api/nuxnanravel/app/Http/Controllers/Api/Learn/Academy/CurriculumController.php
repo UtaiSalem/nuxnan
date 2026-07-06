@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api\Learn\Academy;
 
-use App\Models\Course;
+use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\Course;
 use App\Models\Curriculum;
 use App\Models\CurriculumCourse;
 use App\Models\CurriculumStudent;
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -245,7 +245,7 @@ class CurriculumController extends Controller
         ]);
 
         // ถ้าไม่ได้ระบุ credits ให้ดึงจาก course
-        if (!isset($validated['credits'])) {
+        if (! isset($validated['credits'])) {
             $course = Course::find($validated['course_id']);
             $validated['credits'] = $course->credit_units ?? 0;
         }
@@ -343,11 +343,12 @@ class CurriculumController extends Controller
 
                 if ($exists) {
                     $skippedCount++;
+
                     continue;
                 }
 
                 // ดึง credits จาก course ถ้าไม่ได้ระบุ
-                if (!isset($courseData['credits'])) {
+                if (! isset($courseData['credits'])) {
                     $course = Course::find($courseData['course_id']);
                     $courseData['credits'] = $course->credit_units ?? 0;
                 }
@@ -363,7 +364,7 @@ class CurriculumController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => "เพิ่มรายวิชาสำเร็จ {$addedCount} วิชา" . ($skippedCount > 0 ? " (ข้าม {$skippedCount} วิชาที่มีอยู่แล้ว)" : ''),
+            'message' => "เพิ่มรายวิชาสำเร็จ {$addedCount} วิชา".($skippedCount > 0 ? " (ข้าม {$skippedCount} วิชาที่มีอยู่แล้ว)" : ''),
             'added_count' => $addedCount,
             'skipped_count' => $skippedCount,
         ]);
@@ -470,6 +471,7 @@ class CurriculumController extends Controller
 
                 if ($exists) {
                     $skippedCount++;
+
                     continue;
                 }
 
@@ -488,7 +490,7 @@ class CurriculumController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => "ลงทะเบียนนักเรียนสำเร็จ {$addedCount} คน" . ($skippedCount > 0 ? " (ข้าม {$skippedCount} คนที่ลงทะเบียนแล้ว)" : ''),
+            'message' => "ลงทะเบียนนักเรียนสำเร็จ {$addedCount} คน".($skippedCount > 0 ? " (ข้าม {$skippedCount} คนที่ลงทะเบียนแล้ว)" : ''),
             'added_count' => $addedCount,
             'skipped_count' => $skippedCount,
         ]);
@@ -554,10 +556,10 @@ class CurriculumController extends Controller
         $stats = [
             'total_curriculums' => Curriculum::forAcademy($academy->id)->count(),
             'active_curriculums' => Curriculum::forAcademy($academy->id)->active()->count(),
-            'total_students' => CurriculumStudent::whereIn('curriculum_id', 
+            'total_students' => CurriculumStudent::whereIn('curriculum_id',
                 Curriculum::forAcademy($academy->id)->pluck('id')
             )->where('status', 'active')->count(),
-            'graduated_students' => CurriculumStudent::whereIn('curriculum_id', 
+            'graduated_students' => CurriculumStudent::whereIn('curriculum_id',
                 Curriculum::forAcademy($academy->id)->pluck('id')
             )->where('status', 'graduated')->count(),
         ];

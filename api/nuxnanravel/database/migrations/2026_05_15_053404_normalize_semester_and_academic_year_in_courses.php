@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -19,7 +19,7 @@ return new class extends Migration
 
         DB::table('courses')->whereNotNull('academic_year')->get(['id', 'academic_year'])->each(function ($c) {
             $y = (int) preg_replace('/\D/', '', $c->academic_year); // Extract digits
-            
+
             if ($y >= 2560 && $y <= 2580) {
                 // Already in Thai year range
             } elseif ($y >= 2017 && $y <= 2037) {
@@ -27,14 +27,14 @@ return new class extends Migration
             } else {
                 $y = null; // Out of range or invalid
             }
-            
+
             DB::table('courses')->where('id', $c->id)->update(['academic_year_new' => $y]);
         });
 
         Schema::table('courses', function (Blueprint $table) {
             $table->dropColumn('academic_year');
         });
-        
+
         Schema::table('courses', function (Blueprint $table) {
             $table->renameColumn('academic_year_new', 'academic_year');
         });
@@ -77,13 +77,13 @@ return new class extends Migration
         });
 
         DB::table('courses')->whereNotNull('academic_year')->get(['id', 'academic_year'])->each(function ($c) {
-            DB::table('courses')->where('id', $c->id)->update(['academic_year_old' => (string)$c->academic_year]);
+            DB::table('courses')->where('id', $c->id)->update(['academic_year_old' => (string) $c->academic_year]);
         });
 
         Schema::table('courses', function (Blueprint $table) {
             $table->dropColumn('academic_year');
         });
-        
+
         Schema::table('courses', function (Blueprint $table) {
             $table->renameColumn('academic_year_old', 'academic_year');
         });

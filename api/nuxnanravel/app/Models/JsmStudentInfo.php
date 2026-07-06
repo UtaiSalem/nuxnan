@@ -41,7 +41,7 @@ class JsmStudentInfo extends Model
         'email',
         'phone_number',
         'enrollment_date',
-        
+
         // Father information
         'father_citizen_id',
         'father_title_prefix',
@@ -49,7 +49,7 @@ class JsmStudentInfo extends Model
         'father_last_name',
         'father_status',
         'father_nationality',
-        
+
         // Mother information
         'mother_citizen_id',
         'mother_title_prefix',
@@ -57,7 +57,7 @@ class JsmStudentInfo extends Model
         'mother_last_name',
         'mother_status',
         'mother_nationality',
-        
+
         // Guardian information
         'guardian_citizen_id',
         'guardian_title_prefix',
@@ -65,7 +65,7 @@ class JsmStudentInfo extends Model
         'guardian_occupation',
         'guardian_phone_number',
         'relationship',
-        
+
         // Health information
         'height_cm',
         'weight_kg',

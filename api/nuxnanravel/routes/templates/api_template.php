@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Api\Auth\RegisteredUserController;
+use App\Http\Controllers\Api\Shared\WelcomeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,12 +18,12 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Auth Routes
-Route::post('/register', [App\Http\Controllers\Api\Auth\RegisteredUserController::class, 'store']);
-Route::post('/login', [App\Http\Controllers\Api\Auth\AuthenticatedSessionController::class, 'store']);
-Route::post('/logout', [App\Http\Controllers\Api\Auth\AuthenticatedSessionController::class, 'destroy'])->middleware('auth:sanctum');
+Route::post('/register', [RegisteredUserController::class, 'store']);
+Route::post('/login', [AuthenticatedSessionController::class, 'store']);
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->middleware('auth:sanctum');
 
 // Public Routes
-Route::get('/', [App\Http\Controllers\Api\Shared\WelcomeController::class, 'index']);
+Route::get('/', [WelcomeController::class, 'index']);
 
 // Protected Routes
 Route::middleware(['auth:sanctum'])->group(function () {

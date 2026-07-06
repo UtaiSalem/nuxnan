@@ -25,20 +25,20 @@ class LessonAccessService
         // Admin เห็นทุกอย่าง
         if ($isCourseAdmin) {
             return [
-                'is_locked'     => false,
-                'access_type'   => $lesson->access_type,
+                'is_locked' => false,
+                'access_type' => $lesson->access_type,
                 'access_status' => 'admin',
-                'price_label'   => null,
+                'price_label' => null,
             ];
         }
 
         // Draft/Archived
         if ($lesson->publication_status !== Lesson::STATUS_PUBLISHED) {
             return [
-                'is_locked'     => true,
-                'access_type'   => $lesson->access_type,
+                'is_locked' => true,
+                'access_type' => $lesson->access_type,
                 'access_status' => 'unavailable',
-                'price_label'   => null,
+                'price_label' => null,
             ];
         }
 
@@ -46,11 +46,12 @@ class LessonAccessService
         if ($lesson->access_type === Lesson::ACCESS_FREE) {
             // Auto-create access record ถ้ายังไม่มี
             $this->grantFreeAccess($user, $lesson);
+
             return [
-                'is_locked'     => false,
-                'access_type'   => 'free',
+                'is_locked' => false,
+                'access_type' => 'free',
                 'access_status' => 'unlocked',
-                'price_label'   => 'ฟรี',
+                'price_label' => 'ฟรี',
             ];
         }
 
@@ -59,21 +60,21 @@ class LessonAccessService
 
         if ($lesson->access_type === Lesson::ACCESS_POINTS) {
             return [
-                'is_locked'     => !$hasAccess,
-                'access_type'   => 'points',
+                'is_locked' => ! $hasAccess,
+                'access_type' => 'points',
                 'access_status' => $hasAccess ? 'unlocked' : 'locked',
-                'price_label'   => $lesson->point_tuition_fee . ' แต้ม',
-                'price_points'  => $lesson->point_tuition_fee,
+                'price_label' => $lesson->point_tuition_fee.' แต้ม',
+                'price_points' => $lesson->point_tuition_fee,
             ];
         }
 
         if ($lesson->access_type === Lesson::ACCESS_MONEY) {
             return [
-                'is_locked'     => !$hasAccess,
-                'access_type'   => 'money',
+                'is_locked' => ! $hasAccess,
+                'access_type' => 'money',
                 'access_status' => $hasAccess ? 'unlocked' : 'locked',
-                'price_label'   => '฿' . number_format($lesson->money_tuition_fee, 2),
-                'price_money'   => $lesson->money_tuition_fee,
+                'price_label' => '฿'.number_format($lesson->money_tuition_fee, 2),
+                'price_money' => $lesson->money_tuition_fee,
             ];
         }
 
@@ -97,10 +98,10 @@ class LessonAccessService
         $fee = (float) $lesson->point_tuition_fee;
         if ($user->pp < $fee) {
             return [
-                'success'  => false,
-                'message'  => 'แต้มของคุณไม่เพียงพอ',
+                'success' => false,
+                'message' => 'แต้มของคุณไม่เพียงพอ',
                 'required' => $fee,
-                'current'  => $user->pp,
+                'current' => $user->pp,
                 'shortage' => $fee - $user->pp,
             ];
         }
@@ -111,10 +112,10 @@ class LessonAccessService
 
             if ($user->pp < $fee) {
                 return [
-                    'success'  => false,
-                    'message'  => 'แต้มของคุณไม่เพียงพอ (ตรวจสอบซ้ำ)',
+                    'success' => false,
+                    'message' => 'แต้มของคุณไม่เพียงพอ (ตรวจสอบซ้ำ)',
                     'required' => $fee,
-                    'current'  => $user->pp,
+                    'current' => $user->pp,
                 ];
             }
 
@@ -128,35 +129,35 @@ class LessonAccessService
             );
 
             // 🔐 ตรวจ null
-            if (!$transaction) {
+            if (! $transaction) {
                 throw new \RuntimeException('Failed to deduct points — transaction returned null');
             }
 
             // สร้าง access record
             LessonAccess::create([
-                'user_id'                 => $user->id,
-                'course_id'               => $lesson->course_id,
-                'lesson_id'               => $lesson->id,
-                'access_type'             => LessonAccess::TYPE_POINTS,
-                'points_transaction_id'   => $transaction->id,
-                'amount'                  => $fee,
-                'status'                  => LessonAccess::STATUS_ACTIVE,
-                'unlocked_at'             => now(),
+                'user_id' => $user->id,
+                'course_id' => $lesson->course_id,
+                'lesson_id' => $lesson->id,
+                'access_type' => LessonAccess::TYPE_POINTS,
+                'points_transaction_id' => $transaction->id,
+                'amount' => $fee,
+                'status' => LessonAccess::STATUS_ACTIVE,
+                'unlocked_at' => now(),
             ]);
 
             // ✅ Credit แต้มเข้า course account ในระบบเดียวกัน
             $this->coursePointAccountService->credit(
-                courseId:            $lesson->course_id,
-                lessonId:            $lesson->id,
-                userId:              $user->id,
-                amount:              (int) $fee,
+                courseId: $lesson->course_id,
+                lessonId: $lesson->id,
+                userId: $user->id,
+                amount: (int) $fee,
                 pointsTransactionId: $transaction->id,
             );
 
             Log::info('Lesson unlocked with points', [
-                'user_id'   => $user->id,
+                'user_id' => $user->id,
                 'lesson_id' => $lesson->id,
-                'points'    => $fee,
+                'points' => $fee,
             ]);
 
             return ['success' => true, 'message' => 'ปลดล็อกบทเรียนสำเร็จ'];
@@ -179,10 +180,10 @@ class LessonAccessService
         $fee = $lesson->money_tuition_fee;
         if ($user->wallet < $fee) {
             return [
-                'success'  => false,
-                'message'  => 'ยอดเงินในกระเป๋าไม่เพียงพอ',
+                'success' => false,
+                'message' => 'ยอดเงินในกระเป๋าไม่เพียงพอ',
                 'required' => $fee,
-                'current'  => $user->wallet,
+                'current' => $user->wallet,
                 'shortage' => $fee - $user->wallet,
             ];
         }
@@ -199,14 +200,14 @@ class LessonAccessService
 
             // สร้าง access record
             LessonAccess::create([
-                'user_id'                => $user->id,
-                'course_id'              => $lesson->course_id,
-                'lesson_id'              => $lesson->id,
-                'access_type'            => LessonAccess::TYPE_MONEY,
-                'wallet_transaction_id'  => $transaction->id,
-                'amount'                 => $fee,
-                'status'                 => LessonAccess::STATUS_ACTIVE,
-                'unlocked_at'            => now(),
+                'user_id' => $user->id,
+                'course_id' => $lesson->course_id,
+                'lesson_id' => $lesson->id,
+                'access_type' => LessonAccess::TYPE_MONEY,
+                'wallet_transaction_id' => $transaction->id,
+                'amount' => $fee,
+                'status' => LessonAccess::STATUS_ACTIVE,
+                'unlocked_at' => now(),
             ]);
 
             return ['success' => true, 'message' => 'ชำระเงินและปลดล็อกบทเรียนสำเร็จ'];
@@ -221,10 +222,10 @@ class LessonAccessService
         return LessonAccess::firstOrCreate(
             ['user_id' => $user->id, 'lesson_id' => $lesson->id],
             [
-                'course_id'   => $lesson->course_id,
+                'course_id' => $lesson->course_id,
                 'access_type' => LessonAccess::TYPE_FREE,
-                'amount'      => 0,
-                'status'      => LessonAccess::STATUS_ACTIVE,
+                'amount' => 0,
+                'status' => LessonAccess::STATUS_ACTIVE,
                 'unlocked_at' => now(),
             ]
         );

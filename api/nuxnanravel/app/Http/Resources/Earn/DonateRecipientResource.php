@@ -2,9 +2,8 @@
 
 namespace App\Http\Resources\Earn;
 
-use Illuminate\Http\Request;
 use App\Http\Resources\UserResource;
-use App\Http\Resources\Earn\DonateResource;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class DonateRecipientResource extends JsonResource

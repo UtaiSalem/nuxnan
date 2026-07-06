@@ -16,11 +16,11 @@ return new class extends Migration
             $table->unsignedBigInteger('share_comment_id')->index();
             $table->unsignedBigInteger('user_id')->index();
             $table->timestamps();
-            
+
             // Foreign keys
             $table->foreign('share_comment_id')->references('id')->on('share_comments')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            
+
             // Prevent duplicate likes
             $table->unique(['share_comment_id', 'user_id']);
         });

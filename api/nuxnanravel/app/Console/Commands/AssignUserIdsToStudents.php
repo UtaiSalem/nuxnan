@@ -35,31 +35,34 @@ class AssignUserIdsToStudents extends Command
 
         $this->info("Students without user_id: {$withoutUserId}");
         $this->info("Can fill from academy_members: {$canFill}");
-        $this->info("Cannot fill (no matching user): " . ($withoutUserId - $canFill));
+        $this->info('Cannot fill (no matching user): '.($withoutUserId - $canFill));
 
         if ($canFill === 0) {
             $this->info('Nothing to update.');
+
             return 0;
         }
 
         if ($dryRun) {
             $this->warn('DRY RUN - No changes made.');
+
             return 0;
         }
 
-        if (!$this->confirm("Update {$canFill} students with user_id from academy_members?")) {
+        if (! $this->confirm("Update {$canFill} students with user_id from academy_members?")) {
             $this->info('Cancelled.');
+
             return 0;
         }
 
-        $updated = DB::statement("
+        $updated = DB::statement('
             UPDATE students s
             INNER JOIN academy_members am ON am.student_id = s.id
             SET s.user_id = am.user_id
             WHERE (s.user_id IS NULL OR s.user_id = 0)
               AND am.user_id IS NOT NULL
               AND am.user_id > 0
-        ");
+        ');
 
         // Count how many were actually updated
         $remaining = DB::table('students')
@@ -83,7 +86,7 @@ class AssignUserIdsToStudents extends Command
 
             $this->table(
                 ['ID', 'Student Code', 'First Name', 'Last Name'],
-                $orphans->map(fn($s) => [$s->id, $s->student_id, $s->first_name_th, $s->last_name_th])
+                $orphans->map(fn ($s) => [$s->id, $s->student_id, $s->first_name_th, $s->last_name_th])
             );
         }
 

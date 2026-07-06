@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Payment Model - การชำระเงิน
@@ -42,8 +41,11 @@ class Payment extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_CONFIRMED = 'confirmed';
+
     const STATUS_REJECTED = 'rejected';
+
     const STATUS_REFUNDED = 'refunded';
 
     const STATUSES = [
@@ -118,7 +120,7 @@ class Payment extends Model
         $prefix = 'RCP';
         $year = date('Y');
         $month = date('m');
-        
+
         $lastReceipt = static::where('academy_id', $academyId)
             ->where('receipt_number', 'like', "{$prefix}{$year}{$month}%")
             ->orderBy('receipt_number', 'desc')
@@ -131,7 +133,7 @@ class Payment extends Model
             $newNumber = 1;
         }
 
-        return $prefix . $year . $month . str_pad($newNumber, 5, '0', STR_PAD_LEFT);
+        return $prefix.$year.$month.str_pad($newNumber, 5, '0', STR_PAD_LEFT);
     }
 
     // Scopes

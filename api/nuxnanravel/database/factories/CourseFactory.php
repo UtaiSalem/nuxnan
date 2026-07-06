@@ -2,12 +2,13 @@
 
 namespace Database\Factories;
 
+use App\Models\Course;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Course>
+ * @extends Factory<Course>
  */
 class CourseFactory extends Factory
 {
@@ -20,11 +21,12 @@ class CourseFactory extends Factory
     {
         $name = $this->faker->sentence(3);
         $user = User::factory();
+
         return [
             'user_id' => $user,
             'instructor_id' => $user,
             'name' => $name,
-            'slug' => Str::slug($name) . '-' . Str::random(6),
+            'slug' => Str::slug($name).'-'.Str::random(6),
             'description' => $this->faker->paragraph,
             'price' => $this->faker->randomFloat(2, 0, 1000),
             'status' => 1,

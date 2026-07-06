@@ -50,17 +50,29 @@ class AuditLog extends Model
      * Action constants
      */
     public const ACTION_CREATED = 'created';
+
     public const ACTION_UPDATED = 'updated';
+
     public const ACTION_DELETED = 'deleted';
+
     public const ACTION_VIEWED = 'viewed';
+
     public const ACTION_LOGIN = 'login';
+
     public const ACTION_LOGOUT = 'logout';
+
     public const ACTION_LOGIN_FAILED = 'login_failed';
+
     public const ACTION_PASSWORD_CHANGED = 'password_changed';
+
     public const ACTION_PASSWORD_RESET = 'password_reset';
+
     public const ACTION_EXPORTED = 'exported';
+
     public const ACTION_IMPORTED = 'imported';
+
     public const ACTION_APPROVED = 'approved';
+
     public const ACTION_REJECTED = 'rejected';
 
     /**
@@ -79,6 +91,7 @@ class AuditLog extends Model
         if ($this->entity_type && $this->entity_id) {
             return $this->entity_type::find($this->entity_id);
         }
+
         return null;
     }
 
@@ -115,6 +128,7 @@ class AuditLog extends Model
         if ($entityId) {
             $query->where('entity_id', $entityId);
         }
+
         return $query;
     }
 
@@ -140,19 +154,19 @@ class AuditLog extends Model
     public function getDescriptionAttribute(): string
     {
         $entityName = $this->entity_type ? class_basename($this->entity_type) : 'Item';
-        
+
         $descriptions = [
             self::ACTION_CREATED => "สร้าง {$entityName} ใหม่",
             self::ACTION_UPDATED => "แก้ไข {$entityName}",
             self::ACTION_DELETED => "ลบ {$entityName}",
             self::ACTION_VIEWED => "ดู {$entityName}",
-            self::ACTION_LOGIN => "เข้าสู่ระบบ",
-            self::ACTION_LOGOUT => "ออกจากระบบ",
-            self::ACTION_LOGIN_FAILED => "เข้าสู่ระบบล้มเหลว",
-            self::ACTION_PASSWORD_CHANGED => "เปลี่ยนรหัสผ่าน",
-            self::ACTION_PASSWORD_RESET => "รีเซ็ตรหัสผ่าน",
-            self::ACTION_EXPORTED => "ส่งออกข้อมูล",
-            self::ACTION_IMPORTED => "นำเข้าข้อมูล",
+            self::ACTION_LOGIN => 'เข้าสู่ระบบ',
+            self::ACTION_LOGOUT => 'ออกจากระบบ',
+            self::ACTION_LOGIN_FAILED => 'เข้าสู่ระบบล้มเหลว',
+            self::ACTION_PASSWORD_CHANGED => 'เปลี่ยนรหัสผ่าน',
+            self::ACTION_PASSWORD_RESET => 'รีเซ็ตรหัสผ่าน',
+            self::ACTION_EXPORTED => 'ส่งออกข้อมูล',
+            self::ACTION_IMPORTED => 'นำเข้าข้อมูล',
             self::ACTION_APPROVED => "อนุมัติ {$entityName}",
             self::ACTION_REJECTED => "ปฏิเสธ {$entityName}",
         ];
@@ -165,7 +179,7 @@ class AuditLog extends Model
      */
     public function getChangedFieldsAttribute(): array
     {
-        if (!$this->old_values || !$this->new_values) {
+        if (! $this->old_values || ! $this->new_values) {
             return [];
         }
 
@@ -179,6 +193,7 @@ class AuditLog extends Model
                 ];
             }
         }
+
         return $changes;
     }
 }

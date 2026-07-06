@@ -12,12 +12,12 @@ class AcademyPostLikeObserver
     public function created(AcademyPostLike $like): void
     {
         $post = $like->post;
-        if (!$post) {
+        if (! $post) {
             return;
         }
 
         $post->loadMissing('academy');
-        if (!$post->academy || !$post->user_id) {
+        if (! $post->academy || ! $post->user_id) {
             return;
         }
 
@@ -29,7 +29,7 @@ class AcademyPostLikeObserver
             $post->user_id,
             $post->posted_as_group_id,
             [
-                'post_id'  => $post->id,
+                'post_id' => $post->id,
                 'liker_id' => $like->user_id,
             ]
         );

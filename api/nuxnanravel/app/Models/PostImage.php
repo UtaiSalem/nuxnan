@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Post;
-use App\Models\User;
-use App\Models\PostImageComment;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PostImage extends Model
 {
@@ -26,13 +23,11 @@ class PostImage extends Model
 
     public function getFullUrlAttribute(): string
     {
-        return asset('storage/images/posts/' . $this->filename);
+        return asset('storage/images/posts/'.$this->filename);
     }
 
     /**
      * Get all of the comments for the PostImage
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function image_comments(): HasMany
     {
@@ -41,8 +36,6 @@ class PostImage extends Model
 
     /**
      * The likedPostImage that belong to the Comment
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function likedPostImage(): BelongsToMany
     {
@@ -51,8 +44,6 @@ class PostImage extends Model
 
     /**
      * The dislikedComment that belong to the Comment
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function dislikedPostImage(): BelongsToMany
     {

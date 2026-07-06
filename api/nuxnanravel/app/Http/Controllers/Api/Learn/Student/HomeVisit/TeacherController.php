@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\HomeVisitImage;
+use App\Models\HomeVisitParticipant;
+use App\Models\HomeVisitZone;
 use App\Models\Student;
 use App\Models\StudentHomeVisit;
-use App\Models\HomeVisitImage;
-use App\Models\HomeVisitZone;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class TeacherController extends Controller
 {
@@ -18,7 +19,7 @@ class TeacherController extends Controller
      */
     public function dashboard()
     {
-        if (!session('homevisit_authenticated') || session('homevisit_user_type') !== 'teacher') {
+        if (! session('homevisit_authenticated') || session('homevisit_user_type') !== 'teacher') {
             return redirect()->route('homevisit.login');
         }
 
@@ -41,7 +42,7 @@ class TeacherController extends Controller
             ->values(); // Convert to array
 
         return response()->json([
-            'students' => (object)['data' => []], // Empty initial state
+            'students' => (object) ['data' => []], // Empty initial state
             'classrooms' => $classrooms,
             'zones' => HomeVisitZone::active()->ordered()->get(),
             'stats' => $stats,
@@ -54,20 +55,20 @@ class TeacherController extends Controller
      */
     public function searchStudents(Request $request)
     {
-        if (!session('homevisit_authenticated') || session('homevisit_user_type') !== 'teacher') {
+        if (! session('homevisit_authenticated') || session('homevisit_user_type') !== 'teacher') {
             return redirect()->route('homevisit.login');
         }
 
         $query = Student::with([
-            'academicInfo', 
+            'academicInfo',
             'addresses',
-            'contacts', 
-            'guardians.contacts', 
+            'contacts',
+            'guardians.contacts',
             'healthInfo',
             'documents',
-            'homeVisits' => function($q) {
+            'homeVisits' => function ($q) {
                 $q->orderBy('visit_date', 'desc')->with(['images', 'participants']);
-            }
+            },
         ]);
 
         // Search functionality - student ID only
@@ -77,7 +78,7 @@ class TeacherController extends Controller
 
         // Filter by classroom through academic info
         if ($request->classroom) {
-            $query->whereHas('academicInfo', function($q) use ($request) {
+            $query->whereHas('academicInfo', function ($q) use ($request) {
                 $q->where('current_class', $request->classroom);
             });
         }
@@ -122,13 +123,13 @@ class TeacherController extends Controller
      */
     public function manageStudent($studentId)
     {
-        if (!session('homevisit_authenticated') || session('homevisit_user_type') !== 'teacher') {
+        if (! session('homevisit_authenticated') || session('homevisit_user_type') !== 'teacher') {
             return redirect()->route('homevisit.login');
         }
 
         $student = Student::with(['academicInfo', 'addresses', 'contacts', 'guardians.contacts', 'healthInfo'])
             ->findOrFail($studentId);
-        
+
         // Get student's home visit records
         $homeVisits = StudentHomeVisit::where('student_id', $studentId)
             ->with(['zone', 'images', 'participants'])
@@ -152,7 +153,7 @@ class TeacherController extends Controller
      */
     public function createHomeVisit(Request $request, $studentId)
     {
-        if (!session('homevisit_authenticated') || session('homevisit_user_type') !== 'teacher') {
+        if (! session('homevisit_authenticated') || session('homevisit_user_type') !== 'teacher') {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -182,7 +183,7 @@ class TeacherController extends Controller
 
         } catch (\Exception $e) {
             return redirect()->back()
-                ->withErrors(['error' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage()])
+                ->withErrors(['error' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: '.$e->getMessage()])
                 ->withInput();
         }
     }
@@ -197,7 +198,7 @@ class TeacherController extends Controller
         // }
 
         $homeVisit = StudentHomeVisit::findOrFail($homeVisitId);
-        
+
         // Similar validation and update logic as createHomeVisit
         $validatedData = $request->validate([
             'recommendations' => 'nullable|string',
@@ -212,13 +213,13 @@ class TeacherController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'อัปเดตข้อมูลการเยี่ยมบ้านสำเร็จแล้ว',
-                'homeVisit' => $homeVisit
+                'homeVisit' => $homeVisit,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -233,7 +234,7 @@ class TeacherController extends Controller
         // }
 
         $homeVisit = StudentHomeVisit::findOrFail($homeVisitId);
-        
+
         try {
             // Delete associated photos
             if ($homeVisit->photos) {
@@ -247,13 +248,13 @@ class TeacherController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'ลบข้อมูลการเยี่ยมบ้านสำเร็จแล้ว'
+                'message' => 'ลบข้อมูลการเยี่ยมบ้านสำเร็จแล้ว',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการลบข้อมูล: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการลบข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -268,17 +269,17 @@ class TeacherController extends Controller
         // }
 
         $student = Student::findOrFail($studentId);
-        
+
         try {
             // Update student basic info
             $student->update($request->only([
                 'title_prefix_th',
-                'first_name_th', 
+                'first_name_th',
                 'last_name_th',
                 'nickname',
                 'citizen_id',
                 'class_level',
-                'class_section'
+                'class_section',
             ]));
 
             // Update academic info if provided
@@ -294,7 +295,7 @@ class TeacherController extends Controller
                 // Simple approach: delete and recreate contacts
                 $student->contacts()->delete();
                 foreach ($request->contacts as $contact) {
-                    if (!empty($contact['contact_value'])) {
+                    if (! empty($contact['contact_value'])) {
                         $student->contacts()->create($contact);
                     }
                 }
@@ -302,13 +303,13 @@ class TeacherController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'อัพเดทข้อมูลนักเรียนสำเร็จแล้ว'
+                'message' => 'อัพเดทข้อมูลนักเรียนสำเร็จแล้ว',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการอัพเดทข้อมูล: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการอัพเดทข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -330,11 +331,11 @@ class TeacherController extends Controller
             'notes' => 'nullable|string',
             'participants' => 'nullable|array',
             'participants.*.name' => 'required|string',
-            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:20480'
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:20480',
         ]);
 
         $student = Student::findOrFail($studentId);
-        
+
         try {
             // Create home visit record using the smart method
             $homeVisit = StudentHomeVisit::createFromStudent($student, [
@@ -350,14 +351,14 @@ class TeacherController extends Controller
             // Add participants
             if ($request->has('participants') && is_array($request->participants)) {
                 foreach ($request->participants as $participantData) {
-                    \App\Models\HomeVisitParticipant::create([
+                    HomeVisitParticipant::create([
                         'home_visit_id' => $homeVisit->id,
                         'participant_name' => $participantData['name'],
                     ]);
                 }
             } else {
                 // Fallback: Add current user if no participants provided
-                \App\Models\HomeVisitParticipant::create([
+                HomeVisitParticipant::create([
                     'home_visit_id' => $homeVisit->id,
                     'participant_name' => session('homevisit_user_name', 'ครู'),
                 ]);
@@ -366,9 +367,9 @@ class TeacherController extends Controller
             // Handle image uploads
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $index => $image) {
-                    $imageName = time() . '_' . $index . '.' . $image->getClientOriginalExtension();
-                    $imagePath = $image->storeAs('home_visit_images/' . $homeVisit->id, $imageName, 'public');
-                    
+                    $imageName = time().'_'.$index.'.'.$image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('home_visit_images/'.$homeVisit->id, $imageName, 'public');
+
                     // Save using HomeVisitImage model
                     HomeVisitImage::create([
                         'home_visit_id' => $homeVisit->id,
@@ -376,7 +377,7 @@ class TeacherController extends Controller
                         'image_name' => $imageName,
                         'image_type' => 'evidence',
                         'description' => 'รูปภาพหลักฐานการเยี่ยมบ้าน',
-                        'uploaded_by' => session('homevisit_user_id', 1)
+                        'uploaded_by' => session('homevisit_user_id', 1),
                     ]);
                 }
             }
@@ -384,7 +385,7 @@ class TeacherController extends Controller
             return redirect()->back()->with('success', 'บันทึกการเยี่ยมบ้านสำเร็จแล้ว');
 
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: '.$e->getMessage());
         }
     }
 
@@ -409,11 +410,11 @@ class TeacherController extends Controller
             'participants' => 'required|array|min:1',
             'participants.*.participant_name' => 'required|string',
             'new_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:20480',
-            'images_to_delete' => 'nullable|array'
+            'images_to_delete' => 'nullable|array',
         ]);
 
         $homeVisit = StudentHomeVisit::findOrFail($homeVisitId);
-        
+
         try {
             DB::beginTransaction();
 
@@ -433,10 +434,10 @@ class TeacherController extends Controller
             if ($request->has('participants')) {
                 // Delete existing participants
                 $homeVisit->participants()->delete();
-                
+
                 // Add new participants
                 foreach ($request->participants as $participantData) {
-                    \App\Models\HomeVisitParticipant::create([
+                    HomeVisitParticipant::create([
                         'home_visit_id' => $homeVisit->id,
                         'participant_name' => $participantData['participant_name'],
                     ]);
@@ -446,7 +447,7 @@ class TeacherController extends Controller
             // Handle image deletions
             if ($request->has('images_to_delete') && is_array($request->images_to_delete)) {
                 foreach ($request->images_to_delete as $imageId) {
-                    $image = \App\Models\HomeVisitImage::find($imageId);
+                    $image = HomeVisitImage::find($imageId);
                     if ($image && $image->home_visit_id == $homeVisit->id) {
                         // Delete file from storage
                         if ($image->image_path) {
@@ -461,17 +462,17 @@ class TeacherController extends Controller
             // Handle new image uploads
             if ($request->hasFile('new_images')) {
                 foreach ($request->file('new_images') as $index => $image) {
-                    $imageName = time() . '_' . $index . '.' . $image->getClientOriginalExtension();
-                    $imagePath = $image->storeAs('home_visit_images/' . $homeVisit->id, $imageName, 'public');
-                    
+                    $imageName = time().'_'.$index.'.'.$image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('home_visit_images/'.$homeVisit->id, $imageName, 'public');
+
                     // Save using HomeVisitImage model
-                    \App\Models\HomeVisitImage::create([
+                    HomeVisitImage::create([
                         'home_visit_id' => $homeVisit->id,
                         'image_path' => $imagePath,
                         'image_name' => $imageName,
                         'image_type' => 'evidence',
                         'description' => 'รูปภาพหลักฐานการเยี่ยมบ้าน',
-                        'uploaded_by' => session('homevisit_user_id', 1)
+                        'uploaded_by' => session('homevisit_user_id', 1),
                     ]);
                 }
             }
@@ -484,14 +485,15 @@ class TeacherController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'อัปเดตข้อมูลการเยี่ยมบ้านเรียบร้อยแล้ว',
-                'visit' => $homeVisit
+                'visit' => $homeVisit,
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }

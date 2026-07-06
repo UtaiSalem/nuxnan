@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Enums\UsageEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\UsageEventService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +30,7 @@ class AuthController extends Controller
      * Get a JWT via given credentials.
      * Supports multi-field login: email, phone, username, or member ID
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function login(Request $request)
     {
@@ -85,7 +88,7 @@ class AuthController extends Controller
         }
 
         // Fire gamification event
-        \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::LOGIN->value);
+        UsageEventService::fire($user, UsageEventType::LOGIN->value);
 
         return $this->respondWithToken($token);
     }
@@ -93,7 +96,7 @@ class AuthController extends Controller
     /**
      * Register a User.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function register(Request $request)
     {
@@ -180,7 +183,7 @@ class AuthController extends Controller
     /**
      * Get the authenticated User.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function me()
     {
@@ -197,7 +200,7 @@ class AuthController extends Controller
     /**
      * Log the user out (Invalidate the token).
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function logout()
     {
@@ -212,7 +215,7 @@ class AuthController extends Controller
     /**
      * Refresh a token.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function refresh()
     {
@@ -222,7 +225,7 @@ class AuthController extends Controller
     /**
      * Validate referral code
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function validateReferralCode(Request $request)
     {
@@ -281,7 +284,7 @@ class AuthController extends Controller
      * Get the token array structure.
      *
      * @param  string  $token
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     protected function respondWithToken($token)
     {

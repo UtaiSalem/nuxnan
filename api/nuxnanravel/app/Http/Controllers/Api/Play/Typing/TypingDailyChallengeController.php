@@ -1,10 +1,10 @@
 <?php
+
 namespace App\Http\Controllers\Api\Play\Typing;
 
 use App\Http\Controllers\Controller;
 use App\Models\TypingDailyChallenge;
 use App\Models\TypingUserDailyChallenge;
-use App\Models\TypingSession;
 use App\Services\PointsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,22 +15,22 @@ class TypingDailyChallengeController extends Controller
     {
         $challenge = TypingDailyChallenge::whereDate('challenge_date', today())->first();
 
-        if (!$challenge) {
+        if (! $challenge) {
             return response()->json(['success' => false, 'message' => 'No challenge today.'], 404);
         }
 
         $userEntry = null;
         if (Auth::check()) {
             $userEntry = TypingUserDailyChallenge::where([
-                'user_id'      => Auth::id(),
+                'user_id' => Auth::id(),
                 'challenge_id' => $challenge->id,
             ])->first();
         }
 
         return response()->json([
-            'success'    => true,
-            'challenge'  => $challenge,
-            'completed'  => $userEntry?->completed ?? false,
+            'success' => true,
+            'challenge' => $challenge,
+            'completed' => $userEntry?->completed ?? false,
             'user_score' => $userEntry?->score ?? null,
         ]);
     }
@@ -41,7 +41,7 @@ class TypingDailyChallengeController extends Controller
 
         // ตรวจว่าทำแล้วหรือยัง
         $existing = TypingUserDailyChallenge::where([
-            'user_id'      => $user->id,
+            'user_id' => $user->id,
             'challenge_id' => $challenge->id,
         ])->first();
 
@@ -51,9 +51,9 @@ class TypingDailyChallengeController extends Controller
 
         $validated = $request->validate([
             'session_id' => 'required|exists:typing_sessions,id',
-            'score'      => 'required|integer|min:0',
-            'wpm'        => 'required|integer|min:0',
-            'accuracy'   => 'required|numeric|min:0|max:100',
+            'score' => 'required|integer|min:0',
+            'wpm' => 'required|integer|min:0',
+            'accuracy' => 'required|numeric|min:0|max:100',
         ]);
 
         $completed = $validated['wpm'] >= $challenge->target_wpm
@@ -62,11 +62,11 @@ class TypingDailyChallengeController extends Controller
         TypingUserDailyChallenge::updateOrCreate(
             ['user_id' => $user->id, 'challenge_id' => $challenge->id],
             [
-                'session_id'   => $validated['session_id'],
-                'completed'    => $completed,
-                'score'        => $validated['score'],
-                'wpm'          => $validated['wpm'],
-                'accuracy'     => $validated['accuracy'],
+                'session_id' => $validated['session_id'],
+                'completed' => $completed,
+                'score' => $validated['score'],
+                'wpm' => $validated['wpm'],
+                'accuracy' => $validated['accuracy'],
                 'completed_at' => $completed ? now() : null,
             ]
         );
@@ -84,9 +84,9 @@ class TypingDailyChallengeController extends Controller
         }
 
         return response()->json([
-            'success'   => true,
+            'success' => true,
             'completed' => $completed,
-            'rewards'   => $completed ? [
+            'rewards' => $completed ? [
                 'xp' => $challenge->xp_reward,
                 'pp' => $challenge->pp_reward,
             ] : null,

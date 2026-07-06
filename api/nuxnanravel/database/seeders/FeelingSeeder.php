@@ -29,7 +29,7 @@ class FeelingSeeder extends Seeder
             ['name' => 'relaxed', 'name_th' => 'ผ่อนคลาย', 'icon' => '😌', 'sort_order' => 13],
             ['name' => 'peaceful', 'name_th' => 'สงบ', 'icon' => '☮️', 'sort_order' => 14],
             ['name' => 'content', 'name_th' => 'พอใจ', 'icon' => '😊', 'sort_order' => 15],
-            
+
             // Neutral feelings
             ['name' => 'thoughtful', 'name_th' => 'ครุ่นคิด', 'icon' => '🤔', 'sort_order' => 20],
             ['name' => 'curious', 'name_th' => 'อยากรู้', 'icon' => '🧐', 'sort_order' => 21],
@@ -41,7 +41,7 @@ class FeelingSeeder extends Seeder
             ['name' => 'sleepy', 'name_th' => 'ง่วง', 'icon' => '😴', 'sort_order' => 27],
             ['name' => 'tired', 'name_th' => 'เหนื่อย', 'icon' => '😩', 'sort_order' => 28],
             ['name' => 'lazy', 'name_th' => 'ขี้เกียจ', 'icon' => '🦥', 'sort_order' => 29],
-            
+
             // Negative feelings
             ['name' => 'sad', 'name_th' => 'เศร้า', 'icon' => '😢', 'sort_order' => 40],
             ['name' => 'angry', 'name_th' => 'โกรธ', 'icon' => '😠', 'sort_order' => 41],

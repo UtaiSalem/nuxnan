@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\CourseGroup;
 use App\Models\Lesson;
 use App\Models\Topic;
-use App\Models\CourseGroup;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,10 +15,15 @@ class TopicsAndGroupsReorderTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
+
     protected $student;
+
     protected $course;
+
     protected $lesson;
+
     protected $topics;
+
     protected $groups;
 
     protected function setUp(): void
@@ -51,7 +56,7 @@ class TopicsAndGroupsReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/lessons/{$this->lesson->id}/topics/reorder", [
-                'topics' => $newOrder
+                'topics' => $newOrder,
             ]);
 
         $response->assertStatus(200);
@@ -65,10 +70,10 @@ class TopicsAndGroupsReorderTest extends TestCase
     public function non_admin_cannot_reorder_topics()
     {
         $topicIds = $this->topics->pluck('id')->toArray();
-        
+
         $response = $this->actingAs($this->student, 'api')
             ->patchJson("/api/lessons/{$this->lesson->id}/topics/reorder", [
-                'topics' => [$topicIds[0]]
+                'topics' => [$topicIds[0]],
             ]);
 
         $response->assertStatus(403);
@@ -82,7 +87,7 @@ class TopicsAndGroupsReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/courses/{$this->course->id}/groups/reorder", [
-                'groups' => $newOrder
+                'groups' => $newOrder,
             ]);
 
         $response->assertStatus(200);
@@ -99,7 +104,7 @@ class TopicsAndGroupsReorderTest extends TestCase
 
         $response = $this->actingAs($this->student, 'api')
             ->patchJson("/api/courses/{$this->course->id}/groups/reorder", [
-                'groups' => [$groupIds[0]]
+                'groups' => [$groupIds[0]],
             ]);
 
         $response->assertStatus(403);
@@ -120,7 +125,7 @@ class TopicsAndGroupsReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/lessons/{$this->lesson->id}/topics/reorder", [
-                'topics' => $invalidOrder
+                'topics' => $invalidOrder,
             ]);
 
         $response->assertStatus(422);
@@ -140,7 +145,7 @@ class TopicsAndGroupsReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/courses/{$this->course->id}/groups/reorder", [
-                'groups' => $invalidOrder
+                'groups' => $invalidOrder,
             ]);
 
         $response->assertStatus(422);
@@ -150,7 +155,7 @@ class TopicsAndGroupsReorderTest extends TestCase
     public function creating_topic_sets_sort_order_to_max_plus_one()
     {
         $maxSortOrder = $this->topics->max('sort_order');
-        
+
         $newTopic = Topic::factory()->create([
             'lesson_id' => $this->lesson->id,
             'course_id' => $this->course->id,
@@ -164,7 +169,7 @@ class TopicsAndGroupsReorderTest extends TestCase
     public function creating_course_group_sets_sort_order_to_max_plus_one()
     {
         $maxSortOrder = $this->groups->max('sort_order');
-        
+
         $newGroup = CourseGroup::factory()->create([
             'course_id' => $this->course->id,
             'user_id' => $this->admin->id,
@@ -202,7 +207,7 @@ class TopicsAndGroupsReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/lessons/{$this->lesson->id}/topics/reorder", [
-                'topics' => $subset
+                'topics' => $subset,
             ]);
 
         $response->assertStatus(422);
@@ -216,7 +221,7 @@ class TopicsAndGroupsReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/lessons/{$this->lesson->id}/topics/reorder", [
-                'topics' => $duplicates
+                'topics' => $duplicates,
             ]);
 
         $response->assertStatus(422);

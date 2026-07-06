@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Traits\Auditable;
 
 /**
  * LeaveRequest Model - คำขอลา
  */
 class LeaveRequest extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'staff_profile_id',
@@ -40,8 +40,11 @@ class LeaveRequest extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
+
     const STATUS_CANCELLED = 'cancelled';
 
     const STATUSES = [
@@ -53,7 +56,9 @@ class LeaveRequest extends Model
 
     // Leave period constants
     const PERIOD_FULL_DAY = 'full_day';
+
     const PERIOD_MORNING = 'morning';
+
     const PERIOD_AFTERNOON = 'afternoon';
 
     // Relationships
@@ -88,7 +93,8 @@ class LeaveRequest extends Model
         if ($this->start_date->equalTo($this->end_date)) {
             return $this->start_date->format('d/m/Y');
         }
-        return $this->start_date->format('d/m/Y') . ' - ' . $this->end_date->format('d/m/Y');
+
+        return $this->start_date->format('d/m/Y').' - '.$this->end_date->format('d/m/Y');
     }
 
     // Methods
@@ -121,11 +127,11 @@ class LeaveRequest extends Model
     public function calculateTotalDays(): float
     {
         $days = $this->start_date->diffInDays($this->end_date) + 1;
-        
+
         if ($this->leave_period !== self::PERIOD_FULL_DAY) {
             $days = $days * 0.5;
         }
-        
+
         return $days;
     }
 

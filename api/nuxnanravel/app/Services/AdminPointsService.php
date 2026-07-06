@@ -2,14 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\PointsTransaction;
-use App\Models\PointRule;
 use App\Models\DailyPointLimit;
-use App\Models\Achievement;
-use App\Models\UserAchievement;
-use Illuminate\Support\Facades\DB;
+use App\Models\PointsTransaction;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class AdminPointsService
 {
@@ -18,8 +15,8 @@ class AdminPointsService
      */
     public function getStats(array $filters = []): array
     {
-        $cacheKey = 'admin_points_stats_' . md5(json_encode($filters));
-        
+        $cacheKey = 'admin_points_stats_'.md5(json_encode($filters));
+
         return Cache::remember($cacheKey, 300, function () use ($filters) {
             $startDate = $filters['start_date'] ?? now()->subDays(30);
             $endDate = $filters['end_date'] ?? now();
@@ -195,7 +192,7 @@ class AdminPointsService
                             'admin_id' => auth()->id(),
                             'action' => $action,
                             'original_amount' => $amount,
-                            'bulk_operation' => true
+                            'bulk_operation' => true,
                         ]),
                         'status' => 'completed',
                     ]);
@@ -226,7 +223,7 @@ class AdminPointsService
                     'total' => count($userIds),
                     'success' => $successCount,
                     'failure' => $failureCount,
-                ]
+                ],
             ];
         } catch (\Exception $e) {
             DB::rollBack();

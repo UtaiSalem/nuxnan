@@ -41,12 +41,19 @@ class LeaveType extends Model
 
     // Common leave type codes
     const CODE_ANNUAL = 'ANNUAL';
+
     const CODE_SICK = 'SICK';
+
     const CODE_PERSONAL = 'PERSONAL';
+
     const CODE_MATERNITY = 'MATERNITY';
+
     const CODE_PATERNITY = 'PATERNITY';
+
     const CODE_ORDINATION = 'ORDINATION';
+
     const CODE_MILITARY = 'MILITARY';
+
     const CODE_UNPAID = 'UNPAID';
 
     // Relationships

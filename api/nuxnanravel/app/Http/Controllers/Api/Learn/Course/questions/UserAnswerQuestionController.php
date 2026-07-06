@@ -4,22 +4,26 @@ namespace App\Http\Controllers\Api\Learn\Course\questions;
 
 use App\Constants\QuizConstants;
 use App\Http\Controllers\Controller;
+use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\CourseQuiz;
 use App\Models\CourseQuizResult;
 use App\Models\Question;
+use App\Models\QuestionOption;
 use App\Models\UserAnswerQuestion;
+use App\Services\ContentVisibilityService;
+use App\Services\CourseScoreService;
 use App\Services\QuizEfficiencyService;
 use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-
-use App\Services\ContentVisibilityService;
 
 class UserAnswerQuestionController extends Controller
 {
     protected $quizEfficiencyService;
+
     protected ContentVisibilityService $visibility;
 
     public function __construct(QuizEfficiencyService $quizEfficiencyService, ContentVisibilityService $visibility)
@@ -35,14 +39,14 @@ class UserAnswerQuestionController extends Controller
     {
         $user = auth()->user();
         $isCourseAdmin = false;
-        
-        $course = \App\Models\Course::find($quiz->course_id ?? $request->course_id);
+
+        $course = Course::find($quiz->course_id ?? $request->course_id);
         if ($course) {
             $isCourseAdmin = $course->isAdmin($user);
         }
 
         // Visibility guard for students
-        if (!$isCourseAdmin) {
+        if (! $isCourseAdmin) {
             $this->visibility->assertVisibleOrFail($quiz, $user, 403);
         }
 
@@ -58,9 +62,9 @@ class UserAnswerQuestionController extends Controller
         }
 
         // Lifecycle guard: block regular quiz submissions after the course ends.
-        $course = \App\Models\Course::find($quiz->course_id ?? $request->course_id);
+        $course = Course::find($quiz->course_id ?? $request->course_id);
         if ($course) {
-            $gate = \Illuminate\Support\Facades\Gate::inspect('submitQuiz', $course);
+            $gate = Gate::inspect('submitQuiz', $course);
             if ($gate->denied()) {
                 return response()->json([
                     'success' => false,
@@ -98,7 +102,7 @@ class UserAnswerQuestionController extends Controller
             }
 
             // Create new answer since none exists
-            $selectedOption = \App\Models\QuestionOption::find($request->answer_id);
+            $selectedOption = QuestionOption::find($request->answer_id);
             $isCorrect = $selectedOption && $selectedOption->is_correct;
 
             $userAnswerQuestion = UserAnswerQuestion::create([
@@ -125,12 +129,12 @@ class UserAnswerQuestionController extends Controller
     public function update(CourseQuiz $quiz, Question $question, UserAnswerQuestion $answer, Request $request)
     {
         $user = auth()->user();
-        
-        $course = \App\Models\Course::find($quiz->course_id);
+
+        $course = Course::find($quiz->course_id);
         $isCourseAdmin = $course ? $course->isAdmin($user) : false;
 
         // Visibility guard for students
-        if (!$isCourseAdmin) {
+        if (! $isCourseAdmin) {
             $this->visibility->assertVisibleOrFail($quiz, $user, 403);
         }
 
@@ -183,8 +187,8 @@ class UserAnswerQuestionController extends Controller
             $newAnswer = $request->answer_id;
 
             // Logic change: Check if the options themselves are marked as correct
-            $oldOption = \App\Models\QuestionOption::find($oldAnswer);
-            $newOption = \App\Models\QuestionOption::find($newAnswer);
+            $oldOption = QuestionOption::find($oldAnswer);
+            $newOption = QuestionOption::find($newAnswer);
 
             $isOldAnswerCorrect = $oldOption && $oldOption->is_correct;
             $isNewAnswerCorrect = $newOption && $newOption->is_correct;
@@ -284,7 +288,7 @@ class UserAnswerQuestionController extends Controller
             throw new \Exception('ไม่พบข้อมูลสมาชิกในคอร์สนี้');
         }
 
-        app(\App\Services\CourseScoreService::class)->recompute($courseMember);
+        app(CourseScoreService::class)->recompute($courseMember);
 
         return $courseMember;
     }

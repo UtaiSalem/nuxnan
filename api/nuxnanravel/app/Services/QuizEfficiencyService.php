@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\CourseQuizResult;
 use App\Models\CourseQuiz;
+use App\Models\CourseQuizResult;
 
 class QuizEfficiencyService
 {
@@ -11,9 +11,7 @@ class QuizEfficiencyService
      * Calculate quiz efficiency score.
      * Logic: (Score / Total Score) * 100
      * You can expand this to include duration factors later.
-     * 
-     * @param CourseQuizResult $result
-     * @param CourseQuiz $quiz
+     *
      * @return float
      */
     public function calculateEfficiency(CourseQuizResult $result, CourseQuiz $quiz)

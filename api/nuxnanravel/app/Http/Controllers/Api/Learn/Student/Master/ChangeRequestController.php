@@ -5,7 +5,12 @@ namespace App\Http\Controllers\Api\Learn\Student\Master;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Student;
+use App\Models\StudentAcademicInfo;
+use App\Models\StudentAddress;
 use App\Models\StudentChangeRequest;
+use App\Models\StudentContact;
+use App\Models\StudentGuardian;
+use App\Models\StudentHealthInfo;
 use Illuminate\Http\Request;
 
 class ChangeRequestController extends Controller
@@ -18,7 +23,7 @@ class ChangeRequestController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -32,7 +37,7 @@ class ChangeRequestController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $requests
+            'data' => $requests,
         ]);
     }
 
@@ -44,14 +49,14 @@ class ChangeRequestController extends Controller
         if ($changeRequest->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลคำขอไม่อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลคำขอไม่อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
         if ($changeRequest->student_id !== $student->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลคำขอไม่ตรงกับนักเรียนคนนี้'
+                'message' => 'ข้อมูลคำขอไม่ตรงกับนักเรียนคนนี้',
             ], 403);
         }
 
@@ -63,15 +68,15 @@ class ChangeRequestController extends Controller
 
         // Whitelist allowed models to prevent dynamic class instantiation vulnerability
         $allowedModels = [
-            'Student' => \App\Models\Student::class,
-            'StudentAddress' => \App\Models\StudentAddress::class,
-            'StudentContact' => \App\Models\StudentContact::class,
-            'StudentGuardian' => \App\Models\StudentGuardian::class,
-            'StudentHealthInfo' => \App\Models\StudentHealthInfo::class,
-            'StudentAcademicInfo' => \App\Models\StudentAcademicInfo::class,
+            'Student' => Student::class,
+            'StudentAddress' => StudentAddress::class,
+            'StudentContact' => StudentContact::class,
+            'StudentGuardian' => StudentGuardian::class,
+            'StudentHealthInfo' => StudentHealthInfo::class,
+            'StudentAcademicInfo' => StudentAcademicInfo::class,
         ];
 
-        if (!array_key_exists($changeRequest->model_type, $allowedModels)) {
+        if (! array_key_exists($changeRequest->model_type, $allowedModels)) {
             return response()->json(['success' => false, 'error' => 'ประเภทข้อมูลไม่ถูกต้อง'], 400);
         }
 
@@ -91,7 +96,7 @@ class ChangeRequestController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'อนุมัติคำขอสำเร็จแล้วและอัปเดตข้อมูลแล้ว'
+            'message' => 'อนุมัติคำขอสำเร็จแล้วและอัปเดตข้อมูลแล้ว',
         ]);
     }
 
@@ -103,14 +108,14 @@ class ChangeRequestController extends Controller
         if ($changeRequest->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลคำขอไม่อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลคำขอไม่อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
         if ($changeRequest->student_id !== $student->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลคำขอไม่ตรงกับนักเรียนคนนี้'
+                'message' => 'ข้อมูลคำขอไม่ตรงกับนักเรียนคนนี้',
             ], 403);
         }
 
@@ -131,7 +136,7 @@ class ChangeRequestController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ปฏิเสธคำขอเรียบร้อยแล้ว'
+            'message' => 'ปฏิเสธคำขอเรียบร้อยแล้ว',
         ]);
     }
 }

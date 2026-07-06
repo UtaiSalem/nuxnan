@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 return new class extends Migration
 {
@@ -32,7 +33,7 @@ return new class extends Migration
             $hash = md5($user->id);
             $folder1 = substr($hash, 0, 2);
             $folder2 = substr($hash, 2, 2);
-            
+
             // Check if ALREADY in correct sharded format
             if (preg_match("#^avatars/{$folder1}/{$folder2}/#", $currentPath)) {
                 continue;
@@ -43,31 +44,34 @@ return new class extends Migration
             $cleanPath = preg_replace('#^/?(storage/)?#', '', $currentPath);
 
             // Check if source file exists
-            if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($cleanPath)) {
-                \Illuminate\Support\Facades\Log::warning("File not found for user {$user->id}: {$cleanPath}");
+            if (! Storage::disk('public')->exists($cleanPath)) {
+                Log::warning("File not found for user {$user->id}: {$cleanPath}");
+
                 continue; // File missing, skip or handle? Skipping for safety.
             }
 
             // Determine extension
             $extension = pathinfo($cleanPath, PATHINFO_EXTENSION);
-            if (!$extension) $extension = 'jpg';
+            if (! $extension) {
+                $extension = 'jpg';
+            }
 
             // Generate new filename and path
-            $newFilename = $user->id . '_' . time() . '_' . uniqid() . '.' . $extension;
+            $newFilename = $user->id.'_'.time().'_'.uniqid().'.'.$extension;
             $newPath = "avatars/{$folder1}/{$folder2}/{$newFilename}";
 
             try {
                 // Move file
-                \Illuminate\Support\Facades\Storage::disk('public')->move($cleanPath, $newPath);
-                
+                Storage::disk('public')->move($cleanPath, $newPath);
+
                 // Update Database with new relative path
                 DB::table('users')
                     ->where('id', $user->id)
                     ->update(['profile_photo_path' => $newPath]);
-                
+
                 $count++;
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Failed to migrate avatar for user {$user->id}: " . $e->getMessage());
+            } catch (Exception $e) {
+                Log::error("Failed to migrate avatar for user {$user->id}: ".$e->getMessage());
             }
         }
 

@@ -4,14 +4,13 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\StaffProfile;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\SalaryStructure;
+use App\Models\StaffProfile;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class PayrollController extends Controller
 {
@@ -43,7 +42,7 @@ class PayrollController extends Controller
 
         // Filter by year/month
         if ($request->has('year')) {
-            $query->where('pay_period', 'like', $request->year . '-%');
+            $query->where('pay_period', 'like', $request->year.'-%');
         }
 
         if ($request->has('month')) {
@@ -62,7 +61,7 @@ class PayrollController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $payrolls
+            'data' => $payrolls,
         ]);
     }
 
@@ -76,13 +75,13 @@ class PayrollController extends Controller
         $payroll->load([
             'staffProfile.user:id,name,email,avatar',
             'staffProfile.position:id,name',
-            'items' => fn($q) => $q->ordered(),
-            'approver:id,name'
+            'items' => fn ($q) => $q->ordered(),
+            'approver:id,name',
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $payroll
+            'data' => $payroll,
         ]);
     }
 
@@ -106,7 +105,7 @@ class PayrollController extends Controller
         ]);
 
         $staffProfile = StaffProfile::findOrFail($validated['staff_profile_id']);
-        
+
         if ($staffProfile->academy_id !== $academy->id) {
             return response()->json(['success' => false, 'message' => 'Staff not found'], 404);
         }
@@ -119,7 +118,7 @@ class PayrollController extends Controller
         if ($existing) {
             return response()->json([
                 'success' => false,
-                'message' => 'เงินเดือนสำหรับงวดนี้ถูกสร้างแล้ว'
+                'message' => 'เงินเดือนสำหรับงวดนี้ถูกสร้างแล้ว',
             ], 400);
         }
 
@@ -127,7 +126,7 @@ class PayrollController extends Controller
         $totalEarnings = $validated['base_salary'];
         $totalDeductions = 0;
 
-        if (!empty($validated['items'])) {
+        if (! empty($validated['items'])) {
             foreach ($validated['items'] as $item) {
                 if ($item['type'] === 'earning') {
                     $totalEarnings += $item['amount'];
@@ -138,7 +137,7 @@ class PayrollController extends Controller
         }
 
         // Apply salary structure if provided
-        if (!empty($validated['salary_structure_id'])) {
+        if (! empty($validated['salary_structure_id'])) {
             $structure = SalaryStructure::find($validated['salary_structure_id']);
             if ($structure) {
                 $totalEarnings += $structure->getTotalAllowances();
@@ -159,7 +158,7 @@ class PayrollController extends Controller
         ]);
 
         // Create payroll items
-        if (!empty($validated['items'])) {
+        if (! empty($validated['items'])) {
             foreach ($validated['items'] as $index => $item) {
                 PayrollItem::create([
                     'payroll_id' => $payroll->id,
@@ -174,9 +173,9 @@ class PayrollController extends Controller
         }
 
         // Apply salary structure items
-        if (!empty($validated['salary_structure_id']) && $structure) {
+        if (! empty($validated['salary_structure_id']) && $structure) {
             $order = count($validated['items'] ?? []) + 1;
-            
+
             if ($structure->allowances) {
                 foreach ($structure->allowances as $allowance) {
                     PayrollItem::create([
@@ -213,14 +212,14 @@ class PayrollController extends Controller
             'academy',
             [
                 'pay_period' => $payroll->pay_period,
-                'net_salary' => $payroll->net_salary
+                'net_salary' => $payroll->net_salary,
             ]
         );
 
         return response()->json([
             'success' => true,
             'data' => $payroll->load(['staffProfile.user:id,name', 'items']),
-            'message' => 'สร้างรายการเงินเดือนเรียบร้อยแล้ว'
+            'message' => 'สร้างรายการเงินเดือนเรียบร้อยแล้ว',
         ], 201);
     }
 
@@ -234,7 +233,7 @@ class PayrollController extends Controller
         if ($payroll->status !== Payroll::STATUS_DRAFT) {
             return response()->json([
                 'success' => false,
-                'message' => 'สามารถแก้ไขได้เฉพาะรายการที่เป็น Draft เท่านั้น'
+                'message' => 'สามารถแก้ไขได้เฉพาะรายการที่เป็น Draft เท่านั้น',
             ], 400);
         }
 
@@ -253,7 +252,7 @@ class PayrollController extends Controller
         return response()->json([
             'success' => true,
             'data' => $payroll->fresh(['items']),
-            'message' => 'อัปเดตรายการเงินเดือนเรียบร้อยแล้ว'
+            'message' => 'อัปเดตรายการเงินเดือนเรียบร้อยแล้ว',
         ]);
     }
 
@@ -267,7 +266,7 @@ class PayrollController extends Controller
         if ($payroll->status !== Payroll::STATUS_DRAFT) {
             return response()->json([
                 'success' => false,
-                'message' => 'สามารถแก้ไขได้เฉพาะรายการที่เป็น Draft เท่านั้น'
+                'message' => 'สามารถแก้ไขได้เฉพาะรายการที่เป็น Draft เท่านั้น',
             ], 400);
         }
 
@@ -299,7 +298,7 @@ class PayrollController extends Controller
         return response()->json([
             'success' => true,
             'data' => $item,
-            'message' => 'เพิ่มรายการเรียบร้อยแล้ว'
+            'message' => 'เพิ่มรายการเรียบร้อยแล้ว',
         ], 201);
     }
 
@@ -317,7 +316,7 @@ class PayrollController extends Controller
         if ($payroll->status !== Payroll::STATUS_DRAFT) {
             return response()->json([
                 'success' => false,
-                'message' => 'สามารถแก้ไขได้เฉพาะรายการที่เป็น Draft เท่านั้น'
+                'message' => 'สามารถแก้ไขได้เฉพาะรายการที่เป็น Draft เท่านั้น',
             ], 400);
         }
 
@@ -328,7 +327,7 @@ class PayrollController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบรายการเรียบร้อยแล้ว'
+            'message' => 'ลบรายการเรียบร้อยแล้ว',
         ]);
     }
 
@@ -342,7 +341,7 @@ class PayrollController extends Controller
         if ($payroll->status !== Payroll::STATUS_DRAFT) {
             return response()->json([
                 'success' => false,
-                'message' => 'สามารถอนุมัติได้เฉพาะรายการที่เป็น Draft เท่านั้น'
+                'message' => 'สามารถอนุมัติได้เฉพาะรายการที่เป็น Draft เท่านั้น',
             ], 400);
         }
 
@@ -359,7 +358,7 @@ class PayrollController extends Controller
         return response()->json([
             'success' => true,
             'data' => $payroll->fresh(['approver:id,name']),
-            'message' => 'อนุมัติเงินเดือนเรียบร้อยแล้ว'
+            'message' => 'อนุมัติเงินเดือนเรียบร้อยแล้ว',
         ]);
     }
 
@@ -373,7 +372,7 @@ class PayrollController extends Controller
         if ($payroll->status !== Payroll::STATUS_APPROVED) {
             return response()->json([
                 'success' => false,
-                'message' => 'ต้องอนุมัติก่อนจึงจะจ่ายได้'
+                'message' => 'ต้องอนุมัติก่อนจึงจะจ่ายได้',
             ], 400);
         }
 
@@ -396,14 +395,14 @@ class PayrollController extends Controller
             'academy',
             [
                 'net_salary' => $payroll->net_salary,
-                'payment_date' => $payroll->payment_date
+                'payment_date' => $payroll->payment_date,
             ]
         );
 
         return response()->json([
             'success' => true,
             'data' => $payroll->fresh(),
-            'message' => 'บันทึกการจ่ายเงินเดือนเรียบร้อยแล้ว'
+            'message' => 'บันทึกการจ่ายเงินเดือนเรียบร้อยแล้ว',
         ]);
     }
 
@@ -424,11 +423,11 @@ class PayrollController extends Controller
             ->active()
             ->whereNotNull('base_salary');
 
-        if (!empty($validated['department_id'])) {
+        if (! empty($validated['department_id'])) {
             $query->where('department_id', $validated['department_id']);
         }
 
-        if (!empty($validated['staff_ids'])) {
+        if (! empty($validated['staff_ids'])) {
             $query->whereIn('id', $validated['staff_ids']);
         }
 
@@ -437,7 +436,7 @@ class PayrollController extends Controller
         $skipped = 0;
 
         $structure = null;
-        if (!empty($validated['salary_structure_id'])) {
+        if (! empty($validated['salary_structure_id'])) {
             $structure = SalaryStructure::find($validated['salary_structure_id']);
         }
 
@@ -449,6 +448,7 @@ class PayrollController extends Controller
 
             if ($existing) {
                 $skipped++;
+
                 continue;
             }
 
@@ -513,7 +513,7 @@ class PayrollController extends Controller
             [
                 'pay_period' => $validated['pay_period'],
                 'created' => $created,
-                'skipped' => $skipped
+                'skipped' => $skipped,
             ]
         );
 
@@ -521,9 +521,9 @@ class PayrollController extends Controller
             'success' => true,
             'data' => [
                 'created' => $created,
-                'skipped' => $skipped
+                'skipped' => $skipped,
             ],
-            'message' => "สร้างรายการเงินเดือน {$created} รายการ (ข้าม {$skipped} รายการ)"
+            'message' => "สร้างรายการเงินเดือน {$created} รายการ (ข้าม {$skipped} รายการ)",
         ]);
     }
 
@@ -539,7 +539,7 @@ class PayrollController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $structures
+            'data' => $structures,
         ]);
     }
 
@@ -578,7 +578,7 @@ class PayrollController extends Controller
         return response()->json([
             'success' => true,
             'data' => $structure,
-            'message' => 'สร้างโครงสร้างเงินเดือนเรียบร้อยแล้ว'
+            'message' => 'สร้างโครงสร้างเงินเดือนเรียบร้อยแล้ว',
         ], 201);
     }
 
@@ -604,12 +604,12 @@ class PayrollController extends Controller
                 'draft' => $payrolls->where('status', 'draft')->count(),
                 'approved' => $payrolls->where('status', 'approved')->count(),
                 'paid' => $payrolls->where('status', 'paid')->count(),
-            ]
+            ],
         ];
 
         return response()->json([
             'success' => true,
-            'data' => $summary
+            'data' => $summary,
         ]);
     }
 
@@ -624,7 +624,7 @@ class PayrollController extends Controller
             'staffProfile.user:id,name,email',
             'staffProfile.position:id,name',
             'staffProfile.department:id,name',
-            'items' => fn($q) => $q->ordered()
+            'items' => fn ($q) => $q->ordered(),
         ]);
 
         $earnings = $payroll->items->where('type', 'earning');
@@ -642,20 +642,20 @@ class PayrollController extends Controller
                     'department' => $payroll->staffProfile->department?->name,
                 ],
                 'base_salary' => $payroll->base_salary,
-                'earnings' => $earnings->map(fn($e) => [
+                'earnings' => $earnings->map(fn ($e) => [
                     'name' => $e->name,
-                    'amount' => $e->amount
+                    'amount' => $e->amount,
                 ]),
-                'deductions' => $deductions->map(fn($d) => [
+                'deductions' => $deductions->map(fn ($d) => [
                     'name' => $d->name,
-                    'amount' => $d->amount
+                    'amount' => $d->amount,
                 ]),
                 'total_earnings' => $payroll->total_earnings,
                 'total_deductions' => $payroll->total_deductions,
                 'net_salary' => $payroll->net_salary,
                 'payment_date' => $payroll->payment_date,
                 'status' => $payroll->status,
-            ]
+            ],
         ]);
     }
 

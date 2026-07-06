@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -85,7 +85,7 @@ class AdminRbacSeeder extends Seeder
             );
         }
 
-        $this->command->info('✓ Created ' . count($permissions) . ' permissions');
+        $this->command->info('✓ Created '.count($permissions).' permissions');
 
         // ====================================
         // 2. Create Roles
@@ -160,12 +160,12 @@ class AdminRbacSeeder extends Seeder
             );
 
             // Assign permissions to role
-            if (!empty($roleData['permissions'])) {
+            if (! empty($roleData['permissions'])) {
                 $role->givePermissionTo($roleData['permissions']);
             }
         }
 
-        $this->command->info('✓ Created ' . count($roles) . ' roles');
+        $this->command->info('✓ Created '.count($roles).' roles');
 
         // ====================================
         // 3. Create Default Super Admin User

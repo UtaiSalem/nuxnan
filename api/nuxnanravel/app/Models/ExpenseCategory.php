@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Traits\Auditable;
 
 /**
  * ExpenseCategory Model - หมวดหมู่รายจ่าย
  */
 class ExpenseCategory extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'academy_id',
@@ -55,8 +55,9 @@ class ExpenseCategory extends Model
     public function getFullNameAttribute(): string
     {
         if ($this->parent) {
-            return $this->parent->name . ' > ' . $this->name;
+            return $this->parent->name.' > '.$this->name;
         }
+
         return $this->name;
     }
 

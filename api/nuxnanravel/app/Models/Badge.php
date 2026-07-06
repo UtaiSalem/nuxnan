@@ -7,17 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 class Badge extends Model
 {
     protected $fillable = [
-        'name', 
-        'description', 
-        'icon', 
-        'xp_reward', 
+        'name',
+        'description',
+        'icon',
+        'xp_reward',
         'category',
         // Legacy fields for backward compatibility if needed, but we should migrate to new ones
-        'icon_color', 
-        'background_color', 
-        'rarity', 
+        'icon_color',
+        'background_color',
+        'rarity',
         'points', // Map to xp_reward if needed
-        'max_progress'
+        'max_progress',
     ];
 
     public function users()
@@ -26,5 +26,4 @@ class Badge extends Model
             ->withPivot('is_earned', 'progress', 'earned_at')
             ->withTimestamps();
     }
-
 }

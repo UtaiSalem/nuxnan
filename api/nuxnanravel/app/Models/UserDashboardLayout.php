@@ -25,8 +25,11 @@ class UserDashboardLayout extends Model
 
     // Dashboard Types
     const TYPE_MAIN = 'main';
+
     const TYPE_ACADEMIC = 'academic';
+
     const TYPE_FINANCIAL = 'financial';
+
     const TYPE_STAFF = 'staff';
 
     const TYPES = [
@@ -79,7 +82,7 @@ class UserDashboardLayout extends Model
         $widgets = collect($this->getWidgets())->filter(function ($widget) use ($widgetId) {
             return $widget['id'] !== $widgetId;
         })->values()->toArray();
-        
+
         $this->update(['widget_layout' => ['widgets' => $widgets]]);
     }
 
@@ -89,9 +92,10 @@ class UserDashboardLayout extends Model
             if ($widget['id'] === $widgetId) {
                 $widget['position'] = $position;
             }
+
             return $widget;
         })->toArray();
-        
+
         $this->update(['widget_layout' => ['widgets' => $widgets]]);
     }
 

@@ -14,7 +14,7 @@ class CheckAcademyPermission
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
         }
 
@@ -24,20 +24,24 @@ class CheckAcademyPermission
 
         $academy = $request->route('academy');
 
-        if (!$academy instanceof Academy) {
+        if (! $academy instanceof Academy) {
             $academy = Academy::find($academy);
         }
 
-        if (!$academy) {
+        if (! $academy) {
             return response()->json(['success' => false, 'message' => 'Academy not found'], 404);
+        }
+
+        if ($academy->isAdmin($user)) {
+            return $next($request);
         }
 
         $member = AcademyMember::where('user_id', $user->id)
             ->where('academy_id', $academy->id)
-            ->where('status', 'approved')
+            ->where('status', 2)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json(['success' => false, 'message' => 'Not a member of this academy'], 403);
         }
 
@@ -47,7 +51,7 @@ class CheckAcademyPermission
 
         $role = $member->academyRole;
 
-        if (!$role) {
+        if (! $role) {
             return response()->json(['success' => false, 'message' => 'No role assigned'], 403);
         }
 

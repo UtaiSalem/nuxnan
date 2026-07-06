@@ -2,26 +2,16 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Share;
-use App\Models\Activity;
-use App\Models\PostImage;
-use App\Models\PostLocation;
-use App\Models\PostMention;
-use App\Models\PostTaggedUser;
-use App\Models\PostLinkPreview;
-use App\Models\PostBackground;
-use App\Models\Poll;
 use App\Http\Resources\UserResource;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Notifications\Notifiable;
 
 class Post extends Model
 {
@@ -87,6 +77,7 @@ class Post extends Model
         return $this->belongsTo(User::class);
         // return new UserResource($this->user);
     }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -109,8 +100,6 @@ class Post extends Model
 
     /**
      * The disliked that belong to the Post
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function dislikedPost(): BelongsToMany
     {
@@ -124,8 +113,6 @@ class Post extends Model
 
     /**
      * Get shares of this post
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
      */
     public function postShares(): MorphMany
     {
@@ -133,14 +120,12 @@ class Post extends Model
     }
 
     public function getPostUrlAttribute(): string
-    {   
+    {
         return route('posts.show', $this->id);
     }
 
     /**
      * Get all of the comments for the Post (excluding replies)
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function postComments(): HasMany
     {
@@ -149,8 +134,6 @@ class Post extends Model
 
     /**
      * Get all comments including replies
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function allPostComments(): HasMany
     {
@@ -187,7 +170,7 @@ class Post extends Model
     public function mentionedUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'post_mentions', 'post_id', 'user_id')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
     /**
@@ -196,8 +179,8 @@ class Post extends Model
     public function taggedUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'post_tagged_users', 'post_id', 'user_id')
-                    ->withPivot('is_approved', 'is_notified')
-                    ->withTimestamps();
+            ->withPivot('is_approved', 'is_notified')
+            ->withTimestamps();
     }
 
     /**
@@ -222,10 +205,10 @@ class Post extends Model
     public function scopePublished($query)
     {
         return $query->where('is_published', true)
-                     ->where(function ($q) {
-                         $q->where('is_scheduled', false)
-                           ->orWhere('scheduled_at', '<=', now());
-                     });
+            ->where(function ($q) {
+                $q->where('is_scheduled', false)
+                    ->orWhere('scheduled_at', '<=', now());
+            });
     }
 
     /**
@@ -234,7 +217,7 @@ class Post extends Model
     public function scopeScheduled($query)
     {
         return $query->where('is_scheduled', true)
-                     ->where('scheduled_at', '>', now());
+            ->where('scheduled_at', '>', now());
     }
 
     /**
@@ -263,13 +246,13 @@ class Post extends Model
             // User's own posts (any privacy)
             $q->where('user_id', $user->id)
               // Public posts
-              ->orWhere('privacy_settings', 3)
+                ->orWhere('privacy_settings', 3)
               // Friends' posts if they're friends
-              ->orWhere(function ($subQ) use ($user) {
-                  $friendIds = $user->friends()->pluck('id')->toArray();
-                  $subQ->where('privacy_settings', 2)
-                       ->whereIn('user_id', $friendIds);
-              });
+                ->orWhere(function ($subQ) use ($user) {
+                    $friendIds = $user->friends()->pluck('id')->toArray();
+                    $subQ->where('privacy_settings', 2)
+                        ->whereIn('user_id', $friendIds);
+                });
         });
     }
 
@@ -278,7 +261,7 @@ class Post extends Model
      */
     public function canComment(): bool
     {
-        return !$this->comments_disabled;
+        return ! $this->comments_disabled;
     }
 
     /**
@@ -294,7 +277,7 @@ class Post extends Model
      */
     public function hasFeeling(): bool
     {
-        return !empty($this->feeling) || !empty($this->activity_type);
+        return ! empty($this->feeling) || ! empty($this->activity_type);
     }
 
     /**
@@ -302,9 +285,9 @@ class Post extends Model
      */
     public function hasBackground(): bool
     {
-        return !empty($this->background_color) || 
-               !empty($this->background_gradient) || 
-               !empty($this->background_image);
+        return ! empty($this->background_color) ||
+               ! empty($this->background_gradient) ||
+               ! empty($this->background_image);
     }
 
     /**
@@ -327,9 +310,9 @@ class Post extends Model
         } elseif ($this->activity_type) {
             return "is {$this->activity_type} {$this->activity_text}";
         }
+
         return null;
     }
-
 
     public function getComments()
     {
@@ -337,12 +320,10 @@ class Post extends Model
         return $this->postComments()->latest()->limit(3)->get();
     }
 
-
     public function likedByAuth(): bool
     {
         $like = $this->likedPost()->contains('user_id', auth()->user()->id)->first();
 
         return $like ? true : false;
     }
-
 }

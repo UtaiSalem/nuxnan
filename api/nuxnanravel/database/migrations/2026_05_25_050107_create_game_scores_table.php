@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('time_spent')->default(0);
             $table->json('metadata')->nullable();
             $table->timestamps();
-            
+
             $table->index(['game_type', 'score']);
             $table->index(['game_type', 'level']);
         });

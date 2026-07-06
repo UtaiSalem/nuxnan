@@ -2,19 +2,19 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\Auditable;
 
 /**
  * SchoolAnnouncement Model - ประกาศโรงเรียน
  */
 class SchoolAnnouncement extends Model
 {
-    use HasFactory, SoftDeletes, Auditable;
+    use Auditable, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'academy_id',
@@ -43,9 +43,13 @@ class SchoolAnnouncement extends Model
 
     // Type constants
     const TYPE_GENERAL = 'general';
+
     const TYPE_ACADEMIC = 'academic';
+
     const TYPE_FINANCIAL = 'financial';
+
     const TYPE_EVENT = 'event';
+
     const TYPE_EMERGENCY = 'emergency';
 
     const TYPES = [
@@ -58,8 +62,11 @@ class SchoolAnnouncement extends Model
 
     // Priority constants
     const PRIORITY_LOW = 'low';
+
     const PRIORITY_NORMAL = 'normal';
+
     const PRIORITY_HIGH = 'high';
+
     const PRIORITY_URGENT = 'urgent';
 
     const PRIORITIES = [

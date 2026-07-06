@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +35,7 @@ class MeetingSlot extends Model
 
     // Meeting type constants
     const TYPE_IN_PERSON = 'in_person';
+
     const TYPE_VIDEO_CALL = 'video_call';
 
     // Relationships
@@ -56,18 +58,18 @@ class MeetingSlot extends Model
     public function getAvailableTimesAttribute(): array
     {
         $times = [];
-        $start = \Carbon\Carbon::parse($this->start_time);
-        $end = \Carbon\Carbon::parse($this->end_time);
+        $start = Carbon::parse($this->start_time);
+        $end = Carbon::parse($this->end_time);
 
         $bookedTimes = $this->bookings()
             ->whereIn('status', ['pending', 'confirmed'])
             ->pluck('booked_time')
-            ->map(fn($t) => \Carbon\Carbon::parse($t)->format('H:i'))
+            ->map(fn ($t) => Carbon::parse($t)->format('H:i'))
             ->toArray();
 
         while ($start < $end) {
             $timeStr = $start->format('H:i');
-            if (!in_array($timeStr, $bookedTimes)) {
+            if (! in_array($timeStr, $bookedTimes)) {
                 $times[] = $timeStr;
             }
             $start->addMinutes($this->slot_duration);
@@ -85,8 +87,9 @@ class MeetingSlot extends Model
 
     public function getTotalSlotsAttribute(): int
     {
-        $start = \Carbon\Carbon::parse($this->start_time);
-        $end = \Carbon\Carbon::parse($this->end_time);
+        $start = Carbon::parse($this->start_time);
+        $end = Carbon::parse($this->end_time);
+
         return (int) ($start->diffInMinutes($end) / $this->slot_duration);
     }
 

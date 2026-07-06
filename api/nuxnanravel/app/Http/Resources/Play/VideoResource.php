@@ -28,7 +28,7 @@ class VideoResource extends JsonResource
             'user' => $this->whenLoaded('user', function () {
                 return [
                     'id' => $this->user->id,
-                    'name' => $this->user->first_name . ' ' . $this->user->last_name,
+                    'name' => $this->user->first_name.' '.$this->user->last_name,
                     'avatar' => $this->user->avatar ? url($this->user->avatar) : null,
                 ];
             }),

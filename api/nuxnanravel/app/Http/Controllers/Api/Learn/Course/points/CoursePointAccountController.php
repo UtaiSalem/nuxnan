@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\Learn\Course\points;
 
 use App\Http\Controllers\Controller;
@@ -18,6 +19,7 @@ class CoursePointAccountController extends Controller
     {
         $this->authorizeCourseAdmin($course);
         $account = $this->service->getAccount($course->id);
+
         return response()->json([
             'data' => $account ?? [
                 'balance' => 0, 'total_earned' => 0,
@@ -34,6 +36,7 @@ class CoursePointAccountController extends Controller
         $txs = CoursePointTransaction::where('course_id', $course->id)
             ->latest()
             ->paginate(20);
+
         return response()->json($txs);
     }
 
@@ -44,9 +47,9 @@ class CoursePointAccountController extends Controller
         $request->validate(['amount' => 'required|integer|min:1']);
 
         $result = $this->service->withdraw(
-            courseId:    $course->id,
-            recipient:   $request->user(),
-            amount:      $request->amount,
+            courseId: $course->id,
+            recipient: $request->user(),
+            amount: $request->amount,
             performedBy: $request->user()->id,
         );
 

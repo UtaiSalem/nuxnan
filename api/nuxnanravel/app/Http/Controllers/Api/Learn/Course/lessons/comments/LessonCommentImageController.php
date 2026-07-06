@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons\comments;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 
-class LessonCommentImageController extends \App\Http\Controllers\Controller
+class LessonCommentImageController extends Controller
 {
     //
 }

@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Api\Play;
 
-use App\Http\Controllers\Controller;
-
-use App\Models\Poll;
-use App\Models\Activity;
 use App\Enums\ActivityType;
-use App\Http\Requests\StorePollRequest;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdatePollRequest;
-use App\Http\Resources\Play\PollResource;
 use App\Http\Resources\Play\ActivityResource;
+use App\Http\Resources\Play\PollResource;
+use App\Models\Activity;
+use App\Models\CoursePost;
+use App\Models\Poll;
+use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -50,7 +50,7 @@ class PollController extends Controller
         ]);
 
         $user = auth()->user();
-        $pollPointsPool = (int)$request->input('points_pool', 0);
+        $pollPointsPool = (int) $request->input('points_pool', 0);
         $totalPointsNeeded = 180 + $pollPointsPool;
 
         if ($user->pp < $totalPointsNeeded) {
@@ -63,9 +63,9 @@ class PollController extends Controller
         try {
             DB::beginTransaction();
 
-            $maxVotes = (int)$request->input('max_votes', 100);
+            $maxVotes = (int) $request->input('max_votes', 100);
             $pointsPerVote = $pollPointsPool > 0 ? floor($pollPointsPool / $maxVotes) : 0;
-            $duration = (int)$request->input('duration', 24);
+            $duration = (int) $request->input('duration', 24);
 
             $poll = Poll::create([
                 'user_id' => $user->id,
@@ -92,7 +92,7 @@ class PollController extends Controller
                 }
             }
 
-            $activity = new Activity();
+            $activity = new Activity;
             $activity->user_id = $user->id;
             $activity->activity_type = ActivityType::CREATE_POLL->value;
             $activity->activityable()->associate($poll);
@@ -109,7 +109,7 @@ class PollController extends Controller
             $activity = Activity::with([
                 'user',
                 'activityable.user',
-                'activityable.options'
+                'activityable.options',
             ])->find($activity->id);
 
             return response()->json([
@@ -121,9 +121,10 @@ class PollController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถสร้างโพลได้: ' . $e->getMessage(),
+                'message' => 'ไม่สามารถสร้างโพลได้: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -184,8 +185,8 @@ class PollController extends Controller
             $poll->comments()->delete();
 
             // Update any posts that reference this poll
-            \App\Models\Post::where('poll_id', $poll->id)->update(['poll_id' => null]);
-            \App\Models\CoursePost::where('poll_id', $poll->id)->update(['poll_id' => null]);
+            Post::where('poll_id', $poll->id)->update(['poll_id' => null]);
+            CoursePost::where('poll_id', $poll->id)->update(['poll_id' => null]);
 
             // Delete activities associated with this poll
             $poll->activities()->delete();
@@ -201,9 +202,10 @@ class PollController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete poll: ' . $e->getMessage(),
+                'message' => 'Failed to delete poll: '.$e->getMessage(),
             ], 500);
         }
     }

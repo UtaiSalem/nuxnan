@@ -24,12 +24,12 @@ class UpdateCouponRequest extends FormRequest
         $couponId = $this->route('id');
 
         return [
-            'code'        => ['sometimes', 'string', Rule::unique('coupons', 'code')->ignore($couponId)],
-            'type'        => ['sometimes', Rule::in(['points', 'wallet'])],
-            'amount'      => ['sometimes', 'numeric', 'min:0'],
+            'code' => ['sometimes', 'string', Rule::unique('coupons', 'code')->ignore($couponId)],
+            'type' => ['sometimes', Rule::in(['points', 'wallet'])],
+            'amount' => ['sometimes', 'numeric', 'min:0'],
             'description' => ['sometimes', 'nullable', 'string'],
-            'expires_at'  => ['sometimes', 'nullable', 'date'],
-            'status'      => ['sometimes', Rule::in(['unused', 'used', 'expired', 'disabled'])],
+            'expires_at' => ['sometimes', 'nullable', 'date'],
+            'status' => ['sometimes', Rule::in(['unused', 'used', 'expired', 'disabled'])],
         ];
     }
 }

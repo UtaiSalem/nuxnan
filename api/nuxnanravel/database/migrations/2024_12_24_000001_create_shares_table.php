@@ -23,11 +23,11 @@ return new class extends Migration
             $table->unsignedInteger('comments')->default(0);
             $table->unsignedInteger('views')->default(0);
             $table->timestamps();
-            
+
             // Indexes for performance
             $table->index(['shareable_type', 'shareable_id']);
             $table->index('created_at');
-            
+
             // Foreign key
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });

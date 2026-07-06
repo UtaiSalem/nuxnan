@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,12 +44,19 @@ class StaffAttendance extends Model
 
     // Status constants
     const STATUS_PRESENT = 'present';
+
     const STATUS_ABSENT = 'absent';
+
     const STATUS_LATE = 'late';
+
     const STATUS_EARLY_LEAVE = 'early_leave';
+
     const STATUS_HALF_DAY = 'half_day';
+
     const STATUS_ON_LEAVE = 'on_leave';
+
     const STATUS_HOLIDAY = 'holiday';
+
     const STATUS_WORK_FROM_HOME = 'work_from_home';
 
     const STATUSES = [
@@ -97,19 +105,19 @@ class StaffAttendance extends Model
 
     public function calculateWorkHours(): void
     {
-        if (!$this->check_in_time || !$this->check_out_time) {
+        if (! $this->check_in_time || ! $this->check_out_time) {
             return;
         }
 
-        $checkIn = \Carbon\Carbon::parse($this->check_in_time);
-        $checkOut = \Carbon\Carbon::parse($this->check_out_time);
-        
+        $checkIn = Carbon::parse($this->check_in_time);
+        $checkOut = Carbon::parse($this->check_out_time);
+
         $totalMinutes = $checkOut->diffInMinutes($checkIn);
-        
+
         // Subtract break time if exists
         if ($this->break_start_time && $this->break_end_time) {
-            $breakStart = \Carbon\Carbon::parse($this->break_start_time);
-            $breakEnd = \Carbon\Carbon::parse($this->break_end_time);
+            $breakStart = Carbon::parse($this->break_start_time);
+            $breakEnd = Carbon::parse($this->break_end_time);
             $breakMinutes = $breakEnd->diffInMinutes($breakStart);
             $totalMinutes -= $breakMinutes;
         }

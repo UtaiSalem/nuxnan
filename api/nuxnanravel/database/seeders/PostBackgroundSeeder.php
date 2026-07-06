@@ -78,7 +78,7 @@ class PostBackgroundSeeder extends Seeder
                 'category' => 'colors',
                 'sort_order' => 8,
             ],
-            
+
             // Gradients
             [
                 'name' => 'Sunset Gradient',
@@ -144,7 +144,7 @@ class PostBackgroundSeeder extends Seeder
                 'category' => 'gradients',
                 'sort_order' => 27,
             ],
-            
+
             // Celebration
             [
                 'name' => 'Birthday',

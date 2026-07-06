@@ -41,6 +41,7 @@ class Scholarship extends Model
 
     // Discount types
     const TYPE_PERCENTAGE = 'percentage';
+
     const TYPE_FIXED = 'fixed';
 
     // Relationships
@@ -62,6 +63,7 @@ class Scholarship extends Model
             if ($this->max_amount && $discount > $this->max_amount) {
                 return $this->max_amount;
             }
+
             return $discount;
         }
 
@@ -77,9 +79,10 @@ class Scholarship extends Model
 
     public function hasAvailableSlots(): bool
     {
-        if (!$this->max_recipients) {
+        if (! $this->max_recipients) {
             return true;
         }
+
         return $this->getActiveRecipientsCount() < $this->max_recipients;
     }
 

@@ -68,10 +68,7 @@ const studentImageUrl = computed(() => {
     if (previewImage.value) {
         return previewImage.value
     }
-    if (tempPhoto.value) {
-        return `/storage/images/students/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${tempPhoto.value}`
-    }
-    return null
+    return props.studentInfo.profile_image_url || null
 })
 
 
@@ -113,7 +110,12 @@ const handlePhotoUploadToServer = async (id, studentId, file) => {
                 text: response.data.message,
                 confirmButtonText: 'ตกลง'
             })
-            // tempPhoto.value = response.data.photo // Update tempPhoto with the new photo
+            if (response.data.photo) {
+                tempPhoto.value = response.data.photo
+            }
+            if (response.data.path) {
+                props.studentInfo.profile_image_url = response.data.path
+            }
         } else {
             Swal.fire({
                 icon: 'error',

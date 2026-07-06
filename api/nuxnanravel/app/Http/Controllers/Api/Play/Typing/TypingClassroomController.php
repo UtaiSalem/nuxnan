@@ -6,10 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AcademyAdmin;
 use App\Models\AcademyMember;
 use App\Models\TypingSession;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class TypingClassroomController extends Controller
 {
@@ -21,10 +19,10 @@ class TypingClassroomController extends Controller
         // ตรวจสิทธิ์: ครูต้องเป็น admin ของ academy นี้
         $isTeacher = AcademyAdmin::where([
             'academy_id' => $academyId,
-            'user_id'    => Auth::id(),
+            'user_id' => Auth::id(),
         ])->exists();
 
-        if (!$isTeacher) {
+        if (! $isTeacher) {
             return response()->json(['success' => false, 'message' => 'Unauthorized. Teacher access required.'], 403);
         }
 
@@ -53,21 +51,21 @@ class TypingClassroomController extends Controller
             ->get();
 
         // นักเรียนที่ควรฝึกเพิ่ม (avg_wpm < 20)
-        $needHelp = $stats->filter(function($s) {
+        $needHelp = $stats->filter(function ($s) {
             return $s->avg_wpm < 20;
         })->values();
 
         return response()->json([
-            'success'   => true,
-            'data'      => [
-                'students'  => $stats,
-                'trend'     => $trend,
+            'success' => true,
+            'data' => [
+                'students' => $stats,
+                'trend' => $trend,
                 'need_help' => $needHelp,
-                'summary'   => [
-                    'total_students'  => $memberIds->count(),
+                'summary' => [
+                    'total_students' => $memberIds->count(),
                     'active_students' => $stats->count(),
-                    'class_avg_wpm'   => round($stats->avg('avg_wpm'), 1),
-                    'class_avg_acc'   => round($stats->avg('avg_accuracy'), 1),
+                    'class_avg_wpm' => round($stats->avg('avg_wpm'), 1),
+                    'class_avg_acc' => round($stats->avg('avg_accuracy'), 1),
                 ],
             ],
         ]);

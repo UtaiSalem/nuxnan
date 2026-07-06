@@ -16,8 +16,11 @@ class TopicImageDeleteTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
+
     protected $course;
+
     protected $lesson;
+
     protected $topic;
 
     protected function setUp(): void
@@ -28,14 +31,14 @@ class TopicImageDeleteTest extends TestCase
 
         $this->admin = User::factory()->create();
         $this->course = Course::factory()->create([
-            'user_id' => $this->admin->id
+            'user_id' => $this->admin->id,
         ]);
         $this->lesson = Lesson::factory()->create([
             'course_id' => $this->course->id,
         ]);
         $this->topic = Topic::factory()->create([
             'lesson_id' => $this->lesson->id,
-            'course_id' => $this->course->id
+            'course_id' => $this->course->id,
         ]);
     }
 
@@ -43,12 +46,12 @@ class TopicImageDeleteTest extends TestCase
     public function admin_can_delete_topic_image()
     {
         $filename = 'test-image.jpg';
-        $path = 'images/courses/lessons/topics/' . $filename;
+        $path = 'images/courses/lessons/topics/'.$filename;
         Storage::disk('public')->put($path, 'dummy content');
 
         $image = TopicImage::create([
             'topic_id' => $this->topic->id,
-            'filename' => $filename
+            'filename' => $filename,
         ]);
 
         $response = $this->actingAs($this->admin, 'api')
@@ -64,12 +67,12 @@ class TopicImageDeleteTest extends TestCase
     {
         $topic2 = Topic::factory()->create([
             'lesson_id' => $this->lesson->id,
-            'course_id' => $this->course->id
+            'course_id' => $this->course->id,
         ]);
 
         $image = TopicImage::create([
             'topic_id' => $topic2->id,
-            'filename' => 'topic2-image.jpg'
+            'filename' => 'topic2-image.jpg',
         ]);
 
         $response = $this->actingAs($this->admin, 'api')
@@ -85,7 +88,7 @@ class TopicImageDeleteTest extends TestCase
         $user = User::factory()->create();
         $image = TopicImage::create([
             'topic_id' => $this->topic->id,
-            'filename' => 'unauthorized.jpg'
+            'filename' => 'unauthorized.jpg',
         ]);
 
         $response = $this->actingAs($user, 'api')
@@ -99,22 +102,22 @@ class TopicImageDeleteTest extends TestCase
     public function safe_delete_does_not_remove_file_if_used_elsewhere()
     {
         $filename = 'shared-image.jpg';
-        $path = 'images/courses/lessons/topics/' . $filename;
+        $path = 'images/courses/lessons/topics/'.$filename;
         Storage::disk('public')->put($path, 'shared content');
 
         $image1 = TopicImage::create([
             'topic_id' => $this->topic->id,
-            'filename' => $filename
+            'filename' => $filename,
         ]);
 
         $topic2 = Topic::factory()->create([
             'lesson_id' => $this->lesson->id,
-            'course_id' => $this->course->id
+            'course_id' => $this->course->id,
         ]);
 
         $image2 = TopicImage::create([
             'topic_id' => $topic2->id,
-            'filename' => $filename
+            'filename' => $filename,
         ]);
 
         $response = $this->actingAs($this->admin, 'api')
@@ -123,7 +126,7 @@ class TopicImageDeleteTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseMissing('topic_images', ['id' => $image1->id]);
         $this->assertDatabaseHas('topic_images', ['id' => $image2->id]);
-        
+
         // File should still exist because $image2 uses it
         Storage::disk('public')->assertExists($path);
     }

@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\WalletTransaction;
 use App\Models\WalletDepositRequest;
+use App\Models\WalletTransaction;
 use App\Services\WalletService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class AdminWalletController extends Controller
 {
@@ -26,7 +25,10 @@ class AdminWalletController extends Controller
      */
     protected function isAdminUser($user): bool
     {
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
+
         return $user->isSuperAdmin() || $user->hasAnyRole(['ADMIN', 'MODERATOR']) || $user->isPlearndAdmin();
     }
 
@@ -38,7 +40,7 @@ class AdminWalletController extends Controller
         $user = Auth::user();
 
         // Allow SUPER_ADMIN, ADMIN, or Plearnd Admin
-        if (!$this->isAdminUser($user)) {
+        if (! $this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -97,7 +99,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->isAdminUser($user)) {
+        if (! $this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -134,7 +136,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->isAdminUser($user)) {
+        if (! $this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -170,7 +172,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->isAdminUser($user)) {
+        if (! $this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -179,7 +181,7 @@ class AdminWalletController extends Controller
 
         $depositRequest = WalletDepositRequest::with('user')->find($id);
 
-        if (!$depositRequest) {
+        if (! $depositRequest) {
             return response()->json([
                 'success' => false,
                 'message' => 'Deposit request not found',
@@ -199,7 +201,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -208,7 +210,7 @@ class AdminWalletController extends Controller
 
         $transaction = WalletTransaction::find($transactionId);
 
-        if (!$transaction) {
+        if (! $transaction) {
             return response()->json([
                 'success' => false,
                 'message' => 'Transaction not found',
@@ -217,7 +219,7 @@ class AdminWalletController extends Controller
 
         $result = $this->walletService->approveWithdrawal($transaction);
 
-        if (!$result) {
+        if (! $result) {
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot approve this transaction',
@@ -241,7 +243,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->isAdminUser($user)) {
+        if (! $this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -250,7 +252,7 @@ class AdminWalletController extends Controller
 
         $depositRequest = WalletDepositRequest::find($requestId);
 
-        if (!$depositRequest) {
+        if (! $depositRequest) {
             return response()->json([
                 'success' => false,
                 'message' => 'Deposit request not found',
@@ -263,7 +265,7 @@ class AdminWalletController extends Controller
 
         $result = $this->walletService->approveDepositRequest($depositRequest, $validated['admin_note'] ?? null);
 
-        if (!$result) {
+        if (! $result) {
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot approve this deposit request',
@@ -288,7 +290,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->isAdminUser($user)) {
+        if (! $this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -301,7 +303,7 @@ class AdminWalletController extends Controller
 
         $transaction = WalletTransaction::find($transactionId);
 
-        if (!$transaction) {
+        if (! $transaction) {
             return response()->json([
                 'success' => false,
                 'message' => 'Transaction not found',
@@ -310,7 +312,7 @@ class AdminWalletController extends Controller
 
         $result = $this->walletService->rejectWithdrawal($transaction, $validated['reason']);
 
-        if (!$result) {
+        if (! $result) {
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot reject this transaction',
@@ -335,7 +337,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->isAdminUser($user)) {
+        if (! $this->isAdminUser($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -349,7 +351,7 @@ class AdminWalletController extends Controller
 
         $depositRequest = WalletDepositRequest::find($requestId);
 
-        if (!$depositRequest) {
+        if (! $depositRequest) {
             return response()->json([
                 'success' => false,
                 'message' => 'Deposit request not found',
@@ -362,7 +364,7 @@ class AdminWalletController extends Controller
             $validated['admin_note'] ?? null
         );
 
-        if (!$result) {
+        if (! $result) {
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot reject this deposit request',
@@ -387,7 +389,7 @@ class AdminWalletController extends Controller
     {
         $adminUser = Auth::user();
 
-        if (!$adminUser || !$adminUser->isSuperAdmin()) {
+        if (! $adminUser || ! $adminUser->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -396,7 +398,7 @@ class AdminWalletController extends Controller
 
         $targetUser = User::find($userId);
 
-        if (!$targetUser) {
+        if (! $targetUser) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -434,7 +436,7 @@ class AdminWalletController extends Controller
     {
         $adminUser = Auth::user();
 
-        if (!$adminUser || !$adminUser->isSuperAdmin()) {
+        if (! $adminUser || ! $adminUser->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -443,7 +445,7 @@ class AdminWalletController extends Controller
 
         $user = User::find($userId);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -494,7 +496,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -520,7 +522,7 @@ class AdminWalletController extends Controller
             ->groupBy('date')
             ->orderBy('date')
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'date' => $item->date,
                 'total' => (float) $item->total,
             ]);
@@ -530,7 +532,7 @@ class AdminWalletController extends Controller
             ->whereBetween('created_at', [$dateFrom, $dateTo])
             ->groupBy('transaction_type')
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'transaction_type' => $item->transaction_type,
                 'total' => (float) $item->total,
             ]);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\members;
 
+use App\Enums\UsageEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
 use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
@@ -16,11 +17,19 @@ use App\Models\CourseGroupMember;
 use App\Models\CourseMember;
 use App\Models\CoursePurchase;
 use App\Models\CourseQuizResult;
+use App\Models\LessonAnswerQuestion;
+use App\Models\LessonProgress;
+use App\Models\Notification;
 use App\Models\UserAnswerQuestion;
 use App\Services\AttendanceEligibilityService;
-use App\Services\LearnerIdentityService;
 use App\Services\CourseMemberRemovalService;
+use App\Services\CourseScoreService;
+use App\Services\LearnerIdentityService;
+use App\Services\UsageEventService;
+use App\Services\WalletService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 class CourseMemberController extends Controller
@@ -32,7 +41,7 @@ class CourseMemberController extends Controller
     protected CourseMemberRemovalService $removalService;
 
     public function __construct(
-        AttendanceEligibilityService $eligibilityService, 
+        AttendanceEligibilityService $eligibilityService,
         LearnerIdentityService $identityService,
         CourseMemberRemovalService $removalService
     ) {
@@ -124,23 +133,20 @@ class CourseMemberController extends Controller
         ])->get();
 
         $lessonIds = $rawLessons->pluck('id');
-        $progressMap = \App\Models\LessonProgress::whereIn('lesson_id', $lessonIds)
+        $progressMap = LessonProgress::whereIn('lesson_id', $lessonIds)
             ->where('user_id', $userId)
             ->get()
             ->keyBy('lesson_id');
 
         $courseAssignments = $course->courseAssignments;
 
-        $allAssignmentIds = $rawLessons->flatMap(fn ($l) => 
-            $l->assignments->pluck('id')->merge($l->topics->flatMap->assignments->pluck('id'))
+        $allAssignmentIds = $rawLessons->flatMap(fn ($l) => $l->assignments->pluck('id')->merge($l->topics->flatMap->assignments->pluck('id'))
         )->unique()->merge($courseAssignments->pluck('id'))->unique();
 
         $answerMap = \App\Models\AssignmentAnswer::whereIn('assignment_id', $allAssignmentIds)
             ->where('user_id', $userId)
             ->get()
             ->keyBy('assignment_id');
-
-
 
         $passingThreshold = $course->passing_score;
 
@@ -157,7 +163,7 @@ class CourseMemberController extends Controller
             $gradedQuizzes = collect();
 
             $hasGradedActivity = $gradedAssignments->isNotEmpty();
-            
+
             $statusData = $this->resolveLessonScoreStatus(
                 $gradedAssignments,
                 $gradedQuizzes,
@@ -248,11 +254,11 @@ class CourseMemberController extends Controller
         $courseQuizzes = $course->courseQuizzes()->with('questions')->get();
 
         $quizIds = $courseQuizzes->pluck('id');
-        $allQuizResults = \App\Models\CourseQuizResult::whereIn('quiz_id', $quizIds)
+        $allQuizResults = CourseQuizResult::whereIn('quiz_id', $quizIds)
             ->where('user_id', $userId)
             ->where('course_id', $course->id)
             ->get();
-            
+
         $quizAttemptCounts = $allQuizResults->groupBy('quiz_id')->map->count();
         $bestQuizResults = $allQuizResults->groupBy('quiz_id')->map(function ($results) {
             return $results->sortByDesc('score')->first();
@@ -359,7 +365,7 @@ class CourseMemberController extends Controller
 
         // Lifecycle guard: delegate to CoursePolicy::enroll, which calls
         // CourseLifecycleService. Must run BEFORE wallet charge.
-        $gate = \Illuminate\Support\Facades\Gate::inspect('enroll', $course);
+        $gate = Gate::inspect('enroll', $course);
         if ($gate->denied()) {
             $msg = $gate->message() ?: 'รายวิชานี้ปิดรับสมัครแล้ว';
 
@@ -397,7 +403,7 @@ class CourseMemberController extends Controller
 
             // Process payment via WalletService
             try {
-                $walletService = app(\App\Services\WalletService::class);
+                $walletService = app(WalletService::class);
                 $transaction = $walletService->purchaseCourse($user, $course);
             } catch (\Exception $e) {
                 return response()->json([
@@ -421,7 +427,7 @@ class CourseMemberController extends Controller
         $new_course_member->save();
 
         // Fire gamification event
-        \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::COURSE_JOIN->value, 'course', $course->id);
+        UsageEventService::fire($user, UsageEventType::COURSE_JOIN->value, 'course', $course->id);
 
         if ($new_course_member->group_id) {
             $newCourseGroupMember = new CourseGroupMember;
@@ -705,7 +711,7 @@ class CourseMemberController extends Controller
             ? 'คำขอเข้าเรียนได้รับการอนุมัติ กรุณาชำระเงินเพื่อเริ่มเรียน'
             : 'คำขอเข้าเรียนได้รับการอนุมัติแล้ว';
 
-        \App\Models\Notification::create([
+        Notification::create([
             'user_id' => $member->user_id,
             'sender_id' => auth()->id(),
             'type' => $isPaidCourse ? 'course_approved_payment_required' : 'course_approved',
@@ -734,7 +740,7 @@ class CourseMemberController extends Controller
         $userId = $member->user_id;
         $member->delete();
 
-        \App\Models\Notification::create([
+        Notification::create([
             'user_id' => $userId,
             'sender_id' => auth()->id(),
             'type' => 'course_rejected',
@@ -778,7 +784,7 @@ class CourseMemberController extends Controller
         }
 
         try {
-            $walletService = app(\App\Services\WalletService::class);
+            $walletService = app(WalletService::class);
             $transaction = $walletService->purchaseCourse($user, $course);
 
             // Record the purchase for refund traceability
@@ -829,9 +835,10 @@ class CourseMemberController extends Controller
     {
         try {
             $preview = $this->removalService->preview($course, $member, auth()->user());
+
             return response()->json([
                 'success' => true,
-                'preview' => $preview
+                'preview' => $preview,
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
@@ -847,10 +854,10 @@ class CourseMemberController extends Controller
 
         try {
             $result = $this->removalService->execute(
-                $course, 
-                $member, 
-                auth()->user(), 
-                $request->mode, 
+                $course,
+                $member,
+                auth()->user(),
+                $request->mode,
                 $request->reason
             );
 
@@ -867,7 +874,7 @@ class CourseMemberController extends Controller
 
         // 1. Lessons Progress (Bulk)
         $lessonIds = $course->courseLessons()->pluck('id');
-        $allLessonProgress = \App\Models\LessonProgress::whereIn('lesson_id', $lessonIds)
+        $allLessonProgress = LessonProgress::whereIn('lesson_id', $lessonIds)
             ->where('user_id', $userId)
             ->get()
             ->keyBy('lesson_id');
@@ -887,9 +894,10 @@ class CourseMemberController extends Controller
 
         // 2. Assignments (Bulk)
         $courseAssignments = $course->courseAssignments;
-        $lessonAssignments = $course->courseLessons()->with('assignments')->get()->flatMap(function($lesson) {
-            return $lesson->assignments->map(function($a) use ($lesson) {
+        $lessonAssignments = $course->courseLessons()->with('assignments')->get()->flatMap(function ($lesson) {
+            return $lesson->assignments->map(function ($a) use ($lesson) {
                 $a->lesson_id = $lesson->id;
+
                 return $a;
             });
         });
@@ -902,10 +910,15 @@ class CourseMemberController extends Controller
             ->keyBy('assignment_id');
 
         $assignments = $allAssignments->filter(function ($assignment) use ($course_member) {
-            if ($assignment->status !== 1) return false;
-            if (! empty($assignment->target_groups)) {
-                if (! $course_member->group_id || ! in_array($course_member->group_id, $assignment->target_groups)) return false;
+            if ($assignment->status !== 1) {
+                return false;
             }
+            if (! empty($assignment->target_groups)) {
+                if (! $course_member->group_id || ! in_array($course_member->group_id, $assignment->target_groups)) {
+                    return false;
+                }
+            }
+
             return true;
         })->map(function ($assignment) use ($allAssignmentAnswers) {
             $answer = $allAssignmentAnswers->get($assignment->id);
@@ -946,7 +959,7 @@ class CourseMemberController extends Controller
 
         // 3. Quizzes (Bulk: Course Quizzes + Lesson Quizzes)
         $courseQuizzes = $course->courseQuizzes()->with('questions')->get();
-        $allQuizResults = \App\Models\CourseQuizResult::whereIn('quiz_id', $courseQuizzes->pluck('id'))
+        $allQuizResults = CourseQuizResult::whereIn('quiz_id', $courseQuizzes->pluck('id'))
             ->where('user_id', $userId)
             ->where('course_id', $course->id)
             ->get()
@@ -978,22 +991,24 @@ class CourseMemberController extends Controller
 
         // Lesson quizzes (questions inside lessons)
         $lessonsWithQuestions = $course->courseLessons()->whereHas('questions')->get();
-        $lessonQuizList = $lessonsWithQuestions->map(function($lesson) use ($userId) {
+        $lessonQuizList = $lessonsWithQuestions->map(function ($lesson) use ($userId) {
             $questions = $lesson->questions;
             $questionIds = $questions->pluck('id');
-            $answers = \App\Models\LessonAnswerQuestion::whereIn('question_id', $questionIds)
+            $answers = LessonAnswerQuestion::whereIn('question_id', $questionIds)
                 ->where('user_id', $userId)
                 ->get();
-            
+
             $completed = $answers->count() > 0;
             $earned = $answers->where('is_correct', true)->sum('points');
-            $max = $questions->sum(function($q) { return $q->points ?? 1; });
+            $max = $questions->sum(function ($q) {
+                return $q->points ?? 1;
+            });
 
             return [
                 'id' => $lesson->id,
                 'lesson_id' => $lesson->id,
                 'is_lesson_quiz' => true,
-                'title' => 'แบบทดสอบ: ' . $lesson->title,
+                'title' => 'แบบทดสอบ: '.$lesson->title,
                 'max_score' => $max,
                 'score' => $completed ? $earned : null,
                 'completed' => $completed,
@@ -1004,7 +1019,7 @@ class CourseMemberController extends Controller
         });
 
         // 4. Summary & Grade (Canonical)
-        $scoreService = app(\App\Services\CourseScoreService::class);
+        $scoreService = app(CourseScoreService::class);
         $scoreData = $scoreService->calculateGradeData($course_member);
 
         return response()->json([
@@ -1631,14 +1646,15 @@ class CourseMemberController extends Controller
             'data' => $member->fresh(),
         ], 200);
     }
+
     /**
      * Resolve the status and score of a lesson based on its graded activities.
      */
     private function resolveLessonScoreStatus(
-        \Illuminate\Support\Collection $gradedAssignments,
-        \Illuminate\Support\Collection $gradedQuizzes,
-        \Illuminate\Support\Collection $answerMap,
-        \Illuminate\Support\Collection $quizAnswerMap,
+        Collection $gradedAssignments,
+        Collection $gradedQuizzes,
+        Collection $answerMap,
+        Collection $quizAnswerMap,
         ?float $passingThreshold = null
     ): array {
         if ($gradedAssignments->isEmpty() && $gradedQuizzes->isEmpty()) {
@@ -1661,7 +1677,7 @@ class CourseMemberController extends Controller
             $maxScore = $assignment->points ?? $assignment->max_score ?? 100;
             $totalMaxScore += $maxScore;
 
-            if (!$answer) {
+            if (! $answer) {
                 $hasMissing = true;
             } else {
                 $hasAttempted = true;
@@ -1676,15 +1692,15 @@ class CourseMemberController extends Controller
         foreach ($gradedQuizzes as $quiz) {
             $result = $quizAnswerMap->get($quiz->id);
             $quizMaxScore = $quiz->total_score;
-            if (!$quizMaxScore || $quizMaxScore == 0) {
+            if (! $quizMaxScore || $quizMaxScore == 0) {
                 $quizMaxScore = $quiz->questions->sum('points');
             }
-            if (!$quizMaxScore || $quizMaxScore == 0) {
+            if (! $quizMaxScore || $quizMaxScore == 0) {
                 $quizMaxScore = $quiz->questions->count() ?: 10;
             }
             $totalMaxScore += $quizMaxScore;
 
-            if (!$result) {
+            if (! $result) {
                 $hasMissing = true;
             } else {
                 $hasAttempted = true;
@@ -1692,7 +1708,7 @@ class CourseMemberController extends Controller
             }
         }
 
-        if (!$hasAttempted) {
+        if (! $hasAttempted) {
             return [
                 'status' => 'not_attempted',
                 'score' => null,
@@ -1713,7 +1729,7 @@ class CourseMemberController extends Controller
         }
 
         $percentage = $totalMaxScore > 0 ? round(($totalScore / $totalMaxScore) * 100) : 0;
-        
+
         $status = 'scored';
         if ($passingThreshold !== null && $passingThreshold > 0) {
             $status = $percentage >= $passingThreshold ? 'passed' : 'failed';

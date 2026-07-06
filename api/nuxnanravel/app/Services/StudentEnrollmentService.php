@@ -2,10 +2,17 @@
 
 namespace App\Services;
 
+use App\Events\Enrollment\StudentDropped;
+use App\Events\Enrollment\StudentEnrolled;
+use App\Events\Enrollment\StudentGraduated;
+use App\Events\Enrollment\StudentPromoted;
+use App\Events\Enrollment\StudentRepeated;
+use App\Events\Enrollment\StudentTransferred;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\Student;
 use App\Models\StudentAcademicInfo;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -151,7 +158,7 @@ class StudentEnrollmentService
             $this->manageAcademicInfoSnapshot($student, $classroom, $batchId);
 
             if ($dispatchEvent) {
-                event(new \App\Events\Enrollment\StudentEnrolled($student, $enrollment, $batchId));
+                event(new StudentEnrolled($student, $enrollment, $batchId));
             }
 
             return $enrollment;
@@ -211,7 +218,7 @@ class StudentEnrollmentService
             $opened = $this->enrollStudent($student, $toClassroom, null, $batchId, $userId, false);
 
             if ($closed) {
-                event(new \App\Events\Enrollment\StudentTransferred($student, $closed, $opened, $batchId));
+                event(new StudentTransferred($student, $closed, $opened, $batchId));
             }
 
             return $opened;
@@ -266,7 +273,7 @@ class StudentEnrollmentService
                 ]);
             }
 
-            event(new \App\Events\Enrollment\StudentGraduated($student, $closed, $batchId));
+            event(new StudentGraduated($student, $closed, $batchId));
 
             return $closed;
         });
@@ -319,7 +326,7 @@ class StudentEnrollmentService
                 ]);
             }
 
-            event(new \App\Events\Enrollment\StudentDropped($student, $closed, $reason, $batchId));
+            event(new StudentDropped($student, $closed, $reason, $batchId));
 
             return $closed;
         });
@@ -370,7 +377,7 @@ class StudentEnrollmentService
             $opened = $this->enrollStudent($student, $newClassroom, $studentNumber, $batchId, $userId, false);
 
             if ($closed) {
-                event(new \App\Events\Enrollment\StudentRepeated($student, $closed, $opened, $batchId));
+                event(new StudentRepeated($student, $closed, $opened, $batchId));
             }
 
             return $opened;
@@ -408,7 +415,7 @@ class StudentEnrollmentService
             $opened = $this->enrollStudent($student, $toClassroom, $studentNumber, $batchId, $userId, false);
 
             if ($closed) {
-                event(new \App\Events\Enrollment\StudentPromoted($student, $closed, $opened, $batchId));
+                event(new StudentPromoted($student, $closed, $opened, $batchId));
             }
 
             return $opened;
@@ -499,7 +506,7 @@ class StudentEnrollmentService
     /**
      * Get enrollment history for a student
      */
-    public function getStudentHistory(Student $student): \Illuminate\Database\Eloquent\Collection
+    public function getStudentHistory(Student $student): Collection
     {
         return ClassroomStudent::where('student_id', $student->id)
             ->with(['classroom.academicYear', 'classroom.homeroomTeacher'])

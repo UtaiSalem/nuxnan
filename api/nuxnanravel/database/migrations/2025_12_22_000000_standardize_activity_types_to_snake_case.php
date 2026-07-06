@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -29,7 +27,7 @@ return new class extends Migration
 
     /**
      * Run the migrations.
-     * 
+     *
      * Converts all legacy activity_type values to snake_case format
      * for consistency with REST API standards and frontend actionMap.
      */
@@ -44,7 +42,7 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
-     * 
+     *
      * Converts snake_case values back to legacy format.
      */
     public function down(): void

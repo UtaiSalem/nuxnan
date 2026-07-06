@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('academy_post_comment_likes')) {
+        if (! Schema::hasTable('academy_post_comment_likes')) {
             Schema::create('academy_post_comment_likes', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('academy_post_comment_id');
@@ -29,7 +29,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('academy_post_comment_dislikes')) {
+        if (! Schema::hasTable('academy_post_comment_dislikes')) {
             Schema::create('academy_post_comment_dislikes', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('academy_post_comment_id');

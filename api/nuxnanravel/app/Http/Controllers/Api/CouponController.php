@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\User;
 use App\Services\CouponService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class CouponController extends Controller
@@ -26,7 +26,7 @@ class CouponController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -62,7 +62,7 @@ class CouponController extends Controller
                 );
             }
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -100,7 +100,7 @@ class CouponController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -135,7 +135,7 @@ class CouponController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -144,7 +144,7 @@ class CouponController extends Controller
 
         $coupon = $this->couponService->getCouponById($id, $user);
 
-        if (!$coupon) {
+        if (! $coupon) {
             return response()->json([
                 'success' => false,
                 'message' => 'Coupon not found',
@@ -166,7 +166,7 @@ class CouponController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -188,7 +188,7 @@ class CouponController extends Controller
                 $userAgent
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -222,7 +222,7 @@ class CouponController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -231,7 +231,7 @@ class CouponController extends Controller
 
         $coupon = $this->couponService->getCouponById($id, $user);
 
-        if (!$coupon) {
+        if (! $coupon) {
             return response()->json([
                 'success' => false,
                 'message' => 'Coupon not found',
@@ -241,7 +241,7 @@ class CouponController extends Controller
         try {
             $result = $this->couponService->cancelCoupon($coupon, $user);
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -267,7 +267,7 @@ class CouponController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -276,7 +276,7 @@ class CouponController extends Controller
 
         $coupon = $this->couponService->getCouponById($id, $user);
 
-        if (!$coupon) {
+        if (! $coupon) {
             return response()->json([
                 'success' => false,
                 'message' => 'Coupon not found',
@@ -308,7 +308,7 @@ class CouponController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',

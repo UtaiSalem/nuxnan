@@ -2,12 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Donate;
-use App\Models\Activity;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class DonateRecipient extends Model
 {
@@ -27,7 +24,6 @@ class DonateRecipient extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
-
 
     public function reciever()
     {

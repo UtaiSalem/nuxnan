@@ -68,8 +68,8 @@ return new class extends Migration
 
             $table->unique(['tournament_id', 'user_id'], 'uq_tournament_user');
             $table->index(['tournament_id', 'best_score'], 'idx_tournament_score');
-            
-            // Note: Foreign key for best_session_id is added later or managed in app to avoid circular dep if needed, 
+
+            // Note: Foreign key for best_session_id is added later or managed in app to avoid circular dep if needed,
             // but here it's fine since typing_sessions already exists.
             $table->foreign('best_session_id')->references('id')->on('typing_sessions')->onDelete('set null');
         });

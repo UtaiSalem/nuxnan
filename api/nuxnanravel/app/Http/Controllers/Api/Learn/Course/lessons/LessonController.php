@@ -3,20 +3,26 @@
 namespace App\Http\Controllers\Api\Learn\Course\lessons;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\Course;
-use App\Models\Lesson;
-use Illuminate\Http\Request;
+use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
+use App\Models\AssignmentAnswerImage;
+use App\Models\AssignmentImage;
+use App\Models\Course;
+use App\Models\Lesson;
+use App\Models\LessonCommentImage;
+use App\Models\LessonImage;
+use App\Models\QuestionImage;
+use App\Models\TopicImage;
 use App\Services\CourseMediaService;
 use App\Services\WalletService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class LessonController extends Controller
 {
     protected WalletService $walletService;
+
     protected CourseMediaService $mediaService;
 
     public function __construct(WalletService $walletService, CourseMediaService $mediaService)
@@ -33,9 +39,9 @@ class LessonController extends Controller
         // $isCourseAdmin = $course->user_id == auth()->id() ? true: false;
         return response()->json([
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
-            'course'        => new CourseResource($course),
-            'lessons'       => LessonResource::collection($course->lessons),
-            'groups'        => CourseGroupResource::collection($course->courseGroups),
+            'course' => new CourseResource($course),
+            'lessons' => LessonResource::collection($course->lessons),
+            'groups' => CourseGroupResource::collection($course->courseGroups),
         ]);
     }
 
@@ -44,35 +50,35 @@ class LessonController extends Controller
      */
     public function store(Course $course, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validated = $request->validate([
-            'title'         => ['required','string'],
-            'description'   => ['nullable','string'],
-            'content'       => ['nullable','string'],
-            'youtube_url'   => ['nullable','string'],
-            'status'        => ['required'],
+            'title' => ['required', 'string'],
+            'description' => ['nullable', 'string'],
+            'content' => ['nullable', 'string'],
+            'youtube_url' => ['nullable', 'string'],
+            'status' => ['required'],
             // validate the image
-            'images.*'      => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',
         ]);
-        
+
         $validated['user_id'] = auth()->id();
 
         $lesson = $course->lessons()->create([
-            'user_id'       => $validated['user_id'],
-            'title'         => $validated['title'],
-            'description'   => $validated['description'] === null || $validated['description'] === "null" ? null : $validated['description'],
-            'content'       => $validated['content'] === null || $validated['content'] === "null" ? null : $validated['content'],
-            'youtube_url'   => $validated['youtube_url'] === null || $validated['youtube_url'] === "null" ? null : $validated['youtube_url'],
-            'status'        => $validated['status'],
+            'user_id' => $validated['user_id'],
+            'title' => $validated['title'],
+            'description' => $validated['description'] === null || $validated['description'] === 'null' ? null : $validated['description'],
+            'content' => $validated['content'] === null || $validated['content'] === 'null' ? null : $validated['content'],
+            'youtube_url' => $validated['youtube_url'] === null || $validated['youtube_url'] === 'null' ? null : $validated['youtube_url'],
+            'status' => $validated['status'],
         ]);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/courses/lessons', $image, $fileName);
                 $lesson->images()->create([
                     'filename' => $fileName,
@@ -82,7 +88,7 @@ class LessonController extends Controller
 
         return response()->json([
             'success' => true,
-            'newLesson' => new LessonResource(Lesson::find($lesson->id))
+            'newLesson' => new LessonResource(Lesson::find($lesson->id)),
         ], 200);
     }
 
@@ -93,33 +99,35 @@ class LessonController extends Controller
     {
         $isCourseAdmin = $lesson->course->isAdmin(auth()->user());
         $course = $lesson->course;
-        
+
         try {
-            if (!$isCourseAdmin && (auth()->user()->pp < $lesson->point_tuition_fee)) {
+            if (! $isCourseAdmin && (auth()->user()->pp < $lesson->point_tuition_fee)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'You do not have enough points to access this lesson // คุณมีพอยต์ไม่เพียงพอเพื่อเข้าถึงบทเรียนนี้'
+                    'message' => 'You do not have enough points to access this lesson // คุณมีพอยต์ไม่เพียงพอเพื่อเข้าถึงบทเรียนนี้',
                 ], 401);
             }
 
             $lesson->increment('view_count');
 
-            if (!$isCourseAdmin) { auth()->user()->decrement('pp', $lesson->point_tuition_fee); }
+            if (! $isCourseAdmin) {
+                auth()->user()->decrement('pp', $lesson->point_tuition_fee);
+            }
 
             $course->increment('points', $lesson->point_tuition_fee);
 
             return response()->json([
-                'course'                => new CourseResource($course),
-                'lesson'                => new LessonResource($lesson),
-                'isCourseAdmin'         => $course->isAdmin(auth()->user()),
-                'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),
-                'authUserPP'            => auth()->user()->pp,
+                'course' => new CourseResource($course),
+                'lesson' => new LessonResource($lesson),
+                'isCourseAdmin' => $course->isAdmin(auth()->user()),
+                'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
+                'authUserPP' => auth()->user()->pp,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Lesson not found'
+                'message' => 'Lesson not found',
             ], 404);
         }
     }
@@ -137,42 +145,42 @@ class LessonController extends Controller
      */
     public function update(Course $course, Lesson $lesson, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validated = $request->validate([
-            'title'             => ['required','string'],
-            'description'       => ['nullable','string'],
-            'content'           => ['nullable','string'],
-            'youtube_url'       => ['nullable','string'],
-            'min_read'          => ['nullable','integer'],
-            'point_tuition_fee' => ['nullable','integer'],
-            'order'             => ['nullable','integer'],
-            'status'            => ['nullable','integer'],
-            'images.*'          => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',
+            'title' => ['required', 'string'],
+            'description' => ['nullable', 'string'],
+            'content' => ['nullable', 'string'],
+            'youtube_url' => ['nullable', 'string'],
+            'min_read' => ['nullable', 'integer'],
+            'point_tuition_fee' => ['nullable', 'integer'],
+            'order' => ['nullable', 'integer'],
+            'status' => ['nullable', 'integer'],
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',
         ]);
 
         $lesson->update([
-            'title'             => $validated['title'],
-            'description'       => $validated['description'] === null || $validated['description'] === "null" ? null : $validated['description'],
-            'content'           => $validated['content'] === null || $validated['content'] === "null" ? null : $validated['content'],
-            'youtube_url'       => $validated['youtube_url'] === null || $validated['youtube_url'] === "null" ? null : $validated['youtube_url'],
-            'min_read'          => $validated['min_read'] ?? $lesson->min_read,
+            'title' => $validated['title'],
+            'description' => $validated['description'] === null || $validated['description'] === 'null' ? null : $validated['description'],
+            'content' => $validated['content'] === null || $validated['content'] === 'null' ? null : $validated['content'],
+            'youtube_url' => $validated['youtube_url'] === null || $validated['youtube_url'] === 'null' ? null : $validated['youtube_url'],
+            'min_read' => $validated['min_read'] ?? $lesson->min_read,
             'point_tuition_fee' => $validated['point_tuition_fee'] ?? $lesson->point_tuition_fee,
-            'order'             => $validated['order'] ?? $lesson->order,
-            'status'            => $validated['status'] ?? $lesson->status,
+            'order' => $validated['order'] ?? $lesson->order,
+            'status' => $validated['status'] ?? $lesson->status,
         ]);
 
         $lessonImages = [];
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/courses/lessons', $image, $fileName);
 
                 $lessonImages[] = $lesson->images()->create([
-                    'filename' => $fileName
+                    'filename' => $fileName,
                 ]);
             }
         }
@@ -180,7 +188,7 @@ class LessonController extends Controller
         return response()->json([
             'success' => true,
             'lesson' => new LessonResource($lesson->fresh()),
-            'images' => $lessonImages
+            'images' => $lessonImages,
         ], 200);
     }
 
@@ -194,7 +202,7 @@ class LessonController extends Controller
             foreach ($assignment->images as $image) {
                 $this->mediaService->deleteUnused(
                     'lesson_assignment_image',
-                    \App\Models\AssignmentImage::class,
+                    AssignmentImage::class,
                     'image_url',
                     $image->image_url,
                     $image->id
@@ -210,7 +218,7 @@ class LessonController extends Controller
                     foreach ($answer->images as $answerImage) {
                         $this->mediaService->deleteUnused(
                             'assignment_answer_image',
-                            \App\Models\AssignmentAnswerImage::class,
+                            AssignmentAnswerImage::class,
                             'filename',
                             $answerImage->filename,
                             $answerImage->id
@@ -238,7 +246,7 @@ class LessonController extends Controller
 
                 $this->mediaService->deleteUnused(
                     'question_image',
-                    \App\Models\QuestionImage::class,
+                    QuestionImage::class,
                     $field,
                     $value,
                     $image->id
@@ -257,7 +265,7 @@ class LessonController extends Controller
 
                         $this->mediaService->deleteUnused(
                             'option_image',
-                            \App\Models\QuestionImage::class,
+                            QuestionImage::class,
                             $field,
                             $value,
                             $optImage->id
@@ -287,7 +295,7 @@ class LessonController extends Controller
             foreach ($topic->images as $topic_image) {
                 $this->mediaService->deleteUnused(
                     'topic_image',
-                    \App\Models\TopicImage::class,
+                    TopicImage::class,
                     'filename',
                     $topic_image->filename,
                     $topic_image->id
@@ -318,16 +326,16 @@ class LessonController extends Controller
      */
     public function destroy(Lesson $lesson)
     {
-        if (!$lesson->course->isAdmin(auth()->user())) {
+        if (! $lesson->course->isAdmin(auth()->user())) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ลบบทเรียนนี้'
+                'message' => 'คุณไม่มีสิทธิ์ลบบทเรียนนี้',
             ], 403);
         }
 
         try {
             $course = $lesson->course;
-            
+
             \DB::beginTransaction();
 
             // 1. Delete lesson comments and their related data
@@ -338,7 +346,7 @@ class LessonController extends Controller
                         foreach ($comment->lessonCommentImages as $comment_image) {
                             $this->mediaService->deleteUnused(
                                 'lesson_comment_image',
-                                \App\Models\LessonCommentImage::class,
+                                LessonCommentImage::class,
                                 'filename',
                                 $comment_image->filename,
                                 $comment_image->id
@@ -379,7 +387,7 @@ class LessonController extends Controller
                 foreach ($lesson->images as $lesson_image) {
                     $this->mediaService->deleteUnused(
                         'lesson_image',
-                        \App\Models\LessonImage::class,
+                        LessonImage::class,
                         'filename',
                         $lesson_image->filename,
                         $lesson_image->id
@@ -412,19 +420,19 @@ class LessonController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'ลบบทเรียนสำเร็จ'
+                'message' => 'ลบบทเรียนสำเร็จ',
             ], 200);
 
         } catch (\Exception $e) {
             \DB::rollBack();
-            \Log::error('Error deleting lesson: ' . $e->getMessage());
+            \Log::error('Error deleting lesson: '.$e->getMessage());
             \Log::error($e->getTraceAsString());
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการลบบทเรียน',
-                'error' => config('app.debug') ? $e->getMessage() : null
+                'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
-
 }

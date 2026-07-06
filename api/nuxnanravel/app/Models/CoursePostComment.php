@@ -2,12 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\CoursePost;
-use App\Models\CoursePostCommentImage;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CoursePostComment extends Model
 {
@@ -32,7 +29,7 @@ class CoursePostComment extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
-    }   
+    }
 
     public function coursePost()
     {
@@ -61,6 +58,6 @@ class CoursePostComment extends Model
 
     public function postCommentImages(): HasMany
     {
-        return $this->hasMany(CoursePostCommentImage::class, 'post_comment_id',);
+        return $this->hasMany(CoursePostCommentImage::class, 'post_comment_id');
     }
 }

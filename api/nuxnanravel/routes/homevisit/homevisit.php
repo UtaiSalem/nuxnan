@@ -1,20 +1,20 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\HomeVisitAuthController;
-use App\Http\Controllers\Api\Learn\Student\Master\StudentController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\TeacherController;
 use App\Http\Controllers\Api\Learn\Student\HomeVisit\AdminController;
+use App\Http\Controllers\Api\Learn\Student\HomeVisit\HomeVisitAuthController;
+use App\Http\Controllers\Api\Learn\Student\HomeVisit\TeacherController;
+use App\Http\Controllers\Api\Learn\Student\HomeVisit\ZoneController;
 use App\Http\Controllers\Api\Learn\Student\Master\AcademicInfoController;
 use App\Http\Controllers\Api\Learn\Student\Master\AddressController;
 use App\Http\Controllers\Api\Learn\Student\Master\ContactController;
-use App\Http\Controllers\Api\Learn\Student\Master\HealthController;
 use App\Http\Controllers\Api\Learn\Student\Master\GuardianController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\ZoneController;
+use App\Http\Controllers\Api\Learn\Student\Master\HealthController;
+use App\Http\Controllers\Api\Learn\Student\Master\StudentController;
+use Illuminate\Support\Facades\Route;
 
 // Main Home Visit System Routes
 Route::prefix('home-visit')->name('homevisit.')->group(function () {
-    
+
     // Authentication Routes
     Route::get('/', [HomeVisitAuthController::class, 'index'])->name('login');
     Route::post('/student-login', [HomeVisitAuthController::class, 'studentLogin'])->name('student.login');
@@ -29,7 +29,7 @@ Route::prefix('home-visit')->name('homevisit.')->group(function () {
         Route::get('/profile', [StudentController::class, 'profile'])->name('profile');
         Route::post('/update-info', [StudentController::class, 'updateInfo'])->name('update.info');
         Route::post('/upload-photos', [StudentController::class, 'uploadPhotos'])->name('upload.photos');
-        
+
         // Student Academic Info Routes
         Route::prefix('{student}/academic-info')->name('academic-info.')->group(function () {
             Route::get('/', [AcademicInfoController::class, 'index'])->name('index');  // ดูทั้งหมด
@@ -71,7 +71,7 @@ Route::prefix('home-visit')->name('homevisit.')->group(function () {
             Route::post('/', [GuardianController::class, 'store'])->name('store');
             Route::put('/', [GuardianController::class, 'update'])->name('update');
         });
-        
+
         // Search and Statistics Routes
         Route::get('/academic-info/search', [AcademicInfoController::class, 'searchByAcademicInfo'])->name('academic-info.search');
         Route::get('/academic-info/statistics', [AcademicInfoController::class, 'statistics'])->name('academic-info.statistics');
@@ -88,7 +88,7 @@ Route::prefix('home-visit')->name('homevisit.')->group(function () {
         Route::put('/update-home-visit/{homeVisit}', [TeacherController::class, 'updateHomeVisit'])->name('update.home.visit');
         Route::post('/update-home-visit-with-images/{homeVisit}', [TeacherController::class, 'updateHomeVisitWithImages'])->name('update.home.visit.with.images');
         Route::delete('/delete-home-visit/{homeVisit}', [TeacherController::class, 'deleteHomeVisit'])->name('delete.home.visit');
-        
+
         // Student Academic Info Routes for Teacher
         Route::prefix('{student}/academic-info')->name('academic-info.')->group(function () {
             Route::get('/', [AcademicInfoController::class, 'index'])->name('index');  // ดูทั้งหมด
@@ -130,7 +130,7 @@ Route::prefix('home-visit')->name('homevisit.')->group(function () {
             Route::post('/', [GuardianController::class, 'store'])->name('store');
             Route::put('/', [GuardianController::class, 'update'])->name('update');
         });
-        
+
         // Teacher Access to Search and Statistics
         Route::get('/academic-info/search', [AcademicInfoController::class, 'searchByAcademicInfo'])->name('academic-info.search');
         Route::get('/academic-info/statistics', [AcademicInfoController::class, 'statistics'])->name('academic-info.statistics');
@@ -150,7 +150,7 @@ Route::prefix('home-visit')->name('homevisit.')->group(function () {
         Route::get('/export/visits', [AdminController::class, 'exportVisits'])->name('export.visits');
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
         Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
-        
+
         // Zone Management Routes
         Route::prefix('zones')->name('zones.')->group(function () {
             Route::get('/', [ZoneController::class, 'list'])->name('list');

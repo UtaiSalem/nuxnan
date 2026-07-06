@@ -34,7 +34,9 @@ class ThreadParticipant extends Model
 
     // Role constants
     const ROLE_ADMIN = 'admin';
+
     const ROLE_MODERATOR = 'moderator';
+
     const ROLE_MEMBER = 'member';
 
     // Relationships

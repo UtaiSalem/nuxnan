@@ -4,13 +4,21 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\AcademyGroup;
 use App\Models\AnalyticsAlertHistory;
 use App\Models\AnalyticsAlertRule;
 use App\Models\AnalyticsSnapshot;
+use App\Models\Assignment;
+use App\Models\AssignmentAnswer;
+use App\Models\ClassSchedule;
 use App\Models\ComparativeAnalytics;
 use App\Models\KpiDefinition;
 use App\Models\KpiValue;
+use App\Models\Learn\Academy\Classroom;
+use App\Models\Lesson;
+use App\Models\LessonProgress;
 use App\Models\TrendAnalysis;
+use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,9 +44,9 @@ class AnalyticsController extends Controller
         $user = Auth::user();
         $isFullAdmin = $academy->user_id === $user->id;
 
-        $query = \App\Models\Assignment::whereHas('course', function ($q) use ($academy) {
+        $query = Assignment::whereHas('course', function ($q) use ($academy) {
             $q->where('academy_id', $academy->id);
-        })->with(['course', 'answers' => function($q) {
+        })->with(['course', 'answers' => function ($q) {
             $q->whereNull('points')->orWhere('status', 'submitted');
         }]);
 
@@ -47,10 +55,10 @@ class AnalyticsController extends Controller
         }
 
         $assignments = $query->get()
-            ->filter(function($assignment) {
+            ->filter(function ($assignment) {
                 return $assignment->answers->count() > 0;
             })
-            ->map(function($assignment) {
+            ->map(function ($assignment) {
                 return [
                     'id' => $assignment->id,
                     'title' => $assignment->title,
@@ -79,7 +87,7 @@ class AnalyticsController extends Controller
         })->count();
 
         // Completed lessons count
-        $completedLessonsCount = \App\Models\LessonProgress::where('user_id', $user->id)
+        $completedLessonsCount = LessonProgress::where('user_id', $user->id)
             ->where('status', 'completed')
             ->whereHas('lesson.course', function ($q) use ($academy) {
                 $q->where('academy_id', $academy->id);
@@ -122,7 +130,7 @@ class AnalyticsController extends Controller
         $classesCount = 0;
         try {
             $today = now()->dayOfWeekIso;
-            $classesCount = \App\Models\ClassSchedule::where('academy_id', $academy->id)
+            $classesCount = ClassSchedule::where('academy_id', $academy->id)
                 ->where('day_of_week', $today)
                 ->where('is_active', true)
                 ->count();
@@ -132,8 +140,8 @@ class AnalyticsController extends Controller
 
         $pendingGradingCount = 0;
         try {
-            $pendingGradingCount = \App\Models\AssignmentAnswer::whereHas('assignment', function ($q) use ($academy) {
-                $q->whereHasMorph('assignmentable', [\App\Models\Lesson::class], function ($lq) use ($academy) {
+            $pendingGradingCount = AssignmentAnswer::whereHas('assignment', function ($q) use ($academy) {
+                $q->whereHasMorph('assignmentable', [Lesson::class], function ($lq) use ($academy) {
                     $lq->whereHas('course', fn ($cq) => $cq->where('academy_id', $academy->id));
                 });
             })
@@ -161,7 +169,7 @@ class AnalyticsController extends Controller
      */
     public function houseLeaderboard(Request $request, Academy $academy): JsonResponse
     {
-        $houses = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+        $houses = AcademyGroup::where('academy_id', $academy->id)
             ->where('type', 'house')
             ->get();
 
@@ -192,7 +200,7 @@ class AnalyticsController extends Controller
      */
     public function classroomLeaderboard(Request $request, Academy $academy): JsonResponse
     {
-        $classrooms = \App\Models\Learn\Academy\Classroom::where('academy_id', $academy->id)->get();
+        $classrooms = Classroom::where('academy_id', $academy->id)->get();
 
         $leaderboard = $classrooms->map(function ($classroom) {
             $totalPoints = DB::table('users')
@@ -239,7 +247,7 @@ class AnalyticsController extends Controller
 
         $allAtRiskIds = array_unique(array_merge($atRiskAttendance, $atRiskFees));
 
-        $students = \App\Models\User::whereIn('id', $allAtRiskIds)
+        $students = User::whereIn('id', $allAtRiskIds)
             ->select('id', 'name', 'profile_photo_path', 'email')
             ->with(['academyMember' => function ($q) use ($academy) {
                 $q->where('academy_id', $academy->id);

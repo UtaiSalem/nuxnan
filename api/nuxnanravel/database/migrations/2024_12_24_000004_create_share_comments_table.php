@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedInteger('likes')->default(0);
             $table->unsignedInteger('dislikes')->default(0);
             $table->timestamps();
-            
+
             // Foreign keys
             $table->foreign('share_id')->references('id')->on('shares')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

@@ -19,13 +19,13 @@ class StoreCourseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'       => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'category_id' => ['nullable', 'integer', 'exists:course_categories,id'],
-            'price'       => ['nullable', 'numeric', 'min:0'],
-            'status'           => ['nullable', 'in:draft,pending,published,archived'],
-            'education_level'  => ['nullable', 'string', 'max:30'],
-            'education_year'   => ['nullable', 'integer', 'min:1', 'max:6'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'status' => ['nullable', 'in:draft,pending,published,archived'],
+            'education_level' => ['nullable', 'string', 'max:30'],
+            'education_year' => ['nullable', 'integer', 'min:1', 'max:6'],
         ];
     }
 }

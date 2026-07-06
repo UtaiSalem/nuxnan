@@ -2,18 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
 /**
  * Student Academic Information Model
  */
-use App\Traits\Auditable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StudentAcademicInfo extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $table = 'student_academic_info';
 
@@ -40,26 +39,32 @@ class StudentAcademicInfo extends Model
         'study_status',
         'is_current',
         'transfer_reason',
-        'notes'
+        'notes',
     ];
 
     protected $casts = [
         'enrollment_date' => 'date',
         'graduation_date' => 'date',
         'is_current' => 'boolean',
-        'semester' => 'integer'
+        'semester' => 'integer',
     ];
 
     // Study status constants
     const STATUS_STUDYING = 'studying';
+
     const STATUS_GRADUATED = 'graduated';
+
     const STATUS_TRANSFERRED = 'transferred';
+
     const STATUS_DROPPED = 'dropped';
+
     const STATUS_SUSPENDED = 'suspended';
-    
+
     // Education level constants
     const EDUCATION_KINDERGARTEN = 0;
+
     const EDUCATION_PRIMARY = 1;
+
     const EDUCATION_SECONDARY = 2;
 
     public function student(): BelongsTo
@@ -82,7 +87,7 @@ class StudentAcademicInfo extends Model
         if ($this->classroom_full) {
             return $this->classroom_full;
         }
-        
+
         return "{$this->current_grade}/{$this->current_class}";
     }
 
@@ -91,7 +96,7 @@ class StudentAcademicInfo extends Model
      */
     public function getEducationLevelTextAttribute(): string
     {
-        return match($this->education_level) {
+        return match ($this->education_level) {
             self::EDUCATION_KINDERGARTEN => 'อนุบาล',
             self::EDUCATION_PRIMARY => 'ประถม',
             self::EDUCATION_SECONDARY => 'มัธยม',
@@ -104,7 +109,7 @@ class StudentAcademicInfo extends Model
      */
     public static function getEducationLevelFromString(string $level): int
     {
-        return match(strtolower($level)) {
+        return match (strtolower($level)) {
             'kindergarten', 'อนุบาล' => self::EDUCATION_KINDERGARTEN,
             'primary', 'ประถม' => self::EDUCATION_PRIMARY,
             'secondary', 'มัธยม' => self::EDUCATION_SECONDARY,
@@ -117,11 +122,12 @@ class StudentAcademicInfo extends Model
      */
     public function isCurrentAcademicYear(): bool
     {
-        if (!$this->academic_year) {
+        if (! $this->academic_year) {
             return false;
         }
 
         $currentYear = $this->getCurrentAcademicYear();
+
         return $this->academic_year == $currentYear;
     }
 
@@ -130,14 +136,15 @@ class StudentAcademicInfo extends Model
      */
     public static function getCurrentAcademicYear(): string
     {
-        $now = new \DateTime();
+        $now = new \DateTime;
         $buddhistYear = $now->format('Y') + 543;
-        
+
         // Academic year starts in May of the previous year
         if ($now->format('n') < 5) { // January-April = semester 2
-            return (string)($buddhistYear - 1);
+            return (string) ($buddhistYear - 1);
         }
-        return (string)$buddhistYear; // May-December = semester 1 of new academic year
+
+        return (string) $buddhistYear; // May-December = semester 1 of new academic year
     }
 
     /**
@@ -145,14 +152,15 @@ class StudentAcademicInfo extends Model
      */
     public static function getCurrentSemester(): int
     {
-        $now = new \DateTime();
-        $month = (int)$now->format('n');
-        
+        $now = new \DateTime;
+        $month = (int) $now->format('n');
+
         // Semester 1: May-September
         // Semester 2: October-April
         if ($month >= 5 && $month <= 9) {
             return 1;
         }
+
         return 2;
     }
 
@@ -178,7 +186,7 @@ class StudentAcademicInfo extends Model
     public function scopeByClass($query, $grade, $class)
     {
         return $query->where('current_grade', $grade)
-                    ->where('current_class', $class);
+            ->where('current_class', $class);
     }
 
     /**
@@ -242,7 +250,7 @@ class StudentAcademicInfo extends Model
      */
     public function getStatusTextAttribute(): string
     {
-        return match($this->study_status) {
+        return match ($this->study_status) {
             self::STATUS_STUDYING => 'กำลังศึกษา',
             self::STATUS_GRADUATED => 'จบการศึกษา',
             self::STATUS_TRANSFERRED => 'ย้ายโรงเรียน',
@@ -269,7 +277,7 @@ class StudentAcademicInfo extends Model
         self::where('student_id', $this->student_id)
             ->where('id', '!=', $this->id)
             ->update(['is_current' => false]);
-        
+
         // Set this record as current
         $this->update(['is_current' => true]);
     }

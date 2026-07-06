@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Academy;
 use App\Models\Student;
 use Illuminate\Console\Command;
 
@@ -18,9 +19,10 @@ class AssignStudentsToAcademy extends Command
         $academyId = $this->argument('academy_id');
         $dryRun = $this->option('dry-run');
 
-        $academy = \App\Models\Academy::find($academyId);
-        if (!$academy) {
+        $academy = Academy::find($academyId);
+        if (! $academy) {
             $this->error("Academy ID {$academyId} not found.");
+
             return 1;
         }
 
@@ -35,22 +37,26 @@ class AssignStudentsToAcademy extends Command
 
         if ($studentsWithout === 0) {
             $this->info('All students already have academy_id assigned. Nothing to do.');
+
             return 0;
         }
 
         if ($dryRun) {
             $this->warn('DRY RUN - No changes made.');
+
             return 0;
         }
 
-        if (!$this->confirm("Assign {$studentsWithout} students to academy '{$academy->name}'?")) {
+        if (! $this->confirm("Assign {$studentsWithout} students to academy '{$academy->name}'?")) {
             $this->info('Cancelled.');
+
             return 0;
         }
 
         $updated = Student::whereNull('academy_id')->update(['academy_id' => $academyId]);
 
         $this->info("Updated {$updated} students with academy_id = {$academyId}");
+
         return 0;
     }
 }

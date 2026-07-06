@@ -63,7 +63,7 @@ class UserAchievement extends Model
      */
     public function getProgressPercentageAttribute(): float
     {
-        if (!$this->achievement) {
+        if (! $this->achievement) {
             return 0;
         }
 
@@ -82,7 +82,7 @@ class UserAchievement extends Model
      */
     public function getFormattedProgressAttribute(): string
     {
-        if (!$this->achievement) {
+        if (! $this->achievement) {
             return '0/0';
         }
 

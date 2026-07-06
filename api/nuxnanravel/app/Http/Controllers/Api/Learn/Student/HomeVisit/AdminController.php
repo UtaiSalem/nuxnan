@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
 
+use App\Exports\HomeVisitsExport;
 use App\Http\Controllers\Controller;
-use App\Models\StudentHomeVisit;
+use App\Models\HomeVisitZone;
 use App\Models\Student;
 use App\Models\StudentCard;
+use App\Models\StudentHomeVisit;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
+use Maatwebsite\Excel\Excel;
 
 class AdminController extends Controller
 {
-
     /**
      * Get statistics for academy admin dashboard
      */
@@ -21,11 +22,11 @@ class AdminController extends Controller
         $totalVisits = StudentHomeVisit::count();
         $completedVisits = StudentHomeVisit::where('visit_status', 'completed')->count();
         $pendingVisits = StudentHomeVisit::where('visit_status', 'pending')->count();
-        
+
         // Calculate visited students (distinct)
         $visitedStudents = StudentHomeVisit::distinct('student_id')->count('student_id');
         $visitRate = $totalStudents > 0 ? round(($visitedStudents / $totalStudents) * 100, 1) : 0;
-        
+
         return response()->json([
             'success' => true,
             'statistics' => [
@@ -34,8 +35,8 @@ class AdminController extends Controller
                 'pendingVisits' => $pendingVisits,
                 'totalStudents' => $totalStudents,
                 'visitedStudents' => $visitedStudents,
-                'visitRate' => $visitRate
-            ]
+                'visitRate' => $visitRate,
+            ],
         ]);
     }
 
@@ -68,7 +69,7 @@ class AdminController extends Controller
                 'month' => $date->format('M Y'),
                 'visits' => StudentHomeVisit::whereMonth('visit_date', $date->month)
                     ->whereYear('visit_date', $date->year)
-                    ->count()
+                    ->count(),
             ];
         }
 
@@ -77,7 +78,7 @@ class AdminController extends Controller
             'recentVisits' => $recentVisits,
             'monthlyVisits' => $monthlyVisits,
             'allVisits' => $this->getAllVisitsForReports(),
-            'zones' => \App\Models\HomeVisitZone::all(),
+            'zones' => HomeVisitZone::all(),
         ]);
     }
 
@@ -141,13 +142,13 @@ class AdminController extends Controller
             $zone = $zones[array_rand($zones)];
             $status = ['completed', 'in-progress', 'pending', 'cancelled'][rand(0, 3)];
             $daysAgo = rand(0, 60);
-            
-            $visit = (object)[
+
+            $visit = (object) [
                 'id' => $i,
                 'student_id' => $student['id'],
-                'student' => (object)$student,
+                'student' => (object) $student,
                 'zone_id' => $zone['id'],
-                'zone' => (object)$zone,
+                'zone' => (object) $zone,
                 'teacher_name' => $teachers[array_rand($teachers)],
                 'visitor_name' => $teachers[array_rand($teachers)],
                 'visit_date' => now()->subDays($daysAgo)->toISOString(),
@@ -159,17 +160,17 @@ class AdminController extends Controller
                 'recommendations' => ['กำหนดเวลาเรียนที่บ้านให้ชัดเจน', 'ให้กำลังใจและรางวัล'],
                 'follow_up_actions' => ['ติดตามผลการเรียนในเดือนหน้า', 'ประสานงานกับครูประจำชั้น'],
                 'next_schedule' => $status === 'completed' && rand(0, 1) ? now()->addDays(30)->toISOString() : null,
-                'images' => rand(0, 1) ? array_map(function($url, $idx) use ($i) {
+                'images' => rand(0, 1) ? array_map(function ($url, $idx) use ($i) {
                     return ['id' => "$i-$idx", 'url' => $url, 'caption' => "ภาพกิจกรรม $idx"];
                 }, array_slice($imageUrls, 0, rand(1, 3)), array_keys(array_slice($imageUrls, 0, rand(1, 3)))) : [],
                 'created_at' => now()->subDays($daysAgo)->toISOString(),
                 'updated_at' => now()->subDays(max(0, $daysAgo - 5))->toISOString(),
             ];
-            
+
             $allVisits[] = $visit;
         }
 
-        usort($allVisits, function($a, $b) {
+        usort($allVisits, function ($a, $b) {
             return strtotime($b->visit_date) - strtotime($a->visit_date);
         });
 
@@ -177,11 +178,11 @@ class AdminController extends Controller
             'stats' => [
                 'total_students' => count($students),
                 'total_visits' => count($allVisits),
-                'visits_this_month' => count(array_filter($allVisits, function($v) {
+                'visits_this_month' => count(array_filter($allVisits, function ($v) {
                     return date('Y-m', strtotime($v->visit_date)) === date('Y-m');
                 })),
-                'pending_visits' => count(array_filter($allVisits, fn($v) => $v->visit_status === 'pending')),
-                'completed_visits' => count(array_filter($allVisits, fn($v) => $v->visit_status === 'completed')),
+                'pending_visits' => count(array_filter($allVisits, fn ($v) => $v->visit_status === 'pending')),
+                'completed_visits' => count(array_filter($allVisits, fn ($v) => $v->visit_status === 'completed')),
             ],
             'recentVisits' => array_slice($allVisits, 0, 10),
             'monthlyVisits' => [],
@@ -196,17 +197,17 @@ class AdminController extends Controller
     private function getAllVisitsForReports()
     {
         return StudentHomeVisit::with([
-            'student' => function($query) {
+            'student' => function ($query) {
                 $query->select('id', 'first_name_th', 'last_name_th', 'nickname', 'student_id', 'citizen_id', 'email', 'phone');
             },
             'zone:id,zone_name,zone_code',
             'participants:id,home_visit_id,participant_name,participant_position,participant_role',
             'images:id,home_visit_id,image_path,image_type,image_description',
-            'creator:id,name,email'
+            'creator:id,name,email',
         ])
-        ->withCount('images')
-        ->orderBy('visit_date', 'desc')
-        ->get();
+            ->withCount('images')
+            ->orderBy('visit_date', 'desc')
+            ->get();
     }
 
     /**
@@ -218,32 +219,32 @@ class AdminController extends Controller
 
         // Search functionality - include StudentCard search
         if ($request->search) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $q->where('first_name_th', 'like', "%{$request->search}%")
-                  ->orWhere('last_name_th', 'like', "%{$request->search}%")
-                  ->orWhere('student_id', 'like', "%{$request->search}%")
-                  ->orWhere('citizen_id', 'like', "%{$request->search}%")
+                    ->orWhere('last_name_th', 'like', "%{$request->search}%")
+                    ->orWhere('student_id', 'like', "%{$request->search}%")
+                    ->orWhere('citizen_id', 'like', "%{$request->search}%")
                   // Also search by matching StudentCard data
-                  ->orWhereIn('student_id', function($subquery) use ($request) {
-                      $subquery->select('student_number')
-                               ->from('student_cards')
-                               ->where('first_name_thai', 'like', "%{$request->search}%")
-                               ->orWhere('last_name_thai', 'like', "%{$request->search}%")
-                               ->orWhere('student_number', 'like', "%{$request->search}%");
-                  })
-                  ->orWhereIn('citizen_id', function($subquery) use ($request) {
-                      $subquery->select('national_id')
-                               ->from('student_cards')
-                               ->where('first_name_thai', 'like', "%{$request->search}%")
-                               ->orWhere('last_name_thai', 'like', "%{$request->search}%")
-                               ->orWhere('national_id', 'like', "%{$request->search}%");
-                  });
+                    ->orWhereIn('student_id', function ($subquery) use ($request) {
+                        $subquery->select('student_number')
+                            ->from('student_cards')
+                            ->where('first_name_thai', 'like', "%{$request->search}%")
+                            ->orWhere('last_name_thai', 'like', "%{$request->search}%")
+                            ->orWhere('student_number', 'like', "%{$request->search}%");
+                    })
+                    ->orWhereIn('citizen_id', function ($subquery) use ($request) {
+                        $subquery->select('national_id')
+                            ->from('student_cards')
+                            ->where('first_name_thai', 'like', "%{$request->search}%")
+                            ->orWhere('last_name_thai', 'like', "%{$request->search}%")
+                            ->orWhere('national_id', 'like', "%{$request->search}%");
+                    });
             });
         }
 
         // Filter by classroom through academic info
         if ($request->classroom) {
-            $query->whereHas('academicInfo', function($q) use ($request) {
+            $query->whereHas('academicInfo', function ($q) use ($request) {
                 $q->where('classroom', $request->classroom);
             });
         }
@@ -279,7 +280,7 @@ class AdminController extends Controller
     {
         $student = Student::with(['academicInfo', 'addresses', 'contacts', 'guardians.contacts', 'healthInfo'])
             ->findOrFail($id);
-        
+
         $visits = StudentHomeVisit::where('student_id', $id)
             ->orderBy('visit_date', 'desc')
             ->get();
@@ -376,7 +377,7 @@ class AdminController extends Controller
 
         // Classroom filter
         if ($request->classroom) {
-            $query->whereHas('student.academicInfo', function($q) use ($request) {
+            $query->whereHas('student.academicInfo', function ($q) use ($request) {
                 $q->where('classroom', $request->classroom);
             });
         }
@@ -458,19 +459,19 @@ class AdminController extends Controller
 
         $visits = $query->orderBy('visit_date', 'desc')->get();
 
-        $filename = 'home-visits-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'home-visits-'.now()->format('Y-m-d').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => "attachment; filename={$filename}",
         ];
 
-        $callback = function() use ($visits) {
+        $callback = function () use ($visits) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+
             // CSV Header
             fputcsv($file, [
                 'วันที่เยี่ยม',
@@ -479,7 +480,7 @@ class AdminController extends Controller
                 'ครูผู้เยี่ยม',
                 'สถานะ',
                 'หัวข้อการเยี่ยม',
-                'สรุปผลการเยี่ยม'
+                'สรุปผลการเยี่ยม',
             ]);
 
             foreach ($visits as $visit) {
@@ -514,6 +515,7 @@ class AdminController extends Controller
     public function logout()
     {
         session()->forget('homevisit_admin_authenticated');
+
         return redirect()->route('homevisit.login')->with('success', 'ออกจากระบบเรียบร้อยแล้ว');
     }
 
@@ -523,13 +525,13 @@ class AdminController extends Controller
     public function getAllVisits(Request $request)
     {
         $query = StudentHomeVisit::with([
-            'student' => function($q) {
+            'student' => function ($q) {
                 $q->select('id', 'first_name_th', 'last_name_th', 'nickname', 'student_id', 'citizen_id', 'email', 'phone');
             },
             'zone:id,zone_name,zone_code',
             'participants',
             'images',
-            'creator:id,name,email'
+            'creator:id,name,email',
         ]);
 
         // Apply filters
@@ -550,18 +552,18 @@ class AdminController extends Controller
         }
 
         if ($request->filled('teacherName')) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $q->where('visitor_name', 'like', "%{$request->teacherName}%")
-                  ->orWhereHas('participants', function($pq) use ($request) {
-                      $pq->where('participant_name', 'like', "%{$request->teacherName}%");
-                  });
+                    ->orWhereHas('participants', function ($pq) use ($request) {
+                        $pq->where('participant_name', 'like', "%{$request->teacherName}%");
+                    });
             });
         }
 
         if ($request->filled('studentName')) {
-            $query->whereHas('student', function($q) use ($request) {
+            $query->whereHas('student', function ($q) use ($request) {
                 $q->where('first_name_th', 'like', "%{$request->studentName}%")
-                  ->orWhere('last_name_th', 'like', "%{$request->studentName}%");
+                    ->orWhere('last_name_th', 'like', "%{$request->studentName}%");
             });
         }
 
@@ -576,8 +578,8 @@ class AdminController extends Controller
                 break;
             case 'student_name':
                 $query->join('students', 'student_home_visits.student_id', '=', 'students.id')
-                      ->orderBy('students.first_name_th', 'asc')
-                      ->select('student_home_visits.*');
+                    ->orderBy('students.first_name_th', 'asc')
+                    ->select('student_home_visits.*');
                 break;
             case 'status':
                 $query->orderBy('visit_status', 'asc');
@@ -599,21 +601,21 @@ class AdminController extends Controller
             'zone',
             'participants',
             'images',
-            'creator'
+            'creator',
         ])->findOrFail($visitId);
 
         // TODO: Implement PDF generation with DomPDF or TCPDF
         // For now, return JSON
         return response()->json([
             'message' => 'PDF generation not yet implemented',
-            'visit' => $visit
+            'visit' => $visit,
         ]);
 
         /* Example implementation with DomPDF:
         $pdf = \PDF::loadView('reports.home-visit-detail', [
             'visit' => $visit
         ]);
-        
+
         return $pdf->download("home-visit-report-{$visitId}.pdf");
         */
     }
@@ -625,47 +627,47 @@ class AdminController extends Controller
     {
         try {
             $visitIds = $request->get('visits', []);
-            
+
             // Validate we have visits to export
             if (empty($visitIds)) {
                 return response()->json([
-                    'message' => 'ไม่มีข้อมูลที่จะส่งออก กรุณาเลือกข้อมูลก่อน'
+                    'message' => 'ไม่มีข้อมูลที่จะส่งออก กรุณาเลือกข้อมูลก่อน',
                 ], 400);
             }
-            
+
             $visits = StudentHomeVisit::with([
                 'student',
                 'zone',
                 'participants',
-                'images'
+                'images',
             ])->whereIn('id', $visitIds)->get();
 
             // Check if visits found
             if ($visits->isEmpty()) {
                 return response()->json([
-                    'message' => 'ไม่พบข้อมูลการเยี่ยมบ้านที่เลือก'
+                    'message' => 'ไม่พบข้อมูลการเยี่ยมบ้านที่เลือก',
                 ], 404);
             }
 
             // Generate filename
-            $filename = 'home-visits-' . now()->format('Y-m-d') . '.xlsx';
+            $filename = 'home-visits-'.now()->format('Y-m-d').'.xlsx';
 
             // Use Laravel Excel to export
             return \Maatwebsite\Excel\Facades\Excel::download(
-                new \App\Exports\HomeVisitsExport($visits),
+                new HomeVisitsExport($visits),
                 $filename,
-                \Maatwebsite\Excel\Excel::XLSX,
+                Excel::XLSX,
                 [
                     'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 ]
             );
         } catch (\Exception $e) {
-            \Log::error('Excel Export Error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            \Log::error('Excel Export Error: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json([
-                'message' => 'เกิดข้อผิดพลาดในการส่งออกข้อมูล: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการส่งออกข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -676,12 +678,12 @@ class AdminController extends Controller
     public function exportToPDF(Request $request)
     {
         $visitIds = $request->get('visits', []);
-        
+
         $visits = StudentHomeVisit::with([
             'student',
             'zone',
             'participants',
-            'images'
+            'images',
         ])->whereIn('id', $visitIds)->get();
 
         $filters = $request->get('filters');
@@ -691,7 +693,7 @@ class AdminController extends Controller
         return response()->json([
             'message' => 'PDF export not yet implemented',
             'visits_count' => $visits->count(),
-            'filters' => $filters
+            'filters' => $filters,
         ]);
 
         /* Example implementation with DomPDF:
@@ -700,7 +702,7 @@ class AdminController extends Controller
             'filters' => $filters,
             'generated_at' => now()->format('d/m/Y H:i:s')
         ]);
-        
+
         return $pdf->download('home-visits-summary-' . now()->format('Y-m-d') . '.pdf');
         */
     }

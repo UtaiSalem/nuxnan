@@ -129,7 +129,7 @@ class CourseScoreService
 
         // 3. Lesson Sources (Assignments & Questions)
         $breakdown->totalLessons = $struct['lessonCount'];
-        
+
         // Lesson Progress (Status only)
         $breakdown->lessonsCompleted = DB::table('lesson_progress')
             ->whereIn('lesson_id', $struct['lessonIds'])
@@ -193,6 +193,7 @@ class CourseScoreService
 
     /**
      * Compute breakdown for multiple members efficiently.
+     *
      * @return array<int, ScoreBreakdown> Map of member ID to ScoreBreakdown
      */
     public function computeBulkBreakdown(Course $course, $members): array
@@ -250,7 +251,7 @@ class CourseScoreService
             $userId = $member->user_id;
             $mId = $member->id;
             $breakdown = new ScoreBreakdown;
-            
+
             // Common
             $breakdown->bonus = (float) ($member->bonus_points ?? 0);
             $breakdown->totalQuizzes = $struct['quizCount'];
@@ -267,7 +268,7 @@ class CourseScoreService
 
             // Assignments
             $userAssignments = $assignmentScoresByUser[$userId] ?? collect([]);
-            
+
             // Course Assignments
             $breakdown->courseAssignmentMax = $struct['courseAssignmentMax'];
             $courseAssignResults = $userAssignments->whereIn('assignment_id', $struct['courseAssignIds']);

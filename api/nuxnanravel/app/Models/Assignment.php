@@ -2,18 +2,16 @@
 
 namespace App\Models;
 
-use App\Models\AssignmentImage;
-use App\Models\AssignmentAnswer;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Assignment extends Model
 {
     use HasFactory;
 
     protected $guarded = [];
-    
+
     // append is_published to the model
     protected $appends = ['is_published'];
 
@@ -66,6 +64,4 @@ class Assignment extends Model
 
         return null;
     }
-
-    
 }

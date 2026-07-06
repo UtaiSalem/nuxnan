@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\Play\Typing;
 
 use App\Http\Controllers\Controller;
 use App\Models\TypingSession;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class TypingLeaderboardController extends Controller
 {
@@ -40,7 +40,7 @@ class TypingLeaderboardController extends Controller
         }
 
         $limit = $request->get('limit', 10);
-        
+
         // Group by user to get only their best score
         $leaderboard = $query->selectRaw('user_id, MAX(score) as top_score, MAX(wpm) as top_wpm, MAX(accuracy) as top_accuracy')
             ->whereNotNull('user_id')
@@ -51,7 +51,7 @@ class TypingLeaderboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $leaderboard
+            'data' => $leaderboard,
         ]);
     }
 }

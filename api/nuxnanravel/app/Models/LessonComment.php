@@ -2,15 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Lesson;
-
-use App\Models\LessonCommentImage;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LessonComment extends Model
 {
@@ -86,4 +82,3 @@ class LessonComment extends Model
         return $this->belongsToMany(User::class, 'lesson_comment_dislikes', 'comment_id', 'user_id');
     }
 }
-

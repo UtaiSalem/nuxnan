@@ -17,12 +17,12 @@ class StudentMasterPolicyTest extends TestCase
     private function makeUser(string $tag = ''): User
     {
         return User::create([
-            'name' => 'U' . $tag,
-            'email' => 'u' . $tag . uniqid() . '@x.test',
+            'name' => 'U'.$tag,
+            'email' => 'u'.$tag.uniqid().'@x.test',
             'password' => bcrypt('x'),
-            'username' => 'u' . $tag . uniqid(),
-            'reference_code' => 'R' . uniqid(),
-            'personal_code' => 'P' . uniqid(),
+            'username' => 'u'.$tag.uniqid(),
+            'reference_code' => 'R'.uniqid(),
+            'personal_code' => 'P'.uniqid(),
         ]);
     }
 
@@ -39,7 +39,7 @@ class StudentMasterPolicyTest extends TestCase
             'last_name_th' => 'b',
         ]);
 
-        $policy = new StudentMasterProfilePolicy();
+        $policy = new StudentMasterProfilePolicy;
         $this->assertTrue($policy->view($owner, $student));
     }
 
@@ -57,7 +57,7 @@ class StudentMasterPolicyTest extends TestCase
             'last_name_th' => 'b',
         ]);
 
-        $policy = new StudentMasterProfilePolicy();
+        $policy = new StudentMasterProfilePolicy;
         $this->assertFalse($policy->view($stranger, $student));
         $this->assertFalse($policy->update($stranger, $student));
         $this->assertFalse($policy->approveRequests($stranger, $academy->id));
@@ -83,7 +83,7 @@ class StudentMasterPolicyTest extends TestCase
             'last_name_th' => 'b',
         ]);
 
-        $policy = new StudentMasterProfilePolicy();
+        $policy = new StudentMasterProfilePolicy;
         $this->assertTrue($policy->view($admin, $student));
         $this->assertTrue($policy->update($admin, $student));
         $this->assertTrue($policy->approveRequests($admin, $academy->id));
@@ -110,7 +110,7 @@ class StudentMasterPolicyTest extends TestCase
             'last_name_th' => 'b',
         ]);
 
-        $policy = new StudentMasterProfilePolicy();
+        $policy = new StudentMasterProfilePolicy;
         $this->assertTrue($policy->view($teacher, $student));
         $this->assertFalse($policy->update($teacher, $student));
         $this->assertFalse($policy->approveRequests($teacher, $academy->id));

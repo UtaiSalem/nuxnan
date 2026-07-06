@@ -2,16 +2,13 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Activity;
-use Illuminate\Support\Carbon;
-use App\Models\DonateRecipient;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Carbon;
 
 class Donate extends Model
 {
@@ -42,7 +39,7 @@ class Donate extends Model
     protected $casts = [
         'transfer_date' => 'date',
         'donation_date' => 'datetime',
-        'reviewed_at'   => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -94,5 +91,4 @@ class Donate extends Model
     {
         return $this->amounts * 1080;
     }
-
 }

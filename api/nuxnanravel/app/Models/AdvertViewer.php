@@ -25,6 +25,4 @@ class AdvertViewer extends Model
     {
         return $this->morphOne(Activity::class, 'activityable');
     }
-
-    
 }

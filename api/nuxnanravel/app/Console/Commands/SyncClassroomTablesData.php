@@ -29,7 +29,7 @@ class SyncClassroomTablesData extends Command
             ->count();
 
         $this->info("1. classrooms without academic_year_id: {$classroomsNoYear}");
-        if ($classroomsNoYear > 0 && !$dryRun) {
+        if ($classroomsNoYear > 0 && ! $dryRun) {
             DB::table('classrooms')
                 ->where(function ($q) {
                     $q->whereNull('academic_year_id')->orWhere('academic_year_id', 0);
@@ -49,7 +49,7 @@ class SyncClassroomTablesData extends Command
             ->count();
 
         $this->info("2. classroom_students without academy_id: {$csNoAcademy}");
-        if ($csNoAcademy > 0 && !$dryRun) {
+        if ($csNoAcademy > 0 && ! $dryRun) {
             DB::table('classroom_students')
                 ->where(function ($q) {
                     $q->whereNull('academy_id')->orWhere('academy_id', 0);
@@ -64,7 +64,7 @@ class SyncClassroomTablesData extends Command
             ->count();
 
         $this->info("3. classroom_students without academic_year_id: {$csNoYear}");
-        if ($csNoYear > 0 && !$dryRun) {
+        if ($csNoYear > 0 && ! $dryRun) {
             DB::table('classroom_students')
                 ->whereNull('academic_year_id')
                 ->update(['academic_year_id' => $academicYearId]);
@@ -77,13 +77,13 @@ class SyncClassroomTablesData extends Command
             ->count();
 
         $this->info("4. classroom_students without enrolled_at: {$csNoEnrolled}");
-        if ($csNoEnrolled > 0 && !$dryRun) {
-            DB::statement("
+        if ($csNoEnrolled > 0 && ! $dryRun) {
+            DB::statement('
                 UPDATE classroom_students cs
                 INNER JOIN students s ON s.id = cs.student_id
                 SET cs.enrolled_at = COALESCE(s.enrollment_date, NOW())
                 WHERE cs.enrolled_at IS NULL
-            ");
+            ');
             $this->info('   -> Updated from students.enrollment_date!');
         }
 
@@ -93,14 +93,14 @@ class SyncClassroomTablesData extends Command
             ->count();
 
         $this->info("5. classroom_students without student_number: {$csNoNumber}");
-        if ($csNoNumber > 0 && !$dryRun) {
-            DB::statement("
+        if ($csNoNumber > 0 && ! $dryRun) {
+            DB::statement('
                 UPDATE classroom_students cs
                 INNER JOIN students s ON s.id = cs.student_id
                 SET cs.student_number = s.student_id
                 WHERE cs.student_number IS NULL
                   AND s.student_id IS NOT NULL
-            ");
+            ');
             $this->info('   -> Updated from students.student_id!');
         }
 
@@ -115,7 +115,7 @@ class SyncClassroomTablesData extends Command
 
         $this->table(
             ['Field', 'Remaining NULL'],
-            collect($remaining)->map(fn($v, $k) => [$k, $v])->values()
+            collect($remaining)->map(fn ($v, $k) => [$k, $v])->values()
         );
 
         if ($dryRun) {

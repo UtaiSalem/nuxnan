@@ -12,12 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('course_remediation_sessions', function (Blueprint $table) {
-            if (!Schema::hasColumn('course_remediation_sessions', 'quiz_id')) {
+            if (! Schema::hasColumn('course_remediation_sessions', 'quiz_id')) {
                 $table->unsignedBigInteger('quiz_id')
-                      ->nullable()
-                      ->after('course_id');
+                    ->nullable()
+                    ->after('course_id');
             }
-            
+
             // Add index instead of foreign key due to MyISAM engine in course_quizzes
             $table->index('quiz_id');
         });

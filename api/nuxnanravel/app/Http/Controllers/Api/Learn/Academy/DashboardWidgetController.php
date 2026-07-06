@@ -7,8 +7,8 @@ use App\Models\Academy;
 use App\Models\DashboardWidget;
 use App\Models\UserDashboardLayout;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
@@ -175,7 +175,7 @@ class DashboardWidgetController extends Controller
 
         $widgetId = $widget->id;
         $widgetName = $widget->name;
-        
+
         $widget->delete();
 
         $this->auditLog->log(
@@ -230,7 +230,7 @@ class DashboardWidgetController extends Controller
             ->where('dashboard_type', $dashboardType)
             ->first();
 
-        if (!$layout) {
+        if (! $layout) {
             // Return default layout
             return response()->json([
                 'success' => true,
@@ -339,7 +339,7 @@ class DashboardWidgetController extends Controller
             ->where('dashboard_type', $validated['dashboard_type'])
             ->first();
 
-        if (!$layout) {
+        if (! $layout) {
             return response()->json([
                 'success' => false,
                 'message' => 'Layout not found',
@@ -375,7 +375,7 @@ class DashboardWidgetController extends Controller
             ->where('dashboard_type', $validated['dashboard_type'])
             ->first();
 
-        if (!$layout) {
+        if (! $layout) {
             return response()->json([
                 'success' => false,
                 'message' => 'Layout not found',

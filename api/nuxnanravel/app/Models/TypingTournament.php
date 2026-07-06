@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
 
 class TypingTournament extends Model
 {
@@ -93,7 +93,7 @@ class TypingTournament extends Model
 
     public function getPrizesFor(int $rank): array
     {
-        return match($rank) {
+        return match ($rank) {
             1 => ['xp' => $this->prize_1st_xp, 'pp' => $this->prize_1st_pp],
             2 => ['xp' => $this->prize_2nd_xp, 'pp' => $this->prize_2nd_pp],
             3 => ['xp' => $this->prize_3rd_xp, 'pp' => $this->prize_3rd_pp],

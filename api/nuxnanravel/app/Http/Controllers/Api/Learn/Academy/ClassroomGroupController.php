@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\ClassroomGroup;
 use App\Services\GroupService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ClassroomGroupController extends Controller
 {
@@ -50,7 +50,7 @@ class ClassroomGroupController extends Controller
     public function store(Request $request, int $academyId, int $classroomId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -75,7 +75,7 @@ class ClassroomGroupController extends Controller
     public function update(Request $request, int $academyId, int $classroomId, int $groupId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -102,7 +102,7 @@ class ClassroomGroupController extends Controller
     public function destroy(int $academyId, int $classroomId, int $groupId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -121,7 +121,7 @@ class ClassroomGroupController extends Controller
     public function addMember(Request $request, int $academyId, int $classroomId, int $groupId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -144,7 +144,7 @@ class ClassroomGroupController extends Controller
     public function bulkAddMembers(Request $request, int $academyId, int $classroomId, int $groupId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -168,7 +168,7 @@ class ClassroomGroupController extends Controller
     public function removeMember(int $academyId, int $classroomId, int $groupId, int $memberId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -185,7 +185,9 @@ class ClassroomGroupController extends Controller
     protected function canManage(Academy $academy): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
         if ($academy->user_id === $user->id) {
             return true;

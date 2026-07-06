@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\AcademyMember;
 use App\Models\MemberActivityLog;
 use Illuminate\Http\Request;
 
@@ -46,11 +47,11 @@ class MemberActivityLogController extends Controller
             $query->where('created_at', '>=', $request->from_date);
         }
         if ($request->has('to_date') && $request->to_date) {
-            $query->where('created_at', '<=', $request->to_date . ' 23:59:59');
+            $query->where('created_at', '<=', $request->to_date.' 23:59:59');
         }
 
         // Default to recent 30 days
-        if (!$request->has('from_date') && !$request->has('all')) {
+        if (! $request->has('from_date') && ! $request->has('all')) {
             $query->recent(30);
         }
 
@@ -98,21 +99,21 @@ class MemberActivityLogController extends Controller
     public function getMemberLogs(Academy $academy, int $memberId, Request $request)
     {
         // Get member
-        $member = \App\Models\AcademyMember::where('academy_id', $academy->id)
+        $member = AcademyMember::where('academy_id', $academy->id)
             ->where('id', $memberId)
             ->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบสมาชิก'
+                'message' => 'ไม่พบสมาชิก',
             ], 404);
         }
 
         $query = MemberActivityLog::forAcademy($academy->id)
             ->where(function ($q) use ($member) {
                 $q->where('target_user_id', $member->user_id)
-                  ->orWhere('academy_member_id', $member->id);
+                    ->orWhere('academy_member_id', $member->id);
             })
             ->with(['user:id,name,profile_photo_path'])
             ->orderBy('created_at', 'desc');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Shared;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateUserProfileRequest;
 use App\Http\Resources\Play\ActivityResource;
 use App\Http\Resources\UserProfileResource;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 
-class UserProfileController extends \App\Http\Controllers\Controller
+class UserProfileController extends Controller
 {
     /**
      * Safely parse a date value, returning now() if parsing fails
@@ -508,7 +509,7 @@ class UserProfileController extends \App\Http\Controllers\Controller
                         $q->whereIn('privacy_settings', $privacySettings);
                     }
                 );
-                // Removed orWhereNotIn to prevent privacy leak. 
+                // Removed orWhereNotIn to prevent privacy leak.
                 // All activity types should have proper privacy checks if they are to be displayed.
             })
             ->latest()

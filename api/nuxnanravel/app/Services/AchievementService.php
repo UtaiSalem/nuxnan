@@ -3,8 +3,14 @@
 namespace App\Services;
 
 use App\Models\Achievement;
-use App\Models\UserAchievement;
+use App\Models\AssignmentAnswer;
+use App\Models\CourseMember;
+use App\Models\CourseQuizResult;
+use App\Models\LessonProgress;
+use App\Models\LikedPost;
+use App\Models\PostComment;
 use App\Models\User;
+use App\Models\UserAchievement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -82,13 +88,13 @@ class AchievementService
             $userAchievement->metadata = $metadata ?? $userAchievement->metadata;
 
             // Check if completed
-            if ($userAchievement->progress >= $target && !$userAchievement->is_completed) {
+            if ($userAchievement->progress >= $target && ! $userAchievement->is_completed) {
                 $userAchievement->is_completed = true;
                 $userAchievement->completed_at = now();
 
                 // Award points if achievement has points reward
                 if ($achievement->points_reward > 0) {
-                    $pointsService = new PointsService();
+                    $pointsService = new PointsService;
                     $pointsService->earn(
                         $user,
                         $achievement->points_reward,
@@ -162,7 +168,7 @@ class AchievementService
         $target = $criteria['target'] ?? 1;
         $source = $criteria['source'] ?? null;
 
-        return match($type) {
+        return match ($type) {
             'count' => $this->calculateCountProgress($user, $source, $target),
             'points' => $user->total_points_earned,
             'streak' => $user->pointStreak->current_streak ?? 0,
@@ -176,15 +182,15 @@ class AchievementService
      */
     protected function calculateCountProgress(User $user, ?string $source, int $target): int
     {
-        return match($source) {
+        return match ($source) {
             'posts' => $user->posts()->count(),
-            'likes_received' => \App\Models\LikedPost::where('post_owner_id', $user->id)->count(),
-            'comments_received' => \App\Models\PostComment::whereHas('post', fn($q) => $q->where('user_id', $user->id))->count(),
+            'likes_received' => LikedPost::where('post_owner_id', $user->id)->count(),
+            'comments_received' => PostComment::whereHas('post', fn ($q) => $q->where('user_id', $user->id))->count(),
             'friends' => $user->friends()->count(),
-            'lessons_completed' => \App\Models\LessonProgress::where('user_id', $user->id)->count(),
-            'quizzes_completed' => \App\Models\CourseQuizResult::where('user_id', $user->id)->count(),
-            'assignments_submitted' => \App\Models\AssignmentAnswer::where('user_id', $user->id)->count(),
-            'courses_completed' => \App\Models\CourseMember::where('user_id', $user->id)
+            'lessons_completed' => LessonProgress::where('user_id', $user->id)->count(),
+            'quizzes_completed' => CourseQuizResult::where('user_id', $user->id)->count(),
+            'assignments_submitted' => AssignmentAnswer::where('user_id', $user->id)->count(),
+            'courses_completed' => CourseMember::where('user_id', $user->id)
                 ->where('edited_grade', 'passed')
                 ->count(),
             default => 0,
@@ -205,12 +211,12 @@ class AchievementService
             ->completed()
             ->with('achievement')
             ->get()
-            ->sum(fn($userAchievement) => $userAchievement->achievement->points_reward ?? 0);
+            ->sum(fn ($userAchievement) => $userAchievement->achievement->points_reward ?? 0);
 
         return [
             'total_achievements' => $totalAchievements,
             'completed_achievements' => $completedAchievements,
-            'completion_percentage' => $totalAchievements > 0 
+            'completion_percentage' => $totalAchievements > 0
                 ? round(($completedAchievements / $totalAchievements) * 100, 2)
                 : 0,
             'total_points_from_achievements' => $totalPointsFromAchievements,

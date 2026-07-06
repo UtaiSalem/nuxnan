@@ -27,7 +27,7 @@ return new class extends Migration
             $table->date('effective_date')->nullable();
             $table->date('expiry_date')->nullable();
             $table->timestamps();
-            
+
             // Indexes
             $table->index('rule_key');
             $table->index('source_type');

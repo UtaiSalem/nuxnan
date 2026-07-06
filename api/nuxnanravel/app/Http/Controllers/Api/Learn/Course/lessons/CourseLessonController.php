@@ -2,17 +2,27 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons;
 
+use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
+use App\Models\AssignmentAnswerImage;
+use App\Models\AssignmentImage;
 use App\Models\Course;
 use App\Models\Lesson;
+use App\Models\LessonCommentImage;
+use App\Models\LessonImage;
+use App\Models\QuestionImage;
+use App\Models\RecentlyViewedCourse;
+use App\Models\TopicImage;
+use App\Services\ContentVisibilityService;
 use App\Services\CourseMediaService;
 use App\Services\LessonAccessService;
-use App\Services\ContentVisibilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
-class CourseLessonController extends \App\Http\Controllers\Controller
+class CourseLessonController extends Controller
 {
     public function __construct(
         protected LessonAccessService $accessService,
@@ -166,7 +176,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             // Backend กำหนด order = 1, 2, 3, ... (1-indexed) — ไม่มี gap
             \DB::transaction(function () use ($validated) {
                 foreach ($validated['lessons'] as $index => $lessonId) {
-                    \App\Models\Lesson::where('id', $lessonId)->update(['order' => $index + 1]);
+                    Lesson::where('id', $lessonId)->update(['order' => $index + 1]);
                 }
             });
 
@@ -175,7 +185,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'message' => 'บันทึกลำดับบทเรียนสำเร็จ',
             ], 200);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'ข้อมูลไม่ถูกต้อง',
@@ -222,7 +232,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
 
                 // Update recently viewed course
                 if ($user && $user->id) {
-                    \App\Models\RecentlyViewedCourse::updateOrInsert(
+                    RecentlyViewedCourse::updateOrInsert(
                         ['user_id' => $user->id, 'course_id' => $course->id],
                         ['updated_at' => now()]
                     );
@@ -254,7 +264,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'access' => $accessStatus,
             ], 200);
 
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             throw $e;
         } catch (\Exception $e) {
             \Log::error('Error showing lesson: '.$e->getMessage());
@@ -383,7 +393,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'newLesson' => new LessonResource($lesson),
             ], 201);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'ข้อมูลไม่ถูกต้อง',
@@ -491,8 +501,8 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'status' => $validated['status'],
                 'publication_status' => $validated['publication_status'] ?? $lesson->publication_status,
                 'access_type' => $validated['access_type'] ?? $lesson->access_type,
-                'require_completion_before_exercises' => $request->has('require_completion_before_exercises') 
-                    ? (bool) $request->require_completion_before_exercises 
+                'require_completion_before_exercises' => $request->has('require_completion_before_exercises')
+                    ? (bool) $request->require_completion_before_exercises
                     : $lesson->require_completion_before_exercises,
             ]);
 
@@ -505,7 +515,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 'lesson' => new LessonResource($lesson),
             ], 200);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'ข้อมูลไม่ถูกต้อง',
@@ -531,7 +541,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             foreach ($assignment->images as $image) {
                 $mediaService->deleteUnused(
                     'assignment_image',
-                    \App\Models\AssignmentImage::class,
+                    AssignmentImage::class,
                     'image_url',
                     $image->image_url,
                     $image->id
@@ -547,7 +557,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                     foreach ($answer->images as $answerImage) {
                         $mediaService->deleteUnused(
                             'assignment_answer_image',
-                            \App\Models\AssignmentAnswerImage::class,
+                            AssignmentAnswerImage::class,
                             'filename',
                             $answerImage->filename,
                             $answerImage->id
@@ -574,7 +584,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 $field = $image->filename ? 'filename' : 'image_url';
                 $mediaService->deleteUnused(
                     'question_image',
-                    \App\Models\QuestionImage::class,
+                    QuestionImage::class,
                     $field,
                     $filename,
                     $image->id
@@ -592,7 +602,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                         $optField = $optImage->filename ? 'filename' : 'image_url';
                         $mediaService->deleteUnused(
                             'option_image',
-                            \App\Models\QuestionImage::class,
+                            QuestionImage::class,
                             $optField,
                             $optFilename,
                             $optImage->id
@@ -622,7 +632,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
             foreach ($topic->images as $topic_image) {
                 $mediaService->deleteUnused(
                     'topic_image',
-                    \App\Models\TopicImage::class,
+                    TopicImage::class,
                     'filename',
                     $topic_image->filename,
                     $topic_image->id
@@ -680,7 +690,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                         foreach ($comment->lessonCommentImages as $comment_image) {
                             $mediaService->deleteUnused(
                                 'lesson_comment_image',
-                                \App\Models\LessonCommentImage::class,
+                                LessonCommentImage::class,
                                 'filename',
                                 $comment_image->filename,
                                 $comment_image->id
@@ -721,7 +731,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
                 foreach ($lesson->images as $lesson_image) {
                     $mediaService->deleteUnused(
                         'lesson_image',
-                        \App\Models\LessonImage::class,
+                        LessonImage::class,
                         'filename',
                         $lesson_image->filename,
                         $lesson_image->id
@@ -775,7 +785,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
         $user = auth()->user();
 
         // Visibility guard for students
-        if (!$this->checkCoursePermission($course)) {
+        if (! $this->checkCoursePermission($course)) {
             $this->visibility->assertVisibleOrFail($lesson, $user, 403);
         }
 
@@ -805,7 +815,7 @@ class CourseLessonController extends \App\Http\Controllers\Controller
         $user = auth()->user();
 
         // Visibility guard for students
-        if (!$this->checkCoursePermission($course)) {
+        if (! $this->checkCoursePermission($course)) {
             $this->visibility->assertVisibleOrFail($lesson, $user, 403);
         }
 

@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Api\Play;
 
+use App\Http\Controllers\Controller;
 use App\Models\Friendship;
 use App\Models\User;
 
-class FriendController extends \App\Http\Controllers\Controller
+class FriendController extends Controller
 {
     /**
      * Get friend suggestions (people the user may know).

@@ -4,7 +4,6 @@ namespace App\Http\Resources\Learn\Academy;
 
 use App\Models\Academy;
 use Illuminate\Http\Request;
-use App\Http\Resources\Learn\Academy\AcademyResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class AcademyMemberResource extends JsonResource
@@ -32,7 +31,7 @@ class AcademyMemberResource extends JsonResource
             'graduation_date' => $this->graduation_date,
             'note_comment' => $this->note_comment,
             'invited_by' => $this->invited_by,
-            
+
             // Academy Role Information
             // Academy Role Information
             'academy_role_id' => $this->academy_role_id,
@@ -47,13 +46,13 @@ class AcademyMemberResource extends JsonResource
                     'permissions' => $this->academyRole->permissions,
                 ] : null;
             }),
-            
+
             // Role checks
             'is_admin' => $this->isAdmin(),
             'is_teacher' => $this->isTeacher(),
             'is_student' => $this->isStudent(),
             'is_parent' => $this->isParent(),
-            
+
             // Relations
             'user' => $this->whenLoaded('user', function () {
                 return $this->user ? [
@@ -102,7 +101,7 @@ class AcademyMemberResource extends JsonResource
                 });
             }),
             'academy' => new AcademyResource($this->whenLoaded('academy')),
-            
+
             // Timestamps
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
@@ -114,7 +113,7 @@ class AcademyMemberResource extends JsonResource
      */
     protected function getStatusText(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             1 => 'รอการอนุมัติ',
             2 => 'สมาชิก',
             3 => 'ถูกปฏิเสธ',

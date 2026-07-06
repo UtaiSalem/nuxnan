@@ -19,13 +19,13 @@ return new class extends Migration
             $table->date('last_activity_date')->nullable();
             $table->integer('bonus_points_earned')->default(0);
             $table->timestamps();
-            
+
             // Unique key
             $table->unique('user_id');
-            
+
             // Indexes
             $table->index('current_streak');
-            
+
             // Foreign key
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });

@@ -1,10 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use App\Models\CourseMember;
 use App\Services\LearnerIdentityService;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
@@ -15,7 +13,7 @@ return new class extends Migration
     {
         $identityService = app(LearnerIdentityService::class);
 
-        CourseMember::where(function($query) {
+        CourseMember::where(function ($query) {
             $query->whereNull('member_name')
                 ->orWhereNull('member_code')
                 ->orWhereNull('order_number');
@@ -23,8 +21,8 @@ return new class extends Migration
             foreach ($members as $member) {
                 // Ensure relationships are loaded
                 $member->loadMissing('user', 'course');
-                
-                if (!$member->user || !$member->course) {
+
+                if (! $member->user || ! $member->course) {
                     continue;
                 }
 

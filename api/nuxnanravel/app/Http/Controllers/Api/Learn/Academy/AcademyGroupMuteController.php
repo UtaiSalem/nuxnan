@@ -12,7 +12,7 @@ class AcademyGroupMuteController extends Controller
     public function mute(Request $request, AcademyGroup $academyGroup)
     {
         UserMutedGroup::firstOrCreate([
-            'user_id'          => $request->user()->id,
+            'user_id' => $request->user()->id,
             'academy_group_id' => $academyGroup->id,
         ]);
 

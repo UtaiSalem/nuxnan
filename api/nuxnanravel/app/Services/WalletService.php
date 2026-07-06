@@ -2,10 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\WalletTransaction;
-use App\Models\PointsTransaction;
-use App\Models\User;
 use App\Models\Course;
+use App\Models\CoursePurchase;
+use App\Models\User;
+use App\Models\WalletDepositRequest;
+use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -65,6 +66,7 @@ class WalletService
                     'required' => $amount,
                     'available' => $balanceBefore,
                 ]);
+
                 return null;
             }
 
@@ -248,7 +250,7 @@ class WalletService
                 'balance_before' => $walletBalanceBefore,
                 'balance_after' => $walletBalanceAfter,
                 'currency' => 'THB',
-                'description' => "แปลง " . number_format($amount, 2) . " บาท เป็น {$pointsAmount} แต้ม",
+                'description' => 'แปลง '.number_format($amount, 2)." บาท เป็น {$pointsAmount} แต้ม",
                 'metadata' => [
                     'exchange_rate' => $exchangeRate,
                     'conversion_type' => 'money_to_points',
@@ -258,7 +260,7 @@ class WalletService
             ]);
 
             // Delegate points addition to PointsService
-            $pointsService = new \App\Services\PointsService();
+            $pointsService = new PointsService;
             $pointsResult = $pointsService->addFromWalletConversion($user, $pointsAmount, $amount, $exchangeRate);
 
             Log::info('Wallet converted to points', [
@@ -313,7 +315,7 @@ class WalletService
                 'balance_before' => $balanceBefore,
                 'balance_after' => $balanceAfter,
                 'currency' => 'THB',
-                'description' => $reason ?? "การปรับจาก Admin",
+                'description' => $reason ?? 'การปรับจาก Admin',
                 'metadata' => ['admin_action' => $actionType],
                 'status' => 'completed',
             ]);
@@ -431,9 +433,9 @@ class WalletService
     /**
      * Approve deposit request
      */
-    public function approveDepositRequest(\App\Models\WalletDepositRequest $request, ?string $adminNote = null): bool
+    public function approveDepositRequest(WalletDepositRequest $request, ?string $adminNote = null): bool
     {
-        if (!$request->isPending()) {
+        if (! $request->isPending()) {
             return false;
         }
 
@@ -469,7 +471,7 @@ class WalletService
 
             // Update deposit request
             $request->update([
-                'status' => \App\Models\WalletDepositRequest::STATUS_APPROVED,
+                'status' => WalletDepositRequest::STATUS_APPROVED,
                 'reviewed_by' => auth()->id(),
                 'reviewed_at' => now(),
                 'admin_note' => $adminNote,
@@ -490,14 +492,14 @@ class WalletService
     /**
      * Reject deposit request
      */
-    public function rejectDepositRequest(\App\Models\WalletDepositRequest $request, string $reason, ?string $adminNote = null): bool
+    public function rejectDepositRequest(WalletDepositRequest $request, string $reason, ?string $adminNote = null): bool
     {
-        if (!$request->isPending()) {
+        if (! $request->isPending()) {
             return false;
         }
 
         $request->update([
-            'status' => \App\Models\WalletDepositRequest::STATUS_REJECTED,
+            'status' => WalletDepositRequest::STATUS_REJECTED,
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
             'rejection_reason' => $reason,
@@ -516,11 +518,11 @@ class WalletService
 
     /**
      * Purchase a course - deduct wallet balance and create transaction
-     * 
-     * @param User $user The user making the purchase
-     * @param Course $course The course being purchased
-     * @param float|null $overridePrice Optional override price (for discounts)
-     * @return WalletTransaction
+     *
+     * @param  User  $user  The user making the purchase
+     * @param  Course  $course  The course being purchased
+     * @param  float|null  $overridePrice  Optional override price (for discounts)
+     *
      * @throws \Exception If insufficient balance
      */
     public function purchaseCourse(User $user, Course $course, ?float $overridePrice = null): WalletTransaction
@@ -528,7 +530,7 @@ class WalletService
         // Calculate price - use override, tuition_fees, or price
         $originalPrice = $course->tuition_fees ?? $course->price ?? 0;
         $finalPrice = $overridePrice ?? $originalPrice;
-        
+
         // Apply discount if exists and no override
         if ($overridePrice === null && $course->discount > 0) {
             $finalPrice = $originalPrice - ($originalPrice * $course->discount / 100);
@@ -574,7 +576,7 @@ class WalletService
                 if ($owner) {
                     $ownerBalanceBefore = $owner->wallet;
                     $ownerBalanceAfter = $ownerBalanceBefore + $finalPrice;
-                    
+
                     $owner->update([
                         'wallet' => $ownerBalanceAfter,
                     ]);
@@ -613,12 +615,11 @@ class WalletService
 
     /**
      * Refund a course purchase
-     * 
-     * @param User $user The user to refund
-     * @param Course $course The course being refunded
-     * @param float $amount The amount to refund
-     * @param string|null $reason The reason for refund
-     * @return WalletTransaction
+     *
+     * @param  User  $user  The user to refund
+     * @param  Course  $course  The course being refunded
+     * @param  float  $amount  The amount to refund
+     * @param  string|null  $reason  The reason for refund
      */
     public function refundCoursePurchase(User $user, Course $course, float $amount, ?string $reason = null): WalletTransaction
     {
@@ -661,15 +662,11 @@ class WalletService
 
     /**
      * Check if user has purchased a course
-     * 
-     * @param User $user
-     * @param Course $course
-     * @return bool
      */
     public function hasPurchased(User $user, Course $course): bool
     {
         // First check CoursePurchase table (new reliable source)
-        $hasRecord = \App\Models\CoursePurchase::where('buyer_id', $user->id)
+        $hasRecord = CoursePurchase::where('buyer_id', $user->id)
             ->where('source_course_id', $course->id)
             ->whereIn('status', ['completed', 'pending_clone', 'paid'])
             ->exists();
@@ -690,7 +687,7 @@ class WalletService
         }
 
         // Double check by looking for actual cloned course owned by user
-        return \App\Models\Course::where('user_id', $user->id)
+        return Course::where('user_id', $user->id)
             ->where('source_course_id', $course->id)
             ->exists();
     }

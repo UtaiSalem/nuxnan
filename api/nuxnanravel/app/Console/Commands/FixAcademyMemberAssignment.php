@@ -6,7 +6,6 @@ use App\Models\AcademyMember;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class FixAcademyMemberAssignment extends Command
@@ -47,7 +46,7 @@ class FixAcademyMemberAssignment extends Command
 
         // Get all students
         $studentsQuery = Student::query();
-        
+
         if ($academyId) {
             $studentsQuery->where('academy_id', $academyId);
             $this->info("Processing students for Academy ID: {$academyId}");
@@ -75,26 +74,27 @@ class FixAcademyMemberAssignment extends Command
             $bar->advance();
 
             $studentCode = $student->student_id;
-            
+
             if (empty($studentCode)) {
                 if ($detailed) {
                     $this->newLine();
                     $this->warn("Student ID {$student->id} has no student_id code");
                 }
                 $notMatched++;
+
                 continue;
             }
 
             // First priority: Use user_id from Student table if already assigned
             $user = null;
-            
+
             if ($student->user_id) {
                 $user = User::find($student->user_id);
             }
-            
+
             // Fallback: Search for user with email containing the student code
-            if (!$user) {
-                // Common patterns: 
+            if (! $user) {
+                // Common patterns:
                 // - studentcode@domain.com
                 // - prefix_studentcode@domain.com
                 // - studentcode_suffix@domain.com
@@ -105,7 +105,7 @@ class FixAcademyMemberAssignment extends Command
                     ->first();
             }
 
-            if (!$user) {
+            if (! $user) {
                 if ($detailed) {
                     $this->newLine();
                     $this->line("No user found for student code: {$studentCode}");
@@ -114,10 +114,11 @@ class FixAcademyMemberAssignment extends Command
                 $results[] = [
                     'student_id' => $student->id,
                     'student_code' => $studentCode,
-                    'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                    'student_name' => $student->first_name_th.' '.$student->last_name_th,
                     'status' => 'NO_USER_FOUND',
                     'user_email' => null,
                 ];
+
                 continue;
             }
 
@@ -125,8 +126,8 @@ class FixAcademyMemberAssignment extends Command
 
             // Determine the academy_id
             $targetAcademyId = $student->academy_id ?? $academyId;
-            
-            if (!$targetAcademyId) {
+
+            if (! $targetAcademyId) {
                 if ($detailed) {
                     $this->newLine();
                     $this->warn("Student {$studentCode} has no academy_id");
@@ -134,10 +135,11 @@ class FixAcademyMemberAssignment extends Command
                 $results[] = [
                     'student_id' => $student->id,
                     'student_code' => $studentCode,
-                    'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                    'student_name' => $student->first_name_th.' '.$student->last_name_th,
                     'status' => 'NO_ACADEMY_ID',
                     'user_email' => $user->email,
                 ];
+
                 continue;
             }
 
@@ -152,7 +154,7 @@ class FixAcademyMemberAssignment extends Command
             if ($existingMember) {
                 // Check if it needs update
                 $needsUpdate = false;
-                
+
                 if ($existingMember->student_id != $student->id) {
                     $needsUpdate = true;
                 }
@@ -161,14 +163,14 @@ class FixAcademyMemberAssignment extends Command
                 }
 
                 if ($needsUpdate) {
-                    if (!$dryRun) {
+                    if (! $dryRun) {
                         $existingMember->update([
                             'student_id' => $student->id,
                             'user_id' => $user->id,
                         ]);
-                        
+
                         // Also update student's user_id if not set
-                        if (!$student->user_id) {
+                        if (! $student->user_id) {
                             $student->update(['user_id' => $user->id]);
                         }
                     }
@@ -176,7 +178,7 @@ class FixAcademyMemberAssignment extends Command
                     $results[] = [
                         'student_id' => $student->id,
                         'student_code' => $studentCode,
-                        'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                        'student_name' => $student->first_name_th.' '.$student->last_name_th,
                         'status' => 'UPDATED',
                         'user_email' => $user->email,
                         'academy_member_id' => $existingMember->id,
@@ -191,7 +193,7 @@ class FixAcademyMemberAssignment extends Command
                     $results[] = [
                         'student_id' => $student->id,
                         'student_code' => $studentCode,
-                        'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                        'student_name' => $student->first_name_th.' '.$student->last_name_th,
                         'status' => 'ALREADY_ASSIGNED',
                         'user_email' => $user->email,
                         'academy_member_id' => $existingMember->id,
@@ -210,15 +212,15 @@ class FixAcademyMemberAssignment extends Command
                     ->first();
 
                 if ($wrongMember) {
-                    if (!$dryRun) {
+                    if (! $dryRun) {
                         $wrongMember->update([
                             'academy_id' => $targetAcademyId,
                             'user_id' => $user->id,
                             'student_id' => $student->id,
                         ]);
-                        
+
                         // Also update student's user_id if not set
-                        if (!$student->user_id) {
+                        if (! $student->user_id) {
                             $student->update(['user_id' => $user->id]);
                         }
                     }
@@ -226,7 +228,7 @@ class FixAcademyMemberAssignment extends Command
                     $results[] = [
                         'student_id' => $student->id,
                         'student_code' => $studentCode,
-                        'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                        'student_name' => $student->first_name_th.' '.$student->last_name_th,
                         'status' => 'FIXED_WRONG_RECORD',
                         'user_email' => $user->email,
                         'academy_member_id' => $wrongMember->id,
@@ -238,7 +240,7 @@ class FixAcademyMemberAssignment extends Command
                     }
                 } else {
                     // Create new AcademyMember record
-                    if (!$dryRun) {
+                    if (! $dryRun) {
                         try {
                             $newMember = AcademyMember::create([
                                 'academy_id' => $targetAcademyId,
@@ -250,7 +252,7 @@ class FixAcademyMemberAssignment extends Command
                             ]);
 
                             // Also update student's user_id if not set
-                            if (!$student->user_id) {
+                            if (! $student->user_id) {
                                 $student->update(['user_id' => $user->id]);
                             }
 
@@ -258,7 +260,7 @@ class FixAcademyMemberAssignment extends Command
                             $results[] = [
                                 'student_id' => $student->id,
                                 'student_code' => $studentCode,
-                                'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                                'student_name' => $student->first_name_th.' '.$student->last_name_th,
                                 'status' => 'CREATED',
                                 'user_email' => $user->email,
                                 'academy_member_id' => $newMember->id,
@@ -273,16 +275,16 @@ class FixAcademyMemberAssignment extends Command
                             $results[] = [
                                 'student_id' => $student->id,
                                 'student_code' => $studentCode,
-                                'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                                'student_name' => $student->first_name_th.' '.$student->last_name_th,
                                 'status' => 'ERROR',
                                 'error' => $e->getMessage(),
                             ];
 
                             if ($detailed) {
                                 $this->newLine();
-                                $this->error("Error creating AcademyMember: " . $e->getMessage());
+                                $this->error('Error creating AcademyMember: '.$e->getMessage());
                             }
-                            Log::error("FixAcademyMemberAssignment Error", [
+                            Log::error('FixAcademyMemberAssignment Error', [
                                 'student_id' => $student->id,
                                 'error' => $e->getMessage(),
                             ]);
@@ -292,7 +294,7 @@ class FixAcademyMemberAssignment extends Command
                         $results[] = [
                             'student_id' => $student->id,
                             'student_code' => $studentCode,
-                            'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                            'student_name' => $student->first_name_th.' '.$student->last_name_th,
                             'status' => 'WILL_CREATE',
                             'user_email' => $user->email,
                         ];
@@ -320,7 +322,7 @@ class FixAcademyMemberAssignment extends Command
         );
 
         // Show detailed results if verbose
-        if ($detailed && !empty($results)) {
+        if ($detailed && ! empty($results)) {
             $this->newLine();
             $this->info('=== Detailed Results ===');
             $this->table(
@@ -342,9 +344,9 @@ class FixAcademyMemberAssignment extends Command
         if ($unmatchedStudents->count() > 0) {
             $this->newLine();
             $this->warn("There are {$unmatchedStudents->count()} students without matching users.");
-            
+
             if ($this->confirm('Do you want to export unmatched students to a CSV file?')) {
-                $filename = storage_path('app/unmatched_students_' . date('Y-m-d_His') . '.csv');
+                $filename = storage_path('app/unmatched_students_'.date('Y-m-d_His').'.csv');
                 $fp = fopen($filename, 'w');
                 fputcsv($fp, ['Student ID', 'Student Code', 'Student Name']);
                 foreach ($unmatchedStudents as $student) {

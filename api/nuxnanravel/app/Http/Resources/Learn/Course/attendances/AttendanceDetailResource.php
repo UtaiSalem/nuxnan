@@ -15,11 +15,11 @@ class AttendanceDetailResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'                    => $this->id,
-            'course_attendance_id'  => $this->course_attendance_id,
-            'status'                => $this->status,
-            'comments'              => $this->comments,
-            'course_member_id'      => $this->course_member_id,
+            'id' => $this->id,
+            'course_attendance_id' => $this->course_attendance_id,
+            'status' => $this->status,
+            'comments' => $this->comments,
+            'course_member_id' => $this->course_member_id,
         ];
     }
 }

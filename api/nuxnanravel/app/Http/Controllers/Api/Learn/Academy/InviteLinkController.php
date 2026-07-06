@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyInviteLink;
 use App\Models\AcademyMember;
+use App\Models\AcademyRole;
+use App\Models\MemberActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -80,30 +82,30 @@ class InviteLinkController extends Controller
         ]);
 
         // Validate role belongs to academy
-        if (!empty($validated['academy_role_id'])) {
-            $role = \App\Models\AcademyRole::where('id', $validated['academy_role_id'])
+        if (! empty($validated['academy_role_id'])) {
+            $role = AcademyRole::where('id', $validated['academy_role_id'])
                 ->where('academy_id', $academy->id)
                 ->first();
-            if (!$role) {
+            if (! $role) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'บทบาทไม่ถูกต้อง'
+                    'message' => 'บทบาทไม่ถูกต้อง',
                 ], 422);
             }
         }
 
         // Calculate expires_at
         $expiresAt = null;
-        if (!empty($validated['expires_at'])) {
+        if (! empty($validated['expires_at'])) {
             $expiresAt = $validated['expires_at'];
-        } elseif (!empty($validated['expires_in_days'])) {
+        } elseif (! empty($validated['expires_in_days'])) {
             $expiresAt = now()->addDays($validated['expires_in_days']);
         }
 
         $link = AcademyInviteLink::create([
             'academy_id' => $academy->id,
             'created_by' => $request->user()->id,
-            'name' => $validated['name'] ?? 'ลิงก์เชิญ #' . (AcademyInviteLink::where('academy_id', $academy->id)->count() + 1),
+            'name' => $validated['name'] ?? 'ลิงก์เชิญ #'.(AcademyInviteLink::where('academy_id', $academy->id)->count() + 1),
             'description' => $validated['description'] ?? null,
             'academy_role_id' => $validated['academy_role_id'] ?? null,
             'max_uses' => $validated['max_uses'] ?? null,
@@ -132,7 +134,7 @@ class InviteLinkController extends Controller
         if ($link->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบลิงก์เชิญ'
+                'message' => 'ไม่พบลิงก์เชิญ',
             ], 404);
         }
 
@@ -163,7 +165,7 @@ class InviteLinkController extends Controller
         if ($link->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบลิงก์เชิญ'
+                'message' => 'ไม่พบลิงก์เชิญ',
             ], 404);
         }
 
@@ -184,7 +186,7 @@ class InviteLinkController extends Controller
             ->with(['academy:id,name,display_name,logo_url,description', 'role:id,name,display_name'])
             ->first();
 
-        if (!$link) {
+        if (! $link) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบลิงก์เชิญ หรือลิงก์ไม่ถูกต้อง',
@@ -192,8 +194,8 @@ class InviteLinkController extends Controller
             ], 404);
         }
 
-        if (!$link->isValid()) {
-            $reason = match($link->status) {
+        if (! $link->isValid()) {
+            $reason = match ($link->status) {
                 'expired' => 'ลิงก์เชิญหมดอายุแล้ว',
                 'exhausted' => 'ลิงก์เชิญถูกใช้ครบจำนวนแล้ว',
                 'inactive' => 'ลิงก์เชิญถูกปิดใช้งาน',
@@ -238,14 +240,14 @@ class InviteLinkController extends Controller
             ->with(['academy', 'role'])
             ->first();
 
-        if (!$link) {
+        if (! $link) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบลิงก์เชิญ หรือลิงก์ไม่ถูกต้อง',
             ], 404);
         }
 
-        if (!$link->isValid()) {
+        if (! $link->isValid()) {
             return response()->json([
                 'success' => false,
                 'message' => 'ลิงก์เชิญไม่สามารถใช้งานได้แล้ว',
@@ -253,7 +255,7 @@ class InviteLinkController extends Controller
         }
 
         // Check email domain restriction
-        if (!$link->isEmailAllowed($user->email)) {
+        if (! $link->isEmailAllowed($user->email)) {
             return response()->json([
                 'success' => false,
                 'message' => 'อีเมลของคุณไม่อยู่ในรายการที่อนุญาต',
@@ -304,18 +306,18 @@ class InviteLinkController extends Controller
             $link->incrementUseCount();
 
             // Log activity
-            \App\Models\MemberActivityLog::logActivity([
+            MemberActivityLog::logActivity([
                 'academy_id' => $link->academy_id,
                 'user_id' => $user->id,
                 'target_user_id' => $user->id,
                 'academy_member_id' => $member->id,
-                'action' => $link->require_approval ? \App\Models\MemberActivityLog::ACTION_JOIN : \App\Models\MemberActivityLog::ACTION_ACCEPT_INVITE,
-                'action_category' => \App\Models\MemberActivityLog::CATEGORY_MEMBER,
+                'action' => $link->require_approval ? MemberActivityLog::ACTION_JOIN : MemberActivityLog::ACTION_ACCEPT_INVITE,
+                'action_category' => MemberActivityLog::CATEGORY_MEMBER,
                 'new_values' => [
                     'invite_code' => $link->code,
                     'invite_name' => $link->name,
                 ],
-                'description' => 'เข้าร่วมผ่านลิงก์เชิญ: ' . $link->name,
+                'description' => 'เข้าร่วมผ่านลิงก์เชิญ: '.$link->name,
             ]);
 
             DB::commit();
@@ -335,9 +337,10 @@ class InviteLinkController extends Controller
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -350,11 +353,11 @@ class InviteLinkController extends Controller
         if ($link->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบลิงก์เชิญ'
+                'message' => 'ไม่พบลิงก์เชิญ',
             ], 404);
         }
 
-        $link->update(['is_active' => !$link->is_active]);
+        $link->update(['is_active' => ! $link->is_active]);
 
         return response()->json([
             'success' => true,
@@ -371,7 +374,7 @@ class InviteLinkController extends Controller
         if ($link->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบลิงก์เชิญ'
+                'message' => 'ไม่พบลิงก์เชิญ',
             ], 404);
         }
 

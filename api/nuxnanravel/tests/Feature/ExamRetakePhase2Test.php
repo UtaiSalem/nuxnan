@@ -7,7 +7,6 @@ use App\Models\CourseMember;
 use App\Models\CourseQuiz;
 use App\Models\CourseQuizResult;
 use App\Models\CourseRemediationSession;
-use App\Models\CourseRemediationEnrollment;
 use App\Models\User;
 use App\Services\RemediationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,7 +34,7 @@ class ExamRetakePhase2Test extends TestCase
             'user_id' => $student->id,
             'role' => 'student',
             'completion_status' => 'failed',
-            'draft_grade' => 'F'
+            'draft_grade' => 'F',
         ]);
 
         $quiz = CourseQuiz::factory()->create(['course_id' => $course->id]);
@@ -49,11 +48,11 @@ class ExamRetakePhase2Test extends TestCase
             'type' => 'exam_retake',
             'status' => 'open',
             'passing_score' => 60,
-            'created_by' => $teacher->id
+            'created_by' => $teacher->id,
         ]);
 
         $enrollment = $this->remediationService->enrollStudent($session, $member);
-        
+
         // Pass the remediation
         $this->remediationService->gradeEnrollment($enrollment, 80, $teacher, 'Passed well');
 
@@ -81,16 +80,16 @@ class ExamRetakePhase2Test extends TestCase
             'course_id' => $course->id,
             'quiz_id' => $quiz->id,
             'retake_unlocked_at' => now(),
-            'status' => 0
+            'status' => 0,
         ]);
 
         $this->actingAs($student, 'api');
-        
+
         // Start the quiz via API
         $response = $this->postJson("/api/courses/{$course->id}/quizzes/{$quiz->id}/results");
 
         $response->assertStatus(201);
-        
+
         $quizResult->refresh();
         $this->assertNotNull($quizResult->retake_used_at);
     }
@@ -105,7 +104,7 @@ class ExamRetakePhase2Test extends TestCase
             'user_id' => $student->id,
             'role' => 'student',
             'completion_status' => 'failed',
-            'draft_grade' => 'F'
+            'draft_grade' => 'F',
         ]);
 
         $quiz = CourseQuiz::factory()->create(['course_id' => $course->id]);
@@ -119,11 +118,11 @@ class ExamRetakePhase2Test extends TestCase
             'type' => 'exam_retake',
             'status' => 'open',
             'passing_score' => 60,
-            'created_by' => $teacher->id
+            'created_by' => $teacher->id,
         ]);
 
         $enrollment = $this->remediationService->enrollStudent($session, $member);
-        
+
         // Fail the remediation
         $this->remediationService->gradeEnrollment($enrollment, 30, $teacher, 'Failed');
 

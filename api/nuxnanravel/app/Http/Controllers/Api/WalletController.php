@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\WalletTransaction;
-use App\Models\WalletDepositRequest;
 use App\Models\User;
+use App\Models\WalletDepositRequest;
+use App\Models\WalletTransaction;
 use App\Services\WalletService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -28,7 +28,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -56,7 +56,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -106,7 +106,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -116,7 +116,7 @@ class WalletController extends Controller
         $validated = $request->validate([
             'amount' => 'required|numeric|min:1',
             'reason' => 'required|string',
-            'metadata' => 'nullable|array'
+            'metadata' => 'nullable|array',
         ]);
 
         try {
@@ -133,7 +133,7 @@ class WalletController extends Controller
                 $validated['reason']
             );
 
-            if (!$transaction) {
+            if (! $transaction) {
                 return response()->json([
                     'success' => false,
                     'message' => 'ยอดเงินในกระเป๋าไม่เพียงพอ',
@@ -164,7 +164,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -190,7 +190,7 @@ class WalletController extends Controller
                 $validated['description'] ?? null
             );
 
-            if (!$result) {
+            if (! $result) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Insufficient wallet balance',
@@ -225,7 +225,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -233,7 +233,7 @@ class WalletController extends Controller
         }
 
         $validated = $request->validate([
-            'recipient_id' => 'required|integer|exists:users,id|different:' . $user->id,
+            'recipient_id' => 'required|integer|exists:users,id|different:'.$user->id,
             'amount' => 'required|numeric|min:10',
             'message' => 'nullable|string|max:255',
             'metadata' => 'nullable|array',
@@ -241,7 +241,7 @@ class WalletController extends Controller
 
         try {
             $toUser = User::find($validated['recipient_id']);
-            if (!$toUser) {
+            if (! $toUser) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Recipient not found',
@@ -255,7 +255,7 @@ class WalletController extends Controller
                 $validated['message'] ?? null
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -286,7 +286,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -300,7 +300,7 @@ class WalletController extends Controller
         try {
             $result = $this->walletService->convertPointsToWallet($user, $validated['points']);
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -333,7 +333,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -347,7 +347,7 @@ class WalletController extends Controller
         try {
             $result = $this->walletService->convertWalletToPoints($user, $validated['amount']);
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -380,7 +380,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -443,6 +443,7 @@ class WalletController extends Controller
                     }
                 }
             }
+
             return $transaction;
         });
 
@@ -465,7 +466,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -474,7 +475,7 @@ class WalletController extends Controller
 
         try {
             $transaction = WalletTransaction::find($transactionId);
-            if (!$transaction) {
+            if (! $transaction) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Transaction not found',
@@ -483,7 +484,7 @@ class WalletController extends Controller
 
             $result = $this->walletService->approveWithdrawal($transaction);
 
-            if (!$result) {
+            if (! $result) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cannot approve this transaction',
@@ -513,7 +514,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        if (! $user || ! $user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -526,7 +527,7 @@ class WalletController extends Controller
 
         try {
             $transaction = WalletTransaction::find($transactionId);
-            if (!$transaction) {
+            if (! $transaction) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Transaction not found',
@@ -535,7 +536,7 @@ class WalletController extends Controller
 
             $result = $this->walletService->rejectWithdrawal($transaction, $validated['reason']);
 
-            if (!$result) {
+            if (! $result) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cannot reject this transaction',
@@ -566,7 +567,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -590,7 +591,7 @@ class WalletController extends Controller
             // Store the transfer slip
             $slipPath = null;
             if ($request->hasFile('transfer_slip')) {
-                $slipPath = $request->file('transfer_slip')->store('deposit-slips/' . $user->id, 'public');
+                $slipPath = $request->file('transfer_slip')->store('deposit-slips/'.$user->id, 'public');
             }
 
             // Create the deposit request
@@ -635,7 +636,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -680,7 +681,7 @@ class WalletController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -692,7 +693,7 @@ class WalletController extends Controller
             ->where('status', 'pending')
             ->first();
 
-        if (!$depositRequest) {
+        if (! $depositRequest) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบคำขอเติมเงินหรือคำขอถูกดำเนินการแล้ว',

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->integer('level')->default(1)->after('total_points_spent');
             $table->bigInteger('xp_for_next_level')->default(100)->after('level');
             $table->bigInteger('current_xp')->default(0)->after('xp_for_next_level');
-            
+
             // Indexes
             $table->index('level');
             $table->index('total_points_earned');

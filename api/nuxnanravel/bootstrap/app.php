@@ -1,9 +1,16 @@
 <?php
 
+use App\Http\Middleware\AuditRequest;
+use App\Http\Middleware\CheckAcademyPermission;
+use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureAdminRole;
+use App\Http\Middleware\EnsurePlearndAdmin;
+use App\Http\Middleware\EnsureSuperAdmin;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -19,7 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware(['api'])
                 ->prefix('api/admin')
                 ->group(base_path('routes/admin/admin.php'));
-            
+
             // Load course completion routes
             Route::middleware(['api'])
                 ->prefix('api')
@@ -28,17 +35,17 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'super-admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
-            'plearnd_admin' => \App\Http\Middleware\EnsurePlearndAdmin::class,
-            'admin' => \App\Http\Middleware\EnsureAdminRole::class,
-            'permission' => \App\Http\Middleware\CheckPermission::class,
-            'academy.permission' => \App\Http\Middleware\CheckAcademyPermission::class,
-            'audit.log' => \App\Http\Middleware\AuditRequest::class,
+            'super-admin' => EnsureSuperAdmin::class,
+            'plearnd_admin' => EnsurePlearndAdmin::class,
+            'admin' => EnsureAdminRole::class,
+            'permission' => CheckPermission::class,
+            'academy.permission' => CheckAcademyPermission::class,
+            'audit.log' => AuditRequest::class,
         ]);
-        
+
         // Ensure CORS is applied to API routes
         $middleware->api(prepend: [
-            \Illuminate\Http\Middleware\HandleCors::class,
+            HandleCors::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

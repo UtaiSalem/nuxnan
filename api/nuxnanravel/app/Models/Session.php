@@ -16,11 +16,11 @@ class Session extends Model
         'ip_address',
         'user_agent',
         'payload',
-        'last_activity'
+        'last_activity',
     ];
 
     protected $casts = [
         'user_id' => 'integer',
-        'last_activity' => 'integer'
+        'last_activity' => 'integer',
     ];
 }

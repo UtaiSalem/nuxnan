@@ -24,7 +24,7 @@ class TypingRaceStarted implements ShouldBroadcast
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {
@@ -49,12 +49,12 @@ class TypingRaceStarted implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'room_code'   => $this->room->room_code,
+            'room_code' => $this->room->room_code,
             'content_ids' => $this->room->content_ids,
-            'time_limit'  => $this->room->time_limit,
-            'language'    => $this->room->language,
-            'difficulty'  => $this->room->difficulty,
-            'started_at'  => $this->room->started_at,
+            'time_limit' => $this->room->time_limit,
+            'language' => $this->room->language,
+            'difficulty' => $this->room->difficulty,
+            'started_at' => $this->room->started_at,
         ];
     }
 }

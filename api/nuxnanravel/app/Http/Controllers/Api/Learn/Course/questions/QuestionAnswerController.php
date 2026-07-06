@@ -10,7 +10,7 @@ class QuestionAnswerController extends Controller
     public function index(Question $question)
     {
         return response()->json([
-            'answer' => $question->correct_option_id
+            'answer' => $question->correct_option_id,
         ], 200);
     }
 }

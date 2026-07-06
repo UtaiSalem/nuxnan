@@ -40,7 +40,7 @@ return new class extends Migration
     public function up(): void
     {
         // เพิ่ม academy_id ในตาราง students (ถ้ายังไม่มี)
-        if (Schema::hasTable('students') && !Schema::hasColumn('students', 'academy_id')) {
+        if (Schema::hasTable('students') && ! Schema::hasColumn('students', 'academy_id')) {
             Schema::table('students', function (Blueprint $table) {
                 $table->unsignedBigInteger('academy_id')->nullable()->after('id');
                 $table->unsignedBigInteger('user_id')->nullable()->after('academy_id');
@@ -51,7 +51,7 @@ return new class extends Migration
 
         // เพิ่ม academy_id ในตารางที่มี student_id
         foreach ($this->tablesWithStudentId as $table) {
-            if (Schema::hasTable($table) && !Schema::hasColumn($table, 'academy_id')) {
+            if (Schema::hasTable($table) && ! Schema::hasColumn($table, 'academy_id')) {
                 Schema::table($table, function (Blueprint $table) {
                     $table->unsignedBigInteger('academy_id')->nullable()->after('id');
                     $table->index('academy_id');
@@ -61,7 +61,7 @@ return new class extends Migration
 
         // เพิ่ม academy_id ในตาราง legacy
         foreach ($this->legacyTables as $table) {
-            if (Schema::hasTable($table) && !Schema::hasColumn($table, 'academy_id')) {
+            if (Schema::hasTable($table) && ! Schema::hasColumn($table, 'academy_id')) {
                 Schema::table($table, function (Blueprint $table) {
                     $table->unsignedBigInteger('academy_id')->nullable()->after('id');
                     $table->index('academy_id');

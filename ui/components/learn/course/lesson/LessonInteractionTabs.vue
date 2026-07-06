@@ -593,6 +593,31 @@ const submitReply = async (parentComment: any) => {
 
 <template>
   <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+    <!-- Mark as Complete Button -->
+    <div class="mb-4">
+      <button
+        @click="toggleProgress"
+        :disabled="isTogglingProgress"
+        class="w-full flex items-center justify-center gap-3 py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-[1.02]"
+        :class="isCompleted
+          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+          : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 hover:from-blue-600 hover:to-blue-700'"
+      >
+        <Icon
+          v-if="isTogglingProgress"
+          icon="eos-icons:bubble-loading"
+          class="w-6 h-6"
+        />
+        <template v-else>
+          <Icon
+            :icon="isCompleted ? 'fluent:checkmark-circle-24-filled' : 'fluent:checkbox-unchecked-24-regular'"
+            class="w-6 h-6"
+          />
+          <span>{{ isCompleted ? '✓ อ่านแล้ว' : 'ทำเครื่องหมายว่าอ่านแล้ว' }}</span>
+        </template>
+      </button>
+    </div>
+
     <!-- Tab Navigation -->
     <div class="flex items-center gap-1 mb-4 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl">
       <button
@@ -742,31 +767,6 @@ const submitReply = async (parentComment: any) => {
               class="w-5 h-5 transition-transform hover:scale-110"
             />
             <span class="text-sm font-medium">{{ isBookmarked ? 'บันทึกแล้ว' : 'บันทึก' }}</span>
-          </button>
-        </div>
-
-        <!-- Mark as Complete Button -->
-        <div class="mt-4">
-          <button
-            @click="toggleProgress"
-            :disabled="isTogglingProgress"
-            class="w-full flex items-center justify-center gap-3 py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-[1.02]"
-            :class="isCompleted 
-              ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30' 
-              : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 hover:from-blue-600 hover:to-blue-700'"
-          >
-            <Icon 
-              v-if="isTogglingProgress"
-              icon="eos-icons:bubble-loading" 
-              class="w-6 h-6"
-            />
-            <template v-else>
-              <Icon 
-                :icon="isCompleted ? 'fluent:checkmark-circle-24-filled' : 'fluent:checkbox-unchecked-24-regular'" 
-                class="w-6 h-6"
-              />
-              <span>{{ isCompleted ? '✓ อ่านแล้ว' : 'ทำเครื่องหมายว่าอ่านแล้ว' }}</span>
-            </template>
           </button>
         </div>
 

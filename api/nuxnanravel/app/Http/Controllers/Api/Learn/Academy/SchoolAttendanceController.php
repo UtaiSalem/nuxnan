@@ -4,17 +4,21 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\AcademyGroup;
 use App\Models\AcademyMember;
 use App\Models\ClassroomStudent;
 use App\Models\Learn\Academy\SchoolAttendance;
 use App\Models\Learn\Academy\SchoolAttendanceRecord;
 use App\Models\User;
+use App\Services\Gamification\ClassroomPointsService;
+use App\Services\Gamification\XpService;
 use App\Services\PointsService;
 use App\Services\StudentIdentifierResolver;
 use App\Traits\ManagesEventPermissions;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -199,7 +203,7 @@ class SchoolAttendanceController extends Controller
 
             // Phase M XP / Points
             if ($status !== 'absent') {
-                app(\App\Services\Gamification\XpService::class)->award(
+                app(XpService::class)->award(
                     $academy,
                     'attendance.recorded',
                     config('xp_rates.school.attendance.recorded', 5),
@@ -208,7 +212,7 @@ class SchoolAttendanceController extends Controller
                     ['attendance_id' => $attendance->id, 'type' => 'school']
                 );
 
-                $classroom = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+                $classroom = AcademyGroup::where('academy_id', $academy->id)
                     ->where('type', 'classroom')
                     ->whereHas('members', function ($query) use ($student) {
                         $query->where('user_id', $student->id);
@@ -216,7 +220,7 @@ class SchoolAttendanceController extends Controller
                     ->first();
 
                 if ($classroom) {
-                    app(\App\Services\Gamification\ClassroomPointsService::class)->award(
+                    app(ClassroomPointsService::class)->award(
                         $classroom,
                         'attendance.checkin',
                         config('xp_rates.classroom.attendance.checkin', 1),
@@ -280,7 +284,7 @@ class SchoolAttendanceController extends Controller
                         }
 
                         // Phase M XP / Points
-                        app(\App\Services\Gamification\XpService::class)->award(
+                        app(XpService::class)->award(
                             $academy,
                             'attendance.recorded',
                             config('xp_rates.school.attendance.recorded', 5),
@@ -289,7 +293,7 @@ class SchoolAttendanceController extends Controller
                             ['attendance_id' => $attendance->id, 'type' => 'school']
                         );
 
-                        $classroom = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+                        $classroom = AcademyGroup::where('academy_id', $academy->id)
                             ->where('type', 'classroom')
                             ->whereHas('members', function ($query) use ($student) {
                                 $query->where('user_id', $student->id);
@@ -297,7 +301,7 @@ class SchoolAttendanceController extends Controller
                             ->first();
 
                         if ($classroom) {
-                            app(\App\Services\Gamification\ClassroomPointsService::class)->award(
+                            app(ClassroomPointsService::class)->award(
                                 $classroom,
                                 'attendance.checkin',
                                 config('xp_rates.classroom.attendance.checkin', 1),
@@ -484,7 +488,7 @@ class SchoolAttendanceController extends Controller
 
     // Enrich a collection of SchoolAttendanceRecord with student_number and classroom_name.
     // Uses 2 batched queries (no N+1): AcademyMember → ClassroomStudent → Classroom.
-    private function enrichRecordsWithClassroomInfo(\Illuminate\Support\Collection $records, int $academyId): void
+    private function enrichRecordsWithClassroomInfo(Collection $records, int $academyId): void
     {
         $userIds = $records->pluck('student_id')->filter()->unique()->values();
         if ($userIds->isEmpty()) {

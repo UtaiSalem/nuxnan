@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\MessageThread;
-use App\Models\ThreadParticipant;
 use App\Models\ThreadMessage;
-use App\Models\MessageReadReceipt;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,16 +26,16 @@ class MessageThreadController extends Controller
     public function index(Request $request, Academy $academy)
     {
         $user = $request->user();
-        
+
         $query = MessageThread::where('academy_id', $academy->id)
             ->whereHas('participants', function ($q) use ($user) {
                 $q->where('user_id', $user->id)
-                  ->whereNull('left_at');
+                    ->whereNull('left_at');
             })
             ->with([
                 'participants' => function ($q) {
                     $q->with('user:id,name,profile_photo_path')
-                      ->whereNull('left_at');
+                        ->whereNull('left_at');
                 },
                 'latestMessage.sender:id,name',
             ]);
@@ -61,14 +59,14 @@ class MessageThreadController extends Controller
         $threads->getCollection()->transform(function ($thread) use ($user) {
             $participant = $thread->participants->firstWhere('user_id', $user->id);
             $lastRead = $participant ? $participant->last_read_at : null;
-            
+
             $thread->unread_count = $thread->messages()
                 ->where('created_at', '>', $lastRead ?? '1970-01-01')
                 ->where('sender_id', '!=', $user->id)
                 ->count();
-            
+
             $thread->is_muted = $participant ? $participant->is_muted : false;
-            
+
             return $thread;
         });
 
@@ -101,14 +99,14 @@ class MessageThreadController extends Controller
             ->whereNull('left_at')
             ->first();
 
-        if (!$participant) {
+        if (! $participant) {
             return response()->json(['success' => false, 'message' => 'Thread not found'], 404);
         }
 
         $thread->load([
             'participants' => function ($q) {
                 $q->with('user:id,name,profile_photo_path')
-                  ->whereNull('left_at');
+                    ->whereNull('left_at');
             },
             'relatedStudent:id,name,profile_photo_path',
         ]);
@@ -139,7 +137,7 @@ class MessageThreadController extends Controller
             ->whereNull('left_at')
             ->first();
 
-        if (!$participant) {
+        if (! $participant) {
             return response()->json(['success' => false, 'message' => 'Thread not found'], 404);
         }
 
@@ -260,9 +258,10 @@ class MessageThreadController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create thread: ' . $e->getMessage(),
+                'message' => 'Failed to create thread: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -284,7 +283,7 @@ class MessageThreadController extends Controller
             ->whereNull('left_at')
             ->first();
 
-        if (!$participant) {
+        if (! $participant) {
             return response()->json(['success' => false, 'message' => 'Not a participant'], 403);
         }
 
@@ -334,9 +333,10 @@ class MessageThreadController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send message: ' . $e->getMessage(),
+                'message' => 'Failed to send message: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -424,7 +424,7 @@ class MessageThreadController extends Controller
             ->whereNull('left_at')
             ->first();
 
-        if (!$participant && !in_array($thread->thread_type, ['group', 'parent_teacher'])) {
+        if (! $participant && ! in_array($thread->thread_type, ['group', 'parent_teacher'])) {
             return response()->json(['success' => false, 'message' => 'Cannot add participants to this thread type'], 400);
         }
 
@@ -475,7 +475,7 @@ class MessageThreadController extends Controller
             ->whereNull('left_at')
             ->exists();
 
-        if (!$isAdmin && $participantUserId != $user->id) {
+        if (! $isAdmin && $participantUserId != $user->id) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -511,7 +511,7 @@ class MessageThreadController extends Controller
             ->whereNull('left_at')
             ->first();
 
-        if (!$participant) {
+        if (! $participant) {
             return response()->json(['success' => false, 'message' => 'Not a participant'], 403);
         }
 
@@ -539,7 +539,7 @@ class MessageThreadController extends Controller
             ->whereNull('left_at')
             ->first();
 
-        if (!$participant) {
+        if (! $participant) {
             return response()->json(['success' => false, 'message' => 'Not a participant'], 403);
         }
 
@@ -567,7 +567,7 @@ class MessageThreadController extends Controller
             ->whereNull('left_at')
             ->first();
 
-        if (!$participant) {
+        if (! $participant) {
             return response()->json(['success' => false, 'message' => 'Not a participant'], 403);
         }
 
@@ -595,7 +595,7 @@ class MessageThreadController extends Controller
             ->whereNull('left_at')
             ->first();
 
-        if (!$participant) {
+        if (! $participant) {
             return response()->json(['success' => false, 'message' => 'Not a participant'], 403);
         }
 
@@ -618,8 +618,8 @@ class MessageThreadController extends Controller
             ->where('is_archived', false)
             ->whereHas('participants', function ($q) use ($user) {
                 $q->where('user_id', $user->id)
-                  ->where('is_muted', false)
-                  ->whereNull('left_at');
+                    ->where('is_muted', false)
+                    ->whereNull('left_at');
             })
             ->get();
 
@@ -627,7 +627,7 @@ class MessageThreadController extends Controller
         foreach ($threads as $thread) {
             $participant = $thread->participants->firstWhere('user_id', $user->id);
             $lastRead = $participant ? $participant->last_read_at : null;
-            
+
             $totalUnread += $thread->messages()
                 ->where('created_at', '>', $lastRead ?? '1970-01-01')
                 ->where('sender_id', '!=', $user->id)

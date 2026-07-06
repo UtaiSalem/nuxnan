@@ -41,7 +41,7 @@ return new class extends Migration
 
             $table->unique(['user_id', 'quest_id', 'quest_date'], 'uk_user_quest_date');
             $table->index(['user_id', 'quest_date']);
-            
+
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('quest_id')->references('id')->on('quest_definitions')->onDelete('cascade');
         });

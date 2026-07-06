@@ -56,7 +56,7 @@ class Achievement extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->type) {
+        return match ($this->type) {
             'points' => 'ความสำเร็จด้านแต้ม',
             'actions' => 'ความสำเร็จด้านการกระทำ',
             'streak' => 'ความสำเร็จด้านการเข้าต่อเนื่อง',

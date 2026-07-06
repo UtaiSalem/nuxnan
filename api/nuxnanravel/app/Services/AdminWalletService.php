@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Reward;
 use App\Models\User;
 use App\Models\WalletTransaction;
-use App\Models\Reward;
-use App\Models\UserReward;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class AdminWalletService
 {
@@ -16,8 +15,8 @@ class AdminWalletService
      */
     public function getStats(array $filters = []): array
     {
-        $cacheKey = 'admin_wallet_stats_' . md5(json_encode($filters));
-        
+        $cacheKey = 'admin_wallet_stats_'.md5(json_encode($filters));
+
         return Cache::remember($cacheKey, 300, function () use ($filters) {
             $startDate = $filters['start_date'] ?? now()->subDays(30);
             $endDate = $filters['end_date'] ?? now();
@@ -242,7 +241,7 @@ class AdminWalletService
                             'admin_id' => auth()->id(),
                             'action' => $action,
                             'original_amount' => $amount,
-                            'bulk_operation' => true
+                            'bulk_operation' => true,
                         ]),
                         'status' => 'completed',
                     ]);
@@ -273,7 +272,7 @@ class AdminWalletService
                     'total' => count($userIds),
                     'success' => $successCount,
                     'failure' => $failureCount,
-                ]
+                ],
             ];
         } catch (\Exception $e) {
             DB::rollBack();
@@ -484,7 +483,7 @@ class AdminWalletService
                     'total' => $withdrawals->count(),
                     'success' => $successCount,
                     'failure' => $failureCount,
-                ]
+                ],
             ];
         } catch (\Exception $e) {
             DB::rollBack();

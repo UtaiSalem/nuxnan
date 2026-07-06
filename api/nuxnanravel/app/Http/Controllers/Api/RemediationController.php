@@ -10,6 +10,7 @@ use App\Models\CourseRemediationSession;
 use App\Services\RemediationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class RemediationController extends Controller
 {
@@ -251,7 +252,7 @@ class RemediationController extends Controller
         }
 
         // Lifecycle guard: needs an active remediation grant + course not archived.
-        $gate = \Illuminate\Support\Facades\Gate::inspect('submitRemediation', $course);
+        $gate = Gate::inspect('submitRemediation', $course);
         if ($gate->denied()) {
             return response()->json([
                 'success' => false,
@@ -376,7 +377,7 @@ class RemediationController extends Controller
         // Lifecycle guard: archived courses block all remediation submissions.
         $course = $session->course;
         if ($course) {
-            $gate = \Illuminate\Support\Facades\Gate::inspect('submitRemediation', $course);
+            $gate = Gate::inspect('submitRemediation', $course);
             if ($gate->denied()) {
                 return response()->json([
                     'success' => false,

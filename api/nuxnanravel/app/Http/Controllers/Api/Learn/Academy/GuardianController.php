@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\AcademyMember;
+use App\Models\AcademyRole;
+use App\Models\GuardianContact;
 use App\Models\Student;
 use App\Models\StudentGuardian;
-use App\Models\GuardianContact;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 /**
  * Guardian Controller - ระบบจัดการผู้ปกครอง
@@ -26,7 +27,7 @@ class GuardianController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'นักเรียนไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'นักเรียนไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
@@ -67,7 +68,7 @@ class GuardianController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'นักเรียนไม่ได้อยู่ในโรงเรียนนี้'
+                'message' => 'นักเรียนไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
 
@@ -115,7 +116,7 @@ class GuardianController extends Controller
             ]);
 
             // Add phone contact if provided
-            if (!empty($validated['phone'])) {
+            if (! empty($validated['phone'])) {
                 GuardianContact::create([
                     'guardian_id' => $guardian->id,
                     'contact_type' => 'phone',
@@ -125,7 +126,7 @@ class GuardianController extends Controller
             }
 
             // Add email contact if provided
-            if (!empty($validated['email'])) {
+            if (! empty($validated['email'])) {
                 GuardianContact::create([
                     'guardian_id' => $guardian->id,
                     'contact_type' => 'email',
@@ -143,9 +144,10 @@ class GuardianController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -156,10 +158,10 @@ class GuardianController extends Controller
     public function update(Academy $academy, StudentGuardian $guardian, Request $request)
     {
         // Validate guardian's student belongs to academy
-        if (!$guardian->student || $guardian->student->academy_id !== $academy->id) {
+        if (! $guardian->student || $guardian->student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบข้อมูลผู้ปกครอง'
+                'message' => 'ไม่พบข้อมูลผู้ปกครอง',
             ], 404);
         }
 
@@ -181,7 +183,7 @@ class GuardianController extends Controller
         DB::beginTransaction();
         try {
             // If setting as primary, unset other primaries
-            if ($request->boolean('is_primary_contact') && !$guardian->is_primary_contact) {
+            if ($request->boolean('is_primary_contact') && ! $guardian->is_primary_contact) {
                 StudentGuardian::where('student_id', $guardian->student_id)
                     ->where('id', '!=', $guardian->id)
                     ->update(['is_primary_contact' => false]);
@@ -198,9 +200,10 @@ class GuardianController extends Controller
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -210,10 +213,10 @@ class GuardianController extends Controller
      */
     public function destroy(Academy $academy, StudentGuardian $guardian)
     {
-        if (!$guardian->student || $guardian->student->academy_id !== $academy->id) {
+        if (! $guardian->student || $guardian->student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบข้อมูลผู้ปกครอง'
+                'message' => 'ไม่พบข้อมูลผู้ปกครอง',
             ], 404);
         }
 
@@ -221,7 +224,7 @@ class GuardianController extends Controller
         try {
             // Delete contacts first
             $guardian->contacts()->delete();
-            
+
             // Delete guardian
             $guardian->delete();
 
@@ -233,9 +236,10 @@ class GuardianController extends Controller
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -245,10 +249,10 @@ class GuardianController extends Controller
      */
     public function linkUser(Academy $academy, StudentGuardian $guardian, Request $request)
     {
-        if (!$guardian->student || $guardian->student->academy_id !== $academy->id) {
+        if (! $guardian->student || $guardian->student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่พบข้อมูลผู้ปกครอง'
+                'message' => 'ไม่พบข้อมูลผู้ปกครอง',
             ], 404);
         }
 
@@ -259,17 +263,17 @@ class GuardianController extends Controller
         $user = User::find($request->user_id);
 
         // Add user to academy as parent if not already
-        $existingMember = \App\Models\AcademyMember::where('academy_id', $academy->id)
+        $existingMember = AcademyMember::where('academy_id', $academy->id)
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$existingMember) {
+        if (! $existingMember) {
             // Find parent role
-            $parentRole = \App\Models\AcademyRole::where('academy_id', $academy->id)
+            $parentRole = AcademyRole::where('academy_id', $academy->id)
                 ->where('name', 'parent')
                 ->first();
 
-            \App\Models\AcademyMember::create([
+            AcademyMember::create([
                 'academy_id' => $academy->id,
                 'user_id' => $user->id,
                 'status' => 2, // approved
@@ -279,7 +283,7 @@ class GuardianController extends Controller
 
         // Update guardian with user_id (need to add column)
         // For now, we store the link in a different way or add the column
-        
+
         return response()->json([
             'success' => true,
             'message' => 'เชื่อมโยงบัญชีผู้ใช้กับผู้ปกครองเรียบร้อยแล้ว',
@@ -300,10 +304,10 @@ class GuardianController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'LIKE', "%{$search}%")
-                  ->orWhere('last_name', 'LIKE', "%{$search}%")
-                  ->orWhereHas('contacts', function ($cq) use ($search) {
-                      $cq->where('contact_value', 'LIKE', "%{$search}%");
-                  });
+                    ->orWhere('last_name', 'LIKE', "%{$search}%")
+                    ->orWhereHas('contacts', function ($cq) use ($search) {
+                        $cq->where('contact_value', 'LIKE', "%{$search}%");
+                    });
             });
         }
 
@@ -327,7 +331,7 @@ class GuardianController extends Controller
                     'primary_phone' => $g->primaryContact?->contact_value,
                     'student' => $g->student ? [
                         'id' => $g->student->id,
-                        'name' => $g->student->first_name_th . ' ' . $g->student->last_name_th,
+                        'name' => $g->student->first_name_th.' '.$g->student->last_name_th,
                         'student_id' => $g->student->student_id,
                     ] : null,
                 ];
@@ -349,9 +353,9 @@ class GuardianController extends Controller
         $stats = StudentGuardian::whereHas('student', function ($q) use ($academy) {
             $q->where('academy_id', $academy->id);
         })->selectRaw('guardian_type, count(*) as count')
-          ->groupBy('guardian_type')
-          ->pluck('count', 'guardian_type')
-          ->toArray();
+            ->groupBy('guardian_type')
+            ->pluck('count', 'guardian_type')
+            ->toArray();
 
         $total = array_sum($stats);
         $withContact = StudentGuardian::whereHas('student', function ($q) use ($academy) {

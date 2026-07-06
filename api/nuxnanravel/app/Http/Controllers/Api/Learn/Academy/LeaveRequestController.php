@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\StaffProfile;
-use App\Models\LeaveType;
 use App\Models\LeaveRequest;
+use App\Models\LeaveType;
+use App\Models\StaffProfile;
 use App\Services\AuditLogService;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class LeaveRequestController extends Controller
 {
@@ -31,7 +31,7 @@ class LeaveRequestController extends Controller
         })->with([
             'staffProfile.user:id,name,avatar',
             'leaveType:id,name,code',
-            'approver:id,name'
+            'approver:id,name',
         ]);
 
         // Filter by staff
@@ -64,7 +64,7 @@ class LeaveRequestController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $leaves
+            'data' => $leaves,
         ]);
     }
 
@@ -78,12 +78,12 @@ class LeaveRequestController extends Controller
         $leave->load([
             'staffProfile.user:id,name,email,avatar',
             'leaveType',
-            'approver:id,name'
+            'approver:id,name',
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $leave
+            'data' => $leave,
         ]);
     }
 
@@ -104,7 +104,7 @@ class LeaveRequestController extends Controller
         ]);
 
         $staffProfile = StaffProfile::findOrFail($validated['staff_profile_id']);
-        
+
         if ($staffProfile->academy_id !== $academy->id) {
             return response()->json(['success' => false, 'message' => 'Staff not found'], 404);
         }
@@ -129,10 +129,10 @@ class LeaveRequestController extends Controller
 
         $availableBalance = $leaveType->days_per_year - $usedLeave;
 
-        if (!$leaveType->allow_negative && $totalDays > $availableBalance) {
+        if (! $leaveType->allow_negative && $totalDays > $availableBalance) {
             return response()->json([
                 'success' => false,
-                'message' => "วันลาคงเหลือไม่เพียงพอ (เหลือ {$availableBalance} วัน)"
+                'message' => "วันลาคงเหลือไม่เพียงพอ (เหลือ {$availableBalance} วัน)",
             ], 400);
         }
 
@@ -152,7 +152,7 @@ class LeaveRequestController extends Controller
         if ($overlapping) {
             return response()->json([
                 'success' => false,
-                'message' => 'มีคำขอลาที่ซ้อนทับกับช่วงเวลานี้อยู่แล้ว'
+                'message' => 'มีคำขอลาที่ซ้อนทับกับช่วงเวลานี้อยู่แล้ว',
             ], 400);
         }
 
@@ -177,14 +177,14 @@ class LeaveRequestController extends Controller
             [
                 'leave_type' => $leaveType->name,
                 'days' => $totalDays,
-                'dates' => "{$validated['start_date']} - {$validated['end_date']}"
+                'dates' => "{$validated['start_date']} - {$validated['end_date']}",
             ]
         );
 
         return response()->json([
             'success' => true,
             'data' => $leave->load(['leaveType', 'staffProfile.user:id,name']),
-            'message' => 'ส่งคำขอลาเรียบร้อยแล้ว'
+            'message' => 'ส่งคำขอลาเรียบร้อยแล้ว',
         ], 201);
     }
 
@@ -198,7 +198,7 @@ class LeaveRequestController extends Controller
         if ($leave->status !== LeaveRequest::STATUS_PENDING) {
             return response()->json([
                 'success' => false,
-                'message' => 'คำขอนี้ได้รับการดำเนินการแล้ว'
+                'message' => 'คำขอนี้ได้รับการดำเนินการแล้ว',
             ], 400);
         }
 
@@ -219,7 +219,7 @@ class LeaveRequestController extends Controller
         return response()->json([
             'success' => true,
             'data' => $leave->fresh(['staffProfile.user:id,name', 'leaveType', 'approver:id,name']),
-            'message' => 'อนุมัติคำขอลาเรียบร้อยแล้ว'
+            'message' => 'อนุมัติคำขอลาเรียบร้อยแล้ว',
         ]);
     }
 
@@ -233,7 +233,7 @@ class LeaveRequestController extends Controller
         if ($leave->status !== LeaveRequest::STATUS_PENDING) {
             return response()->json([
                 'success' => false,
-                'message' => 'คำขอนี้ได้รับการดำเนินการแล้ว'
+                'message' => 'คำขอนี้ได้รับการดำเนินการแล้ว',
             ], 400);
         }
 
@@ -254,7 +254,7 @@ class LeaveRequestController extends Controller
         return response()->json([
             'success' => true,
             'data' => $leave->fresh(['staffProfile.user:id,name', 'leaveType', 'approver:id,name']),
-            'message' => 'ปฏิเสธคำขอลาเรียบร้อยแล้ว'
+            'message' => 'ปฏิเสธคำขอลาเรียบร้อยแล้ว',
         ]);
     }
 
@@ -265,10 +265,10 @@ class LeaveRequestController extends Controller
     {
         $this->authorizeLeave($academy, $leave);
 
-        if (!in_array($leave->status, [LeaveRequest::STATUS_PENDING, LeaveRequest::STATUS_APPROVED])) {
+        if (! in_array($leave->status, [LeaveRequest::STATUS_PENDING, LeaveRequest::STATUS_APPROVED])) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถยกเลิกคำขอนี้ได้'
+                'message' => 'ไม่สามารถยกเลิกคำขอนี้ได้',
             ], 400);
         }
 
@@ -285,7 +285,7 @@ class LeaveRequestController extends Controller
         return response()->json([
             'success' => true,
             'data' => $leave->fresh(),
-            'message' => 'ยกเลิกคำขอลาเรียบร้อยแล้ว'
+            'message' => 'ยกเลิกคำขอลาเรียบร้อยแล้ว',
         ]);
     }
 
@@ -301,7 +301,7 @@ class LeaveRequestController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $types
+            'data' => $types,
         ]);
     }
 
@@ -339,7 +339,7 @@ class LeaveRequestController extends Controller
         return response()->json([
             'success' => true,
             'data' => $type,
-            'message' => 'สร้างประเภทการลาเรียบร้อยแล้ว'
+            'message' => 'สร้างประเภทการลาเรียบร้อยแล้ว',
         ], 201);
     }
 
@@ -353,7 +353,7 @@ class LeaveRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'code' => 'sometimes|string|max:20|unique:leave_types,code,' . $leaveType->id,
+            'code' => 'sometimes|string|max:20|unique:leave_types,code,'.$leaveType->id,
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'days_per_year' => 'sometimes|integer|min:0',
@@ -371,7 +371,7 @@ class LeaveRequestController extends Controller
         return response()->json([
             'success' => true,
             'data' => $leaveType->fresh(),
-            'message' => 'อัปเดตประเภทการลาเรียบร้อยแล้ว'
+            'message' => 'อัปเดตประเภทการลาเรียบร้อยแล้ว',
         ]);
     }
 
@@ -415,8 +415,8 @@ class LeaveRequestController extends Controller
             'data' => [
                 'year' => now()->year,
                 'staff' => $staff->only(['id', 'employee_id']),
-                'balances' => $balances
-            ]
+                'balances' => $balances,
+            ],
         ]);
     }
 
@@ -449,10 +449,10 @@ class LeaveRequestController extends Controller
             ->selectRaw('leave_type_id, COUNT(*) as count, SUM(total_days) as total_days')
             ->groupBy('leave_type_id')
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'leave_type' => $item->leaveType?->name ?? 'ไม่ระบุ',
                 'count' => $item->count,
-                'total_days' => $item->total_days
+                'total_days' => $item->total_days,
             ]);
 
         // Pending count for quick reference
@@ -467,8 +467,8 @@ class LeaveRequestController extends Controller
                 'month' => $month,
                 'pending_count' => $pendingCount,
                 'by_status' => $byStatus,
-                'by_type' => $byType
-            ]
+                'by_type' => $byType,
+            ],
         ]);
     }
 

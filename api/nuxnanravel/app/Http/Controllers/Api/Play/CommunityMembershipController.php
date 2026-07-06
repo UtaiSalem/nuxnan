@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Api\Play;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\CommunityMembership;
 use App\Http\Requests\StoreCommunityMembershipRequest;
 use App\Http\Requests\UpdateCommunityMembershipRequest;
+use App\Models\CommunityMembership;
 
 class CommunityMembershipController extends Controller
 {

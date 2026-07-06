@@ -14,16 +14,24 @@ class StoreOrder extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_CONFIRMED = 'confirmed';
+
     const STATUS_PROCESSING = 'processing';
+
     const STATUS_READY = 'ready';
+
     const STATUS_COMPLETED = 'completed';
+
     const STATUS_CANCELLED = 'cancelled';
+
     const STATUS_REFUNDED = 'refunded';
 
     // Payment status constants
     const PAYMENT_PENDING = 'pending';
+
     const PAYMENT_PAID = 'paid';
+
     const PAYMENT_REFUNDED = 'refunded';
 
     protected $fillable = [
@@ -67,7 +75,7 @@ class StoreOrder extends Model
 
         static::creating(function ($order) {
             if (empty($order->order_number)) {
-                $order->order_number = 'ORD-' . strtoupper(Str::random(8)) . '-' . time();
+                $order->order_number = 'ORD-'.strtoupper(Str::random(8)).'-'.time();
             }
         });
     }
@@ -151,7 +159,7 @@ class StoreOrder extends Model
 
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'รอดำเนินการ',
             self::STATUS_CONFIRMED => 'ยืนยันแล้ว',
             self::STATUS_PROCESSING => 'กำลังดำเนินการ',
@@ -165,7 +173,7 @@ class StoreOrder extends Model
 
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'yellow',
             self::STATUS_CONFIRMED => 'blue',
             self::STATUS_PROCESSING => 'indigo',

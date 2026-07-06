@@ -274,7 +274,7 @@ class CourseGroupController extends Controller
     {
         try {
             // Check permission
-            if (!$course->isAdmin(auth()->user())) {
+            if (! $course->isAdmin(auth()->user())) {
                 return response()->json([
                     'success' => false,
                     'message' => 'คุณไม่มีสิทธิ์จัดลำดับกลุ่มในรายวิชานี้',
@@ -306,7 +306,7 @@ class CourseGroupController extends Controller
             }
 
             foreach ($incomingIds as $id) {
-                if (!in_array($id, $courseGroupIds)) {
+                if (! in_array($id, $courseGroupIds)) {
                     return response()->json([
                         'success' => false,
                         'message' => "กลุ่ม ID {$id} ไม่ได้อยู่ในรายวิชานี้",
@@ -327,7 +327,8 @@ class CourseGroupController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
-            \Log::error('Error reordering groups: ' . $e->getMessage());
+            \Log::error('Error reordering groups: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการจัดลำดับกลุ่ม',

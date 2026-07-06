@@ -18,14 +18,14 @@ return new class extends Migration
         $patterns = [
             '/ชั้นประถมศึกษาปีที่\s*(\d+)/' => 'ประถมศึกษา',
             '/ชั้นมัธยมศึกษาปีที่\s*(\d+)/' => 'มัธยมศึกษา',
-            '/ประถมศึกษาปีที่\s*(\d+)/'     => 'ประถมศึกษา',
-            '/มัธยมศึกษาปีที่\s*(\d+)/'     => 'มัธยมศึกษา',
-            '/^ป\.?\s*(\d+)$/'              => 'ประถมศึกษา',
-            '/^ม\.?\s*(\d+)$/'              => 'มัธยมศึกษา',
-            '/ปวช/i'                         => 'ปวช.',
-            '/ปวส/i'                         => 'ปวส.',
-            '/อุดมศึกษา/i'                   => 'อุดมศึกษา',
-            '/อนุบาล/i'                      => 'อื่นๆ',
+            '/ประถมศึกษาปีที่\s*(\d+)/' => 'ประถมศึกษา',
+            '/มัธยมศึกษาปีที่\s*(\d+)/' => 'มัธยมศึกษา',
+            '/^ป\.?\s*(\d+)$/' => 'ประถมศึกษา',
+            '/^ม\.?\s*(\d+)$/' => 'มัธยมศึกษา',
+            '/ปวช/i' => 'ปวช.',
+            '/ปวส/i' => 'ปวส.',
+            '/อุดมศึกษา/i' => 'อุดมศึกษา',
+            '/อนุบาล/i' => 'อื่นๆ',
         ];
 
         $courses = DB::table('courses')->whereNotNull('level')->where('level', '!=', '')->get(['id', 'level']);
@@ -45,13 +45,13 @@ return new class extends Migration
                 }
             }
 
-            if (!$educationLevel && $level !== '') {
+            if (! $educationLevel && $level !== '') {
                 $educationLevel = 'อื่นๆ';
             }
 
             DB::table('courses')->where('id', $course->id)->update([
                 'education_level' => $educationLevel,
-                'education_year'  => $educationYear,
+                'education_year' => $educationYear,
             ]);
         }
 

@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\UsageEventType;
+use App\Jobs\ProcessUsageEvent;
 use App\Models\User;
 use App\Models\UserUsageEvent;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class UsageEventService
 {
@@ -39,7 +39,7 @@ class UsageEventService
         $event = $service->record($user, $eventType, $sourceType, $sourceId, $context);
 
         // Dispatch job to process the event
-        \App\Jobs\ProcessUsageEvent::dispatch($event);
+        ProcessUsageEvent::dispatch($event);
     }
 
     /**
@@ -47,10 +47,10 @@ class UsageEventService
      */
     protected function generateIdempotencyKey(int $userId, string $eventType, ?int $sourceId): string
     {
-        $strategy = \App\Enums\UsageEventType::IDEMPOTENCY_STRATEGIES[$eventType] ?? 'daily';
+        $strategy = UsageEventType::IDEMPOTENCY_STRATEGIES[$eventType] ?? 'daily';
         $sourceIdStr = $sourceId ?? 'none';
 
-        $keyParts = match($strategy) {
+        $keyParts = match ($strategy) {
             'daily' => [$userId, $eventType, now()->toDateString()],
             'once_per_source' => [$userId, $eventType, $sourceIdStr],
             'daily_per_source' => [$userId, $eventType, $sourceIdStr, now()->toDateString()],

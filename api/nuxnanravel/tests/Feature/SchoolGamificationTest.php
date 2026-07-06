@@ -4,12 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Academy;
 use App\Models\AcademyGroup;
+use App\Models\AcademyPost;
+use App\Models\AcademyPostComment;
+use App\Models\AcademyPostLike;
 use App\Models\User;
-use App\Models\XpEvent;
-use App\Models\SchoolXpCycle;
-use App\Models\ClassroomPointCycle;
-use App\Services\Gamification\XpService;
 use App\Services\Gamification\ClassroomPointsService;
+use App\Services\Gamification\XpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,8 +18,11 @@ class SchoolGamificationTest extends TestCase
     use RefreshDatabase;
 
     protected Academy $academy;
+
     protected User $user;
+
     protected XpService $xpService;
+
     protected ClassroomPointsService $classroomPointsService;
 
     protected function setUp(): void
@@ -177,7 +180,7 @@ class SchoolGamificationTest extends TestCase
     public function test_observers_automatically_award_xp_on_post_like_comment()
     {
         // 1. Create a Post -> Awards 10 XP
-        $post = \App\Models\AcademyPost::create([
+        $post = AcademyPost::create([
             'academy_id' => $this->academy->id,
             'user_id' => $this->user->id,
             'content' => 'Hello nuxnan social school hub!',
@@ -190,7 +193,7 @@ class SchoolGamificationTest extends TestCase
 
         // 2. Add a Like -> Awards 1 XP to the post author
         $liker = User::factory()->create();
-        $like = new \App\Models\AcademyPostLike();
+        $like = new AcademyPostLike;
         $like->academy_post_id = $post->id;
         $like->user_id = $liker->id;
         $like->save();
@@ -202,7 +205,7 @@ class SchoolGamificationTest extends TestCase
 
         // 3. Add a Comment -> Awards 2 XP to the post author
         $commenter = User::factory()->create();
-        \App\Models\AcademyPostComment::create([
+        AcademyPostComment::create([
             'academy_post_id' => $post->id,
             'user_id' => $commenter->id,
             'content' => 'Keep up the good work!',

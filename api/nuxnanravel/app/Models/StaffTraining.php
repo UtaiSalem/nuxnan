@@ -36,9 +36,13 @@ class StaffTraining extends Model
 
     // Status constants
     const STATUS_ENROLLED = 'enrolled';
+
     const STATUS_IN_PROGRESS = 'in_progress';
+
     const STATUS_COMPLETED = 'completed';
+
     const STATUS_CANCELLED = 'cancelled';
+
     const STATUS_FAILED = 'failed';
 
     const STATUSES = [
@@ -73,8 +77,13 @@ class StaffTraining extends Model
 
     public function getIsCertificateValidAttribute(): bool
     {
-        if (!$this->certificate_number) return false;
-        if (!$this->certificate_expiry) return true;
+        if (! $this->certificate_number) {
+            return false;
+        }
+        if (! $this->certificate_expiry) {
+            return true;
+        }
+
         return $this->certificate_expiry >= now();
     }
 
@@ -84,7 +93,7 @@ class StaffTraining extends Model
         $this->update(['status' => self::STATUS_IN_PROGRESS]);
     }
 
-    public function complete(float $score = null, ?string $certificateNumber = null): void
+    public function complete(?float $score = null, ?string $certificateNumber = null): void
     {
         $this->update([
             'status' => self::STATUS_COMPLETED,

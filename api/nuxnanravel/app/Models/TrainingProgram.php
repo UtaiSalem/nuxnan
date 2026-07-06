@@ -47,9 +47,13 @@ class TrainingProgram extends Model
 
     // Type constants
     const TYPE_INTERNAL = 'internal';
+
     const TYPE_EXTERNAL = 'external';
+
     const TYPE_ONLINE = 'online';
+
     const TYPE_WORKSHOP = 'workshop';
+
     const TYPE_CERTIFICATION = 'certification';
 
     const TYPES = [
@@ -89,14 +93,20 @@ class TrainingProgram extends Model
 
     public function getAvailableSlotsAttribute(): ?int
     {
-        if (!$this->max_participants) return null;
+        if (! $this->max_participants) {
+            return null;
+        }
+
         return max(0, $this->max_participants - $this->enrolled_count);
     }
 
     // Methods
     public function hasAvailableSlots(): bool
     {
-        if (!$this->max_participants) return true;
+        if (! $this->max_participants) {
+            return true;
+        }
+
         return $this->enrolled_count < $this->max_participants;
     }
 

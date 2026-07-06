@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Course;
 use Carbon\Carbon;
+use Illuminate\Console\Command;
 
 class UpdateCourseAcademicInfo extends Command
 {
@@ -59,7 +59,7 @@ class UpdateCourseAcademicInfo extends Command
                 // Note: user said "Oct-Mar is Semester 2".
                 // If created in Jan 2026 (2569), it belongs to Academic Year 2568.
                 $semester = '2';
-                $academicYear = $thaiYear - 1; 
+                $academicYear = $thaiYear - 1;
             } else {
                 // Month 4 (April) - Summer
                 $semester = 'summer';

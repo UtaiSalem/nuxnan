@@ -19,49 +19,49 @@ return new class extends Migration
             // Check if index exists before adding
             $conn = DB::connection();
             $dbName = $conn->getDatabaseName();
-            
-            $existingIndexes = collect(DB::select("SHOW INDEX FROM notifications"))->pluck('Key_name');
 
-            if (!$existingIndexes->contains('notifications_user_id_read_status_index')) {
+            $existingIndexes = collect(DB::select('SHOW INDEX FROM notifications'))->pluck('Key_name');
+
+            if (! $existingIndexes->contains('notifications_user_id_read_status_index')) {
                 $table->index(['user_id', 'read_status']);
             }
-            if (!$existingIndexes->contains('notifications_created_at_index')) {
+            if (! $existingIndexes->contains('notifications_created_at_index')) {
                 $table->index('created_at');
             }
         });
 
         Schema::table('course_members', function (Blueprint $table) {
-            $existingIndexes = collect(DB::select("SHOW INDEX FROM course_members"))->pluck('Key_name');
-            
-            if (!$existingIndexes->contains('course_members_course_id_user_id_index')) {
+            $existingIndexes = collect(DB::select('SHOW INDEX FROM course_members'))->pluck('Key_name');
+
+            if (! $existingIndexes->contains('course_members_course_id_user_id_index')) {
                 $table->index(['course_id', 'user_id']);
             }
-            if (!$existingIndexes->contains('course_members_user_id_role_index')) {
+            if (! $existingIndexes->contains('course_members_user_id_role_index')) {
                 $table->index(['user_id', 'role']);
             }
         });
 
         Schema::table('store_orders', function (Blueprint $table) {
-            $existingIndexes = collect(DB::select("SHOW INDEX FROM store_orders"))->pluck('Key_name');
+            $existingIndexes = collect(DB::select('SHOW INDEX FROM store_orders'))->pluck('Key_name');
 
-            if (!$existingIndexes->contains('store_orders_academy_store_id_status_index')) {
+            if (! $existingIndexes->contains('store_orders_academy_store_id_status_index')) {
                 $table->index(['academy_store_id', 'status']);
             }
-            if (!$existingIndexes->contains('store_orders_user_id_index') && !$existingIndexes->contains('store_orders_user_id_foreign')) {
+            if (! $existingIndexes->contains('store_orders_user_id_index') && ! $existingIndexes->contains('store_orders_user_id_foreign')) {
                 $table->index('user_id');
             }
-            if (!$existingIndexes->contains('store_orders_order_number_index') && !$existingIndexes->contains('store_orders_order_number_unique')) {
+            if (! $existingIndexes->contains('store_orders_order_number_index') && ! $existingIndexes->contains('store_orders_order_number_unique')) {
                 $table->index('order_number');
             }
         });
 
         Schema::table('course_quiz_results', function (Blueprint $table) {
-            $existingIndexes = collect(DB::select("SHOW INDEX FROM course_quiz_results"))->pluck('Key_name');
+            $existingIndexes = collect(DB::select('SHOW INDEX FROM course_quiz_results'))->pluck('Key_name');
 
-            if (!$existingIndexes->contains('course_quiz_results_quiz_id_user_id_index')) {
+            if (! $existingIndexes->contains('course_quiz_results_quiz_id_user_id_index')) {
                 $table->index(['quiz_id', 'user_id']);
             }
-            if (!$existingIndexes->contains('course_quiz_results_status_index')) {
+            if (! $existingIndexes->contains('course_quiz_results_status_index')) {
                 $table->index('status');
             }
         });

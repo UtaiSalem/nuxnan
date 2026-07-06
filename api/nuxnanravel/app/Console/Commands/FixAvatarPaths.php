@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\User;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -57,6 +57,7 @@ class FixAvatarPaths extends Command
             if (filter_var($currentPath, FILTER_VALIDATE_URL)) {
                 $stats['already_correct']++; // Technically not "correct" structure, but valid external URL
                 $bar->advance();
+
                 continue;
             }
 
@@ -64,15 +65,15 @@ class FixAvatarPaths extends Command
             $cleanCurrentPath = preg_replace('#^/?(storage/)?#', '', $currentPath);
 
             // Check if file exists
-            if (!Storage::disk('public')->exists($cleanCurrentPath)) {
+            if (! Storage::disk('public')->exists($cleanCurrentPath)) {
                 // File missing at old path - check if already migrated to avatars/{user_id}/
                 $targetFolder = "avatars/{$user->id}";
                 $existingFiles = Storage::disk('public')->files($targetFolder);
                 $found = false;
                 foreach ($existingFiles as $file) {
-                    if (Str::startsWith(basename($file), $user->id . '_')) {
+                    if (Str::startsWith(basename($file), $user->id.'_')) {
                         // Found migrated file, update DB to point to it
-                        if (!$isDryRun) {
+                        if (! $isDryRun) {
                             $user->profile_photo_path = $file;
                             $user->saveQuietly();
                         }
@@ -81,8 +82,8 @@ class FixAvatarPaths extends Command
                         break;
                     }
                 }
-                if (!$found) {
-                    if ($clearMissing && !$isDryRun) {
+                if (! $found) {
+                    if ($clearMissing && ! $isDryRun) {
                         $user->profile_photo_path = null;
                         $user->saveQuietly();
                         $stats['cleared']++;
@@ -91,6 +92,7 @@ class FixAvatarPaths extends Command
                     }
                 }
                 $bar->advance();
+
                 continue;
             }
 
@@ -101,9 +103,10 @@ class FixAvatarPaths extends Command
 
             // Check if already in correct folder
             // strict check: directory matches
-            if (Str::startsWith($cleanCurrentPath, $targetFolder . '/')) {
+            if (Str::startsWith($cleanCurrentPath, $targetFolder.'/')) {
                 $stats['already_correct']++;
                 $bar->advance();
+
                 continue;
             }
 
@@ -116,11 +119,11 @@ class FixAvatarPaths extends Command
 
                     // Check if target file already exists (collision?)
                     if (Storage::disk('public')->exists($targetPath)) {
-                        // If file content is same, just update DB? 
+                        // If file content is same, just update DB?
                         // Or rename new file? Let's rename to be safe.
                         $ext = pathinfo($filename, PATHINFO_EXTENSION);
                         $name = pathinfo($filename, PATHINFO_FILENAME);
-                        $newFilename = $name . '_' . time() . '.' . $ext;
+                        $newFilename = $name.'_'.time().'.'.$ext;
                         $targetPath = "{$targetFolder}/{$newFilename}";
                     }
 
@@ -133,7 +136,7 @@ class FixAvatarPaths extends Command
 
                     $stats['migrated']++;
                 } catch (\Exception $e) {
-                    $this->error("Failed to move {$cleanCurrentPath} for user {$user->id}: " . $e->getMessage());
+                    $this->error("Failed to move {$cleanCurrentPath} for user {$user->id}: ".$e->getMessage());
                     $stats['errors']++;
                 }
             }
@@ -152,7 +155,7 @@ class FixAvatarPaths extends Command
             ['Cleared (set null)', $stats['cleared']],
             ['Errors', $stats['errors']],
         ]);
-        
+
         $this->info('Done.');
     }
 }

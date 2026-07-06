@@ -42,10 +42,15 @@ class ReportDefinition extends Model
 
     // Categories
     const CATEGORY_ENROLLMENT = 'enrollment';
+
     const CATEGORY_ATTENDANCE = 'attendance';
+
     const CATEGORY_ACADEMIC = 'academic';
+
     const CATEGORY_FINANCIAL = 'financial';
+
     const CATEGORY_STAFF = 'staff';
+
     const CATEGORY_DEMOGRAPHIC = 'demographic';
 
     const CATEGORIES = [
@@ -59,8 +64,11 @@ class ReportDefinition extends Model
 
     // Report Types
     const TYPE_TABLE = 'table';
+
     const TYPE_CHART = 'chart';
+
     const TYPE_SUMMARY = 'summary';
+
     const TYPE_DETAILED = 'detailed';
 
     const TYPES = [
@@ -122,9 +130,10 @@ class ReportDefinition extends Model
     {
         $new = $this->replicate();
         $new->name = $newName;
-        $new->code = $this->code . '_copy_' . time();
+        $new->code = $this->code.'_copy_'.time();
         $new->is_system = false;
         $new->save();
+
         return $new;
     }
 }

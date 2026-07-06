@@ -42,16 +42,24 @@ class GradeAppeal extends Model
 
     // Appeal types
     const TYPE_SCORE_ERROR = 'score_error';
+
     const TYPE_ATTENDANCE_ERROR = 'attendance_error';
+
     const TYPE_GRADING_CRITERIA = 'grading_criteria';
+
     const TYPE_SPECIAL_CIRCUMSTANCE = 'special_circumstance';
+
     const TYPE_OTHER = 'other';
 
     // Status
     const STATUS_PENDING = 'pending';
+
     const STATUS_REVIEWING = 'reviewing';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
+
     const STATUS_WITHDRAWN = 'withdrawn';
 
     /**
@@ -115,9 +123,10 @@ class GradeAppeal extends Model
      */
     public function isWithinDeadline(): bool
     {
-        if (!$this->deadline_at) {
+        if (! $this->deadline_at) {
             return true;
         }
+
         return $this->deadline_at->isFuture();
     }
 
@@ -159,7 +168,7 @@ class GradeAppeal extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->appeal_type) {
+        return match ($this->appeal_type) {
             self::TYPE_SCORE_ERROR => 'คะแนนผิดพลาด',
             self::TYPE_ATTENDANCE_ERROR => 'การเข้าเรียนผิดพลาด',
             self::TYPE_GRADING_CRITERIA => 'เกณฑ์การให้เกรด',
@@ -174,7 +183,7 @@ class GradeAppeal extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'รอพิจารณา',
             self::STATUS_REVIEWING => 'กำลังพิจารณา',
             self::STATUS_APPROVED => 'อนุมัติ',

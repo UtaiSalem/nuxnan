@@ -157,6 +157,18 @@ export const useAcademyNavigation = (
       visibleWhen: (c) => c.isMember
     },
     {
+      id: 'departments',
+      title: 'ฝ่ายงานและชุมชน',
+      outcome: 'ค้นหาฝ่ายงานและกลุ่มต่างๆ',
+      icon: 'fluent:building-24-regular',
+      to: `/academies/{n}#groups`,
+      destinationLabel: 'แท็บส่วนงาน',
+      intent: 'community',
+      color: 'sky',
+      order: 10,
+      visibleWhen: (c) => c.isMember
+    },
+    {
       id: 'school-store',
       title: 'ร้านค้าโรงเรียน',
       outcome: 'ซื้อสินค้า/แต้มของโรงเรียน',
@@ -165,7 +177,7 @@ export const useAcademyNavigation = (
       destinationLabel: 'หน้าโรงเรียนสโตร์',
       intent: 'commerce',
       color: 'emerald',
-      order: 10,
+      order: 11,
       visibleWhen: (c) => c.isMember
     },
     {
@@ -177,7 +189,7 @@ export const useAcademyNavigation = (
       destinationLabel: 'หน้าระบบควบคุม',
       intent: 'manage',
       color: 'rose',
-      order: 11,
+      order: 12,
       visibleWhen: (c) => c.role.isAdmin.value || c.role.can('academy.settings.view')
     }
   ]

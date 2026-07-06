@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CourseGroupMember extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'course_id',
         'group_id',

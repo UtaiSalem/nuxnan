@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Services\InvitationService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ClassroomInvitationController extends Controller
 {
@@ -37,7 +37,7 @@ class ClassroomInvitationController extends Controller
     public function store(Request $request, int $academyId, int $classroomId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -98,7 +98,7 @@ class ClassroomInvitationController extends Controller
     public function cancel(int $academyId, int $classroomId, int $invitationId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        if (!$this->canManage($academy)) {
+        if (! $this->canManage($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -136,7 +136,9 @@ class ClassroomInvitationController extends Controller
     protected function canManage(Academy $academy): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
         if ($academy->user_id === $user->id) {
             return true;

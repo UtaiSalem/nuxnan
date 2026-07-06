@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Academy;
 use App\Models\ReportDefinition;
 use Illuminate\Database\Seeder;
 
@@ -55,7 +56,7 @@ class SchoolReportDefinitionSeeder extends Seeder
             ],
         ];
 
-        $academy = \App\Models\Academy::first();
+        $academy = Academy::first();
         $academyId = $academy ? $academy->id : 1;
 
         foreach ($definitions as $def) {

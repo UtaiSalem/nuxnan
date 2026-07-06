@@ -2,13 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Jobs\CloneCourseJob;
 use App\Models\Course;
 use App\Models\CoursePurchase;
-use App\Models\WalletTransaction;
-use App\Models\PointsTransaction;
+use App\Models\Lesson;
 use App\Models\Notification;
-use App\Jobs\CloneCourseJob;
+use App\Models\User;
+use App\Models\WalletTransaction;
+use App\Services\CourseCloneService;
 use App\Services\CoursePurchaseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -32,13 +33,13 @@ class CoursePurchaseFlowTest extends TestCase
     public function test_purchase_course_successfully_sync()
     {
         $seller = User::factory()->create(['wallet' => 0]);
-        $buyer  = User::factory()->create(['wallet' => 1000]);
+        $buyer = User::factory()->create(['wallet' => 1000]);
 
         $course = Course::factory()->create([
-            'user_id'           => $seller->id,
-            'price'             => 500,
+            'user_id' => $seller->id,
+            'price' => 500,
             'is_for_marketplace' => true,
-            'saleable'          => true,
+            'saleable' => true,
         ]);
 
         $response = $this->actingAs($buyer, 'api')
@@ -50,10 +51,10 @@ class CoursePurchaseFlowTest extends TestCase
 
         $this->assertDatabaseHas('course_purchases', [
             'source_course_id' => $course->id,
-            'buyer_id'         => $buyer->id,
-            'status'           => 'completed',
-            'amount_wallet'    => 500,
-            'payment_mode'     => 'wallet',
+            'buyer_id' => $buyer->id,
+            'status' => 'completed',
+            'amount_wallet' => 500,
+            'payment_mode' => 'wallet',
         ]);
 
         $purchase = CoursePurchase::first();
@@ -70,18 +71,18 @@ class CoursePurchaseFlowTest extends TestCase
         Queue::fake();
 
         $seller = User::factory()->create();
-        $buyer  = User::factory()->create(['wallet' => 1000]);
+        $buyer = User::factory()->create(['wallet' => 1000]);
 
         $course = Course::factory()->create([
-            'user_id'           => $seller->id,
-            'price'             => 500,
+            'user_id' => $seller->id,
+            'price' => 500,
             'is_for_marketplace' => true,
-            'instructor_id'     => $seller->id,
+            'instructor_id' => $seller->id,
         ]);
 
-        \App\Models\Lesson::factory()->count(21)->create([
+        Lesson::factory()->count(21)->create([
             'course_id' => $course->id,
-            'user_id'   => $seller->id,
+            'user_id' => $seller->id,
         ]);
 
         $response = $this->actingAs($buyer, 'api')
@@ -93,7 +94,7 @@ class CoursePurchaseFlowTest extends TestCase
 
         $this->assertDatabaseHas('course_purchases', [
             'source_course_id' => $course->id,
-            'status'           => 'pending_clone',
+            'status' => 'pending_clone',
         ]);
     }
 
@@ -108,7 +109,7 @@ class CoursePurchaseFlowTest extends TestCase
     {
         [$buyer, $seller, $purchase, $tx, $incomeTx] = $this->makePendingClonePurchase(500);
 
-        $mockCloneService = \Mockery::mock(\App\Services\CourseCloneService::class);
+        $mockCloneService = \Mockery::mock(CourseCloneService::class);
         $mockCloneService->shouldReceive('clone')->andThrow(new \Exception('Disk full'));
 
         $job = new CloneCourseJob($purchase->id);
@@ -161,7 +162,7 @@ class CoursePurchaseFlowTest extends TestCase
 
         $this->assertDatabaseHas('notifications', [
             'user_id' => $buyer->id,
-            'type'    => Notification::TYPE_GENERAL,
+            'type' => Notification::TYPE_GENERAL,
         ]);
 
         $notification = Notification::where('user_id', $buyer->id)->first();
@@ -208,7 +209,7 @@ class CoursePurchaseFlowTest extends TestCase
     {
         [$buyer, $seller, $purchase] = $this->makePendingClonePurchase(500);
 
-        $mockCloneService = \Mockery::mock(\App\Services\CourseCloneService::class);
+        $mockCloneService = \Mockery::mock(CourseCloneService::class);
         // Second attempt succeeds
         $mockCloneService->shouldReceive('clone')->once()->andReturn(
             Course::factory()->create(['user_id' => $buyer->id])
@@ -228,7 +229,7 @@ class CoursePurchaseFlowTest extends TestCase
         [$buyer, $seller, $purchase] = $this->makePendingClonePurchase(500);
         $purchase->update(['status' => 'completed']);
 
-        $mockCloneService = \Mockery::mock(\App\Services\CourseCloneService::class);
+        $mockCloneService = \Mockery::mock(CourseCloneService::class);
         $mockCloneService->shouldNotReceive('clone');
 
         $job = new CloneCourseJob($purchase->id);
@@ -243,8 +244,8 @@ class CoursePurchaseFlowTest extends TestCase
     {
         $owner = User::factory()->create(['wallet' => 1000]);
         $course = Course::factory()->create([
-            'user_id'           => $owner->id,
-            'price'             => 100,
+            'user_id' => $owner->id,
+            'price' => 100,
             'is_for_marketplace' => true,
         ]);
 
@@ -258,10 +259,10 @@ class CoursePurchaseFlowTest extends TestCase
     public function test_duplicate_purchase_is_rejected()
     {
         $seller = User::factory()->create(['wallet' => 0]);
-        $buyer  = User::factory()->create(['wallet' => 2000]);
+        $buyer = User::factory()->create(['wallet' => 2000]);
         $course = Course::factory()->create([
-            'user_id'           => $seller->id,
-            'price'             => 100,
+            'user_id' => $seller->id,
+            'price' => 100,
             'is_for_marketplace' => true,
         ]);
 
@@ -286,8 +287,8 @@ class CoursePurchaseFlowTest extends TestCase
         $response = $this->actingAs($owner, 'api')
             ->patchJson(route('course.marketplace.update', $course->id), [
                 'is_for_marketplace' => true,
-                'price_type'         => 'wallet',
-                'price'              => -50,
+                'price_type' => 'wallet',
+                'price' => -50,
             ]);
 
         $response->assertStatus(422);
@@ -304,49 +305,49 @@ class CoursePurchaseFlowTest extends TestCase
     private function makePendingClonePurchase(float $amount): array
     {
         $seller = User::factory()->create(['wallet' => 0]);
-        $buyer  = User::factory()->create(['wallet' => 1000, 'pp' => 0]);
+        $buyer = User::factory()->create(['wallet' => 1000, 'pp' => 0]);
 
         $course = Course::factory()->create([
-            'user_id'           => $seller->id,
-            'price'             => $amount,
+            'user_id' => $seller->id,
+            'price' => $amount,
             'is_for_marketplace' => true,
         ]);
 
         $purchase = CoursePurchase::create([
             'source_course_id' => $course->id,
-            'buyer_id'         => $buyer->id,
-            'seller_id'        => $seller->id,
-            'amount_wallet'    => $amount,
-            'payment_mode'     => 'wallet',
-            'status'           => 'paid',
+            'buyer_id' => $buyer->id,
+            'seller_id' => $seller->id,
+            'amount_wallet' => $amount,
+            'payment_mode' => 'wallet',
+            'status' => 'paid',
         ]);
 
         $buyerTx = WalletTransaction::create([
-            'user_id'          => $buyer->id,
+            'user_id' => $buyer->id,
             'transaction_type' => 'purchase',
-            'amount'           => $amount,
-            'balance_before'   => 1000,
-            'balance_after'    => 1000 - $amount,
-            'status'           => 'completed',
-            'metadata'         => ['course_id' => $course->id],
+            'amount' => $amount,
+            'balance_before' => 1000,
+            'balance_after' => 1000 - $amount,
+            'status' => 'completed',
+            'metadata' => ['course_id' => $course->id],
         ]);
         $buyer->decrement('wallet', $amount);
 
         $sellerTx = WalletTransaction::create([
-            'user_id'          => $seller->id,
+            'user_id' => $seller->id,
             'transaction_type' => 'course_income',
-            'amount'           => $amount,
-            'balance_before'   => 0,
-            'balance_after'    => $amount,
-            'status'           => 'completed',
-            'metadata'         => ['course_id' => $course->id],
+            'amount' => $amount,
+            'balance_before' => 0,
+            'balance_after' => $amount,
+            'status' => 'completed',
+            'metadata' => ['course_id' => $course->id],
         ]);
         $seller->increment('wallet', $amount);
 
         $purchase->update([
-            'wallet_transaction_id'        => $buyerTx->id,
+            'wallet_transaction_id' => $buyerTx->id,
             'seller_income_transaction_id' => $sellerTx->id,
-            'status'                       => 'pending_clone',
+            'status' => 'pending_clone',
         ]);
 
         return [$buyer, $seller, $purchase, $buyerTx, $sellerTx];

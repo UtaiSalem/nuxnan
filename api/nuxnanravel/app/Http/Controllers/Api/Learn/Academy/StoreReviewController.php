@@ -25,7 +25,7 @@ class StoreReviewController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => collect($reviews->items())->map(fn($r) => [
+            'data' => collect($reviews->items())->map(fn ($r) => [
                 'id' => $r->id,
                 'rating' => $r->rating,
                 'comment' => $r->comment,
@@ -43,7 +43,7 @@ class StoreReviewController extends Controller
                 'total' => $reviews->total(),
                 'average_rating' => (float) $product->average_rating,
                 'review_count' => $product->review_count,
-            ]
+            ],
         ]);
     }
 
@@ -53,7 +53,7 @@ class StoreReviewController extends Controller
     public function store(Request $request, Academy $academy, StoreProduct $product): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -66,13 +66,13 @@ class StoreReviewController extends Controller
         // Check if already reviewed
         $existing = StoreProductReview::where('store_product_id', $product->id)
             ->where('user_id', $user->id)
-            ->when($request->order_id, fn($q) => $q->where('store_order_id', $request->order_id))
+            ->when($request->order_id, fn ($q) => $q->where('store_order_id', $request->order_id))
             ->first();
 
         if ($existing) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณได้รีวิวสินค้านี้แล้ว'
+                'message' => 'คุณได้รีวิวสินค้านี้แล้ว',
             ], 422);
         }
 
@@ -94,7 +94,7 @@ class StoreReviewController extends Controller
                 'rating' => $review->rating,
                 'comment' => $review->comment,
             ],
-            'message' => 'รีวิวเรียบร้อย'
+            'message' => 'รีวิวเรียบร้อย',
         ], 201);
     }
 
@@ -104,7 +104,7 @@ class StoreReviewController extends Controller
     public function destroy(Academy $academy, StoreProduct $product, StoreProductReview $review): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -113,7 +113,7 @@ class StoreReviewController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบรีวิวเรียบร้อย'
+            'message' => 'ลบรีวิวเรียบร้อย',
         ]);
     }
 }

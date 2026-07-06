@@ -42,12 +42,19 @@ class GradeEditLog extends Model
 
     // Change types
     const TYPE_SCORE_UPDATE = 'score_update';
+
     const TYPE_GRADE_OVERRIDE = 'grade_override';
+
     const TYPE_ATTENDANCE_CORRECTION = 'attendance_correction';
+
     const TYPE_APPEAL_RESULT = 'appeal_result';
+
     const TYPE_REMEDIATION_RESULT = 'remediation_result';
+
     const TYPE_ADMIN_ADJUSTMENT = 'admin_adjustment';
+
     const TYPE_BULK_UPDATE = 'bulk_update';
+
     const TYPE_SYSTEM_RECALCULATION = 'system_recalculation';
 
     /**
@@ -186,7 +193,7 @@ class GradeEditLog extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->change_type) {
+        return match ($this->change_type) {
             self::TYPE_SCORE_UPDATE => 'อัพเดทคะแนน',
             self::TYPE_GRADE_OVERRIDE => 'แก้ไขเกรด',
             self::TYPE_ATTENDANCE_CORRECTION => 'แก้ไขการเข้าเรียน',
@@ -207,15 +214,15 @@ class GradeEditLog extends Model
         $parts = [];
 
         if ($this->hasScoreChange()) {
-            $parts[] = sprintf('คะแนน: %s → %s', 
-                $this->old_score ?? '-', 
+            $parts[] = sprintf('คะแนน: %s → %s',
+                $this->old_score ?? '-',
                 $this->new_score ?? '-'
             );
         }
 
         if ($this->hasGradeChange()) {
-            $parts[] = sprintf('เกรด: %s → %s', 
-                $this->old_grade ?? '-', 
+            $parts[] = sprintf('เกรด: %s → %s',
+                $this->old_grade ?? '-',
                 $this->new_grade ?? '-'
             );
         }

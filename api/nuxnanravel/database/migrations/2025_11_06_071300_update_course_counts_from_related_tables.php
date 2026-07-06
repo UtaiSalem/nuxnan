@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -21,7 +19,7 @@ return new class extends Migration
                 WHERE cg.course_id = courses.id
             )
         ');
-        
+
         // Update quizzes count from course_quizzes table
         DB::statement('
             UPDATE courses
@@ -31,7 +29,7 @@ return new class extends Migration
                 WHERE cq.course_id = courses.id
             )
         ');
-        
+
         // Update enrolled_students count from course_members table
         // Count only active students (status = 1 and role = 1 or 2)
         DB::statement('

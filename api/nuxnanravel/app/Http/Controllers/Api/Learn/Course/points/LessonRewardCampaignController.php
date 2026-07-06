@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\Learn\Course\points;
 
 use App\Http\Controllers\Controller;
@@ -24,16 +25,16 @@ class LessonRewardCampaignController extends Controller
 
         return response()->json([
             'data' => $campaign ? [
-                'id'              => $campaign->id,
+                'id' => $campaign->id,
                 'points_per_claim' => $campaign->points_per_claim,
-                'max_claims'      => $campaign->max_claims,
-                'total_claimed'   => $campaign->total_claimed,
-                'remaining'       => $campaign->max_claims
+                'max_claims' => $campaign->max_claims,
+                'total_claimed' => $campaign->total_claimed,
+                'remaining' => $campaign->max_claims
                     ? $campaign->max_claims - $campaign->total_claimed
                     : null,
-                'status'          => $campaign->status,
-                'starts_at'       => $campaign->starts_at,
-                'ends_at'         => $campaign->ends_at,
+                'status' => $campaign->status,
+                'starts_at' => $campaign->starts_at,
+                'ends_at' => $campaign->ends_at,
             ] : null,
         ]);
     }
@@ -44,14 +45,15 @@ class LessonRewardCampaignController extends Controller
         $this->authorizeCourseAdmin($course);
         $data = $request->validate([
             'points_per_claim' => 'required|integer|min:1',
-            'max_claims'       => 'nullable|integer|min:1',
-            'starts_at'        => 'nullable|date',
-            'ends_at'          => 'nullable|date|after_or_equal:starts_at',
+            'max_claims' => 'nullable|integer|min:1',
+            'starts_at' => 'nullable|date',
+            'ends_at' => 'nullable|date|after_or_equal:starts_at',
         ]);
 
         $result = $this->service->createLessonRewardCampaign(
             $course->id, $lesson->id, $data, $request->user()->id
         );
+
         return response()->json($result, $result['success'] ? 201 : 422);
     }
 
@@ -65,6 +67,7 @@ class LessonRewardCampaignController extends Controller
             ->firstOrFail();
 
         $result = $this->service->cancelCampaign($campaign->id);
+
         return response()->json($result);
     }
 

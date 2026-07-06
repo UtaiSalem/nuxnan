@@ -55,7 +55,7 @@ class DiagnoseAcademyMemberIssues extends Command
             );
 
             if ($problematicRecords > 10) {
-                $this->line("... and " . ($problematicRecords - 10) . " more records");
+                $this->line('... and '.($problematicRecords - 10).' more records');
             }
         }
 
@@ -71,23 +71,23 @@ class DiagnoseAcademyMemberIssues extends Command
 
         // 3. Count students with user_id assigned
         $studentsWithUser = Student::whereNotNull('user_id')
-            ->when($academyId, fn($q) => $q->where('academy_id', $academyId))
+            ->when($academyId, fn ($q) => $q->where('academy_id', $academyId))
             ->count();
         $this->info("3. Students with user_id assigned: {$studentsWithUser}");
 
         // 4. Count students without user_id
         $studentsWithoutUser = Student::whereNull('user_id')
-            ->when($academyId, fn($q) => $q->where('academy_id', $academyId))
+            ->when($academyId, fn ($q) => $q->where('academy_id', $academyId))
             ->count();
         $this->info("4. Students without user_id: {$studentsWithoutUser}");
 
         $this->newLine();
 
         // 5. Check potential email matches
-        $this->info("5. Checking potential email matches...");
-        
+        $this->info('5. Checking potential email matches...');
+
         $students = Student::whereNull('user_id')
-            ->when($academyId, fn($q) => $q->where('academy_id', $academyId))
+            ->when($academyId, fn ($q) => $q->where('academy_id', $academyId))
             ->limit(100)
             ->get();
 
@@ -96,7 +96,7 @@ class DiagnoseAcademyMemberIssues extends Command
 
         foreach ($students as $student) {
             $studentCode = $student->student_id;
-            
+
             if (empty($studentCode)) {
                 continue;
             }
@@ -111,7 +111,7 @@ class DiagnoseAcademyMemberIssues extends Command
                 $matches[] = [
                     'student_id' => $student->id,
                     'student_code' => $studentCode,
-                    'student_name' => $student->first_name_th . ' ' . $student->last_name_th,
+                    'student_name' => $student->first_name_th.' '.$student->last_name_th,
                     'user_id' => $user->id,
                     'user_email' => $user->email,
                     'user_name' => $user->name,
@@ -121,9 +121,9 @@ class DiagnoseAcademyMemberIssues extends Command
 
         $this->info("   Found {$matchCount} potential matches (from first 100 students without user_id)");
 
-        if (!empty($matches)) {
+        if (! empty($matches)) {
             $this->newLine();
-            $this->info("   Sample matches:");
+            $this->info('   Sample matches:');
             $this->table(
                 ['Student ID', 'Code', 'Student Name', 'User ID', 'User Email'],
                 collect($matches)->take(10)->map(function ($m) {
@@ -141,11 +141,11 @@ class DiagnoseAcademyMemberIssues extends Command
         $this->newLine();
 
         // 6. Show academy distribution of problematic records
-        $this->info("6. Distribution of problematic records by member_code patterns:");
-        
+        $this->info('6. Distribution of problematic records by member_code patterns:');
+
         $memberCodePatterns = AcademyMember::where('user_id', 1)
             ->where('academy_id', 1)
-            ->selectRaw("SUBSTRING(member_code, 1, 2) as prefix, COUNT(*) as count")
+            ->selectRaw('SUBSTRING(member_code, 1, 2) as prefix, COUNT(*) as count')
             ->groupBy('prefix')
             ->orderByDesc('count')
             ->limit(10)
@@ -164,11 +164,11 @@ class DiagnoseAcademyMemberIssues extends Command
 
         // Recommendations
         $this->info('=== Recommendations ===');
-        
+
         if ($problematicRecords > 0) {
             $this->warn("⚠ You have {$problematicRecords} records with user_id=1 and academy_id=1");
-            $this->line("   Run: php artisan academy:fix-member-assignment --dry-run");
-            $this->line("   to see what would be fixed, then run without --dry-run to apply.");
+            $this->line('   Run: php artisan academy:fix-member-assignment --dry-run');
+            $this->line('   to see what would be fixed, then run without --dry-run to apply.');
         }
 
         if ($matchCount > 0) {

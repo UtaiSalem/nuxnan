@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Share;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class ShareComment extends Model
 {
@@ -53,10 +51,10 @@ class ShareComment extends Model
      */
     public function getIsLikedByAuthAttribute(): bool
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return false;
         }
-        
+
         return \DB::table('share_comment_likes')
             ->where('share_comment_id', $this->id)
             ->where('user_id', auth()->id())
@@ -68,10 +66,10 @@ class ShareComment extends Model
      */
     public function getIsDislikedByAuthAttribute(): bool
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return false;
         }
-        
+
         return \DB::table('share_comment_dislikes')
             ->where('share_comment_id', $this->id)
             ->where('user_id', auth()->id())

@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\Topic;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class TopicImage extends Model
 {
@@ -24,7 +23,6 @@ class TopicImage extends Model
 
     public function getImageUrlAttribute()
     {
-        return asset('storage/images/courses/lessons/topics/' . $this->filename);
+        return asset('storage/images/courses/lessons/topics/'.$this->filename);
     }
-
 }

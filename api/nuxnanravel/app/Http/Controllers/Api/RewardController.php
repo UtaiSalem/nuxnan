@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\RewardService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class RewardController extends Controller
@@ -24,7 +24,7 @@ class RewardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -33,7 +33,7 @@ class RewardController extends Controller
 
         $type = $request->input('type');
 
-        $rewards = $type 
+        $rewards = $type
             ? $this->rewardService->getRewardsByType($type)
             : $this->rewardService->getAllRewards();
 
@@ -52,7 +52,7 @@ class RewardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -61,7 +61,7 @@ class RewardController extends Controller
 
         $reward = $this->rewardService->getRewardDetails($id);
 
-        if (!$reward) {
+        if (! $reward) {
             return response()->json([
                 'success' => false,
                 'message' => 'Reward not found',
@@ -83,7 +83,7 @@ class RewardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -107,7 +107,7 @@ class RewardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -132,7 +132,7 @@ class RewardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -141,7 +141,7 @@ class RewardController extends Controller
 
         $result = $this->rewardService->cancelUserReward($user, $id);
 
-        if (!$result) {
+        if (! $result) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to cancel reward',
@@ -161,7 +161,7 @@ class RewardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',

@@ -4,14 +4,15 @@ namespace App\Exports;
 
 use App\Models\Course;
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CourseStatsSummarySheet implements FromArray, WithTitle, ShouldAutoSize, WithStyles
+class CourseStatsSummarySheet implements FromArray, ShouldAutoSize, WithStyles, WithTitle
 {
     protected Course $course;
+
     protected array $stats;
 
     public function __construct(Course $course, array $stats)
@@ -33,7 +34,7 @@ class CourseStatsSummarySheet implements FromArray, WithTitle, ShouldAutoSize, W
             ['จำนวนนักเรียนทั้งหมด', $this->stats['total'] ?? 0],
             ['ผ่าน', $this->stats['passed'] ?? 0],
             ['ไม่ผ่าน', $this->stats['failed'] ?? 0],
-            ['อัตราการผ่าน', ($this->stats['pass_rate'] ?? 0) . '%'],
+            ['อัตราการผ่าน', ($this->stats['pass_rate'] ?? 0).'%'],
             ['คะแนนเฉลี่ย', $this->stats['average_score'] ?? 0],
             ['คะแนนสูงสุด', $this->stats['max_score'] ?? 0],
             ['คะแนนต่ำสุด', $this->stats['min_score'] ?? 0],
@@ -63,7 +64,7 @@ class CourseStatsSummarySheet implements FromArray, WithTitle, ShouldAutoSize, W
     {
         // Title
         $sheet->getStyle('A1')->getFont()->setSize(16)->setBold(true);
-        
+
         // Section headers
         $sheet->getStyle('A3')->getFont()->setBold(true);
         $sheet->getStyle('A7')->getFont()->setBold(true);

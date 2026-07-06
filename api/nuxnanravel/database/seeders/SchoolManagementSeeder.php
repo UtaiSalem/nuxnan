@@ -2,42 +2,45 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use App\Models\AcademicYear;
 use App\Models\Academy;
-use App\Models\User;
+use App\Models\Budget;
 use App\Models\Classroom;
 use App\Models\ClassSchedule;
-use App\Models\AcademicYear;
-use App\Models\Semester;
-use App\Models\Subject;
-use App\Models\FeeStructure;
-use App\Models\FeeItem;
-use App\Models\ExpenseCategory;
+use App\Models\DashboardWidget;
 use App\Models\Expense;
-use App\Models\Budget;
-use App\Models\StaffProfile;
-use App\Models\StaffAttendance;
-use App\Models\LeaveType;
+use App\Models\ExpenseCategory;
+use App\Models\FeeItem;
+use App\Models\FeeStructure;
+use App\Models\KpiDefinition;
 use App\Models\LeaveRequest;
+use App\Models\LeaveType;
+use App\Models\MeetingSlot;
 use App\Models\Payroll;
+use App\Models\ReportDefinition;
 use App\Models\SchoolAnnouncement;
 use App\Models\SchoolEvent;
-use App\Models\MeetingSlot;
-use App\Models\ReportDefinition;
-use App\Models\DashboardWidget;
-use App\Models\KpiDefinition;
+use App\Models\Semester;
+use App\Models\StaffAttendance;
+use App\Models\StaffProfile;
+use App\Models\Subject;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 /**
  * School Management System Seeder
- * 
+ *
  * รัน: php artisan db:seed --class=SchoolManagementSeeder
  */
 class SchoolManagementSeeder extends Seeder
 {
     protected $academy;
+
     protected $users = [];
+
     protected $academicYear;
+
     protected $semester;
 
     public function run(): void
@@ -46,8 +49,9 @@ class SchoolManagementSeeder extends Seeder
 
         // Get or create academy
         $this->academy = Academy::first();
-        if (!$this->academy) {
+        if (! $this->academy) {
             $this->command->error('❌ No academy found! Please create an academy first.');
+
             return;
         }
 
@@ -55,6 +59,7 @@ class SchoolManagementSeeder extends Seeder
         $this->users = User::take(10)->get();
         if ($this->users->isEmpty()) {
             $this->command->error('❌ No users found! Please create users first.');
+
             return;
         }
 
@@ -123,11 +128,11 @@ class SchoolManagementSeeder extends Seeder
                     'academy_id' => $this->academy->id,
                     'academic_year_id' => $this->academicYear->id,
                     'homeroom_teacher_id' => $this->users->random()->id,
-                    'is_active' => true
+                    'is_active' => true,
                 ])
             );
         }
-        $this->command->info('  ✅ Classrooms: ' . count($classrooms) . ' records');
+        $this->command->info('  ✅ Classrooms: '.count($classrooms).' records');
 
         // Subjects - columns: id,academy_id,subject_code,name_th,name_en,description,credits,hours_per_week,subject_type,subject_group,grade_levels,is_active,created_by
         $subjects = [
@@ -148,12 +153,12 @@ class SchoolManagementSeeder extends Seeder
                 ])
             );
         }
-        $this->command->info('  ✅ Subjects: ' . count($subjects) . ' records');
+        $this->command->info('  ✅ Subjects: '.count($subjects).' records');
 
         // Class Schedules - columns: academy_id,academic_year_id,semester_id,classroom_id,subject_id,teacher_id,day_of_week,start_time,end_time,period_number,room,status,notes,created_by
         $classroom = Classroom::where('academy_id', $this->academy->id)->first();
         $allSubjects = Subject::where('academy_id', $this->academy->id)->get();
-        
+
         if ($classroom && $allSubjects->isNotEmpty()) {
             $schedules = [
                 ['day_of_week' => 1, 'start_time' => '08:30', 'end_time' => '09:30', 'period_number' => 1, 'room' => 'ห้อง 101', 'subject_index' => 0],
@@ -166,7 +171,7 @@ class SchoolManagementSeeder extends Seeder
             foreach ($schedules as $data) {
                 $subjectIndex = $data['subject_index'] ?? 0;
                 unset($data['subject_index']);
-                
+
                 ClassSchedule::updateOrCreate(
                     [
                         'academy_id' => $this->academy->id,
@@ -186,7 +191,7 @@ class SchoolManagementSeeder extends Seeder
                     ])
                 );
             }
-            $this->command->info('  ✅ Class Schedules: ' . count($schedules) . ' records');
+            $this->command->info('  ✅ Class Schedules: '.count($schedules).' records');
         }
     }
 
@@ -228,7 +233,7 @@ class SchoolManagementSeeder extends Seeder
                 FeeItem::updateOrCreate(
                     ['fee_structure_id' => $structure->id, 'name' => $itemData['name']],
                     array_merge($itemData, [
-                        'fee_structure_id' => $structure->id, 
+                        'fee_structure_id' => $structure->id,
                         'is_mandatory' => true,
                         'is_refundable' => false,
                         'display_order' => $index + 1,
@@ -236,7 +241,7 @@ class SchoolManagementSeeder extends Seeder
                 );
             }
         }
-        $this->command->info('  ✅ Fee Structures: ' . count($feeStructures) . ' records');
+        $this->command->info('  ✅ Fee Structures: '.count($feeStructures).' records');
 
         // Expense Categories - columns: id,academy_id,code,name,description,is_active
         $categories = [
@@ -253,7 +258,7 @@ class SchoolManagementSeeder extends Seeder
                 array_merge($data, ['academy_id' => $this->academy->id, 'is_active' => true])
             );
         }
-        $this->command->info('  ✅ Expense Categories: ' . count($categories) . ' records');
+        $this->command->info('  ✅ Expense Categories: '.count($categories).' records');
 
         // Expenses - columns: id,academy_id,expense_category_id,academic_year_id,title,description,amount,expense_date,vendor,reference_number,receipt_image,status,requested_by,approved_by,approved_at,approval_notes
         $category = ExpenseCategory::where('academy_id', $this->academy->id)->first();
@@ -278,7 +283,7 @@ class SchoolManagementSeeder extends Seeder
                     ])
                 );
             }
-            $this->command->info('  ✅ Expenses: ' . count($expenses) . ' records');
+            $this->command->info('  ✅ Expenses: '.count($expenses).' records');
         }
 
         // Budgets - columns: id,academy_id,academic_year_id,expense_category_id,name,description,allocated_amount,spent_amount,remaining_amount,period,start_date,end_date,is_active
@@ -299,7 +304,7 @@ class SchoolManagementSeeder extends Seeder
                     ])
                 );
             }
-            $this->command->info('  ✅ Budgets: ' . count($budgets) . ' records');
+            $this->command->info('  ✅ Budgets: '.count($budgets).' records');
         }
     }
 
@@ -324,14 +329,14 @@ class SchoolManagementSeeder extends Seeder
                 [
                     'academy_id' => $this->academy->id,
                     'user_id' => $user->id,
-                    'employee_id' => 'EMP' . str_pad($index + 1, 4, '0', STR_PAD_LEFT),
-                    'citizen_id' => '1' . str_pad(rand(100000000000, 999999999999), 12, '0', STR_PAD_LEFT),
+                    'employee_id' => 'EMP'.str_pad($index + 1, 4, '0', STR_PAD_LEFT),
+                    'citizen_id' => '1'.str_pad(rand(100000000000, 999999999999), 12, '0', STR_PAD_LEFT),
                     'title_prefix' => $titlePrefixes[$index % count($titlePrefixes)],
                     'first_name' => $firstNames[$index % count($firstNames)],
                     'last_name' => $lastNames[$index % count($lastNames)],
                     'nickname' => substr($firstNames[$index % count($firstNames)], 0, 6),
                     'gender' => $index % 2 == 0 ? 'male' : 'female',
-                    'phone' => '08' . rand(10000000, 99999999),
+                    'phone' => '08'.rand(10000000, 99999999),
                     'employment_type' => $employmentTypes[$index % count($employmentTypes)],
                     'hire_date' => Carbon::now()->subYears(rand(1, 10)),
                     'status' => 'active',
@@ -339,7 +344,7 @@ class SchoolManagementSeeder extends Seeder
             );
             $staffCount++;
         }
-        $this->command->info('  ✅ Staff Profiles: ' . $staffCount . ' records');
+        $this->command->info('  ✅ Staff Profiles: '.$staffCount.' records');
 
         // Staff Attendance - columns: id,staff_profile_id,attendance_date,check_in_time,check_out_time,break_start_time,break_end_time,work_hours,overtime_hours,status,check_in_location,check_out_location,notes,approved_by,approved_at
         $staffProfiles = StaffProfile::where('academy_id', $this->academy->id)->get();
@@ -347,8 +352,8 @@ class SchoolManagementSeeder extends Seeder
         foreach ($staffProfiles as $staff) {
             for ($i = 1; $i <= 5; $i++) {
                 $date = Carbon::now()->subDays($i);
-                $checkIn = '08:' . str_pad(rand(0, 30), 2, '0', STR_PAD_LEFT);
-                $checkOut = '17:' . str_pad(rand(0, 30), 2, '0', STR_PAD_LEFT);
+                $checkIn = '08:'.str_pad(rand(0, 30), 2, '0', STR_PAD_LEFT);
+                $checkOut = '17:'.str_pad(rand(0, 30), 2, '0', STR_PAD_LEFT);
                 StaffAttendance::updateOrCreate(
                     ['staff_profile_id' => $staff->id, 'attendance_date' => $date->toDateString()],
                     [
@@ -364,7 +369,7 @@ class SchoolManagementSeeder extends Seeder
                 $attendanceCount++;
             }
         }
-        $this->command->info('  ✅ Staff Attendance: ' . $attendanceCount . ' records');
+        $this->command->info('  ✅ Staff Attendance: '.$attendanceCount.' records');
 
         // Leave Types - columns: id,academy_id,code,name,description,max_days_per_year,is_paid,is_active
         $leaveTypes = [
@@ -380,7 +385,7 @@ class SchoolManagementSeeder extends Seeder
                 array_merge($data, ['academy_id' => $this->academy->id, 'is_active' => true])
             );
         }
-        $this->command->info('  ✅ Leave Types: ' . count($leaveTypes) . ' records');
+        $this->command->info('  ✅ Leave Types: '.count($leaveTypes).' records');
 
         // Leave Requests - columns: id,staff_profile_id,leave_type_id,start_date,end_date,total_days,leave_period,reason,document_path,contact_during_leave,status,approved_by,approved_at,rejection_reason,substitute_staff_id
         $leaveType = LeaveType::where('academy_id', $this->academy->id)->first();
@@ -430,7 +435,7 @@ class SchoolManagementSeeder extends Seeder
                     'payment_method' => 'bank_transfer',
                     'bank_name' => 'กสิกรไทย',
                     'bank_account' => rand(1000000000, 9999999999),
-                    'payslip_number' => 'PAY-2026-01-' . str_pad($index + 1, 3, '0', STR_PAD_LEFT),
+                    'payslip_number' => 'PAY-2026-01-'.str_pad($index + 1, 3, '0', STR_PAD_LEFT),
                     'created_by' => $this->users->first()->id,
                     'approved_by' => $this->users->first()->id,
                     'approved_at' => now(),
@@ -484,7 +489,7 @@ class SchoolManagementSeeder extends Seeder
                 ])
             );
         }
-        $this->command->info('  ✅ Announcements: ' . count($announcements) . ' records');
+        $this->command->info('  ✅ Announcements: '.count($announcements).' records');
 
         // Events - columns: id,academy_id,created_by,title,description,event_type,category,start_datetime,end_datetime,location,location_type,meeting_url,max_participants,requires_registration,registration_deadline,registration_fee,target_audience,cover_image,attachments,is_all_day,is_recurring,recurrence_pattern,status,published_at
         $events = [
@@ -533,7 +538,7 @@ class SchoolManagementSeeder extends Seeder
                 ])
             );
         }
-        $this->command->info('  ✅ Events: ' . count($events) . ' records');
+        $this->command->info('  ✅ Events: '.count($events).' records');
 
         // Meeting Slots - columns: id,academy_id,teacher_id,meeting_date,start_time,end_time,slot_duration,location,meeting_type,meeting_url,is_available
         for ($i = 1; $i <= 5; $i++) {
@@ -615,7 +620,7 @@ class SchoolManagementSeeder extends Seeder
                 ])
             );
         }
-        $this->command->info('  ✅ Report Definitions: ' . count($reports) . ' records');
+        $this->command->info('  ✅ Report Definitions: '.count($reports).' records');
 
         // Dashboard Widgets - columns: id,academy_id,code,name,widget_type,category,data_source,display_config,refresh_interval,is_system,is_active
         $widgets = [
@@ -664,7 +669,7 @@ class SchoolManagementSeeder extends Seeder
                 ])
             );
         }
-        $this->command->info('  ✅ Dashboard Widgets: ' . count($widgets) . ' records');
+        $this->command->info('  ✅ Dashboard Widgets: '.count($widgets).' records');
 
         // KPI Definitions - columns: id,academy_id,code,name,description,category,metric_type,calculation,target_value,warning_threshold,critical_threshold,comparison_direction,is_active
         $kpis = [
@@ -725,6 +730,6 @@ class SchoolManagementSeeder extends Seeder
                 ])
             );
         }
-        $this->command->info('  ✅ KPI Definitions: ' . count($kpis) . ' records');
+        $this->command->info('  ✅ KPI Definitions: '.count($kpis).' records');
     }
 }

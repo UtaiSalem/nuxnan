@@ -12,14 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('academy_post_comment_images', function (Blueprint $table) {
-            if (!Schema::hasColumn('academy_post_comment_images', 'academy_post_comment_id')) {
+            if (! Schema::hasColumn('academy_post_comment_images', 'academy_post_comment_id')) {
                 $table->unsignedBigInteger('academy_post_comment_id')->nullable();
                 $table->foreign('academy_post_comment_id')
                     ->references('id')
                     ->on('academy_post_comments')
                     ->onDelete('cascade');
             }
-            if (!Schema::hasColumn('academy_post_comment_images', 'filename')) {
+            if (! Schema::hasColumn('academy_post_comment_images', 'filename')) {
                 $table->string('filename')->nullable();
             }
         });

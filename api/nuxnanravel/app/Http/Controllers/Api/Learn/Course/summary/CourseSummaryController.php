@@ -18,7 +18,7 @@ class CourseSummaryController extends Controller
             'courseMembers',
             'courseLessons',
             'courseAssignments',
-            'courseQuizzes'
+            'courseQuizzes',
         ]);
 
         $summary = [
@@ -57,8 +57,10 @@ class CourseSummaryController extends Controller
     private function calculateCourseCompletionRate(Course $course): float
     {
         $members = $course->courseMembers()->where('status', 1)->get();
-        
-        if ($members->isEmpty()) return 0;
+
+        if ($members->isEmpty()) {
+            return 0;
+        }
 
         $totalCompletion = 0;
         foreach ($members as $member) {
@@ -76,21 +78,23 @@ class CourseSummaryController extends Controller
         $totalItems = $course->courseLessons()->count() +
                      $course->courseAssignments()->count() +
                      $course->courseQuizzes()->count();
-        
-        if ($totalItems === 0) return 0;
+
+        if ($totalItems === 0) {
+            return 0;
+        }
 
         $completedItems = 0;
-        
+
         // Count completed lessons
         if ($member->lessons_completed) {
             $completedItems += count(json_decode($member->lessons_completed, true) ?? []);
         }
-        
+
         // Count completed assignments
         if ($member->assignments_completed) {
             $completedItems += count(json_decode($member->assignments_completed, true) ?? []);
         }
-        
+
         // Count completed quizzes
         if ($member->quizzes_completed) {
             $completedItems += count(json_decode($member->quizzes_completed, true) ?? []);
@@ -105,8 +109,10 @@ class CourseSummaryController extends Controller
     private function calculateCourseAverageGrade(Course $course): float
     {
         $members = $course->courseMembers()->where('status', 1)->get();
-        
-        if ($members->isEmpty()) return 0;
+
+        if ($members->isEmpty()) {
+            return 0;
+        }
 
         $totalGrade = 0;
         foreach ($members as $member) {

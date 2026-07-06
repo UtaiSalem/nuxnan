@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 useHead({
   title: 'ระบบบัตรนักเรียน'
@@ -10,35 +10,52 @@ definePageMeta({
 })
 
 const isNavigating = ref(false)
+const isLoading = ref(true)
 const activeTab = ref(0)
-const mattayomLevels = [
-    { id: 0, name: 'ม.1', rooms: 11, color: 'blue' },
-    { id: 1, name: 'ม.2', rooms: 9, color: 'blue' },
-    { id: 2, name: 'ม.3', rooms: 9, color: 'blue' },
-    { id: 3, name: 'ม.4', rooms: 8, color: 'blue' },
-    { id: 4, name: 'ม.5', rooms: 7, color: 'blue' },
-    { id: 5, name: 'ม.6', rooms: 7, color: 'blue' },
-]
-const currentLevel = ref(mattayomLevels[0])
+const config = useRuntimeConfig()
 
-const handleSelectLevel = (levelId: number) => {
-    activeTab.value = levelId;
-    currentLevel.value = mattayomLevels[levelId];
+interface DynamicLevel {
+    level: string;
+    name: string;
+    sections: string[];
+    studentCount: number;
 }
 
-const getClassrooms = (levelId: number) => {
-    const level = mattayomLevels[levelId]
-    const rooms = []
-    for (let i = 1; i <= level.rooms; i++) {
-        rooms.push({
-            id: i,
-            name: `${i}`,
-            fullName: `${level.name}/${i}`,
-            link: `/student-card/${levelId+1}/${i}`,
-            levelId: level.id,
-        })
+const levels = ref<DynamicLevel[]>([])
+const currentLevel = ref<DynamicLevel | null>(null)
+
+onMounted(async () => {
+    try {
+        const response: any = await $fetch(`${config.public.apiBase}/api/student-card/dashboard`)
+        if (response?.success && response.levels) {
+            levels.value = response.levels
+            if (levels.value.length > 0) {
+                activeTab.value = 0
+                currentLevel.value = levels.value[0]
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load levels', e)
+    } finally {
+        isLoading.value = false
     }
-    return rooms
+})
+
+const handleSelectLevel = (index: number) => {
+    activeTab.value = index;
+    currentLevel.value = levels.value[index];
+}
+
+const getClassrooms = (index: number) => {
+    if (!levels.value[index]) return []
+    const level = levels.value[index]
+    return level.sections.map(section => ({
+        id: section,
+        name: section,
+        fullName: `${level.name}/${section}`,
+        link: `/student-card/${level.level}/${section}`,
+        levelId: level.level,
+    }))
 }
 
 const handleSelectRoom = (link: string) => {
@@ -94,55 +111,62 @@ const handleSelectRoom = (link: string) => {
                 </div>
             </div>
 
-            <!-- Level Tabs -->
-            <div class="max-w-5xl mx-auto mb-6">
-                <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-2">
-                    <div class="flex flex-wrap justify-center gap-2">
-                        <button
-                            v-for="level in mattayomLevels"
-                            :key="level.id"
-                            @click="handleSelectLevel(level.id)"
-                            :class="[
-                                'px-6 py-3 rounded-xl font-semibold transition-all duration-200',
-                                activeTab === level.id 
-                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md' 
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            ]"
-                        >
-                            {{ level.name }}
-                        </button>
-                    </div>
-                </div>
+            <!-- Loading State -->
+            <div v-if="isLoading" class="flex justify-center my-12">
+                <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
 
-            <!-- Room Grid -->
-            <div class="max-w-5xl mx-auto">
-                <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-                    <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                        <span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                        </span>
-                        เลือกห้องเรียน - {{ currentLevel.name }}
-                    </h2>
-                    
-                    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                        <button
-                            v-for="room in getClassrooms(activeTab)"
-                            :key="room.id"
-                            @click="handleSelectRoom(room.link)"
-                            class="group relative bg-gradient-to-br from-blue-50 to-white border-2 border-blue-100 rounded-xl p-4 hover:border-blue-400 hover:shadow-lg transition-all duration-200"
-                        >
-                            <div class="text-center">
-                                <span class="block text-2xl font-bold text-blue-600 group-hover:text-blue-700">{{ room.name }}</span>
-                                <span class="text-xs text-gray-500">{{ room.fullName }}</span>
-                            </div>
-                            <div class="absolute inset-0 bg-blue-500/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        </button>
+            <template v-else>
+                <!-- Level Tabs -->
+                <div class="max-w-5xl mx-auto mb-6">
+                    <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-2">
+                        <div class="flex flex-wrap justify-center gap-2">
+                            <button
+                                v-for="(level, index) in levels"
+                                :key="level.level"
+                                @click="handleSelectLevel(index)"
+                                :class="[
+                                    'px-6 py-3 rounded-xl font-semibold transition-all duration-200',
+                                    activeTab === index
+                                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ]"
+                            >
+                                {{ level.name }}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                <!-- Room Grid -->
+                <div class="max-w-5xl mx-auto" v-if="currentLevel">
+                    <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                            <span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                            </span>
+                            เลือกห้องเรียน - {{ currentLevel.name }}
+                        </h2>
+
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                            <button
+                                v-for="room in getClassrooms(activeTab)"
+                                :key="room.id"
+                                @click="handleSelectRoom(room.link)"
+                                class="group relative bg-gradient-to-br from-blue-50 to-white border-2 border-blue-100 rounded-xl p-4 hover:border-blue-400 hover:shadow-lg transition-all duration-200"
+                            >
+                                <div class="text-center">
+                                    <span class="block text-2xl font-bold text-blue-600 group-hover:text-blue-700">{{ room.name }}</span>
+                                    <span class="text-xs text-gray-500">{{ room.fullName }}</span>
+                                </div>
+                                <div class="absolute inset-0 bg-blue-500/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
 
             <!-- Footer -->
             <div class="max-w-5xl mx-auto mt-8 text-center text-gray-500 text-sm">

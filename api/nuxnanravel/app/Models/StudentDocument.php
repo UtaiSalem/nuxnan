@@ -26,12 +26,12 @@ class StudentDocument extends Model
         'uploaded_by',
         'is_verified',
         'verified_by',
-        'verified_at'
+        'verified_at',
     ];
 
     protected $casts = [
         'is_verified' => 'boolean',
-        'verified_at' => 'datetime'
+        'verified_at' => 'datetime',
     ];
 
     public function student(): BelongsTo
@@ -56,16 +56,18 @@ class StudentDocument extends Model
 
     public function getFileSizeHumanAttribute(): string
     {
-        if (!$this->file_size) return 'N/A';
-        
+        if (! $this->file_size) {
+            return 'N/A';
+        }
+
         $bytes = $this->file_size;
         $units = ['B', 'KB', 'MB', 'GB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 
     public function scopeByType($query, $type)

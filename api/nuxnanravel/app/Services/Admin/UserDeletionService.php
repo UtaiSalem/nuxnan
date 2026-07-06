@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Models\AdminUserDeletionAudit;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -36,10 +37,10 @@ class UserDeletionService
             'email' => $user->email,
             'phone' => $user->phone_number,
             'roles' => $user->roles()->pluck('name')->toArray(),
-            'pp'         => $user->pp,
-            'wallet'     => $user->wallet,
-            'created_at' => $user->created_at instanceof \Carbon\Carbon ? $user->created_at->toDateTimeString() : $user->created_at,
-            ];
+            'pp' => $user->pp,
+            'wallet' => $user->wallet,
+            'created_at' => $user->created_at instanceof Carbon ? $user->created_at->toDateTimeString() : $user->created_at,
+        ];
 
         DB::transaction(function () use ($user, $deletedBy, $reason, $impact, $snapshot) {
 

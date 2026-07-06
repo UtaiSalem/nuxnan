@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Events\Enrollment\RolloverCommitted;
+use App\Events\Enrollment\RolloverUndone;
 use App\Exceptions\RolloverNotUndoable;
 use App\Models\AcademicYear;
 use App\Models\Academy;
@@ -428,7 +430,7 @@ class AcademicYearRolloverService
                 ],
             ]);
 
-            event(new \App\Events\Enrollment\RolloverCommitted($batch));
+            event(new RolloverCommitted($batch));
 
             return $batch;
         });
@@ -515,7 +517,7 @@ class AcademicYearRolloverService
                 'undone_by_user_id' => $by->id,
             ]);
 
-            event(new \App\Events\Enrollment\RolloverUndone($batch));
+            event(new RolloverUndone($batch));
 
             return $batch;
         });

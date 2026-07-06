@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Student\UpdateContactRequest;
 use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentContact;
 use App\Traits\HandlesStudentUpdates;
-use App\Http\Requests\Student\UpdateContactRequest;
-use Illuminate\Http\Request;
 
 class ContactController extends Controller
 {
@@ -19,7 +18,7 @@ class ContactController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -33,12 +32,12 @@ class ContactController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $contacts
+                'data' => $contacts,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการดึงข้อมูลการติดต่อ'
+                'message' => 'เกิดข้อผิดพลาดในการดึงข้อมูลการติดต่อ',
             ], 500);
         }
     }
@@ -48,7 +47,7 @@ class ContactController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -63,7 +62,7 @@ class ContactController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'message' => 'ส่งคำขอเพิ่มข้อมูลการติดต่อแล้ว รอการอนุมัติ',
-                    'needs_approval' => true
+                    'needs_approval' => true,
                 ]);
             }
 
@@ -79,12 +78,12 @@ class ContactController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'เพิ่มข้อมูลการติดต่อเรียบร้อยแล้ว',
-                'data' => $contact
+                'data' => $contact,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการเพิ่มข้อมูลการติดต่อ: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการเพิ่มข้อมูลการติดต่อ: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -94,14 +93,14 @@ class ContactController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
         if ($contact->student_id !== $student->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลการติดต่อไม่ตรงกับนักเรียน'
+                'message' => 'ข้อมูลการติดต่อไม่ตรงกับนักเรียน',
             ], 403);
         }
 
@@ -114,8 +113,10 @@ class ContactController extends Controller
             $directUpdates = [];
 
             foreach ($validated as $field => $value) {
-                if ($value === $contact->$field) continue;
-                
+                if ($value === $contact->$field) {
+                    continue;
+                }
+
                 $changeRequest = $this->applyUpdate($student, 'StudentContact', $contact->id, "contact.$field", $value, $contact->$field);
                 if ($changeRequest) {
                     $needsApproval = true;
@@ -124,7 +125,7 @@ class ContactController extends Controller
                 }
             }
 
-            if (!empty($directUpdates)) {
+            if (! empty($directUpdates)) {
                 // หากเป็นการติดต่อหลัก ให้เปลี่ยนการติดต่ออื่นให้ไม่ใช่หลัก
                 if (isset($directUpdates['is_primary']) && $directUpdates['is_primary']) {
                     StudentContact::where('student_id', $contact->student_id)
@@ -139,19 +140,19 @@ class ContactController extends Controller
                     'status' => 'success',
                     'message' => 'ส่งคำขอแก้ไขข้อมูลการติดต่อแล้ว รอการอนุมัติ ส่วนข้อมูลที่ไม่ต้องอนุมัติถูกอัปเดตแล้ว',
                     'needs_approval' => true,
-                    'data' => $contact->fresh()
+                    'data' => $contact->fresh(),
                 ]);
             }
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'แก้ไขข้อมูลการติดต่อเรียบร้อยแล้ว',
-                'data' => $contact->fresh()
+                'data' => $contact->fresh(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการแก้ไขข้อมูลการติดต่อ: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาดในการแก้ไขข้อมูลการติดต่อ: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -161,14 +162,14 @@ class ContactController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
         if ($contact->student_id !== $student->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลการติดต่อไม่ตรงกับนักเรียน'
+                'message' => 'ข้อมูลการติดต่อไม่ตรงกับนักเรียน',
             ], 403);
         }
 
@@ -179,12 +180,12 @@ class ContactController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'ลบข้อมูลการติดต่อเรียบร้อยแล้ว'
+                'message' => 'ลบข้อมูลการติดต่อเรียบร้อยแล้ว',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการลบข้อมูลการติดต่อ'
+                'message' => 'เกิดข้อผิดพลาดในการลบข้อมูลการติดต่อ',
             ], 500);
         }
     }
@@ -194,14 +195,14 @@ class ContactController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
         if ($contact->student_id !== $student->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลการติดต่อไม่ตรงกับนักเรียน'
+                'message' => 'ข้อมูลการติดต่อไม่ตรงกับนักเรียน',
             ], 403);
         }
 
@@ -218,12 +219,12 @@ class ContactController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'ตั้งค่าเป็นการติดต่อหลักเรียบร้อยแล้ว',
-                'data' => $contact->fresh()
+                'data' => $contact->fresh(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการตั้งค่า'
+                'message' => 'เกิดข้อผิดพลาดในการตั้งค่า',
             ], 500);
         }
     }

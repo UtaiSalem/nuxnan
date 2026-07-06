@@ -2,22 +2,20 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Course;
-use App\Models\Lesson;
-use App\Models\Topic;
 use App\Models\Assignment;
-use App\Models\CourseQuiz;
+use App\Models\Course;
 use App\Models\CourseMember;
-use App\Models\LessonComment;
-use App\Models\LessonProgress;
-use App\Models\AssignmentAnswer;
+use App\Models\CourseQuiz;
 use App\Models\CourseQuizResult;
 use App\Models\CourseReview;
+use App\Models\Lesson;
+use App\Models\LessonComment;
+use App\Models\LessonProgress;
+use App\Models\Topic;
+use App\Models\User;
 use App\Services\CourseCloneService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class CourseClonePrivacyTest extends TestCase
 {

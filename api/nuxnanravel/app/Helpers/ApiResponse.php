@@ -9,10 +9,7 @@ trait ApiResponse
     /**
      * Return a success JSON response.
      *
-     * @param mixed $data
-     * @param string $message
-     * @param int $statusCode
-     * @return JsonResponse
+     * @param  mixed  $data
      */
     protected function success($data = null, string $message = 'Success', int $statusCode = 200): JsonResponse
     {
@@ -26,10 +23,7 @@ trait ApiResponse
     /**
      * Return an error JSON response.
      *
-     * @param string $message
-     * @param int $statusCode
-     * @param mixed $errors
-     * @return JsonResponse
+     * @param  mixed  $errors
      */
     protected function error(string $message = 'Error', int $statusCode = 400, $errors = null): JsonResponse
     {
@@ -48,9 +42,7 @@ trait ApiResponse
     /**
      * Return a validation error JSON response.
      *
-     * @param mixed $errors
-     * @param string $message
-     * @return JsonResponse
+     * @param  mixed  $errors
      */
     protected function validationError($errors, string $message = 'Validation failed'): JsonResponse
     {
@@ -59,9 +51,6 @@ trait ApiResponse
 
     /**
      * Return an unauthorized JSON response.
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     protected function unauthorized(string $message = 'Unauthorized'): JsonResponse
     {
@@ -70,9 +59,6 @@ trait ApiResponse
 
     /**
      * Return a forbidden JSON response.
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     protected function forbidden(string $message = 'Forbidden'): JsonResponse
     {
@@ -81,9 +67,6 @@ trait ApiResponse
 
     /**
      * Return a not found JSON response.
-     *
-     * @param string $message
-     * @return JsonResponse
      */
     protected function notFound(string $message = 'Resource not found'): JsonResponse
     {

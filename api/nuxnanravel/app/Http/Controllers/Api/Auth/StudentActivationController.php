@@ -18,7 +18,7 @@ class StudentActivationController extends Controller
     {
         $invitation = $this->findInvitationByToken($token);
 
-        if (!$invitation) {
+        if (! $invitation) {
             return response()->json(['success' => false, 'message' => 'ลิงก์ไม่ถูกต้องหรือหมดอายุ'], 404);
         }
 
@@ -36,11 +36,11 @@ class StudentActivationController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'student_name' => trim(($student->title_prefix_th ?? '') . $student->first_name_th . ' ' . $student->last_name_th),
+                'student_name' => trim(($student->title_prefix_th ?? '').$student->first_name_th.' '.$student->last_name_th),
                 'student_id' => $student->student_id,
                 'academy_name' => $academy->name ?? $academy->display_name ?? '',
                 'academy_logo' => $academy->logo_url ?? null,
-            ]
+            ],
         ]);
     }
 
@@ -48,7 +48,7 @@ class StudentActivationController extends Controller
     {
         $invitation = $this->findInvitationByToken($token);
 
-        if (!$invitation) {
+        if (! $invitation) {
             return response()->json(['success' => false, 'message' => 'ลิงก์ไม่ถูกต้องหรือหมดอายุ'], 404);
         }
 
@@ -73,14 +73,14 @@ class StudentActivationController extends Controller
         $academy = $invitation->academy;
 
         $result = DB::transaction(function () use ($request, $student, $academy, $invitation) {
-            $username = User::normalizeUsername($student->first_name_th . ' ' . $student->last_name_th);
+            $username = User::normalizeUsername($student->first_name_th.' '.$student->last_name_th);
             $existingUsername = User::where('username', $username)->exists();
             if ($existingUsername) {
-                $username = $username . '_' . $student->student_id;
+                $username = $username.'_'.$student->student_id;
             }
 
             $user = User::create([
-                'name' => $student->first_name_th . ' ' . $student->last_name_th,
+                'name' => $student->first_name_th.' '.$student->last_name_th,
                 'username' => $username,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),

@@ -2,13 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Course;
-use App\Models\CourseSetting;
-use App\Models\CourseMember;
 use App\Models\CourseGroup;
 use App\Models\CourseGroupMember;
-use App\Services\WalletService;
+use App\Models\CourseMember;
+use App\Models\CourseSetting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -30,10 +29,10 @@ class CourseEnrollmentApprovalTest extends TestCase
     {
         $admin = User::factory()->create();
         $user = User::factory()->create(['wallet' => 1000]);
-        
+
         $course = Course::factory()->create([
             'user_id' => $admin->id,
-            'tuition_fees' => 500
+            'tuition_fees' => 500,
         ]);
 
         // Ensure course settings has auto_accept_members = 0
@@ -47,7 +46,7 @@ class CourseEnrollmentApprovalTest extends TestCase
             ->postJson("/api/courses/{$course->id}/members");
 
         $response->assertStatus(200);
-        
+
         // Assert: Wallet NOT charged
         $this->assertEquals(1000, $user->fresh()->wallet);
 
@@ -56,7 +55,7 @@ class CourseEnrollmentApprovalTest extends TestCase
             'course_id' => $course->id,
             'user_id' => $user->id,
             'status' => 0,
-            'course_member_status' => 0
+            'course_member_status' => 0,
         ]);
 
         $member = CourseMember::where('course_id', $course->id)->where('user_id', $user->id)->first();
@@ -71,7 +70,7 @@ class CourseEnrollmentApprovalTest extends TestCase
         $this->assertDatabaseHas('course_members', [
             'id' => $member->id,
             'status' => 0,
-            'course_member_status' => 1
+            'course_member_status' => 1,
         ]);
 
         // Step 7: User completes payment
@@ -87,7 +86,7 @@ class CourseEnrollmentApprovalTest extends TestCase
         $this->assertDatabaseHas('course_members', [
             'id' => $member->id,
             'status' => 1,
-            'course_member_status' => 1
+            'course_member_status' => 1,
         ]);
     }
 
@@ -99,10 +98,10 @@ class CourseEnrollmentApprovalTest extends TestCase
     {
         $admin = User::factory()->create();
         $user = User::factory()->create(['wallet' => 1000]);
-        
+
         $course = Course::factory()->create([
             'user_id' => $admin->id,
-            'tuition_fees' => 500
+            'tuition_fees' => 500,
         ]);
 
         // Ensure course settings has auto_accept_members = 1
@@ -116,7 +115,7 @@ class CourseEnrollmentApprovalTest extends TestCase
             ->postJson("/api/courses/{$course->id}/members");
 
         $response->assertStatus(200);
-        
+
         // Assert: Wallet charged immediately
         $this->assertEquals(500, $user->fresh()->wallet);
 
@@ -125,7 +124,7 @@ class CourseEnrollmentApprovalTest extends TestCase
             'course_id' => $course->id,
             'user_id' => $user->id,
             'status' => 1,
-            'course_member_status' => 1
+            'course_member_status' => 1,
         ]);
     }
 
@@ -136,7 +135,7 @@ class CourseEnrollmentApprovalTest extends TestCase
     {
         $admin = User::factory()->create();
         $user = User::factory()->create();
-        
+
         $course = Course::factory()->create(['user_id' => $admin->id]);
         CourseSetting::updateOrCreate(['course_id' => $course->id], ['auto_accept_members' => 0]);
 
@@ -161,15 +160,15 @@ class CourseEnrollmentApprovalTest extends TestCase
     {
         $admin = User::factory()->create();
         $user = User::factory()->create();
-        
+
         $course = Course::factory()->create(['user_id' => $admin->id]);
         CourseSetting::updateOrCreate(['course_id' => $course->id], ['auto_accept_members' => 0]);
-        
+
         $group = CourseGroup::create([
             'course_id' => $course->id,
             'name' => 'Test Group',
             'user_id' => $admin->id,
-            'privacy' => 'public'
+            'privacy' => 'public',
         ]);
 
         // User requests to join group
@@ -198,18 +197,18 @@ class CourseEnrollmentApprovalTest extends TestCase
     {
         $admin = User::factory()->create();
         $user = User::factory()->create();
-        
+
         $course = Course::factory()->create([
             'user_id' => $admin->id,
-            'tuition_fees' => 0
+            'tuition_fees' => 0,
         ]);
         CourseSetting::updateOrCreate(['course_id' => $course->id], ['auto_accept_members' => 0]);
-        
+
         $group = CourseGroup::create([
             'course_id' => $course->id,
             'name' => 'Free Group',
             'user_id' => $admin->id,
-            'privacy' => 'public'
+            'privacy' => 'public',
         ]);
 
         // User requests to join group
@@ -234,18 +233,18 @@ class CourseEnrollmentApprovalTest extends TestCase
     {
         $admin = User::factory()->create();
         $user = User::factory()->create();
-        
+
         $course = Course::factory()->create([
             'user_id' => $admin->id,
-            'tuition_fees' => 0
+            'tuition_fees' => 0,
         ]);
-        
+
         // Manually create a stuck member: approved but status=0
         $member = CourseMember::create([
             'course_id' => $course->id,
             'user_id' => $user->id,
             'course_member_status' => 1,
-            'status' => 0
+            'status' => 0,
         ]);
 
         // User calls complete-payment

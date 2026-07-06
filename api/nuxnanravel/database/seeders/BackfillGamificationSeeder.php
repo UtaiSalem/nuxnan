@@ -3,15 +3,16 @@
 namespace Database\Seeders;
 
 use App\Models\Academy;
+use App\Models\AcademyGroup;
 use App\Models\AcademyPost;
-use App\Models\AcademyPostLike;
 use App\Models\AcademyPostComment;
-use App\Models\CourseMember;
-use App\Models\SchoolAttendanceRecord;
-use App\Models\EventRegistration;
+use App\Models\AcademyPostLike;
 use App\Models\AssignmentAnswer;
-use App\Services\Gamification\XpService;
+use App\Models\CourseMember;
+use App\Models\EventRegistration;
+use App\Models\SchoolAttendanceRecord;
 use App\Services\Gamification\ClassroomPointsService;
+use App\Services\Gamification\XpService;
 use Illuminate\Database\Seeder;
 
 class BackfillGamificationSeeder extends Seeder
@@ -23,7 +24,7 @@ class BackfillGamificationSeeder extends Seeder
         // 1. Pre-create cycles for all academies and classrooms
         Academy::cursor()->each(function (Academy $academy) use ($xpService, $classroomPointsService) {
             $xpService->ensureCurrentCycles($academy);
-            $classrooms = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+            $classrooms = AcademyGroup::where('academy_id', $academy->id)
                 ->where('type', 'classroom')
                 ->get();
             foreach ($classrooms as $cl) {
@@ -118,7 +119,7 @@ class BackfillGamificationSeeder extends Seeder
                     ['backfill' => true, 'attendance_record_id' => $rec->id]
                 );
 
-                $classroom = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+                $classroom = AcademyGroup::where('academy_id', $academy->id)
                     ->where('type', 'classroom')
                     ->whereHas('members', function ($query) use ($rec) {
                         $query->where('user_id', $rec->student_id);
@@ -141,27 +142,27 @@ class BackfillGamificationSeeder extends Seeder
         AssignmentAnswer::cursor()->each(function (AssignmentAnswer $answer) use ($classroomPointsService) {
             $user = $answer->user;
             $assignment = $answer->assignment;
-            if (!$user || !$assignment) {
+            if (! $user || ! $assignment) {
                 return;
             }
 
             $lesson = $assignment->getLesson();
-            if (!$lesson) {
+            if (! $lesson) {
                 return;
             }
 
             $course = $lesson->course;
-            if (!$course) {
+            if (! $course) {
                 return;
             }
 
             $course->loadMissing('academy');
             $academy = $course->academy;
-            if (!$academy) {
+            if (! $academy) {
                 return;
             }
 
-            $classroom = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+            $classroom = AcademyGroup::where('academy_id', $academy->id)
                 ->where('type', 'classroom')
                 ->whereHas('members', function ($query) use ($user) {
                     $query->where('user_id', $user->id);
@@ -170,8 +171,8 @@ class BackfillGamificationSeeder extends Seeder
 
             if ($classroom) {
                 $isLate = $answer->late_submission ?? false;
-                $points = $isLate 
-                    ? config('xp_rates.classroom.assignment.submitted_late', 2) 
+                $points = $isLate
+                    ? config('xp_rates.classroom.assignment.submitted_late', 2)
                     : config('xp_rates.classroom.assignment.submitted_on_time', 5);
 
                 $source = $isLate ? 'assignment.submitted_late' : 'assignment.submitted_on_time';

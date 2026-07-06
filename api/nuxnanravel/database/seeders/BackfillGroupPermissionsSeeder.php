@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use App\Constants\AcademyGroupPermissions;
 use App\Models\AcademyGroup;
 use App\Models\AcademyGroupPermission;
-use App\Constants\AcademyGroupPermissions;
+use Illuminate\Database\Seeder;
 
 class BackfillGroupPermissionsSeeder extends Seeder
 {

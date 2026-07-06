@@ -39,9 +39,13 @@ class EventRegistration extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_CONFIRMED = 'confirmed';
+
     const STATUS_CANCELLED = 'cancelled';
+
     const STATUS_ATTENDED = 'attended';
+
     const STATUS_NO_SHOW = 'no_show';
 
     const STATUSES = [

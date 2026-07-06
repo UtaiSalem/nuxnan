@@ -5,9 +5,8 @@ namespace App\Http\Controllers\Api\Play\Typing;
 use App\Http\Controllers\Controller;
 use App\Models\TypingAchievement;
 use App\Models\TypingUserAchievement;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 class TypingAchievementController extends Controller
 {
@@ -19,10 +18,10 @@ class TypingAchievementController extends Controller
         $achievements = TypingAchievement::where('is_active', true)
             ->orderBy('id', 'asc')
             ->get();
-            
+
         return response()->json([
             'success' => true,
-            'data' => $achievements
+            'data' => $achievements,
         ]);
     }
 
@@ -32,7 +31,7 @@ class TypingAchievementController extends Controller
     public function mine(): JsonResponse
     {
         $user = Auth::user();
-        
+
         $myAchievements = TypingUserAchievement::where('user_id', $user->id)
             ->with('achievement')
             ->get()
@@ -46,10 +45,10 @@ class TypingAchievementController extends Controller
                     'earned_at' => $ua->earned_at,
                 ];
             });
-            
+
         return response()->json([
             'success' => true,
-            'data' => $myAchievements
+            'data' => $myAchievements,
         ]);
     }
 }

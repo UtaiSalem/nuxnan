@@ -2,20 +2,26 @@
 
 namespace App\Http\Controllers\Api\Play;
 
+use App\Enums\UsageEventType;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCommentRequest;
+use App\Http\Resources\Play\PostCommentResource;
 use App\Models\Post;
 use App\Models\PostComment;
-use Illuminate\Http\Request;
 use App\Models\PostCommentImage;
+use App\Models\User;
+use App\Services\UsageEventService;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Play\PostCommentResource;
 
-class PostCommentController extends \App\Http\Controllers\Controller
+class PostCommentController extends Controller
 {
     public function index(Post $post, Request $request)
     {
         try {
             $perPage = $request->input('per_page', 10);
-            
+
             // Get top-level comments only (exclude replies)
             // Replies have parent_post_comment_id set
             $postComments = PostComment::where('post_id', $post->id)
@@ -23,7 +29,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
                 ->with(['user', 'postCommentImages'])
                 ->orderBy('created_at', 'desc')
                 ->paginate($perPage);
-            
+
             $postCommentResource = PostCommentResource::collection($postComments);
 
             return response()->json([
@@ -35,7 +41,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
                     'per_page' => $postComments->perPage(),
                     'total' => $postComments->total(),
                     'has_more' => $postComments->hasMorePages(),
-                ]
+                ],
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -51,8 +57,8 @@ class PostCommentController extends \App\Http\Controllers\Controller
     /**
      * Store a newly created comment in storage.
      *
-     * @param  \App\Http\Requests\StoreCommentRequest  $request
-     * @return \Illuminate\Http\Response
+     * @param  StoreCommentRequest  $request
+     * @return Response
      */
     public function store(Post $post, Request $request)
     {
@@ -63,13 +69,13 @@ class PostCommentController extends \App\Http\Controllers\Controller
 
         $newComment = $post->postComments()->create([
             'user_id' => auth()->id(),
-            'content' => $validatedData['content']
+            'content' => $validatedData['content'],
         ]);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $post_comment_images = $request->file('images');
             foreach ($post_comment_images as $image) {
-                $fileName = $post->id . uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = $post->id.uniqid().'.'.$image->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/posts/comments', $image, $fileName);
                 // PostCommentImage::create([
                 //     'post_id' => $post->id,
@@ -86,7 +92,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
         $post->increment('comments', 1);
 
         // Fire gamification event
-        \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::COMMENT_CREATE->value, 'post', $post->id);
+        UsageEventService::fire(auth()->user(), UsageEventType::COMMENT_CREATE->value, 'post', $post->id);
 
         return response()->json([
             'success' => true,
@@ -97,14 +103,13 @@ class PostCommentController extends \App\Http\Controllers\Controller
     /**
      * Update the specified comment in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, Post $post, PostComment $comment)
     {
         if ($comment->user_id !== auth()->id()) {
-             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validatedData = $request->validate([
@@ -112,13 +117,13 @@ class PostCommentController extends \App\Http\Controllers\Controller
         ]);
 
         $comment->update([
-            'content' => $validatedData['content']
+            'content' => $validatedData['content'],
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Comment updated successfully',
-            'comment' => new PostCommentResource($comment)
+            'comment' => new PostCommentResource($comment),
         ]);
     }
 
@@ -126,13 +131,13 @@ class PostCommentController extends \App\Http\Controllers\Controller
      * Remove the specified comment from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(Post $post, PostComment $comment)
     {
         if ($comment->user_id !== auth()->id() && $post->user_id !== auth()->id()) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-       }
+        }
 
         // Clean up likes and dislikes
         $comment->likedPostComment()->detach();
@@ -142,7 +147,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
         $comment_images = $comment->postCommentImages;
         if ($comment_images->count() > 0) {
             foreach ($comment_images as $image) {
-                Storage::disk('public')->delete('images/posts/comments/' . $image->filename);
+                Storage::disk('public')->delete('images/posts/comments/'.$image->filename);
                 $image->delete();
             }
         }
@@ -152,7 +157,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
             $reply->likedPostComment()->detach();
             $reply->dislikedPostComment()->detach();
             $reply->postCommentImages()->each(function ($image) {
-                Storage::disk('public')->delete('images/posts/comments/' . $image->filename);
+                Storage::disk('public')->delete('images/posts/comments/'.$image->filename);
                 $image->delete();
             });
             $reply->delete();
@@ -165,16 +170,14 @@ class PostCommentController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Comment deleted successfully'
+            'message' => 'Comment deleted successfully',
         ]);
     }
 
     /**
      * Store a reply to a comment.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\PostComment  $comment
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function storeReply(PostComment $comment, Request $request)
     {
@@ -211,7 +214,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
         }
 
         // Give points to super admin (6 points)
-        $superAdmin = \App\Models\User::find(1);
+        $superAdmin = User::find(1);
         if ($superAdmin) {
             $superAdmin->increment('pp', 6);
         }
@@ -220,7 +223,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
         $comment->increment('replies');
 
         // Fire gamification event
-        \App\Services\UsageEventService::fire($user, \App\Enums\UsageEventType::COMMENT_CREATE->value, 'post', $comment->post_id);
+        UsageEventService::fire($user, UsageEventType::COMMENT_CREATE->value, 'post', $comment->post_id);
 
         // Load the reply with user relationship
         $reply->load('user');
@@ -235,20 +238,18 @@ class PostCommentController extends \App\Http\Controllers\Controller
     /**
      * Get replies for a comment.
      *
-     * @param  \App\Models\PostComment  $comment
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function getReplies(PostComment $comment, Request $request)
     {
         try {
             $perPage = $request->input('per_page', 5);
-            
+
             $replies = PostComment::where('parent_post_comment_id', $comment->id)
                 ->with(['user', 'postCommentImages'])
                 ->orderBy('created_at', 'asc')
                 ->paginate($perPage);
-            
+
             return response()->json([
                 'success' => true,
                 'replies' => PostCommentResource::collection($replies),
@@ -258,7 +259,7 @@ class PostCommentController extends \App\Http\Controllers\Controller
                     'per_page' => $replies->perPage(),
                     'total' => $replies->total(),
                     'has_more' => $replies->hasMorePages(),
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([

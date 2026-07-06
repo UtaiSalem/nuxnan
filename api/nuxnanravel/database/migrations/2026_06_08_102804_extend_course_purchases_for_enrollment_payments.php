@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('course_purchases', function (Blueprint $table) {
             $table->enum('purchase_type', ['marketplace', 'enrollment'])->default('marketplace')->after('id');
             $table->unsignedBigInteger('course_member_id')->nullable()->after('buyer_id');
-            
+
             $table->foreign('course_member_id')
                 ->references('id')
                 ->on('course_members')

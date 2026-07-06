@@ -27,7 +27,7 @@ return new class extends Migration
                 // Calculate rough word count
                 $wordCount = $sentence['language'] === 'en'
                     ? str_word_count($sentence['text'])
-                    : max(1, (int)(mb_strlen($sentence['text']) / 4)); // Rough estimate for Thai
+                    : max(1, (int) (mb_strlen($sentence['text']) / 4)); // Rough estimate for Thai
 
                 DB::table('typing_sentences')->updateOrInsert(
                     [
@@ -173,7 +173,6 @@ return new class extends Migration
             ['language' => 'th', 'difficulty' => 'hard', 'text' => 'ปฏิสัมพันธ์ระหว่างแรงโน้มถ่วงและหลุมดำยังคงเป็นปริศนาทางฟิสิกส์ดาราศาสตร์ที่รอการค้นพบ'],
             ['language' => 'th', 'difficulty' => 'hard', 'text' => 'นวัตกรรมแบบพลิกผันเปลี่ยนรูปแบบอุตสาหกรรมเดิมไปอย่างสิ้นเชิงด้วยโมเดลธุรกิจที่แตกต่าง'],
             ['language' => 'th', 'difficulty' => 'hard', 'text' => 'เทคโนโลยีบล็อกเชนช่วยขจัดความจำเป็นในการใช้ตัวกลางสำหรับการทำธุรกรรมดิจิทัลที่น่าเชื่อถือ'],
-
 
             // ==========================================
             // ENGLISH SENTENCES (100)

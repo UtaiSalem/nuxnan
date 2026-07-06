@@ -6,9 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Academy\AcademyMemberResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\AcademyMember;
+use App\Models\AttendanceDetail;
+use App\Models\Classroom;
+use App\Models\ClassroomStudent;
+use App\Models\CourseGrade;
+use App\Models\CourseMember;
+use App\Models\SemesterTranscript;
 use App\Models\Student;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class AcademyMemberController extends Controller
@@ -170,16 +178,16 @@ class AcademyMemberController extends Controller
      */
     public function getFilterOptions(Academy $academy)
     {
-        $currentYearId = \App\Models\AcademicYear::query()
+        $currentYearId = AcademicYear::query()
             ->where('academy_id', $academy->id)
             ->where('is_current', true)
             ->value('id');
 
         $hasActiveEnrollmentsInCurrentYear = $currentYearId
-            ? \App\Models\ClassroomStudent::query()
+            ? ClassroomStudent::query()
                 ->where('academy_id', $academy->id)
                 ->where('academic_year_id', $currentYearId)
-                ->where('status', \App\Models\ClassroomStudent::STATUS_ACTIVE)
+                ->where('status', ClassroomStudent::STATUS_ACTIVE)
                 ->exists()
             : false;
 
@@ -192,7 +200,7 @@ class AcademyMemberController extends Controller
                 })
                 ->where('classroom_students.academy_id', $academy->id)
                 ->where('classroom_students.academic_year_id', $currentYearId)
-                ->where('classroom_students.status', \App\Models\ClassroomStudent::STATUS_ACTIVE)
+                ->where('classroom_students.status', ClassroomStudent::STATUS_ACTIVE)
                 ->where('classrooms.is_active', true);
 
             $classLevels = (clone $currentEnrollmentQuery)
@@ -267,13 +275,13 @@ class AcademyMemberController extends Controller
         }
 
         // Try to get data from classrooms table first (more reliable)
-        $hasClassrooms = \App\Models\Classroom::where('academy_id', $academy->id)
+        $hasClassrooms = Classroom::where('academy_id', $academy->id)
             ->where('is_active', true)
             ->exists();
 
         if ($hasClassrooms) {
             // Use classrooms as source for grade levels
-            $classLevels = \App\Models\Classroom::where('academy_id', $academy->id)
+            $classLevels = Classroom::where('academy_id', $academy->id)
                 ->where('is_active', true)
                 ->distinct()
                 ->orderBy('grade_level')
@@ -281,7 +289,7 @@ class AcademyMemberController extends Controller
                 ->map(fn ($level) => ['value' => $level, 'label' => $level])
                 ->values();
 
-            $classSections = \App\Models\Classroom::where('academy_id', $academy->id)
+            $classSections = Classroom::where('academy_id', $academy->id)
                 ->where('is_active', true)
                 ->distinct()
                 ->orderBy('section')
@@ -959,11 +967,11 @@ class AcademyMemberController extends Controller
         $completedCoursesCount = 0;
 
         if ($member->user_id) {
-            $enrolledCoursesCount = \App\Models\CourseMember::whereHas('course', function ($q) use ($academy) {
+            $enrolledCoursesCount = CourseMember::whereHas('course', function ($q) use ($academy) {
                 $q->where('academy_id', $academy->id);
             })->where('user_id', $member->user_id)->where('status', 2)->count();
 
-            $completedCoursesCount = \App\Models\CourseMember::whereHas('course', function ($q) use ($academy) {
+            $completedCoursesCount = CourseMember::whereHas('course', function ($q) use ($academy) {
                 $q->where('academy_id', $academy->id);
             })->where('user_id', $member->user_id)->where('is_completed', true)->count();
         }
@@ -975,9 +983,9 @@ class AcademyMemberController extends Controller
         $gpa = null;
         if ($member->user_id) {
             // Try to get latest published/completed semester transcript
-            $latestTranscript = \App\Models\SemesterTranscript::where('student_id', $member->student_id?->id ?? 0)
+            $latestTranscript = SemesterTranscript::where('student_id', $member->student_id?->id ?? 0)
                 ->where('academy_id', $academy->id)
-                ->whereIn('status', [\App\Models\SemesterTranscript::STATUS_PUBLISHED, \App\Models\SemesterTranscript::STATUS_APPROVED])
+                ->whereIn('status', [SemesterTranscript::STATUS_PUBLISHED, SemesterTranscript::STATUS_APPROVED])
                 ->orderBy('semester_id', 'desc')
                 ->first();
 
@@ -985,8 +993,8 @@ class AcademyMemberController extends Controller
                 $gpa = (float) $latestTranscript->gpa;
             } elseif ($member->user_id) {
                 // Fallback: Calculate from CourseGrade
-                $courseGrades = \App\Models\CourseGrade::where('student_id', $member->student_id?->id ?? 0)
-                    ->where('status', \App\Models\CourseGrade::STATUS_COMPLETED)
+                $courseGrades = CourseGrade::where('student_id', $member->student_id?->id ?? 0)
+                    ->where('status', CourseGrade::STATUS_COMPLETED)
                     ->where('is_published', true)
                     ->get();
 
@@ -1009,7 +1017,7 @@ class AcademyMemberController extends Controller
         // Calculate attendance rate from attendance records
         $attendanceRate = null;
         if ($member->user_id && $member->student_id) {
-            $attendanceDetails = \App\Models\AttendanceDetail::whereHas('courseMember', function ($q) use ($academy, $member) {
+            $attendanceDetails = AttendanceDetail::whereHas('courseMember', function ($q) use ($academy, $member) {
                 $q->where('academy_id', $academy->id)
                     ->where('user_id', $member->user_id);
             })
@@ -1045,7 +1053,7 @@ class AcademyMemberController extends Controller
         $courses = [];
 
         if ($member->user_id) {
-            $courseMembers = \App\Models\CourseMember::with('course')
+            $courseMembers = CourseMember::with('course')
                 ->whereHas('course', function ($q) use ($academy) {
                     $q->where('academy_id', $academy->id);
                 })
@@ -1168,7 +1176,7 @@ class AcademyMemberController extends Controller
 
         // Invite by emails (create invitation or find existing user)
         foreach ($emails as $email) {
-            $user = \App\Models\User::where('email', $email)->first();
+            $user = User::where('email', $email)->first();
 
             if ($user) {
                 // User exists, check if already member
@@ -1278,10 +1286,10 @@ class AcademyMemberController extends Controller
             // Find user by email or reference_code
             $user = null;
             if ($email) {
-                $user = \App\Models\User::where('email', $email)->first();
+                $user = User::where('email', $email)->first();
             }
             if (! $user && $referenceCode) {
-                $user = \App\Models\User::where('reference_code', $referenceCode)->first();
+                $user = User::where('reference_code', $referenceCode)->first();
             }
 
             if (! $user) {

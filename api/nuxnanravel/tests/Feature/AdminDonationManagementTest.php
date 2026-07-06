@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Donate;
+use App\Models\PlearndAdmin;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,9 +21,9 @@ class AdminDonationManagementTest extends TestCase
         $this->admin = User::factory()->create([
             'email_verified_at' => now(),
         ]);
-        
+
         // Make them a Plearnd Admin
-        \App\Models\PlearndAdmin::create(['user_id' => $this->admin->id]);
+        PlearndAdmin::create(['user_id' => $this->admin->id]);
     }
 
     public function test_admin_can_list_donations_with_stats()
@@ -76,7 +77,7 @@ class AdminDonationManagementTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonCount(1, 'donates.data')
             ->assertJsonPath('donates.data.0.donor_name', 'John Doe');
-            
+
         $response = $this->actingAs($this->admin, 'api')
             ->getJson('/api/plearnd-admin/supports/donates?search=TXN456');
 

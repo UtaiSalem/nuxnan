@@ -53,14 +53,20 @@ class CourseCertificate extends Model
 
     // Certificate types
     const TYPE_COMPLETION = 'completion';
+
     const TYPE_ACHIEVEMENT = 'achievement';
+
     const TYPE_PARTICIPATION = 'participation';
+
     const TYPE_EXCELLENCE = 'excellence';
 
     // Status
     const STATUS_DRAFT = 'draft';
+
     const STATUS_ISSUED = 'issued';
+
     const STATUS_REVOKED = 'revoked';
+
     const STATUS_EXPIRED = 'expired';
 
     /**
@@ -89,7 +95,7 @@ class CourseCertificate extends Model
         $month = date('m');
         $random = strtoupper(Str::random(6));
         $sequence = self::whereYear('created_at', $year)->count() + 1;
-        
+
         return sprintf('CERT-%s%s-%06d-%s', $year, $month, $sequence, $random);
     }
 
@@ -98,7 +104,7 @@ class CourseCertificate extends Model
      */
     public static function generateVerificationCode(): string
     {
-        return hash('sha256', Str::uuid() . now()->timestamp . Str::random(32));
+        return hash('sha256', Str::uuid().now()->timestamp.Str::random(32));
     }
 
     /**
@@ -203,7 +209,7 @@ class CourseCertificate extends Model
      */
     public function getVerificationUrl(): string
     {
-        return config('app.url') . '/verify-certificate/' . $this->verification_code;
+        return config('app.url').'/verify-certificate/'.$this->verification_code;
     }
 
     /**
@@ -222,7 +228,7 @@ class CourseCertificate extends Model
         return $query->where('status', self::STATUS_ISSUED)
             ->where(function ($q) {
                 $q->whereNull('expires_at')
-                  ->orWhere('expires_at', '>', now());
+                    ->orWhere('expires_at', '>', now());
             });
     }
 
@@ -231,7 +237,7 @@ class CourseCertificate extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->type) {
+        return match ($this->type) {
             self::TYPE_COMPLETION => 'ใบจบวิชา',
             self::TYPE_ACHIEVEMENT => 'ใบประกาศเกียรติคุณ',
             self::TYPE_PARTICIPATION => 'ใบรับรองการเข้าร่วม',
@@ -245,7 +251,7 @@ class CourseCertificate extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_DRAFT => 'ฉบับร่าง',
             self::STATUS_ISSUED => 'ออกแล้ว',
             self::STATUS_REVOKED => 'เพิกถอน',

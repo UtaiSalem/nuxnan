@@ -10,7 +10,7 @@ class QuestDefinition extends Model
     protected $fillable = [
         'quest_key', 'title', 'title_th', 'description', 'quest_type',
         'event_type', 'target_count', 'points_reward', 'xp_reward',
-        'icon', 'is_active', 'sort_order'
+        'icon', 'is_active', 'sort_order',
     ];
 
     protected $casts = [

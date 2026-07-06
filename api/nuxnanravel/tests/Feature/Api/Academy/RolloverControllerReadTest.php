@@ -12,6 +12,7 @@ use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class RolloverControllerReadTest extends TestCase
@@ -380,7 +381,7 @@ class RolloverControllerReadTest extends TestCase
     public function test_index_as_staff(): void
     {
         RolloverBatch::create([
-            'id' => \Illuminate\Support\Str::uuid()->toString(),
+            'id' => Str::uuid()->toString(),
             'academy_id' => $this->academy->id,
             'from_academic_year_id' => $this->year2568->id,
             'to_academic_year_id' => $this->year2569->id,
@@ -431,7 +432,7 @@ class RolloverControllerReadTest extends TestCase
      */
     public function test_show_batch_in_own_academy(): void
     {
-        $batchId = \Illuminate\Support\Str::uuid()->toString();
+        $batchId = Str::uuid()->toString();
         $batch = RolloverBatch::create([
             'id' => $batchId,
             'academy_id' => $this->academy->id,
@@ -468,7 +469,7 @@ class RolloverControllerReadTest extends TestCase
      */
     public function test_show_batch_from_other_academy(): void
     {
-        $batchId = \Illuminate\Support\Str::uuid()->toString();
+        $batchId = Str::uuid()->toString();
         $batch = RolloverBatch::create([
             'id' => $batchId,
             'academy_id' => $this->otherAcademy->id,
@@ -494,7 +495,7 @@ class RolloverControllerReadTest extends TestCase
      */
     public function test_show_batch_hides_plan_summary_for_teacher(): void
     {
-        $batchId = \Illuminate\Support\Str::uuid()->toString();
+        $batchId = Str::uuid()->toString();
         $batch = RolloverBatch::create([
             'id' => $batchId,
             'academy_id' => $this->academy->id,
@@ -520,7 +521,7 @@ class RolloverControllerReadTest extends TestCase
      */
     public function test_show_batch_shows_plan_summary_for_admin(): void
     {
-        $batchId = \Illuminate\Support\Str::uuid()->toString();
+        $batchId = Str::uuid()->toString();
         $batch = RolloverBatch::create([
             'id' => $batchId,
             'academy_id' => $this->academy->id,

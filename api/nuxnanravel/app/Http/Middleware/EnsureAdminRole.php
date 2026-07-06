@@ -11,16 +11,16 @@ class EnsureAdminRole
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthenticated'
+                'message' => 'Unauthenticated',
             ], 401);
         }
 
@@ -30,20 +30,20 @@ class EnsureAdminRole
         }
 
         // If specific roles are required
-        if (!empty($roles)) {
-            if (!$user->hasAnyRole($roles)) {
+        if (! empty($roles)) {
+            if (! $user->hasAnyRole($roles)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้'
+                    'message' => 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้',
                 ], 403);
             }
         } else {
             // Default admin roles check
             $adminRoles = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'INSTRUCTOR'];
-            if (!$user->hasAnyRole($adminRoles)) {
+            if (! $user->hasAnyRole($adminRoles)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์เข้าถึงระบบ Admin'
+                    'message' => 'คุณไม่มีสิทธิ์เข้าถึงระบบ Admin',
                 ], 403);
             }
         }

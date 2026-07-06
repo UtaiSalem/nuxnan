@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         // Create pivot table for member-tag relationships
-        if (!Schema::hasTable('academy_member_tag')) {
+        if (! Schema::hasTable('academy_member_tag')) {
             Schema::create('academy_member_tag', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('academy_member_id');

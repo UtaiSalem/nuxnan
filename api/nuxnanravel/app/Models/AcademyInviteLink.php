@@ -93,7 +93,7 @@ class AcademyInviteLink extends Model
     {
         return $query->where(function ($q) {
             $q->whereNull('expires_at')
-              ->orWhere('expires_at', '>', now());
+                ->orWhere('expires_at', '>', now());
         });
     }
 
@@ -101,7 +101,7 @@ class AcademyInviteLink extends Model
     {
         return $query->where(function ($q) {
             $q->whereNull('max_uses')
-              ->orWhereRaw('use_count < max_uses');
+                ->orWhereRaw('use_count < max_uses');
         });
     }
 
@@ -115,7 +115,7 @@ class AcademyInviteLink extends Model
      */
     public function isValid(): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 
@@ -138,6 +138,7 @@ class AcademyInviteLink extends Model
         if ($this->max_uses === null) {
             return null; // Unlimited
         }
+
         return max(0, $this->max_uses - $this->use_count);
     }
 
@@ -146,7 +147,7 @@ class AcademyInviteLink extends Model
      */
     public function getStatusAttribute(): string
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return 'inactive';
         }
         if ($this->expires_at && $this->expires_at < now()) {
@@ -155,6 +156,7 @@ class AcademyInviteLink extends Model
         if ($this->max_uses && $this->use_count >= $this->max_uses) {
             return 'exhausted';
         }
+
         return 'active';
     }
 
@@ -163,7 +165,7 @@ class AcademyInviteLink extends Model
      */
     public function getInviteUrlAttribute(): string
     {
-        return config('app.frontend_url', 'https://app.plearnd.com') . '/invite/' . $this->code;
+        return config('app.frontend_url', 'https://app.plearnd.com').'/invite/'.$this->code;
     }
 
     /**
@@ -172,6 +174,7 @@ class AcademyInviteLink extends Model
     public function getQrCodeUrlAttribute(): string
     {
         $url = urlencode($this->invite_url);
+
         return "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={$url}";
     }
 
@@ -192,7 +195,8 @@ class AcademyInviteLink extends Model
             return true;
         }
 
-        $emailDomain = substr(strrchr($email, "@"), 1);
+        $emailDomain = substr(strrchr($email, '@'), 1);
+
         return in_array($emailDomain, $this->allowed_domains);
     }
 }

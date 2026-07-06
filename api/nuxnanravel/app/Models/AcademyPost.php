@@ -2,17 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Academy;
-use App\Models\Activity;
-use App\Models\AcademyPostImage;
-use App\Models\AcademyPostComment;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class AcademyPost extends Model
 {
@@ -24,8 +19,8 @@ class AcademyPost extends Model
 
     protected $casts = [
         'target_audience' => 'array',
-        'embed_data'      => 'array',
-        'is_pinned'       => 'boolean',
+        'embed_data' => 'array',
+        'is_pinned' => 'boolean',
     ];
 
     public function academy()
@@ -55,8 +50,6 @@ class AcademyPost extends Model
 
     /**
      * The disliked that belong to the Post
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function dislikedPost(): BelongsToMany
     {
@@ -75,8 +68,6 @@ class AcademyPost extends Model
 
     /**
      * Get all of the comments for the AcademyPost
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function comments(): HasMany
     {

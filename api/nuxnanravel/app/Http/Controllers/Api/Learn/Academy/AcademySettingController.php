@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\AcademySetting;
 use App\Http\Requests\StoreAcademySettingRequest;
 use App\Http\Requests\UpdateAcademySettingRequest;
+use App\Models\AcademySetting;
 
 class AcademySettingController extends Controller
 {

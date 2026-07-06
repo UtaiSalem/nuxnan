@@ -3,19 +3,22 @@
 namespace App\Http\Controllers\Api\Learn\Course\assignments;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\Course;
+use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Assignment;
+use App\Models\AssignmentImage;
+use App\Models\Course;
+use App\Models\Lesson;
+use App\Models\Topic;
+use App\Services\ContentVisibilityService;
 use App\Services\CourseMediaService;
+use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use App\Http\Resources\Learn\Course\info\CourseResource;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
-
-
-use App\Services\ContentVisibilityService;
-
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class CourseAssignmentController extends Controller
 {
@@ -33,49 +36,49 @@ class CourseAssignmentController extends Controller
 
         // Get lesson IDs for parent visibility filtering
         $lessonIds = $course->courseLessons()->pluck('id');
-        $topicIds = \App\Models\Topic::whereIn('lesson_id', $lessonIds)->pluck('id');
+        $topicIds = Topic::whereIn('lesson_id', $lessonIds)->pluck('id');
 
-        $assignmentsQuery = \App\Models\Assignment::where(function($q) use ($course, $lessonIds, $topicIds) {
-            $q->where(function($q) use ($course) {
+        $assignmentsQuery = Assignment::where(function ($q) use ($course, $lessonIds, $topicIds) {
+            $q->where(function ($q) use ($course) {
                 $q->where('assignmentable_type', Course::class)
-                  ->where('assignmentable_id', $course->id);
-            })->orWhere(function($q) use ($lessonIds) {
-                $q->where('assignmentable_type', \App\Models\Lesson::class)
-                  ->whereIn('assignmentable_id', $lessonIds);
-            })->orWhere(function($q) use ($topicIds) {
-                $q->where('assignmentable_type', \App\Models\Topic::class)
-                  ->whereIn('assignmentable_id', $topicIds);
+                    ->where('assignmentable_id', $course->id);
+            })->orWhere(function ($q) use ($lessonIds) {
+                $q->where('assignmentable_type', Lesson::class)
+                    ->whereIn('assignmentable_id', $lessonIds);
+            })->orWhere(function ($q) use ($topicIds) {
+                $q->where('assignmentable_type', Topic::class)
+                    ->whereIn('assignmentable_id', $topicIds);
             });
         });
 
         // Filter for students
-        if (!$isCourseAdmin) {
+        if (! $isCourseAdmin) {
             $assignmentsQuery->where('status', 1); // Published only
-            
+
             // Filter by parent lesson visibility
             $publishedLessonIds = $course->courseLessons()
-                ->where('publication_status', \App\Models\Lesson::STATUS_PUBLISHED)
+                ->where('publication_status', Lesson::STATUS_PUBLISHED)
                 ->pluck('id');
-            $publishedTopicIds = \App\Models\Topic::whereIn('lesson_id', $publishedLessonIds)->pluck('id');
+            $publishedTopicIds = Topic::whereIn('lesson_id', $publishedLessonIds)->pluck('id');
 
-            $assignmentsQuery->where(function($q) use ($course, $publishedLessonIds, $publishedTopicIds) {
+            $assignmentsQuery->where(function ($q) use ($publishedLessonIds, $publishedTopicIds) {
                 $q->where('assignmentable_type', Course::class)
-                  ->orWhere(function($q) use ($publishedLessonIds) {
-                      $q->where('assignmentable_type', \App\Models\Lesson::class)
-                        ->whereIn('assignmentable_id', $publishedLessonIds);
-                  })->orWhere(function($q) use ($publishedTopicIds) {
-                      $q->where('assignmentable_type', \App\Models\Topic::class)
-                        ->whereIn('assignmentable_id', $publishedTopicIds);
-                  });
+                    ->orWhere(function ($q) use ($publishedLessonIds) {
+                        $q->where('assignmentable_type', Lesson::class)
+                            ->whereIn('assignmentable_id', $publishedLessonIds);
+                    })->orWhere(function ($q) use ($publishedTopicIds) {
+                        $q->where('assignmentable_type', Topic::class)
+                            ->whereIn('assignmentable_id', $publishedTopicIds);
+                    });
             });
         }
 
         return response()->json([
-            'course'                => new CourseResource($course),
-            'assignments'           => AssignmentResource::collection($assignmentsQuery->withCount('answers')->latest()->paginate(15)),
-            'groups'                => $course->courseGroups()->get(['id', 'name']),
-            'isCourseAdmin'         => $isCourseAdmin,
-            'courseMemberOfAuth'    => $course->courseMembers()->where('user_id', auth()->id())->first(),
+            'course' => new CourseResource($course),
+            'assignments' => AssignmentResource::collection($assignmentsQuery->withCount('answers')->latest()->paginate(15)),
+            'groups' => $course->courseGroups()->get(['id', 'name']),
+            'isCourseAdmin' => $isCourseAdmin,
+            'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
         ]);
     }
 
@@ -95,7 +98,7 @@ class CourseAssignmentController extends Controller
             abort(404);
         }
 
-        if (!$isCourseAdmin) {
+        if (! $isCourseAdmin) {
             $this->visibility->assertVisibleOrFail($assignment, $user, 404);
         }
 
@@ -106,10 +109,10 @@ class CourseAssignmentController extends Controller
             'isCourseAdmin' => $isCourseAdmin,
         ]);
     }
-    
+
     public function store(Course $course, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -130,36 +133,37 @@ class CourseAssignmentController extends Controller
         ]);
 
         $assignment = $course->assignments()->create([
-            'title'             => $validated['title'],
-            'description'       => $validated['description'] ?? null,
-            'points'            => $validated['points'],
-            'passing_score'     => $validated['passing_score'] ?? floor($validated['points'] / 2),
-            'graded_score'      => $validated['points'],
-            'due_date'          => !empty($validated['due_date']) ? Carbon::parse($validated['due_date'])->setTimezone('Asia/Bangkok') : null,
-            'start_date'        => !empty($validated['start_date']) ? Carbon::parse($validated['start_date'])->setTimezone('Asia/Bangkok') : null,
-            'end_date'          => !empty($validated['end_date']) ? Carbon::parse($validated['end_date'])->setTimezone('Asia/Bangkok') : null,
-            'target_groups'     => $validated['target_groups'] ?? null,
-            'increase_points'   => $validated['increase_points'] ?? null,
-            'decrease_points'   => $validated['decrease_points'] ?? null,
-            'status'            => $validated['status'],
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'points' => $validated['points'],
+            'passing_score' => $validated['passing_score'] ?? floor($validated['points'] / 2),
+            'graded_score' => $validated['points'],
+            'due_date' => ! empty($validated['due_date']) ? Carbon::parse($validated['due_date'])->setTimezone('Asia/Bangkok') : null,
+            'start_date' => ! empty($validated['start_date']) ? Carbon::parse($validated['start_date'])->setTimezone('Asia/Bangkok') : null,
+            'end_date' => ! empty($validated['end_date']) ? Carbon::parse($validated['end_date'])->setTimezone('Asia/Bangkok') : null,
+            'target_groups' => $validated['target_groups'] ?? null,
+            'increase_points' => $validated['increase_points'] ?? null,
+            'decrease_points' => $validated['decrease_points'] ?? null,
+            'status' => $validated['status'],
         ]);
 
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
         $course->increment('assignments');
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             $fileNames = [];
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/courses/assignments', $image, $fileName);
                 $fileNames[] = $fileName;
 
                 $assignment->images()->create([
-                    'image_url' => $fileName
+                    'image_url' => $fileName,
                 ]);
             }
         }
+
         return response()->json([
             'assignment' => new AssignmentResource($assignment),
         ], 200);
@@ -177,7 +181,7 @@ class CourseAssignmentController extends Controller
             abort(404, 'Assignment does not belong to this course');
         }
 
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -198,37 +202,38 @@ class CourseAssignmentController extends Controller
         ]);
 
         $assignment->update([
-            'title'                 => $validated['title'],
-            'description'           => $validated['description'] ?? null,
-            'points'                => $validated['points'],
-            'passing_score'         => $validated['passing_score'] ?? 0,
-            'graded_score'          => $validated['points'],
-            'due_date'              => !empty($validated['due_date']) ? Carbon::parse($validated['due_date'])->setTimezone('Asia/Bangkok') : null,
-            'start_date'            => !empty($validated['start_date']) ? Carbon::parse($validated['start_date'])->setTimezone('Asia/Bangkok') : null,
-            'end_date'              => !empty($validated['end_date']) ? Carbon::parse($validated['end_date'])->setTimezone('Asia/Bangkok') : null,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'points' => $validated['points'],
+            'passing_score' => $validated['passing_score'] ?? 0,
+            'graded_score' => $validated['points'],
+            'due_date' => ! empty($validated['due_date']) ? Carbon::parse($validated['due_date'])->setTimezone('Asia/Bangkok') : null,
+            'start_date' => ! empty($validated['start_date']) ? Carbon::parse($validated['start_date'])->setTimezone('Asia/Bangkok') : null,
+            'end_date' => ! empty($validated['end_date']) ? Carbon::parse($validated['end_date'])->setTimezone('Asia/Bangkok') : null,
             // 'target_groups'      => json_encode($validated['target_groups'])->toArray(),
             // 'target_groups'         => json_encode($validated['target_groups']),
-            'target_groups'         => $validated['target_groups'] ?? null,
-            'increase_points'       => $validated['increase_points'] ?? null,
-            'decrease_points'       => $validated['decrease_points'] ?? null,
-            'status'                => $validated['status'],
+            'target_groups' => $validated['target_groups'] ?? null,
+            'increase_points' => $validated['increase_points'] ?? null,
+            'decrease_points' => $validated['decrease_points'] ?? null,
+            'status' => $validated['status'],
         ]);
-        
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
-            
-        if($request->hasFile('images')) {
+
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
+
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
 
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/courses/assignments', $image, $fileName);
 
                 $assignment->images()->create([
                     // 'image_url' => $image_url
-                    'image_url' => $fileName
+                    'image_url' => $fileName,
                 ]);
             }
         }
+
         return response()->json([
             'assignment' => new AssignmentResource($assignment),
         ], 200);
@@ -247,13 +252,13 @@ class CourseAssignmentController extends Controller
                 abort(404, 'Assignment does not belong to this course');
             }
 
-            if (!$course->isAdmin(auth()->user())) {
+            if (! $course->isAdmin(auth()->user())) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
             }
 
-            \Illuminate\Support\Facades\DB::transaction(function () use ($assignment, $course, $mediaService) {
+            DB::transaction(function () use ($assignment, $course, $mediaService) {
                 // Delete answer images
-                foreach ($assignment->answers as $answer) {            
+                foreach ($assignment->answers as $answer) {
                     foreach ($answer->images as $image) {
                         Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
                     }
@@ -263,8 +268,8 @@ class CourseAssignmentController extends Controller
                 // Delete assignment images via media service
                 foreach ($assignment->images as $image) {
                     $mediaService->deleteIfUnused(
-                        'images/courses/assignments/' . $image->image_url,
-                        \App\Models\AssignmentImage::class,
+                        'images/courses/assignments/'.$image->image_url,
+                        AssignmentImage::class,
                         'image_url',
                         $image->image_url,
                         $image->id
@@ -274,7 +279,7 @@ class CourseAssignmentController extends Controller
                 // Only sync total_score for Course-level assignments
                 // Lesson/Topic assignments have their own score tracking
                 if ($assignment->assignmentable_type === Course::class) {
-                    app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
+                    app(CourseScoreService::class)->syncCourseTotalScore($course);
                 }
 
                 $assignment->answers()->delete();
@@ -283,15 +288,16 @@ class CourseAssignmentController extends Controller
             });
 
             return response()->json(['success' => true], 200);
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             return response()->json(['success' => false, 'msg' => $e->getMessage() ?: 'ไม่พบข้อมูล'], $e->getStatusCode());
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Assignment destroy failed: ' . $e->getMessage(), [
+            Log::error('Assignment destroy failed: '.$e->getMessage(), [
                 'course_id' => $course->id,
                 'assignment_id' => $assignment->id,
                 'trace' => $e->getTraceAsString(),
             ]);
-            return response()->json(['success' => false, 'msg' => 'ลบไม่สำเร็จ: ' . $e->getMessage()], 500);
+
+            return response()->json(['success' => false, 'msg' => 'ลบไม่สำเร็จ: '.$e->getMessage()], 500);
         }
     }
 }

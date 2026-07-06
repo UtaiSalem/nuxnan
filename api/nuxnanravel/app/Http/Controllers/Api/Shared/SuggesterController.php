@@ -2,22 +2,21 @@
 
 namespace App\Http\Controllers\Api\Shared;
 
+use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 
-use Illuminate\Http\Request;
-use App\Http\Resources\UserResource;
-
-class SuggesterController extends \App\Http\Controllers\Controller
+class SuggesterController extends Controller
 {
     public function index(User $user)
     {
         if ($user) {
             return response()->json([
                 'isSuggesterActive' => true,
-                'suggester'         => new UserResource($user),
-                'error'             => null,
-            ]);           
-        }else {
+                'suggester' => new UserResource($user),
+                'error' => null,
+            ]);
+        } else {
             return response()->json([
                 'isSuggesterActive' => false,
                 'suggester' => null,
@@ -33,13 +32,12 @@ class SuggesterController extends \App\Http\Controllers\Controller
                 'isSuggesterActive' => true,
                 'suggester' => new UserResource($user),
             ]);
-        }else {
+        } else {
             return response()->json([
                 'isSuggesterActive' => false,
                 'suggester' => new UserResource($user),
                 'error' => 'Suggester has reached the maximum number of referrals/ผู้แนะนำได้รับจำนวนการแนะนำสูงสุดแล้ว',
             ]);
         }
-    } 
-    
+    }
 }

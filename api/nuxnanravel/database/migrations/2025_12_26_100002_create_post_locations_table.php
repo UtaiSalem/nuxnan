@@ -29,10 +29,10 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('post_id')
-                  ->references('id')
-                  ->on('posts')
-                  ->onDelete('cascade');
-            
+                ->references('id')
+                ->on('posts')
+                ->onDelete('cascade');
+
             $table->index(['latitude', 'longitude']);
             $table->index('place_id');
         });

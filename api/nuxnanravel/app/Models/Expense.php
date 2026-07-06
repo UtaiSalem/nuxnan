@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Traits\Auditable;
 
 /**
  * Expense Model - รายจ่าย
  */
 class Expense extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'academy_id',
@@ -42,8 +42,11 @@ class Expense extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
+
     const STATUS_PAID = 'paid';
 
     const STATUSES = [
@@ -120,7 +123,7 @@ class Expense extends Model
         $prefix = 'EXP';
         $year = date('Y');
         $month = date('m');
-        
+
         $lastExpense = static::where('academy_id', $academyId)
             ->where('expense_number', 'like', "{$prefix}{$year}{$month}%")
             ->orderBy('expense_number', 'desc')
@@ -133,7 +136,7 @@ class Expense extends Model
             $newNumber = 1;
         }
 
-        return $prefix . $year . $month . str_pad($newNumber, 5, '0', STR_PAD_LEFT);
+        return $prefix.$year.$month.str_pad($newNumber, 5, '0', STR_PAD_LEFT);
     }
 
     // Scopes

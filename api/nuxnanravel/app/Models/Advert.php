@@ -8,9 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
-use App\Models\User;
-use App\Models\AdvertViewer;
-use App\Models\Activity;
 
 class Advert extends Model
 {
@@ -36,7 +33,7 @@ class Advert extends Model
     public function getMediaImageAttribute($value)
     {
         // Return full URL to prevent frontend from adding prefix
-        return $value ? url('/storage/images/adverts/medias/' . $value) : null;
+        return $value ? url('/storage/images/adverts/medias/'.$value) : null;
     }
 
     public function getSlipAttribute($value)

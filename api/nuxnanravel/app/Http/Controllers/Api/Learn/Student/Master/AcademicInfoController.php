@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Student\UpdateAcademicInfoRequest;
 use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentAcademicInfo;
 use App\Traits\HandlesStudentUpdates;
-use App\Http\Requests\Student\UpdateAcademicInfoRequest;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AcademicInfoController extends Controller
@@ -23,18 +22,18 @@ class AcademicInfoController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
         $this->authorize('update', $student);
 
         $academicInfos = $student->academicInfos()
-                                ->orderBy('academic_year', 'desc')
-                                ->orderBy('is_current', 'desc')
-                                ->orderBy('created_at', 'desc')
-                                ->get();
-        
+            ->orderBy('academic_year', 'desc')
+            ->orderBy('is_current', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return response()->json([
             'success' => true,
             'data' => $academicInfos,
@@ -50,14 +49,14 @@ class AcademicInfoController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
         $this->authorize('update', $student);
 
         $academicInfo = $student->currentAcademicInfo;
-        
+
         return response()->json([
             'success' => true,
             'data' => $academicInfo,
@@ -72,7 +71,7 @@ class AcademicInfoController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -99,7 +98,7 @@ class AcademicInfoController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -111,12 +110,12 @@ class AcademicInfoController extends Controller
             DB::beginTransaction();
 
             // ถ้าไม่ได้ระบุ academicInfo แสดงว่าเป็นการอัปเดตข้อมูลปัจจุบัน
-            if (!$academicInfo) {
+            if (! $academicInfo) {
                 $academicInfo = $student->currentAcademicInfo;
             }
 
             // ถ้ายังไม่มีข้อมูลเลย ให้สร้างใหม่
-            if (!$academicInfo) {
+            if (! $academicInfo) {
                 $academicInfo = new StudentAcademicInfo(['student_id' => $student->id]);
             }
 
@@ -134,20 +133,21 @@ class AcademicInfoController extends Controller
             }
 
             // สร้าง classroom_full อัตโนมัติถ้าไม่ได้กรอกมา
-            if (empty($validated['classroom_full']) && !empty($validated['current_grade']) && !empty($validated['current_class'])) {
-                $validated['classroom_full'] = $validated['current_grade'] . '/' . $validated['current_class'];
+            if (empty($validated['classroom_full']) && ! empty($validated['current_grade']) && ! empty($validated['current_class'])) {
+                $validated['classroom_full'] = $validated['current_grade'].'/'.$validated['current_class'];
             }
 
             // For new records (no id yet), staff bypass approval and persist; owner queues approval.
-            if (!$academicInfo->exists) {
+            if (! $academicInfo->exists) {
                 // Check if creation needs approval
                 $changeRequest = $this->applyUpdate($student, 'StudentAcademicInfo', null, 'academic.create', $validated);
                 if ($changeRequest) {
                     DB::commit();
+
                     return response()->json([
                         'success' => true,
                         'message' => 'ส่งคำขอเพิ่มประวัติการศึกษาแล้ว รอการอนุมัติ',
-                        'needs_approval' => true
+                        'needs_approval' => true,
                     ]);
                 }
 
@@ -159,10 +159,10 @@ class AcademicInfoController extends Controller
             }
 
             // หากตั้งเป็น current ให้ปรับปรุงข้อมูลอื่นๆ (apply only if not pending)
-            if (array_key_exists('is_current', $result['updated'] ?? []) && !empty($result['updated']['is_current'])) {
+            if (array_key_exists('is_current', $result['updated'] ?? []) && ! empty($result['updated']['is_current'])) {
                 $student->academicInfos()
-                       ->where('id', '!=', $academicInfo->id ?? 0)
-                       ->update(['is_current' => false]);
+                    ->where('id', '!=', $academicInfo->id ?? 0)
+                    ->update(['is_current' => false]);
             }
 
             DB::commit();
@@ -178,10 +178,10 @@ class AcademicInfoController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -194,7 +194,7 @@ class AcademicInfoController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -214,25 +214,26 @@ class AcademicInfoController extends Controller
             $changeRequest = $this->applyUpdate($student, 'StudentAcademicInfo', null, 'academic.create', $validated);
             if ($changeRequest) {
                 DB::commit();
+
                 return response()->json([
                     'success' => true,
                     'message' => 'ส่งคำขอเพิ่มประวัติการศึกษาแล้ว รอการอนุมัติ',
-                    'needs_approval' => true
+                    'needs_approval' => true,
                 ]);
             }
 
             // สร้างข้อมูลใหม่
             $academicInfo = new StudentAcademicInfo(array_merge($validated, [
-                'student_id' => $student->id
+                'student_id' => $student->id,
             ]));
-            
+
             // สร้าง classroom_full อัตโนมัติถ้าไม่ได้กรอกมา
-            if (empty($validated['classroom_full']) && !empty($validated['current_grade']) && !empty($validated['current_class'])) {
-                $academicInfo->classroom_full = $validated['current_grade'] . '/' . $validated['current_class'];
+            if (empty($validated['classroom_full']) && ! empty($validated['current_grade']) && ! empty($validated['current_class'])) {
+                $academicInfo->classroom_full = $validated['current_grade'].'/'.$validated['current_class'];
             }
 
             // หากตั้งเป็น current ให้ปรับปรุงข้อมูลอื่นๆ
-            if (!empty($validated['is_current'])) {
+            if (! empty($validated['is_current'])) {
                 // Unset current flag from other records
                 $student->academicInfos()->update(['is_current' => false]);
             }
@@ -249,10 +250,10 @@ class AcademicInfoController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการสร้างข้อมูล: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาดในการสร้างข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -265,7 +266,7 @@ class AcademicInfoController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -289,7 +290,7 @@ class AcademicInfoController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการลบข้อมูล: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาดในการลบข้อมูล: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -302,7 +303,7 @@ class AcademicInfoController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -334,10 +335,10 @@ class AcademicInfoController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการตั้งค่า: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาดในการตั้งค่า: '.$e->getMessage(),
             ], 500);
         }
     }

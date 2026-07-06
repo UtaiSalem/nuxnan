@@ -2,21 +2,16 @@
 
 namespace App\Models;
 
-
-use App\Models\User;
-use App\Models\Academy;
-use App\Models\AcademyRole;
-use App\Models\MemberTag;
-
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AcademyMember extends Model
 {
     use HasFactory;
+
     protected $guarded = [];
 
     public function academy(): BelongsTo
@@ -31,7 +26,7 @@ class AcademyMember extends Model
 
     public function student(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Student::class);
+        return $this->belongsTo(Student::class);
     }
 
     public function inviter(): BelongsTo
@@ -62,9 +57,10 @@ class AcademyMember extends Model
      */
     public function hasPermission(string $permission): bool
     {
-        if (!$this->academyRole) {
+        if (! $this->academyRole) {
             return false;
         }
+
         return $this->academyRole->hasPermission($permission);
     }
 
@@ -73,9 +69,10 @@ class AcademyMember extends Model
      */
     public function hasAnyPermission(array $permissions): bool
     {
-        if (!$this->academyRole) {
+        if (! $this->academyRole) {
             return false;
         }
+
         return $this->academyRole->hasAnyPermission($permissions);
     }
 
@@ -84,9 +81,10 @@ class AcademyMember extends Model
      */
     public function isAdmin(): bool
     {
-        if (!$this->academyRole) {
+        if (! $this->academyRole) {
             return false;
         }
+
         return $this->academyRole->isAdminRole();
     }
 
@@ -95,9 +93,10 @@ class AcademyMember extends Model
      */
     public function isTeacher(): bool
     {
-        if (!$this->academyRole) {
+        if (! $this->academyRole) {
             return false;
         }
+
         return $this->academyRole->isTeacherRole();
     }
 
@@ -106,10 +105,11 @@ class AcademyMember extends Model
      */
     public function isStudent(): bool
     {
-        if (!$this->academyRole) {
+        if (! $this->academyRole) {
             // Default to student if no role assigned
             return true;
         }
+
         return $this->academyRole->isStudentRole();
     }
 
@@ -118,9 +118,10 @@ class AcademyMember extends Model
      */
     public function isParent(): bool
     {
-        if (!$this->academyRole) {
+        if (! $this->academyRole) {
             return false;
         }
+
         return $this->academyRole->isParentRole();
     }
 
@@ -141,13 +142,18 @@ class AcademyMember extends Model
             return $this->user->name;
         }
         if ($this->student_id && $this->relationLoaded('student') && $this->student) {
-            $name = trim($this->student->first_name_th . ' ' . $this->student->last_name_th);
-            if (!empty($name)) return $name;
-            
-            $nameEn = trim($this->student->first_name_en . ' ' . $this->student->last_name_en);
-            if (!empty($nameEn)) return $nameEn;
+            $name = trim($this->student->first_name_th.' '.$this->student->last_name_th);
+            if (! empty($name)) {
+                return $name;
+            }
+
+            $nameEn = trim($this->student->first_name_en.' '.$this->student->last_name_en);
+            if (! empty($nameEn)) {
+                return $nameEn;
+            }
         }
-        return 'สมาชิก #' . $this->id;
+
+        return 'สมาชิก #'.$this->id;
     }
 
     public function getMemberAvatarAttribute()
@@ -156,16 +162,17 @@ class AcademyMember extends Model
         if ($this->user_id && $this->relationLoaded('user') && $this->user && $this->user->profile_photo_url) {
             return $this->user->profile_photo_url;
         }
-        if ($this->student_id && $this->relationLoaded('student') && $this->student && $this->student->profile_image) {
-            return '/storage/images/students/profiles/' . $this->student->profile_image;
+        if ($this->student_id && $this->student && $this->student->profile_image_url) {
+            return $this->student->profile_image_url;
         }
-        
+
         // Generate UI Avatar with initials
         $name = $this->member_name;
         $initials = $this->getInitials($name);
-        return 'https://ui-avatars.com/api/?name=' . urlencode($initials) . '&color=FFFFFF&background=6366F1&font-size=0.4&bold=true';
+
+        return 'https://ui-avatars.com/api/?name='.urlencode($initials).'&color=FFFFFF&background=6366F1&font-size=0.4&bold=true';
     }
-    
+
     /**
      * Get initials from name (supports Thai)
      */
@@ -174,8 +181,9 @@ class AcademyMember extends Model
         $words = explode(' ', trim($name));
         if (count($words) >= 2) {
             // Get first character of first and last word
-            return mb_substr($words[0], 0, 1) . mb_substr($words[count($words) - 1], 0, 1);
+            return mb_substr($words[0], 0, 1).mb_substr($words[count($words) - 1], 0, 1);
         }
+
         // Just use first 2 characters
         return mb_substr($name, 0, 2);
     }
@@ -197,8 +205,10 @@ class AcademyMember extends Model
                 'student' => 'นักเรียน',
                 'parent' => 'ผู้ปกครอง',
             ];
+
             return $roleNames[$this->role] ?? $this->role;
         }
+
         return 'สมาชิก';
     }
 }

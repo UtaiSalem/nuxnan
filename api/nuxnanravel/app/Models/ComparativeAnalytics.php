@@ -33,7 +33,9 @@ class ComparativeAnalytics extends Model
 
     // Comparison Types
     const TYPE_YEAR_OVER_YEAR = 'year_over_year';
+
     const TYPE_PERIOD_COMPARISON = 'period_comparison';
+
     const TYPE_COHORT = 'cohort';
 
     const TYPES = [
@@ -44,8 +46,11 @@ class ComparativeAnalytics extends Model
 
     // Categories
     const CATEGORY_ENROLLMENT = 'enrollment';
+
     const CATEGORY_ACADEMIC = 'academic';
+
     const CATEGORY_FINANCIAL = 'financial';
+
     const CATEGORY_ATTENDANCE = 'attendance';
 
     const CATEGORIES = [
@@ -86,6 +91,7 @@ class ComparativeAnalytics extends Model
     public function getChangePercent(string $metricName): ?float
     {
         $metric = $this->getMetricComparison($metricName);
+
         return $metric['change'] ?? null;
     }
 
@@ -95,6 +101,7 @@ class ComparativeAnalytics extends Model
         if ($change === null) {
             return false;
         }
+
         return $higherIsBetter ? $change > 0 : $change < 0;
     }
 

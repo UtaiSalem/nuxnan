@@ -15,12 +15,12 @@ class HomeVisitImage extends Model
         'image_name',
         'image_type',
         'description',
-        'uploaded_by'
+        'uploaded_by',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -44,6 +44,6 @@ class HomeVisitImage extends Model
      */
     public function getImageUrlAttribute()
     {
-        return asset('storage/' . $this->image_path);
+        return asset('storage/'.$this->image_path);
     }
 }

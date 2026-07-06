@@ -3,15 +3,14 @@
 namespace App\Http\Controllers\Api\Learn\Course\assignments;
 
 use App\Http\Controllers\Controller;
-use App\Models\Course;
-use App\Models\Assignment;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-
-use App\Http\Resources\Learn\Course\info\CourseResource;
-use App\Http\Resources\Learn\Course\lessons\LessonResource;
 use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Http\Resources\Learn\Course\lessons\LessonResource;
+use App\Models\Assignment;
+use App\Models\Course;
+use App\Services\CourseScoreService;
+use Illuminate\Support\Facades\Storage;
 
 class AssignmentController extends Controller
 {
@@ -19,24 +18,24 @@ class AssignmentController extends Controller
     {
         return response()->json([
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
-            'course'        => new CourseResource($course),
-            'lessons'       => LessonResource::collection($course->lessons),
-            'assignments'       => AssignmentResource::collection($course->assignments),
-            'groups'        => CourseGroupResource::collection($course->courseGroups),
-            'courseMemberOfAuth'=> $course->courseMembers()->where('user_id', auth()->id())->first(),
+            'course' => new CourseResource($course),
+            'lessons' => LessonResource::collection($course->lessons),
+            'assignments' => AssignmentResource::collection($course->assignments),
+            'groups' => CourseGroupResource::collection($course->courseGroups),
+            'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
         ]);
     }
 
     public function destroy(Assignment $assignment)
     {
         $course = $assignment->assignmentable;
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        foreach ( $assignment->answers as $answer) {            
+        foreach ($assignment->answers as $answer) {
             foreach ($answer->images as $image) {
-                Storage::disk('public')->delete('images/courses/assignments/answers/'. $image->filename);
+                Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
             }
             $answer->images()->delete();
         }
@@ -46,7 +45,7 @@ class AssignmentController extends Controller
         }
 
         $course = $assignment->assignmentable;
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
 
         $assignment->answers()->delete();
         $assignment->images()->delete();

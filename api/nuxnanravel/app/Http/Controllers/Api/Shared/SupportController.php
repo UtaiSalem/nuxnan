@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Api\Shared;
 
-use App\Http\Controllers\Controller;
-use App\Models\Advert;
-use App\Models\Activity;
-use Illuminate\Http\Request;
 use App\Enums\ActivityType;
+use App\Http\Controllers\Controller;
+use App\Models\Activity;
+use App\Models\Advert;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -26,13 +26,13 @@ class SupportController extends Controller
 
         try {
             $slip_filename = null;
-            if($request->file('slip')) {
+            if ($request->file('slip')) {
                 $slip_file = $request->file('slip');
-                $slip_filename =  uniqid().'.'.$slip_file->getClientOriginalExtension();
+                $slip_filename = uniqid().'.'.$slip_file->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/adverts/slips', $slip_file, $slip_filename);
             }
 
-            $newAdvert = new Advert();
+            $newAdvert = new Advert;
             $newAdvert->user_id = auth()->id();
             $newAdvert->amounts = $validated['amounts'];
             $newAdvert->duration = 0; // Not an advertisement
@@ -55,7 +55,7 @@ class SupportController extends Controller
                         'message' => 'ยอดเงินในกระเป๋าไม่เพียงพอ',
                     ], 402);
                 }
-                
+
                 $user->decrement('wallet', $validated['amounts']);
                 $user->increment('pp', $newAdvert->exchange_points); // Give points immediately
                 $newAdvert->status = 1; // Approved
@@ -63,7 +63,7 @@ class SupportController extends Controller
 
             $newAdvert->save();
 
-            $activity = new Activity();
+            $activity = new Activity;
             $activity->user_id = $newAdvert->user_id;
             $activity->activity_type = ActivityType::CREATE_ADVERTISE->value; // Consider adding a new ActivityType for SUPPORT if possible
             $activity->activityable()->associate($newAdvert);
@@ -72,7 +72,7 @@ class SupportController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'ขอบคุณสำหรับการสนับสนุน',
-                'points' => $newAdvert->exchange_points
+                'points' => $newAdvert->exchange_points,
             ]);
 
         } catch (\Throwable $th) {

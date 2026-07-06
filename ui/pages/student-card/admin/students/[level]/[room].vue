@@ -197,8 +197,8 @@ const downloadCard = async (index, studentNumber) => {
                             <div class="flex p-[2%] gap-[2%] h-[80%]">
                                 <!-- Photo -->
                                 <div class="w-[30%] h-[80%] rounded-xl overflow-hidden flex-shrink-0 mt-4">
-                                    <img v-if="student.profile_image"
-                                        :src="`${apiBase}/storage/images/students/${student.class_level}/${student.class_section}/${student.profile_image}`"
+                                    <img v-if="student.profile_image_url"
+                                        :src="student.profile_image_url"
                                         alt="Student Photo" class="w-full h-full object-fill rounded-xl" />
                                     <div v-else class="w-full h-full flex items-center justify-center bg-gray-300">
                                         <Icon icon="tabler:photo-plus" class="w-10 h-10 text-gray-600/60" />

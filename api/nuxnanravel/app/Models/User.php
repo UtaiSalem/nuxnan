@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,11 +13,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
 // use App\Models\User; // Recursive import removed
 
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Multicaret\Acquaintances\Traits\Friendable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 // use Laravel\Sanctum\HasApiTokens;
@@ -29,11 +31,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 
     public const MAX_REFERRALS_PER_SUGGESTER = 5;
 
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes;
-
     // use HasApiTokens;
-    use \Multicaret\Acquaintances\Traits\Friendable;
+    use Friendable;
+
+    /** @use HasFactory<UserFactory> */
+    use HasFactory, Notifiable, SoftDeletes;
 
     public $incrementing = true;
 
@@ -474,7 +476,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     /**
      * Get all of the activities for the User
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany
      */
     public function activities()
     {
@@ -717,7 +719,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function pointsTransactions()
     {
-        return $this->hasMany(\App\Models\PointsTransaction::class);
+        return $this->hasMany(PointsTransaction::class);
     }
 
     /**
@@ -725,7 +727,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function walletTransactions()
     {
-        return $this->hasMany(\App\Models\WalletTransaction::class);
+        return $this->hasMany(WalletTransaction::class);
     }
 
     /**
@@ -733,7 +735,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function userRewards()
     {
-        return $this->hasMany(\App\Models\UserReward::class);
+        return $this->hasMany(UserReward::class);
     }
 
     /**
@@ -741,7 +743,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function userAchievements()
     {
-        return $this->hasMany(\App\Models\UserAchievement::class);
+        return $this->hasMany(UserAchievement::class);
     }
 
     /**
@@ -749,7 +751,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function pointStreak()
     {
-        return $this->hasOne(\App\Models\PointStreak::class);
+        return $this->hasOne(PointStreak::class);
     }
 
     /**
@@ -757,7 +759,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function dailyPointLimits()
     {
-        return $this->hasMany(\App\Models\DailyPointLimit::class);
+        return $this->hasMany(DailyPointLimit::class);
     }
 
     /**
@@ -765,7 +767,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function coupons()
     {
-        return $this->hasMany(\App\Models\Coupon::class);
+        return $this->hasMany(Coupon::class);
     }
 
     /**
@@ -773,7 +775,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function redeemedCoupons()
     {
-        return $this->hasMany(\App\Models\Coupon::class, 'redeemed_by');
+        return $this->hasMany(Coupon::class, 'redeemed_by');
     }
 
     /**
@@ -781,7 +783,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function couponRedemptions()
     {
-        return $this->hasMany(\App\Models\CouponRedemption::class);
+        return $this->hasMany(CouponRedemption::class);
     }
 
     /**
@@ -789,7 +791,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function following()
     {
-        return $this->hasMany(\App\Models\Follow::class, 'follower_id');
+        return $this->hasMany(Follow::class, 'follower_id');
     }
 
     /**
@@ -797,7 +799,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function followers()
     {
-        return $this->hasMany(\App\Models\Follow::class, 'followed_id');
+        return $this->hasMany(Follow::class, 'followed_id');
     }
 
     /**

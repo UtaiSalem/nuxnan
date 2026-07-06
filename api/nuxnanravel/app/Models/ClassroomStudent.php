@@ -127,7 +127,7 @@ class ClassroomStudent extends Model
     // Created by (audit)
     public function createdBy(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'created_by_user_id');
+        return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
     /**

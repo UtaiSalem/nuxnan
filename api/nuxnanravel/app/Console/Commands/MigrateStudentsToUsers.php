@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\Models\User;
+use App\Models\AcademyMember;
 use App\Models\Student;
 use App\Models\StudentCard;
-use App\Models\AcademyMember;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -15,17 +15,17 @@ use Illuminate\Support\Str;
  * ============================================================================
  * Command: Migrate Students to Users and Academy Members
  * ============================================================================
- * 
+ *
  * คำสั่งนี้ใช้สำหรับย้ายข้อมูลจากตาราง students หรือ student_cards
  * ไปสร้างระเบียนใหม่ในตาราง users และ academy_members
- * 
+ *
  * การทำงาน:
  * 1. อ่านข้อมูลจาก students/student_cards ที่ยังไม่มี user_id
  * 2. ตรวจสอบความซ้ำซ้อนก่อนสร้าง User ใหม่
  * 3. สร้าง User ใหม่พร้อมเข้ารหัสรหัสผ่าน
  * 4. อัปเดต/สร้าง AcademyMember พร้อมเชื่อมโยง user_id
  * 5. อัปเดต Student.user_id
- * 
+ *
  * ============================================================================
  */
 class MigrateStudentsToUsers extends Command
@@ -68,12 +68,13 @@ class MigrateStudentsToUsers extends Command
         // Step 1: Get Source Data
         // =====================================================================
         $this->info('📖 Step 1: Reading source data...');
-        
+
         $records = $this->getSourceRecords($source, $limit);
         $totalRecords = $records->count();
 
         if ($totalRecords === 0) {
             $this->warn('No records found to migrate.');
+
             return Command::SUCCESS;
         }
 
@@ -96,7 +97,7 @@ class MigrateStudentsToUsers extends Command
                 $bar->advance();
             }
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 DB::commit();
             } else {
                 DB::rollBack();
@@ -105,7 +106,8 @@ class MigrateStudentsToUsers extends Command
         } catch (\Exception $e) {
             DB::rollBack();
             $this->newLine(2);
-            $this->error('Transaction rolled back due to error: ' . $e->getMessage());
+            $this->error('Transaction rolled back due to error: '.$e->getMessage());
+
             return Command::FAILURE;
         }
 
@@ -162,7 +164,7 @@ class MigrateStudentsToUsers extends Command
     {
         try {
             // Extract student code based on source
-            $studentCode = $source === 'student_cards' 
+            $studentCode = $source === 'student_cards'
                 ? trim($record->student_number)
                 : trim($record->student_id);
 
@@ -191,7 +193,7 @@ class MigrateStudentsToUsers extends Command
                 $name = $this->extractName($record, $source);
                 $password = $this->generatePassword($studentCode, $passwordPattern);
 
-                if (!$dryRun) {
+                if (! $dryRun) {
                     $newUser = User::create([
                         'name' => $name,
                         'email' => $email,
@@ -203,7 +205,7 @@ class MigrateStudentsToUsers extends Command
                     ]);
                     $userId = $newUser->id;
                 } else {
-                    $userId = 'NEW-' . $studentCode; // Placeholder for dry-run
+                    $userId = 'NEW-'.$studentCode; // Placeholder for dry-run
                 }
                 $this->stats['users_created']++;
             }
@@ -217,14 +219,14 @@ class MigrateStudentsToUsers extends Command
             // =====================================================
             // 2.5 Create/Update Academy Member
             // =====================================================
-            if (!$dryRun && is_numeric($userId)) {
+            if (! $dryRun && is_numeric($userId)) {
                 $this->createOrUpdateAcademyMember(
-                    $academyId, 
-                    $userId, 
+                    $academyId,
+                    $userId,
                     $studentCode,
                     $source === 'students' ? $record->id : null
                 );
-            } else if ($dryRun) {
+            } elseif ($dryRun) {
                 $this->stats['academy_members_created']++; // Assume created for dry-run
             }
 
@@ -269,20 +271,21 @@ class MigrateStudentsToUsers extends Command
     {
         if ($source === 'student_cards') {
             // From student_cards
-            $name = trim(($record->first_name_thai ?? '') . ' ' . ($record->last_name_thai ?? ''));
+            $name = trim(($record->first_name_thai ?? '').' '.($record->last_name_thai ?? ''));
             if (empty($name)) {
                 $name = $record->full_name_thai ?? "Student {$record->student_number}";
             }
         } else {
             // From students
-            $name = trim(($record->first_name_th ?? '') . ' ' . ($record->last_name_th ?? ''));
+            $name = trim(($record->first_name_th ?? '').' '.($record->last_name_th ?? ''));
             if (empty($name)) {
-                $name = trim(($record->first_name_en ?? '') . ' ' . ($record->last_name_en ?? ''));
+                $name = trim(($record->first_name_en ?? '').' '.($record->last_name_en ?? ''));
             }
             if (empty($name)) {
                 $name = "Student {$record->student_id}";
             }
         }
+
         return $name;
     }
 
@@ -398,7 +401,7 @@ class MigrateStudentsToUsers extends Command
     {
         $this->newLine();
         $this->warn('⚠️ Errors encountered (up to 20 shown):');
-        
+
         $errors = array_slice($this->errorLog, 0, 20);
         $this->table(
             ['Record ID', 'Student Code', 'Error'],

@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\Hash;
  * ============================================================================
  * Command: Reset Student Passwords
  * ============================================================================
- * 
+ *
  * รีเซ็ตรหัสผ่านของ users ที่มี email ตามรูปแบบ S{student_code}@domain
  * ให้เป็นรหัสผ่านตามรูปแบบมาตรฐาน
- * 
+ *
  * ============================================================================
  */
 class ResetStudentPasswords extends Command
@@ -42,11 +42,11 @@ class ResetStudentPasswords extends Command
         // Step 1: Get Users with matching email pattern
         // =====================================================================
         $this->info('📖 Step 1: Finding users with matching email pattern...');
-        
+
         $query = User::whereRaw('LOWER(email) LIKE ?', [strtolower($emailPattern)]);
-        
+
         if ($limit) {
-            $query->limit((int)$limit);
+            $query->limit((int) $limit);
         }
 
         $users = $query->get();
@@ -54,6 +54,7 @@ class ResetStudentPasswords extends Command
 
         if ($totalUsers === 0) {
             $this->warn('No users found matching the email pattern.');
+
             return Command::SUCCESS;
         }
 
@@ -64,7 +65,7 @@ class ResetStudentPasswords extends Command
         // Step 2: Reset Passwords
         // =====================================================================
         $this->info('🔄 Step 2: Resetting passwords...');
-        
+
         $updated = 0;
         $skipped = 0;
         $errors = 0;
@@ -86,15 +87,16 @@ class ResetStudentPasswords extends Command
                     if (empty($studentCode)) {
                         $skipped++;
                         $bar->advance();
+
                         continue;
                     }
 
                     // Generate new password
                     $newPassword = $this->generatePassword($studentCode, $passwordPattern);
 
-                    if (!$dryRun) {
+                    if (! $dryRun) {
                         $user->update([
-                            'password' => Hash::make($newPassword)
+                            'password' => Hash::make($newPassword),
                         ]);
                     }
 
@@ -124,7 +126,7 @@ class ResetStudentPasswords extends Command
                 $bar->advance();
             }
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 DB::commit();
             } else {
                 DB::rollBack();
@@ -133,7 +135,8 @@ class ResetStudentPasswords extends Command
         } catch (\Exception $e) {
             DB::rollBack();
             $this->newLine(2);
-            $this->error('Transaction rolled back: ' . $e->getMessage());
+            $this->error('Transaction rolled back: '.$e->getMessage());
+
             return Command::FAILURE;
         }
 
@@ -185,6 +188,7 @@ class ResetStudentPasswords extends Command
         if (preg_match('/^s(\d+)@/i', $email, $matches)) {
             return $matches[1];
         }
+
         return null;
     }
 

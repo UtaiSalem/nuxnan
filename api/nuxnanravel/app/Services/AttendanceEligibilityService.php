@@ -11,6 +11,7 @@ use App\Models\ExamEligibilityOverride;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 class AttendanceEligibilityService
 {
@@ -863,7 +864,7 @@ class AttendanceEligibilityService
         int $totalSessions,
         int $minSessions,
         float $maxAbsencePercent,
-        \Illuminate\Support\Collection $attendanceDetails
+        Collection $attendanceDetails
     ): array {
         if ($totalSessions === 0 || $totalSessions < $minSessions) {
             return [

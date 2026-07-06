@@ -3,22 +3,19 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
-
-
-use App\Models\Academy;
-use Illuminate\Http\Request;
-use App\Models\AcademyMember;
-use Intervention\Image\Facades\Image;
-use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Academy\AcademyResource;
+use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Models\Academy;
+use App\Models\AcademyMember;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-
-
+use Intervention\Image\Facades\Image;
 
 class AcademyController extends Controller
 {
     // Middleware is now handled in route definitions (routes/learn/academy.php)
-    
+
     /**
      * Display a listing of the resource.
      */
@@ -27,7 +24,6 @@ class AcademyController extends Controller
         return response()->json(['success' => true]);
     }
 
-
     /**
      * Show the form for creating a new resource.
      */
@@ -35,14 +31,15 @@ class AcademyController extends Controller
     {
         return response()->json(['success' => true]);
     }
+
     public function create_course(Academy $academy)
     {
         $isAcademyAdmin = $academy->user_id == auth()->id();
-        
-        return response()->json([ 
-            'academy'           => new AcademyResource($academy),
-            'courses'           => CourseResource::collection($academy->courses()->paginate()),
-            'isAcademyAdmin'    => $isAcademyAdmin,
+
+        return response()->json([
+            'academy' => new AcademyResource($academy),
+            'courses' => CourseResource::collection($academy->courses()->paginate()),
+            'isAcademyAdmin' => $isAcademyAdmin,
         ]);
     }
 
@@ -55,18 +52,18 @@ class AcademyController extends Controller
         if (auth()->user()->pp < 1000000) {
             return response()->json([
                 'success' => false,
-                'message' => 'แต้มสะสมไม่เพียงพอ, กรุณาเพิ่มแต้มสะสม'
+                'message' => 'แต้มสะสมไม่เพียงพอ, กรุณาเพิ่มแต้มสะสม',
             ], 200);
         }
-        
+
         $validated = $request->validate([
-            'name'              => 'required|string',
-            'slogan'            => 'required|string',
-            'address'           => 'required|string',
-            'autoAcceptMember'  => 'required|string',
-            'membershipFees'    => 'required|integer',
-            'logo'              => 'image|mimes:jpg,jpeg,png,gif,svg',
-            'cover'             => 'image|mimes:jpg,jpeg,png,gif,svg',
+            'name' => 'required|string',
+            'slogan' => 'required|string',
+            'address' => 'required|string',
+            'autoAcceptMember' => 'required|string',
+            'membershipFees' => 'required|integer',
+            'logo' => 'image|mimes:jpg,jpeg,png,gif,svg',
+            'cover' => 'image|mimes:jpg,jpeg,png,gif,svg',
         ]);
 
         // return $validated['autoAcceptMember'] === true ? true: false;
@@ -74,10 +71,10 @@ class AcademyController extends Controller
         try {
             $authUser = auth()->user();
 
-            if($request->hasFile('logo')) {
+            if ($request->hasFile('logo')) {
                 // $logo = $request->file('logo');
                 $logo = $validated['logo'];
-                $logo_name = uniqid() . '.' . $logo->getClientOriginalExtension();
+                $logo_name = uniqid().'.'.$logo->getClientOriginalExtension();
 
                 // $logo_image = Image::make($logo->getRealPath());
                 // $logo_image->resize(300, 300, function ($constraint) {
@@ -87,14 +84,14 @@ class AcademyController extends Controller
                 $logo_url = Storage::disk('public')->putFileAs('images/academies/logos', $logo, $logo_name);
             }
 
-            if($request->hasFile('cover')) {
+            if ($request->hasFile('cover')) {
                 $cover = $validated['cover'];
-                $cover_name = uniqid() . '.' . $cover->getClientOriginalExtension();
+                $cover_name = uniqid().'.'.$cover->getClientOriginalExtension();
 
                 $cover_url = Storage::disk('public')->putFileAs('images/academies/covers', $cover, $cover_name);
             }
 
-            $academy = new Academy();
+            $academy = new Academy;
             $academy->user_id = auth()->id();
             $academy->name = $validated['name'];
             $academy->slogan = $validated['slogan'];
@@ -107,14 +104,14 @@ class AcademyController extends Controller
             $academy->save();
 
             $academy->academySetting()->create([
-                'auto_accept_members' => $validated['autoAcceptMember'] === 'true' ? true: false,
+                'auto_accept_members' => $validated['autoAcceptMember'] === 'true' ? true : false,
             ]);
 
             auth()->user()->decrement('pp', 860000);
 
             return response()->json([
                 'success' => true,
-                'academy' => $academy->id
+                'academy' => $academy->id,
             ], 200);
 
         } catch (\Throwable $th) {
@@ -128,17 +125,17 @@ class AcademyController extends Controller
     public function show(Academy $academy)
     {
         $isAcademyAdmin = $academy->user_id == auth()->id();
-        
+
         // Get user's membership and role in this academy
         $membership = null;
         $myRole = null;
-        
+
         if (auth()->check()) {
             $membership = AcademyMember::where('academy_id', $academy->id)
                 ->where('user_id', auth()->id())
                 ->with('academyRole')
                 ->first();
-            
+
             if ($membership && $membership->academyRole) {
                 $myRole = [
                     'id' => $membership->academyRole->id,
@@ -163,7 +160,7 @@ class AcademyController extends Controller
                 ];
             }
         }
-        
+
         return response()->json([
             'success' => true,
             'academy' => new AcademyResource($academy),
@@ -199,39 +196,44 @@ class AcademyController extends Controller
             'logo' => 'nullable|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        if($request->hasFile('cover')) {
-            if($academy->cover && ($academy->cover !== 'default_cover.png')){
+        if ($request->hasFile('cover')) {
+            if ($academy->cover && ($academy->cover !== 'default_cover.png')) {
                 Storage::disk('public')->delete($academy->cover);
-            };
+            }
 
             $cover = $validated['cover'];
-            
-            $cover_name = uniqid() . '.' . $cover->getClientOriginalExtension();
+
+            $cover_name = uniqid().'.'.$cover->getClientOriginalExtension();
             $cover_path = Storage::disk('public')->putFileAs('images/academies/covers', $cover, $cover_name);
             $academy->cover = $cover_name;
         }
 
-        if($request->hasFile('logo')) {
-            if($academy->logo && ($academy->logo !== 'default_logo.png')){
+        if ($request->hasFile('logo')) {
+            if ($academy->logo && ($academy->logo !== 'default_logo.png')) {
                 Storage::disk('public')->delete($academy->logo);
-            };
+            }
 
             $logo = $validated['logo'];
 
-            $logo_name = uniqid() . '.' . $logo->getClientOriginalExtension();
+            $logo_name = uniqid().'.'.$logo->getClientOriginalExtension();
             $logo_path = Storage::disk('public')->putFileAs('images/academies/logos', $logo, $logo_name);
             $academy->logo = $logo_name;
         }
 
-        if($request->name){ $academy->name = $request->name; }
-        if($request->slogan){  $academy->slogan = $request->slogan; }
-        if($request->address){  $academy->address = $request->address; }
+        if ($request->name) {
+            $academy->name = $request->name;
+        }
+        if ($request->slogan) {
+            $academy->slogan = $request->slogan;
+        }
+        if ($request->address) {
+            $academy->address = $request->address;
+        }
 
         $academy->update();
 
         return redirect()->back();
     }
-
 
     /**
      * Remove the specified resource from storage.
@@ -283,7 +285,7 @@ class AcademyController extends Controller
         ]);
 
         $academy->academySetting->update([
-            'auto_accept_members' => $validated['autoAcceptMember'] === 'true' ? true: false,
+            'auto_accept_members' => $validated['autoAcceptMember'] === 'true' ? true : false,
         ]);
 
         return redirect()->back();
@@ -308,13 +310,13 @@ class AcademyController extends Controller
             'logo' => 'required|image|mimes:jpg,jpeg,png,gif,svg',
         ]);
 
-        if($academy->logo && ($academy->logo !== 'default_logo.png')){
+        if ($academy->logo && ($academy->logo !== 'default_logo.png')) {
             Storage::disk('public')->delete($academy->logo);
-        };
+        }
 
         $logo = $validated['logo'];
 
-        $logo_name = uniqid() . '.' . $logo->getClientOriginalExtension();
+        $logo_name = uniqid().'.'.$logo->getClientOriginalExtension();
         $logo_path = Storage::disk('public')->putFileAs('images/academies/logos', $logo, $logo_name);
         $academy->logo = $logo_name;
 
@@ -329,13 +331,13 @@ class AcademyController extends Controller
             'cover' => 'required|image|mimes:jpg,jpeg,png,gif,svg',
         ]);
 
-        if($academy->cover && ($academy->cover !== 'default_cover.png')){
+        if ($academy->cover && ($academy->cover !== 'default_cover.png')) {
             Storage::disk('public')->delete($academy->cover);
-        };
+        }
 
         $cover = $validated['cover'];
 
-        $cover_name = uniqid() . '.' . $cover->getClientOriginalExtension();
+        $cover_name = uniqid().'.'.$cover->getClientOriginalExtension();
         $cover_path = Storage::disk('public')->putFileAs('images/academies/covers', $cover, $cover_name);
         $academy->cover = $cover_name;
 
@@ -389,28 +391,30 @@ class AcademyController extends Controller
         ], 200);
     }
 
-    public function getMyAcademies(){
+    public function getMyAcademies()
+    {
         try {
             // $academiesAuthMember = AcademyMember::where('user_id', auth()->id())->get('academy_id');
 
             return response()->json([
                 'success' => true,
-                'academies'    => AcademyResource::collection(auth()->user()->academies()->paginate(10)),
+                'academies' => AcademyResource::collection(auth()->user()->academies()->paginate(10)),
             ], 200);
 
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ], 200);
         }
     }
 
-    public function getAuthMemberedAcademies(\App\Models\User $user){
+    public function getAuthMemberedAcademies(User $user)
+    {
         if (auth()->id() !== $user->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized access.'
+                'message' => 'Unauthorized access.',
             ], 403);
         }
 
@@ -418,50 +422,52 @@ class AcademyController extends Controller
             // Get academies where user is a member with pending or approved status
             // Status: 1 = Pending, 2 = Approved, 3 = Rejected, 4 = Invited, 5 = Suspended
             $memberships = AcademyMember::where('user_id', $user->id)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->whereIn('status', [1, 2, 'pending', 'accepted', 'approved']);
                 })
                 ->get(['academy_id', 'status', 'role']);
 
             $academyIds = $memberships->pluck('academy_id');
-            
+
             // Get academies with pagination
             $academies = Academy::whereIn('id', $academyIds)->paginate(10);
-            
+
             // Map member status to each academy
             $academiesWithStatus = $academies->getCollection()->map(function ($academy) use ($memberships) {
                 $membership = $memberships->firstWhere('academy_id', $academy->id);
                 $academy->memberStatus = $membership ? $membership->status : null;
                 $academy->memberRole = $membership ? $membership->role : null;
+
                 return $academy;
             });
-            
+
             $academies->setCollection($academiesWithStatus);
 
             return response()->json([
-                'success'       => true,
-                'academies'     => AcademyResource::collection($academies),
+                'success' => true,
+                'academies' => AcademyResource::collection($academies),
             ], 200);
 
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ], 200);
         }
     }
 
-    public function getAllAcademies(){
+    public function getAllAcademies()
+    {
         try {
             return response()->json([
-                'success'       => true,
-                'academies'     => AcademyResource::collection(Academy::paginate(10)),
+                'success' => true,
+                'academies' => AcademyResource::collection(Academy::paginate(10)),
             ], 200);
 
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ], 200);
         }
     }
@@ -477,11 +483,11 @@ class AcademyController extends Controller
                 ->where('user_id', auth()->id())
                 ->with('academyRole')
                 ->first();
-                
-            if (!$member || !$member->hasPermission('settings.manage')) {
+
+            if (! $member || ! $member->hasPermission('settings.manage')) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์แก้ไขการตั้งค่าโรงเรียน'
+                    'message' => 'คุณไม่มีสิทธิ์แก้ไขการตั้งค่าโรงเรียน',
                 ], 403);
             }
         }
@@ -490,7 +496,7 @@ class AcademyController extends Controller
             // Update basic info
             $academy->fill($request->only([
                 'name', 'name_en', 'description', 'description_en',
-                'email', 'phone', 'website', 'address', 'province', 'country'
+                'email', 'phone', 'website', 'address', 'province', 'country',
             ]));
 
             // Generate slug if name changed
@@ -501,7 +507,7 @@ class AcademyController extends Controller
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 $avatar = $request->file('avatar');
-                $avatar_name = uniqid() . '.' . $avatar->getClientOriginalExtension();
+                $avatar_name = uniqid().'.'.$avatar->getClientOriginalExtension();
                 $avatar_url = Storage::disk('public')->putFileAs('images/academies/logos', $avatar, $avatar_name);
                 $academy->logo = Storage::disk('public')->url($avatar_url);
             }
@@ -509,7 +515,7 @@ class AcademyController extends Controller
             // Handle cover upload
             if ($request->hasFile('cover')) {
                 $cover = $request->file('cover');
-                $cover_name = uniqid() . '.' . $cover->getClientOriginalExtension();
+                $cover_name = uniqid().'.'.$cover->getClientOriginalExtension();
                 $cover_url = Storage::disk('public')->putFileAs('images/academies/covers', $cover, $cover_name);
                 $academy->cover = Storage::disk('public')->url($cover_url);
             }
@@ -549,7 +555,7 @@ class AcademyController extends Controller
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ], 500);
         }
     }

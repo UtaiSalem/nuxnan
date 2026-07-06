@@ -72,7 +72,7 @@ class PointRule extends Model
      */
     public function isActiveNow(): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 
@@ -102,7 +102,7 @@ class PointRule extends Model
      */
     public function getActionTypeLabelAttribute(): string
     {
-        return match($this->action_type) {
+        return match ($this->action_type) {
             'earn' => 'การได้แต้ม',
             'spend' => 'การใช้แต้ม',
             default => $this->action_type,

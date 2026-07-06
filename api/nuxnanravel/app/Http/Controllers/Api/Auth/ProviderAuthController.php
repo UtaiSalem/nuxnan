@@ -4,13 +4,9 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Student;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Facades\Socialite;
 
 class ProviderAuthController extends Controller
@@ -39,12 +35,12 @@ class ProviderAuthController extends Controller
         } catch (\Exception $e) {
             Log::error('OAuth redirect error', [
                 'provider' => $provider,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect(
-                env('FRONTEND_URL', 'http://localhost:3000') .
-                '/?error=server_error&error_description=' . urlencode('Failed to initiate authentication')
+                env('FRONTEND_URL', 'http://localhost:3000').
+                '/?error=server_error&error_description='.urlencode('Failed to initiate authentication')
             );
         }
     }
@@ -61,17 +57,17 @@ class ProviderAuthController extends Controller
             $sessionState = session('oauth_state');
             $sessionProvider = session('oauth_provider');
 
-            if (!$state || !$sessionState || $state !== $sessionState) {
+            if (! $state || ! $sessionState || $state !== $sessionState) {
                 Log::warning('OAuth state mismatch detected', [
                     'provider' => $provider,
-                    'ip' => request()->ip()
+                    'ip' => request()->ip(),
                 ]);
 
                 session()->forget(['oauth_state', 'oauth_provider']);
 
                 return redirect(
-                    env('FRONTEND_URL', 'http://localhost:3000') .
-                    '/?error=invalid_state&error_description=' . urlencode('Security validation failed')
+                    env('FRONTEND_URL', 'http://localhost:3000').
+                    '/?error=invalid_state&error_description='.urlencode('Security validation failed')
                 );
             }
 
@@ -84,7 +80,7 @@ class ProviderAuthController extends Controller
             // Find or create user
             $user = User::where('email', $socialUser->getEmail())->first();
 
-            if (!$user) {
+            if (! $user) {
                 $user = User::create([
                     'name' => $socialUser->getName(),
                     'username' => User::generateUniqueUsername($socialUser->getName()),
@@ -102,7 +98,7 @@ class ProviderAuthController extends Controller
             }
 
             // Update provider info if not set
-            if (!$user->provider) {
+            if (! $user->provider) {
                 $user->update([
                     'provider' => $provider,
                     'provider_id' => $socialUser->getId(),
@@ -113,20 +109,20 @@ class ProviderAuthController extends Controller
             $token = auth()->login($user);
 
             return redirect(
-                env('FRONTEND_URL', 'http://localhost:3000') .
-                '/oauth/callback?token=' . $token .
-                '&reference_code=' . session('oauth_reference_code', '')
+                env('FRONTEND_URL', 'http://localhost:3000').
+                '/oauth/callback?token='.$token.
+                '&reference_code='.session('oauth_reference_code', '')
             );
 
         } catch (\Exception $e) {
             Log::error('OAuth callback error', [
                 'provider' => $provider,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect(
-                env('FRONTEND_URL', 'http://localhost:3000') .
-                '/?error=authentication_failed&error_description=' . urlencode($e->getMessage())
+                env('FRONTEND_URL', 'http://localhost:3000').
+                '/?error=authentication_failed&error_description='.urlencode($e->getMessage())
             );
         }
     }

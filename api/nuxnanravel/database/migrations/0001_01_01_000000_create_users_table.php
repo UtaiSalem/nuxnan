@@ -17,38 +17,38 @@ return new class extends Migration
             $table->string('email', 191)->unique();
             $table->string('phone_number')->nullable();
             $table->string('password')->nullable(); // Nullable for social login
-            
+
             // Referral System
             $table->string('suggester_code')->nullable();
             $table->string('personal_code', 50)->unique()->nullable();
             $table->string('reference_code', 50)->unique()->nullable();
             $table->integer('no_of_ref')->default(0);
-            
+
             // Wallet & Points
             $table->decimal('pp', 10, 2)->default(0);
             $table->decimal('wallet', 10, 2)->default(0);
-            
+
             // Profile & Verification
             $table->string('profile_photo_path')->nullable();
             $table->boolean('verified')->default(false);
             $table->timestamp('email_verified_at')->nullable();
             $table->timestamp('phone_verified_at')->nullable();
-            
+
             // Social Login IDs
             $table->string('google_id')->nullable();
             $table->string('facebook_id')->nullable();
             $table->string('twitter_id')->nullable();
             $table->string('linkedin_id')->nullable();
             $table->string('github_id')->nullable();
-            
+
             // Two Factor Authentication
             $table->text('two_factor_secret')->nullable();
             $table->text('two_factor_recovery_codes')->nullable();
             $table->timestamp('two_factor_confirmed_at')->nullable();
-            
+
             // Team Support
             $table->foreignId('current_team_id')->nullable();
-            
+
             $table->rememberToken();
             $table->timestamps();
         });

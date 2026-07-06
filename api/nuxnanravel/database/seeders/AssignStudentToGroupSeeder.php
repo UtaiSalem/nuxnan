@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Academy;
+use App\Models\AcademyGroup;
+use App\Models\StudentAcademicInfo;
 use Illuminate\Database\Seeder;
 
 class AssignStudentToGroupSeeder extends Seeder
@@ -13,17 +15,18 @@ class AssignStudentToGroupSeeder extends Seeder
     public function run(): void
     {
         // 1. Find the target Academy
-        $academy = \App\Models\Academy::where('name', 'LIKE', '%Plearnd Wittayathan%')
-                    ->orWhere('name', 'LIKE', '%เพลินวิทยาทาน%')
-                    ->first();
+        $academy = Academy::where('name', 'LIKE', '%Plearnd Wittayathan%')
+            ->orWhere('name', 'LIKE', '%เพลินวิทยาทาน%')
+            ->first();
 
-        if (!$academy) {
-            $this->command->error("Academy not found. Using ID 1.");
-            $academy = \App\Models\Academy::find(1);
+        if (! $academy) {
+            $this->command->error('Academy not found. Using ID 1.');
+            $academy = Academy::find(1);
         }
 
-        if (!$academy) {
-            $this->command->error("No Academy found.");
+        if (! $academy) {
+            $this->command->error('No Academy found.');
+
             return;
         }
 
@@ -31,37 +34,39 @@ class AssignStudentToGroupSeeder extends Seeder
 
         // 2. Fetch all valid Student Academic Infos (with valid classroom)
         // Adjust query to handle potential duplicates or non-current if needed, but 'is_current' is best if data exists
-        $academicInfos = \App\Models\StudentAcademicInfo::whereNotNull('classroom_full')
-                            ->where('classroom_full', '!=', '')
-                            ->with('student')
-                            ->get();
+        $academicInfos = StudentAcademicInfo::whereNotNull('classroom_full')
+            ->where('classroom_full', '!=', '')
+            ->with('student')
+            ->get();
 
         $count = 0;
         $skipped = 0;
 
         foreach ($academicInfos as $info) {
             $student = $info->student;
-            if (!$student) continue;
+            if (! $student) {
+                continue;
+            }
 
             // Find the group matches the classroom
-            $group = \App\Models\AcademyGroup::where('academy_id', $academy->id)
-                        ->where('name', $info->classroom_full)
-                        ->first();
+            $group = AcademyGroup::where('academy_id', $academy->id)
+                ->where('name', $info->classroom_full)
+                ->first();
 
             if ($group) {
                 // Check if already a member (either by user_id or student_id)
                 $query = \DB::table('academy_group_members')
-                            ->where('academy_group_id', $group->id);
-                
+                    ->where('academy_group_id', $group->id);
+
                 if ($student->user_id) {
                     $query->where('user_id', $student->user_id);
                 } else {
                     $query->where('student_id', $student->id);
                 }
-                
+
                 $exists = $query->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     \DB::table('academy_group_members')->insert([
                         'academy_group_id' => $group->id,
                         'user_id' => $student->user_id, // Can be null

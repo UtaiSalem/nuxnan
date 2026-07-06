@@ -23,7 +23,7 @@ return new class extends Migration
             $table->timestamp('activated_at')->nullable();
             $table->timestamp('expires_at');
             $table->timestamps();
-            
+
             $table->index(['student_id', 'status']);
         });
     }

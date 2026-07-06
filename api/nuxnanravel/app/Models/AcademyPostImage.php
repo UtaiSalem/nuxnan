@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\AcademyPost;
-use App\Models\AcademyPostImageComment;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AcademyPostImage extends Model
 {
@@ -26,8 +23,6 @@ class AcademyPostImage extends Model
 
     /**
      * Get all of the comments for the AcademyPostImage
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function image_comments(): HasMany
     {
@@ -36,13 +31,11 @@ class AcademyPostImage extends Model
 
     public function getFullUrlAttribute(): string
     {
-        return asset('storage/images/academies/posts/' . $this->filename);
+        return asset('storage/images/academies/posts/'.$this->filename);
     }
 
     /**
      * The postImageLikes that belong to the AcademyPostImage
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function postImageLikes(): BelongsToMany
     {
@@ -51,8 +44,6 @@ class AcademyPostImage extends Model
 
     /**
      * The postImageDislikes that belong to the AcademyPostImage
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function postImageDislikes(): BelongsToMany
     {

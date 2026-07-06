@@ -19,7 +19,7 @@ class StoreCategoryController extends Controller
     public function index(Academy $academy): JsonResponse
     {
         $store = AcademyStore::where('academy_id', $academy->id)->first();
-        if (!$store) {
+        if (! $store) {
             return response()->json(['success' => false, 'message' => 'ไม่พบร้านค้า'], 404);
         }
 
@@ -38,7 +38,7 @@ class StoreCategoryController extends Controller
                     'sort_order' => $category->sort_order,
                     'is_active' => $category->is_active,
                     'products_count' => $category->products()->count(),
-                    'children' => $category->children->map(fn($child) => [
+                    'children' => $category->children->map(fn ($child) => [
                         'id' => $child->id,
                         'name' => $child->name,
                         'slug' => $child->slug,
@@ -61,7 +61,7 @@ class StoreCategoryController extends Controller
     public function store(Request $request, Academy $academy): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -80,7 +80,7 @@ class StoreCategoryController extends Controller
             ->where('slug', $slug)->exists();
 
         if ($existingSlug) {
-            $slug .= '-' . Str::random(4);
+            $slug .= '-'.Str::random(4);
         }
 
         $category = StoreCategory::create([
@@ -96,7 +96,7 @@ class StoreCategoryController extends Controller
         return response()->json([
             'success' => true,
             'data' => $category,
-            'message' => 'สร้างหมวดหมู่เรียบร้อย'
+            'message' => 'สร้างหมวดหมู่เรียบร้อย',
         ], 201);
     }
 
@@ -106,7 +106,7 @@ class StoreCategoryController extends Controller
     public function update(Request $request, Academy $academy, StoreCategory $category): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -127,17 +127,17 @@ class StoreCategoryController extends Controller
                 ->where('id', '!=', $category->id)
                 ->exists();
             if ($existingSlug) {
-                $slug .= '-' . Str::random(4);
+                $slug .= '-'.Str::random(4);
             }
             $data['slug'] = $slug;
         }
 
-        $category->update(array_filter($data, fn($v) => $v !== null));
+        $category->update(array_filter($data, fn ($v) => $v !== null));
 
         return response()->json([
             'success' => true,
             'data' => $category->fresh(),
-            'message' => 'อัพเดทหมวดหมู่เรียบร้อย'
+            'message' => 'อัพเดทหมวดหมู่เรียบร้อย',
         ]);
     }
 
@@ -147,7 +147,7 @@ class StoreCategoryController extends Controller
     public function destroy(Academy $academy, StoreCategory $category): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -155,7 +155,7 @@ class StoreCategoryController extends Controller
         if ($category->products()->count() > 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถลบหมวดหมู่ที่มีสินค้าอยู่ได้ กรุณาย้ายสินค้าก่อน'
+                'message' => 'ไม่สามารถลบหมวดหมู่ที่มีสินค้าอยู่ได้ กรุณาย้ายสินค้าก่อน',
             ], 422);
         }
 
@@ -166,7 +166,7 @@ class StoreCategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบหมวดหมู่เรียบร้อย'
+            'message' => 'ลบหมวดหมู่เรียบร้อย',
         ]);
     }
 }

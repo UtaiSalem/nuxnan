@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Models\AcademyGroup;
 use App\Models\AssignmentAnswer;
 use App\Services\Gamification\ClassroomPointsService;
 
@@ -13,28 +14,28 @@ class AssignmentAnswerObserver
     {
         $user = $answer->user;
         $assignment = $answer->assignment;
-        if (!$user || !$assignment) {
+        if (! $user || ! $assignment) {
             return;
         }
 
         $lesson = $assignment->getLesson();
-        if (!$lesson) {
+        if (! $lesson) {
             return;
         }
 
         $course = $lesson->course;
-        if (!$course) {
+        if (! $course) {
             return;
         }
 
         $course->loadMissing('academy');
         $academy = $course->academy;
-        if (!$academy) {
+        if (! $academy) {
             return;
         }
 
         // Find student's classroom
-        $classroom = \App\Models\AcademyGroup::where('academy_id', $academy->id)
+        $classroom = AcademyGroup::where('academy_id', $academy->id)
             ->where('type', 'classroom')
             ->whereHas('members', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
@@ -43,8 +44,8 @@ class AssignmentAnswerObserver
 
         if ($classroom) {
             $isLate = $answer->late_submission ?? false;
-            $points = $isLate 
-                ? config('xp_rates.classroom.assignment.submitted_late', 2) 
+            $points = $isLate
+                ? config('xp_rates.classroom.assignment.submitted_late', 2)
                 : config('xp_rates.classroom.assignment.submitted_on_time', 5);
 
             $source = $isLate ? 'assignment.submitted_late' : 'assignment.submitted_on_time';
@@ -56,7 +57,7 @@ class AssignmentAnswerObserver
                 $user->id,
                 [
                     'assignment_id' => $assignment->id,
-                    'answer_id'     => $answer->id,
+                    'answer_id' => $answer->id,
                 ]
             );
         }

@@ -38,7 +38,9 @@ class Subject extends Model
 
     // Subject Types
     const TYPE_REQUIRED = 'required';
+
     const TYPE_ELECTIVE = 'elective';
+
     const TYPE_ACTIVITY = 'activity';
 
     // Subject Groups
@@ -93,14 +95,14 @@ class Subject extends Model
     // Accessors
     public function getDisplayNameAttribute(): string
     {
-        return $this->subject_code 
-            ? "{$this->subject_code} - {$this->name_th}" 
+        return $this->subject_code
+            ? "{$this->subject_code} - {$this->name_th}"
             : $this->name_th;
     }
 
     public function getSubjectTypeTextAttribute(): string
     {
-        return match($this->subject_type) {
+        return match ($this->subject_type) {
             self::TYPE_REQUIRED => 'วิชาบังคับ',
             self::TYPE_ELECTIVE => 'วิชาเลือก',
             self::TYPE_ACTIVITY => 'กิจกรรมพัฒนาผู้เรียน',

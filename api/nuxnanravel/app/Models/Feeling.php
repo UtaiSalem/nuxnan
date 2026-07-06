@@ -56,6 +56,7 @@ class Feeling extends Model
         if (app()->getLocale() === 'th' && $this->name_th) {
             return $this->name_th;
         }
+
         return $this->name;
     }
 }

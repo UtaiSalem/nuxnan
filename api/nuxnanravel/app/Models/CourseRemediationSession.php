@@ -47,17 +47,26 @@ class CourseRemediationSession extends Model
 
     // Remediation types
     const TYPE_EXAM_RETAKE = 'exam_retake';
+
     const TYPE_ASSIGNMENT = 'assignment';
+
     const TYPE_PROJECT = 'project';
+
     const TYPE_ATTENDANCE_MAKEUP = 'attendance_makeup';
+
     const TYPE_MIXED = 'mixed';
 
     // Status
     const STATUS_DRAFT = 'draft';
+
     const STATUS_OPEN = 'open';
+
     const STATUS_IN_PROGRESS = 'in_progress';
+
     const STATUS_GRADING = 'grading';
+
     const STATUS_COMPLETED = 'completed';
+
     const STATUS_CANCELLED = 'cancelled';
 
     /**
@@ -122,7 +131,7 @@ class CourseRemediationSession extends Model
             $currentCount = $this->enrollments()
                 ->whereNotIn('status', ['cancelled'])
                 ->count();
-            
+
             if ($currentCount >= $this->max_participants) {
                 return false;
             }
@@ -136,7 +145,7 @@ class CourseRemediationSession extends Model
      */
     public function getRemainingSlots(): ?int
     {
-        if (!$this->max_participants) {
+        if (! $this->max_participants) {
             return null;
         }
 
@@ -163,7 +172,7 @@ class CourseRemediationSession extends Model
         return $query->where('status', self::STATUS_OPEN)
             ->where(function ($q) {
                 $q->whereNull('registration_deadline')
-                  ->orWhere('registration_deadline', '>', now());
+                    ->orWhere('registration_deadline', '>', now());
             });
     }
 
@@ -172,7 +181,7 @@ class CourseRemediationSession extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->type) {
+        return match ($this->type) {
             self::TYPE_EXAM_RETAKE => 'สอบใหม่',
             self::TYPE_ASSIGNMENT => 'ส่งงานเพิ่ม',
             self::TYPE_PROJECT => 'ทำโปรเจค',
@@ -187,7 +196,7 @@ class CourseRemediationSession extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_DRAFT => 'ฉบับร่าง',
             self::STATUS_OPEN => 'เปิดรับสมัคร',
             self::STATUS_IN_PROGRESS => 'กำลังดำเนินการ',

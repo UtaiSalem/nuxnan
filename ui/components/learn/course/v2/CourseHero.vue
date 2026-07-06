@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 
 import CourseActionButton from './CourseActionButton.vue'
+import { useToast } from '~/composables/useToast'
 
 const props = defineProps({
   course: { type: Object, required: true },
@@ -18,6 +19,7 @@ const emit = defineEmits(['edit-name', 'refresh', 'request-member', 'purchase-co
 const config = useRuntimeConfig()
 const courseStore = useCourseStore()
 const api = useApi()
+const toast = useToast()
 
 // File inputs
 const coverInput = ref<HTMLInputElement | null>(null)
@@ -28,6 +30,29 @@ const coverPreview = ref<string | null>(null)
 const logoPreview = ref<string | null>(null)
 const isUpdatingCover = ref(false)
 const isUpdatingLogo = ref(false)
+
+function parseUploadError(error: any, label: string): string {
+  const data = error?.data
+  if (data?.errors) {
+    const firstField = Object.values(data.errors)[0]
+    if (Array.isArray(firstField) && firstField.length) {
+      const msg = firstField[0] as string
+      if (msg.includes('greater than')) {
+        const match = msg.match(/(\d+)\s*kilobytes/)
+        const mb = match ? Math.round(Number(match[1]) / 1024) : null
+        return mb
+          ? `${label}มีขนาดใหญ่เกินไป (สูงสุด ${mb} MB) กรุณาลดขนาดรูปแล้วลองใหม่`
+          : `${label}มีขนาดใหญ่เกินไป กรุณาลดขนาดรูปแล้วลองใหม่`
+      }
+      if (msg.includes('mimes') || msg.includes('image')) {
+        return `ไฟล์${label}ไม่ถูกต้อง รองรับเฉพาะ JPG, PNG, GIF, SVG`
+      }
+      return msg
+    }
+  }
+  if (data?.message) return data.message
+  return `อัปโหลด${label}ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง`
+}
 
 const coverUrl = computed(() => {
   if (coverPreview.value) return coverPreview.value
@@ -63,8 +88,10 @@ async function onCoverInputChange(event: Event) {
     const response = await api.post(`/api/courses/${props.course.id}/cover`, formData)
     if (response.cover) courseStore.updateCourse({ cover: response.cover })
     emit('refresh')
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to update cover:', error)
+    const msg = parseUploadError(error, 'รูปหน้าปก')
+    toast.error(msg)
     coverPreview.value = null
   } finally {
     isUpdatingCover.value = false
@@ -83,8 +110,10 @@ async function onLogoInputChange(event: Event) {
     const response = await api.post(`/api/courses/${props.course.id}/logo`, formData)
     if (response.logo) courseStore.updateCourse({ logo: response.logo })
     emit('refresh')
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to update logo:', error)
+    const msg = parseUploadError(error, 'โลโก้')
+    toast.error(msg)
     logoPreview.value = null
   } finally {
     isUpdatingLogo.value = false

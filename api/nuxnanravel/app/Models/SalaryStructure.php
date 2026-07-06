@@ -34,7 +34,9 @@ class SalaryStructure extends Model
 
     // Pay frequency constants
     const FREQUENCY_MONTHLY = 'monthly';
+
     const FREQUENCY_BI_WEEKLY = 'bi_weekly';
+
     const FREQUENCY_WEEKLY = 'weekly';
 
     // Relationships
@@ -51,13 +53,19 @@ class SalaryStructure extends Model
     // Methods
     public function getTotalAllowances(): float
     {
-        if (!$this->allowances) return 0;
+        if (! $this->allowances) {
+            return 0;
+        }
+
         return collect($this->allowances)->sum('amount');
     }
 
     public function getTotalDeductions(): float
     {
-        if (!$this->deductions) return 0;
+        if (! $this->deductions) {
+            return 0;
+        }
+
         return collect($this->deductions)->sum('amount');
     }
 

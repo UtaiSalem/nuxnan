@@ -24,13 +24,13 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->enum('status', ['pending', 'completed', 'failed', 'cancelled'])->default('completed');
             $table->timestamps();
-            
+
             // Indexes
             $table->index('user_id');
             $table->index('transaction_type');
             $table->index(['source_type', 'source_id']);
             $table->index('created_at');
-            
+
             // Foreign key
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });

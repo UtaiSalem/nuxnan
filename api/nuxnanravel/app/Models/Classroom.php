@@ -2,25 +2,21 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Support\Str;
-
+use Illuminate\Database\Eloquent\Relations\HasMany;
 // Related classroom management models
-use App\Models\ClassroomMember;
-use App\Models\ClassroomGroup;
-use App\Models\ClassroomInvitation;
-use App\Traits\Auditable;
+use Illuminate\Support\Str;
 
 /**
  * Classroom Model - ห้องเรียน
  */
 class Classroom extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'academy_id',
@@ -47,6 +43,7 @@ class Classroom extends Model
 
     // Status constants
     const STATUS_ACTIVE = 'active';
+
     const STATUS_ARCHIVED = 'archived';
 
     // ───── Boot ─────
@@ -226,6 +223,7 @@ class Classroom extends Model
         if (array_key_exists('student_count', $this->attributes)) {
             return (int) $this->attributes['student_count'];
         }
+
         return $this->classroomStudents()->active()->count();
     }
 
@@ -237,6 +235,7 @@ class Classroom extends Model
     public function getFullNameAttribute(): string
     {
         $yearName = $this->academic_year ?? $this->academicYear?->name ?? '';
+
         return "{$this->display_name} ปีการศึกษา {$yearName}";
     }
 
@@ -285,7 +284,7 @@ class Classroom extends Model
      */
     public function isFull(): bool
     {
-        if (!$this->capacity) {
+        if (! $this->capacity) {
             return false;
         }
 

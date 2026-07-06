@@ -18,14 +18,14 @@ return new class extends Migration
             $table->string('city')->nullable()->after('address');
             $table->string('country')->nullable()->after('city');
             $table->string('postal_code')->nullable()->after('country');
-            
+
             // Professional Information
             $table->string('job_title')->nullable()->after('postal_code');
             $table->string('company')->nullable()->after('job_title');
             $table->string('industry')->nullable()->after('company');
             $table->text('skills')->nullable()->after('industry');
             $table->string('experience_years')->nullable()->after('skills');
-            
+
             // Privacy Settings
             $table->boolean('show_email')->default(false)->after('experience_years');
             $table->boolean('show_phone')->default(false)->after('show_email');
@@ -45,10 +45,10 @@ return new class extends Migration
         Schema::table('user_profiles', function (Blueprint $table) {
             // Personal Information
             $table->dropColumn(['phone_number', 'address', 'city', 'country', 'postal_code']);
-            
+
             // Professional Information
             $table->dropColumn(['job_title', 'company', 'industry', 'skills', 'experience_years']);
-            
+
             // Privacy Settings
             $table->dropColumn(['show_email', 'show_phone', 'show_birthdate', 'show_location', 'allow_friend_requests', 'allow_messages', 'show_online_status']);
         });

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CourseMemberGradeSnapshot extends Model
 {
     protected $guarded = [];
-    
+
     protected $casts = [
         'breakdown_json' => 'array',
         'is_current' => 'boolean',

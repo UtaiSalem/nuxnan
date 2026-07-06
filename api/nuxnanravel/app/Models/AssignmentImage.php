@@ -2,10 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\Assignment;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AssignmentImage extends Model
 {
@@ -22,6 +21,6 @@ class AssignmentImage extends Model
 
     public function getFullUrlAttribute(): string
     {
-        return asset('storage/images/courses/assignments/' . $this->image_url);
+        return asset('storage/images/courses/assignments/'.$this->image_url);
     }
 }

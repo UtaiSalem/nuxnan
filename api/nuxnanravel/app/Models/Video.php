@@ -76,10 +76,10 @@ class Video extends Model
             if ($viewer->id === $ownerId) {
                 return $q;
             }
-            
+
             // Check if viewer is a friend of the owner
             $isFriend = $viewer->friends()->where('users.id', $ownerId)->exists();
-            
+
             if ($isFriend) {
                 // Friends can see friends-only and public videos
                 $q->whereIn('privacy_settings', [2, 3]);

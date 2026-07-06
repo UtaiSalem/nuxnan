@@ -20,15 +20,15 @@ return new class extends Migration
             $table->dateTime('completed_at')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
-            
+
             // Unique key
             $table->unique(['user_id', 'achievement_id']);
-            
+
             // Indexes
             $table->index('user_id');
             $table->index('achievement_id');
             $table->index('is_completed');
-            
+
             // Foreign keys
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('achievement_id')->references('id')->on('achievements')->onDelete('cascade');

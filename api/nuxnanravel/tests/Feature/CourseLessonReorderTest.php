@@ -13,8 +13,11 @@ class CourseLessonReorderTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
+
     protected $student;
+
     protected $course;
+
     protected $lessons;
 
     protected function setUp(): void
@@ -23,12 +26,12 @@ class CourseLessonReorderTest extends TestCase
 
         $this->admin = User::factory()->create();
         $this->student = User::factory()->create();
-        
+
         $this->course = Course::factory()->create(['user_id' => $this->admin->id]);
-        
+
         // Create some lessons
         $this->lessons = Lesson::factory()->count(3)->create([
-            'course_id' => $this->course->id
+            'course_id' => $this->course->id,
         ]);
     }
 
@@ -45,7 +48,7 @@ class CourseLessonReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/courses/{$this->course->id}/lessons/reorder", [
-                'lessons' => $newOrder
+                'lessons' => $newOrder,
             ]);
 
         $response->assertStatus(200)
@@ -65,7 +68,7 @@ class CourseLessonReorderTest extends TestCase
 
         $response = $this->actingAs($this->student, 'api')
             ->patchJson("/api/courses/{$this->course->id}/lessons/reorder", [
-                'lessons' => $newOrder
+                'lessons' => $newOrder,
             ]);
 
         $response->assertStatus(403);
@@ -79,7 +82,7 @@ class CourseLessonReorderTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/courses/{$this->course->id}/lessons/reorder", [
-                'lessons' => [$otherLesson->id]
+                'lessons' => [$otherLesson->id],
             ]);
 
         $response->assertStatus(422);
@@ -90,7 +93,7 @@ class CourseLessonReorderTest extends TestCase
     {
         $response = $this->actingAs($this->admin, 'api')
             ->patchJson("/api/courses/{$this->course->id}/lessons/reorder", [
-                'lessons' => []
+                'lessons' => [],
             ]);
 
         $response->assertStatus(422);
@@ -104,17 +107,17 @@ class CourseLessonReorderTest extends TestCase
 
         $this->actingAs($this->admin, 'api')
             ->patchJson("/api/courses/{$this->course->id}/lessons/reorder", [
-                'lessons' => $newOrder
+                'lessons' => $newOrder,
             ]);
 
         $response = $this->actingAs($this->admin, 'api')
             ->getJson("/api/courses/{$this->course->id}/lessons");
 
         $response->assertStatus(200);
-        
+
         $lessons = $response->json()['lessons'];
         $returnedIds = collect(isset($lessons['data']) ? $lessons['data'] : $lessons)->pluck('id')->toArray();
-        
+
         // Check if the order matches the newOrder
         $this->assertEquals($newOrder, $returnedIds);
     }

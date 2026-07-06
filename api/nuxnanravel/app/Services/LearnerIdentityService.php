@@ -2,27 +2,23 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Course;
-use App\Models\CourseMember;
+use App\Models\AcademicYear;
 use App\Models\AcademyMember;
 use App\Models\ClassroomStudent;
-use App\Models\AcademicYear;
+use App\Models\Course;
+use App\Models\CourseMember;
 use App\Models\Student;
+use App\Models\User;
 
 class LearnerIdentityService
 {
     /**
      * Resolve effective identity for a user in a course
-     * 
+     *
      * Fallback Chain:
      * - Name: course_member.member_name -> user.name
      * - Code: course_member.member_code -> academy_member.member_code
      * - Order: course_member.order_number -> classroom_student.student_number
-     * 
-     * @param User $user
-     * @param Course $course
-     * @return array
      */
     public function resolve(User $user, Course $course): array
     {
@@ -49,15 +45,15 @@ class LearnerIdentityService
             $academyMember = AcademyMember::where('academy_id', $course->academy_id)
                 ->where('user_id', $user->id)
                 ->first();
-            
-            if ($academyMember && !empty($academyMember->member_code)) {
+
+            if ($academyMember && ! empty($academyMember->member_code)) {
                 $identity['member_code'] = $academyMember->member_code;
                 if ($identity['source'] === 'user') {
                     $identity['source'] = 'academy';
                 }
             }
-        } elseif (!empty($identity['member_code']) && $identity['source'] === 'user') {
-             $identity['source'] = 'course_override';
+        } elseif (! empty($identity['member_code']) && $identity['source'] === 'user') {
+            $identity['source'] = 'course_override';
         }
 
         // 3. Resolve Classroom-level data (order_number)
@@ -76,7 +72,7 @@ class LearnerIdentityService
                         ->where('academic_year_id', $currentYear->id)
                         ->first();
 
-                    if ($classroomStudent && !empty($classroomStudent->student_number)) {
+                    if ($classroomStudent && ! empty($classroomStudent->student_number)) {
                         $identity['order_number'] = $classroomStudent->student_number;
                         if ($identity['source'] === 'user' || $identity['source'] === 'academy') {
                             $identity['source'] = 'classroom';
@@ -84,7 +80,7 @@ class LearnerIdentityService
                     }
                 }
             }
-        } elseif (!empty($identity['order_number']) && $identity['source'] !== 'course_override') {
+        } elseif (! empty($identity['order_number']) && $identity['source'] !== 'course_override') {
             $identity['source'] = 'course_override';
         }
 
@@ -93,9 +89,6 @@ class LearnerIdentityService
 
     /**
      * Auto-populate course member identity fields if they are empty
-     * 
-     * @param CourseMember $member
-     * @return void
      */
     public function autoPopulate(CourseMember $member): void
     {

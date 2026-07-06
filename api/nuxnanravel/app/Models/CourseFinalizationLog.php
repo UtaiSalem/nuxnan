@@ -29,11 +29,17 @@ class CourseFinalizationLog extends Model
 
     // Actions
     const ACTION_START_GRADING = 'start_grading';
+
     const ACTION_PUBLISH_DRAFT = 'publish_draft_grades';
+
     const ACTION_FINALIZE = 'finalize_grades';
+
     const ACTION_OPEN_REMEDIATION = 'open_remediation';
+
     const ACTION_CLOSE_REMEDIATION = 'close_remediation';
+
     const ACTION_REOPEN = 'reopen_grading';
+
     const ACTION_ARCHIVE = 'archive_course';
 
     /**
@@ -65,7 +71,7 @@ class CourseFinalizationLog extends Model
      */
     public function getActionLabelAttribute(): string
     {
-        return match($this->action) {
+        return match ($this->action) {
             self::ACTION_START_GRADING => 'เริ่มช่วงให้เกรด',
             self::ACTION_PUBLISH_DRAFT => 'ประกาศเกรดเบื้องต้น',
             self::ACTION_FINALIZE => 'ยืนยันเกรดสุดท้าย',

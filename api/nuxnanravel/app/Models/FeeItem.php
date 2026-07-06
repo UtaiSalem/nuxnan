@@ -34,13 +34,21 @@ class FeeItem extends Model
 
     // Fee types
     const TYPE_TUITION = 'tuition';
+
     const TYPE_REGISTRATION = 'registration';
+
     const TYPE_ACTIVITY = 'activity';
+
     const TYPE_TRANSPORT = 'transport';
+
     const TYPE_MEAL = 'meal';
+
     const TYPE_UNIFORM = 'uniform';
+
     const TYPE_BOOK = 'book';
+
     const TYPE_INSURANCE = 'insurance';
+
     const TYPE_OTHER = 'other';
 
     const TYPES = [

@@ -1,13 +1,14 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\PointsController;
-use App\Http\Controllers\Api\WalletController;
-use App\Http\Controllers\Api\GamificationController;
-use App\Http\Controllers\Api\RewardController;
-use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\AdminPointsController;
 use App\Http\Controllers\Api\AdminWalletController;
+use App\Http\Controllers\Api\FollowController;
+use App\Http\Controllers\Api\GamificationController;
+use App\Http\Controllers\Api\PointsController;
+use App\Http\Controllers\Api\RewardController;
+use App\Http\Controllers\Api\UserUsageEventController;
+use App\Http\Controllers\Api\WalletController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,7 +82,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // Usage Event Routes
-    Route::post('/usage-events', [\App\Http\Controllers\Api\UserUsageEventController::class, 'store']);
+    Route::post('/usage-events', [UserUsageEventController::class, 'store']);
 
     // Follower Routes
     Route::prefix('follow')->group(function () {
@@ -100,7 +101,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/redeem', [RewardController::class, 'redeem']);
         Route::get('/{id}', [RewardController::class, 'show']);
         Route::post('/{id}/claim', [RewardController::class, 'claim']);
-        
+
         // Admin routes
         Route::middleware('role:admin')->group(function () {
             Route::post('/', [RewardController::class, 'store']);

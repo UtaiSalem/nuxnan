@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\PointRule;
 use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Services\PointsService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PointsController extends Controller
@@ -26,7 +27,7 @@ class PointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -56,7 +57,7 @@ class PointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -105,7 +106,7 @@ class PointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -158,7 +159,7 @@ class PointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -183,7 +184,7 @@ class PointsController extends Controller
                 $validated['metadata'] ?? null
             );
 
-            if (!$result) {
+            if (! $result) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Insufficient points',
@@ -214,7 +215,7 @@ class PointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -262,7 +263,7 @@ class PointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -270,7 +271,7 @@ class PointsController extends Controller
         }
 
         $validated = $request->validate([
-            'recipient_id' => 'required|integer|exists:users,id|different:' . $user->id,
+            'recipient_id' => 'required|integer|exists:users,id|different:'.$user->id,
             'amount' => 'required|numeric|min:0.01',
             'message' => 'nullable|string|max:255',
             'metadata' => 'nullable|array',
@@ -278,7 +279,7 @@ class PointsController extends Controller
 
         try {
             $toUser = User::find($validated['recipient_id']);
-            if (!$toUser) {
+            if (! $toUser) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Recipient not found',
@@ -292,7 +293,7 @@ class PointsController extends Controller
                 $validated['message'] ?? null
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -323,7 +324,7 @@ class PointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -338,7 +339,7 @@ class PointsController extends Controller
         try {
             $result = $this->pointsService->convertPointsToWallet($user, $validated['points']);
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -371,7 +372,7 @@ class PointsController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not authenticated',
@@ -411,11 +412,11 @@ class PointsController extends Controller
         // Transform transactions to include sender/receiver info for transfers
         $transformedTransactions = collect($transactions->items())->map(function ($tx) use ($user) {
             $txArray = $tx->toArray();
-            
+
             // For transfer transactions, include sender and receiver info
             if (in_array($tx->transaction_type, ['transfer_in', 'transfer_out']) && $tx->source_id) {
                 $relatedUser = User::find($tx->source_id);
-                
+
                 if ($tx->transaction_type === 'transfer_in') {
                     // User received points - sender is related user, receiver is current user
                     $txArray['sender'] = $relatedUser ? [
@@ -442,7 +443,7 @@ class PointsController extends Controller
                     ] : null;
                 }
             }
-            
+
             return $txArray;
         });
 
@@ -463,7 +464,7 @@ class PointsController extends Controller
      */
     private function getUiAvatarUrl(string $name): string
     {
-        return 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=random&color=fff';
+        return 'https://ui-avatars.com/api/?name='.urlencode($name).'&background=random&color=fff';
     }
 
     /**
@@ -471,7 +472,7 @@ class PointsController extends Controller
      */
     public function rules(Request $request): JsonResponse
     {
-        $query = \App\Models\PointRule::active();
+        $query = PointRule::active();
 
         // Filter by action type
         if ($request->has('action_type') && $request->action_type) {

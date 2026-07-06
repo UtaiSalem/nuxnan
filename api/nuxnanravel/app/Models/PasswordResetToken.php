@@ -13,10 +13,10 @@ class PasswordResetToken extends Model
 
     protected $fillable = [
         'email',
-        'token'
+        'token',
     ];
 
     protected $casts = [
-        
+
     ];
 }

@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons\questions;
 
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\questions\QuestionResource;
 use App\Models\Lesson;
 use App\Models\Question;
+use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\questions\QuestionResource;
 
-class LessonQuestionController extends \App\Http\Controllers\Controller
+class LessonQuestionController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -16,6 +18,7 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
     public function index(Lesson $lesson)
     {
         $questions = $lesson->questions()->with(['options', 'images'])->get();
+
         return QuestionResource::collection($questions);
     }
 
@@ -31,13 +34,13 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
         ]);
 
         if ($lesson->course) {
-            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
+            app(CourseScoreService::class)->syncCourseTotalScore($lesson->course);
         }
 
         if ($request->filled('options')) {
             foreach ($request->options as $index => $optionData) {
                 if (is_array($optionData)) {
-                     $newOption = $question->options()->create([
+                    $newOption = $question->options()->create([
                         'text' => $optionData['text'] ?? '',
                         'is_correct' => filter_var($optionData['is_correct'] ?? false, FILTER_VALIDATE_BOOLEAN),
                         'explanation' => $optionData['explanation'] ?? null,
@@ -45,7 +48,7 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
 
                     if ($request->hasFile("options.$index.image")) {
                         $image = $request->file("options.$index.image");
-                        $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                        $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                         // Correct path: lessons/questions/options
                         $image_path = Storage::disk('public')->putFileAs('images/courses/lessons/questions/options', $image, $fileName);
                         $newOption->images()->create([
@@ -56,10 +59,10 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
             }
         }
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 // Correct path: lessons/questions
                 $image_path = Storage::disk('public')->putFileAs('images/courses/lessons/questions', $image, $fileName);
                 $question->images()->create([
@@ -70,7 +73,7 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'success' => true,
-            'question' => new QuestionResource($question->load('options', 'images'))
+            'question' => new QuestionResource($question->load('options', 'images')),
         ]);
     }
 
@@ -90,7 +93,7 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
         // Sync Options
         if ($request->filled('options')) {
             $processedIds = [];
-            
+
             foreach ($request->options as $index => $optionData) {
                 if (isset($optionData['id']) && $optionData['id']) {
                     // Update
@@ -106,9 +109,9 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
                         // Check for new image
                         if ($request->hasFile("options.$index.image")) {
                             // Delete old image if needed (not implemented here)
-                            
+
                             $image = $request->file("options.$index.image");
-                            $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                            $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                             $image_path = Storage::disk('public')->putFileAs('images/courses/lessons/questions/options', $image, $fileName);
                             $option->images()->create([
                                 'filename' => $fileName,
@@ -126,7 +129,7 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
 
                     if ($request->hasFile("options.$index.image")) {
                         $image = $request->file("options.$index.image");
-                        $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                        $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                         $image_path = Storage::disk('public')->putFileAs('images/courses/lessons/questions/options', $image, $fileName);
                         $newOption->images()->create([
                             'filename' => $fileName,
@@ -134,45 +137,45 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
                     }
                 }
             }
-            
+
             // Delete removed options
             $question->options()->whereNotIn('id', $processedIds)->delete();
         }
 
         // Handle new images
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_path = Storage::disk('public')->putFileAs('images/courses/lessons/questions', $image, $fileName);
                 $question->images()->create([
                     'filename' => $fileName,
                 ]);
             }
         }
-        
+
         // Handle deleted images
         if ($request->filled('deleted_images')) {
-             foreach ($request->deleted_images as $imgId) {
-                 $img = $question->images()->find($imgId);
-                 if ($img) {
-                     $path = 'images/courses/lessons/questions/' . $img->filename;
-                     \Log::info('Attempting to delete image: ' . $img->id . ' path: ' . $path);
-                     
-                     if (Storage::disk('public')->exists($path)) {
-                          \Log::info('File exists, deleting...');
-                          Storage::disk('public')->delete($path);
-                     } else {
-                          \Log::warning('File not found at path: ' . $path);
-                     }
-                     $img->delete();
-                 }
-             }
+            foreach ($request->deleted_images as $imgId) {
+                $img = $question->images()->find($imgId);
+                if ($img) {
+                    $path = 'images/courses/lessons/questions/'.$img->filename;
+                    \Log::info('Attempting to delete image: '.$img->id.' path: '.$path);
+
+                    if (Storage::disk('public')->exists($path)) {
+                        \Log::info('File exists, deleting...');
+                        Storage::disk('public')->delete($path);
+                    } else {
+                        \Log::warning('File not found at path: '.$path);
+                    }
+                    $img->delete();
+                }
+            }
         }
 
         return response()->json([
             'success' => true,
-            'question' => new QuestionResource($question->load('options', 'images'))
+            'question' => new QuestionResource($question->load('options', 'images')),
         ]);
     }
 
@@ -185,8 +188,8 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
             // 1. Delete Question Images
             if ($question->images) {
                 foreach ($question->images as $image) {
-                    if (!empty($image->filename)) {
-                        $path = 'images/courses/lessons/questions/' . $image->filename;
+                    if (! empty($image->filename)) {
+                        $path = 'images/courses/lessons/questions/'.$image->filename;
                         if (Storage::disk('public')->exists($path)) {
                             Storage::disk('public')->delete($path);
                         }
@@ -194,14 +197,14 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
                     $image->delete();
                 }
             }
-            
+
             // 2. Delete Options and Option Images
             if ($question->options) {
                 foreach ($question->options as $option) {
                     if ($option->images) {
                         foreach ($option->images as $image) {
-                            if (!empty($image->filename)) {
-                                $path = 'images/courses/lessons/questions/options/' . $image->filename;
+                            if (! empty($image->filename)) {
+                                $path = 'images/courses/lessons/questions/options/'.$image->filename;
                                 if (Storage::disk('public')->exists($path)) {
                                     Storage::disk('public')->delete($path);
                                 }
@@ -215,20 +218,21 @@ class LessonQuestionController extends \App\Http\Controllers\Controller
 
             // 3. Update Course Score (Safely)
             if ($lesson->course) {
-                app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
+                app(CourseScoreService::class)->syncCourseTotalScore($lesson->course);
             }
 
             // 4. Delete the Question itself
             $question->delete();
-            
+
             return response()->json(['success' => true]);
 
         } catch (\Exception $e) {
-            \Log::error('Error deleting question ID ' . $question->id . ': ' . $e->getMessage());
+            \Log::error('Error deleting question ID '.$question->id.': '.$e->getMessage());
+
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Failed to delete question. Please check server logs.',
-                'error' => $e->getMessage() 
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

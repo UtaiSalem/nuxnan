@@ -5,6 +5,7 @@ namespace App\Http\Resources\Learn\Course\info;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 use App\Http\Resources\UserResource;
+use App\Models\CourseInvitation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -153,7 +154,7 @@ class CourseResource extends JsonResource
                     : ['is_member' => false, 'status' => null, 'enrolled_at' => null];
             }),
             'pending_invitation' => $this->when(auth()->guard('api')->check(), function () {
-                return \App\Models\CourseInvitation::where('course_id', $this->id)
+                return CourseInvitation::where('course_id', $this->id)
                     ->where('invitee_id', auth()->guard('api')->id())
                     ->where('status', 'pending')
                     ->first();

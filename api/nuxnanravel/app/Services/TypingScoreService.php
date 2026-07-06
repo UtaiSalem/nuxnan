@@ -2,12 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\TypingSession;
 use App\Models\TypingAchievement;
+use App\Models\TypingSession;
 use App\Models\TypingUserAchievement;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class TypingScoreService
 {
@@ -17,7 +15,10 @@ class TypingScoreService
      */
     public function calculateWpm(int $correctChars, float $elapsedSeconds): int
     {
-        if ($elapsedSeconds <= 0) return 0;
+        if ($elapsedSeconds <= 0) {
+            return 0;
+        }
+
         return (int) round(($correctChars / 5) / ($elapsedSeconds / 60));
     }
 
@@ -26,7 +27,10 @@ class TypingScoreService
      */
     public function calculateAccuracy(int $correctChars, int $totalChars): float
     {
-        if ($totalChars <= 0) return 0.0;
+        if ($totalChars <= 0) {
+            return 0.0;
+        }
+
         return round(($correctChars / $totalChars) * 100, 2);
     }
 
@@ -36,23 +40,23 @@ class TypingScoreService
      */
     public function calculateScore(array $data): array
     {
-        $correctWords  = $data['correct_words'] ?? 0;
-        $wpm           = $data['wpm'] ?? 0;
-        $accuracy      = $data['accuracy'] ?? 0; // 0-100
-        $maxCombo      = $data['max_combo'] ?? 0;
-        $mistakes       = $data['mistakes'] ?? 0;
-        $difficulty    = $data['difficulty'] ?? 'normal';
+        $correctWords = $data['correct_words'] ?? 0;
+        $wpm = $data['wpm'] ?? 0;
+        $accuracy = $data['accuracy'] ?? 0; // 0-100
+        $maxCombo = $data['max_combo'] ?? 0;
+        $mistakes = $data['mistakes'] ?? 0;
+        $difficulty = $data['difficulty'] ?? 'normal';
 
         // Base Multiplier
-        $diffMultiplier = match($difficulty) {
+        $diffMultiplier = match ($difficulty) {
             'beginner' => 1.0,
-            'easy'     => 1.2,
-            'normal'   => 1.5,
-            'hard'     => 2.0,
-            'expert'   => 3.0,
-            default    => 1.0,
+            'easy' => 1.2,
+            'normal' => 1.5,
+            'hard' => 2.0,
+            'expert' => 3.0,
+            default => 1.0,
         };
-        
+
         $base = $correctWords * 10 * $diffMultiplier;
 
         // Speed Bonus: +2 pts per WPM over 20
@@ -62,12 +66,12 @@ class TypingScoreService
         $comboBonus = $maxCombo >= 5 ? (int) ($maxCombo * $maxCombo * 0.5) : 0;
 
         // Accuracy Bonus
-        $accuracyBonus = match(true) {
+        $accuracyBonus = match (true) {
             $accuracy >= 100 => 200,
-            $accuracy >= 95  => 100,
-            $accuracy >= 90  => 50,
-            $accuracy >= 80  => 20,
-            default          => 0,
+            $accuracy >= 95 => 100,
+            $accuracy >= 90 => 50,
+            $accuracy >= 80 => 20,
+            default => 0,
         };
 
         // Mistake Penalty
@@ -76,11 +80,11 @@ class TypingScoreService
         $total = (int) max(0, $base + $speedBonus + $comboBonus + $accuracyBonus - $penalty);
 
         return [
-            'score'          => $total,
-            'speed_bonus'    => (int) $speedBonus,
-            'combo_bonus'    => $comboBonus,
+            'score' => $total,
+            'speed_bonus' => (int) $speedBonus,
+            'combo_bonus' => $comboBonus,
             'accuracy_bonus' => $accuracyBonus,
-            'penalty'        => $penalty,
+            'penalty' => $penalty,
         ];
     }
 
@@ -89,18 +93,18 @@ class TypingScoreService
      */
     public function calculateXp(int $score, int $wpm, float $accuracy, string $difficulty): int
     {
-        $base = match($difficulty) {
+        $base = match ($difficulty) {
             'beginner' => 5,
-            'easy'     => 10,
-            'normal'   => 20,
-            'hard'     => 35,
-            'expert'   => 50,
-            default    => 10,
+            'easy' => 10,
+            'normal' => 20,
+            'hard' => 35,
+            'expert' => 50,
+            default => 10,
         };
-        
+
         // Multiplier based on accuracy and speed
         $multiplier = min(($accuracy / 100) * max(1, $wpm / 30), 3.0);
-        
+
         return max(3, (int) ($base * $multiplier));
     }
 
@@ -115,31 +119,35 @@ class TypingScoreService
         foreach ($achievements as $achievement) {
             // ตรวจว่าได้ไปแล้วหรือยัง
             $alreadyEarned = TypingUserAchievement::where([
-                'user_id'        => $user->id,
+                'user_id' => $user->id,
                 'achievement_id' => $achievement->id,
             ])->exists();
 
-            if ($alreadyEarned) continue;
+            if ($alreadyEarned) {
+                continue;
+            }
 
             $condition = $achievement->condition; // assuming it's casted to array in Model
-            if (is_string($condition)) $condition = json_decode($condition, true);
+            if (is_string($condition)) {
+                $condition = json_decode($condition, true);
+            }
 
-            $met = match($condition['type'] ?? '') {
-                'wpm'         => $session->wpm >= $condition['value'],
-                'accuracy'    => $session->accuracy >= $condition['value'],
-                'combo'       => $session->max_combo >= $condition['value'],
-                'score'       => $session->score >= $condition['value'],
-                'first_game'  => true,
+            $met = match ($condition['type'] ?? '') {
+                'wpm' => $session->wpm >= $condition['value'],
+                'accuracy' => $session->accuracy >= $condition['value'],
+                'combo' => $session->max_combo >= $condition['value'],
+                'score' => $session->score >= $condition['value'],
+                'first_game' => true,
                 'session_count' => TypingSession::where('user_id', $user->id)->count() >= ($condition['value'] ?? 1),
-                default       => false,
+                default => false,
             };
 
             if ($met) {
                 TypingUserAchievement::create([
-                    'user_id'        => $user->id,
+                    'user_id' => $user->id,
                     'achievement_id' => $achievement->id,
-                    'session_id'     => $session->id,
-                    'earned_at'      => now(),
+                    'session_id' => $session->id,
+                    'earned_at' => now(),
                 ]);
 
                 if ($achievement->xp_reward > 0) {

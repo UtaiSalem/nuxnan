@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Api\Learn\Course\lessons\questions;
 
 use App\Http\Controllers\Controller;
+use App\Models\Course;
+use App\Models\CourseMember;
 use App\Models\Lesson;
 use App\Models\LessonAnswerQuestion;
 use App\Models\Question;
 use App\Models\QuestionOption;
-use Illuminate\Http\Request;
-
 use App\Services\ContentVisibilityService;
+use App\Services\CourseScoreService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class LessonAnswerQuestionController extends Controller
 {
@@ -25,7 +28,7 @@ class LessonAnswerQuestionController extends Controller
         $user = auth()->user();
 
         // Guard for students
-        if (!$lesson->course->isAdmin($user)) {
+        if (! $lesson->course->isAdmin($user)) {
             $this->visibility->assertVisibleOrFail($lesson, $user, 403);
         }
 
@@ -34,9 +37,9 @@ class LessonAnswerQuestionController extends Controller
         ]);
 
         // Lifecycle guard: block lesson question answers after the course ends.
-        $course = \App\Models\Course::find($lesson->course_id);
+        $course = Course::find($lesson->course_id);
         if ($course) {
-            $gate = \Illuminate\Support\Facades\Gate::inspect('submitLessonQuestion', $course);
+            $gate = Gate::inspect('submitLessonQuestion', $course);
             if ($gate->denied()) {
                 return response()->json([
                     'success' => false,
@@ -49,7 +52,7 @@ class LessonAnswerQuestionController extends Controller
         // Completion requirement guard
         if ($lesson->require_completion_before_exercises) {
             $isCourseAdmin = $course ? $course->isAdmin(auth()->user()) : false;
-            if (!$lesson->canUserDoExercises(auth()->user(), $isCourseAdmin)) {
+            if (! $lesson->canUserDoExercises(auth()->user(), $isCourseAdmin)) {
                 return response()->json([
                     'success' => false,
                     'code' => 'LESSON_COMPLETION_REQUIRED',
@@ -80,12 +83,12 @@ class LessonAnswerQuestionController extends Controller
 
         // Update CourseMember achieved score
         $courseId = $lesson->course_id;
-        $courseMember = \App\Models\CourseMember::where('course_id', $courseId)
+        $courseMember = CourseMember::where('course_id', $courseId)
             ->where('user_id', auth()->id())
             ->first();
 
         if ($courseMember) {
-            app(\App\Services\CourseScoreService::class)->recompute($courseMember);
+            app(CourseScoreService::class)->recompute($courseMember);
         }
 
         return response()->json([

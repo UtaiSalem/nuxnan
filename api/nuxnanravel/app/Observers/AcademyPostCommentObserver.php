@@ -12,12 +12,12 @@ class AcademyPostCommentObserver
     public function created(AcademyPostComment $comment): void
     {
         $post = $comment->post;
-        if (!$post) {
+        if (! $post) {
             return;
         }
 
         $post->loadMissing('academy');
-        if (!$post->academy || !$post->user_id) {
+        if (! $post->academy || ! $post->user_id) {
             return;
         }
 
@@ -29,8 +29,8 @@ class AcademyPostCommentObserver
             $post->user_id,
             $post->posted_as_group_id,
             [
-                'post_id'      => $post->id,
-                'comment_id'   => $comment->id,
+                'post_id' => $post->id,
+                'comment_id' => $comment->id,
                 'commenter_id' => $comment->user_id,
             ]
         );

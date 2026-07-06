@@ -339,8 +339,8 @@ const studentThaiPrefixName = (index) => {
                                 <!-- Photo Section -->
                                 <div class="w-[30%] h-[80%] rounded-xl overflow-hidden flex-shrink-0 mt-4">
                                     <!-- Photo Display -->
-                                    <div v-if="student.profile_image" class="w-full h-full relative ">
-                                        <img :src="`/storage/images/students/${student.class_level}/${student.class_section}/${student.profile_image}`"
+                                    <div v-if="student.profile_image_url" class="w-full h-full relative ">
+                                        <img :src="student.profile_image_url"
                                             alt="Student Photo" class="w-full h-full object-fill rounded-xl" />
                                     </div>
                                     <!-- Default Avatar -->

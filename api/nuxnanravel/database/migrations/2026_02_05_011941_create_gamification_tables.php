@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('gamification_tables')) {
+        if (! Schema::hasTable('gamification_tables')) {
             Schema::create('gamification_tables', function (Blueprint $table) {
                 $table->id();
                 $table->timestamps();
             });
         }
 
-        if (!Schema::hasTable('badges')) {
+        if (! Schema::hasTable('badges')) {
             Schema::create('badges', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
@@ -30,14 +30,14 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('user_badges')) {
+        if (! Schema::hasTable('user_badges')) {
             Schema::create('user_badges', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->onDelete('cascade');
                 $table->foreignId('badge_id')->constrained()->onDelete('cascade');
                 $table->timestamp('unlocked_at')->useCurrent();
                 $table->timestamps();
-                
+
                 // Prevent duplicate badges for same user
                 $table->unique(['user_id', 'badge_id']);
             });

@@ -2,23 +2,23 @@
 
 namespace App\Services;
 
-use App\Models\Post;
-use App\Models\Activity;
-use App\Models\PostImage;
 use App\Enums\ActivityType;
+use App\Models\Activity;
 use App\Models\Poll;
-use App\Models\QuestionOption;
-use Illuminate\Http\UploadedFile;
+use App\Models\Post;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class PostService
 {
     protected MentionService $mentionService;
+
     protected LinkPreviewService $linkPreviewService;
+
     protected LocationService $locationService;
+
     protected TaggingService $taggingService;
+
     protected PostMediaService $mediaService;
 
     public function __construct(
@@ -42,7 +42,7 @@ class PostService
     {
         return DB::transaction(function () use ($data, $userId) {
             // Handle Poll Creation
-            if (!empty($data['is_poll']) && !empty($data['poll_title'])) {
+            if (! empty($data['is_poll']) && ! empty($data['poll_title'])) {
                 $pointsPool = (int) ($data['poll_points_pool'] ?? 0);
                 $maxVotes = (int) ($data['poll_max_votes'] ?? 100);
 
@@ -60,7 +60,7 @@ class PostService
 
                 // Deduct points from creator if they provided a pool
                 if ($pointsPool > 0) {
-                    $creator = \App\Models\User::find($userId);
+                    $creator = User::find($userId);
                     if ($creator && $creator->pp >= $pointsPool) {
                         $creator->decrement('pp', $pointsPool);
                     } else {
@@ -68,7 +68,7 @@ class PostService
                     }
                 }
 
-                if (!empty($data['poll_options'])) {
+                if (! empty($data['poll_options'])) {
                     foreach ($data['poll_options'] as $index => $optionText) {
                         if (trim($optionText)) {
                             $poll->options()->create([
@@ -78,7 +78,7 @@ class PostService
                         }
                     }
                 }
-                
+
                 $data['poll_id'] = $poll->id;
             }
 
@@ -97,47 +97,47 @@ class PostService
                 'status' => 1,
                 'hashtags' => $hashtags,
                 'post_type' => $postType,
-                
+
                 // Location (simple)
                 'location' => $data['location_name'] ?? null,
-                
+
                 // Feeling/Activity
                 'feeling' => $data['feeling'] ?? null,
                 'feeling_icon' => $data['feeling_icon'] ?? null,
                 'activity_type' => $data['activity_type'] ?? null,
                 'activity_text' => $data['activity_text'] ?? null,
-                
+
                 // Background/Theme (for text posts)
                 'background_color' => $data['background_color'] ?? null,
                 'background_gradient' => $data['background_gradient'] ?? null,
                 'background_image' => $data['background_image'] ?? null,
                 'text_color' => $data['text_color'] ?? null,
                 'font_size' => $data['font_size'] ?? 'medium',
-                
+
                 // Scheduling
                 'scheduled_at' => $data['scheduled_at'] ?? null,
-                'is_scheduled' => !empty($data['scheduled_at']),
+                'is_scheduled' => ! empty($data['scheduled_at']),
                 'is_published' => empty($data['scheduled_at']),
-                
+
                 // Options
                 'comments_disabled' => $data['comments_disabled'] ?? false,
                 'is_pinned' => $data['is_pinned'] ?? false,
-                
+
                 // Poll reference
                 'poll_id' => $data['poll_id'] ?? null,
             ]);
 
             // Upload images if provided
-            if (!empty($data['images'])) {
+            if (! empty($data['images'])) {
                 $this->mediaService->uploadImages(
-                    $post, 
+                    $post,
                     $data['images'],
                     $data['image_captions'] ?? null
                 );
             }
 
             // Save structured location if provided
-            if (!empty($data['location'])) {
+            if (! empty($data['location'])) {
                 $this->locationService->saveLocation($post, $data['location']);
             }
 
@@ -147,12 +147,12 @@ class PostService
             }
 
             // Tag users if provided
-            if (!empty($data['tagged_users'])) {
+            if (! empty($data['tagged_users'])) {
                 $this->taggingService->tagUsers($post, $data['tagged_users'], $userId);
             }
 
             // Generate link preview if content contains URL
-            if ($content && !$post->hasMedia()) {
+            if ($content && ! $post->hasMedia()) {
                 $this->linkPreviewService->extractAndSaveLinkPreview($post, $content);
             }
 
@@ -183,7 +183,7 @@ class PostService
         return DB::transaction(function () use ($post, $data) {
             $content = $data['content'] ?? $post->content;
             $hashtags = $this->extractHashtags($content);
-            
+
             // Track if content changed for edit marker
             $contentChanged = $content !== $post->content;
 
@@ -192,30 +192,30 @@ class PostService
                 'hashtags' => $hashtags,
                 'privacy_settings' => $data['privacy_settings'] ?? $post->privacy_settings,
                 'location' => $data['location_name'] ?? $post->location,
-                
+
                 // Feeling/Activity
                 'feeling' => $data['feeling'] ?? $post->feeling,
                 'feeling_icon' => $data['feeling_icon'] ?? $post->feeling_icon,
                 'activity_type' => $data['activity_type'] ?? $post->activity_type,
                 'activity_text' => $data['activity_text'] ?? $post->activity_text,
-                
+
                 // Background/Theme
                 'background_color' => $data['background_color'] ?? $post->background_color,
                 'background_gradient' => $data['background_gradient'] ?? $post->background_gradient,
                 'background_image' => $data['background_image'] ?? $post->background_image,
                 'text_color' => $data['text_color'] ?? $post->text_color,
                 'font_size' => $data['font_size'] ?? $post->font_size,
-                
+
                 // Options
                 'comments_disabled' => $data['comments_disabled'] ?? $post->comments_disabled,
-                
+
                 // Edit tracking
                 'is_edited' => $contentChanged ? true : $post->is_edited,
                 'edited_at' => $contentChanged ? now() : $post->edited_at,
             ]);
 
             // Upload new images if provided
-            if (!empty($data['images'])) {
+            if (! empty($data['images'])) {
                 $this->mediaService->uploadImages(
                     $post,
                     $data['images'],
@@ -243,7 +243,7 @@ class PostService
             }
 
             // Update link preview if no media
-            if ($content && !$post->hasMedia()) {
+            if ($content && ! $post->hasMedia()) {
                 $this->linkPreviewService->extractAndSaveLinkPreview($post, $content);
             }
 
@@ -306,7 +306,8 @@ class PostService
      */
     public function togglePin(Post $post): Post
     {
-        $post->update(['is_pinned' => !$post->is_pinned]);
+        $post->update(['is_pinned' => ! $post->is_pinned]);
+
         return $post;
     }
 
@@ -315,7 +316,8 @@ class PostService
      */
     public function toggleComments(Post $post): Post
     {
-        $post->update(['comments_disabled' => !$post->comments_disabled]);
+        $post->update(['comments_disabled' => ! $post->comments_disabled]);
+
         return $post;
     }
 
@@ -329,7 +331,7 @@ class PostService
             'is_scheduled' => true,
             'is_published' => false,
         ]);
-        
+
         return $post;
     }
 
@@ -342,7 +344,7 @@ class PostService
             'is_scheduled' => false,
             'is_published' => true,
         ]);
-        
+
         return $post;
     }
 
@@ -353,6 +355,7 @@ class PostService
     {
         $pattern = '/#(\w+)/u';
         preg_match_all($pattern, $content, $matches);
+
         return $matches[1] ?? [];
     }
 
@@ -361,23 +364,23 @@ class PostService
      */
     protected function determinePostType(array $data): string
     {
-        if (!empty($data['poll_id'])) {
+        if (! empty($data['poll_id'])) {
             return 'poll';
         }
-        
-        if (!empty($data['images'])) {
+
+        if (! empty($data['images'])) {
             return 'photo';
         }
-        
-        if (!empty($data['background_color']) || !empty($data['background_gradient'])) {
+
+        if (! empty($data['background_color']) || ! empty($data['background_gradient'])) {
             return 'status';
         }
-        
+
         $content = $data['content'] ?? '';
         if ($this->linkPreviewService->extractFirstUrl($content)) {
             return 'link';
         }
-        
+
         return 'text';
     }
 
@@ -386,13 +389,13 @@ class PostService
      */
     protected function createActivity(Post $post, ActivityType $type): Activity
     {
-        $activity = new Activity();
+        $activity = new Activity;
         $activity->user_id = $post->user_id;
         $activity->activity_type = $type->value;
         $activity->privacy_settings = $post->privacy_settings; // Sync privacy_settings from post
         $activity->activityable()->associate($post);
         $activity->save();
-        
+
         return $activity;
     }
 }

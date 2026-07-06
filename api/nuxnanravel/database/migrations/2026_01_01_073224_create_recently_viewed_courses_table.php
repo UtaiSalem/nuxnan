@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
-            
+
             // Unique index to prevent duplicate tracking per user/course
             // We'll update the 'updated_at' timestamp on view
             $table->unique(['user_id', 'course_id']);

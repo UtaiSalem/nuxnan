@@ -4,12 +4,13 @@ namespace App\Http\Controllers\Api\Learn\Course\scores;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\CourseMember;
 use App\Models\CourseExternalScore;
 use App\Models\CourseExternalScoreEntry;
+use App\Models\CourseMember;
 use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CourseExternalScoreController extends Controller
 {
@@ -25,7 +26,7 @@ class CourseExternalScoreController extends Controller
      */
     public function index(Course $course)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -40,7 +41,7 @@ class CourseExternalScoreController extends Controller
                     'title' => $score->title,
                     'description' => $score->description,
                     'category' => $score->category,
-                    'max_score' => (float)$score->max_score,
+                    'max_score' => (float) $score->max_score,
                     'group_id' => $score->group_id,
                     'group_name' => $score->group?->name,
                     'scored_at' => $score->scored_at?->format('Y-m-d'),
@@ -70,7 +71,7 @@ class CourseExternalScoreController extends Controller
      */
     public function store(Course $course, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -108,7 +109,7 @@ class CourseExternalScoreController extends Controller
      */
     public function show(Course $course, CourseExternalScore $externalScore)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -153,7 +154,7 @@ class CourseExternalScoreController extends Controller
                 'title' => $externalScore->title,
                 'description' => $externalScore->description,
                 'category' => $externalScore->category,
-                'max_score' => (float)$externalScore->max_score,
+                'max_score' => (float) $externalScore->max_score,
                 'group_id' => $externalScore->group_id,
                 'scored_at' => $externalScore->scored_at?->format('Y-m-d'),
                 'is_active' => $externalScore->is_active,
@@ -168,7 +169,7 @@ class CourseExternalScoreController extends Controller
      */
     public function update(Course $course, CourseExternalScore $externalScore, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -205,7 +206,7 @@ class CourseExternalScoreController extends Controller
      */
     public function destroy(Course $course, CourseExternalScore $externalScore)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -240,7 +241,7 @@ class CourseExternalScoreController extends Controller
      */
     public function saveEntries(Course $course, CourseExternalScore $externalScore, Request $request)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -251,7 +252,7 @@ class CourseExternalScoreController extends Controller
         $validated = $request->validate([
             'entries' => 'required|array',
             'entries.*.course_member_id' => 'required|exists:course_members,id',
-            'entries.*.score' => 'nullable|numeric|min:0|max:' . $externalScore->max_score,
+            'entries.*.score' => 'nullable|numeric|min:0|max:'.$externalScore->max_score,
             'entries.*.note' => 'nullable|string|max:500',
         ]);
 
@@ -305,7 +306,7 @@ class CourseExternalScoreController extends Controller
      */
     public function tableView(Course $course, $groupId = null)
     {
-        if (!$course->isAdmin(auth()->user())) {
+        if (! $course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -350,6 +351,7 @@ class CourseExternalScoreController extends Controller
             }
 
             $user = $member->user;
+
             return [
                 'id' => $member->id,
                 'user_id' => $member->user_id,
@@ -360,9 +362,9 @@ class CourseExternalScoreController extends Controller
                 'group_id' => $member->group_id,
                 'group' => $member->group ? ['id' => $member->group->id, 'name' => $member->group->name] : null,
                 'scores' => $scores,
-                'external_score_points' => (float)$member->external_score_points,
-                'bonus_points' => (float)$member->bonus_points,
-                'achieved_score' => (float)$member->achieved_score,
+                'external_score_points' => (float) $member->external_score_points,
+                'bonus_points' => (float) $member->bonus_points,
+                'achieved_score' => (float) $member->achieved_score,
             ];
         });
 
@@ -397,8 +399,8 @@ class CourseExternalScoreController extends Controller
 
         foreach ($uniqueIds as $memberId) {
             $totalExternal = CourseExternalScoreEntry::whereHas('externalScore', function ($q) use ($course) {
-                    $q->where('course_id', $course->id)->where('is_active', true);
-                })
+                $q->where('course_id', $course->id)->where('is_active', true);
+            })
                 ->where('course_member_id', $memberId)
                 ->sum('score');
 
@@ -438,7 +440,7 @@ class CourseExternalScoreController extends Controller
 
     private function getAvatarUrl($user): string
     {
-        if (!$user) {
+        if (! $user) {
             return 'https://ui-avatars.com/api/?name=User&color=7F9CF5&background=EBF4FF';
         }
 
@@ -446,9 +448,10 @@ class CourseExternalScoreController extends Controller
             if (filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
                 return $user->profile_photo_path;
             }
-            return url(\Illuminate\Support\Facades\Storage::url($user->profile_photo_path));
+
+            return url(Storage::url($user->profile_photo_path));
         }
 
-        return 'https://ui-avatars.com/api/?name=' . urlencode($user->name ?? 'User') . '&color=7F9CF5&background=EBF4FF';
+        return 'https://ui-avatars.com/api/?name='.urlencode($user->name ?? 'User').'&color=7F9CF5&background=EBF4FF';
     }
 }

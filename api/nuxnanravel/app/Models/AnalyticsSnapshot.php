@@ -29,8 +29,11 @@ class AnalyticsSnapshot extends Model
 
     // Snapshot Types
     const TYPE_DAILY = 'daily';
+
     const TYPE_WEEKLY = 'weekly';
+
     const TYPE_MONTHLY = 'monthly';
+
     const TYPE_ACADEMIC_YEAR = 'academic_year';
 
     const TYPES = [
@@ -42,8 +45,11 @@ class AnalyticsSnapshot extends Model
 
     // Categories
     const CATEGORY_ENROLLMENT = 'enrollment';
+
     const CATEGORY_ATTENDANCE = 'attendance';
+
     const CATEGORY_ACADEMIC = 'academic';
+
     const CATEGORY_FINANCIAL = 'financial';
 
     const CATEGORIES = [

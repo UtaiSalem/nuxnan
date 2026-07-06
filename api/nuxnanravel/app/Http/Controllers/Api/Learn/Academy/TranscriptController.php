@@ -3,17 +3,16 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
-use App\Models\SemesterTranscript;
-use App\Models\AnnualTranscript;
-use App\Models\CourseGrade;
-use App\Models\Student;
-use App\Models\Academy;
-use App\Models\Semester;
 use App\Models\AcademicYear;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use App\Models\Academy;
+use App\Models\AnnualTranscript;
+use App\Models\Semester;
+use App\Models\SemesterTranscript;
+use App\Models\Student;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TranscriptController extends Controller
 {
@@ -23,8 +22,8 @@ class TranscriptController extends Controller
     public function getSemesterTranscript(Request $request, int $studentId): JsonResponse
     {
         $student = Student::with(['academy', 'user'])->findOrFail($studentId);
-        
-        if (!$this->canViewTranscript($student)) {
+
+        if (! $this->canViewTranscript($student)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -52,8 +51,8 @@ class TranscriptController extends Controller
     public function getAnnualTranscript(Request $request, int $studentId): JsonResponse
     {
         $student = Student::with(['academy', 'user'])->findOrFail($studentId);
-        
-        if (!$this->canViewTranscript($student)) {
+
+        if (! $this->canViewTranscript($student)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -81,8 +80,8 @@ class TranscriptController extends Controller
     public function generateSemesterTranscript(Request $request, int $academyId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManageTranscripts($academy)) {
+
+        if (! $this->canManageTranscripts($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -97,15 +96,15 @@ class TranscriptController extends Controller
 
         // Get students to process
         $studentQuery = Student::where('academy_id', $academyId);
-        
-        if (!empty($validated['classroom_id'])) {
-            $studentQuery->whereHas('classroomStudents', function($q) use ($validated) {
+
+        if (! empty($validated['classroom_id'])) {
+            $studentQuery->whereHas('classroomStudents', function ($q) use ($validated) {
                 $q->where('classroom_id', $validated['classroom_id'])
-                  ->where('status', 'active');
+                    ->where('status', 'active');
             });
         }
 
-        if (!empty($validated['student_ids'])) {
+        if (! empty($validated['student_ids'])) {
             $studentQuery->whereIn('id', $validated['student_ids']);
         }
 
@@ -150,9 +149,10 @@ class TranscriptController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -163,8 +163,8 @@ class TranscriptController extends Controller
     public function publishSemesterTranscripts(Request $request, int $academyId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManageTranscripts($academy)) {
+
+        if (! $this->canManageTranscripts($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -178,7 +178,7 @@ class TranscriptController extends Controller
             ->where('semester_id', $validated['semester_id'])
             ->where('status', 'draft');
 
-        if (!empty($validated['transcript_ids'])) {
+        if (! empty($validated['transcript_ids'])) {
             $query->whereIn('id', $validated['transcript_ids']);
         }
 
@@ -196,8 +196,8 @@ class TranscriptController extends Controller
     public function generateAnnualTranscript(Request $request, int $academyId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManageTranscripts($academy)) {
+
+        if (! $this->canManageTranscripts($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
         }
 
@@ -212,7 +212,7 @@ class TranscriptController extends Controller
         // Get students to process
         $studentQuery = Student::where('academy_id', $academyId);
 
-        if (!empty($validated['student_ids'])) {
+        if (! empty($validated['student_ids'])) {
             $studentQuery->whereIn('id', $validated['student_ids']);
         }
 
@@ -224,7 +224,7 @@ class TranscriptController extends Controller
             foreach ($students as $student) {
                 // Get grade level from latest classroom
                 $gradeLevel = $student->classroomStudents()
-                    ->whereHas('classroom', function($q) use ($academicYear) {
+                    ->whereHas('classroom', function ($q) use ($academicYear) {
                         $q->where('academic_year_id', $academicYear->id);
                     })
                     ->with('classroom')
@@ -257,9 +257,10 @@ class TranscriptController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -270,8 +271,8 @@ class TranscriptController extends Controller
     public function downloadTranscriptPdf(Request $request, int $studentId, int $transcriptId): mixed
     {
         $student = Student::with(['academy', 'user'])->findOrFail($studentId);
-        
-        if (!$this->canViewTranscript($student)) {
+
+        if (! $this->canViewTranscript($student)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -295,8 +296,8 @@ class TranscriptController extends Controller
     public function getAcademyTranscriptOverview(Request $request, int $academyId): JsonResponse
     {
         $academy = Academy::findOrFail($academyId);
-        
-        if (!$this->canManageTranscripts($academy)) {
+
+        if (! $this->canManageTranscripts($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -348,7 +349,9 @@ class TranscriptController extends Controller
     protected function canViewTranscript(Student $student): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
         // Student viewing own transcript
         if ($student->user_id === $user->id) {
@@ -370,7 +373,9 @@ class TranscriptController extends Controller
     protected function canManageTranscripts(Academy $academy): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
         if ($academy->user_id === $user->id) {
             return true;
@@ -391,14 +396,14 @@ class TranscriptController extends Controller
         $academyId = $request->query('academy_id');
 
         $query = Student::where('user_id', $user->id);
-        
+
         if ($academyId) {
             $query->where('academy_id', $academyId);
         }
 
         $student = $query->first();
 
-        if (!$student) {
+        if (! $student) {
             return response()->json([
                 'success' => true,
                 'transcripts' => [],
@@ -447,7 +452,7 @@ class TranscriptController extends Controller
     public function downloadMyTranscriptPdf(int $transcriptId)
     {
         $user = auth()->user();
-        
+
         $transcript = SemesterTranscript::with(['student.user', 'student.academy', 'semester.academicYear', 'classroom', 'items.course'])
             ->findOrFail($transcriptId);
 

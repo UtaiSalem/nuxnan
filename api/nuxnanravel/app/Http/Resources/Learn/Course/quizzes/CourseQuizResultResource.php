@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources\Learn\Course\quizzes;
 
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Http\Resources\UserResource;
 
 class CourseQuizResultResource extends JsonResource
 {

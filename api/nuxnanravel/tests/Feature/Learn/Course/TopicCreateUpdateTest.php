@@ -2,14 +2,11 @@
 
 namespace Tests\Feature\Learn\Course;
 
-use App\Models\Academy;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Topic;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TopicCreateUpdateTest extends TestCase
@@ -17,7 +14,9 @@ class TopicCreateUpdateTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
+
     protected $course;
+
     protected $lesson;
 
     protected function setUp(): void
@@ -26,11 +25,11 @@ class TopicCreateUpdateTest extends TestCase
 
         $this->admin = User::factory()->create();
         $this->course = Course::factory()->create([
-            'user_id' => $this->admin->id
+            'user_id' => $this->admin->id,
         ]);
         $this->lesson = Lesson::factory()->create([
             'course_id' => $this->course->id,
-            'min_read' => 0
+            'min_read' => 0,
         ]);
     }
 
@@ -90,7 +89,7 @@ class TopicCreateUpdateTest extends TestCase
     {
         $topic = Topic::factory()->create([
             'lesson_id' => $this->lesson->id,
-            'min_read' => 10
+            'min_read' => 10,
         ]);
         $this->lesson->increment('min_read', 10);
 

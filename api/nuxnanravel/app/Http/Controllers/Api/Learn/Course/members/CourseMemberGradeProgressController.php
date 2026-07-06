@@ -2,32 +2,31 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\members;
 
-use App\Models\Course;
-use App\Models\CourseMember;
-use Illuminate\Http\Request;
-use App\Models\AssignmentAnswer;
-use App\Models\CourseQuizResult;
-use App\Models\UserAnswerQuestion;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
+use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
-use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
-use App\Http\Resources\Learn\Course\quizzes\CourseQuizResource;
-use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\members\CourseMemberResource;
-use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
 use App\Http\Resources\Learn\Course\quizzes\CourseQuizResultResource;
+use App\Models\AssignmentAnswer;
+use App\Models\Course;
+use App\Models\CourseMember;
+use App\Models\CourseQuizResult;
+use App\Services\CourseScoreService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CourseMemberGradeProgressController extends Controller
 {
     /**
      * ตรวจสอบความถูกต้องของคะแนน
-     * @param int $achievedScore คะแนนที่ทำได้
-     * @param int $totalScore คะแนนรวมสูงสุด
-     * @param int $memberId รหัสสมาชิก
-     * @param int $courseId รหัสคอร์ส
+     *
+     * @param  int  $achievedScore  คะแนนที่ทำได้
+     * @param  int  $totalScore  คะแนนรวมสูงสุด
+     * @param  int  $memberId  รหัสสมาชิก
+     * @param  int  $courseId  รหัสคอร์ส
      * @return array ผลการตรวจสอบ
      */
     private function validateScore($achievedScore, $totalScore, $memberId, $courseId)
@@ -37,7 +36,7 @@ class CourseMemberGradeProgressController extends Controller
             'error_message' => '',
             'has_error' => false,
             'severity' => 'none', // 'none', 'warning', 'error', 'critical'
-            'percentage' => 0
+            'percentage' => 0,
         ];
 
         // ตรวจสอบค่าว่าง
@@ -54,13 +53,13 @@ class CourseMemberGradeProgressController extends Controller
             $validation['has_error'] = true;
             $validation['severity'] = 'critical';
             $validation['error_message'] = "พบค่าคะแนนติดลบ: คะแนนที่ทำได้ ({$achievedScore}), คะแนนรวม ({$totalScore})";
-            
+
             Log::error('Score Validation Error (Negative Values)', [
                 'member_id' => $memberId,
                 'course_id' => $courseId,
                 'achieved_score' => $achievedScore,
                 'total_score' => $totalScore,
-                'timestamp' => now()
+                'timestamp' => now(),
             ]);
 
             return $validation;
@@ -72,7 +71,7 @@ class CourseMemberGradeProgressController extends Controller
             $validation['has_error'] = true;
             $validation['severity'] = $achievedScore > ($totalScore * 1.5) ? 'critical' : 'error';
             $validation['error_message'] = "คะแนนที่บันทึก ({$achievedScore}) สูงกว่าคะแนนรวมสูงสุด ({$totalScore}) คิดเป็น {$percentage}%";
-            
+
             Log::error('Score Validation Error (Score Exceeds Total)', [
                 'member_id' => $memberId,
                 'course_id' => $courseId,
@@ -81,7 +80,7 @@ class CourseMemberGradeProgressController extends Controller
                 'percentage' => $percentage,
                 'exceed_by' => $achievedScore - $totalScore,
                 'severity' => $validation['severity'],
-                'timestamp' => now()
+                'timestamp' => now(),
             ]);
 
             return $validation;
@@ -99,13 +98,13 @@ class CourseMemberGradeProgressController extends Controller
             $courseMember = CourseMember::where('course_id', $courseId)
                 ->where('id', $memberId)
                 ->first();
-            
-            if (!$courseMember) {
+
+            if (! $courseMember) {
                 return response()->json(['error' => 'Course member not found'], 404);
             }
-            
+
             $userId = $courseMember->user_id;
-            
+
             // 1. หาคำตอบล่าสุดสำหรับแต่ละคำถามในแต่ละ quiz
             $latestAnswers = DB::table('user_answer_questions as uaq')
                 ->select('quiz_id', 'question_id',
@@ -117,7 +116,7 @@ class CourseMemberGradeProgressController extends Controller
 
             // 2. ลบคำตอบเก่าทั้งหมดที่ไม่ใช่คำตอบล่าสุด
             $idsToKeep = $latestAnswers->pluck('latest_id')->toArray();
-            if (!empty($idsToKeep)) {
+            if (! empty($idsToKeep)) {
                 DB::table('user_answer_questions')
                     ->where('course_id', $courseId)
                     ->where('user_id', $userId)
@@ -138,19 +137,19 @@ class CourseMemberGradeProgressController extends Controller
             // 4. อัปเดตคะแนนในตาราง course_quiz_results แบบ batch
             $totalScore = 0;
             $updateData = [];
-            
+
             foreach ($quizResults as $result) {
                 $updateData[] = [
                     'course_id' => $courseId,
                     'user_id' => $userId,
                     'quiz_id' => $result->quiz_id,
                     'score' => $result->score,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ];
                 $totalScore += $result->score;
             }
 
-            if (!empty($updateData)) {
+            if (! empty($updateData)) {
                 DB::table('course_quiz_results')->upsert(
                     $updateData,
                     ['course_id', 'user_id', 'quiz_id'],
@@ -166,7 +165,7 @@ class CourseMemberGradeProgressController extends Controller
             $scoreValidation = $this->validateScore($totalScore, $courseTotalScore, $memberId, $courseId);
 
             // 7. อัปเดตคะแนนรวมในตาราง course_members ผ่าน CourseScoreService
-            $scoreService = app(\App\Services\CourseScoreService::class);
+            $scoreService = app(CourseScoreService::class);
             $breakdown = $scoreService->recompute($courseMember);
 
             DB::commit();
@@ -178,7 +177,7 @@ class CourseMemberGradeProgressController extends Controller
                 'total_score' => $breakdown->internalEarned(),
                 'course_total_score' => $courseTotalScore,
                 'quizzes_processed' => count($updateData),
-                'validation' => $scoreValidation
+                'validation' => $scoreValidation,
             ];
 
             // หากมีข้อผิดพลาด เพิ่ม warning flag
@@ -190,6 +189,7 @@ class CourseMemberGradeProgressController extends Controller
             return response()->json($response);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -200,33 +200,34 @@ class CourseMemberGradeProgressController extends Controller
         $courseAssignments = $course->courseAssignments;
 
         $user_assignments_answers = AssignmentAnswer::with([
-                                        'user',
-                                        'assignment.assignmentable'
-                                    ])
-                                    ->whereIn('assignment_id', $courseAssignments->pluck('id'))
-                                    ->where('user_id', $member->user_id)
-                                    ->get();
+            'user',
+            'assignment.assignmentable',
+        ])
+            ->whereIn('assignment_id', $courseAssignments->pluck('id'))
+            ->where('user_id', $member->user_id)
+            ->get();
 
         $user_quizes_results = CourseQuizResult::with('user')
-                ->where('course_id', $course->id)
-                ->where('user_id', $member->user_id)
-                ->get();
+            ->where('course_id', $course->id)
+            ->where('user_id', $member->user_id)
+            ->get();
 
         return response()->json([
-            'isCourseAdmin'             => $course->isAdmin(auth()->user()),
-            'course'                    => new CourseResource($course),
+            'isCourseAdmin' => $course->isAdmin(auth()->user()),
+            'course' => new CourseResource($course),
             // 'lessons'                   => LessonResource::collection($course->courseLessons),
             // 'groups'                    => CourseGroupResource::collection($course->courseGroups),
-            'course_assignments'        => $course->courseAssignments,
-            'course_quizzes'            => $course->courseQuizzes,
-            'member'                    => new CourseMemberResource($member),
-            'member_assignments_answers'   => AssignmentAnswerResource::collection($user_assignments_answers), 
-            'member_quizes_results'     => CourseQuizResultResource::collection($user_quizes_results)
+            'course_assignments' => $course->courseAssignments,
+            'course_quizzes' => $course->courseQuizzes,
+            'member' => new CourseMemberResource($member),
+            'member_assignments_answers' => AssignmentAnswerResource::collection($user_assignments_answers),
+            'member_quizes_results' => CourseQuizResultResource::collection($user_quizes_results),
         ]);
     }
+
     public function updateEditedGrade(Course $course, CourseMember $member, Request $request)
     {
-        if (!$course->hasPermission(auth()->user(), 'edit_grades')) {
+        if (! $course->hasPermission(auth()->user(), 'edit_grades')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -235,7 +236,7 @@ class CourseMemberGradeProgressController extends Controller
         ]);
 
         $member->update([
-            'edited_grade' => $request->edited_grade
+            'edited_grade' => $request->edited_grade,
         ]);
 
         return response()->json([

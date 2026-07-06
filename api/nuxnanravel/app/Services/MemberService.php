@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\ClassroomCapacityException;
 use App\Models\Classroom;
 use App\Models\ClassroomMember;
 use App\Models\GroupMember;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -20,9 +22,8 @@ class MemberService
     /**
      * List members of a classroom with optional role filter.
      *
-     * @param  int         $classroomId
-     * @param  string|null $role  Filter by role
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @param  string|null  $role  Filter by role
+     * @return Collection
      */
     public function listMembers(int $classroomId, ?string $role = null)
     {
@@ -42,14 +43,8 @@ class MemberService
     /**
      * Add a single member to a classroom.
      *
-     * @param  Classroom $classroom
-     * @param  int       $userId
-     * @param  string    $role
-     * @param  int|null  $studentNo
-     * @param  string    $joinMethod
-     * @return ClassroomMember
      *
-     * @throws \App\Exceptions\ClassroomCapacityException
+     * @throws ClassroomCapacityException
      */
     public function addMember(
         Classroom $classroom,
@@ -88,10 +83,7 @@ class MemberService
     /**
      * Bulk-add members to a classroom.
      *
-     * @param  Classroom $classroom
-     * @param  array     $userIds
-     * @param  string    $role
-     * @return int  Number added
+     * @return int Number added
      */
     public function bulkAddMembers(Classroom $classroom, array $userIds, string $role = 'student'): int
     {
@@ -106,6 +98,7 @@ class MemberService
             // Clear cached count so isFull() recalculates
             $classroom->unsetRelation('activeMembers');
         }
+
         return $added;
     }
 
@@ -113,9 +106,7 @@ class MemberService
      * Remove a member from a classroom (soft-deactivate).
      * BR-2: Also removes the member from all classroom groups.
      *
-     * @param  int $classroomId
-     * @param  int $memberId  ClassroomMember ID
-     * @return bool
+     * @param  int  $memberId  ClassroomMember ID
      */
     public function removeMember(int $classroomId, int $memberId): bool
     {
@@ -138,15 +129,16 @@ class MemberService
     {
         $member = ClassroomMember::findOrFail($memberId);
         $member->update($data);
+
         return $member->fresh('user');
     }
 
     /**
      * Transfer a member from one classroom to another.
      *
-     * @param  int $memberId          ClassroomMember ID
-     * @param  int $targetClassroomId Destination classroom
-     * @return ClassroomMember  The new membership record
+     * @param  int  $memberId  ClassroomMember ID
+     * @param  int  $targetClassroomId  Destination classroom
+     * @return ClassroomMember The new membership record
      */
     public function transferMember(int $memberId, int $targetClassroomId): ClassroomMember
     {

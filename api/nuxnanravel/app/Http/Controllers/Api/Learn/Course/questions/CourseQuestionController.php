@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\Learn\Course\questions;
 
 use App\Http\Controllers\Controller;
-
+use App\Http\Resources\QuestionResource;
 use App\Models\Course;
 use App\Models\Question;
+use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\QuestionResource;
 
 class CourseQuestionController extends Controller
 {
@@ -20,21 +20,22 @@ class CourseQuestionController extends Controller
             'points' => $request->points,
         ]);
 
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             $fileNames = [];
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/courses/questions', $image, $fileName);
                 $fileNames[] = $fileName;
 
                 $question->images()->create([
-                    'image_url' => $image_url
+                    'image_url' => $image_url,
                 ]);
             }
         }
+
         return response()->json([
             'success' => true,
             'question' => new QuestionResource($question),
@@ -61,7 +62,7 @@ class CourseQuestionController extends Controller
             }
             $question->options()->delete();
         }
-        app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($course);
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
         $question->delete();
     }
 }

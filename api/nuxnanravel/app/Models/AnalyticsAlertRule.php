@@ -36,7 +36,9 @@ class AnalyticsAlertRule extends Model
 
     // Condition Types
     const CONDITION_THRESHOLD = 'threshold';
+
     const CONDITION_CHANGE_PERCENT = 'change_percent';
+
     const CONDITION_ANOMALY = 'anomaly';
 
     const CONDITION_TYPES = [
@@ -47,9 +49,13 @@ class AnalyticsAlertRule extends Model
 
     // Operators
     const OPERATOR_GT = 'gt';
+
     const OPERATOR_LT = 'lt';
+
     const OPERATOR_EQ = 'eq';
+
     const OPERATOR_GTE = 'gte';
+
     const OPERATOR_LTE = 'lte';
 
     const OPERATORS = [
@@ -62,7 +68,9 @@ class AnalyticsAlertRule extends Model
 
     // Alert Levels
     const LEVEL_INFO = 'info';
+
     const LEVEL_WARNING = 'warning';
+
     const LEVEL_CRITICAL = 'critical';
 
     const LEVELS = [
@@ -144,7 +152,7 @@ class AnalyticsAlertRule extends Model
     {
         $kpiName = $this->kpi ? $this->kpi->name : 'Unknown KPI';
         $operatorText = $this->getOperatorText();
-        
+
         return sprintf(
             '%s: %s is %s %s (current: %s)',
             strtoupper($this->alert_level),

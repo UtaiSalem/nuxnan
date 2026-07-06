@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -28,7 +28,7 @@ return new class extends Migration
 
             foreach ($tablesToConvert as $table) {
                 if (Schema::hasTable($table)) {
-                    $engine = DB::selectOne("SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?", [$table]);
+                    $engine = DB::selectOne('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [$table]);
                     if ($engine && strtolower($engine->ENGINE) !== 'innodb') {
                         DB::statement("ALTER TABLE `{$table}` ENGINE = InnoDB");
                     }
@@ -38,10 +38,10 @@ return new class extends Migration
 
         // Step 2: Add academy_id and user_id to students table (if not exists)
         Schema::table('students', function (Blueprint $table) {
-            if (!Schema::hasColumn('students', 'academy_id')) {
+            if (! Schema::hasColumn('students', 'academy_id')) {
                 $table->unsignedBigInteger('academy_id')->nullable()->after('id');
             }
-            if (!Schema::hasColumn('students', 'user_id')) {
+            if (! Schema::hasColumn('students', 'user_id')) {
                 $table->unsignedBigInteger('user_id')->nullable()->after('academy_id');
             }
         });
@@ -69,12 +69,12 @@ return new class extends Migration
         // Step 4: Add FK constraints
         Schema::table('students', function (Blueprint $table) {
             $table->foreign('academy_id', 'fk_students_academy_id')
-                  ->references('id')->on('academies')
-                  ->onDelete('set null');
+                ->references('id')->on('academies')
+                ->onDelete('set null');
 
             $table->foreign('user_id', 'fk_students_user_id')
-                  ->references('id')->on('users')
-                  ->onDelete('set null');
+                ->references('id')->on('users')
+                ->onDelete('set null');
         });
 
         Schema::table('academy_members', function (Blueprint $table) {
@@ -89,8 +89,8 @@ return new class extends Migration
             }
 
             $table->foreign('student_id', 'fk_academy_members_student_id')
-                  ->references('id')->on('students')
-                  ->onDelete('set null');
+                ->references('id')->on('students')
+                ->onDelete('set null');
 
             // Add FK for academy_id if not exists
             $addFk = true;
@@ -98,11 +98,11 @@ return new class extends Migration
                 $fks = collect(DB::select("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'academy_members' AND CONSTRAINT_NAME = 'fk_academy_members_academy_id'"));
                 $addFk = $fks->isEmpty();
             }
-            
+
             if ($addFk) {
                 $table->foreign('academy_id', 'fk_academy_members_academy_id')
-                      ->references('id')->on('academies')
-                      ->onDelete('cascade');
+                    ->references('id')->on('academies')
+                    ->onDelete('cascade');
             }
         });
     }

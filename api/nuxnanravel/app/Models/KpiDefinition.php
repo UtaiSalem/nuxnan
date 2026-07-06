@@ -36,8 +36,11 @@ class KpiDefinition extends Model
 
     // Categories
     const CATEGORY_ACADEMIC = 'academic';
+
     const CATEGORY_FINANCIAL = 'financial';
+
     const CATEGORY_OPERATIONAL = 'operational';
+
     const CATEGORY_STAFF = 'staff';
 
     const CATEGORIES = [
@@ -49,8 +52,11 @@ class KpiDefinition extends Model
 
     // Metric Types
     const METRIC_PERCENTAGE = 'percentage';
+
     const METRIC_COUNT = 'count';
+
     const METRIC_CURRENCY = 'currency';
+
     const METRIC_RATIO = 'ratio';
 
     const METRIC_TYPES = [
@@ -62,6 +68,7 @@ class KpiDefinition extends Model
 
     // Comparison Directions
     const DIRECTION_HIGHER_IS_BETTER = 'higher_is_better';
+
     const DIRECTION_LOWER_IS_BETTER = 'lower_is_better';
 
     // Relationships
@@ -124,6 +131,7 @@ class KpiDefinition extends Model
                 return 'warning';
             }
         }
+
         return 'on_track';
     }
 
@@ -136,9 +144,9 @@ class KpiDefinition extends Model
     {
         switch ($this->metric_type) {
             case self::METRIC_PERCENTAGE:
-                return number_format($value, 1) . '%';
+                return number_format($value, 1).'%';
             case self::METRIC_CURRENCY:
-                return '฿' . number_format($value, 2);
+                return '฿'.number_format($value, 2);
             case self::METRIC_RATIO:
                 return number_format($value, 2);
             default:

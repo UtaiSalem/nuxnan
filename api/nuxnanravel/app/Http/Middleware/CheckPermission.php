@@ -11,16 +11,16 @@ class CheckPermission
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthenticated'
+                'message' => 'Unauthenticated',
             ], 401);
         }
 
@@ -39,7 +39,7 @@ class CheckPermission
         return response()->json([
             'success' => false,
             'message' => 'คุณไม่มีสิทธิ์ดำเนินการนี้',
-            'required_permissions' => $permissions
+            'required_permissions' => $permissions,
         ], 403);
     }
 }

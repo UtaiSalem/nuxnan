@@ -33,9 +33,13 @@ class DashboardWidget extends Model
 
     // Widget Types
     const TYPE_COUNTER = 'counter';
+
     const TYPE_CHART = 'chart';
+
     const TYPE_TABLE = 'table';
+
     const TYPE_PROGRESS = 'progress';
+
     const TYPE_LIST = 'list';
 
     const TYPES = [
@@ -48,9 +52,13 @@ class DashboardWidget extends Model
 
     // Categories
     const CATEGORY_OVERVIEW = 'overview';
+
     const CATEGORY_ACADEMIC = 'academic';
+
     const CATEGORY_FINANCIAL = 'financial';
+
     const CATEGORY_ATTENDANCE = 'attendance';
+
     const CATEGORY_STAFF = 'staff';
 
     const CATEGORIES = [

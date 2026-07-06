@@ -48,10 +48,7 @@ const tempPhoto = ref(props.studentInfo.profile_image || null)
 
 const studentImageUrl = computed(() => {
     if (previewImage.value) return previewImage.value
-    if (tempPhoto.value) {
-        return `${apiBase}/storage/images/students/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${tempPhoto.value}`
-    }
-    return null
+    return props.studentInfo.profile_image_url || null
 })
 
 const cardBgStyle = computed(() => ({
@@ -81,6 +78,12 @@ const handlePhotoUploadToServer = async (id, studentNumber, file) => {
         })
         if (response.success) {
             Swal.fire({ icon: 'success', title: 'อัพโหลดรูปภาพสำเร็จ', text: response.message, confirmButtonText: 'ตกลง' })
+            if (response.photo) {
+                tempPhoto.value = response.photo
+            }
+            if (response.path) {
+                props.studentInfo.profile_image_url = response.path
+            }
         } else {
             Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: response.message || 'ไม่สามารถอัพโหลดรูปภาพได้', confirmButtonText: 'ตกลง' })
         }

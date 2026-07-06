@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Traits\Auditable;
 
 /**
  * Budget Model - งบประมาณ
  */
 class Budget extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'academy_id',
@@ -40,8 +40,11 @@ class Budget extends Model
 
     // Status constants
     const STATUS_DRAFT = 'draft';
+
     const STATUS_ACTIVE = 'active';
+
     const STATUS_CLOSED = 'closed';
+
     const STATUS_EXCEEDED = 'exceeded';
 
     const STATUSES = [
@@ -85,7 +88,10 @@ class Budget extends Model
 
     public function getUsagePercentageAttribute(): float
     {
-        if ($this->allocated_amount <= 0) return 0;
+        if ($this->allocated_amount <= 0) {
+            return 0;
+        }
+
         return round(($this->spent_amount / $this->allocated_amount) * 100, 2);
     }
 

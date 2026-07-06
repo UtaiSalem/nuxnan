@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Learn\Course\info;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CourseSettingController extends Controller
 {
@@ -22,9 +22,9 @@ class CourseSettingController extends Controller
         // 2. Validate
         $validated = $request->validate([
             'is_for_marketplace' => 'required|boolean',
-            'price_type'         => 'required_if:is_for_marketplace,true|in:free,points,wallet,both',
-            'price'              => 'nullable|integer|min:0',
-            'price_points'       => 'nullable|integer|min:0',
+            'price_type' => 'required_if:is_for_marketplace,true|in:free,points,wallet,both',
+            'price' => 'nullable|integer|min:0',
+            'price_points' => 'nullable|integer|min:0',
         ]);
 
         // 3. ถ้าเปิดขาย ต้องมีราคาสอดคล้องกับ price_type
@@ -41,21 +41,21 @@ class CourseSettingController extends Controller
         // 4. อัปเดต
         $course->update([
             'is_for_marketplace' => $validated['is_for_marketplace'],
-            'price_type'         => $validated['price_type'] ?? 'free',
-            'price'              => $validated['price'] ?? 0,
-            'price_points'       => $validated['price_points'] ?? 0,
+            'price_type' => $validated['price_type'] ?? 'free',
+            'price' => $validated['price'] ?? 0,
+            'price_points' => $validated['price_points'] ?? 0,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => $course->is_for_marketplace ? 'Course listed on marketplace.' : 'Course removed from marketplace.',
-            'data'    => [
+            'data' => [
                 'is_for_marketplace' => $course->is_for_marketplace,
-                'price_type'         => $course->price_type,
-                'price'              => $course->price,
-                'price_points'       => $course->price_points,
-                'total_sales'        => $course->total_sales,
-            ]
+                'price_type' => $course->price_type,
+                'price' => $course->price,
+                'price_points' => $course->price_points,
+                'total_sales' => $course->total_sales,
+            ],
         ]);
     }
 
@@ -66,12 +66,12 @@ class CourseSettingController extends Controller
 
             foreach ($courses as $course) {
                 $course->courseSettings()->create([
-                    'auto_accept_members' => 1
+                    'auto_accept_members' => 1,
                 ]);
             }
 
             return response()->json([
-                'success' => true
+                'success' => true,
             ], 200);
 
         } catch (\Throwable $th) {

@@ -33,24 +33,40 @@ class MemberActivityLog extends Model
 
     // Action types constants
     public const ACTION_JOIN = 'join';
+
     public const ACTION_LEAVE = 'leave';
+
     public const ACTION_APPROVE = 'approve';
+
     public const ACTION_REJECT = 'reject';
+
     public const ACTION_SUSPEND = 'suspend';
+
     public const ACTION_UNSUSPEND = 'unsuspend';
+
     public const ACTION_REMOVE = 'remove';
+
     public const ACTION_ROLE_CHANGE = 'role_change';
+
     public const ACTION_INVITE = 'invite';
+
     public const ACTION_ACCEPT_INVITE = 'accept_invite';
+
     public const ACTION_DECLINE_INVITE = 'decline_invite';
+
     public const ACTION_PROFILE_UPDATE = 'profile_update';
+
     public const ACTION_BULK_ACTION = 'bulk_action';
 
     // Categories
     public const CATEGORY_MEMBER = 'member';
+
     public const CATEGORY_ROLE = 'role';
+
     public const CATEGORY_COURSE = 'course';
+
     public const CATEGORY_ATTENDANCE = 'attendance';
+
     public const CATEGORY_SYSTEM = 'system';
 
     /**
@@ -115,7 +131,7 @@ class MemberActivityLog extends Model
     public static function logActivity(array $data): self
     {
         $request = request();
-        
+
         return self::create([
             'academy_id' => $data['academy_id'],
             'user_id' => $data['user_id'] ?? $request->user()?->id,

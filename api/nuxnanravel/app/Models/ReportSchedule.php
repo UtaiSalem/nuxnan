@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
 
 class ReportSchedule extends Model
 {
@@ -35,9 +35,13 @@ class ReportSchedule extends Model
 
     // Frequencies
     const FREQUENCY_DAILY = 'daily';
+
     const FREQUENCY_WEEKLY = 'weekly';
+
     const FREQUENCY_MONTHLY = 'monthly';
+
     const FREQUENCY_QUARTERLY = 'quarterly';
+
     const FREQUENCY_YEARLY = 'yearly';
 
     const FREQUENCIES = [
@@ -50,7 +54,9 @@ class ReportSchedule extends Model
 
     // Export Formats
     const FORMAT_PDF = 'pdf';
+
     const FORMAT_EXCEL = 'excel';
+
     const FORMAT_CSV = 'csv';
 
     const FORMATS = [

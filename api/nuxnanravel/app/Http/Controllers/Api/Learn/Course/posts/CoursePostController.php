@@ -2,21 +2,17 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\posts;
 
+use App\Enums\ActivityType;
 use App\Http\Controllers\Controller;
-
-use App\Models\Course;
+use App\Http\Resources\Learn\Course\posts\CoursePostResource;
+use App\Http\Resources\Play\ActivityResource;
 use App\Models\Activity;
+use App\Models\Course;
 use App\Models\CoursePost;
 use App\Models\CoursePostImage;
-use Illuminate\Http\Request;
-use App\Enums\ActivityType;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Play\ActivityResource;
-use App\Http\Resources\Learn\Course\posts\CoursePostResource;
 use App\Models\Poll;
-use App\Models\QuestionOption;
-use App\Http\Requests\StoreCoursePostRequest;
-use App\Http\Requests\UpdateCoursePostRequest;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CoursePostController extends Controller
 {
@@ -69,7 +65,7 @@ class CoursePostController extends Controller
                 'per_page' => $posts->perPage(),
                 'total' => $posts->total(),
                 'has_more' => $posts->hasMorePages(),
-            ]
+            ],
         ], 200);
     }
 
@@ -109,7 +105,7 @@ class CoursePostController extends Controller
             $content = $validatedData['content'] ?? '';
             $hashtags = $this->extractHashtags($content);
 
-            $post = new CoursePost();
+            $post = new CoursePost;
             $post->user_id = auth()->user()->id;
             $post->course_id = $course->id;
             $post->group_id = $validatedData['group_id'] ?? null;
@@ -125,7 +121,7 @@ class CoursePostController extends Controller
                 $pollOptions = $request->poll_options;
                 $pollDuration = $request->poll_duration ?? 24; // Hours
 
-                if (!empty($pollTitle) && is_array($pollOptions) && count($pollOptions) >= 2) {
+                if (! empty($pollTitle) && is_array($pollOptions) && count($pollOptions) >= 2) {
                     // Calculate points per vote
                     $maxVotes = (int) $request->input('poll_max_votes', 100);
                     $pointsPerVote = $pollPointsPool > 0 ? floor($pollPointsPool / $maxVotes) : 0;
@@ -162,7 +158,7 @@ class CoursePostController extends Controller
             if ($request->hasFile('images')) {
                 $images = $request->file('images');
                 foreach ($images as $image) {
-                    $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                    $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                     Storage::disk('public')->putFileAs('images/courses/posts', $image, $fileName);
 
                     $post->post_images()->create([
@@ -171,7 +167,7 @@ class CoursePostController extends Controller
                 }
             }
 
-            $activity = new Activity();
+            $activity = new Activity;
             $activity->user_id = $post->user_id;
             $activity->activity_type = ActivityType::CREATE_POST->value;
             $activity->activityable()->associate($post);
@@ -197,7 +193,7 @@ class CoursePostController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create course post' . $e->getMessage(),
+                'message' => 'Failed to create course post'.$e->getMessage(),
             ], 500);
         }
     }
@@ -215,6 +211,7 @@ class CoursePostController extends Controller
             'activity' => new ActivityResource($course_post->activity),
         ]);
     }
+
     /**
      * Show the form for editing the specified resource.
      */
@@ -232,14 +229,14 @@ class CoursePostController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Course $course, CoursePost $course_post, Request $request, )
+    public function update(Course $course, CoursePost $course_post, Request $request)
     {
         // Authorization check: only post owner or course admin can edit
         $user = auth()->user();
         $isOwner = $course_post->user_id === $user->id;
         $isCourseAdmin = $course->isAdmin($user);
 
-        if (!$isOwner && !$isCourseAdmin) {
+        if (! $isOwner && ! $isCourseAdmin) {
             return response()->json([
                 'success' => false,
                 'message' => 'คุณไม่มีสิทธิ์แก้ไขโพสต์นี้',
@@ -282,7 +279,7 @@ class CoursePostController extends Controller
                     $image->postImageDislikes()->detach();
 
                     // Delete physical file
-                    Storage::disk('public')->delete('images/courses/posts/' . $image->filename);
+                    Storage::disk('public')->delete('images/courses/posts/'.$image->filename);
                     $image->delete();
                 }
             }
@@ -296,13 +293,13 @@ class CoursePostController extends Controller
             if ($currentImageCount + $newImagesCount > 10) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'จำนวนรูปภาพรวมต้องไม่เกิน 10 รูป (ปัจจุบันมี ' . $currentImageCount . ' รูป)',
+                    'message' => 'จำนวนรูปภาพรวมต้องไม่เกิน 10 รูป (ปัจจุบันมี '.$currentImageCount.' รูป)',
                 ], 422);
             }
 
             $post_images = $request->file('images');
             foreach ($post_images as $image) {
-                $fileName = $course_post->id . uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = $course_post->id.uniqid().'.'.$image->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/courses/posts', $image, $fileName);
                 CoursePostImage::create([
                     'post_id' => $course_post->id,
@@ -329,7 +326,7 @@ class CoursePostController extends Controller
         $isOwner = $course_post->user_id === $user->id;
         $isCourseAdmin = $course->isAdmin($user);
 
-        if (!$isOwner && !$isCourseAdmin) {
+        if (! $isOwner && ! $isCourseAdmin) {
             return response()->json([
                 'success' => false,
                 'message' => 'คุณไม่มีสิทธิ์ลบโพสต์นี้',
@@ -351,7 +348,7 @@ class CoursePostController extends Controller
                 $cp_image->postImageLikes()->detach();
                 $cp_image->postImageDislikes()->detach();
 
-                Storage::disk('public')->delete('images/courses/posts/' . $cp_image->filename);
+                Storage::disk('public')->delete('images/courses/posts/'.$cp_image->filename);
                 $cp_image->delete();
             }
 
@@ -365,7 +362,7 @@ class CoursePostController extends Controller
             foreach ($course_post->post_comments as $comment) {
                 // Delete comment images if any
                 foreach ($comment->postCommentImages as $commentImage) {
-                    Storage::disk('public')->delete('images/courses/posts/comments/' . $commentImage->filename);
+                    Storage::disk('public')->delete('images/courses/posts/comments/'.$commentImage->filename);
                     $commentImage->delete();
                 }
 
@@ -388,16 +385,15 @@ class CoursePostController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete course post: ' . $e->getMessage(),
+                'message' => 'Failed to delete course post: '.$e->getMessage(),
             ], 500);
         }
     }
 
-
     /**
      * Extract hashtags from post content.
      *
-     * @param string $content The post content.
+     * @param  string  $content  The post content.
      * @return array An array of extracted hashtags.
      */
     private function extractHashtags($content)
@@ -417,5 +413,4 @@ class CoursePostController extends Controller
 
         return $hashtags;
     }
-
 }

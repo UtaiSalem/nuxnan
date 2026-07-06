@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
-
 use App\Models\AcademyAdmin;
 use Illuminate\Http\Request;
 

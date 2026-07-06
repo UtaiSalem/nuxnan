@@ -19,7 +19,7 @@ class StoreProductController extends Controller
     public function index(Request $request, Academy $academy): JsonResponse
     {
         $store = AcademyStore::where('academy_id', $academy->id)->first();
-        if (!$store) {
+        if (! $store) {
             return response()->json(['success' => false, 'message' => 'ไม่พบร้านค้า'], 404);
         }
 
@@ -27,7 +27,7 @@ class StoreProductController extends Controller
             ->with(['category:id,name,slug,icon']);
 
         // Filter: active only for non-admin
-        if (!$request->boolean('include_inactive', false)) {
+        if (! $request->boolean('include_inactive', false)) {
             $query->active();
         }
 
@@ -74,13 +74,13 @@ class StoreProductController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $products->items() ? collect($products->items())->map(fn($p) => $this->formatProduct($p)) : [],
+            'data' => $products->items() ? collect($products->items())->map(fn ($p) => $this->formatProduct($p)) : [],
             'meta' => [
                 'current_page' => $products->currentPage(),
                 'last_page' => $products->lastPage(),
                 'per_page' => $products->perPage(),
                 'total' => $products->total(),
-            ]
+            ],
         ]);
     }
 
@@ -105,7 +105,7 @@ class StoreProductController extends Controller
     public function store(Request $request, Academy $academy): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -149,7 +149,7 @@ class StoreProductController extends Controller
             'sku' => $request->sku,
             'stock_quantity' => $request->stock_quantity,
             'low_stock_threshold' => $request->input('low_stock_threshold', 5),
-            'images' => !empty($imagePaths) ? $imagePaths : null,
+            'images' => ! empty($imagePaths) ? $imagePaths : null,
             'is_active' => $request->input('is_active', true),
             'is_featured' => $request->input('is_featured', false),
             'payment_type' => $request->input('payment_type', 'both'),
@@ -159,7 +159,7 @@ class StoreProductController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->formatProduct($product),
-            'message' => 'สร้างสินค้าเรียบร้อย'
+            'message' => 'สร้างสินค้าเรียบร้อย',
         ], 201);
     }
 
@@ -169,7 +169,7 @@ class StoreProductController extends Controller
     public function update(Request $request, Academy $academy, StoreProduct $product): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -198,7 +198,7 @@ class StoreProductController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->formatProduct($product->fresh()),
-            'message' => 'อัพเดทสินค้าเรียบร้อย'
+            'message' => 'อัพเดทสินค้าเรียบร้อย',
         ]);
     }
 
@@ -208,7 +208,7 @@ class StoreProductController extends Controller
     public function uploadImages(Request $request, Academy $academy, StoreProduct $product): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -228,7 +228,7 @@ class StoreProductController extends Controller
         return response()->json([
             'success' => true,
             'data' => ['images' => $product->image_urls],
-            'message' => 'อัพโหลดรูปเรียบร้อย'
+            'message' => 'อัพโหลดรูปเรียบร้อย',
         ]);
     }
 
@@ -238,7 +238,7 @@ class StoreProductController extends Controller
     public function deleteImage(Request $request, Academy $academy, StoreProduct $product): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -249,7 +249,7 @@ class StoreProductController extends Controller
         $images = $product->images ?? [];
         $index = $request->image_index;
 
-        if (!isset($images[$index])) {
+        if (! isset($images[$index])) {
             return response()->json(['success' => false, 'message' => 'ไม่พบรูปภาพ'], 404);
         }
 
@@ -258,12 +258,12 @@ class StoreProductController extends Controller
 
         // Remove from array
         array_splice($images, $index, 1);
-        $product->update(['images' => !empty($images) ? $images : null]);
+        $product->update(['images' => ! empty($images) ? $images : null]);
 
         return response()->json([
             'success' => true,
             'data' => ['images' => $product->image_urls],
-            'message' => 'ลบรูปเรียบร้อย'
+            'message' => 'ลบรูปเรียบร้อย',
         ]);
     }
 
@@ -273,7 +273,7 @@ class StoreProductController extends Controller
     public function destroy(Academy $academy, StoreProduct $product): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -281,7 +281,7 @@ class StoreProductController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบสินค้าเรียบร้อย'
+            'message' => 'ลบสินค้าเรียบร้อย',
         ]);
     }
 
@@ -324,7 +324,7 @@ class StoreProductController extends Controller
             $data['is_active'] = $product->is_active;
             $data['is_low_stock'] = $product->isLowStock();
             $data['created_at'] = $product->created_at;
-            $data['reviews'] = $product->reviews ? $product->reviews->map(fn($r) => [
+            $data['reviews'] = $product->reviews ? $product->reviews->map(fn ($r) => [
                 'id' => $r->id,
                 'rating' => $r->rating,
                 'comment' => $r->comment,

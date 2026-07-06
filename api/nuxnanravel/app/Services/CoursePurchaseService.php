@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\CloneCourseJob;
 use App\Models\Course;
+use App\Models\CoursePurchase;
 use App\Models\User;
 use App\Models\WalletTransaction;
 use App\Services\Support\CourseCloneContext;
@@ -36,11 +37,11 @@ class CoursePurchaseService
             }
 
             // Reload buyer with a row-level lock to prevent concurrent balance reads
-            $buyer = \App\Models\User::where('id', $buyer->id)->lockForUpdate()->firstOrFail();
+            $buyer = User::where('id', $buyer->id)->lockForUpdate()->firstOrFail();
 
             // Pessimistic lock on any in-progress purchase record to prevent duplicates
             if ($academyId) {
-                $alreadyPurchased = \App\Models\CoursePurchase::where('academy_id', $academyId)
+                $alreadyPurchased = CoursePurchase::where('academy_id', $academyId)
                     ->where('source_course_id', $course->id)
                     ->whereIn('status', ['completed', 'pending_clone', 'paid'])
                     ->lockForUpdate()
@@ -52,7 +53,7 @@ class CoursePurchaseService
                         ->exists();
                 }
             } else {
-                $alreadyPurchased = \App\Models\CoursePurchase::where('buyer_id', $buyer->id)
+                $alreadyPurchased = CoursePurchase::where('buyer_id', $buyer->id)
                     ->where('source_course_id', $course->id)
                     ->whereIn('status', ['completed', 'pending_clone', 'paid'])
                     ->lockForUpdate()
@@ -71,7 +72,7 @@ class CoursePurchaseService
             }
 
             // Create purchase record
-            $purchase = \App\Models\CoursePurchase::create([
+            $purchase = CoursePurchase::create([
                 'source_course_id' => $course->id,
                 'buyer_id' => $buyer->id,
                 'academy_id' => $academyId,
@@ -119,7 +120,7 @@ class CoursePurchaseService
         });
     }
 
-    protected function processPayment(User $buyer, Course $course, string $usedMode, \App\Models\CoursePurchase $purchase): array
+    protected function processPayment(User $buyer, Course $course, string $usedMode, CoursePurchase $purchase): array
     {
         $seller = $course->user;
         if (! $seller) {

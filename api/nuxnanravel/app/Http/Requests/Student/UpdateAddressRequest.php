@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Requests\Student;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -24,7 +25,7 @@ class UpdateAddressRequest extends FormRequest
             'district' => 'required|string|max:100',
             'province' => 'required|string|max:100',
             'postal_code' => 'nullable|string|max:10',
-            'is_current' => 'boolean'
+            'is_current' => 'boolean',
         ];
     }
 }

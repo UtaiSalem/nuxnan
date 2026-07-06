@@ -15,6 +15,7 @@ use App\Models\CoursePost;
 use App\Models\RecentlyViewedCourse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Storage;
 
 class CourseActivityController extends Controller implements HasMiddleware
 {
@@ -88,7 +89,7 @@ class CourseActivityController extends Controller implements HasMiddleware
                         ? ($user->profile_photo_path
                             ? (filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)
                                 ? $user->profile_photo_path
-                                : url(\Illuminate\Support\Facades\Storage::url($user->profile_photo_path)))
+                                : url(Storage::url($user->profile_photo_path)))
                             : 'https://ui-avatars.com/api/?name='.urlencode($user->name ?? 'User').'&color=7F9CF5&background=EBF4FF')
                         : 'https://ui-avatars.com/api/?name=User&color=7F9CF5&background=EBF4FF';
 

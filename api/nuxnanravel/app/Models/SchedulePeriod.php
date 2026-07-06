@@ -34,8 +34,11 @@ class SchedulePeriod extends Model
 
     // Period types
     const TYPE_CLASS = 'class';
+
     const TYPE_BREAK = 'break';
+
     const TYPE_LUNCH = 'lunch';
+
     const TYPE_ACTIVITY = 'activity';
 
     const TYPES = [
@@ -59,7 +62,7 @@ class SchedulePeriod extends Model
 
     public function getTimeRangeAttribute(): string
     {
-        return $this->start_time->format('H:i') . ' - ' . $this->end_time->format('H:i');
+        return $this->start_time->format('H:i').' - '.$this->end_time->format('H:i');
     }
 
     public function getDurationMinutesAttribute(): int

@@ -25,7 +25,7 @@ return new class extends Migration
             $table->dateTime('available_from')->nullable();
             $table->dateTime('available_until')->nullable();
             $table->timestamps();
-            
+
             // Indexes
             $table->index('type');
             $table->index('is_active');

@@ -29,11 +29,14 @@ class AlertAcknowledgement extends Model
 
     // Channel constants
     const CHANNEL_APP = 'app';
+
     const CHANNEL_SMS = 'sms';
+
     const CHANNEL_EMAIL = 'email';
 
     // Response constants
     const RESPONSE_SAFE = 'safe';
+
     const RESPONSE_NEED_HELP = 'need_help';
 
     // Relationships

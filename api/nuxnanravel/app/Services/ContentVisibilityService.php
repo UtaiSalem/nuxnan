@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Lesson;
-use App\Models\Topic;
 use App\Models\Assignment;
 use App\Models\CourseQuiz;
+use App\Models\Lesson;
+use App\Models\Topic;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class ContentVisibilityService
@@ -26,7 +26,7 @@ class ContentVisibilityService
     public function canStudentViewAssignment(User $user, Assignment $assignment): bool
     {
         // Must be published itself
-        if (!$assignment->is_published) {
+        if (! $assignment->is_published) {
             return false;
         }
 
@@ -91,7 +91,7 @@ class ContentVisibilityService
             return;
         }
 
-        if (!$visible) {
+        if (! $visible) {
             abort($code, 'เนื้อหานี้ยังไม่เปิดให้เข้าใช้งาน');
         }
     }

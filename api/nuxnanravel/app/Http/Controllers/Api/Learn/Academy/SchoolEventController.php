@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\AcademyGroup;
+use App\Models\AcademyGroupAdmin;
 use App\Models\ActivityEnrollment;
 use App\Models\ActivitySession;
 use App\Models\EventRegistration;
 use App\Models\SchoolEvent;
 use App\Services\AuditLogService;
+use App\Services\EventToPostMirror;
 use App\Traits\ManagesEventPermissions;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -39,8 +42,8 @@ class SchoolEventController extends Controller
         // Academy admins see every event. Group admins additionally see drafts of their own group.
         // Everyone else only sees published events.
         if (! $this->isAcademyAdmin($user, $academy)) {
-            $managedGroupIds = \App\Models\AcademyGroupAdmin::where('user_id', $user->id)
-                ->whereIn('academy_group_id', \App\Models\AcademyGroup::where('academy_id', $academy->id)->pluck('id'))
+            $managedGroupIds = AcademyGroupAdmin::where('user_id', $user->id)
+                ->whereIn('academy_group_id', AcademyGroup::where('academy_id', $academy->id)->pluck('id'))
                 ->pluck('academy_group_id');
 
             $query->where(function ($q) use ($managedGroupIds) {
@@ -255,7 +258,7 @@ class SchoolEventController extends Controller
 
             // Mirror if published
             if ($event->status === 'published') {
-                app(\App\Services\EventToPostMirror::class)->mirror($event);
+                app(EventToPostMirror::class)->mirror($event);
             }
 
             // Generate sessions if recurring
@@ -351,9 +354,9 @@ class SchoolEventController extends Controller
 
             // Mirror if published, otherwise unmirror (if draft/cancelled)
             if ($event->status === 'published') {
-                app(\App\Services\EventToPostMirror::class)->mirror($event);
+                app(EventToPostMirror::class)->mirror($event);
             } else {
-                app(\App\Services\EventToPostMirror::class)->unmirror($event);
+                app(EventToPostMirror::class)->unmirror($event);
             }
 
             return response()->json([
@@ -398,7 +401,7 @@ class SchoolEventController extends Controller
         );
 
         // Mirror to post
-        app(\App\Services\EventToPostMirror::class)->mirror($event);
+        app(EventToPostMirror::class)->mirror($event);
 
         return response()->json([
             'success' => true,
@@ -435,7 +438,7 @@ class SchoolEventController extends Controller
         );
 
         // Unmirror event post
-        app(\App\Services\EventToPostMirror::class)->unmirror($event);
+        app(EventToPostMirror::class)->unmirror($event);
 
         // TODO: Notify registered participants
 
@@ -682,7 +685,7 @@ class SchoolEventController extends Controller
         $oldData = $event->toArray();
 
         // Unmirror post before deleting event
-        app(\App\Services\EventToPostMirror::class)->unmirror($event);
+        app(EventToPostMirror::class)->unmirror($event);
 
         $event->delete();
 

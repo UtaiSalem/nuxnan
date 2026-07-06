@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-
 use App\Models\Course;
 use App\Services\CourseScoreService;
+use Illuminate\Console\Command;
 
 class CourseScoreSyncCommand extends Command
 {
@@ -32,8 +31,9 @@ class CourseScoreSyncCommand extends Command
 
         if ($courseId) {
             $course = Course::find($courseId);
-            if (!$course) {
+            if (! $course) {
                 $this->error("Course with ID {$courseId} not found.");
+
                 return 1;
             }
             $this->syncCourse($course, $scoreService);
@@ -49,6 +49,7 @@ class CourseScoreSyncCommand extends Command
         }
 
         $this->info('Successfully synced scores and grades.');
+
         return 0;
     }
 

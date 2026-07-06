@@ -31,9 +31,13 @@ class KpiValue extends Model
 
     // Period Types
     const PERIOD_DAILY = 'daily';
+
     const PERIOD_WEEKLY = 'weekly';
+
     const PERIOD_MONTHLY = 'monthly';
+
     const PERIOD_QUARTERLY = 'quarterly';
+
     const PERIOD_YEARLY = 'yearly';
 
     const PERIOD_TYPES = [
@@ -46,7 +50,9 @@ class KpiValue extends Model
 
     // Statuses
     const STATUS_ON_TRACK = 'on_track';
+
     const STATUS_WARNING = 'warning';
+
     const STATUS_CRITICAL = 'critical';
 
     // Relationships
@@ -108,11 +114,11 @@ class KpiValue extends Model
         }
 
         $direction = $this->kpi->comparison_direction;
-        
+
         if ($direction === KpiDefinition::DIRECTION_HIGHER_IS_BETTER) {
             return $this->change_percent > 0;
         }
-        
+
         return $this->change_percent < 0;
     }
 
@@ -125,7 +131,7 @@ class KpiValue extends Model
         if ($this->isImproved()) {
             return '↑';
         }
-        
+
         return '↓';
     }
 

@@ -19,33 +19,33 @@ class CourseCompletionApiTest extends TestCase
     {
         $course = Course::first();
         $user = User::first();
-        
-        if (!$course || !$user) {
+
+        if (! $course || ! $user) {
             $this->markTestSkipped('No course or user found in database');
         }
-        
+
         // Get a member of this course
         $member = CourseMember::where('course_id', $course->id)
             ->where('user_id', $user->id)
             ->first();
-        
-        if (!$member) {
+
+        if (! $member) {
             $this->markTestSkipped('User is not a member of the course');
         }
-        
+
         $response = $this->actingAs($user)
             ->getJson("/api/courses/{$course->id}/eligibility");
-        
+
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'data' => [
                     'is_eligible',
                     'eligibility_status',
                     'stats',
-                ]
+                ],
             ]);
     }
-    
+
     /**
      * Test eligibility summary endpoint
      */
@@ -53,14 +53,14 @@ class CourseCompletionApiTest extends TestCase
     {
         $course = Course::first();
         $user = User::first();
-        
-        if (!$course || !$user) {
+
+        if (! $course || ! $user) {
             $this->markTestSkipped('No course or user found in database');
         }
-        
+
         $response = $this->actingAs($user)
             ->getJson("/api/courses/{$course->id}/eligibility/summary");
-        
+
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'data' => [
@@ -68,10 +68,10 @@ class CourseCompletionApiTest extends TestCase
                     'eligible',
                     'at_risk',
                     'ineligible',
-                ]
+                ],
             ]);
     }
-    
+
     /**
      * Test completion summary endpoint
      */
@@ -79,23 +79,23 @@ class CourseCompletionApiTest extends TestCase
     {
         $course = Course::first();
         $user = User::first();
-        
-        if (!$course || !$user) {
+
+        if (! $course || ! $user) {
             $this->markTestSkipped('No course or user found in database');
         }
-        
+
         $response = $this->actingAs($user)
             ->getJson("/api/courses/{$course->id}/completion/summary");
-        
+
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'data' => [
                     'course_id',
                     'finalization_status',
-                ]
+                ],
             ]);
     }
-    
+
     /**
      * Test my grade endpoint
      */
@@ -103,25 +103,25 @@ class CourseCompletionApiTest extends TestCase
     {
         $course = Course::first();
         $user = User::first();
-        
-        if (!$course || !$user) {
+
+        if (! $course || ! $user) {
             $this->markTestSkipped('No course or user found in database');
         }
-        
+
         $member = CourseMember::where('course_id', $course->id)
             ->where('user_id', $user->id)
             ->first();
-        
-        if (!$member) {
+
+        if (! $member) {
             $this->markTestSkipped('User is not a member of the course');
         }
-        
+
         $response = $this->actingAs($user)
             ->getJson("/api/courses/{$course->id}/completion/my-grade");
-        
+
         $response->assertStatus(200);
     }
-    
+
     /**
      * Test certificates list endpoint
      */
@@ -129,17 +129,17 @@ class CourseCompletionApiTest extends TestCase
     {
         $course = Course::first();
         $user = User::first();
-        
-        if (!$course || !$user) {
+
+        if (! $course || ! $user) {
             $this->markTestSkipped('No course or user found in database');
         }
-        
+
         $response = $this->actingAs($user)
             ->getJson("/api/courses/{$course->id}/certificates");
-        
+
         $response->assertStatus(200);
     }
-    
+
     /**
      * Test appeals list endpoint
      */
@@ -147,17 +147,17 @@ class CourseCompletionApiTest extends TestCase
     {
         $course = Course::first();
         $user = User::first();
-        
-        if (!$course || !$user) {
+
+        if (! $course || ! $user) {
             $this->markTestSkipped('No course or user found in database');
         }
-        
+
         $response = $this->actingAs($user)
             ->getJson("/api/courses/{$course->id}/appeals");
-        
+
         $response->assertStatus(200);
     }
-    
+
     /**
      * Test remediation sessions list endpoint
      */
@@ -165,14 +165,14 @@ class CourseCompletionApiTest extends TestCase
     {
         $course = Course::first();
         $user = User::first();
-        
-        if (!$course || !$user) {
+
+        if (! $course || ! $user) {
             $this->markTestSkipped('No course or user found in database');
         }
-        
+
         $response = $this->actingAs($user)
             ->getJson("/api/courses/{$course->id}/remediation");
-        
+
         $response->assertStatus(200);
     }
 }

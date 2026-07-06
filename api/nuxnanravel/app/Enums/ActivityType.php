@@ -4,10 +4,10 @@ namespace App\Enums;
 
 /**
  * ActivityType Enum
- * 
+ *
  * Defines all possible activity types in the system.
  * Uses snake_case convention for consistency with REST API standards.
- * 
+ *
  * @since PHP 8.1+
  */
 enum ActivityType: string
@@ -50,13 +50,13 @@ enum ActivityType: string
     case UPDATE = 'update';
     case DELETE = 'delete';
     case JOIN = 'join';
-    
+
     /**
      * Get the Thai display text for this activity type.
      */
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::CREATE_POST => 'สร้างโพสต์ใหม่',
             self::UPDATE_POST => 'อัปเดตโพสต์',
             self::DELETE_POST => 'ลบโพสต์',
@@ -88,7 +88,7 @@ enum ActivityType: string
      */
     public function shortLabel(): string
     {
-        return match($this) {
+        return match ($this) {
             self::CREATE_POST => 'โพสต์',
             self::SHARE_POST => 'แชร์',
             self::CREATE_COMMENT => 'คอมเมนต์',
@@ -107,7 +107,7 @@ enum ActivityType: string
      */
     public function icon(): string
     {
-        return match($this) {
+        return match ($this) {
             self::CREATE_POST => 'fluent:add-circle-24-regular',
             self::UPDATE_POST => 'fluent:edit-24-regular',
             self::DELETE_POST => 'fluent:delete-24-regular',
@@ -172,13 +172,13 @@ enum ActivityType: string
         // e.g., "createPost" or "CreatePost" -> "create_post"
         $snakeCase = preg_replace('/([a-z])([A-Z])/', '$1_$2', $value);
         $snakeCase = strtolower($snakeCase);
-        
+
         // Handle concatenated lowercase like "createpost" -> "create_post"
         // Common patterns
         $patterns = [
             '/^(create|update|delete|share|view|approve|reject|give|receive)/' => '$1_',
         ];
-        
+
         foreach ($patterns as $pattern => $replacement) {
             if (preg_match($pattern, $snakeCase) && strpos($snakeCase, '_') === false) {
                 $snakeCase = preg_replace($pattern, $replacement, $snakeCase);

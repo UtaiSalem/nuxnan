@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\Course;
@@ -31,36 +32,36 @@ class CoursePointAccountService
             ->firstOrCreate(
                 ['course_id' => $courseId],
                 [
-                    'balance'             => 0,
-                    'total_earned'        => 0,
-                    'total_withdrawn'     => 0,
-                    'total_distributed'   => 0,
-                    'reserved_balance'    => 0,
-                    'commission_rate'     => 0.0000,
-                    'minimum_withdrawal'  => CoursePointAccount::MINIMUM_WITHDRAWAL,
+                    'balance' => 0,
+                    'total_earned' => 0,
+                    'total_withdrawn' => 0,
+                    'total_distributed' => 0,
+                    'reserved_balance' => 0,
+                    'commission_rate' => 0.0000,
+                    'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL,
                 ]
             );
 
         $balanceBefore = $account->balance;
-        $balanceAfter  = $balanceBefore + $amount;
+        $balanceAfter = $balanceBefore + $amount;
 
         $account->update([
-            'balance'      => $balanceAfter,
+            'balance' => $balanceAfter,
             'total_earned' => $account->total_earned + $amount,
         ]);
 
         return CoursePointTransaction::create([
-            'course_point_account_id'      => $account->id,
-            'course_id'                    => $courseId,
-            'lesson_id'                    => $lessonId,
-            'user_id'                      => $userId,
-            'type'                         => CoursePointTransaction::TYPE_LESSON_INCOME,
-            'amount'                       => $amount,
-            'balance_before'               => $balanceBefore,
-            'balance_after'                => $balanceAfter,
+            'course_point_account_id' => $account->id,
+            'course_id' => $courseId,
+            'lesson_id' => $lessonId,
+            'user_id' => $userId,
+            'type' => CoursePointTransaction::TYPE_LESSON_INCOME,
+            'amount' => $amount,
+            'balance_before' => $balanceBefore,
+            'balance_after' => $balanceAfter,
             'related_points_transaction_id' => $pointsTransactionId,
-            'metadata'                     => ['source' => 'lesson_unlock'],
-            'created_by'                   => $userId,
+            'metadata' => ['source' => 'lesson_unlock'],
+            'created_by' => $userId,
         ]);
     }
 
@@ -78,8 +79,9 @@ class CoursePointAccountService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if (!$account->canWithdraw($amount)) {
+            if (! $account->canWithdraw($amount)) {
                 $minAmount = $account->minimum_withdrawal;
+
                 return [
                     'success' => false,
                     'message' => "ถอนขั้นต่ำ {$minAmount} แต้ม (Available: {$account->available_balance} แต้ม)",
@@ -87,25 +89,25 @@ class CoursePointAccountService
             }
 
             $balanceBefore = $account->balance;
-            $balanceAfter  = $balanceBefore - $amount;
+            $balanceAfter = $balanceBefore - $amount;
 
             // อัพเดท course account
             $account->update([
-                'balance'         => $balanceAfter,
+                'balance' => $balanceAfter,
                 'total_withdrawn' => $account->total_withdrawn + $amount,
             ]);
 
             // สร้าง ledger รายวิชา
             $courseTx = CoursePointTransaction::create([
                 'course_point_account_id' => $account->id,
-                'course_id'               => $courseId,
-                'user_id'                 => $recipient->id,
-                'type'                    => CoursePointTransaction::TYPE_OWNER_WITHDRAW,
-                'amount'                  => $amount,
-                'balance_before'          => $balanceBefore,
-                'balance_after'           => $balanceAfter,
-                'metadata'                => ['recipient' => $recipient->name],
-                'created_by'              => $performedBy,
+                'course_id' => $courseId,
+                'user_id' => $recipient->id,
+                'type' => CoursePointTransaction::TYPE_OWNER_WITHDRAW,
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'metadata' => ['recipient' => $recipient->name],
+                'created_by' => $performedBy,
             ]);
 
             // เพิ่มแต้มให้ owner (ฝั่ง user)
@@ -122,15 +124,15 @@ class CoursePointAccountService
             $courseTx->update(['related_points_transaction_id' => $userTx->id]);
 
             Log::info('Course points withdrawn', [
-                'course_id'    => $courseId,
+                'course_id' => $courseId,
                 'recipient_id' => $recipient->id,
-                'amount'       => $amount,
+                'amount' => $amount,
             ]);
 
             return [
-                'success'         => true,
-                'message'         => "ถอน {$amount} แต้มสำเร็จ",
-                'new_balance'     => $balanceAfter,
+                'success' => true,
+                'message' => "ถอน {$amount} แต้มสำเร็จ",
+                'new_balance' => $balanceAfter,
                 'user_new_points' => $recipient->fresh()->pp,
             ];
         });
@@ -157,7 +159,7 @@ class CoursePointAccountService
             $reserveAmount = 0;
             if (isset($data['max_claims']) && $data['max_claims']) {
                 $reserveAmount = $data['points_per_claim'] * $data['max_claims'];
-                if (!$account->canReserve($reserveAmount)) {
+                if (! $account->canReserve($reserveAmount)) {
                     return [
                         'success' => false,
                         'message' => "แต้มไม่พอ ต้องการ {$reserveAmount} แต้ม (Available: {$account->available_balance} แต้ม)",
@@ -168,17 +170,17 @@ class CoursePointAccountService
 
             $campaign = CoursePointCampaign::create([
                 'course_point_account_id' => $account->id,
-                'course_id'               => $courseId,
-                'campaign_type'           => CoursePointCampaign::CAMPAIGN_TYPE_MANUAL,
-                'title'                   => $data['title'],
-                'description'             => $data['description'] ?? null,
-                'points_per_claim'        => $data['points_per_claim'],
-                'max_claims'              => $data['max_claims'] ?? null,
-                'eligible_type'           => 'all_enrolled',
-                'starts_at'               => $data['starts_at'] ?? null,
-                'ends_at'                 => $data['ends_at'] ?? null,
-                'status'                  => CoursePointCampaign::STATUS_ACTIVE,
-                'created_by'              => $createdBy,
+                'course_id' => $courseId,
+                'campaign_type' => CoursePointCampaign::CAMPAIGN_TYPE_MANUAL,
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'points_per_claim' => $data['points_per_claim'],
+                'max_claims' => $data['max_claims'] ?? null,
+                'eligible_type' => 'all_enrolled',
+                'starts_at' => $data['starts_at'] ?? null,
+                'ends_at' => $data['ends_at'] ?? null,
+                'status' => CoursePointCampaign::STATUS_ACTIVE,
+                'created_by' => $createdBy,
             ]);
 
             return ['success' => true, 'campaign' => $campaign];
@@ -215,7 +217,7 @@ class CoursePointAccountService
             $reserveAmount = 0;
             if (isset($data['max_claims']) && $data['max_claims']) {
                 $reserveAmount = $data['points_per_claim'] * $data['max_claims'];
-                if (!$account->canReserve($reserveAmount)) {
+                if (! $account->canReserve($reserveAmount)) {
                     return [
                         'success' => false,
                         'message' => "แต้มไม่พอต้องการจอง {$reserveAmount} แต้ม (Available: {$account->available_balance} แต้ม)",
@@ -226,18 +228,18 @@ class CoursePointAccountService
 
             $campaign = CoursePointCampaign::create([
                 'course_point_account_id' => $account->id,
-                'course_id'               => $courseId,
-                'lesson_id'               => $lessonId,
-                'campaign_type'           => CoursePointCampaign::CAMPAIGN_TYPE_LESSON,
-                'title'                   => $data['title'] ?? "รางวัลอ่านจบบทเรียน",
-                'description'             => $data['description'] ?? null,
-                'points_per_claim'        => $data['points_per_claim'],
-                'max_claims'              => $data['max_claims'] ?? null,
-                'eligible_type'           => 'all_enrolled',
-                'starts_at'               => $data['starts_at'] ?? null,
-                'ends_at'                 => $data['ends_at'] ?? null,
-                'status'                  => CoursePointCampaign::STATUS_ACTIVE,
-                'created_by'              => $createdBy,
+                'course_id' => $courseId,
+                'lesson_id' => $lessonId,
+                'campaign_type' => CoursePointCampaign::CAMPAIGN_TYPE_LESSON,
+                'title' => $data['title'] ?? 'รางวัลอ่านจบบทเรียน',
+                'description' => $data['description'] ?? null,
+                'points_per_claim' => $data['points_per_claim'],
+                'max_claims' => $data['max_claims'] ?? null,
+                'eligible_type' => 'all_enrolled',
+                'starts_at' => $data['starts_at'] ?? null,
+                'ends_at' => $data['ends_at'] ?? null,
+                'status' => CoursePointCampaign::STATUS_ACTIVE,
+                'created_by' => $createdBy,
             ]);
 
             return ['success' => true, 'campaign' => $campaign];
@@ -253,19 +255,23 @@ class CoursePointAccountService
             ->where('status', CoursePointCampaign::STATUS_ACTIVE)
             ->first();
 
-        if (!$campaign || !$campaign->isClaimable()) {
+        if (! $campaign || ! $campaign->isClaimable()) {
             return ['rewarded' => false, 'reason' => 'no_active_campaign'];
         }
 
         return DB::transaction(function () use ($campaign, $lesson, $student) {
             // ลำดับ lock: campaign -> account เพื่อเลี่ยง deadlock
             $campaign = CoursePointCampaign::lockForUpdate()->find($campaign->id);
-            if (!$campaign->isClaimable()) return ['rewarded' => false, 'reason' => 'not_claimable'];
+            if (! $campaign->isClaimable()) {
+                return ['rewarded' => false, 'reason' => 'not_claimable'];
+            }
 
             $alreadyClaimed = CoursePointCampaignClaim::where('campaign_id', $campaign->id)
                 ->where('user_id', $student->id)
                 ->exists();
-            if ($alreadyClaimed) return ['rewarded' => false, 'reason' => 'already_claimed'];
+            if ($alreadyClaimed) {
+                return ['rewarded' => false, 'reason' => 'already_claimed'];
+            }
 
             $account = CoursePointAccount::lockForUpdate()->find($campaign->course_point_account_id);
             $amount = $campaign->points_per_claim;
@@ -273,17 +279,20 @@ class CoursePointAccountService
             if ($campaign->max_claims) {
                 if ($account->balance < $amount || $account->reserved_balance < $amount) {
                     $campaign->update(['status' => CoursePointCampaign::STATUS_DEPLETED]);
+
                     return ['rewarded' => false, 'reason' => 'depleted'];
                 }
             } else {
-                if ($account->available_balance < $amount) return ['rewarded' => false, 'reason' => 'insufficient_balance'];
+                if ($account->available_balance < $amount) {
+                    return ['rewarded' => false, 'reason' => 'insufficient_balance'];
+                }
             }
 
             $balanceBefore = $account->balance;
-            $balanceAfter  = $balanceBefore - $amount;
+            $balanceAfter = $balanceBefore - $amount;
 
             $updateData = [
-                'balance'          => $balanceAfter,
+                'balance' => $balanceAfter,
                 'total_distributed' => $account->total_distributed + $amount,
             ];
             if ($campaign->max_claims) {
@@ -293,16 +302,16 @@ class CoursePointAccountService
 
             $courseTx = CoursePointTransaction::create([
                 'course_point_account_id' => $account->id,
-                'course_id'               => $lesson->course_id,
-                'lesson_id'               => $lesson->id,
-                'user_id'                 => $student->id,
-                'type'                    => CoursePointTransaction::TYPE_STUDENT_CLAIM,
-                'amount'                  => $amount,
-                'balance_before'          => $balanceBefore,
-                'balance_after'           => $balanceAfter,
-                'related_campaign_id'     => $campaign->id,
-                'metadata'                => ['source' => 'lesson_completion'],
-                'created_by'              => $student->id,
+                'course_id' => $lesson->course_id,
+                'lesson_id' => $lesson->id,
+                'user_id' => $student->id,
+                'type' => CoursePointTransaction::TYPE_STUDENT_CLAIM,
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'related_campaign_id' => $campaign->id,
+                'metadata' => ['source' => 'lesson_completion'],
+                'created_by' => $student->id,
             ]);
 
             $userTx = $this->pointsService->earn(
@@ -315,12 +324,12 @@ class CoursePointAccountService
             );
 
             CoursePointCampaignClaim::create([
-                'campaign_id'                 => $campaign->id,
-                'user_id'                     => $student->id,
-                'points_amount'               => $amount,
-                'points_transaction_id'       => $userTx->id,
+                'campaign_id' => $campaign->id,
+                'user_id' => $student->id,
+                'points_amount' => $amount,
+                'points_transaction_id' => $userTx->id,
                 'course_point_transaction_id' => $courseTx->id,
-                'claimed_at'                  => now(),
+                'claimed_at' => now(),
             ]);
 
             $campaign->increment('total_claimed');
@@ -331,9 +340,9 @@ class CoursePointAccountService
             }
 
             return [
-                'rewarded'        => true,
+                'rewarded' => true,
                 'points_received' => $amount,
-                'campaign_title'  => $campaign->title,
+                'campaign_title' => $campaign->title,
             ];
         });
     }
@@ -344,10 +353,12 @@ class CoursePointAccountService
     {
         return DB::transaction(function () use ($campaignId) {
             $campaign = CoursePointCampaign::lockForUpdate()->findOrFail($campaignId);
-            if ($campaign->status === CoursePointCampaign::STATUS_ENDED) return ['success' => true];
+            if ($campaign->status === CoursePointCampaign::STATUS_ENDED) {
+                return ['success' => true];
+            }
 
             $account = CoursePointAccount::lockForUpdate()->find($campaign->course_point_account_id);
-            
+
             // คืน reserved
             if ($campaign->max_claims) {
                 $remaining = ($campaign->max_claims - $campaign->total_claimed) * $campaign->points_per_claim;
@@ -357,6 +368,7 @@ class CoursePointAccountService
             }
 
             $campaign->update(['status' => CoursePointCampaign::STATUS_ENDED]);
+
             return ['success' => true];
         });
     }
@@ -382,6 +394,6 @@ class CoursePointAccountService
     public function claimCampaign(int $campaignId, User $student): array
     {
         // Re-use logic or just redirect to specific claim
-        return $this->grantLessonCompletionReward(CoursePointCampaign::find($campaignId)->lesson ?? new Lesson(), $student);
+        return $this->grantLessonCompletionReward(CoursePointCampaign::find($campaignId)->lesson ?? new Lesson, $student);
     }
 }

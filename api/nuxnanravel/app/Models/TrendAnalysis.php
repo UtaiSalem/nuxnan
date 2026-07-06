@@ -36,7 +36,9 @@ class TrendAnalysis extends Model
 
     // Time Granularities
     const GRANULARITY_DAILY = 'daily';
+
     const GRANULARITY_WEEKLY = 'weekly';
+
     const GRANULARITY_MONTHLY = 'monthly';
 
     const GRANULARITIES = [
@@ -115,12 +117,14 @@ class TrendAnalysis extends Model
             return null;
         }
         $last = end($points);
+
         return $last['value'] ?? null;
     }
 
     public function getForecastValue(int $periodsAhead = 1): ?float
     {
         $forecast = $this->forecast ?? [];
+
         return $forecast[$periodsAhead - 1]['value'] ?? null;
     }
 

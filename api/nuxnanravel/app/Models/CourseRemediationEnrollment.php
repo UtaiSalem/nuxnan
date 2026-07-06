@@ -44,13 +44,21 @@ class CourseRemediationEnrollment extends Model
 
     // Status
     const STATUS_ENROLLED = 'enrolled';
+
     const STATUS_CONFIRMED = 'confirmed';
+
     const STATUS_ATTENDED = 'attended';
+
     const STATUS_SUBMITTED = 'submitted';
+
     const STATUS_GRADED = 'graded';
+
     const STATUS_PASSED = 'passed';
+
     const STATUS_FAILED = 'failed';
+
     const STATUS_CANCELLED = 'cancelled';
+
     const STATUS_NO_SHOW = 'no_show';
 
     /**
@@ -199,7 +207,7 @@ class CourseRemediationEnrollment extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_ENROLLED => 'ลงทะเบียนแล้ว',
             self::STATUS_CONFIRMED => 'ยืนยันแล้ว',
             self::STATUS_ATTENDED => 'เข้าร่วมแล้ว',

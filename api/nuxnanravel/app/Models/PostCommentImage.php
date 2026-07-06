@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\PostComment;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class PostCommentImage extends Model
 {
@@ -21,7 +20,6 @@ class PostCommentImage extends Model
 
     public function getUrlAttribute(): string
     {
-        return asset('storage/images/posts/comments/' . $this->filename);
+        return asset('storage/images/posts/comments/'.$this->filename);
     }
-    
 }

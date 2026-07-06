@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentAccountInvitation;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 
 class StudentAccountController extends Controller
 {
@@ -42,31 +42,32 @@ class StudentAccountController extends Controller
             'data' => [
                 'token' => $raw,
                 'expires_at' => $invitation->expires_at,
-            ]
+            ],
         ]);
     }
 
     public function exportInvitations(Academy $academy)
     {
         $headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=invitations_export.csv",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
+            'Content-type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=invitations_export.csv',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
         ];
-        
-        $callback = function() use ($academy) {
+
+        $callback = function () use ($academy) {
             $file = fopen('php://output', 'w');
-            fputs($file, "\xEF\xBB\xBF");
+            fwrite($file, "\xEF\xBB\xBF");
             fputcsv($file, ['รหัสนักเรียน', 'ชื่อ', 'นามสกุล', 'Link เปิดบัญชี', 'หมดอายุ']);
-            
-            $baseUrl = config('app.frontend_url', 'http://localhost:3000') . '/activate-student/';
-            
-            $sanitize = function($val) {
+
+            $baseUrl = config('app.frontend_url', 'http://localhost:3000').'/activate-student/';
+
+            $sanitize = function ($val) {
                 if ($val !== null && preg_match('/^[=\-+@]/', $val)) {
-                    return "'" . $val;
+                    return "'".$val;
                 }
+
                 return $val;
             };
 
@@ -86,14 +87,14 @@ class StudentAccountController extends Controller
                         $sanitize($inv->student->student_id),
                         $sanitize($inv->student->first_name_th),
                         $sanitize($inv->student->last_name_th),
-                        $baseUrl . $raw,
-                        $inv->expires_at->format('Y-m-d H:i')
+                        $baseUrl.$raw,
+                        $inv->expires_at->format('Y-m-d H:i'),
                     ]);
                 }
             }
             fclose($file);
         };
-        
+
         return response()->stream($callback, 200, $headers);
     }
 }

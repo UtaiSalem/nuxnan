@@ -2,22 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Course;
-use App\Models\Academy;
-use App\Models\Activity;
-use App\Models\CourseGroup;
-use App\Models\CoursePostLike;
-use App\Models\CoursePostImage;
-use App\Models\CoursePostShare;
-use App\Models\CoursePostComment;
-use App\Models\Poll;
-use App\Models\CoursePostDislike;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class CoursePost extends Model
 {
@@ -119,7 +108,6 @@ class CoursePost extends Model
         return $this->hasMany(CoursePostDislike::class);
     }
 
-
     public function activity(): MorphOne
     {
         return $this->morphOne(Activity::class, 'activityable');
@@ -128,7 +116,6 @@ class CoursePost extends Model
     public function getPostUrlAttribute(): string
     {
         // return route('course.posts.show', $this->course_id, $this->id);
-        return '/courses/'. $this->course_id . '/posts/' . $this->id;
+        return '/courses/'.$this->course_id.'/posts/'.$this->id;
     }
-
 }

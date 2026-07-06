@@ -21,12 +21,12 @@ return new class extends Migration
             $table->dateTime('expires_at')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
-            
+
             // Indexes
             $table->index('user_id');
             $table->index('reward_id');
             $table->index('status');
-            
+
             // Foreign keys
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('reward_id')->references('id')->on('rewards')->onDelete('cascade');

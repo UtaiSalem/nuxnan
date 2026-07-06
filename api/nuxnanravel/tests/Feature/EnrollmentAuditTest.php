@@ -11,6 +11,7 @@ use App\Models\RolloverBatch;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class EnrollmentAuditTest extends TestCase
@@ -160,7 +161,7 @@ class EnrollmentAuditTest extends TestCase
         $this->assertEquals(ClassroomStudent::STATUS_ACTIVE, $log->old_values['status']);
         $this->assertEquals(ClassroomStudent::STATUS_GRADUATED, $log->new_values['status']);
         $this->assertEquals('Graduated successfully', $log->new_values['leave_reason']);
-        $this->assertEquals('2026-03-31', \Illuminate\Support\Carbon::parse($log->new_values['left_at'])->setTimezone(config('app.timezone'))->format('Y-m-d'));
+        $this->assertEquals('2026-03-31', Carbon::parse($log->new_values['left_at'])->setTimezone(config('app.timezone'))->format('Y-m-d'));
     }
 
     public function test_classroom_student_transfer_audits_correctly(): void
@@ -222,7 +223,7 @@ class EnrollmentAuditTest extends TestCase
         $this->assertEquals(ClassroomStudent::STATUS_ACTIVE, $updateLog->old_values['status']);
         $this->assertEquals(ClassroomStudent::STATUS_TRANSFERRED, $updateLog->new_values['status']);
         $this->assertEquals('Transferred to section 2', $updateLog->new_values['leave_reason']);
-        $this->assertEquals('2025-10-01', \Illuminate\Support\Carbon::parse($updateLog->new_values['left_at'])->setTimezone(config('app.timezone'))->format('Y-m-d'));
+        $this->assertEquals('2025-10-01', Carbon::parse($updateLog->new_values['left_at'])->setTimezone(config('app.timezone'))->format('Y-m-d'));
     }
 
     public function test_rollover_batch_creation_and_update_audits_correctly(): void

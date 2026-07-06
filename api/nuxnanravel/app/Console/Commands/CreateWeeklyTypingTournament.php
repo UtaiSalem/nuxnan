@@ -4,11 +4,11 @@ namespace App\Console\Commands;
 
 use App\Models\TypingTournament;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
 
 class CreateWeeklyTypingTournament extends Command
 {
     protected $signature = 'typing:create-weekly-tournament';
+
     protected $description = "Create next week's typing tournament";
 
     public function handle(): void
@@ -22,6 +22,7 @@ class CreateWeeklyTypingTournament extends Command
 
         if (TypingTournament::where('slug', $slug)->exists()) {
             $this->info("Weekly tournament for W{$weekNum} already exists.");
+
             return;
         }
 

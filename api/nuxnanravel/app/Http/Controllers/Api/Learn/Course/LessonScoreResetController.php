@@ -8,7 +8,6 @@ use App\Models\CourseMember;
 use App\Models\Lesson;
 use App\Services\LessonScoreResetService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class LessonScoreResetController extends Controller
 {
@@ -25,7 +24,7 @@ class LessonScoreResetController extends Controller
     public function resetMemberLesson(Request $request, Course $course, CourseMember $member, Lesson $lesson)
     {
         // 1. Guard: Check permission
-        if (!$course->hasPermission(auth()->user(), 'edit_grades')) {
+        if (! $course->hasPermission(auth()->user(), 'edit_grades')) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -78,7 +77,7 @@ class LessonScoreResetController extends Controller
      */
     public function resetAllMembersLesson(Request $request, Course $course, Lesson $lesson)
     {
-        if (!$course->hasPermission(auth()->user(), 'edit_grades')) {
+        if (! $course->hasPermission(auth()->user(), 'edit_grades')) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -94,7 +93,7 @@ class LessonScoreResetController extends Controller
         $reason = $request->input('reason');
         $adminId = auth()->id();
 
-        if (!in_array($type, ['quiz', 'assignment_grade', 'assignment_full'], true)) {
+        if (! in_array($type, ['quiz', 'assignment_grade', 'assignment_full'], true)) {
             return response()->json(['message' => 'Invalid reset type'], 422);
         }
 

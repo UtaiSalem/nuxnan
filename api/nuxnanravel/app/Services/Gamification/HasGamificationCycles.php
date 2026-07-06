@@ -12,24 +12,25 @@ trait HasGamificationCycles
     protected function activeCycles(): array
     {
         $now = Carbon::now();
+
         return [
             [
-                'type'  => 'week',
-                'key'   => $now->format('o-\WW'), // ISO year-week e.g. '2026-W26'
+                'type' => 'week',
+                'key' => $now->format('o-\WW'), // ISO year-week e.g. '2026-W26'
                 'start' => $now->copy()->startOfWeek(),
-                'end'   => $now->copy()->endOfWeek(),
+                'end' => $now->copy()->endOfWeek(),
             ],
             [
-                'type'  => 'month',
-                'key'   => $now->format('Y-m'),
+                'type' => 'month',
+                'key' => $now->format('Y-m'),
                 'start' => $now->copy()->startOfMonth(),
-                'end'   => $now->copy()->endOfMonth(),
+                'end' => $now->copy()->endOfMonth(),
             ],
             [
-                'type'  => 'all_time',
-                'key'   => 'all',
+                'type' => 'all_time',
+                'key' => 'all',
                 'start' => Carbon::create(2020, 1, 1),
-                'end'   => null,
+                'end' => null,
             ],
         ];
     }

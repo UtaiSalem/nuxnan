@@ -6,8 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
@@ -22,7 +23,7 @@ class SocialAuthController extends Controller
     /**
      * Redirect the user to the Google authentication page.
      *
-     * @return \Illuminate\Http\RedirectResponse|\Symfony\Component\HttpFoundation\RedirectResponse
+     * @return RedirectResponse|\Symfony\Component\HttpFoundation\RedirectResponse
      */
     public function redirectToGoogle()
     {
@@ -32,15 +33,16 @@ class SocialAuthController extends Controller
     /**
      * Obtain the user information from Google.
      *
-     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     * @return RedirectResponse|JsonResponse
      */
     public function handleGoogleCallback()
     {
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Google Auth Error: ' . $e->getMessage());
-            \Illuminate\Support\Facades\Log::error($e->getTraceAsString());
+            Log::error('Google Auth Error: '.$e->getMessage());
+            Log::error($e->getTraceAsString());
+
             return response()->json(['error' => 'Google authentication failed', 'message' => $e->getMessage()], 401);
         }
 
@@ -89,15 +91,12 @@ class SocialAuthController extends Controller
 
         // Redirect to frontend with token
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
-        
+
         return redirect()->to("{$frontendUrl}/auth/callback?token={$token}");
     }
 
     /**
      * Generate a unique username from the name.
-     *
-     * @param string $name
-     * @return string
      */
     protected function generateUniqueUsername(string $name): string
     {

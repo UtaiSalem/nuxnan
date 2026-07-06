@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         // Create member_tags table
-        if (!Schema::hasTable('member_tags')) {
+        if (! Schema::hasTable('member_tags')) {
             Schema::create('member_tags', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('academy_id');
@@ -25,7 +25,7 @@ return new class extends Migration
                 $table->timestamps();
 
                 $table->foreign('academy_id')->references('id')->on('academies')->onDelete('cascade');
-                
+
                 $table->unique(['academy_id', 'name']);
                 $table->unique(['academy_id', 'slug']);
                 $table->index(['academy_id', 'is_active']);
@@ -33,7 +33,7 @@ return new class extends Migration
         }
 
         // Create pivot table for member-tag relationships
-        if (!Schema::hasTable('academy_member_tag')) {
+        if (! Schema::hasTable('academy_member_tag')) {
             Schema::create('academy_member_tag', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('academy_member_id');

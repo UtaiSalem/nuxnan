@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Traits\Auditable;
 
 /**
  * TuitionFee Model - ค่าเล่าเรียนของนักเรียน
  */
 class TuitionFee extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'academy_id',
@@ -54,10 +54,15 @@ class TuitionFee extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_PARTIAL = 'partial';
+
     const STATUS_PAID = 'paid';
+
     const STATUS_OVERDUE = 'overdue';
+
     const STATUS_CANCELLED = 'cancelled';
+
     const STATUS_REFUNDED = 'refunded';
 
     const STATUSES = [
@@ -138,8 +143,8 @@ class TuitionFee extends Model
 
     public function getIsOverdueAttribute(): bool
     {
-        return $this->status !== self::STATUS_PAID 
-            && $this->status !== self::STATUS_CANCELLED 
+        return $this->status !== self::STATUS_PAID
+            && $this->status !== self::STATUS_CANCELLED
             && $this->due_date < now();
     }
 
@@ -148,6 +153,7 @@ class TuitionFee extends Model
         if ($this->net_amount <= 0) {
             return 100;
         }
+
         return round(($this->paid_amount / $this->net_amount) * 100, 2);
     }
 
@@ -174,7 +180,7 @@ class TuitionFee extends Model
         $this->paid_amount = $this->payments()
             ->where('status', Payment::STATUS_CONFIRMED)
             ->sum('amount');
-        
+
         $this->balance_amount = $this->net_amount - $this->paid_amount;
 
         if ($this->balance_amount <= 0) {
@@ -196,7 +202,7 @@ class TuitionFee extends Model
         $prefix = 'INV';
         $year = date('Y');
         $month = date('m');
-        
+
         $lastInvoice = static::where('academy_id', $academyId)
             ->where('invoice_number', 'like', "{$prefix}{$year}{$month}%")
             ->orderBy('invoice_number', 'desc')
@@ -209,7 +215,7 @@ class TuitionFee extends Model
             $newNumber = 1;
         }
 
-        return $prefix . $year . $month . str_pad($newNumber, 5, '0', STR_PAD_LEFT);
+        return $prefix.$year.$month.str_pad($newNumber, 5, '0', STR_PAD_LEFT);
     }
 
     // Scopes

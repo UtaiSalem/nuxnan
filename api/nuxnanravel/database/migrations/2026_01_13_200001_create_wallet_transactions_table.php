@@ -24,13 +24,13 @@ return new class extends Migration
             $table->enum('status', ['pending', 'completed', 'failed', 'cancelled'])->default('completed');
             $table->string('reference_number')->nullable();
             $table->timestamps();
-            
+
             // Indexes
             $table->index('user_id');
             $table->index('transaction_type');
             $table->index('created_at');
             $table->index('reference_number');
-            
+
             // Foreign key
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });

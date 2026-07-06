@@ -101,7 +101,7 @@ class Photo extends Model
      */
     public function getIsLikedAttribute(): bool
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return false;
         }
 

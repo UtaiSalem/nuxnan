@@ -42,7 +42,9 @@ class WalletDepositRequest extends Model
      * Status constants
      */
     const STATUS_PENDING = 'pending';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
 
     /**
@@ -122,15 +124,15 @@ class WalletDepositRequest extends Model
      */
     public function getSlipUrlAttribute(): ?string
     {
-        if (!$this->transfer_slip) {
+        if (! $this->transfer_slip) {
             return null;
         }
-        
+
         if (str_starts_with($this->transfer_slip, 'http')) {
             return $this->transfer_slip;
         }
-        
-        return asset('storage/' . $this->transfer_slip);
+
+        return asset('storage/'.$this->transfer_slip);
     }
 
     /**
@@ -138,7 +140,7 @@ class WalletDepositRequest extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'รอตรวจสอบ',
             self::STATUS_APPROVED => 'อนุมัติแล้ว',
             self::STATUS_REJECTED => 'ปฏิเสธ',
@@ -151,7 +153,7 @@ class WalletDepositRequest extends Model
      */
     public function getPaymentMethodLabelAttribute(): string
     {
-        return match($this->payment_method) {
+        return match ($this->payment_method) {
             'bank_transfer' => 'โอนเงิน/ธนาคาร',
             'promptpay' => 'พร้อมเพย์',
             'credit_card' => 'บัตรเครดิต',

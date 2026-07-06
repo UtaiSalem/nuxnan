@@ -5,19 +5,18 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class VerificationController extends Controller
 {
     /**
      * Mark the authenticated user's email address as verified.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  string  $id
      * @param  string  $hash
-     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     * @return RedirectResponse|JsonResponse
      */
     public function verify(Request $request, $id, $hash)
     {
@@ -32,21 +31,18 @@ class VerificationController extends Controller
         }
 
         if ($user->hasVerifiedEmail()) {
-            return redirect()->to(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?verified=1');
+            return redirect()->to(env('FRONTEND_URL', 'http://localhost:3000').'/auth/login?verified=1');
         }
 
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
         }
 
-        return redirect()->to(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?verified=1');
+        return redirect()->to(env('FRONTEND_URL', 'http://localhost:3000').'/auth/login?verified=1');
     }
 
     /**
      * Resend the email verification notification.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function resend(Request $request): JsonResponse
     {

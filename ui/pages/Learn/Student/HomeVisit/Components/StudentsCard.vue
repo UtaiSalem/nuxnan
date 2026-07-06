@@ -88,49 +88,16 @@ const studentPhoto = ref(null)
 const photoInput = ref(null)
 const showPhotoModal = ref(false)
 
-// Computed property to get student photo URL
-const getStudentPhotoUrl = computed(() => {
+// Function to load student photo
+const loadStudentPhoto = () => {
   if (form.profile_image) {
-    // Priority order: students table profile_image, then studentCard profile_image
-    const possiblePaths = []
-    
-    // If profile_image from students table exists
-    if (props.student?.profile_image) {
-      possiblePaths.push(`/storage/images/students/${props.student?.class_level}/${props.student?.class_section}/${props.student.profile_image}`)
-    }
-    
-    // If profile_image from studentCard exists
-    if (props.studentCard?.profile_image && props.studentCard?.class_level && props.studentCard?.class_section) {
-      possiblePaths.push(`/storage/images/students/${props.studentCard.class_level}/${props.studentCard.class_section}/${props.studentCard.profile_image}`)
-    }
-    
-    return possiblePaths
+    studentPhoto.value = props.student?.profile_image_url || props.studentCard?.profile_image_url || null
   }
-  return null
-})
+}
 
-// Load student photo on component mount
 onMounted(() => {
   loadStudentPhoto()
 })
-
-// Function to load student photo
-const loadStudentPhoto = async () => {
-  if (getStudentPhotoUrl.value) {
-    for (const photoPath of getStudentPhotoUrl.value) {
-      try {
-        const response = await fetch(photoPath, { method: 'HEAD' })
-        if (response.ok) {
-          studentPhoto.value = photoPath
-          break
-        }
-      } catch (error) {
-        // Continue to next path
-        continue
-      }
-    }
-  }
-}
 
 // Function to open photo modal
 const openPhotoModal = () => {

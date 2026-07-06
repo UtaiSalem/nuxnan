@@ -13,7 +13,7 @@ class CourseMemberObserver
     {
         if ($member->isDirty('completion_status') && $member->completion_status === 'completed') {
             $course = $member->course;
-            if (!$course) {
+            if (! $course) {
                 return;
             }
 
@@ -26,9 +26,9 @@ class CourseMemberObserver
                     $member->user_id,
                     null,
                     [
-                        'course_id'   => $course->id,
+                        'course_id' => $course->id,
                         'course_code' => $course->code,
-                        'grade'       => $member->final_grade,
+                        'grade' => $member->final_grade,
                     ]
                 );
             }

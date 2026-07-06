@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\quizzes;
 
+use App\Constants\QuizConstants;
+use App\Enums\UsageEventType;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseQuiz;
-use Illuminate\Http\Request;
 use App\Models\CourseQuizResult;
 use App\Models\UserAnswerQuestion;
-use App\Constants\QuizConstants;
 use App\Services\AttendanceEligibilityService;
-use Illuminate\Support\Facades\DB;
-
 use App\Services\ContentVisibilityService;
+use App\Services\UsageEventService;
+use Illuminate\Http\Request;
 
 class CourseQuizResultController extends Controller
 {
     protected AttendanceEligibilityService $eligibilityService;
+
     protected ContentVisibilityService $visibility;
 
     public function __construct(AttendanceEligibilityService $eligibilityService, ContentVisibilityService $visibility)
@@ -34,16 +35,16 @@ class CourseQuizResultController extends Controller
         $isCourseAdmin = $course->isAdmin($user);
 
         // Visibility guard for students
-        if (!$isCourseAdmin) {
+        if (! $isCourseAdmin) {
             $this->visibility->assertVisibleOrFail($quiz, $user, 403);
-            
+
             $member = $course->courseMembers()->where('user_id', $user->id)->first();
             if ($member) {
                 $eligibilityInfo = $this->eligibilityService->canTakeExam($member);
-                if (!$eligibilityInfo['can_take_exam'] && $eligibilityInfo['eligibility_status'] !== 'unlocked') {
+                if (! $eligibilityInfo['can_take_exam'] && $eligibilityInfo['eligibility_status'] !== 'unlocked') {
                     return response()->json([
                         'status' => false,
-                        'message' => !empty($eligibilityInfo['reasons'])
+                        'message' => ! empty($eligibilityInfo['reasons'])
                             ? implode(', ', $eligibilityInfo['reasons'])
                             : 'คุณยังไม่มีสิทธิ์ทำข้อสอบนี้',
                         'eligibility' => $eligibilityInfo,
@@ -59,9 +60,9 @@ class CourseQuizResultController extends Controller
 
         if ($quizResult) {
             $updates = [
-                'status'        => 0,
-                'started_at'    => date('Y-m-d H:i:s'),
-                'completed_at'  => null,
+                'status' => 0,
+                'started_at' => date('Y-m-d H:i:s'),
+                'completed_at' => null,
             ];
 
             // Mark retake as used if student has an active grant
@@ -72,25 +73,25 @@ class CourseQuizResultController extends Controller
             $quizResult->update($updates);
 
             return response()->json([
-                'status'        => true,
-                'quizResult'    => $quizResult
+                'status' => true,
+                'quizResult' => $quizResult,
             ], 201);
 
-        }else {
+        } else {
             $quizResult = CourseQuizResult::create([
-                'user_id'       => $user->id,
-                'course_id'     => $course->id,
-                'quiz_id'       => $quiz->id,
-                'status'        => 0,
-                'started_at'    => date('Y-m-d H:i:s'),
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+                'quiz_id' => $quiz->id,
+                'status' => 0,
+                'started_at' => date('Y-m-d H:i:s'),
             ]);
 
             return response()->json([
-                'status'        => true,
-                'quizResult'    => $quizResult
+                'status' => true,
+                'quizResult' => $quizResult,
             ], 201);
         }
-    
+
     }
 
     public function update(Course $course, CourseQuiz $quiz, CourseQuizResult $result, Request $request)
@@ -104,7 +105,7 @@ class CourseQuizResultController extends Controller
         }
 
         // Visibility guard for students (cannot finalize attempt on inactive quiz)
-        if (!$isCourseAdmin) {
+        if (! $isCourseAdmin) {
             $this->visibility->assertVisibleOrFail($quiz, $user, 403);
         }
 
@@ -125,8 +126,8 @@ class CourseQuizResultController extends Controller
 
         $data['score'] = $quizUserAnswers->sum('points');
         $data['attempted_questions'] = $quizUserAnswers->count();
-        $data['correct_answers'] = $quizUserAnswers->filter(fn($a) => $a->points > 0)->count();
-        $data['incorrect_answers'] = $quizUserAnswers->filter(fn($a) => $a->points == 0)->count();
+        $data['correct_answers'] = $quizUserAnswers->filter(fn ($a) => $a->points > 0)->count();
+        $data['incorrect_answers'] = $quizUserAnswers->filter(fn ($a) => $a->points == 0)->count();
         $data['percentage'] = $quiz->total_score > 0
             ? round(($data['score'] / $quiz->total_score) * 100, 2)
             : 0;
@@ -138,22 +139,20 @@ class CourseQuizResultController extends Controller
 
         // Fire gamification events if finalized
         if ($request->has('finalize') && $request->finalize == true) {
-            \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::QUIZ_SUBMIT->value, 'quiz', $quiz->id, [
+            UsageEventService::fire(auth()->user(), UsageEventType::QUIZ_SUBMIT->value, 'quiz', $quiz->id, [
                 'score' => $data['score'],
                 'percentage' => $data['percentage'],
-                'status' => $data['status']
+                'status' => $data['status'],
             ]);
 
             if ($data['status'] === QuizConstants::STATUS_PASSED) {
-                \App\Services\UsageEventService::fire(auth()->user(), \App\Enums\UsageEventType::QUIZ_PASS->value, 'quiz', $quiz->id);
+                UsageEventService::fire(auth()->user(), UsageEventType::QUIZ_PASS->value, 'quiz', $quiz->id);
             }
         }
 
         return response()->json([
             'success' => true,
-            'quizResult' => $result
+            'quizResult' => $result,
         ]);
     }
-
-
 }

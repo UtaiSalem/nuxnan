@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\Play\ActivityResource;
+use App\Http\Resources\Play\ShareResource;
+use App\Models\Activity;
 use App\Models\CoursePost;
 use App\Models\Share;
-use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Http\Resources\Play\ActivityResource;
-use App\Http\Resources\Play\ShareResource;
+use Illuminate\Validation\ValidationException;
 
 class CoursePostShareController extends Controller
 {
@@ -21,160 +22,160 @@ class CoursePostShareController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Find course post
             $post = CoursePost::where('id', $id)
                 ->where('course_id', $courseId)
                 ->first();
-                
-            if (!$post) {
+
+            if (! $post) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'ไม่พบโพสต์ในรายวิชานี้'
+                    'message' => 'ไม่พบโพสต์ในรายวิชานี้',
                 ], 404);
             }
-            
+
             // Prevent sharing own post
             if ($post->user_id === $user->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณไม่สามารถแชร์โพสต์ของตัวเองได้'
+                    'message' => 'คุณไม่สามารถแชร์โพสต์ของตัวเองได้',
                 ], 403);
             }
-            
+
             // Check if already shared (check Share table, not Activity)
             $existingShare = Share::where('user_id', $user->id)
                 ->where('shareable_type', 'App\\Models\\CoursePost')
                 ->where('shareable_id', $post->id)
                 ->first();
-            
+
             if ($existingShare) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณได้แชร์โพสต์นี้แล้ว'
+                    'message' => 'คุณได้แชร์โพสต์นี้แล้ว',
                 ], 400);
             }
-            
+
             // Check user has enough points
             $pointsRequired = 36;
             $userPoints = $user->pp ?? 0;
             if ($userPoints < $pointsRequired) {
                 return response()->json([
                     'success' => false,
-                    'message' => "แต้มของคุณไม่เพียงพอ\n\nต้องการ: {$pointsRequired} แต้ม\nมีอยู่: {$userPoints} แต้ม\nขาดอีก: " . ($pointsRequired - $userPoints) . " แต้ม"
+                    'message' => "แต้มของคุณไม่เพียงพอ\n\nต้องการ: {$pointsRequired} แต้ม\nมีอยู่: {$userPoints} แต้ม\nขาดอีก: ".($pointsRequired - $userPoints).' แต้ม',
                 ], 400);
             }
-            
+
             // Validate request
             $validated = $request->validate([
                 'share_comment' => 'nullable|string|max:1000',
                 'privacy' => 'nullable|string|in:public,friends,private',
                 'tagged_friends' => 'nullable|array',
-                'location' => 'nullable|string|max:255'
+                'location' => 'nullable|string|max:255',
             ]);
-            
+
             DB::beginTransaction();
-            
+
             try {
                 // Deduct points from user
                 $user->pp -= $pointsRequired;
                 $user->save();
-                
+
                 // Add points to post author (18 points)
                 $postAuthor = User::find($post->user_id);
                 if ($postAuthor) {
                     $postAuthor->pp += 18;
                     $postAuthor->save();
                 }
-                
+
                 // Add points to system (Super Admin - User ID 1)
                 $superAdmin = User::find(1);
                 if ($superAdmin) {
                     $superAdmin->pp += 18;
                     $superAdmin->save();
                 }
-                
+
                 // Increment post shares and views
                 $post->increment('shares');
                 $post->increment('views');
-                
+
                 // Create Share record first
                 $share = Share::create([
                     'user_id' => $user->id,
                     'shareable_type' => 'App\\Models\\CoursePost',
                     'shareable_id' => $post->id,
                     'share_comment' => $validated['share_comment'] ?? null,
-                    'privacy' => $validated['privacy'] ?? 'public'
+                    'privacy' => $validated['privacy'] ?? 'public',
                 ]);
-                
+
                 // Create activity record pointing to Share (not CoursePost)
                 $activityDetails = [
                     'share_comment' => $validated['share_comment'] ?? null,
                     'privacy' => $validated['privacy'] ?? 'public',
                     'original_post_type' => 'CoursePost',
                     'original_post_id' => $post->id,
-                    'course_id' => $courseId
+                    'course_id' => $courseId,
                 ];
-                
+
                 // Map privacy to privacy_settings (1=private, 2=friends, 3=public)
                 $privacyMap = ['private' => 1, 'friends' => 2, 'public' => 3];
                 $privacySettings = $privacyMap[$validated['privacy'] ?? 'public'] ?? 3;
-                
+
                 $activity = Activity::create([
                     'user_id' => $user->id,
                     'activityable_type' => 'App\\Models\\Share',
                     'activityable_id' => $share->id,
                     'activity_type' => 'share_post',
                     'activity_details' => json_encode($activityDetails),
-                    'privacy_settings' => $privacySettings
+                    'privacy_settings' => $privacySettings,
                 ]);
-                
+
                 DB::commit();
-                
+
                 // Load activity with relationships for response
                 $activity->load(['user', 'activityable']);
-                
+
                 Log::info('Course post shared successfully', [
                     'user_id' => $user->id,
                     'course_id' => $courseId,
                     'post_id' => $post->id,
-                    'activity_id' => $activity->id
+                    'activity_id' => $activity->id,
                 ]);
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'แชร์โพสต์สำเร็จ',
                     'activity' => new ActivityResource($activity),
                     'shares' => $post->shares,
-                    'user_points' => $user->pp
+                    'user_points' => $user->pp,
                 ]);
-                
+
             } catch (\Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
-            
-        } catch (\Illuminate\Validation\ValidationException $e) {
+
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'ข้อมูลไม่ถูกต้อง',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             Log::error('Failed to share course post', [
                 'error' => $e->getMessage(),
                 'course_id' => $courseId,
                 'post_id' => $id,
-                'user_id' => $request->user()->id ?? null
+                'user_id' => $request->user()->id ?? null,
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการแชร์โพสต์'
+                'message' => 'เกิดข้อผิดพลาดในการแชร์โพสต์',
             ], 500);
         }
     }
-    
+
     /**
      * Unshare a course post (remove share and activity)
      */
@@ -182,82 +183,82 @@ class CoursePostShareController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Find the share record
             $share = Share::where('user_id', $user->id)
                 ->where('shareable_type', 'App\\Models\\CoursePost')
                 ->where('shareable_id', $id)
                 ->first();
-            
-            if (!$share) {
+
+            if (! $share) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'ไม่พบการแชร์ของคุณ'
+                    'message' => 'ไม่พบการแชร์ของคุณ',
                 ], 404);
             }
-            
+
             // Find course post
             $post = CoursePost::where('id', $id)
                 ->where('course_id', $courseId)
                 ->first();
-                
-            if (!$post) {
+
+            if (! $post) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'ไม่พบโพสต์ในรายวิชานี้'
+                    'message' => 'ไม่พบโพสต์ในรายวิชานี้',
                 ], 404);
             }
-            
+
             DB::beginTransaction();
-            
+
             try {
                 // Delete activity that points to this share
                 Activity::where('activityable_type', 'App\\Models\\Share')
                     ->where('activityable_id', $share->id)
                     ->delete();
-                
+
                 // Delete share record
                 $share->delete();
-                
+
                 // Decrement post shares count
                 if ($post->shares > 0) {
                     $post->decrement('shares');
                 }
-                
+
                 DB::commit();
-                
+
                 Log::info('Course post unshared successfully', [
                     'user_id' => $user->id,
                     'course_id' => $courseId,
-                    'post_id' => $post->id
+                    'post_id' => $post->id,
                 ]);
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'ยกเลิกการแชร์สำเร็จ',
-                    'shares' => $post->shares
+                    'shares' => $post->shares,
                 ]);
-                
+
             } catch (\Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
-            
+
         } catch (\Exception $e) {
             Log::error('Failed to unshare course post', [
                 'error' => $e->getMessage(),
                 'course_id' => $courseId,
                 'post_id' => $id,
-                'user_id' => $request->user()->id ?? null
+                'user_id' => $request->user()->id ?? null,
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการยกเลิกการแชร์'
+                'message' => 'เกิดข้อผิดพลาดในการยกเลิกการแชร์',
             ], 500);
         }
     }
-    
+
     /**
      * Get list of users who shared this course post
      */
@@ -267,21 +268,21 @@ class CoursePostShareController extends Controller
             $post = CoursePost::where('id', $id)
                 ->where('course_id', $courseId)
                 ->first();
-                
-            if (!$post) {
+
+            if (! $post) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'ไม่พบโพสต์ในรายวิชานี้'
+                    'message' => 'ไม่พบโพสต์ในรายวิชานี้',
                 ], 404);
             }
-            
+
             // Get all shares for this course post from Share table
             $shares = Share::where('shareable_type', 'App\\Models\\CoursePost')
                 ->where('shareable_id', $id)
                 ->with('user:id,username,avatar,verified')
                 ->orderBy('created_at', 'desc')
                 ->paginate(20);
-            
+
             return response()->json([
                 'success' => true,
                 'shares' => ShareResource::collection($shares->items()),
@@ -290,20 +291,20 @@ class CoursePostShareController extends Controller
                     'current_page' => $shares->currentPage(),
                     'last_page' => $shares->lastPage(),
                     'per_page' => $shares->perPage(),
-                    'has_more' => $shares->hasMorePages()
-                ]
+                    'has_more' => $shares->hasMorePages(),
+                ],
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Failed to get course post shares list', [
                 'error' => $e->getMessage(),
                 'course_id' => $courseId,
-                'post_id' => $id
+                'post_id' => $id,
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการโหลดรายการผู้แชร์'
+                'message' => 'เกิดข้อผิดพลาดในการโหลดรายการผู้แชร์',
             ], 500);
         }
     }

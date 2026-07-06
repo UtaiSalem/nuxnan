@@ -9,12 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('courses', function (Blueprint $table) {
-            if (!Schema::hasColumn('courses', 'min_sessions_for_eligibility_check')) {
+            if (! Schema::hasColumn('courses', 'min_sessions_for_eligibility_check')) {
                 $table->unsignedInteger('min_sessions_for_eligibility_check')->default(3)
                     ->after('max_absence_percent')
                     ->comment('จำนวนคาบเรียนขั้นต่ำก่อนคำนวณสิทธิ์สอบ');
             }
-            if (!Schema::hasColumn('courses', 'allow_unlock_by_appeal')) {
+            if (! Schema::hasColumn('courses', 'allow_unlock_by_appeal')) {
                 $table->boolean('allow_unlock_by_appeal')->default(true)
                     ->after('allow_unlock_by_reading');
             }

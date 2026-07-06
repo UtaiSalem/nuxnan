@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api\Learn\Student\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Student\UpdateHealthRequest;
 use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentHealthInfo;
-use App\Http\Requests\Student\UpdateHealthRequest;
 use App\Traits\HandlesStudentUpdates;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
@@ -24,7 +23,7 @@ class HealthController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -32,26 +31,26 @@ class HealthController extends Controller
 
         try {
             $healthInfo = StudentHealthInfo::where('student_id', $student->id)->first();
-            
+
             if ($healthInfo) {
                 return response()->json([
                     'status' => 'success',
-                    'data' => $healthInfo
+                    'data' => $healthInfo,
                 ]);
             }
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => null,
-                'message' => 'ยังไม่มีข้อมูลสุขภาพ'
+                'message' => 'ยังไม่มีข้อมูลสุขภาพ',
             ]);
-            
+
         } catch (\Exception $e) {
-            Log::error('Error showing student health info: ' . $e->getMessage());
-            
+            Log::error('Error showing student health info: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการโหลดข้อมูลสุขภาพ'
+                'message' => 'เกิดข้อผิดพลาดในการโหลดข้อมูลสุขภาพ',
             ], 500);
         }
     }
@@ -64,7 +63,7 @@ class HealthController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
@@ -76,7 +75,7 @@ class HealthController extends Controller
             if ($existingHealth) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'ข้อมูลสุขภาพมีอยู่แล้ว กรุณาใช้การอัปเดต'
+                    'message' => 'ข้อมูลสุขภาพมีอยู่แล้ว กรุณาใช้การอัปเดต',
                 ], 409);
             }
 
@@ -89,7 +88,7 @@ class HealthController extends Controller
                 'chronic_diseases' => $validated['chronic_diseases'] ?? null,
                 'medications' => $validated['medications'] ?? null,
                 'blood_type' => $validated['blood_type'] ?? null,
-                'rh_factor' => $validated['rh_factor'] ?? null
+                'rh_factor' => $validated['rh_factor'] ?? null,
             ];
 
             // Check if creation needs approval
@@ -98,7 +97,7 @@ class HealthController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'message' => 'ส่งคำขอเพิ่มข้อมูลสุขภาพแล้ว รอการอนุมัติ',
-                    'needs_approval' => true
+                    'needs_approval' => true,
                 ]);
             }
 
@@ -107,15 +106,15 @@ class HealthController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'บันทึกข้อมูลสุขภาพเรียบร้อยแล้ว',
-                'data' => $health
+                'data' => $health,
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Error storing student health info: ' . $e->getMessage());
-            
+            Log::error('Error storing student health info: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูลสุขภาพ'
+                'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูลสุขภาพ',
             ], 500);
         }
     }
@@ -128,14 +127,14 @@ class HealthController extends Controller
         if ($student->academy_id !== $academy->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้'
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
             ], 403);
         }
 
         if ($health->student_id !== $student->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ไม่มีสิทธิ์ในการแก้ไขข้อมูลนี้'
+                'message' => 'ไม่มีสิทธิ์ในการแก้ไขข้อมูลนี้',
             ], 403);
         }
 
@@ -144,13 +143,27 @@ class HealthController extends Controller
         try {
             $validated = $request->validated();
             $healthData = [];
-            if (array_key_exists('height', $validated)) $healthData['height_cm'] = $validated['height'];
-            if (array_key_exists('weight', $validated)) $healthData['weight_kg'] = $validated['weight'];
-            if (array_key_exists('allergies', $validated)) $healthData['allergies'] = $validated['allergies'];
-            if (array_key_exists('chronic_diseases', $validated)) $healthData['chronic_diseases'] = $validated['chronic_diseases'];
-            if (array_key_exists('medications', $validated)) $healthData['medications'] = $validated['medications'];
-            if (array_key_exists('blood_type', $validated)) $healthData['blood_type'] = $validated['blood_type'];
-            if (array_key_exists('rh_factor', $validated)) $healthData['rh_factor'] = $validated['rh_factor'];
+            if (array_key_exists('height', $validated)) {
+                $healthData['height_cm'] = $validated['height'];
+            }
+            if (array_key_exists('weight', $validated)) {
+                $healthData['weight_kg'] = $validated['weight'];
+            }
+            if (array_key_exists('allergies', $validated)) {
+                $healthData['allergies'] = $validated['allergies'];
+            }
+            if (array_key_exists('chronic_diseases', $validated)) {
+                $healthData['chronic_diseases'] = $validated['chronic_diseases'];
+            }
+            if (array_key_exists('medications', $validated)) {
+                $healthData['medications'] = $validated['medications'];
+            }
+            if (array_key_exists('blood_type', $validated)) {
+                $healthData['blood_type'] = $validated['blood_type'];
+            }
+            if (array_key_exists('rh_factor', $validated)) {
+                $healthData['rh_factor'] = $validated['rh_factor'];
+            }
 
             // Route through processFieldUpdates
             $result = $this->processFieldUpdates($student, $health, 'StudentHealthInfo', 'health', $healthData);
@@ -165,11 +178,11 @@ class HealthController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error updating student health info: ' . $e->getMessage());
-            
+            Log::error('Error updating student health info: '.$e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'เกิดข้อผิดพลาดในการอัปเดตข้อมูลสุขภาพ'
+                'message' => 'เกิดข้อผิดพลาดในการอัปเดตข้อมูลสุขภาพ',
             ], 500);
         }
     }

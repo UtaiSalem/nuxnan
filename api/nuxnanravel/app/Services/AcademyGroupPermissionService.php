@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\AcademyGroup;
-use App\Models\AcademyGroupPermission;
 use Illuminate\Support\Collection;
 
 class AcademyGroupPermissionService
@@ -34,10 +33,10 @@ class AcademyGroupPermissionService
     {
         // Disable all current permissions first (optional approach)
         // Or more efficiently:
-        
+
         // 1. Get current permissions
         $existing = $group->permissions()->pluck('permission_key')->toArray();
-        
+
         // 2. Identify keys to enable
         foreach ($permissionKeys as $key) {
             $group->permissions()->updateOrCreate(
@@ -45,7 +44,7 @@ class AcademyGroupPermissionService
                 ['enabled' => true]
             );
         }
-        
+
         // 3. Disable keys not in the provided list but existing in DB
         $group->permissions()
             ->whereNotIn('permission_key', $permissionKeys)
@@ -60,7 +59,7 @@ class AcademyGroupPermissionService
         $permission = $group->permissions()
             ->where('permission_key', $permissionKey)
             ->first();
-            
-        return $permission ? (bool)$permission->enabled : true;
+
+        return $permission ? (bool) $permission->enabled : true;
     }
 }

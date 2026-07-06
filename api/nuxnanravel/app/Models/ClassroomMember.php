@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\GroupMember;
 
 /**
  * ClassroomMember Model - สมาชิกในห้องเรียน (multi-role)
@@ -36,13 +35,18 @@ class ClassroomMember extends Model
 
     // Role Constants
     const ROLE_TEACHER = 'teacher';
+
     const ROLE_CO_TEACHER = 'co_teacher';
+
     const ROLE_STUDENT = 'student';
+
     const ROLE_OBSERVER = 'observer';
 
     // Join Method Constants
     const JOIN_ADMIN = 'admin_assigned';
+
     const JOIN_INVITATION = 'invitation';
+
     const JOIN_CODE = 'classroom_code';
 
     // ───── Relationships ─────

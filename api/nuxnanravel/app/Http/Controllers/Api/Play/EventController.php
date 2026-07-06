@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Api\Play;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Event;
+use App\Models\User;
 
 class EventController extends Controller
 {
-    public function getUserEvents(\App\Models\User $user)
+    public function getUserEvents(User $user)
     {
-        $events = \App\Models\Event::where('user_id', $user->id)
-            ->orWhere(function($q) use ($user) {
+        $events = Event::where('user_id', $user->id)
+            ->orWhere(function ($q) {
                 // If we had a participation system, we'd check it here
                 // For now, simple hosted events
             })
@@ -19,11 +20,11 @@ class EventController extends Controller
 
         return response()->json([
             'success' => true,
-            'events' => $events->map(function($event) {
+            'events' => $events->map(function ($event) {
                 return [
                     'id' => $event->id,
                     'title' => $event->title,
-                    'slug' => (string)$event->id,
+                    'slug' => (string) $event->id,
                     'start_date' => $event->start_time->toIsoString(),
                     'end_date' => $event->end_time ? $event->end_time->toIsoString() : null,
                     'location' => $event->location,
@@ -32,8 +33,7 @@ class EventController extends Controller
                     'is_going' => false, // Placeholder
                     'category' => 'General', // Placeholder
                 ];
-            })
+            }),
         ]);
     }
-
 }

@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Middleware to automatically audit sensitive endpoints.
- * 
+ *
  * Usage in routes:
  * Route::get('/sensitive', [Controller::class, 'method'])->middleware('audit.log:module,action');
  */
@@ -25,7 +25,7 @@ class AuditRequest
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, ?string $module = null, ?string $action = null): Response
     {
@@ -47,7 +47,7 @@ class AuditRequest
         try {
             // Determine action from HTTP method if not provided
             $action = $action ?? $this->getActionFromMethod($request->method());
-            
+
             // Determine module from route if not provided
             $module = $module ?? $this->getModuleFromRoute($request);
 
@@ -88,14 +88,14 @@ class AuditRequest
     protected function getModuleFromRoute(Request $request): ?string
     {
         $routeName = $request->route()?->getName();
-        
-        if (!$routeName) {
+
+        if (! $routeName) {
             return null;
         }
 
         // Extract module from route name (e.g., 'admin.users.index' -> 'users')
         $parts = explode('.', $routeName);
-        
+
         if (count($parts) >= 2) {
             return $parts[1] ?? null;
         }

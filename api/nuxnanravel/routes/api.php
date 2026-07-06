@@ -1,19 +1,27 @@
 <?php
 
 // Import Controllers
+use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Auth\ProviderAuthController;
+use App\Http\Controllers\Api\Auth\StudentActivationController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyGroupController;
+use App\Http\Controllers\Api\Learn\Course\info\MentalMathController;
+use App\Http\Controllers\Api\Learn\Student\Master\StudentController;
+use App\Http\Controllers\Api\Play\ActivityController;
+use App\Http\Controllers\Api\Play\BadgeController;
+use App\Http\Controllers\Api\Play\EventController;
+use App\Http\Controllers\Api\Play\FriendController;
+use App\Http\Controllers\Api\Play\NewsfeedController;
+use App\Http\Controllers\Api\Play\NotificationController;
+use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\Shared\ForgotPasswordController;
+use App\Http\Controllers\Api\Shared\SuggesterController;
+use App\Http\Controllers\Api\Shared\UserProfileController;
+use App\Http\Controllers\Api\Shopping\CartController;
+use App\Http\Controllers\Api\SuperAdminController;
+use App\Http\Controllers\Api\WelcomeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\WelcomeController;
-use App\Http\Controllers\Api\SettingsController;
-use App\Http\Controllers\Api\Auth\AuthController;
-use App\Http\Controllers\Api\Play\FriendController;
-use App\Http\Controllers\Api\Play\ActivityController;
-use App\Http\Controllers\Api\Play\NewsfeedController;
-use App\Http\Controllers\Api\Shared\SuggesterController;
-use App\Http\Controllers\Api\Auth\ProviderAuthController;
-use App\Http\Controllers\Api\Shared\UserProfileController;
-use App\Http\Controllers\Api\Shared\ForgotPasswordController;
-use App\Http\Controllers\Api\Learn\Course\info\MentalMathController;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,8 +62,8 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/validate-referral-code', [AuthController::class, 'validateReferralCode']);
 
 // Student Account Activation (public — no auth required)
-Route::get('/student-activate/{token}', [\App\Http\Controllers\Api\Auth\StudentActivationController::class, 'show']);
-Route::post('/student-activate/{token}', [\App\Http\Controllers\Api\Auth\StudentActivationController::class, 'activate']);
+Route::get('/student-activate/{token}', [StudentActivationController::class, 'show']);
+Route::post('/student-activate/{token}', [StudentActivationController::class, 'activate']);
 Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
@@ -87,7 +95,7 @@ Route::middleware(['auth:api'])->group(function () {
 
     Route::get('/dashboard', function () {
         return response()->json([
-            'isPlearndAdmin' => auth()->user()->isPlearndAdmin()
+            'isPlearndAdmin' => auth()->user()->isPlearndAdmin(),
         ]);
     })->name('dashboard');
 
@@ -115,11 +123,11 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('/users/{identifier}/stats', [UserProfileController::class, 'stats'])->name('user.stats');
     Route::get('/users/{identifier}/activities', [UserProfileController::class, 'activities'])->name('user.activities');
 
-    // Forgot Password (Authenticated?) - Logic from old web.php seems to have it under auth:sanctum? 
-    // Usually forgot password is public, but let's keep it as is if that's what it was, 
-    // OR move it to public if it was a mistake. 
-    // Looking at lines 37-43 in old web.php, it IS under auth:sanctum. 
-    // But wait, forgot password usually implies you can't login. 
+    // Forgot Password (Authenticated?) - Logic from old web.php seems to have it under auth:sanctum?
+    // Usually forgot password is public, but let's keep it as is if that's what it was,
+    // OR move it to public if it was a mistake.
+    // Looking at lines 37-43 in old web.php, it IS under auth:sanctum.
+    // But wait, forgot password usually implies you can't login.
     // Maybe it's for "Reset Password" while logged in? Or the old app had weird grouping.
     // Let's keep it here for now but verify later.
     Route::get('/forgot-password', [ForgotPasswordController::class, 'index'])->name('forgot-pasword');
@@ -129,27 +137,27 @@ Route::middleware(['auth:api'])->group(function () {
     Route::delete('/forgot-password/users/{user}', [ForgotPasswordController::class, 'destroy']);
 
     // Cart Routes
-    Route::get('/cart', [\App\Http\Controllers\Api\Shopping\CartController::class, 'index']);
-    Route::post('/cart/add', [\App\Http\Controllers\Api\Shopping\CartController::class, 'add']);
-    Route::post('/cart/update', [\App\Http\Controllers\Api\Shopping\CartController::class, 'update']);
-    Route::post('/cart/remove', [\App\Http\Controllers\Api\Shopping\CartController::class, 'remove']);
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::post('/cart/add', [CartController::class, 'add']);
+    Route::post('/cart/update', [CartController::class, 'update']);
+    Route::post('/cart/remove', [CartController::class, 'remove']);
 
     // User Groups Routes
-    Route::get('/users/{user}/groups', [\App\Http\Controllers\Api\Learn\Academy\AcademyGroupController::class, 'getUserGroups']);
-    Route::get('/profile/groups', function(\Illuminate\Http\Request $request) {
-        return app(\App\Http\Controllers\Api\Learn\Academy\AcademyGroupController::class)->getUserGroups($request->user());
+    Route::get('/users/{user}/groups', [AcademyGroupController::class, 'getUserGroups']);
+    Route::get('/profile/groups', function (Request $request) {
+        return app(AcademyGroupController::class)->getUserGroups($request->user());
     });
 
     // Events Routes
-    Route::get('/users/{user}/events', [\App\Http\Controllers\Api\Play\EventController::class, 'getUserEvents']);
-    Route::get('/profile/events', function(\Illuminate\Http\Request $request) {
-        return app(\App\Http\Controllers\Api\Play\EventController::class)->getUserEvents($request->user());
+    Route::get('/users/{user}/events', [EventController::class, 'getUserEvents']);
+    Route::get('/profile/events', function (Request $request) {
+        return app(EventController::class)->getUserEvents($request->user());
     });
 
     // Badges Routes
-    Route::get('/users/{user}/badges', [\App\Http\Controllers\Api\Play\BadgeController::class, 'getUserBadges']);
-    Route::get('/profile/badges', function(\Illuminate\Http\Request $request) {
-        return app(\App\Http\Controllers\Api\Play\BadgeController::class)->getUserBadges($request->user());
+    Route::get('/users/{user}/badges', [BadgeController::class, 'getUserBadges']);
+    Route::get('/profile/badges', function (Request $request) {
+        return app(BadgeController::class)->getUserBadges($request->user());
     });
 
     // Friends
@@ -168,72 +176,72 @@ Route::middleware(['auth:api'])->group(function () {
     // Notifications
     // ===========================================
     Route::prefix('notifications')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\Play\NotificationController::class, 'index'])->name('notifications.index');
-        Route::get('/recent', [\App\Http\Controllers\Api\Play\NotificationController::class, 'recent'])->name('notifications.recent');
-        Route::get('/unread-count', [\App\Http\Controllers\Api\Play\NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
-        Route::post('/mark-all-read', [\App\Http\Controllers\Api\Play\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
-        Route::delete('/read', [\App\Http\Controllers\Api\Play\NotificationController::class, 'deleteAllRead'])->name('notifications.delete-read');
-        Route::post('/{notification}/read', [\App\Http\Controllers\Api\Play\NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
-        Route::delete('/{notification}', [\App\Http\Controllers\Api\Play\NotificationController::class, 'destroy'])->name('notifications.destroy');
+        Route::get('/', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/recent', [NotificationController::class, 'recent'])->name('notifications.recent');
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+        Route::delete('/read', [NotificationController::class, 'deleteAllRead'])->name('notifications.delete-read');
+        Route::post('/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+        Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
     });
 
     // Super Admin Check (any authenticated user can check their own status)
-    Route::get('/super-admins/check', [\App\Http\Controllers\Api\SuperAdminController::class, 'check'])->name('super-admin.check');
+    Route::get('/super-admins/check', [SuperAdminController::class, 'check'])->name('super-admin.check');
 
 });
 
 // Super Admin Management Routes (requires Super Admin privileges)
 Route::middleware(['auth:api', 'super-admin'])->prefix('super-admins')->group(function () {
-    Route::get('/', [\App\Http\Controllers\Api\SuperAdminController::class, 'index'])->name('super-admin.index');
-    Route::post('/', [\App\Http\Controllers\Api\SuperAdminController::class, 'store'])->name('super-admin.store');
-    Route::delete('/{userId}', [\App\Http\Controllers\Api\SuperAdminController::class, 'destroy'])->name('super-admin.destroy');
+    Route::get('/', [SuperAdminController::class, 'index'])->name('super-admin.index');
+    Route::post('/', [SuperAdminController::class, 'store'])->name('super-admin.store');
+    Route::delete('/{userId}', [SuperAdminController::class, 'destroy'])->name('super-admin.destroy');
 });
 
 // Include other route files
-require __DIR__ . '/earn/donate.php';
-require __DIR__ . '/earn/advert.php';
-require __DIR__ . '/earn/points-wallet.php';
-require __DIR__ . '/earn/coupons.php';
-require __DIR__ . '/earn/qr.php';
-require __DIR__ . '/play/post.php';
-require __DIR__ . '/play/game.php';
-require __DIR__ . '/play/shares.php';
-require __DIR__ . '/play/photos.php';
-require __DIR__ . '/play/videos.php';
-require __DIR__ . '/learn/academy.php';
-require __DIR__ . '/learn/course.php';
-require __DIR__ . '/learn/student.php';
+require __DIR__.'/earn/donate.php';
+require __DIR__.'/earn/advert.php';
+require __DIR__.'/earn/points-wallet.php';
+require __DIR__.'/earn/coupons.php';
+require __DIR__.'/earn/qr.php';
+require __DIR__.'/play/post.php';
+require __DIR__.'/play/game.php';
+require __DIR__.'/play/shares.php';
+require __DIR__.'/play/photos.php';
+require __DIR__.'/play/videos.php';
+require __DIR__.'/learn/academy.php';
+require __DIR__.'/learn/course.php';
+require __DIR__.'/learn/student.php';
 
 // Academy-based Student Card and Home Visit Routes (NEW - under academy management)
-require __DIR__ . '/learn/academy-student-card.php';
-require __DIR__ . '/learn/academy-home-visit.php';
+require __DIR__.'/learn/academy-student-card.php';
+require __DIR__.'/learn/academy-home-visit.php';
 
 // Student Profile Routes (view student profile by academy context)
-require __DIR__ . '/learn/student-profile.php';
+require __DIR__.'/learn/student-profile.php';
 
 // Academy Store Management Routes (School Store System)
-require __DIR__ . '/learn/academy-store.php';
+require __DIR__.'/learn/academy-store.php';
 
 // Student Master Profile Routes
 Route::middleware(['auth:api'])->prefix('student')->group(function () {
-    Route::get('/me', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'myProfile']);
+    Route::get('/me', [StudentController::class, 'myProfile']);
     Route::prefix('requests')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'listRequests']);
-        Route::patch('/{id}/approve', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'approveRequest']);
-        Route::patch('/{id}/reject', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'rejectRequest']);
+        Route::get('/', [StudentController::class, 'listRequests']);
+        Route::patch('/{id}/approve', [StudentController::class, 'approveRequest']);
+        Route::patch('/{id}/reject', [StudentController::class, 'rejectRequest']);
     });
-    
+
     Route::prefix('master')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'index']);
-        Route::get('/{student}', [\App\Http\Controllers\Api\Learn\Student\Master\StudentController::class, 'show']);
+        Route::get('/', [StudentController::class, 'index']);
+        Route::get('/{student}', [StudentController::class, 'show']);
     });
 });
 
 // Legacy routes (deprecated - kept for backward compatibility)
 // GUARD: Do NOT add new routes here. Use /learn/academy-home-visit.php or unified master profile instead.
 // TODO: Remove these in future version after frontend migration is complete
-require __DIR__ . '/homevisit/homevisit.php';
-require __DIR__ . '/studentcard/studentcard.php';
+require __DIR__.'/homevisit/homevisit.php';
+require __DIR__.'/studentcard/studentcard.php';
 
 // Note: Admin routes are loaded in bootstrap/app.php with /api/admin prefix
 // Do not include them here to avoid route conflicts

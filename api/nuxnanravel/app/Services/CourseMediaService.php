@@ -2,11 +2,9 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class CourseMediaService
 {
@@ -14,18 +12,18 @@ class CourseMediaService
      * Paths for various course-related media.
      */
     const PATHS = [
-        'course_cover'     => 'images/courses/covers',
-        'course_logo'      => 'images/courses/logos',
-        'lesson_image'     => 'images/courses/lessons',
-        'topic_image'      => 'images/courses/lessons/topics',
+        'course_cover' => 'images/courses/covers',
+        'course_logo' => 'images/courses/logos',
+        'lesson_image' => 'images/courses/lessons',
+        'topic_image' => 'images/courses/lessons/topics',
         'assignment_image' => 'images/courses/assignments',
         'assignment_answer_image' => 'images/courses/assignments/answers',
         'lesson_assignment_image' => 'images/lessons/assignments',
         'lesson_comment_image' => 'images/courses/lessons/comments',
-        'question_image'   => 'images/courses/lessons/questions',
-        'option_image'     => 'images/courses/lessons/questions/options',
+        'question_image' => 'images/courses/lessons/questions',
+        'option_image' => 'images/courses/lessons/questions/options',
         'quiz_question_image' => 'images/courses/quizzes/questions',
-        'quiz_option_image'   => 'images/courses/quizzes/questions/options',
+        'quiz_option_image' => 'images/courses/quizzes/questions/options',
     ];
 
     /**
@@ -39,22 +37,25 @@ class CourseMediaService
 
         // Clean filename in case it contains path components
         $basename = basename($filename);
-        $sourcePath = $targetPath . '/' . $basename;
+        $sourcePath = $targetPath.'/'.$basename;
 
-        if (!Storage::disk('public')->exists($sourcePath)) {
+        if (! Storage::disk('public')->exists($sourcePath)) {
             Log::warning("Media file not found: {$sourcePath}");
+
             return null;
         }
 
         $extension = pathinfo($basename, PATHINFO_EXTENSION);
-        $newFilename = uniqid() . '.' . $extension;
-        $destinationPath = $targetPath . '/' . $newFilename;
+        $newFilename = uniqid().'.'.$extension;
+        $destinationPath = $targetPath.'/'.$newFilename;
 
         try {
             Storage::disk('public')->copy($sourcePath, $destinationPath);
+
             return $newFilename;
         } catch (\Exception $e) {
-            Log::error("Failed to copy media file: {$sourcePath} to {$destinationPath}. Error: " . $e->getMessage());
+            Log::error("Failed to copy media file: {$sourcePath} to {$destinationPath}. Error: ".$e->getMessage());
+
             return null;
         }
     }
@@ -89,13 +90,17 @@ class CourseMediaService
      */
     public function copyQuestionImage(?string $filename): ?string
     {
-        if (empty($filename)) return null;
-        
+        if (empty($filename)) {
+            return null;
+        }
+
         $filename = basename($filename);
 
         // Try standard path
         $newFile = $this->copyFile($filename, self::PATHS['question_image']);
-        if ($newFile) return $newFile;
+        if ($newFile) {
+            return $newFile;
+        }
 
         // Try quiz path
         return $this->copyFile($filename, self::PATHS['quiz_question_image']);
@@ -103,13 +108,17 @@ class CourseMediaService
 
     public function copyOptionImage(?string $filename): ?string
     {
-        if (empty($filename)) return null;
-        
+        if (empty($filename)) {
+            return null;
+        }
+
         $filename = basename($filename);
 
         // Try standard path
         $newFile = $this->copyFile($filename, self::PATHS['option_image']);
-        if ($newFile) return $newFile;
+        if ($newFile) {
+            return $newFile;
+        }
 
         // Try quiz path
         return $this->copyFile($filename, self::PATHS['quiz_option_image']);
@@ -120,11 +129,13 @@ class CourseMediaService
      */
     public function deleteUnused(string $pathKey, string $modelClass, string $field, mixed $value, ?int $excludeId = null): void
     {
-        if (empty($value)) return;
-        
+        if (empty($value)) {
+            return;
+        }
+
         $path = self::PATHS[$pathKey] ?? $pathKey;
         $filename = basename($value);
-        $diskPath = $path . '/' . $filename;
+        $diskPath = $path.'/'.$filename;
 
         $this->deleteIfUnused($diskPath, $modelClass, $field, $value, $excludeId);
     }
@@ -145,7 +156,7 @@ class CourseMediaService
 
         $exists = $query->exists();
 
-        if (!$exists) {
+        if (! $exists) {
             if (Storage::disk('public')->exists($diskPath)) {
                 Storage::disk('public')->delete($diskPath);
             }

@@ -18,11 +18,11 @@ return new class extends Migration
                 ->constrained('course_remediation_sessions')->cascadeOnDelete();
             $table->foreignId('course_member_id')->constrained()->cascadeOnDelete();
             $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
-            
+
             // Original performance
             $table->string('original_grade', 2);
             $table->decimal('original_score', 8, 2)->nullable();
-            
+
             // Enrollment status
             $table->enum('status', [
                 'enrolled',     // ลงทะเบียนแล้ว
@@ -33,14 +33,14 @@ return new class extends Migration
                 'passed',       // ผ่าน
                 'failed',       // ไม่ผ่าน
                 'cancelled',    // ยกเลิก
-                'no_show'       // ไม่มา
+                'no_show',       // ไม่มา
             ])->default('enrolled');
-            
+
             $table->timestamp('enrolled_at');
             $table->timestamp('confirmed_at')->nullable();
             $table->timestamp('attended_at')->nullable();
             $table->timestamp('submitted_at')->nullable();
-            
+
             // Remediation result
             $table->decimal('remediation_score', 8, 2)->nullable();
             $table->string('remediation_grade', 2)->nullable();
@@ -48,18 +48,18 @@ return new class extends Migration
             $table->foreignId('graded_by')->nullable()
                 ->constrained('users')->nullOnDelete();
             $table->timestamp('graded_at')->nullable();
-            
+
             // Submission (for assignment/project types)
             $table->json('submission')->nullable()
                 ->comment('ไฟล์หรือลิงก์งานที่ส่ง');
             $table->text('student_notes')->nullable();
-            
+
             // Attempt tracking
             $table->integer('attempt_number')->default(1)
                 ->comment('ครั้งที่แก้ตัว');
-            
+
             $table->timestamps();
-            
+
             $table->unique(['remediation_session_id', 'course_member_id'], 'cre_session_member_unique');
             $table->index(['student_id', 'status'], 'cre_student_status_idx');
         });

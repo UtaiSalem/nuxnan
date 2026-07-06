@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Requests\Student;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -16,7 +17,7 @@ class UpdateContactRequest extends FormRequest
         return [
             'contact_type' => ['required', Rule::in(['phone', 'email', 'line', 'facebook', 'other'])],
             'contact_value' => 'required|string|max:100',
-            'is_primary' => 'boolean'
+            'is_primary' => 'boolean',
         ];
     }
 }

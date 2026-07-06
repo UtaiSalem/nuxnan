@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Requests\Student;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,7 +27,7 @@ class UpdateGuardianRequest extends FormRequest
             'guardian.is_emergency_contact' => 'boolean',
             'contact.contact_type' => 'required|in:phone,email,line,facebook,other',
             'contact.contact_value' => 'required|string|max:100',
-            'contact.is_primary' => 'boolean'
+            'contact.is_primary' => 'boolean',
         ];
     }
 }

@@ -322,3 +322,31 @@
 - Completed JWT home-visit CRUD integration across `Master/HomeVisitController`, student-profile routes, `useHomeVisit.ts`, and `HomeVisitTab.vue`.
 - Added status-enum migration `2026_07_03_000001_expand_student_home_visit_statuses.php` (created, not run) and focused `StudentHomeVisitApiTest` (3 passed, 12 assertions).
 - Existing Phase 7 and other dirty-worktree changes were preserved.
+## 2026-07-06 — Student Card Rollover 2568 → 2569
+
+- Created academic year 2569 (id 2), set current after successful rollover, and created target classrooms: M1=10, M2=11, M3=9, M4=9, M5=8, M6=7.
+- Committed rollover batch `3c9ca6f7-3ece-4bbd-8f51-b7d64eae5162`: promote 1,662; graduate 267; new intake 476; skip 0.
+- Corrected duplicate card link: card 1440 now links to student 1411 by citizen ID; no record was deleted.
+- Card sync results: created 476, updated 1,662, expired 268. Active 2569 enrollments = active cards = 2,138.
+- Integrity checks all zero: duplicate active cards, multiple active enrollments, multiple current academic rows, active enrollment without active card.
+- Added migration `2026_07_06_200000_allow_uuid_entity_ids_in_audit_logs.php` because rollover UUIDs could not fit the former integer audit entity_id; migration was run successfully.
+- Verification: StudentCard tests 8 passed / 19 assertions; Pint passed; dashboard API reports 2,138 students using 2569 room structure.
+
+---
+
+## 2026-07-07 — Student Photo Path Migration & E2E Polish
+
+- **Canonical Photo Path Migration**: Migrated student photos from legacy room-based folders to student-identity-based paths (`images/students/profiles/{student_id}.{ext}`).
+- **Backend Service & Models**: Created `StudentPhotoService` for unified storage management and backend-owned fallback checks. Added `profile_image_url` accessors to both `Student` and `StudentCard` models.
+- **Migration Commands**: Implemented and executed `students:migrate-photos` migration tool (migrated 1,529/1,531 photos successfully). Created `students:cleanup-legacy-photos` tool for post-migration folder cleanup.
+- **E2E Review Polish**: Resolved 22 code review findings including:
+  - C1: Missing import of `StudentPhotoService` in `StudentCardController.php`.
+  - H1: Path concatenation safety for already relative paths in `destroyPhoto()`.
+  - H2: Stripping the 'ม.' Thai grade prefix in the legacy path assembly of `StudentCard`'s accessor.
+  - H6: Null safety guards in `admin/students/[level]/[room].vue`.
+  - C2 & H5: Complete simplification of frontend image loading across 15+ Vue components to rely solely on the resolved `profile_image_url` property from API.
+  - M1: Automatically updating the frontend reactive refs on photo upload success.
+  - M2: Fixing array return values in `StudentsCard.vue` helper methods.
+  - H3: Grade normalization within `StudentPhotoService`.
+- **Verification**: Formatted with Pint and verified all 8 unit tests in the StudentCard feature suite pass.
+

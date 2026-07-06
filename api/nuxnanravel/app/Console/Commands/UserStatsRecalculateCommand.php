@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\User;
 use App\Services\UserStatsRecalculationService;
+use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 class UserStatsRecalculateCommand extends Command
@@ -25,18 +25,19 @@ class UserStatsRecalculateCommand extends Command
         $chunkSize = (int) $this->option('chunk');
         $runId = (string) Str::uuid();
 
-        if (!$apply) {
-            $this->warn("DRY RUN MODE: No changes will be saved. Pass --apply to write.");
+        if (! $apply) {
+            $this->warn('DRY RUN MODE: No changes will be saved. Pass --apply to write.');
         } else {
             // In non-interactive environments (CI, cron) confirm() always returns false,
             // so we skip the prompt when stdin is not a TTY.
             $isTty = stream_isatty(STDIN);
-            if ($isTty && !$this->confirm("Are you sure you want to APPLY changes to the database? This will modify user stats.")) {
-                $this->warn("Aborted.");
+            if ($isTty && ! $this->confirm('Are you sure you want to APPLY changes to the database? This will modify user stats.')) {
+                $this->warn('Aborted.');
+
                 return;
             }
-            if (!$isTty) {
-                $this->warn("Non-interactive mode: skipping confirmation prompt. Applying changes.");
+            if (! $isTty) {
+                $this->warn('Non-interactive mode: skipping confirmation prompt. Applying changes.');
             }
         }
 
@@ -55,11 +56,11 @@ class UserStatsRecalculateCommand extends Command
         $query->chunk($chunkSize, function ($users) use ($recalcService, $runId, $apply, $options) {
             foreach ($users as $user) {
                 $this->comment("Processing User #{$user->id}: {$user->name}...");
-                
+
                 $results = $recalcService->recalculateUser($user, $runId, $apply, $options);
-                
+
                 if (empty($results['changes'])) {
-                    $this->line("  ✓ No changes needed.");
+                    $this->line('  ✓ No changes needed.');
                 } else {
                     foreach ($results['changes'] as $change) {
                         $this->info("  → Fixed {$change['field']}: {$change['before']} to {$change['after']}");
@@ -68,6 +69,6 @@ class UserStatsRecalculateCommand extends Command
             }
         });
 
-        $this->info("Recalculation complete.");
+        $this->info('Recalculation complete.');
     }
 }

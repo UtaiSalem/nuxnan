@@ -12,19 +12,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('academy_groups', function (Blueprint $table) {
-            if (!Schema::hasColumn('academy_groups', 'academy_id')) {
+            if (! Schema::hasColumn('academy_groups', 'academy_id')) {
                 $table->foreignId('academy_id')->after('id')->constrained()->onDelete('cascade');
             }
-            if (!Schema::hasColumn('academy_groups', 'name')) {
+            if (! Schema::hasColumn('academy_groups', 'name')) {
                 $table->string('name')->after('academy_id');
             }
-            if (!Schema::hasColumn('academy_groups', 'description')) {
+            if (! Schema::hasColumn('academy_groups', 'description')) {
                 $table->string('description')->nullable()->after('name');
             }
-            if (!Schema::hasColumn('academy_groups', 'type')) {
+            if (! Schema::hasColumn('academy_groups', 'type')) {
                 $table->string('type')->default('classroom')->after('description');
             }
-            if (!Schema::hasColumn('academy_groups', 'settings')) {
+            if (! Schema::hasColumn('academy_groups', 'settings')) {
                 $table->json('settings')->nullable()->after('type');
             }
         });

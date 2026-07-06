@@ -30,14 +30,14 @@ class RebuildClassroomsFromStudents extends Command
 
         $existingCount = Classroom::count();
 
-        $this->info("=== Classroom Rebuild Plan ===");
+        $this->info('=== Classroom Rebuild Plan ===');
         $this->info("Existing classrooms to delete: {$existingCount}");
         $this->info("New classrooms to create: {$combos->count()}");
         $this->newLine();
 
         $this->table(
             ['Grade', 'Section', 'Name', 'Students'],
-            $combos->map(fn($c) => [
+            $combos->map(fn ($c) => [
                 "ม.{$c->class_level}",
                 $c->class_section,
                 "ม.{$c->class_level}/{$c->class_section}",
@@ -56,11 +56,13 @@ class RebuildClassroomsFromStudents extends Command
 
         if ($dryRun) {
             $this->warn('DRY RUN — No changes made.');
+
             return 0;
         }
 
-        if (!$this->confirm("Delete {$existingCount} old classrooms and create {$combos->count()} new ones?")) {
+        if (! $this->confirm("Delete {$existingCount} old classrooms and create {$combos->count()} new ones?")) {
             $this->info('Cancelled.');
+
             return 0;
         }
 
@@ -119,7 +121,7 @@ class RebuildClassroomsFromStudents extends Command
                     ->select('id')
                     ->get();
 
-                $pivotData = $students->map(fn($s) => [
+                $pivotData = $students->map(fn ($s) => [
                     'classroom_id' => $classroomId,
                     'student_id' => $s->id,
                     'status' => 'active',
@@ -127,7 +129,7 @@ class RebuildClassroomsFromStudents extends Command
                     'updated_at' => now(),
                 ])->toArray();
 
-                if (!empty($pivotData)) {
+                if (! empty($pivotData)) {
                     DB::table('classroom_students')->insert($pivotData);
                     $pivotInserted += count($pivotData);
                 }
@@ -141,6 +143,7 @@ class RebuildClassroomsFromStudents extends Command
         } catch (\Exception $e) {
             DB::rollBack();
             $this->error("Error: {$e->getMessage()}");
+
             return 1;
         }
 

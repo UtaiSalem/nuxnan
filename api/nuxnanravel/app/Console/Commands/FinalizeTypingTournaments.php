@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 class FinalizeTypingTournaments extends Command
 {
     protected $signature = 'typing:finalize-tournaments';
+
     protected $description = 'Update tournament statuses and finalize rankings';
 
     public function handle(): void
@@ -17,7 +18,7 @@ class FinalizeTypingTournaments extends Command
         $activated = TypingTournament::upcoming()
             ->where('starts_at', '<=', now())
             ->update(['status' => 'active']);
-        
+
         if ($activated > 0) {
             $this->info("Activated {$activated} tournaments.");
         }

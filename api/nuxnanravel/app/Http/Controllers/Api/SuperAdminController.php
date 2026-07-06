@@ -16,11 +16,11 @@ class SuperAdminController extends Controller
     public function index()
     {
         $superAdminRole = Role::where('name', 'SUPER_ADMIN')->first();
-        
-        if (!$superAdminRole) {
+
+        if (! $superAdminRole) {
             return response()->json([
                 'message' => 'Super Admin role not found',
-                'data' => []
+                'data' => [],
             ], 404);
         }
 
@@ -30,7 +30,7 @@ class SuperAdminController extends Controller
 
         return response()->json([
             'message' => 'Super Admins retrieved successfully',
-            'data' => $superAdmins
+            'data' => $superAdmins,
         ]);
     }
 
@@ -46,7 +46,7 @@ class SuperAdminController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -54,7 +54,7 @@ class SuperAdminController extends Controller
 
         if ($user->isSuperAdmin()) {
             return response()->json([
-                'message' => 'User is already a Super Admin'
+                'message' => 'User is already a Super Admin',
             ], 400);
         }
 
@@ -62,7 +62,7 @@ class SuperAdminController extends Controller
 
         return response()->json([
             'message' => 'Super Admin role assigned successfully',
-            'data' => $user->load('roles')
+            'data' => $user->load('roles'),
         ], 201);
     }
 
@@ -73,15 +73,15 @@ class SuperAdminController extends Controller
     {
         $user = User::find($userId);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
-                'message' => 'User not found'
+                'message' => 'User not found',
             ], 404);
         }
 
-        if (!$user->isSuperAdmin()) {
+        if (! $user->isSuperAdmin()) {
             return response()->json([
-                'message' => 'User is not a Super Admin'
+                'message' => 'User is not a Super Admin',
             ], 400);
         }
 
@@ -90,7 +90,7 @@ class SuperAdminController extends Controller
 
         return response()->json([
             'message' => 'Super Admin role removed successfully',
-            'data' => $user->load('roles')
+            'data' => $user->load('roles'),
         ]);
     }
 
@@ -103,7 +103,7 @@ class SuperAdminController extends Controller
 
         return response()->json([
             'is_super_admin' => $user->isSuperAdmin(),
-            'user' => $user
+            'user' => $user,
         ]);
     }
 }

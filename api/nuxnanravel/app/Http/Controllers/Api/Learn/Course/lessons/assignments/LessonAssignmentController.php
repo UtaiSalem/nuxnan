@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons\assignments;
 
-use App\Models\Lesson;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 use App\Models\Assignment;
+use App\Models\CourseMember;
+use App\Models\Lesson;
+use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 
-class LessonAssignmentController extends \App\Http\Controllers\Controller
+class LessonAssignmentController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -37,27 +40,28 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
             'points' => $request->points,
             'start_date' => $request->start_date,
             'due_date' => $request->due_date,
-            'status' => 1 // Auto publish
+            'status' => 1, // Auto publish
         ]);
 
         // Update Course Total Score
         if ($lesson->course) {
-            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
+            app(CourseScoreService::class)->syncCourseTotalScore($lesson->course);
         }
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             $fileNames = [];
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/lessons/assignments', $image, $fileName);
                 $fileNames[] = $fileName;
 
                 $assignment->images()->create([
-                    'image_url' => $image_url
+                    'image_url' => $image_url,
                 ]);
             }
         }
+
         return response()->json([
             'assignment' => new AssignmentResource($assignment),
         ], 200);
@@ -86,7 +90,7 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
     {
         // Ownership check: assignment must belong to this lesson (directly or via topic)
         $assignmentLesson = $assignment->getLesson();
-        if ($assignment->assignmentable_type === \App\Models\Lesson::class) {
+        if ($assignment->assignmentable_type === Lesson::class) {
             abort_if($assignment->assignmentable_id !== $lesson->id, 404);
         } elseif ($assignmentLesson) {
             abort_if($assignmentLesson->id !== $lesson->id, 404);
@@ -105,22 +109,23 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
 
         // Update Course Total Score if points changed
         if ($lesson->course) {
-            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
+            app(CourseScoreService::class)->syncCourseTotalScore($lesson->course);
         }
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             $fileNames = [];
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/lessons/assignments', $image, $fileName);
                 $fileNames[] = $fileName;
 
                 $assignment->images()->create([
-                    'image_url' => $image_url
+                    'image_url' => $image_url,
                 ]);
             }
         }
+
         return response()->json([
             'assignment' => new AssignmentResource($assignment),
         ], 200);
@@ -134,27 +139,27 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
         $affectedCourseMembers = [];
 
         // Delete all answers and their images
-        foreach ($assignment->answers as $answer) {            
+        foreach ($assignment->answers as $answer) {
             // Collect course members to recompute later
             if ($answer->points > 0) {
-                $courseMember = \App\Models\CourseMember::where('course_id', $lesson->course_id)
+                $courseMember = CourseMember::where('course_id', $lesson->course_id)
                     ->where('user_id', $answer->user_id)
                     ->first();
-                
+
                 if ($courseMember) {
                     $affectedCourseMembers[] = $courseMember;
                 }
             }
 
             foreach ($answer->images as $image) {
-                Storage::disk('public')->delete('images/courses/assignments/answers/'. $image->filename);
+                Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
             }
             $answer->images()->delete();
         }
         $assignment->answers()->delete();
 
         foreach ($affectedCourseMembers as $cm) {
-            app(\App\Services\CourseScoreService::class)->recompute($cm);
+            app(CourseScoreService::class)->recompute($cm);
         }
 
         // Delete assignment images
@@ -165,7 +170,7 @@ class LessonAssignmentController extends \App\Http\Controllers\Controller
 
         // Sync Course total score
         if ($lesson->course) {
-            app(\App\Services\CourseScoreService::class)->syncCourseTotalScore($lesson->course);
+            app(CourseScoreService::class)->syncCourseTotalScore($lesson->course);
         }
 
         $assignment->delete();

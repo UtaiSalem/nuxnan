@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Api\Shared;
 
-use App\Models\User;
-
-use App\Models\Course;
-use Illuminate\Http\Request;
-use App\Models\AcademyMember;
-use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
+use App\Models\AcademyMember;
+use App\Models\Course;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
-class ForgotPasswordController extends \App\Http\Controllers\Controller
+class ForgotPasswordController extends Controller
 {
     /**
      * ตรวจสอบสิทธิ์การเข้าถึงหน้า Admin Reset Password
@@ -20,14 +20,14 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
     public function index()
     {
         $user = auth()->user();
-        
-        if (!$user || !$user->isPlearndAdmin()) {
+
+        if (! $user || ! $user->isPlearndAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์เข้าถึง'
+                'message' => 'ไม่มีสิทธิ์เข้าถึง',
             ], 403);
         }
-        
+
         return response()->json(['success' => true]);
     }
 
@@ -37,7 +37,7 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
     public function getUser(Request $request)
     {
         $search = $request->input('email', '');
-        
+
         if (empty(trim($search))) {
             return response()->json([
                 'users' => [],
@@ -46,10 +46,10 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
         }
 
         $users = UserResource::collection(
-            User::where('email', 'like', '%' . $search . '%')
-                ->orWhere('name', 'like', '%' . $search . '%')
-                ->orWhere('phone_number', 'like', '%' . $search . '%')
-                ->orWhere('personal_code', 'like', '%' . $search . '%')
+            User::where('email', 'like', '%'.$search.'%')
+                ->orWhere('name', 'like', '%'.$search.'%')
+                ->orWhere('phone_number', 'like', '%'.$search.'%')
+                ->orWhere('personal_code', 'like', '%'.$search.'%')
                 ->limit(10)
                 ->get()
         );
@@ -70,12 +70,12 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
     public function resetPassword(User $user, Request $request)
     {
         $admin = auth()->user();
-        
+
         // ตรวจสอบสิทธิ์ Admin
-        if (!$admin || !$admin->isPlearndAdmin()) {
+        if (! $admin || ! $admin->isPlearndAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่มีสิทธิ์ในการรีเซ็ตรหัสผ่าน'
+                'message' => 'ไม่มีสิทธิ์ในการรีเซ็ตรหัสผ่าน',
             ], 403);
         }
 
@@ -87,20 +87,20 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
         // ค่าแต้มที่ต้องใช้
         $requiredPoints = 4800;
         $pointsPerBaht = 1080;
-        
+
         // ตรวจสอบแต้มและ wallet ของสมาชิก
         $userPoints = $user->pp ?? 0;
         $userWallet = $user->wallet ?? 0;
-        
+
         // คำนวณมูลค่ารวมของแต้ม + wallet (แปลง wallet เป็นแต้ม)
         $walletAsPoints = $userWallet * $pointsPerBaht;
         $totalAvailablePoints = $userPoints + $walletAsPoints;
-        
+
         // ตรวจสอบว่ามีเพียงพอหรือไม่ (รวมแต้ม + wallet)
         if ($totalAvailablePoints < $requiredPoints) {
             $neededPoints = $requiredPoints - $totalAvailablePoints;
             $neededMoney = ceil($neededPoints / $pointsPerBaht);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'แต้มและเงินใน Wallet ของสมาชิกไม่เพียงพอ',
@@ -121,11 +121,11 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
 
         try {
             DB::beginTransaction();
-            
+
             $pointsDeducted = 0;
             $moneyDeducted = 0;
             $remainingToDeduct = $requiredPoints;
-            
+
             // 1. หักจากแต้มก่อน (ใช้แต้มให้หมดก่อน)
             if ($userPoints > 0) {
                 $pointsToUse = min($userPoints, $remainingToDeduct);
@@ -133,20 +133,20 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
                 $pointsDeducted = $pointsToUse;
                 $remainingToDeduct -= $pointsToUse;
             }
-            
+
             // 2. ถ้ายังไม่พอ หักจาก Wallet
             if ($remainingToDeduct > 0) {
                 // คำนวณเงินที่ต้องหัก (ปัดขึ้น)
                 $moneyNeeded = ceil($remainingToDeduct / $pointsPerBaht);
                 $user->decrement('wallet', $moneyNeeded);
                 $moneyDeducted = $moneyNeeded;
-                
+
                 // เพิ่มแต้มจากเงิน แล้วหักแต้มที่เหลือ
                 $pointsFromMoney = $moneyNeeded * $pointsPerBaht;
                 $user->increment('pp', $pointsFromMoney);
                 $user->decrement('pp', $remainingToDeduct);
             }
-            
+
             // อัพเดทรหัสผ่าน
             $user->update([
                 'password' => Hash::make($newPassword),
@@ -158,7 +158,7 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
                 ->delete();
 
             DB::commit();
-            
+
             // Refresh user data
             $user->refresh();
 
@@ -184,11 +184,11 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Password reset failed: ' . $e->getMessage());
-            
+            Log::error('Password reset failed: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน'
+                'message' => 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน',
             ], 500);
         }
     }
@@ -199,11 +199,11 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
             if ($request->money && $request->money < 0) {
                 return redirect()->back()->with([
                     'success' => false,
-                    'message' => 'จำนวนเงินน้อยเกินไป'
+                    'message' => 'จำนวนเงินน้อยเกินไป',
                 ]);
             }
 
-            $user->increment('pp', $request->money*1080);
+            $user->increment('pp', $request->money * 1080);
 
             return response()->json([
                 'success' => true,
@@ -221,7 +221,7 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
         if ($user->id === 1) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถลบผู้ดูแลระบบได้'
+                'message' => 'ไม่สามารถลบผู้ดูแลระบบได้',
             ]);
         }
 
@@ -242,7 +242,6 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
         //     $question->answers()->delete();
         // }
 
-
         // Post::where('user_id', $user->id)->delete();
         // PostComment::where('user_id', $user->id)->delete();
         // PostLike::where('user_id', $user->id)->delete();
@@ -250,14 +249,12 @@ class ForgotPasswordController extends \App\Http\Controllers\Controller
         // PostCommentLike::where('user_id', $user->id)->delete();
         // PostCommentDislike::where('user_id', $user->id)->delete();
 
-
         // $user->delete();
-        
+
         // return response()->json([
         //     'success' => true,
         //     'message' => 'User deleted successfully'
         // ]);
 
     }
-
 }

@@ -19,27 +19,27 @@ class ClassroomPointsService
         array $metadata = []
     ): XpEvent {
         $event = XpEvent::create([
-            'academy_id'         => $classroom->academy_id,
-            'user_id'            => $userId,
+            'academy_id' => $classroom->academy_id,
+            'user_id' => $userId,
             'classroom_group_id' => $classroom->id,
-            'source'             => $source,
-            'xp'                 => 0,
-            'classroom_pts'      => $points,
-            'metadata'           => $metadata,
-            'occurred_at'        => now(),
+            'source' => $source,
+            'xp' => 0,
+            'classroom_pts' => $points,
+            'metadata' => $metadata,
+            'occurred_at' => now(),
         ]);
 
         foreach ($this->activeCycles() as $cycle) {
             $row = ClassroomPointCycle::firstOrCreate(
                 [
                     'classroom_group_id' => $classroom->id,
-                    'cycle_type'         => $cycle['type'],
-                    'cycle_key'          => $cycle['key'],
+                    'cycle_type' => $cycle['type'],
+                    'cycle_key' => $cycle['key'],
                 ],
                 [
-                    'academy_id'   => $classroom->academy_id,
-                    'cycle_start'  => $cycle['start'],
-                    'cycle_end'    => $cycle['end'],
+                    'academy_id' => $classroom->academy_id,
+                    'cycle_start' => $cycle['start'],
+                    'cycle_end' => $cycle['end'],
                     'total_points' => 0,
                 ]
             );
@@ -58,13 +58,13 @@ class ClassroomPointsService
             ClassroomPointCycle::firstOrCreate(
                 [
                     'classroom_group_id' => $classroom->id,
-                    'cycle_type'         => $cycle['type'],
-                    'cycle_key'          => $cycle['key'],
+                    'cycle_type' => $cycle['type'],
+                    'cycle_key' => $cycle['key'],
                 ],
                 [
-                    'academy_id'   => $classroom->academy_id,
-                    'cycle_start'  => $cycle['start'],
-                    'cycle_end'    => $cycle['end'],
+                    'academy_id' => $classroom->academy_id,
+                    'cycle_start' => $cycle['start'],
+                    'cycle_end' => $cycle['end'],
                     'total_points' => 0,
                 ]
             );
@@ -77,7 +77,7 @@ class ClassroomPointsService
     public function leaderboard(int $academyId, string $cycleType = 'month', int $limit = 3): array
     {
         $key = match ($cycleType) {
-            'week'  => Carbon::now()->format('o-\WW'),
+            'week' => Carbon::now()->format('o-\WW'),
             'month' => Carbon::now()->format('Y-m'),
             default => 'all',
         };
@@ -91,10 +91,10 @@ class ClassroomPointsService
             ->limit($limit)
             ->get()
             ->map(fn ($r, $i) => [
-                'rank'      => $i + 1,
-                'group_id'  => $r->classroom_group_id,
-                'name'      => $r->classroomGroup?->name ?? 'ห้องเรียนทั่วไป',
-                'points'    => $r->total_points,
+                'rank' => $i + 1,
+                'group_id' => $r->classroom_group_id,
+                'name' => $r->classroomGroup?->name ?? 'ห้องเรียนทั่วไป',
+                'points' => $r->total_points,
             ])
             ->all();
     }

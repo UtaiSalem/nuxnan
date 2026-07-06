@@ -32,9 +32,13 @@ class PaymentMethod extends Model
 
     // Common payment method codes
     const CODE_CASH = 'cash';
+
     const CODE_TRANSFER = 'transfer';
+
     const CODE_CREDIT_CARD = 'credit_card';
+
     const CODE_PROMPTPAY = 'promptpay';
+
     const CODE_WALLET = 'wallet';
 
     // Relationships

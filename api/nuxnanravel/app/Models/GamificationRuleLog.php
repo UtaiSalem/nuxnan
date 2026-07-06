@@ -9,7 +9,7 @@ class GamificationRuleLog extends Model
 {
     protected $fillable = [
         'user_id', 'usage_event_id', 'rule_key', 'result',
-        'points_awarded', 'xp_awarded', 'reason', 'evaluated_at'
+        'points_awarded', 'xp_awarded', 'reason', 'evaluated_at',
     ];
 
     protected $casts = [

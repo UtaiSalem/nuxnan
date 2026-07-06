@@ -23,13 +23,21 @@ class EligibilityAuditLog extends Model
     ];
 
     const TYPE_AUTO_CALC = 'auto_calc';
+
     const TYPE_POINTS_UNLOCK = 'points_unlock';
+
     const TYPE_READING_UNLOCK = 'reading_unlock';
+
     const TYPE_ADMIN_UNLOCK = 'admin_unlock';
+
     const TYPE_APPEAL_UNLOCK = 'appeal_unlock';
+
     const TYPE_SELF_UNLOCK = 'self_unlock';
+
     const TYPE_REMEDIATION_UNLOCK = 'remediation_unlock';
+
     const TYPE_ADMIN_REVOKE = 'admin_revoke';
+
     const TYPE_EXPIRATION = 'expiration';
 
     public function courseMember(): BelongsTo

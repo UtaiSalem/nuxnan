@@ -45,7 +45,9 @@ class SemesterTranscript extends Model
 
     // Status Constants
     const STATUS_DRAFT = 'draft';
+
     const STATUS_PUBLISHED = 'published';
+
     const STATUS_APPROVED = 'approved';
 
     // Relationships
@@ -103,7 +105,7 @@ class SemesterTranscript extends Model
     // Accessors
     public function getStatusTextAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_DRAFT => 'ร่าง',
             self::STATUS_PUBLISHED => 'เผยแพร่',
             self::STATUS_APPROVED => 'อนุมัติ',
@@ -113,13 +115,19 @@ class SemesterTranscript extends Model
 
     public function getClassRankDisplayAttribute(): string
     {
-        if (!$this->class_rank) return '-';
+        if (! $this->class_rank) {
+            return '-';
+        }
+
         return "{$this->class_rank}/{$this->total_students_in_class}";
     }
 
     public function getGradeRankDisplayAttribute(): string
     {
-        if (!$this->grade_rank) return '-';
+        if (! $this->grade_rank) {
+            return '-';
+        }
+
         return "{$this->grade_rank}/{$this->total_students_in_grade}";
     }
 
@@ -185,7 +193,7 @@ class SemesterTranscript extends Model
      */
     public function calculateRanking(): self
     {
-        if (!$this->classroom_id || !$this->gpa) {
+        if (! $this->classroom_id || ! $this->gpa) {
             return $this;
         }
 
@@ -238,6 +246,7 @@ class SemesterTranscript extends Model
     public function publish(): self
     {
         $this->update(['status' => self::STATUS_PUBLISHED]);
+
         return $this;
     }
 
@@ -251,6 +260,7 @@ class SemesterTranscript extends Model
             'approved_by' => $approverId ?? auth()->id(),
             'approved_at' => now(),
         ]);
+
         return $this;
     }
 }

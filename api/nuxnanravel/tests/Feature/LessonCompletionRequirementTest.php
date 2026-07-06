@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Assignment;
 use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\Lesson;
@@ -18,10 +17,15 @@ class LessonCompletionRequirementTest extends TestCase
     use RefreshDatabase;
 
     protected $teacher;
+
     protected $student;
+
     protected $course;
+
     protected $lesson;
+
     protected $assignment;
+
     protected $question;
 
     protected function setUp(): void
@@ -32,7 +36,7 @@ class LessonCompletionRequirementTest extends TestCase
         $this->student = User::factory()->create();
 
         $this->course = Course::factory()->create(['user_id' => $this->teacher->id]);
-        
+
         // Add student to course
         CourseMember::create([
             'course_id' => $this->course->id,

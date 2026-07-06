@@ -3,9 +3,8 @@
 namespace App\Services;
 
 use App\Models\Reward;
-use App\Models\UserReward;
 use App\Models\User;
-use App\Services\PointsService;
+use App\Models\UserReward;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -41,7 +40,7 @@ class RewardService
     {
         $reward = Reward::find($rewardId);
 
-        if (!$reward) {
+        if (! $reward) {
             return null;
         }
 
@@ -104,14 +103,14 @@ class RewardService
         return DB::transaction(function () use ($user, $rewardId, $quantity) {
             $reward = Reward::find($rewardId);
 
-            if (!$reward) {
+            if (! $reward) {
                 return [
                     'success' => false,
                     'message' => 'ไม่พบรางวัล',
                 ];
             }
 
-            if (!$reward->isAvailable()) {
+            if (! $reward->isAvailable()) {
                 return [
                     'success' => false,
                     'message' => 'รางวัลนี้ไม่สามารถแลกได้',
@@ -163,7 +162,7 @@ class RewardService
                 ]
             );
 
-            if (!$spendResult) {
+            if (! $spendResult) {
                 return [
                     'success' => false,
                     'message' => 'ไม่สามารถใช้แต้ม',
@@ -226,7 +225,7 @@ class RewardService
                 ->where('id', $userRewardId)
                 ->first();
 
-            if (!$userReward) {
+            if (! $userReward) {
                 return false;
             }
 
@@ -283,7 +282,7 @@ class RewardService
             'total_rewards' => $totalRewards,
             'total_redeemed' => $userRedemptions,
             'total_points_spent' => $userPointsSpent,
-            'average_points_per_redemption' => $userRedemptions > 0 
+            'average_points_per_redemption' => $userRedemptions > 0
                 ? round($userPointsSpent / $userRedemptions, 2)
                 : 0,
         ];

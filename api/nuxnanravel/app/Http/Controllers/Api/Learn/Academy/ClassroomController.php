@@ -79,9 +79,7 @@ class ClassroomController extends Controller
                     ->first();
                 $student->student_number = $pivot?->student_number;
                 // Build full profile image URL
-                if ($student->profile_image) {
-                    $student->profile_image_url = asset("storage/images/students/{$student->class_level}/{$student->class_section}/{$student->profile_image}");
-                }
+                $student->profile_image_url = $student->profile_image_url;
 
                 return $student;
             })
@@ -98,9 +96,7 @@ class ClassroomController extends Controller
                 ->orderBy('first_name_th')
                 ->get()
                 ->map(function ($student) {
-                    if ($student->profile_image) {
-                        $student->profile_image_url = asset("storage/images/students/{$student->class_level}/{$student->class_section}/{$student->profile_image}");
-                    }
+                    $student->profile_image_url = $student->profile_image_url;
 
                     return $student;
                 });

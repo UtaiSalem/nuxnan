@@ -16,9 +16,9 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
             $table->string('session_token', 64)->unique();
             $table->enum('game_mode', [
-                'word_typing', 'time_attack', 'sentence_typing', 
-                'monster_battle', 'falling_words', 'classroom_race', 
-                'daily_challenge'
+                'word_typing', 'time_attack', 'sentence_typing',
+                'monster_battle', 'falling_words', 'classroom_race',
+                'daily_challenge',
             ]);
             $table->enum('language', ['th', 'en', 'ar'])->default('en');
             $table->enum('difficulty', ['beginner', 'easy', 'normal', 'hard', 'expert']);

@@ -1,15 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Learn\Student\Profile\StudentProfileController;
-use App\Http\Controllers\Api\Learn\Student\Master\StudentController;
+use App\Http\Controllers\Api\Learn\Student\Master\AcademicInfoController;
 use App\Http\Controllers\Api\Learn\Student\Master\AddressController;
+use App\Http\Controllers\Api\Learn\Student\Master\ChangeRequestController;
 use App\Http\Controllers\Api\Learn\Student\Master\ContactController;
 use App\Http\Controllers\Api\Learn\Student\Master\GuardianController;
 use App\Http\Controllers\Api\Learn\Student\Master\HealthController;
-use App\Http\Controllers\Api\Learn\Student\Master\AcademicInfoController;
-use App\Http\Controllers\Api\Learn\Student\Master\ChangeRequestController;
 use App\Http\Controllers\Api\Learn\Student\Master\HomeVisitController;
+use App\Http\Controllers\Api\Learn\Student\Master\StudentController;
+use App\Http\Controllers\Api\Learn\Student\Profile\StudentProfileController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,10 +38,10 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
     // Student Profile by ID
     // ============================================
     Route::prefix('students/{student}')->name('api.academy.student-profile.')->group(function () {
-        
+
         // Full student profile
         Route::get('/profile', [StudentProfileController::class, 'show'])->name('show');
-        
+
         // Lightweight profile summary
         Route::get('/summary', [StudentProfileController::class, 'summary'])->name('summary');
 

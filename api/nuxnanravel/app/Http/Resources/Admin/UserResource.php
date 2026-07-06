@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Admin;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -99,7 +100,7 @@ class UserResource extends JsonResource
         }
 
         try {
-            return \Carbon\Carbon::parse($value)->toISOString();
+            return Carbon::parse($value)->toISOString();
         } catch (\Throwable $e) {
             return is_string($value) ? $value : null;
         }

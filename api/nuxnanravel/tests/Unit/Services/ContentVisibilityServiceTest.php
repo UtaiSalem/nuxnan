@@ -2,22 +2,23 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\User;
+use App\Models\Assignment;
 use App\Models\Course;
+use App\Models\CourseQuiz;
 use App\Models\Lesson;
 use App\Models\Topic;
-use App\Models\Assignment;
-use App\Models\CourseQuiz;
+use App\Models\User;
 use App\Services\ContentVisibilityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\TestCase;
 
 class ContentVisibilityServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     private ContentVisibilityService $service;
+
     private User $student;
 
     protected function setUp(): void
@@ -118,10 +119,10 @@ class ContentVisibilityServiceTest extends TestCase
     public function test_assert_visible_or_fail_throws_404_for_draft_lesson(): void
     {
         $lesson = Lesson::factory()->create(['publication_status' => 'draft']);
-        
+
         $this->expectException(HttpException::class);
         $this->expectExceptionMessage('เนื้อหานี้ยังไม่เปิดให้เข้าใช้งาน');
-        
+
         try {
             $this->service->assertVisibleOrFail($lesson, $this->student, 404);
         } catch (HttpException $e) {
@@ -138,9 +139,9 @@ class ContentVisibilityServiceTest extends TestCase
             'assignmentable_type' => Course::class,
             'assignmentable_id' => $course->id,
         ]);
-        
+
         $this->expectException(HttpException::class);
-        
+
         try {
             $this->service->assertVisibleOrFail($assignment, $this->student, 403);
         } catch (HttpException $e) {

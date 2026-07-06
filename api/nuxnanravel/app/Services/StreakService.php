@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\PointStreak;
 use App\Models\User;
-use App\Services\PointsService;
 use Illuminate\Support\Facades\DB;
 
 class StreakService
@@ -62,7 +61,7 @@ class StreakService
 
             // Calculate bonus points
             $bonusPoints = $streak->calculateBonusPoints();
-            
+
             // Check if bonus milestone reached
             $nextMilestone = $streak->getNextBonusMilestone();
             if ($streak->current_streak >= $nextMilestone && $bonusPoints > 0) {
@@ -107,7 +106,7 @@ class StreakService
     {
         $streak = PointStreak::where('user_id', $userId)->first();
 
-        if (!$streak) {
+        if (! $streak) {
             return [
                 'current_streak' => 0,
                 'longest_streak' => 0,
@@ -169,7 +168,7 @@ class StreakService
      */
     private function getStreakMessage(int $streakDays, bool $streakIncreased, int $bonusPoints): string
     {
-        if (!$streakIncreased && $bonusPoints === 0) {
+        if (! $streakIncreased && $bonusPoints === 0) {
             return 'คุณได้เข้าสู่ระบบไปแล้ววันนี้';
         }
 
@@ -177,7 +176,7 @@ class StreakService
             return "🎉 ยอดเยี่ยม! คุณได้รับ {$bonusPoints} แต้ม จาก Streak {$streakDays} วัน!";
         }
 
-        return match(true) {
+        return match (true) {
             $streakDays >= 30 => "💎 สุดยอด! คุณมี Streak {$streakDays} วัน!",
             $streakDays >= 21 => "🏆 เยี่ยมมาก! คุณมี Streak {$streakDays} วัน!",
             $streakDays >= 14 => "🥇 ยอดเยี่ยม! คุณมี Streak {$streakDays} วัน!",
@@ -194,7 +193,7 @@ class StreakService
     {
         $streak = PointStreak::where('user_id', $userId)->first();
 
-        if (!$streak) {
+        if (! $streak) {
             return false;
         }
 

@@ -114,13 +114,17 @@ class GradebookAssessment extends Model
     public function getAverageScoreAttribute(): ?float
     {
         $avg = $this->scores()->where('status', 'graded')->avg('score');
+
         return $avg ? round($avg, 2) : null;
     }
 
     public function getAveragePercentageAttribute(): ?float
     {
-        if (!$this->max_score || $this->max_score == 0) return null;
+        if (! $this->max_score || $this->max_score == 0) {
+            return null;
+        }
         $avg = $this->average_score;
+
         return $avg ? round(($avg / $this->max_score) * 100, 2) : null;
     }
 
@@ -145,7 +149,9 @@ class GradebookAssessment extends Model
 
         foreach ($answers as $answer) {
             $student = $answer->user?->students()->first();
-            if (!$student) continue;
+            if (! $student) {
+                continue;
+            }
 
             $this->scores()->updateOrCreate(
                 ['student_id' => $student->id],
@@ -169,7 +175,9 @@ class GradebookAssessment extends Model
 
         foreach ($results as $result) {
             $student = $result->user?->students()->first();
-            if (!$student) continue;
+            if (! $student) {
+                continue;
+            }
 
             $this->scores()->updateOrCreate(
                 ['student_id' => $student->id],

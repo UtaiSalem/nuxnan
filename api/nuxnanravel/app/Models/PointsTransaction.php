@@ -101,7 +101,7 @@ class PointsTransaction extends Model
      */
     public function getFormattedAmountAttribute(): string
     {
-        return number_format($this->amount, 2) . ' แต้ม';
+        return number_format($this->amount, 2).' แต้ม';
     }
 
     /**
@@ -109,7 +109,7 @@ class PointsTransaction extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->transaction_type) {
+        return match ($this->transaction_type) {
             'earn' => 'การได้แต้ม',
             'spend' => 'การใช้แต้ม',
             'refund' => 'การคืนแต้ม',
@@ -127,7 +127,7 @@ class PointsTransaction extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'รอดำเนินการ',
             'completed' => 'เสร็จสิ้น',
             'failed' => 'ล้มเหลว',

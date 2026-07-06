@@ -17,15 +17,15 @@ return new class extends Migration
             $table->foreignId('course_member_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('lesson_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('admin_id')->constrained('users')->cascadeOnDelete();
-            
+
             // quiz, assignment_grade (reset score only), assignment_full (delete submission)
-            $table->string('reset_type'); 
-            
+            $table->string('reset_type');
+
             $table->json('old_score_snapshot')->nullable();
             $table->string('reason')->nullable();
-            
+
             $table->timestamps();
-            
+
             $table->index(['course_id', 'course_member_id']);
             $table->index(['course_id', 'lesson_id']);
         });

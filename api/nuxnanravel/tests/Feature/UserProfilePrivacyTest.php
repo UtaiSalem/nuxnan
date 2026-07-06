@@ -12,7 +12,9 @@ class UserProfilePrivacyTest extends TestCase
     use RefreshDatabase;
 
     protected $owner;
+
     protected $friend;
+
     protected $stranger;
 
     protected function setUp(): void
@@ -32,19 +34,19 @@ class UserProfilePrivacyTest extends TestCase
             'show_email' => true,
             'show_phone' => true,
             'location' => 'Bangkok, Thailand',
-            'privacy_settings' => 'public'
+            'privacy_settings' => 'public',
         ]);
 
         UserProfile::create([
             'user_id' => $this->friend->id,
             'first_name' => 'Friend',
-            'last_name' => 'Test'
+            'last_name' => 'Test',
         ]);
 
         UserProfile::create([
             'user_id' => $this->stranger->id,
             'first_name' => 'Stranger',
-            'last_name' => 'Test'
+            'last_name' => 'Test',
         ]);
 
         // Establish Friendship: Owner <-> Friend
@@ -56,7 +58,7 @@ class UserProfilePrivacyTest extends TestCase
     public function owner_can_see_their_own_private_info()
     {
         $response = $this->actingAs($this->owner, 'api')
-            ->getJson("/api/profile/me");
+            ->getJson('/api/profile/me');
 
         $response->assertStatus(200)
             ->assertJsonPath('data.email', 'owner@example.com')
@@ -110,7 +112,7 @@ class UserProfilePrivacyTest extends TestCase
         $this->owner->update(['pp' => 1500]); // Assuming 1000 XP per level for simplicity in test logic
 
         $response = $this->actingAs($this->owner, 'api')
-            ->getJson("/api/profile/me");
+            ->getJson('/api/profile/me');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -118,10 +120,10 @@ class UserProfilePrivacyTest extends TestCase
                     'level',
                     'level_progress',
                     'experience',
-                    'experience_to_next_level'
-                ]
+                    'experience_to_next_level',
+                ],
             ]);
-        
+
         $data = $response->json('data');
         $this->assertGreaterThanOrEqual(0, $data['level_progress']);
         $this->assertLessThanOrEqual(100, $data['level_progress']);

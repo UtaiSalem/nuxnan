@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons\assignments;
 
-use App\Models\Topic;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 use App\Models\Assignment;
+use App\Models\Topic;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 
-class TopicAssignmentController extends \App\Http\Controllers\Controller
+class TopicAssignmentController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -36,19 +37,20 @@ class TopicAssignmentController extends \App\Http\Controllers\Controller
             'points' => $request->points,
         ]);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             $fileNames = [];
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/topics/assignments', $image, $fileName);
                 $fileNames[] = $fileName;
 
                 $assignment->images()->create([
-                    'image_url' => $image_url
+                    'image_url' => $image_url,
                 ]);
             }
         }
+
         return response()->json([
             'assignment' => new AssignmentResource($assignment),
         ], 200);
@@ -80,19 +82,20 @@ class TopicAssignmentController extends \App\Http\Controllers\Controller
             'points' => $request->points,
         ]);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             $fileNames = [];
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/topics/assignments', $image, $fileName);
                 $fileNames[] = $fileName;
 
                 $assignment->images()->create([
-                    'image_url' => $image_url
+                    'image_url' => $image_url,
                 ]);
             }
         }
+
         return response()->json([
             'assignment' => new AssignmentResource($assignment),
         ], 200);

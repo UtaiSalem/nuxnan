@@ -90,12 +90,12 @@ class VideoController extends Controller
         $user = auth()->user();
 
         // Upload video file
-        $videoPath = $request->file('file')->store('videos/' . $user->id, 'public');
+        $videoPath = $request->file('file')->store('videos/'.$user->id, 'public');
 
         // Upload thumbnail if provided
         $thumbnailPath = null;
         if ($request->hasFile('thumbnail')) {
-            $thumbnailPath = $request->file('thumbnail')->store('videos/' . $user->id . '/thumbnails', 'public');
+            $thumbnailPath = $request->file('thumbnail')->store('videos/'.$user->id.'/thumbnails', 'public');
         }
 
         // Map privacy string to integer
@@ -113,8 +113,8 @@ class VideoController extends Controller
             'user_id' => $user->id,
             'title' => $request->title,
             'description' => $request->description,
-            'video_url' => '/storage/' . $videoPath,
-            'thumbnail_url' => $thumbnailPath ? '/storage/' . $thumbnailPath : null,
+            'video_url' => '/storage/'.$videoPath,
+            'thumbnail_url' => $thumbnailPath ? '/storage/'.$thumbnailPath : null,
             'duration' => $duration,
             'privacy_settings' => $privacySettings,
         ]);
@@ -227,7 +227,7 @@ class VideoController extends Controller
                 if ($video->privacy_settings === 1) {
                     return response()->json(['success' => false, 'message' => 'Not found'], 404);
                 }
-                if ($video->privacy_settings === 2 && !$isFriend) {
+                if ($video->privacy_settings === 2 && ! $isFriend) {
                     return response()->json(['success' => false, 'message' => 'Not found'], 404);
                 }
             }

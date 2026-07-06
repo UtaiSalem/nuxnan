@@ -3,45 +3,45 @@
 namespace App\Http\Controllers\Api\Learn\Course\lessons\topics;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\Topic;
-use App\Models\Lesson;
-use App\Services\CourseMediaService;
-use Illuminate\Http\Request;
-use App\Http\Resources\Learn\Course\lessons\TopicResource;
+use App\Http\Resources\Learn\Academy\AcademyResource;
+use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\lessons\LessonResource;
-use App\Http\Resources\Learn\Academy\AcademyResource;
-use Illuminate\Support\Facades\Storage;
+use App\Http\Resources\Learn\Course\lessons\TopicResource;
 use App\Http\Resources\Learn\Course\questions\QuestionResource;
-use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
+use App\Models\Lesson;
+use App\Models\Topic;
+use App\Models\TopicImage;
+use App\Services\CourseMediaService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
-class TopicController extends \App\Http\Controllers\Controller
+class TopicController extends Controller
 {
     public function store(Lesson $lesson, Request $request)
     {
-        if (!$lesson->course->isAdmin(auth()->user())) {
+        if (! $lesson->course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validatedData = $request->validate([
-            'title'         => ['required', 'string', 'max:255'],
-            'content'       => ['nullable', 'string'],
-            'youtube_url'   => ['nullable', 'string', 'url:https'],
-            'min_read'      => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'images.*'      => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:10240'],
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['nullable', 'string'],
+            'youtube_url' => ['nullable', 'string', 'url:https'],
+            'min_read' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:10240'],
         ]);
 
         $topic = DB::transaction(function () use ($lesson, $validatedData) {
             $topic = $lesson->topics()->create([
-                'user_id'       => auth()->id(),
-                'academy_id'    => $lesson->course->academy_id,
-                'course_id'     => $lesson->course_id,
-                'title'         => $validatedData['title'],
-                'content'       => $validatedData['content'] ?? null,
-                'youtube_url'   => $validatedData['youtube_url'] ?? null,
-                'min_read'      => $validatedData['min_read'] ?? 0,
+                'user_id' => auth()->id(),
+                'academy_id' => $lesson->course->academy_id,
+                'course_id' => $lesson->course_id,
+                'title' => $validatedData['title'],
+                'content' => $validatedData['content'] ?? null,
+                'youtube_url' => $validatedData['youtube_url'] ?? null,
+                'min_read' => $validatedData['min_read'] ?? 0,
             ]);
 
             $lesson->increment('min_read', $topic->min_read);
@@ -53,9 +53,9 @@ class TopicController extends \App\Http\Controllers\Controller
         if ($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/courses/lessons/topics', $image, $fileName);
-                
+
                 $topic->images()->create([
                     'filename' => $fileName,
                 ]);
@@ -78,13 +78,13 @@ class TopicController extends \App\Http\Controllers\Controller
 
         return response()->json([
             'isCourseAdmin' => $isCourseAdmin,
-            'academy'       => new AcademyResource($academy),
-            'course'        => new CourseResource($lesson->course),
-            'lesson'        => new LessonResource($lesson),
-            'topic'         => new TopicResource($topic),
-            'assignments'   => AssignmentResource::collection($topic->assignments),
-            'questions'     => QuestionResource::collection($topic->questions),
-            'imagePath'     => '/../../'
+            'academy' => new AcademyResource($academy),
+            'course' => new CourseResource($lesson->course),
+            'lesson' => new LessonResource($lesson),
+            'topic' => new TopicResource($topic),
+            'assignments' => AssignmentResource::collection($topic->assignments),
+            'questions' => QuestionResource::collection($topic->questions),
+            'imagePath' => '/../../',
         ]);
     }
 
@@ -103,26 +103,26 @@ class TopicController extends \App\Http\Controllers\Controller
 
     public function update(Lesson $lesson, Topic $topic, Request $request)
     {
-        if (!$lesson->course->isAdmin(auth()->user())) {
+        if (! $lesson->course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validatedData = $request->validate([
-            'title'         => ['required', 'string', 'max:255'],
-            'content'       => ['nullable', 'string'],
-            'youtube_url'   => ['nullable', 'string', 'url:https'],
-            'min_read'      => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'images.*'      => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:10240'],
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['nullable', 'string'],
+            'youtube_url' => ['nullable', 'string', 'url:https'],
+            'min_read' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:10240'],
         ]);
 
         DB::transaction(function () use ($lesson, $topic, $validatedData) {
             $oldMinRead = $topic->min_read;
 
             $topic->update([
-                'title'       => $validatedData['title'],
-                'content'     => $validatedData['content'] ?? null,
+                'title' => $validatedData['title'],
+                'content' => $validatedData['content'] ?? null,
                 'youtube_url' => $validatedData['youtube_url'] ?? null,
-                'min_read'    => $validatedData['min_read'] ?? 0,
+                'min_read' => $validatedData['min_read'] ?? 0,
             ]);
 
             $lesson->increment('min_read', ($topic->min_read - $oldMinRead));
@@ -131,11 +131,11 @@ class TopicController extends \App\Http\Controllers\Controller
         if ($request->hasFile('images')) {
             $images = $request->file('images');
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 Storage::disk('public')->putFileAs('images/courses/lessons/topics', $image, $fileName);
 
                 $topic->images()->create([
-                    'filename' => $fileName
+                    'filename' => $fileName,
                 ]);
             }
         }
@@ -148,15 +148,15 @@ class TopicController extends \App\Http\Controllers\Controller
 
     public function destroy(Lesson $lesson, Topic $topic, CourseMediaService $mediaService)
     {
-        if (!$lesson->course->isAdmin(auth()->user())) {
+        if (! $lesson->course->isAdmin(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         if ($topic->images->count() > 0) {
             foreach ($topic->images as $image) {
                 $mediaService->deleteIfUnused(
-                    'images/courses/lessons/topics/' . $image->filename,
-                    \App\Models\TopicImage::class,
+                    'images/courses/lessons/topics/'.$image->filename,
+                    TopicImage::class,
                     'filename',
                     $image->filename,
                     $image->id
@@ -170,7 +170,7 @@ class TopicController extends \App\Http\Controllers\Controller
         //         if ($assignment->images) {
         //             foreach ($assignment->images as $image) {
         //                 Storage::disk('public')->delete($image->image_url);
-        //                 $image->delete();   
+        //                 $image->delete();
         //             }
         //         }
         //         if ($assignment->answers) {
@@ -178,14 +178,14 @@ class TopicController extends \App\Http\Controllers\Controller
         //                 if ($answer->images) {
         //                     foreach ($answer->images as $image) {
         //                         Storage::disk('public')->delete($image->image_url);
-        //                         $image->delete();   
+        //                         $image->delete();
         //                     }
         //                 }
-        //                 $answer->delete();   
+        //                 $answer->delete();
         //             }
         //         }
-    
-        //         $assignment->delete();   
+
+        //         $assignment->delete();
         //     }
         // }
 
@@ -194,31 +194,30 @@ class TopicController extends \App\Http\Controllers\Controller
         //         if ($question->images) {
         //             foreach ($question->images as $image) {
         //                 Storage::disk('public')->delete($image->image_url);
-        //                 $image->delete();   
+        //                 $image->delete();
         //             }
         //         }
-                
+
         //         if($question->answers){
         //             foreach ($question->answers as $answer) {
         //                 if ($answer->images) {
         //                     foreach ($answer->images as $image) {
         //                         Storage::disk('public')->delete($image->image_url);
-        //                         $image->delete();   
+        //                         $image->delete();
         //                     }
         //                 }
-        //                 $answer->delete();   
+        //                 $answer->delete();
         //             }
         //         }
 
-        //         $question->delete();   
+        //         $question->delete();
         //     }
         // }
 
-
         $topic->delete();
-        
+
         return response()->json([
-            'success' => true
+            'success' => true,
         ], 200);
     }
 
@@ -229,19 +228,20 @@ class TopicController extends \App\Http\Controllers\Controller
             'points' => $request->points,
         ]);
 
-        if($request->hasFile('images')) {
+        if ($request->hasFile('images')) {
             $images = $request->file('images');
             $fileNames = [];
             foreach ($images as $image) {
-                $fileName = uniqid() . '.' . $image->getClientOriginalExtension();
+                $fileName = uniqid().'.'.$image->getClientOriginalExtension();
                 $image_url = Storage::disk('public')->putFileAs('images/topics/assignments', $image, $fileName);
                 $fileNames[] = $fileName;
 
                 $assignment->images()->create([
-                    'image_url' => $image_url
+                    'image_url' => $image_url,
                 ]);
             }
         }
+
         return response()->json([
             'assignment' => new AssignmentResource($assignment),
         ], 200);
@@ -254,7 +254,7 @@ class TopicController extends \App\Http\Controllers\Controller
     {
         try {
             // Check permission
-            if (!$lesson->course->isAdmin(auth()->user())) {
+            if (! $lesson->course->isAdmin(auth()->user())) {
                 return response()->json([
                     'success' => false,
                     'message' => 'คุณไม่มีสิทธิ์จัดลำดับหัวข้อในบทเรียนนี้',
@@ -286,7 +286,7 @@ class TopicController extends \App\Http\Controllers\Controller
             }
 
             foreach ($incomingIds as $id) {
-                if (!in_array($id, $lessonTopicIds)) {
+                if (! in_array($id, $lessonTopicIds)) {
                     return response()->json([
                         'success' => false,
                         'message' => "หัวข้อ ID {$id} ไม่ได้อยู่ในบทเรียนนี้",
@@ -307,7 +307,8 @@ class TopicController extends \App\Http\Controllers\Controller
             ], 200);
 
         } catch (\Exception $e) {
-            \Log::error('Error reordering topics: ' . $e->getMessage());
+            \Log::error('Error reordering topics: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาดในการจัดลำดับหัวข้อ',

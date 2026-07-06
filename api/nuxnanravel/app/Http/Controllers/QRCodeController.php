@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Universal QR Code Controller
- * 
+ *
  * Handles QR code parsing and routing to appropriate actions
- * 
+ *
  * QR Format: PREFIX:DATA[:DATA2:...]
- * 
+ *
  * Supported Types:
  * - COUPON:12345678         → Redeem coupon
  * - CHECKIN:class_id:session_id → Class check-in
@@ -80,9 +81,8 @@ class QRCodeController extends Controller
 
     /**
      * Parse QR code and return type information
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
     public function parse(Request $request)
     {
@@ -101,9 +101,8 @@ class QRCodeController extends Controller
 
     /**
      * Execute QR code action
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
     public function execute(Request $request)
     {
@@ -114,7 +113,7 @@ class QRCodeController extends Controller
         $qrData = trim($request->qr_data);
         $parsed = $this->parseQRCode($qrData);
 
-        if (!$parsed['is_valid']) {
+        if (! $parsed['is_valid']) {
             return response()->json([
                 'success' => false,
                 'message' => 'QR Code ไม่ถูกต้องหรือไม่รู้จัก',
@@ -125,36 +124,34 @@ class QRCodeController extends Controller
         // Route to appropriate handler based on type
         try {
             $result = $this->executeAction($parsed, $request);
+
             return response()->json($result);
         } catch (\Exception $e) {
-            Log::error('QR Execute Error: ' . $e->getMessage(), [
+            Log::error('QR Execute Error: '.$e->getMessage(), [
                 'qr_data' => $qrData,
                 'parsed' => $parsed,
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Parse QR code string
-     * 
-     * @param string $qrString
-     * @return array
      */
     protected function parseQRCode(string $qrString): array
     {
         $upperString = strtoupper(trim($qrString));
-        
+
         // Try to match known prefixes
         foreach (self::QR_TYPES as $prefix => $config) {
-            if (str_starts_with($upperString, $prefix . ':')) {
+            if (str_starts_with($upperString, $prefix.':')) {
                 $dataString = substr($qrString, strlen($prefix) + 1);
                 $dataParts = explode(':', $dataString);
-                
+
                 return [
                     'type' => $config['type'],
                     'prefix' => $prefix,
@@ -164,14 +161,15 @@ class QRCodeController extends Controller
                     'endpoint' => $config['endpoint'] ?? null,
                     'raw_data' => $qrString,
                     'data' => $dataParts,
-                    'is_valid' => !empty($dataParts[0]),
+                    'is_valid' => ! empty($dataParts[0]),
                 ];
             }
         }
-        
+
         // Check if it's a pure numeric code (legacy coupon format)
         if (preg_match('/^\d{8}$/', $upperString)) {
             $config = self::QR_TYPES['COUPON'];
+
             return [
                 'type' => $config['type'],
                 'prefix' => 'COUPON',
@@ -184,7 +182,7 @@ class QRCodeController extends Controller
                 'is_valid' => true,
             ];
         }
-        
+
         // Unknown QR code
         return [
             'type' => 'unknown',
@@ -201,23 +199,19 @@ class QRCodeController extends Controller
 
     /**
      * Execute action based on parsed QR
-     * 
-     * @param array $parsed
-     * @param Request $request
-     * @return array
      */
     protected function executeAction(array $parsed, Request $request): array
     {
         switch ($parsed['type']) {
             case 'coupon':
                 return $this->handleCoupon($parsed, $request);
-            
+
             case 'checkin':
                 return $this->handleCheckin($parsed, $request);
-            
+
             case 'event':
                 return $this->handleEvent($parsed, $request);
-            
+
             case 'poll':
             case 'share':
             case 'course':
@@ -230,10 +224,10 @@ class QRCodeController extends Controller
                     'redirect_url' => str_replace('{id}', $parsed['data'][0], $parsed['route']),
                     'message' => 'กำลังนำทาง...',
                 ];
-            
+
             case 'reward':
                 return $this->handleReward($parsed, $request);
-            
+
             default:
                 return [
                     'success' => false,
@@ -247,17 +241,17 @@ class QRCodeController extends Controller
      */
     protected function handleCoupon(array $parsed, Request $request): array
     {
-        $couponController = app(\App\Http\Controllers\CouponController::class);
-        
+        $couponController = app(CouponController::class);
+
         // Create a new request with coupon code
         $redeemRequest = new Request([
             'coupon_code' => $parsed['data'][0],
         ]);
         $redeemRequest->setUserResolver($request->getUserResolver());
-        
+
         $response = $couponController->redeem($redeemRequest);
         $responseData = json_decode($response->getContent(), true);
-        
+
         return $responseData;
     }
 
@@ -269,14 +263,14 @@ class QRCodeController extends Controller
         // TODO: Implement when class check-in feature is ready
         $classId = $parsed['data'][0] ?? null;
         $sessionId = $parsed['data'][1] ?? null;
-        
-        if (!$classId) {
+
+        if (! $classId) {
             return [
                 'success' => false,
                 'message' => 'รหัสชั้นเรียนไม่ถูกต้อง',
             ];
         }
-        
+
         // Placeholder - implement actual check-in logic
         return [
             'success' => true,
@@ -296,14 +290,14 @@ class QRCodeController extends Controller
     {
         // TODO: Implement when event check-in feature is ready
         $eventId = $parsed['data'][0] ?? null;
-        
-        if (!$eventId) {
+
+        if (! $eventId) {
             return [
                 'success' => false,
                 'message' => 'รหัสกิจกรรมไม่ถูกต้อง',
             ];
         }
-        
+
         // Placeholder - implement actual check-in logic
         return [
             'success' => true,
@@ -322,14 +316,14 @@ class QRCodeController extends Controller
     {
         // TODO: Implement when reward feature is ready
         $rewardId = $parsed['data'][0] ?? null;
-        
-        if (!$rewardId) {
+
+        if (! $rewardId) {
             return [
                 'success' => false,
                 'message' => 'รหัสรางวัลไม่ถูกต้อง',
             ];
         }
-        
+
         // Placeholder - implement actual reward claim logic
         return [
             'success' => true,
@@ -352,10 +346,10 @@ class QRCodeController extends Controller
                 'prefix' => $prefix,
                 'type' => $config['type'],
                 'label' => $config['label'],
-                'format' => $prefix . ':' . $this->getFormatExample($config['type']),
+                'format' => $prefix.':'.$this->getFormatExample($config['type']),
             ];
         }
-        
+
         return response()->json([
             'success' => true,
             'data' => $types,

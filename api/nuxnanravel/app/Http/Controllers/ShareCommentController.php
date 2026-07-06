@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Models\Share;
 use App\Models\ShareComment;
-use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +17,7 @@ class ShareCommentController extends Controller
     public function store(Request $request, $shareId)
     {
         $request->validate([
-            'content' => 'required|string|max:1000'
+            'content' => 'required|string|max:1000',
         ]);
 
         $share = Share::findOrFail($shareId);
@@ -29,17 +29,17 @@ class ShareCommentController extends Controller
             $comment = ShareComment::create([
                 'share_id' => $share->id,
                 'user_id' => $user->id,
-                'content' => $request->content
+                'content' => $request->content,
             ]);
 
             // Increment share comment count
             $share->increment('comments');
-            
+
             DB::commit();
-            
+
             // Refresh comment with user relationship
             $comment = ShareComment::with('user')->find($comment->id);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'แสดงความคิดเห็นสำเร็จ',
@@ -55,14 +55,15 @@ class ShareCommentController extends Controller
                     'diff_humans_created_at' => $comment->diff_humans_created_at,
                     'created_at' => $comment->created_at,
                     'updated_at' => $comment->updated_at,
-                ]
+                ],
             ]);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการแสดงความคิดเห็น'
+                'message' => 'เกิดข้อผิดพลาดในการแสดงความคิดเห็น',
             ], 500);
         }
     }
@@ -74,16 +75,16 @@ class ShareCommentController extends Controller
     {
         try {
             $share = Share::findOrFail($shareId);
-            
+
             $perPage = $request->input('per_page', 10);
-            
+
             $comments = ShareComment::where('share_id', $shareId)
                 ->with('user')
                 ->orderBy('created_at', 'desc')
                 ->paginate($perPage);
 
             // Format comments เหมือน ShareResource getShareComments()
-            $formattedComments = $comments->getCollection()->map(function($comment) {
+            $formattedComments = $comments->getCollection()->map(function ($comment) {
                 return [
                     'id' => $comment->id,
                     'user' => new UserResource($comment->user),
@@ -106,19 +107,19 @@ class ShareCommentController extends Controller
                     'last_page' => $comments->lastPage(),
                     'per_page' => $comments->perPage(),
                     'total' => $comments->total(),
-                    'has_more' => $comments->hasMorePages()
-                ]
+                    'has_more' => $comments->hasMorePages(),
+                ],
             ]);
         } catch (\Exception $e) {
             \Log::error('ShareCommentController@index error:', [
                 'share_id' => $shareId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load comments: ' . $e->getMessage()
+                'message' => 'Failed to load comments: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -129,21 +130,21 @@ class ShareCommentController extends Controller
     public function update(Request $request, $commentId)
     {
         $comment = ShareComment::findOrFail($commentId);
-        
+
         // Check if user owns the comment
         if ($comment->user_id !== Auth::id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้'
+                'message' => 'คุณไม่มีสิทธิ์แก้ไขความคิดเห็นนี้',
             ], 403);
         }
 
         $request->validate([
-            'content' => 'required|string|max:1000'
+            'content' => 'required|string|max:1000',
         ]);
 
         $comment->update([
-            'content' => $request->content
+            'content' => $request->content,
         ]);
 
         return response()->json([
@@ -153,7 +154,7 @@ class ShareCommentController extends Controller
                 'id' => $comment->id,
                 'content' => $comment->content,
                 'updated_at' => $comment->updated_at,
-            ]
+            ],
         ]);
     }
 
@@ -164,12 +165,12 @@ class ShareCommentController extends Controller
     {
         $comment = ShareComment::findOrFail($commentId);
         $share = $comment->share;
-        
+
         // Check if user owns the comment OR owns the share
         if ($comment->user_id !== Auth::id() && $share->user_id !== Auth::id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้'
+                'message' => 'คุณไม่มีสิทธิ์ลบความคิดเห็นนี้',
             ], 403);
         }
 
@@ -178,25 +179,26 @@ class ShareCommentController extends Controller
             // Delete likes and dislikes
             DB::table('share_comment_likes')->where('share_comment_id', $comment->id)->delete();
             DB::table('share_comment_dislikes')->where('share_comment_id', $comment->id)->delete();
-            
+
             // Delete comment
             $comment->delete();
-            
+
             // Decrement share comment count
             $share->decrement('comments');
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'ลบความคิดเห็นสำเร็จ'
+                'message' => 'ลบความคิดเห็นสำเร็จ',
             ]);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาดในการลบความคิดเห็น'
+                'message' => 'เกิดข้อผิดพลาดในการลบความคิดเห็น',
             ], 500);
         }
     }
@@ -214,7 +216,7 @@ class ShareCommentController extends Controller
         if ($comment->user_id === $user->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่สามารถกดถูกใจความคิดเห็นของตัวเองได้'
+                'message' => 'คุณไม่สามารถกดถูกใจความคิดเห็นของตัวเองได้',
             ], 400);
         }
 
@@ -232,20 +234,20 @@ class ShareCommentController extends Controller
                     ->where('share_comment_id', $comment->id)
                     ->where('user_id', $user->id)
                     ->delete();
-                
+
                 $comment->decrement('likes');
-                
+
                 // Return points
                 $user->increment('pp', 24);
-                
+
                 DB::commit();
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'ยกเลิกการกดถูกใจแล้ว',
                     'action' => 'unliked',
                     'likes' => $comment->likes,
-                    'pp' => $user->pp
+                    'pp' => $user->pp,
                 ]);
             }
 
@@ -260,9 +262,9 @@ class ShareCommentController extends Controller
                     ->where('share_comment_id', $comment->id)
                     ->where('user_id', $user->id)
                     ->delete();
-                
+
                 $comment->decrement('dislikes');
-                
+
                 // Return points from dislike
                 $user->increment('pp', 12);
             }
@@ -273,9 +275,10 @@ class ShareCommentController extends Controller
             // Check if user has enough points
             if ($user->pp < 24) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณมีแต้มไม่เพียงพอ (ต้องการ 24 แต้ม)'
+                    'message' => 'คุณมีแต้มไม่เพียงพอ (ต้องการ 24 แต้ม)',
                 ], 400);
             }
 
@@ -284,29 +287,30 @@ class ShareCommentController extends Controller
                 'share_comment_id' => $comment->id,
                 'user_id' => $user->id,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
-            
+
             $comment->increment('likes');
-            
+
             // Deduct points
             $user->decrement('pp', 24);
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'กดถูกใจสำเร็จ',
                 'action' => 'liked',
                 'likes' => $comment->likes,
-                'pp' => $user->pp
+                'pp' => $user->pp,
             ]);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -324,7 +328,7 @@ class ShareCommentController extends Controller
         if ($comment->user_id === $user->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'คุณไม่สามารถกดไม่ถูกใจความคิดเห็นของตัวเองได้'
+                'message' => 'คุณไม่สามารถกดไม่ถูกใจความคิดเห็นของตัวเองได้',
             ], 400);
         }
 
@@ -342,20 +346,20 @@ class ShareCommentController extends Controller
                     ->where('share_comment_id', $comment->id)
                     ->where('user_id', $user->id)
                     ->delete();
-                
+
                 $comment->decrement('dislikes');
-                
+
                 // Return points
                 $user->increment('pp', 12);
-                
+
                 DB::commit();
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'ยกเลิกการกดไม่ถูกใจแล้ว',
                     'action' => 'undisliked',
                     'dislikes' => $comment->dislikes,
-                    'pp' => $user->pp
+                    'pp' => $user->pp,
                 ]);
             }
 
@@ -370,9 +374,9 @@ class ShareCommentController extends Controller
                     ->where('share_comment_id', $comment->id)
                     ->where('user_id', $user->id)
                     ->delete();
-                
+
                 $comment->decrement('likes');
-                
+
                 // Return points from like
                 $user->increment('pp', 24);
             }
@@ -383,9 +387,10 @@ class ShareCommentController extends Controller
             // Check if user has enough points
             if ($user->pp < 12) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'คุณมีแต้มไม่เพียงพอ (ต้องการ 12 แต้ม)'
+                    'message' => 'คุณมีแต้มไม่เพียงพอ (ต้องการ 12 แต้ม)',
                 ], 400);
             }
 
@@ -394,29 +399,30 @@ class ShareCommentController extends Controller
                 'share_comment_id' => $comment->id,
                 'user_id' => $user->id,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
-            
+
             $comment->increment('dislikes');
-            
+
             // Deduct points
             $user->decrement('pp', 12);
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'กดไม่ถูกใจสำเร็จ',
                 'action' => 'disliked',
                 'dislikes' => $comment->dislikes,
-                'pp' => $user->pp
+                'pp' => $user->pp,
             ]);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }

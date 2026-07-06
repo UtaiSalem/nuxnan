@@ -43,12 +43,13 @@ class GradeScaleItem extends Model
         if ($this->letter_grade) {
             return "{$this->letter_grade} ({$this->grade})";
         }
+
         return $this->grade;
     }
 
     public function getScoreRangeAttribute(): string
     {
-        return number_format($this->min_score, 2) . ' - ' . number_format($this->max_score, 2);
+        return number_format($this->min_score, 2).' - '.number_format($this->max_score, 2);
     }
 
     /**

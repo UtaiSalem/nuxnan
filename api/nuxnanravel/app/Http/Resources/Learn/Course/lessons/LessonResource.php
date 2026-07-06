@@ -6,6 +6,9 @@ use App\Http\Resources\Learn\Course\assignments\AssignmentResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\questions\QuestionResource;
 use App\Http\Resources\UserResource;
+use App\Models\CoursePointCampaign;
+use App\Models\CoursePointCampaignClaim;
+use App\Services\LessonAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +26,7 @@ class LessonResource extends JsonResource
 
         // If not provided (e.g. in collection), calculate it
         if (! $accessStatus) {
-            $accessService = $this->additional['access_service'] ?? app(\App\Services\LessonAccessService::class);
+            $accessService = $this->additional['access_service'] ?? app(LessonAccessService::class);
             $isCourseAdmin = $this->course->isAdmin($user);
             $accessStatus = $accessService->getAccessStatus($user, $this->resource, $isCourseAdmin);
         }
@@ -115,7 +118,7 @@ class LessonResource extends JsonResource
 
     protected function getRewardInfo(Request $request): ?array
     {
-        $campaign = \App\Models\CoursePointCampaign::where('lesson_id', $this->id)
+        $campaign = CoursePointCampaign::where('lesson_id', $this->id)
             ->where('campaign_type', 'lesson_completion')
             ->whereIn('status', ['active', 'paused', 'depleted'])
             ->first();
@@ -126,7 +129,7 @@ class LessonResource extends JsonResource
 
         $user = $request->user();
         $claimedByAuth = $user
-            ? \App\Models\CoursePointCampaignClaim::where('campaign_id', $campaign->id)
+            ? CoursePointCampaignClaim::where('campaign_id', $campaign->id)
                 ->where('user_id', $user->id)->exists()
             : false;
 

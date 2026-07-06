@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Traits\Auditable;
 
 /**
  * Payroll Model - เงินเดือน
  */
 class Payroll extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $fillable = [
         'academy_id',
@@ -59,9 +59,13 @@ class Payroll extends Model
 
     // Status constants
     const STATUS_DRAFT = 'draft';
+
     const STATUS_PENDING = 'pending';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_PAID = 'paid';
+
     const STATUS_CANCELLED = 'cancelled';
 
     const STATUSES = [
@@ -143,7 +147,7 @@ class Payroll extends Model
     {
         $prefix = 'PAY';
         $periodCode = str_replace('-', '', $period);
-        
+
         $lastPayslip = static::where('academy_id', $academyId)
             ->where('payslip_number', 'like', "{$prefix}{$periodCode}%")
             ->orderBy('payslip_number', 'desc')
@@ -156,7 +160,7 @@ class Payroll extends Model
             $newNumber = 1;
         }
 
-        return $prefix . $periodCode . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+        return $prefix.$periodCode.str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
 
     // Scopes

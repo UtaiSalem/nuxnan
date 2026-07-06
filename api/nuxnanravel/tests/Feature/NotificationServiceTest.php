@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Notification;
+use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,12 +15,12 @@ class NotificationServiceTest extends TestCase
     private function createUser()
     {
         return User::create([
-            'name' => 'Test User ' . uniqid(),
-            'email' => 'test' . uniqid() . '@example.com',
+            'name' => 'Test User '.uniqid(),
+            'email' => 'test'.uniqid().'@example.com',
             'password' => bcrypt('password'),
-            'username' => 'user' . uniqid(),
-            'reference_code' => 'REF' . uniqid(),
-            'personal_code' => 'PER' . uniqid(),
+            'username' => 'user'.uniqid(),
+            'reference_code' => 'REF'.uniqid(),
+            'personal_code' => 'PER'.uniqid(),
         ]);
     }
 
@@ -28,8 +28,8 @@ class NotificationServiceTest extends TestCase
     {
         $user = $this->createUser();
         $sender = $this->createUser();
-        
-        $service = new NotificationService();
+
+        $service = new NotificationService;
         $notification = $service->send([
             'user_id' => $user->id,
             'sender_id' => $sender->id,
@@ -63,7 +63,7 @@ class NotificationServiceTest extends TestCase
         $user2 = $this->createUser();
         $sender = $this->createUser();
 
-        $service = new NotificationService();
+        $service = new NotificationService;
         $count = $service->sendBulk([
             [
                 'user_id' => $user1->id,
@@ -82,7 +82,7 @@ class NotificationServiceTest extends TestCase
                 'action_url' => '/url/2',
                 'related_id' => 222,
                 'metadata' => ['meta' => 2],
-            ]
+            ],
         ]);
 
         $this->assertEquals(2, $count);

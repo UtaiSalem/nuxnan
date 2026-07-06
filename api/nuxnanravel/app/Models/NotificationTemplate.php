@@ -32,15 +32,22 @@ class NotificationTemplate extends Model
 
     // Category constants
     const CATEGORY_ACADEMIC = 'academic';
+
     const CATEGORY_FINANCIAL = 'financial';
+
     const CATEGORY_ATTENDANCE = 'attendance';
+
     const CATEGORY_EVENT = 'event';
+
     const CATEGORY_SYSTEM = 'system';
 
     // Channel constants
     const CHANNEL_EMAIL = 'email';
+
     const CHANNEL_SMS = 'sms';
+
     const CHANNEL_PUSH = 'push';
+
     const CHANNEL_IN_APP = 'in_app';
 
     // Relationships
@@ -56,7 +63,7 @@ class NotificationTemplate extends Model
         $body = $this->body;
 
         foreach ($data as $key => $value) {
-            $placeholder = '{{' . $key . '}}';
+            $placeholder = '{{'.$key.'}}';
             $subject = str_replace($placeholder, $value, $subject);
             $body = str_replace($placeholder, $value, $body);
         }

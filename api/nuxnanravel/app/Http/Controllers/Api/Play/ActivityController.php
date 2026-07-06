@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\Play;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Activity;
 use App\Http\Resources\Play\ActivityResource;
+use App\Models\Activity;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,14 +17,14 @@ class ActivityController extends Controller
     public function index()
     {
         $activities = Activity::with([
-                'user', 
-                'activityable.user',
-            ])
+            'user',
+            'activityable.user',
+        ])
             ->latest()
             ->paginate();
 
         // Load images based on model type
-        $activities->getCollection()->each(function($activity) {
+        $activities->getCollection()->each(function ($activity) {
             if ($activity->activityable) {
                 if ($activity->activityable_type === 'App\Models\Post') {
                     $activity->activityable->load(['postImages', 'poll.options', 'poll.user']);
@@ -35,16 +35,16 @@ class ActivityController extends Controller
         });
 
         // Load Share comments for Share activities
-        $activities->getCollection()->each(function($activity) {
+        $activities->getCollection()->each(function ($activity) {
             if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {
-                $activity->activityable->load(['shareComments' => function($query) {
+                $activity->activityable->load(['shareComments' => function ($query) {
                     $query->with('user')->latest()->limit(3);
                 }]);
             }
         });
 
         return response()->json([
-            'success'    => true,
+            'success' => true,
             'activities' => ActivityResource::collection($activities),
         ], 200);
     }
@@ -56,23 +56,23 @@ class ActivityController extends Controller
     public function newsfeed(Request $request)
     {
         $perPage = $request->input('per_page', 15);
-        
+
         $activities = Activity::whereIn('activityable_type', [
-                'App\Models\Post',
-                'App\Models\CoursePost',
-                'App\Models\Donate',
-                'App\Models\DonateRecipient',
-                'App\Models\Share',
-            ])
+            'App\Models\Post',
+            'App\Models\CoursePost',
+            'App\Models\Donate',
+            'App\Models\DonateRecipient',
+            'App\Models\Share',
+        ])
             ->with([
-                'user', 
+                'user',
                 'activityable.user',
             ])
             ->latest()
             ->paginate($perPage);
 
         // Load images and poll based on model type
-        $activities->getCollection()->each(function($activity) {
+        $activities->getCollection()->each(function ($activity) {
             if ($activity->activityable) {
                 if ($activity->activityable_type === 'App\Models\Post') {
                     $activity->activityable->load(['postImages', 'poll.options', 'poll.user']);
@@ -83,26 +83,26 @@ class ActivityController extends Controller
         });
 
         // Load DonateRecipient specific relations
-        $activities->getCollection()->each(function($activity) {
+        $activities->getCollection()->each(function ($activity) {
             if ($activity->activityable_type === 'App\Models\DonateRecipient' && $activity->activityable) {
                 $activity->activityable->load(['reciever', 'donation']);
             }
         });
 
         // Load Share comments for Share activities
-        $activities->getCollection()->each(function($activity) {
+        $activities->getCollection()->each(function ($activity) {
             if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {
                 $activity->activityable->load([
-                    'shareComments' => function($query) {
+                    'shareComments' => function ($query) {
                         $query->with('user')->latest()->limit(3);
                     },
-                    'shareable.user' // Load original post and its author
+                    'shareable.user', // Load original post and its author
                 ]);
             }
         });
 
         return response()->json([
-            'success'    => true,
+            'success' => true,
             'activities' => ActivityResource::collection($activities),
         ], 200);
     }
@@ -114,14 +114,14 @@ class ActivityController extends Controller
     {
         $activities = $user->activities()
             ->with([
-                'user', 
+                'user',
                 'activityable.user',
             ])
             ->latest()
             ->paginate();
 
         // Load images based on model type
-        $activities->getCollection()->each(function($activity) {
+        $activities->getCollection()->each(function ($activity) {
             if ($activity->activityable) {
                 if ($activity->activityable_type === 'App\Models\Post') {
                     $activity->activityable->load(['postImages', 'poll.options', 'poll.user']);
@@ -132,19 +132,19 @@ class ActivityController extends Controller
         });
 
         // Load Share comments for Share activities
-        $activities->getCollection()->each(function($activity) {
+        $activities->getCollection()->each(function ($activity) {
             if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {
                 $activity->activityable->load([
-                    'shareComments' => function($query) {
+                    'shareComments' => function ($query) {
                         $query->with('user')->latest()->limit(3);
                     },
-                    'shareable.user' // Load original post and its author
+                    'shareable.user', // Load original post and its author
                 ]);
             }
         });
 
         return response()->json([
-            'success'    => true,
+            'success' => true,
             'activities' => ActivityResource::collection($activities),
         ], 200);
     }
@@ -158,7 +158,7 @@ class ActivityController extends Controller
             $activity->activityable()->delete();
         }
         $activity->delete();
-        
+
         if (auth()->check()) {
             // auth()->user()->decrement('pp', 1); // Uncomment if 'pp' exists and is needed
         }
@@ -168,4 +168,3 @@ class ActivityController extends Controller
         ], 200);
     }
 }
-

@@ -2,16 +2,13 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Activity;
-use App\Models\ShareComment;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Share extends Model
 {
@@ -90,9 +87,10 @@ class Share extends Model
      */
     public function isLikedByAuth(): bool
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return false;
         }
+
         return $this->likedShare()->where('user_id', auth()->id())->exists();
     }
 
@@ -101,9 +99,10 @@ class Share extends Model
      */
     public function isDislikedByAuth(): bool
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return false;
         }
+
         return $this->dislikedShare()->where('user_id', auth()->id())->exists();
     }
 

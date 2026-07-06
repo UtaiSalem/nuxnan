@@ -17,12 +17,12 @@ class Interaction extends Model
         'subject_id',
         'relation',
         'relation_value',
-        'relation_type'
+        'relation_type',
     ];
 
     protected $casts = [
         'user_id' => 'integer',
         'subject_id' => 'integer',
-        'relation_value' => 'decimal:2'
+        'relation_value' => 'decimal:2',
     ];
 }

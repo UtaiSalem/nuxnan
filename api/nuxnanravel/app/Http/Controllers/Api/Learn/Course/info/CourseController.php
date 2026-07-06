@@ -2,23 +2,34 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\info;
 
+use App\DataTransferObjects\ScoreBreakdown;
 use App\Exports\LearningResultsExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\info\MemberedCourseResource;
 use App\Http\Resources\Learn\Course\info\UserProfileCourseResource;
+use App\Models\AssignmentAnswer;
+use App\Models\AttendanceDetail;
 use App\Models\Course;
+use App\Models\CourseInvitation;
 use App\Models\CourseMember;
+use App\Models\CourseQuizResult;
+use App\Models\LessonAnswerQuestion;
+use App\Models\LessonImage;
+use App\Models\LessonProgress;
 use App\Models\RecentlyViewedCourse;
 use App\Models\User;
 use App\Services\CourseCloneService;
 use App\Services\CourseMediaService;
+use App\Services\CourseScoreService;
+use App\Services\Support\CourseCloneContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 
 class CourseController extends Controller
@@ -35,7 +46,7 @@ class CourseController extends Controller
         }
 
         try {
-            $context = new \App\Services\Support\CourseCloneContext(
+            $context = new CourseCloneContext(
                 mode: 'self_duplicate',
                 addCopySuffix: true
             );
@@ -125,7 +136,7 @@ class CourseController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($request->input('limit', 12));
 
-        return \App\Http\Resources\Learn\Course\info\CourseResource::collection($courses);
+        return CourseResource::collection($courses);
     }
 
     public function toggleFavorite(Request $request, $id)
@@ -532,10 +543,10 @@ class CourseController extends Controller
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'category' => 'nullable|string',
-                'semester' => ['nullable', \Illuminate\Validation\Rule::in(['1', '2', '3', 'summer', 'weekend'])],
+                'semester' => ['nullable', Rule::in(['1', '2', '3', 'summer', 'weekend'])],
                 'academic_year' => ['nullable', 'integer', 'min:2560', 'max:2580'],
                 'level' => 'nullable|string',
-                'education_level' => ['nullable', \Illuminate\Validation\Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],
+                'education_level' => ['nullable', Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],
                 'education_year' => ['nullable', 'integer', 'min:1', 'max:6'],
                 'credit_units' => 'nullable|numeric',
                 'hours_per_week' => 'nullable|numeric',
@@ -652,12 +663,12 @@ class CourseController extends Controller
             'price' => 'nullable|numeric|min:0',
             'credit_units' => 'nullable|numeric',
             'hours_per_week' => 'nullable|numeric',
-            'semester' => ['nullable', \Illuminate\Validation\Rule::in(['1', '2', '3', 'summer', 'weekend'])],
+            'semester' => ['nullable', Rule::in(['1', '2', '3', 'summer', 'weekend'])],
             'academic_year' => ['nullable', 'integer', 'min:2560', 'max:2580'],
             'category' => 'nullable',
             'capacity' => 'nullable|numeric',
             'level' => 'nullable',
-            'education_level' => ['nullable', \Illuminate\Validation\Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],
+            'education_level' => ['nullable', Rule::in(['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ'])],
             'education_year' => ['nullable', 'integer', 'min:1', 'max:6'],
             'is_for_marketplace' => 'nullable|boolean',
             'price_points' => 'nullable|numeric',
@@ -840,7 +851,7 @@ class CourseController extends Controller
                     foreach ($lesson->images as $image) {
                         $mediaService->deleteUnused(
                             'lesson_image',
-                            \App\Models\LessonImage::class,
+                            LessonImage::class,
                             'filename',
                             $image->filename,
                             $image->id
@@ -946,7 +957,7 @@ class CourseController extends Controller
         }
 
         // Attendance details - use DB aggregate
-        $attendancePresenceByMember = \App\Models\AttendanceDetail::whereIn('course_attendance_id', $allCourseAttendances->pluck('id'))
+        $attendancePresenceByMember = AttendanceDetail::whereIn('course_attendance_id', $allCourseAttendances->pluck('id'))
             ->whereIn('course_member_id', $memberIds)
             ->whereIn('status', [1, 2])
             ->select('course_member_id', 'course_attendance_id')
@@ -954,13 +965,13 @@ class CourseController extends Controller
             ->get()
             ->groupBy('course_member_id');
 
-        $scoreService = app(\App\Services\CourseScoreService::class);
+        $scoreService = app(CourseScoreService::class);
         $bulkBreakdowns = $scoreService->computeBulkBreakdown($course, $courseMembers);
 
         $courseMembersProgress = [];
         foreach ($courseMembers as $member) {
             $memberId = $member->id;
-            $breakdown = $bulkBreakdowns[$memberId] ?? new \App\DataTransferObjects\ScoreBreakdown;
+            $breakdown = $bulkBreakdowns[$memberId] ?? new ScoreBreakdown;
             $percentage = $breakdown->percentage();
 
             // Attendance - using pre-computed maps
@@ -977,9 +988,9 @@ class CourseController extends Controller
 
             $attendanceRate = ($totalGroupAttendanceSessions > 0) ? round(($attendancePresent / $totalGroupAttendanceSessions) * 100) : 0;
 
-            $realtimeGrade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
+            $realtimeGrade = CourseMember::calculateGradeFromPercentage($percentage);
             $finalGrade = $member->edited_grade ?? $realtimeGrade;
-            $finalGradeName = \App\Models\CourseMember::getGradeNameFromGrade($finalGrade);
+            $finalGradeName = CourseMember::getGradeNameFromGrade($finalGrade);
 
             $courseMembersProgress[] = [
                 'member' => $member,
@@ -1079,7 +1090,7 @@ class CourseController extends Controller
         $memberUserIds = $courseMembers->pluck('user_id');
 
         // Get all graded assignment answers
-        $allAssignmentAnswers = \App\Models\AssignmentAnswer::whereIn('assignment_id', $courseAssignmentIds->merge($lessonAssignmentIds))
+        $allAssignmentAnswers = AssignmentAnswer::whereIn('assignment_id', $courseAssignmentIds->merge($lessonAssignmentIds))
             ->whereIn('user_id', $memberUserIds)
             ->where(function ($query) {
                 $query->where('status', 'graded')
@@ -1089,13 +1100,13 @@ class CourseController extends Controller
             ->groupBy('user_id');
 
         // Get quiz results
-        $allQuizResults = \App\Models\CourseQuizResult::where('course_id', $course->id)
+        $allQuizResults = CourseQuizResult::where('course_id', $course->id)
             ->whereIn('user_id', $memberUserIds)
             ->get()
             ->groupBy('user_id');
 
         // Get lesson question answers from lesson quiz table
-        $allQuestionAnswers = \App\Models\LessonAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
+        $allQuestionAnswers = LessonAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
             ->whereIn('user_id', $memberUserIds)
             ->where('is_correct', true)
             ->get()
@@ -1110,7 +1121,7 @@ class CourseController extends Controller
         // Read Guard: Fallback if stored total_score is invalid (<= 0)
         $computedCap = $maxCourseAssign + $maxLessonAssign + $maxCourseQuiz + $maxLessonQuiz;
         $storedCap = (float) ($course->total_score ?? 0);
-        
+
         if ($storedCap <= 0) {
             $totalScoreCap = $computedCap;
         } else {
@@ -1149,9 +1160,9 @@ class CourseController extends Controller
             // Calculate grade
             $percentage = ($totalScoreCap > 0) ? ($totalScore / $totalScoreCap) * 100 : 0;
             $percentage = min(100, max(0, $percentage));
-            $grade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
+            $grade = CourseMember::calculateGradeFromPercentage($percentage);
             $finalGrade = $member->edited_grade ?? $grade;
-            $gradeName = \App\Models\CourseMember::getGradeNameFromGrade($finalGrade);
+            $gradeName = CourseMember::getGradeNameFromGrade($finalGrade);
 
             $membersWithScores[] = [
                 'id' => $member->id,
@@ -1192,7 +1203,7 @@ class CourseController extends Controller
             'course' => new CourseResource($course),
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
-            'pendingInvitation' => \App\Models\CourseInvitation::where('course_id', $course->id)
+            'pendingInvitation' => CourseInvitation::where('course_id', $course->id)
                 ->where('invitee_id', auth()->id())
                 ->where('status', 'pending')
                 ->first(),
@@ -1205,7 +1216,7 @@ class CourseController extends Controller
             'course' => new CourseResource($course),
             'isCourseAdmin' => $course->isAdmin(auth()->user()),
             'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
-            'pendingInvitation' => \App\Models\CourseInvitation::where('course_id', $course->id)
+            'pendingInvitation' => CourseInvitation::where('course_id', $course->id)
                 ->where('invitee_id', auth()->id())
                 ->where('status', 'pending')
                 ->first(),
@@ -1479,7 +1490,7 @@ class CourseController extends Controller
 
         $memberUserIds = $courseMembers->pluck('user_id');
 
-        $allAssignmentAnswers = \App\Models\AssignmentAnswer::whereIn('assignment_id', $courseAssignmentIds->merge($lessonAssignmentIds))
+        $allAssignmentAnswers = AssignmentAnswer::whereIn('assignment_id', $courseAssignmentIds->merge($lessonAssignmentIds))
             ->whereIn('user_id', $memberUserIds)
             ->where(function ($query) {
                 $query->where('status', 'graded')
@@ -1488,19 +1499,19 @@ class CourseController extends Controller
             ->get()
             ->groupBy('user_id');
 
-        $allQuizResults = \App\Models\CourseQuizResult::where('course_id', $course->id)
+        $allQuizResults = CourseQuizResult::where('course_id', $course->id)
             ->whereIn('user_id', $memberUserIds)
             ->get()
             ->groupBy('user_id');
 
-        $allQuestionAnswers = \App\Models\LessonAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
+        $allQuestionAnswers = LessonAnswerQuestion::whereIn('question_id', $lessonQuestionIds)
             ->whereIn('user_id', $memberUserIds)
             ->where('is_correct', true)
             ->get()
             ->groupBy('user_id');
 
         $lessonIds = $lessons->pluck('id');
-        $allLessonProgress = \App\Models\LessonProgress::whereIn('lesson_id', $lessonIds)
+        $allLessonProgress = LessonProgress::whereIn('lesson_id', $lessonIds)
             ->whereIn('user_id', $memberUserIds)
             ->where('status', 'completed')
             ->get()
@@ -1513,7 +1524,7 @@ class CourseController extends Controller
         $allCourseAttendances = $course->courseAttendances()->get();
         $attendancesByGroup = $allCourseAttendances->groupBy('group_id');
 
-        $allAttendanceDetails = \App\Models\AttendanceDetail::whereIn('course_attendance_id', $allCourseAttendances->pluck('id'))
+        $allAttendanceDetails = AttendanceDetail::whereIn('course_attendance_id', $allCourseAttendances->pluck('id'))
             ->whereIn('course_member_id', $courseMembers->pluck('id'))
             ->get()
             ->groupBy('course_member_id');
@@ -1522,13 +1533,13 @@ class CourseController extends Controller
         $computedMaxTotal2 = $courseAssignments->sum('points') + $lessonAssignments->sum('points')
             + $courseQuizzes->sum('total_score') + $lessonQuestions->sum('points');
 
-        $scoreService = app(\App\Services\CourseScoreService::class);
+        $scoreService = app(CourseScoreService::class);
         $bulkBreakdowns = $scoreService->computeBulkBreakdown($course, $courseMembers);
 
         $exportData = [];
         foreach ($courseMembers as $member) {
             $memberId = $member->id;
-            $breakdown = $bulkBreakdowns[$memberId] ?? new \App\DataTransferObjects\ScoreBreakdown;
+            $breakdown = $bulkBreakdowns[$memberId] ?? new ScoreBreakdown;
             $percentage = $breakdown->percentage();
 
             $memberGroupId = $member->group_id;
@@ -1541,9 +1552,9 @@ class CourseController extends Controller
             $attendancePresent = $memberGroupAttendance->whereIn('status', [1, 2])->pluck('course_attendance_id')->unique()->count();
             $attendanceRate = ($totalGroupAttendanceSessions > 0) ? round(($attendancePresent / $totalGroupAttendanceSessions) * 100) : 0;
 
-            $realtimeGrade = \App\Models\CourseMember::calculateGradeFromPercentage($percentage);
+            $realtimeGrade = CourseMember::calculateGradeFromPercentage($percentage);
             $finalGrade = $member->edited_grade ?? $realtimeGrade;
-            $finalGradeName = \App\Models\CourseMember::getGradeNameFromGrade($finalGrade);
+            $finalGradeName = CourseMember::getGradeNameFromGrade($finalGrade);
 
             $exportData[] = [
                 'member' => $member,

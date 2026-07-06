@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\ClassSchedule;
 use App\Models\Classroom;
+use App\Models\ClassSchedule;
 use App\Models\Semester;
+use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -138,7 +139,7 @@ class ClassScheduleController extends Controller
         } else {
             $query->byTeacher($request->teacher_id);
             $viewType = 'teacher';
-            $viewEntity = \App\Models\User::find($request->teacher_id);
+            $viewEntity = User::find($request->teacher_id);
         }
 
         $schedules = $query->orderBy('day_of_week')
@@ -193,7 +194,7 @@ class ClassScheduleController extends Controller
                 'view_type' => $viewType,
                 'view_entity' => $viewEntity ? [
                     'id' => $viewEntity->id,
-                    'name' => $viewEntity->name ?? $viewEntity->first_name . ' ' . $viewEntity->last_name,
+                    'name' => $viewEntity->name ?? $viewEntity->first_name.' '.$viewEntity->last_name,
                 ] : null,
                 'timetable' => array_values($timetable),
             ],
@@ -440,6 +441,7 @@ class ClassScheduleController extends Controller
                         'index' => $index,
                         'message' => 'ครูผู้สอนมีตารางสอนซ้ำซ้อน',
                     ];
+
                     continue;
                 }
 
@@ -454,6 +456,7 @@ class ClassScheduleController extends Controller
                         'index' => $index,
                         'message' => 'ห้องเรียนมีตารางเรียนซ้ำซ้อน',
                     ];
+
                     continue;
                 }
 
@@ -477,8 +480,9 @@ class ClassScheduleController extends Controller
                 $created[] = $schedule;
             }
 
-            if (empty($created) && !empty($errors)) {
+            if (empty($created) && ! empty($errors)) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
                     'message' => 'ไม่สามารถสร้างตารางเรียนได้เนื่องจากมีการซ้ำซ้อน',
@@ -490,7 +494,7 @@ class ClassScheduleController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'สร้างตารางเรียนสำเร็จ ' . count($created) . ' รายการ',
+                'message' => 'สร้างตารางเรียนสำเร็จ '.count($created).' รายการ',
                 'data' => [
                     'created_count' => count($created),
                     'error_count' => count($errors),
@@ -499,9 +503,10 @@ class ClassScheduleController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage(),
+                'message' => 'เกิดข้อผิดพลาด: '.$e->getMessage(),
             ], 500);
         }
     }

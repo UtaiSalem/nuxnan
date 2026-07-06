@@ -18,12 +18,12 @@ class PersonalAccessToken extends Model
         'token',
         'abilities',
         'last_used_at',
-        'expires_at'
+        'expires_at',
     ];
 
     protected $casts = [
         'tokenable_id' => 'integer',
         'last_used_at' => 'datetime',
-        'expires_at' => 'datetime'
+        'expires_at' => 'datetime',
     ];
 }

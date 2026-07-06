@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\SchoolEvent;
 use App\Services\EventToPostMirror;
+use Illuminate\Database\Seeder;
 
 class MirrorExistingEventsSeeder extends Seeder
 {

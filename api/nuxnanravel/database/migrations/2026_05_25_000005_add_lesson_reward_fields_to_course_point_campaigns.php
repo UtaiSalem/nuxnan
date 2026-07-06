@@ -13,17 +13,17 @@ return new class extends Migration
     {
         Schema::table('course_point_campaigns', function (Blueprint $table) {
             $table->enum('campaign_type', ['manual_claim', 'lesson_completion'])
-                  ->default('manual_claim')
-                  ->after('course_id');
+                ->default('manual_claim')
+                ->after('course_id');
 
             $table->unsignedBigInteger('lesson_id')
-                  ->nullable()
-                  ->after('campaign_type');
+                ->nullable()
+                ->after('campaign_type');
 
             $table->foreign('lesson_id')
-                  ->references('id')
-                  ->on('lessons')
-                  ->nullOnDelete();
+                ->references('id')
+                ->on('lessons')
+                ->nullOnDelete();
 
             $table->index(['lesson_id', 'status', 'campaign_type'], 'idx_campaign_lesson_status');
         });

@@ -18,13 +18,13 @@ return new class extends Migration
             $table->integer('points_earned')->default(0);
             $table->integer('points_spent')->default(0);
             $table->timestamps();
-            
+
             // Unique key
             $table->unique(['user_id', 'date']);
-            
+
             // Indexes
             $table->index('date');
-            
+
             // Foreign key
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });

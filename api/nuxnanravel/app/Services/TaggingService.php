@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Models\Post;
-use App\Models\User;
 use App\Models\PostTaggedUser;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 
 class TaggingService
@@ -24,7 +25,7 @@ class TaggingService
 
             // Check if user exists
             $user = User::find($userId);
-            if (!$user) {
+            if (! $user) {
                 continue;
             }
 
@@ -69,16 +70,17 @@ class TaggingService
     public function updateTags(Post $post, array $userIds, int $taggedBy): array
     {
         $this->removeAllTags($post);
+
         return $this->tagUsers($post, $userIds, $taggedBy);
     }
 
     /**
      * Get all posts where a user is tagged.
      */
-    public function getTaggedPosts(User $user, bool $approvedOnly = true): \Illuminate\Database\Eloquent\Collection
+    public function getTaggedPosts(User $user, bool $approvedOnly = true): Collection
     {
         $query = $user->taggedInPosts();
-        
+
         if ($approvedOnly) {
             $query->wherePivot('is_approved', true);
         }
@@ -119,12 +121,12 @@ class TaggingService
             try {
                 // Send notification (you'll need to create this notification class)
                 // $tag->user->notify(new PostTaggedNotification($post, $tag));
-                
+
                 $tag->markAsNotified();
             } catch (\Exception $e) {
                 Log::error('Failed to send tag notification', [
                     'tag_id' => $tag->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }

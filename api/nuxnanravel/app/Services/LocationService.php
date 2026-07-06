@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Post;
 use App\Models\PostLocation;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class LocationService
 {
@@ -50,21 +49,21 @@ class LocationService
     {
         // Placeholder for Google Places API integration
         // You would implement this with your actual API key
-        
+
         /*
         $apiKey = config('services.google.places_api_key');
-        
+
         $response = Http::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json', [
             'location' => "{$lat},{$lng}",
             'radius' => $radius,
             'key' => $apiKey,
         ]);
-        
+
         if ($response->successful()) {
             return $response->json('results');
         }
         */
-        
+
         return [];
     }
 
@@ -75,27 +74,27 @@ class LocationService
     public function searchPlaces(string $query, ?float $lat = null, ?float $lng = null): array
     {
         // Placeholder for Google Places API integration
-        
+
         /*
         $apiKey = config('services.google.places_api_key');
-        
+
         $params = [
             'input' => $query,
             'key' => $apiKey,
         ];
-        
+
         if ($lat && $lng) {
             $params['location'] = "{$lat},{$lng}";
             $params['radius'] = 50000;
         }
-        
+
         $response = Http::get('https://maps.googleapis.com/maps/api/place/autocomplete/json', $params);
-        
+
         if ($response->successful()) {
             return $response->json('predictions');
         }
         */
-        
+
         return [];
     }
 
@@ -106,21 +105,21 @@ class LocationService
     public function getPlaceDetails(string $placeId): ?array
     {
         // Placeholder for Google Places API integration
-        
+
         /*
         $apiKey = config('services.google.places_api_key');
-        
+
         $response = Http::get('https://maps.googleapis.com/maps/api/place/details/json', [
             'place_id' => $placeId,
             'key' => $apiKey,
             'fields' => 'name,formatted_address,geometry,types,icon,address_components',
         ]);
-        
+
         if ($response->successful()) {
             return $response->json('result');
         }
         */
-        
+
         return null;
     }
 
@@ -130,6 +129,7 @@ class LocationService
     public function removeLocation(Post $post): bool
     {
         $post->update(['location' => null]);
+
         return $post->postLocation()->delete() >= 0;
     }
 

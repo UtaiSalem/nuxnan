@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Post;
-
-use App\Models\PostCommentImage;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PostComment extends Model
 {
@@ -29,19 +26,14 @@ class PostComment extends Model
 
     /**
      * Get the user that owns the PostComment
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-
     /**
      * Get the Post that owns the PostComment
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function Post(): BelongsTo
     {
@@ -69,11 +61,8 @@ class PostComment extends Model
         return $this->hasMany(PostCommentImage::class);
     }
 
-
     /**
      * The likedPostComment that belong to the Comment
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function likedPostComment(): BelongsToMany
     {
@@ -82,8 +71,6 @@ class PostComment extends Model
 
     /**
      * The dislikedComment that belong to the Comment
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
     public function dislikedPostComment(): BelongsToMany
     {

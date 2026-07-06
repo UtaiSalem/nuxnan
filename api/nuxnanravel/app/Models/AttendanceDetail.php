@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\CourseMember;
-use App\Models\CourseAttendance;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AttendanceDetail extends Model
 {
@@ -33,5 +31,4 @@ class AttendanceDetail extends Model
     {
         return $this->belongsTo(CourseMember::class, 'course_member_id');
     }
-    
 }

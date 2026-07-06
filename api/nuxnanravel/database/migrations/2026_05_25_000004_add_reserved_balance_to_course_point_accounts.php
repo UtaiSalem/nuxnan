@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::table('course_point_accounts', function (Blueprint $table) {
             $table->unsignedBigInteger('reserved_balance')->default(0)
-                  ->after('total_distributed')
-                  ->comment('ยอดแต้มที่จองไว้สำหรับ campaigns ที่กำหนด max_claims');
+                ->after('total_distributed')
+                ->comment('ยอดแต้มที่จองไว้สำหรับ campaigns ที่กำหนด max_claims');
         });
     }
 

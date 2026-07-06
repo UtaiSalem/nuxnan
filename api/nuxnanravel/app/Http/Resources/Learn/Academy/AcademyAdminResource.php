@@ -2,10 +2,9 @@
 
 namespace App\Http\Resources\Learn\Academy;
 
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Http\Resources\UserResource;
-use App\Http\Resources\Learn\Academy\AcademyResource;
 
 class AcademyAdminResource extends JsonResource
 {
@@ -17,8 +16,8 @@ class AcademyAdminResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'user'      => $this->user ? new UserResource($this->user) : null,
-            'academy'   => $this->academy ? new AcademyResource($this->academy) : null,
+            'user' => $this->user ? new UserResource($this->user) : null,
+            'academy' => $this->academy ? new AcademyResource($this->academy) : null,
         ];
     }
 }

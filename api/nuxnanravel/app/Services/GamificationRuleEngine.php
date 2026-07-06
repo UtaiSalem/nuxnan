@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\UserUsageEvent;
+use App\Jobs\UpdateActivitySummary;
+use App\Models\GamificationRuleLog;
 use App\Models\PointRule;
 use App\Models\QuestDefinition;
+use App\Models\User;
 use App\Models\UserQuestProgress;
-use App\Models\GamificationRuleLog;
-use Illuminate\Support\Facades\DB;
+use App\Models\UserUsageEvent;
 use Illuminate\Support\Facades\Log;
 
 class GamificationRuleEngine
@@ -32,9 +32,9 @@ class GamificationRuleEngine
 
         // Mark event as processed
         $event->update(['processed_at' => now()]);
-        
+
         // 3. Update Daily Summary
-        \App\Jobs\UpdateActivitySummary::dispatch($user, $event->occurred_at->toDateString());
+        UpdateActivitySummary::dispatch($user, $event->occurred_at->toDateString());
     }
 
     protected function processPointsRules(User $user, UserUsageEvent $event): void
@@ -46,6 +46,7 @@ class GamificationRuleEngine
         if ($rules->isEmpty()) {
             // Log that no rules were found for this event type
             $this->logResult($user, $event, 'no_rule', 'skipped', 0, 0, "No active rules for event type: {$event->event_type}");
+
             return;
         }
 
@@ -59,13 +60,14 @@ class GamificationRuleEngine
         $pointsService = app(PointsService::class);
 
         // Check eligibility (daily limits, cooldown, etc.)
-        if (!$pointsService->canEarnFromRule($user, $rule)) {
+        if (! $pointsService->canEarnFromRule($user, $rule)) {
             $this->logResult($user, $event, $rule->rule_key, 'skipped', 0, 0, 'Eligibility check failed (limits or cooldown)');
+
             return;
         }
 
         $amount = $rule->base_amount * $rule->multiplier;
-        
+
         // Award XP (using rule amount or default formula: 10 XP per 1 point)
         $xpAmount = $rule->xp_amount ?? (int) ($amount * 10);
 
@@ -79,7 +81,7 @@ class GamificationRuleEngine
             ['usage_event_id' => $event->id],
             $xpAmount
         );
-        
+
         $this->logResult($user, $event, $rule->rule_key, 'awarded', $amount, $xpAmount);
     }
 
@@ -97,7 +99,7 @@ class GamificationRuleEngine
     protected function updateQuestProgress(User $user, QuestDefinition $quest, UserUsageEvent $event): void
     {
         $date = $event->occurred_at->toDateString();
-        
+
         $progress = UserQuestProgress::firstOrCreate(
             [
                 'user_id' => $user->id,
@@ -128,7 +130,7 @@ class GamificationRuleEngine
     {
         $pointsService = app(PointsService::class);
         $xpReward = (int) ($quest->xp_reward ?? 0);
-        
+
         if ($quest->points_reward > 0) {
             $pointsService->earn(
                 $user,

@@ -2,15 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Course;
-use App\Models\Question;
-use App\Models\CourseQuizResult;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class CourseQuiz extends Model
 {
@@ -18,6 +14,7 @@ class CourseQuiz extends Model
 
     // Table name
     protected $table = 'course_quizzes';
+
     protected $guarded = [];
     // Mass assignable fields
     // protected $fillable = [
@@ -36,24 +33,22 @@ class CourseQuiz extends Model
     // Relationships
     /**
      * Get the user that owns the Quiz
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
-    
+
     // A quiz belongs to a course
-    public function course(): BelongsTo 
+    public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
     }
-    
+
     /**
      * Retrieve the questions associated with this quiz.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany
      */
     // public function questions(): HasMany
     // {
@@ -64,15 +59,11 @@ class CourseQuiz extends Model
         return $this->morphMany(Question::class, 'questionable');
     }
 
-
     /**
      * Get all of the userResults for the CourseQuiz
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function userResults(): HasMany
     {
         return $this->hasMany(CourseQuizResult::class, 'quiz_id');
     }
-
 }

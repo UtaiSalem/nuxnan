@@ -1,16 +1,16 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\HomeVisitAuthController;
-use App\Http\Controllers\Api\Learn\Student\Master\StudentController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\TeacherController;
 use App\Http\Controllers\Api\Learn\Student\HomeVisit\AdminController;
+use App\Http\Controllers\Api\Learn\Student\HomeVisit\HomeVisitAuthController;
+use App\Http\Controllers\Api\Learn\Student\HomeVisit\TeacherController;
+use App\Http\Controllers\Api\Learn\Student\HomeVisit\ZoneController;
 use App\Http\Controllers\Api\Learn\Student\Master\AcademicInfoController;
 use App\Http\Controllers\Api\Learn\Student\Master\AddressController;
 use App\Http\Controllers\Api\Learn\Student\Master\ContactController;
-use App\Http\Controllers\Api\Learn\Student\Master\HealthController;
 use App\Http\Controllers\Api\Learn\Student\Master\GuardianController;
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\ZoneController;
+use App\Http\Controllers\Api\Learn\Student\Master\HealthController;
+use App\Http\Controllers\Api\Learn\Student\Master\StudentController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,17 +26,17 @@ use App\Http\Controllers\Api\Learn\Student\HomeVisit\ZoneController;
 */
 
 Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function () {
-    
+
     // ================================================
     // Home Visit Routes (under Academy)
     // ================================================
     Route::prefix('home-visits')->name('api.academy.home-visits.')->group(function () {
-        
+
         // Dashboard and Overview
         Route::get('/', [AdminController::class, 'dashboard'])->name('index');
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/statistics', [AdminController::class, 'statistics'])->name('statistics');
-        
+
         // ================================================
         // Authentication Routes (Session-based for the subsystem)
         // ================================================
@@ -70,7 +70,7 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
             Route::post('/home-visit', [StudentController::class, 'storeHomeVisit'])->name('home-visit.store');
             Route::post('/update-info', [StudentController::class, 'updateInfo'])->name('update.info');
             Route::post('/upload-photos', [StudentController::class, 'uploadPhotos'])->name('upload.photos');
-            
+
             // Student Academic Info Routes
             Route::prefix('{student}/academic-info')->name('academic-info.')->group(function () {
                 Route::get('/', [AcademicInfoController::class, 'index'])->name('index');
@@ -126,7 +126,7 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
             Route::put('/update-home-visit/{homeVisit}', [TeacherController::class, 'updateHomeVisit'])->name('update.home.visit');
             Route::post('/update-home-visit-with-images/{homeVisit}', [TeacherController::class, 'updateHomeVisitWithImages'])->name('update.home.visit.with.images');
             Route::delete('/delete-home-visit/{homeVisit}', [TeacherController::class, 'deleteHomeVisit'])->name('delete.home.visit');
-            
+
             // Teacher Access to Student Sub-routes
             Route::prefix('{student}/academic-info')->name('academic-info.')->group(function () {
                 Route::get('/', [AcademicInfoController::class, 'index'])->name('index');
@@ -134,27 +134,27 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
                 Route::put('/{academicInfo}', [AcademicInfoController::class, 'update'])->name('update');
                 Route::delete('/{academicInfo}', [AcademicInfoController::class, 'destroy'])->name('destroy');
             });
-            
+
             Route::prefix('{student}/addresses')->name('addresses.')->group(function () {
                 Route::get('/', [AddressController::class, 'index'])->name('index');
                 Route::post('/', [AddressController::class, 'store'])->name('store');
                 Route::put('/{address}', [AddressController::class, 'update'])->name('update');
                 Route::delete('/{address}', [AddressController::class, 'destroy'])->name('destroy');
             });
-            
+
             Route::prefix('{student}/contacts')->name('contacts.')->group(function () {
                 Route::get('/', [ContactController::class, 'index'])->name('index');
                 Route::post('/', [ContactController::class, 'store'])->name('store');
                 Route::put('/{contact}', [ContactController::class, 'update'])->name('update');
                 Route::delete('/{contact}', [ContactController::class, 'destroy'])->name('destroy');
             });
-            
+
             Route::prefix('{student}/health')->name('health.')->group(function () {
                 Route::get('/', [HealthController::class, 'show'])->name('show');
                 Route::post('/', [HealthController::class, 'store'])->name('store');
                 Route::put('/{health}', [HealthController::class, 'update'])->name('update');
             });
-            
+
             Route::prefix('{student}/guardian')->name('guardian.')->group(function () {
                 Route::get('/', [GuardianController::class, 'show'])->name('show');
                 Route::post('/', [GuardianController::class, 'store'])->name('store');
@@ -176,7 +176,7 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
             Route::put('/visits/{id}/status', [AdminController::class, 'updateVisitStatus'])->name('visits.update.status');
             Route::get('/export/visits', [AdminController::class, 'exportVisits'])->name('export.visits');
             Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
-            
+
             // Statistics and Reports
             Route::get('/statistics', [AdminController::class, 'statistics'])->name('statistics');
             Route::get('/reports', [AdminController::class, 'reports'])->name('reports');

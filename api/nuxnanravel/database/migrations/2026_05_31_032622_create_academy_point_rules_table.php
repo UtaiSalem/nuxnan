@@ -23,7 +23,7 @@ return new class extends Migration
             $table->boolean('requires_approval')->default(false);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            
+
             $table->index(['academy_id', 'rule_type']);
         });
     }
