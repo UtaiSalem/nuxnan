@@ -197,7 +197,7 @@ const handleSelectRoom = (link: string) => {
 
             <!-- Footer -->
             <div class="max-w-5xl mx-auto mt-8 text-center text-gray-500 text-sm">
-                <p>© {{ new Date().getFullYear() }} ระบบจัดการบัตรนักเรียน - โรงเรียนจอมสุรางค์อุปถัมภ์</p>
+                <p>© {{ new Date().getFullYear() }} ระบบจัดการบัตรนักเรียน - โรงเรียนจริยธรรมศึกษามูลนิธิ</p>
             </div>
         </div>
     </div>

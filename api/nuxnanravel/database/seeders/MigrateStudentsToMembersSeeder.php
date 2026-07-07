@@ -15,7 +15,7 @@ class MigrateStudentsToMembersSeeder extends Seeder
      */
     public function run(): void
     {
-        // Find Academy (ID 1 = โรงเรียนเพลินวิทยาธาร)
+        // Find Academy (ID 1 = โรงเรียนจริยธรรมศึกษามูลนิธิ)
         $academy = Academy::find(1);
 
         if (! $academy) {

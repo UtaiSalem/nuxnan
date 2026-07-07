@@ -54,6 +54,7 @@ class StudentCardSSOTTest extends TestCase
             'user_id' => $owner->id,
             'student_id' => 'STU1001',
             'citizen_id' => '1234567890123',
+            'date_of_birth' => '2010-01-15',
             'title_prefix_th' => 'เด็กชาย',
             'first_name_th' => 'สมปอง',
             'last_name_th' => 'ใจดี',
@@ -171,7 +172,7 @@ class StudentCardSSOTTest extends TestCase
         $this->assertEquals('ยอดดี', $student->last_name_th);
     }
 
-    public function test_public_endpoint_omits_pii_data()
+    public function test_public_room_endpoint_returns_card_identity_data_from_student_master()
     {
         [$owner, $admin, $academy, $student, $enrollment, $card] = $this->setupStudentAndAcademy();
 
@@ -183,10 +184,9 @@ class StudentCardSSOTTest extends TestCase
         $data = $response->json('students');
         $this->assertNotEmpty($data);
 
-        // Assert national_id and birth_date are omitted
-        $this->assertArrayNotHasKey('national_id', $data[0]);
-        $this->assertArrayNotHasKey('birth_date', $data[0]);
-        $this->assertArrayNotHasKey('birth_date_string', $data[0]);
+        $this->assertSame($student->citizen_id, $data[0]['national_id']);
+        $this->assertSame('2010-01-15', $data[0]['birth_date']);
+        $this->assertSame('15/01/2010', $data[0]['birth_date_string']);
     }
 
     public function test_moving_enrollment_changes_room_api_immediately(): void
