@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,17 +15,31 @@ class StudentCardPublicResource extends JsonResource
         $enrollment = $student?->classroomEnrollments
             ?->first(fn ($item) => $item->status === 'active' && $item->classroom?->academicYear?->is_current);
 
+        $birthDate = $student?->date_of_birth ?: $this->birth_date;
+        $birthDateValue = $birthDate
+            ? Carbon::parse($birthDate)->format('Y-m-d')
+            : null;
+        $birthDateString = $birthDate
+            ? Carbon::parse($birthDate)->format('d/m/Y')
+            : $this->birth_date_string;
+
         return [
             'id' => $this->id,
             'student_id' => $this->student_id,
             'academy_id' => $this->academy_id,
             'student_number' => $student ? $student->student_id : $this->student_number,
-            // national_id and birth_date/birth_date_string omitted for security/PII reasons on public route
+            'national_id' => $student ? $student->citizen_id : $this->national_id,
             'title_name' => $student ? $student->title_prefix_th : $this->title_name,
             'first_name_thai' => $student ? $student->first_name_th : $this->first_name_thai,
             'last_name_thai' => $student ? $student->last_name_th : $this->last_name_thai,
             'full_name_thai' => $student ? trim("{$student->title_prefix_th} {$student->first_name_th} {$student->last_name_th}") : $this->full_name_thai,
             'first_name_english' => $student ? $student->first_name_en : $this->first_name_english,
+            'last_name_english' => $student?->last_name_en,
+            'full_name_english' => $student
+                ? trim($student->first_name_en.' '.$student->last_name_en)
+                : $this->first_name_english,
+            'birth_date' => $birthDateValue,
+            'birth_date_string' => $birthDateString,
             'class_level' => $enrollment ? $this->numericGradeLevel($enrollment->classroom->grade_level) : $this->class_level,
             'class_section' => $enrollment ? (int) $enrollment->classroom->section : $this->class_section,
             'level_and_room' => $enrollment ? $this->numericGradeLevel($enrollment->classroom->grade_level).'/'.$enrollment->classroom->section : $this->level_and_room,

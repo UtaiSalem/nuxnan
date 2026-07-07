@@ -31,6 +31,10 @@ class StudentCardResource extends JsonResource
             'last_name_thai' => $student ? $student->last_name_th : $this->last_name_thai,
             'full_name_thai' => $student ? trim("{$student->title_prefix_th} {$student->first_name_th} {$student->last_name_th}") : $this->full_name_thai,
             'first_name_english' => $student ? $student->first_name_en : $this->first_name_english,
+            'last_name_english' => $student?->last_name_en,
+            'full_name_english' => $student
+                ? trim($student->first_name_en.' '.$student->last_name_en)
+                : $this->first_name_english,
             'birth_date' => $student ? $student->date_of_birth : $this->birth_date,
             'birth_date_string' => $birthDateString ?: $this->birth_date_string,
             'class_level' => $enrollment ? $this->numericGradeLevel($enrollment->classroom->grade_level) : $this->class_level,

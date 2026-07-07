@@ -221,7 +221,7 @@ const downloadCard = async (index, studentNumber) => {
                                             <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
                                             <div class="text-[36px] text-gray-700 leading-tight">
                                                 <span v-if="student.first_name_english">
-                                                    {{ studentPrefixName(student) }}{{ student.first_name_english }}
+                                                    {{ studentPrefixName(student) }}{{ student.full_name_english || student.first_name_english }}
                                                 </span>
                                             </div>
                                         </div>

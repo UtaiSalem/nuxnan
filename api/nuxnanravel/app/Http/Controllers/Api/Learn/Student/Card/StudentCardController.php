@@ -581,11 +581,16 @@ class StudentCardController extends Controller
         $this->ensureCardBelongsToAcademy($student_card, $academy);
         $request->validate([
             'first_name_english' => 'nullable|string|max:255',
+            'last_name_english' => 'nullable|string|max:255',
         ]);
 
         try {
             if ($student = $student_card->student) {
-                $student->update(['first_name_en' => $request->input('first_name_english')]);
+                $updates = ['first_name_en' => $request->input('first_name_english')];
+                if ($request->has('last_name_english')) {
+                    $updates['last_name_en'] = $request->input('last_name_english');
+                }
+                $student->update($updates);
             }
 
             return response()->json([
@@ -614,6 +619,7 @@ class StudentCardController extends Controller
             'first_name_thai' => 'nullable|string|max:255',
             'last_name_thai' => 'nullable|string|max:255',
             'first_name_english' => 'nullable|string|max:255',
+            'last_name_english' => 'nullable|string|max:255',
             'national_id' => 'nullable|string|max:20',
             'birth_date' => 'nullable|date',
             'class_level' => 'nullable|string|max:10',
@@ -644,6 +650,9 @@ class StudentCardController extends Controller
                 }
                 if ($request->has('first_name_english')) {
                     $studentUpdates['first_name_en'] = $request->input('first_name_english');
+                }
+                if ($request->has('last_name_english')) {
+                    $studentUpdates['last_name_en'] = $request->input('last_name_english');
                 }
                 if ($request->has('national_id')) {
                     $studentUpdates['citizen_id'] = $request->input('national_id');
