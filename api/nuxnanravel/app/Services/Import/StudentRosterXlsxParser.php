@@ -81,12 +81,24 @@ class StudentRosterXlsxParser
         $rawHeaders = $rows[$headerRowKey];
         unset($rows[$headerRowKey]);
 
-        // Clean and normalize headers
+        // Clean, normalize, and deduplicate headers (append .1, .2 for duplicates)
         $headers = [];
+        $headerCounts = [];
         foreach ($rawHeaders as $colIndex => $header) {
             $header = trim((string) $header);
             $header = preg_replace('/\s+/', ' ', $header);
-            $headers[$colIndex] = $header;
+            if ($header === '') {
+                $headers[$colIndex] = $header;
+
+                continue;
+            }
+            if (! isset($headerCounts[$header])) {
+                $headerCounts[$header] = 0;
+                $headers[$colIndex] = $header;
+            } else {
+                $headerCounts[$header]++;
+                $headers[$colIndex] = $header.'.'.$headerCounts[$header];
+            }
         }
 
         $parsedRows = collect();
