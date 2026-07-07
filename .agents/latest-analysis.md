@@ -839,3 +839,767 @@ WHERE sc.academy_id != s.academy_id;
 - ทั้งสองขั้นตอนมี preview ก่อน commit
 - ทั้งสองขั้นตอนตรวจ reconciliation หลัง commit
 - ไม่มีการลบข้อมูล — เปลี่ยนสถานะเท่านั้น
+
+---
+
+## 2026-07-07 - Updated student roster XLSX analysis
+
+- Source: `docs/api/20260707150052.xlsx`, sheet `Student List`, 2,437 data rows and 53 columns.
+- File quality: no blank/duplicate student codes or citizen IDs; all 13-digit citizen IDs passed checksum; required names and classroom labels are populated.
+- Target context inferred from database: academy 1 (`เพลินวิทยาธาร`), academic year 2 (`2569`). Read-only checks only; no student data was changed.
+- Identity preview: 1,839 match on both keys, 462 match student code with blank DB citizen ID, 125 are new, and 11 have conflicting identity matches requiring manual quarantine.
+- Enrollment preview for code matches: 1,700 already in the same class, 170 differ, 442 have no active 2569 enrollment.
+- The XLSX contains 70 classrooms. Sixteen primary/kindergarten classrooms are absent from the current-year DB; these must be created/approved before commit.
+- Existing `StudentImportService` accepts CSV and rejects existing identities, so it is not safe for this update as-is. Plan an XLSX adapter plus update-capable preview/commit workflow with per-row transactions, audit trail, idempotency, and rollback evidence.
+- Map canonical data into `students`, `classroom_students`, `student_academic_info`, `student_addresses`, `student_contacts`, `student_guardians`/guardian contacts, and `student_health_info`; run card sync only after roster reconciliation.
+- Verification plan: preview category totals, manually resolve 11 conflicts, back up DB, commit in batches, reconcile identity/enrollment/academic-info counts, then sample records by classroom.
+
+### 2026-07-07 roster runtime/schema fixes
+
+- Fixed post-roster card sync to run once per completed batch instead of once per row in both CLI and queued import paths.
+- Identity changes are now committed independently of enrollment classification, preserving citizen-ID fills during move/create/unchanged actions.
+- Added missing roster service imports and the explicit Laravel `Log` facade import.
+- Corrected address and health upsert keys/field names to match their schemas.
+- Extended the integration test to cover identity fill during classroom movement, address/health persistence, and exactly one card-sync call.
+- Verification: roster date/parser/integration suites pass (3 tests, 38 assertions); scoped Pint check passes.
+
+---
+
+## แผนอัปเดตรายชื่อนักเรียนจาก XLSX — ฉบับสมบูรณ์
+
+**วันที่วางแผน:** 2026-07-07
+**สถานะ:** วางแผนเสร็จ (ยังไม่เริ่มพัฒนา)
+**ขอบเขต:** นำไฟล์ XLSX รายชื่อนักเรียน 2,437 คน อัปเดตลงฐานข้อมูลปีการศึกษา 2569
+
+### ข้อมูลต้นทาง (XLSX)
+
+| รายการ | ค่า |
+|--------|-----|
+| ไฟล์ | `docs/api/20260707150052.xlsx` |
+| จำนวนแถว | 2,437 |
+| จำนวนคอลัมน์ | 53 |
+| จำนวนห้องเรียน | 70 (อ.1–อ.3, ป.1–ป.6, ม.1–ม.6) |
+| สถานะ "กำลังศึกษาอยู่" | 1,626 คน |
+| สถานะ "นักเรียนเข้าใหม่" | 811 คน |
+| รูปแบบวันที่ | ไทยย่อ+พ.ศ. เช่น `08 เม.ย. 57`, `07 พ.ค. 2569` |
+| Academy | 1 (เพลินวิทยาธาร) |
+| ปีการศึกษาเป้าหมาย | 2 (2569) |
+
+### การแจกแจงตามระดับ (จาก XLSX)
+
+| ระดับ | จำนวน | เข้าใหม่ | กำลังศึกษา | หมายเหตุ |
+|-------|--------|----------|------------|----------|
+| อ.1–อ.3 | 102 | 48 | 54 | **ห้องเรียนยังไม่มีใน DB** |
+| ป.1–ป.6 | 385 | 74 | 311 | **ห้องเรียนยังไม่มีใน DB (12 ห้อง)** |
+| ม.1 | 395 | 389 | 6 | เกือบทั้งหมดเข้าใหม่ |
+| ม.2 | 399 | 8 | 391 | |
+| ม.3 | 329 | 4 | 325 | |
+| ม.4 | 288 | 282 | 6 | เกือบทั้งหมดเข้าใหม่ (จาก ม.3 อื่นโรงเรียน) |
+| ม.5 | 258 | 6 | 252 | |
+| ม.6 | 281 | 0 | 281 | ทั้งหมดกำลังศึกษา |
+
+### ผลการเทียบกับ DB (Read-only)
+
+| กลุ่ม | จำนวน | คำอธิบาย |
+|-------|--------|----------|
+| exact_match | 1,839 | ตรงทั้ง student_code + citizen_id |
+| code_only | 462 | student_code ตรง แต่ DB ยังไม่มี citizen_id → เติมได้ |
+| new_student | 125 | ไม่มีใน DB เลย → สร้างใหม่ |
+| conflict | 11 | student_code ชี้คนหนึ่ง citizen_id ชี้อีกคน → กักตรวจ |
+| same_class | 1,700 | enrollment ปี 2569 ตรงกับ XLSX |
+| diff_class | 170 | enrollment ปี 2569 ห้องไม่ตรง → ย้ายห้อง |
+| no_enrollment | 442 | มี student record แต่ไม่มี enrollment 2569 → สร้าง |
+| missing_classroom | 16 | ห้องเรียนที่ XLSX มี แต่ DB ไม่มี (อ./ป.) |
+
+---
+
+### ระยะที่ 1: สร้าง XLSX Parser + Thai Date Normalizer
+
+**เป้าหมาย:** แปลงไฟล์ XLSX 53 คอลัมน์เป็น normalized struct ที่พร้อมเทียบกับ DB
+
+**1.1 สร้าง `StudentRosterXlsxParser`**
+
+**ไฟล์:** `app/Services/Import/StudentRosterXlsxParser.php`
+
+**หน้าที่:**
+- อ่าน XLSX ด้วย `PhpSpreadsheet` (ต้อง `composer require phpoffice/phpspreadsheet`)
+- หรือใช้ `Maatwebsite\Excel` ที่มีอยู่แล้วในโปรเจค
+
+**Input:** path ไปยัง XLSX file
+**Output:** `Collection` ของ normalized array
+
+**Column mapping (53 XLSX cols → normalized keys):**
+
+```php
+$columnMap = [
+    'เลขประจำตัวประชาชน'        => 'citizen_id',         // col 1
+    'เลขประจำตัวนักเรียน '       => 'student_code',       // col 2 (มีเว้นวรรคต่อท้าย!)
+    'ชั้นเรียน'                  => 'classroom_label',    // col 3 → split เป็น grade_level + section
+    'คำนำหน้าชื่อ'               => 'title_prefix_th',    // col 4
+    'ชื่อ'                       => 'first_name_th',      // col 5
+    'นามสกุล'                    => 'namsagul',           // col 6
+    'ชื่อกลาง'                   => 'middle_name_th',     // col 7
+    'คำนำหน้าชื่อ.1'             => 'title_prefix_en',    // col 8
+    'ชื่อภาษาอังกฤษ'             => 'first_name_en',      // col 9
+    'นามสกุลภาษาอังกฤษ'          => 'last_name_en',       // col 10
+    'ชื่อกลางภาษาอังกฤษ'         => 'middle_name_en',     // col 11
+    'ว.ด.ป. เกิด'               => 'birth_date_raw',     // col 12 → parse Thai date
+    'เพศ'                        => 'gender_raw',         // col 13 (ชาย/หญิง)
+    'สัญชาติ'                    => 'nationality',        // col 14
+    'ศาสนา'                      => 'religion',           // col 15
+    'สถานะนักเรียน'              => 'student_status_raw', // col 16
+    'วันที่บันทึก'               => 'record_date_raw',    // col 17
+    'ประเภทความพิการ'            => 'disability_type',    // col 18
+    // --- ที่อยู่ ---
+    'รหัสประจำบ้าน'              => 'house_code',         // col 19
+    'บ้านเลขที่'                 => 'house_number',       // col 20
+    'หมู่ที่'                    => 'village_number',     // col 21
+    'ซอย'                        => 'alley',              // col 22
+    'ถนน'                        => 'road',               // col 23
+    'ตำบล/แขวง'                  => 'subdistrict',        // col 24
+    'อำเภอ/เขต'                  => 'district',           // col 25
+    'จังหวัด'                    => 'province',           // col 26
+    'รหัสไปรษณีย์'               => 'postal_code',        // col 27
+    'เบอร์โทรศัพท์'              => 'phone',              // col 28
+    'วันที่เข้าเรียน'            => 'enrollment_date_raw',// col 29
+    // --- บิดา ---
+    'เลขประจำตัวประชาชน (บิดา)'  => 'father_citizen_id',  // col 30
+    'คำนำหน้าชื่อ (บิดา)'       => 'father_title',       // col 31
+    'ชื่อ  (บิดา)'              => 'father_first_name',  // col 32
+    'นามสกุล  (บิดา)'           => 'father_last_name',   // col 33
+    'สถานภาพของบิดา'            => 'father_status',      // col 34
+    'สัญชาติ.1'                  => 'father_nationality', // col 35
+    // --- มารดา ---
+    'เลขประจำตัวประชาชน (มารดา)' => 'mother_citizen_id',  // col 36
+    'คำนำหน้าชื่อ (มารดา)'      => 'mother_title',       // col 37
+    'ชื่อ (มารดา)'              => 'mother_first_name',  // col 38
+    'นามสกุล (มารดา)'           => 'mother_last_name',   // col 39
+    'สถานภาพของมารดา'           => 'mother_status',      // col 40
+    'สัญชาติ.2'                  => 'mother_nationality', // col 41
+    // --- ผู้ปกครอง ---
+    'เลขประจำตัวประชาชน (ผู้ปกครอง)' => 'guardian_citizen_id',  // col 42
+    'คำนำหน้าชื่อ.2'                => 'guardian_title',       // col 43
+    'ชื่อ - นามสกุล'                => 'guardian_full_name',   // col 44 → split first/last
+    'อาชีพของผู้ปกครอง'             => 'guardian_occupation',  // col 45
+    'เบอร์โทรศัพท์.1'               => 'guardian_phone',       // col 46
+    'ความสัมพันธ์'                  => 'guardian_relationship', // col 47
+    // --- สุขภาพ ---
+    'ความสูง (ซม.)'              => 'height_cm',          // col 48
+    'น้ำหนัก (กก.)'              => 'weight_kg',          // col 49
+    // --- โรงเรียนเดิม ---
+    'ชื่อโรงเรียนเดิม'           => 'previous_school',    // col 50
+    'จังหวัดโรงเรียนเดิม'        => 'previous_school_province', // col 51
+    'ชั้นเรียน.1'                => 'previous_grade',     // col 52
+];
+```
+
+**1.2 สร้าง Thai Date Parser**
+
+**ไฟล์:** `app/Services/Import/ThaiDateParser.php`
+
+**รูปแบบที่ต้องรองรับ:**
+
+| ตัวอย่าง | ความหมาย | ผลลัพธ์ (ค.ศ.) |
+|----------|----------|----------------|
+| `08 เม.ย. 57` | 2-digit พ.ศ. (2557) | `2014-04-08` |
+| `23 ก.ย. 51` | 2-digit พ.ศ. (2551) | `2008-09-23` |
+| `07 พ.ค. 2569` | 4-digit พ.ศ. | `2026-05-07` |
+| `15 พ.ค. 2569` | 4-digit พ.ศ. | `2026-05-15` |
+
+**Thai month abbreviation mapping:**
+```php
+$thaiMonths = [
+    'ม.ค.'  => 1,  'ก.พ.'  => 2,  'มี.ค.' => 3,  'เม.ย.' => 4,
+    'พ.ค.'  => 5,  'มิ.ย.' => 6,  'ก.ค.'  => 7,  'ส.ค.'  => 8,
+    'ก.ย.'  => 9,  'ต.ค.'  => 10, 'พ.ย.'  => 11, 'ธ.ค.'  => 12,
+];
+```
+
+**Logic:**
+1. Regex match: `/^(\d{1,2})\s+(\S+)\s+(\d{2,4})$/u`
+2. Map Thai month → int
+3. ถ้าปี ≤ 99 → เติม 2500 (พ.ศ. 2 หลัก) → ลบ 543 (แปลง ค.ศ.)
+4. ถ้าปี > 2400 → ลบ 543 (พ.ศ. 4 หลัก)
+5. ถ้าปี < 100 และ > 40 → สันนิษฐาน 25xx → ลบ 543
+6. Return Carbon date หรือ null ถ้า parse ไม่ได้
+
+**1.3 Classroom Label Splitter**
+
+**ไฟล์:** อยู่ใน Parser เดียวกัน
+
+**Logic:** `ม.1/5` → `['grade_level' => 'ม.1', 'section' => '5']`
+```php
+preg_match('/^([^\/]+)\/(\d+)$/', $label, $m);
+// $m[1] = 'ม.1', $m[2] = '5'
+```
+
+**⚠️ ข้อควรระวัง:**
+- คอลัมน์ `เลขประจำตัวนักเรียน ` มีช่องว่างต่อท้าย (trailing space) — ต้อง trim ชื่อคอลัมน์
+- คอลัมน์ `ชื่อ  (บิดา)` และ `นามสกุล  (บิดา)` มีเว้นวรรค 2 ตัว — ต้อง normalize whitespace
+- `ชื่อ - นามสกุล` ของผู้ปกครอง เป็น full name ชิ้นเดียว → ต้อง split by space
+- ค่า `gender_raw` เป็น `ชาย` / `หญิง` → map เป็น `1` / `0`
+- ค่า `father_status` / `mother_status` เป็น `มีชีวิต` / `เสียชีวิต` → map เป็น `alive` / `deceased`
+
+**1.4 Row Validation**
+
+แต่ละแถวต้องผ่าน validation:
+```
+- citizen_id: required, digits:13, Thai checksum pass
+- student_code: required, string, max:20
+- first_name_th: required, string, max:100
+- last_name_th: required, string, max:100
+- classroom_label: required, pattern /^[^\\/]+\/\d+$/
+- birth_date: required, valid date, before today
+- gender: required, in:ชาย,หญิง
+```
+
+**ผลลัพธ์ระยะ 1:**
+- `StudentRosterXlsxParser` ที่แปลง XLSX → Collection ของ normalized structs
+- `ThaiDateParser` ที่แปลงวันที่ไทยได้ทุกรูปแบบ
+- ข้อมูลแต่ละแถวมี status: `valid`, `warning`, `invalid`
+
+**ไฟล์ที่ต้องสร้าง:**
+| ไฟล์ | Action |
+|------|--------|
+| `app/Services/Import/StudentRosterXlsxParser.php` | สร้างใหม่ |
+| `app/Services/Import/ThaiDateParser.php` | สร้างใหม่ |
+
+---
+
+### ระยะที่ 2: สร้าง Identity Matcher + Preview Batch
+
+**เป้าหมาย:** เทียบข้อมูล XLSX กับ DB แล้วจำแนกแต่ละแถวเป็นกลุ่ม action
+
+**2.1 สร้าง `StudentRosterUpdateService`**
+
+**ไฟล์:** `app/Services/Import/StudentRosterUpdateService.php`
+
+**Method หลัก:**
+```php
+public function preview(
+    Academy $academy,
+    AcademicYear $year,
+    Collection $parsedRows
+): StudentRosterUpdateBatch
+```
+
+**Logic ของ Identity Matching (ต่อแถว):**
+
+```
+1. ค้นหา Student ด้วย student_code (students.student_id) ภายใน academy
+2. ค้นหา Student ด้วย citizen_id (students.citizen_id) ภายใน academy
+3. จำแนก:
+
+   a) ทั้ง student_code + citizen_id ตรงกัน → MATCHED
+      → เทียบ enrollment + ข้อมูลส่วนตัว ต่อ
+
+   b) student_code ตรง + DB ไม่มี citizen_id → CODE_ONLY_MATCH
+      → เตรียม fill citizen_id
+      → เทียบ enrollment + ข้อมูลส่วนตัว ต่อ
+
+   c) ไม่พบทั้ง student_code + citizen_id → NEW_STUDENT
+      → สร้าง student + enrollment + ข้อมูลทั้งหมด
+
+   d) student_code ชี้คนหนึ่ง, citizen_id ชี้อีกคน → CONFLICT
+      → กักไว้ ห้ามอัปเดตอัตโนมัติ
+      → ต้องแก้ด้วยคน
+
+   e) ไม่มี student_code แต่มี citizen_id ตรง → CITIZEN_MATCH
+      → อัปเดต student_code ให้ตรง + ต่อ enrollment
+```
+
+**2.2 Enrollment Classification (สำหรับ MATCHED / CODE_ONLY_MATCH):**
+
+หลังจับคู่ตัวตนได้แล้ว ตรวจ enrollment:
+
+```
+1. ค้นหา active enrollment ของ student ในปี target (academic_year_id = 2)
+2. จำแนก:
+
+   a) มี enrollment + ห้องเดิม → UNCHANGED
+      → เทียบข้อมูลส่วนตัว (ชื่อ/ที่อยู่/ผู้ปกครอง) → ถ้าต่าง → UPDATE_PERSONAL
+
+   b) มี enrollment + ห้องต่าง → MOVE_CLASSROOM
+      → ย้ายจากห้องเดิมไปห้องใหม่
+
+   c) ไม่มี enrollment ปี target → CREATE_ENROLLMENT
+      → สร้าง enrollment ใหม่ (ไม่ลบ enrollment เก่าปีก่อน)
+```
+
+**2.3 รูปแบบ Preview Batch:**
+
+ขยาย `student_import_batches` + `student_import_rows` ที่มีอยู่ หรือสร้าง table ใหม่ `student_roster_update_batches` + `student_roster_update_rows`:
+
+**แนะนำ: ใช้ table เดิม** (`student_import_batches` + `student_import_rows`) เพิ่ม field:
+
+```
+student_import_batches:
+  + import_type ENUM('new_intake', 'roster_update') DEFAULT 'new_intake'
+  + source_format ENUM('csv', 'xlsx') DEFAULT 'csv'
+
+student_import_rows:
+  + action ENUM('unchanged','update_identity','update_personal','move_classroom',
+                'create_enrollment','new_student','conflict') DEFAULT NULL
+  + matched_student_id BIGINT UNSIGNED NULL  -- FK → students.id ที่จับคู่ได้
+  + diff_data JSON NULL  -- เก็บ before/after ของ field ที่ต่าง
+```
+
+**2.4 Preview Summary ที่ต้องแสดง:**
+
+```json
+{
+  "batch_id": "uuid",
+  "total_rows": 2437,
+  "by_action": {
+    "unchanged": 1530,
+    "update_identity": 462,
+    "update_personal": 170,
+    "move_classroom": 170,
+    "create_enrollment": 442,
+    "new_student": 125,
+    "conflict": 11,
+    "invalid": 0
+  },
+  "missing_classrooms": [
+    {"label": "อ.1/1", "student_count": 22},
+    {"label": "ป.1/1", "student_count": 27}
+  ],
+  "conflicts": [
+    {"row": 45, "student_code": "1234", "xlsx_citizen": "1234567890123",
+     "db_student_code_points_to": "student_id=100",
+     "db_citizen_id_points_to": "student_id=200"}
+  ]
+}
+```
+
+**ไฟล์ที่ต้องสร้าง/แก้:**
+| ไฟล์ | Action |
+|------|--------|
+| `app/Services/Import/StudentRosterUpdateService.php` | สร้างใหม่ |
+| `database/migrations/xxxx_add_roster_update_fields_to_import_tables.php` | สร้างใหม่ |
+| `app/Models/StudentImportBatch.php` | แก้ — เพิ่ม cast/fillable |
+| `app/Models/StudentImportRow.php` | แก้ — เพิ่ม cast/fillable |
+
+---
+
+### ระยะที่ 3: สร้าง Artisan Command (CLI workflow)
+
+**เป้าหมาย:** ทำให้ admin รัน preview/commit ผ่าน CLI ก่อน มี UI ทีหลัง
+
+**3.1 สร้าง Command: `roster:preview`**
+
+**ไฟล์:** `app/Console/Commands/RosterPreviewCommand.php`
+**Signature:** `roster:preview {file} {--academy=1} {--year=2} {--export-conflicts=}`
+
+**ขั้นตอน:**
+1. อ่าน XLSX ด้วย `StudentRosterXlsxParser`
+2. Validate ทุกแถว → แสดง invalid rows (ถ้ามี)
+3. รัน `StudentRosterUpdateService::preview()`
+4. แสดง summary table บน console
+5. ถ้า `--export-conflicts` → export ไฟล์ CSV ของ 11 conflicts ให้นายทะเบียนตรวจ
+6. บันทึก batch ลง DB (status = `previewed`)
+
+**3.2 สร้าง Command: `roster:commit`**
+
+**ไฟล์:** `app/Console/Commands/RosterCommitCommand.php`
+**Signature:** `roster:commit {batch_id} {--dry-run} {--chunk=50}`
+
+**ขั้นตอน:**
+1. โหลด batch จาก DB → ตรวจว่า status = `previewed`
+2. ตรวจ prerequisites (missing classrooms ต้อง = 0, conflicts ต้อง resolved)
+3. ถ้า `--dry-run` → แสดงสรุปแล้วหยุด
+4. ถามยืนยัน: "จะอัปเดตนักเรียน {n} คน ในปีการศึกษา 2569 ยืนยันหรือไม่? (yes/no)"
+5. ประมวลผลเป็น chunk (default 50 แถว/transaction)
+6. แสดง progress bar
+7. แสดง reconciliation summary เมื่อเสร็จ
+
+**ไฟล์ที่ต้องสร้าง:**
+| ไฟล์ | Action |
+|------|--------|
+| `app/Console/Commands/RosterPreviewCommand.php` | สร้างใหม่ |
+| `app/Console/Commands/RosterCommitCommand.php` | สร้างใหม่ |
+
+---
+
+### ระยะที่ 4: Commit Logic — เขียนข้อมูลลง 7 ตาราง
+
+**เป้าหมาย:** อัปเดต/สร้างข้อมูลใน DB ตาม action ที่จำแนกไว้
+
+**4.1 ตารางที่ 1: `students` (ข้อมูลหลัก)**
+
+| Action | สิ่งที่ทำ |
+|--------|----------|
+| NEW_STUDENT | สร้าง record ใหม่ด้วย `StudentIntakeService::intake()` ที่มีอยู่ (reuse!) |
+| UPDATE_IDENTITY | `students.citizen_id = xlsx.citizen_id` (เติม citizen_id ที่ว่าง) |
+| UPDATE_PERSONAL | อัปเดต field ที่ต่าง: `title_prefix_th`, `first_name_th`, `last_name_th`, `first_name_en`, `last_name_en`, `date_of_birth`, `gender`, `nationality`, `religion` |
+| MOVE_CLASSROOM | อัปเดต `students.class_level`, `students.class_section` ให้ตรงห้องใหม่ |
+
+**⚠️ กฎสำคัญ:**
+- ห้ามเขียนทับ `students.profile_image` — รูปมาจากอีกช่องทาง
+- ห้ามเปลี่ยน `students.user_id`, `students.academy_id`, `students.account_status`
+- เก็บ before/after ไว้ใน `student_import_rows.diff_data`
+
+**4.2 ตารางที่ 2: `classroom_students` (enrollment)**
+
+| Action | สิ่งที่ทำ |
+|--------|----------|
+| CREATE_ENROLLMENT | ใช้ `StudentEnrollmentService::enrollStudent()` ที่มีอยู่ |
+| MOVE_CLASSROOM | 1) ปิด enrollment เดิม (status → `transferred`) 2) สร้าง enrollment ใหม่ในห้องที่ถูกต้อง |
+| UNCHANGED | ไม่ทำอะไร |
+
+**⚠️ กฎสำคัญ:**
+- ห้ามลบ enrollment เดิม — เปลี่ยนสถานะเท่านั้น
+- ต้องมี `classroom_id` ที่ valid (ห้องต้องมีอยู่ใน DB ก่อน)
+- enrollment ใหม่ต้องตั้ง `academic_year_id` = ปี target
+
+**4.3 ตารางที่ 3: `student_academic_info`**
+
+| Action | สิ่งที่ทำ |
+|--------|----------|
+| CREATE_ENROLLMENT / MOVE_CLASSROOM | ใช้ `StudentEnrollmentService` ที่จัดการ academic_info ให้อัตโนมัติ (มี `manageAcademicInfoSnapshot` อยู่แล้ว) |
+
+**4.4 ตารางที่ 4: `student_addresses`**
+
+**XLSX → DB mapping:**
+
+| XLSX col | → DB field |
+|----------|-----------|
+| `บ้านเลขที่` | `house_number` |
+| `หมู่ที่` | `village_number` |
+| `ซอย` | `alley` |
+| `ถนน` | `road` |
+| `ตำบล/แขวง` | `subdistrict` |
+| `อำเภอ/เขต` | `district` |
+| `จังหวัด` | `province` |
+| `รหัสไปรษณีย์` | `postal_code` |
+
+**Logic:**
+- ค้นหา `student_addresses` ที่ `student_id` ตรง + `address_type = 'current'` + `is_current = true`
+- ถ้ามี → เทียบแต่ละ field → อัปเดตถ้าต่าง
+- ถ้าไม่มี → สร้างใหม่ (`address_type = 'current'`, `is_current = true`)
+- ⚠️ ค่า `-` ใน XLSX ให้ถือว่า null (ซอย/ถนนมักเป็น `-`)
+
+**4.5 ตารางที่ 5: `student_guardians`**
+
+**XLSX มี 3 ชุดข้อมูลผู้เกี่ยวข้อง:**
+
+**ชุดที่ 1 — บิดา (cols 30-35):**
+```
+→ student_guardians (guardian_type = 'father')
+  citizen_id    = father_citizen_id
+  title_prefix  = father_title
+  first_name    = father_first_name
+  last_name     = father_last_name
+  status        = father_status → map('มีชีวิต'=>'alive', 'เสียชีวิต'=>'deceased')
+  nationality   = father_nationality
+```
+
+**ชุดที่ 2 — มารดา (cols 36-41):**
+```
+→ student_guardians (guardian_type = 'mother')
+  citizen_id    = mother_citizen_id
+  title_prefix  = mother_title
+  first_name    = mother_first_name
+  last_name     = mother_last_name
+  status        = mother_status → map('มีชีวิต'=>'alive', 'เสียชีวิต'=>'deceased')
+  nationality   = mother_nationality
+```
+
+**ชุดที่ 3 — ผู้ปกครอง (cols 42-47):**
+```
+→ student_guardians (guardian_type = 'guardian')
+  citizen_id          = guardian_citizen_id
+  title_prefix        = guardian_title
+  first_name + last_name = split(guardian_full_name)  ← "ชื่อ - นามสกุล" → split by space
+  occupation          = guardian_occupation
+  relationship        = guardian_relationship (มารดา, บิดา, ฯลฯ)
+  is_primary_contact  = true
+```
+
+**Logic:**
+- ค้นหา guardian ที่ `student_id` + `guardian_type` ตรง
+- ถ้ามี → เทียบ field → อัปเดตถ้าต่าง
+- ถ้าไม่มี → สร้างใหม่
+- ถ้า XLSX ไม่มีข้อมูลของ type นั้น (null ทุก field) → ข้าม ไม่ลบของเดิม
+
+**4.6 ตารางที่ 6: `student_contacts`**
+
+**XLSX มี 2 เบอร์:**
+- `เบอร์โทรศัพท์` (col 28) → contact ของนักเรียน
+- `เบอร์โทรศัพท์.1` (col 46) → contact ของผู้ปกครอง
+
+**Logic สำหรับ student contact:**
+- ค้นหา `student_contacts` ที่ `student_id` ตรง + `contact_type = 'mobile'` + `is_primary = true`
+- ถ้ามี → เทียบ `contact_value` → อัปเดตถ้าต่าง
+- ถ้าไม่มี + XLSX มีเบอร์ → สร้างใหม่
+
+**Logic สำหรับ guardian contact:**
+- เบอร์ผู้ปกครอง เก็บใน guardian record เลย (ไม่ใช่ `student_contacts`)
+- ⚠️ ดูว่า guardian model มี `phone_number` field ไหม → migration `2026_02_01` มี! ใช้ได้
+
+**4.7 ตารางที่ 7: `student_health_info`**
+
+**XLSX → DB mapping:**
+
+| XLSX col | → DB field |
+|----------|-----------|
+| `ความสูง (ซม.)` | `height_cm` (decimal 5,2) |
+| `น้ำหนัก (กก.)` | `weight_kg` (decimal 5,2) |
+
+**Logic:**
+- `student_health_info` มี unique constraint on `student_id`
+- ค้นหา record ที่ `student_id` ตรง
+- ถ้ามี → อัปเดต height/weight
+- ถ้าไม่มี → สร้างใหม่
+- ⚠️ บาง weight เป็นทศนิยม (เช่น `35.3`) → ต้อง cast เป็น decimal
+
+**4.8 Transaction Strategy:**
+
+```
+foreach (batch->rows->chunk(50) as $chunk) {
+    DB::transaction(function () use ($chunk) {
+        foreach ($chunk as $row) {
+            if ($row->action === 'conflict' || $row->action === 'invalid') {
+                continue; // ข้าม
+            }
+            $this->processRow($row);
+            $row->update(['status' => 'imported']);
+        }
+    });
+    // ถ้า transaction ของ chunk ใด fail → mark rows เป็น 'failed'
+    // chunk อื่นทำต่อได้ (partial commit)
+}
+```
+
+**⚠️ ข้อพิจารณาที่ต้องตัดสินใจ:**
+1. **Partial commit หรือ All-or-nothing?**
+   - แนะนำ: Chunk-level transaction (50 แถว/chunk) — ถ้า chunk ใด fail ไม่กระทบ chunk อื่น
+   - แต่ถ้าต้องการ all-or-nothing → ห่อ chunk ทั้งหมดใน transaction เดียว (ช้ากว่า, lock นาน)
+
+2. **ข้อมูล `ประเภทความพิการ` จะเก็บที่ไหน?**
+   - **ตัดสินใจแล้ว:** เก็บในตาราง `student_academic_info` (โมเดล `StudentAcademicInfo`) ซึ่งมีฟิลด์ `disability_type` และ `special_needs` รองรับอยู่แล้ว ไม่ต้องแก้ไข Schema
+
+3. **ข้อมูลโรงเรียนเดิม (`ชื่อโรงเรียนเดิม`, `จังหวัดโรงเรียนเดิม`) จะเก็บที่ไหน?**
+   - **ตัดสินใจแล้ว:** เก็บในตาราง `student_academic_info` (โมเดล `StudentAcademicInfo`) ซึ่งมีฟิลด์ `previous_school_name`, `previous_school_province`, `previous_grade_level` รองรับอยู่แล้ว ไม่ต้องแก้ไข Schema
+
+**ไฟล์ที่ต้องสร้าง/แก้:**
+| ไฟล์ | Action |
+|------|--------|
+| `app/Services/Import/StudentRosterCommitService.php` | สร้างใหม่ |
+| อาจต้องเพิ่ม migration สำหรับ `disability_type` / `previous_school` | ขึ้นกับการตัดสินใจ |
+
+---
+
+### ระยะที่ 5: สร้างห้องเรียนที่ขาด (Prerequisite)
+
+**เป้าหมาย:** สร้าง 16 ห้องเรียนที่ XLSX มีแต่ DB ไม่มี
+
+**5.1 รายการห้องเรียนที่ขาด:**
+
+| ห้อง | จำนวนนักเรียน | ระดับ |
+|------|---------------|-------|
+| อ.1/1 | 22 | อนุบาล |
+| อ.2/1 | 34 | อนุบาล |
+| อ.3/1 | 23 | อนุบาล |
+| อ.3/2 | 23 | อนุบาล |
+| ป.1/1 | 27 | ประถม |
+| ป.1/2 | 35 | ประถม |
+| ป.2/1 | 30 | ประถม |
+| ป.2/2 | 40 | ประถม |
+| ป.3/1 | 26 | ประถม |
+| ป.3/2 | 37 | ประถม |
+| ป.4/1 | 28 | ประถม |
+| ป.4/2 | 34 | ประถม |
+| ป.5/1 | 28 | ประถม |
+| ป.5/2 | 34 | ประถม |
+| ป.6/1 | 27 | ประถม |
+| ป.6/2 | 39 | ประถม |
+
+**5.2 วิธีสร้าง:**
+
+ทางเลือก A (แนะนำ): เพิ่มใน `roster:commit` command — ถ้าพบ missing classrooms ให้ถามยืนยัน → สร้างอัตโนมัติ:
+```php
+Classroom::create([
+    'academy_id' => $academy->id,
+    'academic_year_id' => $year->id,
+    'grade_level' => 'อ.1',  // หรือ 'ป.1', etc.
+    'section' => '1',
+    'name' => 'อ.1/1',
+    'capacity' => 45,
+]);
+```
+
+ทางเลือก B: ให้ admin สร้างผ่าน UI ก่อน
+
+**⚠️ ข้อพิจารณา:**
+- ระบบเดิมรองรับแค่ `ม.1`–`ม.6` (ดูจาก `nextGrade()` ใน RolloverService)
+- ถ้าเพิ่ม `อ.` และ `ป.` → ต้องตรวจว่า API, frontend, rollover ไม่พังจากค่าที่ไม่คาดคิด
+- `StudentCardSyncService.numericGradeLevel()` ใช้ regex `/(\d+)\s*$/` → `อ.1` จะได้ `1`, `ป.3` จะได้ `3` — **ชนกับ ม.1, ม.3!**
+- **ต้องแก้ `numericGradeLevel()` ให้รองรับ prefix** หรือแยก card sync ให้ทำเฉพาะ ม.
+
+**5.3 ผลกระทบต่อ Card Sync:**
+- บัตรนักเรียนปัจจุบันทำเฉพาะ ม.1–ม.6
+- ถ้าเพิ่ม อ./ป. → ต้องตัดสินใจว่าจะออกบัตรให้ระดับนี้ไหม
+- **แนะนำ:** filter card sync ให้ทำเฉพาะ grade_level ที่ขึ้นต้นด้วย 'ม.' ก่อน
+
+---
+
+### ระยะที่ 6: Post-commit — Card Sync + Reconciliation
+
+**เป้าหมาย:** หลัง commit roster แล้ว sync บัตรนักเรียน + ตรวจความถูกต้อง
+
+**6.1 รัน Card Sync (ม.1–ม.6 เท่านั้น):**
+
+```bash
+php artisan students:sync-cards --academy=1 --academic-year=2 --preview
+# ตรวจ preview → ถ้าถูกต้อง
+php artisan students:sync-cards --academy=1 --academic-year=2 --commit
+```
+
+ใช้ `StudentCardSyncService` ที่มีอยู่แล้ว — ไม่ต้องเขียนใหม่
+
+**6.2 Reconciliation Queries (รันหลัง commit ทุกครั้ง):**
+
+```sql
+-- 1. จำนวนนักเรียนในฐานข้อมูล ต้อง ≥ 2,437
+SELECT COUNT(*) FROM students WHERE academy_id = 1 AND status = 'active';
+
+-- 2. active enrollment ต้องตรง XLSX count ต่อห้อง
+SELECT c.grade_level, c.section, COUNT(*) as db_count
+FROM classroom_students cs
+JOIN classrooms c ON cs.classroom_id = c.id
+WHERE cs.academic_year_id = 2 AND cs.status = 'active' AND c.academy_id = 1
+GROUP BY c.grade_level, c.section
+ORDER BY c.grade_level, CAST(c.section AS UNSIGNED);
+-- เทียบกับ XLSX count ต่อห้อง
+
+-- 3. ไม่มี duplicate active enrollment
+SELECT student_id, COUNT(*) as cnt FROM classroom_students
+WHERE status = 'active' AND academic_year_id = 2
+GROUP BY student_id HAVING cnt > 1;
+
+-- 4. ไม่มี duplicate current academic info
+SELECT student_id, COUNT(*) as cnt FROM student_academic_info
+WHERE is_current = 1
+GROUP BY student_id HAVING cnt > 1;
+
+-- 5. citizen_id ที่เติมใหม่ ตรงกับ XLSX
+SELECT s.student_id, s.citizen_id FROM students s
+WHERE s.academy_id = 1 AND s.citizen_id IS NOT NULL AND s.status = 'active'
+ORDER BY s.student_id;
+-- เทียบกับ XLSX citizen_id
+
+-- 6. active student ม.1-ม.6 ทุกคนมีบัตร
+SELECT s.id, s.student_id, s.first_name_th FROM students s
+JOIN classroom_students cs ON s.id = cs.student_id AND cs.status = 'active'
+JOIN classrooms c ON cs.classroom_id = c.id
+LEFT JOIN student_cards sc ON s.id = sc.student_id AND sc.student_status = 'active'
+WHERE s.status = 'active' AND s.academy_id = 1 AND c.grade_level LIKE 'ม.%' AND sc.id IS NULL;
+-- ต้องได้ 0 rows
+
+-- 7. สุ่มตรวจ 1 ห้อง
+SELECT s.student_id, s.citizen_id, s.first_name_th, s.last_name_th,
+       c.grade_level, c.section, cs.student_number,
+       sa.house_number, sa.subdistrict, sa.district, sa.province,
+       sg_f.first_name as father_name, sg_m.first_name as mother_name
+FROM students s
+JOIN classroom_students cs ON s.id = cs.student_id AND cs.status = 'active'
+JOIN classrooms c ON cs.classroom_id = c.id
+LEFT JOIN student_addresses sa ON s.id = sa.student_id AND sa.is_current = 1
+LEFT JOIN student_guardians sg_f ON s.id = sg_f.student_id AND sg_f.guardian_type = 'father'
+LEFT JOIN student_guardians sg_m ON s.id = sg_m.student_id AND sg_m.guardian_type = 'mother'
+WHERE c.grade_level = 'ม.1' AND c.section = '1' AND c.academic_year_id = 2
+ORDER BY cs.student_number;
+-- เทียบกับ XLSX แถว ม.1/1
+```
+
+---
+
+### Deployment Checklist
+
+```
+ Phase 0 — ก่อนเริ่ม
+ [x] ตัดสินใจ: เก็บ ประเภทความพิการ ที่ไหน -> เก็บใน student_academic_info (มีฟิลด์รองรับอยู่แล้ว)
+ [x] ตัดสินใจ: เก็บ โรงเรียนเดิม ที่ไหน -> เก็บใน student_academic_info (มีฟิลด์รองรับอยู่แล้ว)
+ [x] ตัดสินใจ: ออกบัตรให้ อ./ป. ด้วยไหม -> ข้ามระดับชั้น อ./ป. ไม่ต้องนำเข้าข้อมูล (นำเข้าเฉพาะ ม.1-ม.6)
+
+ Phase 1 — Parse & Normalize
+ ☐ สร้าง ThaiDateParser + unit test
+ ☐ สร้าง StudentRosterXlsxParser + unit test
+ ☐ ทดสอบ parse XLSX → ได้ 2,437 valid structs
+
+ Phase 2 — Identity Match & Preview
+ ☐ เขียน migration เพิ่ม fields ใน import tables
+ ☐ php artisan migrate
+ ☐ สร้าง StudentRosterUpdateService
+ ☐ สร้าง roster:preview command
+ ☐ รัน preview → ตรวจ summary ตรงกับที่วิเคราะห์ไว้:
+   - exact_match: ~1,839
+   - code_only: ~462
+   - new_student: ~125
+   - conflict: 11
+   - create_enrollment: ~442
+   - move_classroom: ~170
+
+ Phase 3 — Prerequisites
+ ☐ ส่ง conflict report (11 คน) ให้นายทะเบียนตรวจ
+ ☐ รอนายทะเบียน resolve conflicts
+ ☐ ตรวจว่า 16 ห้อง อ./ป. ที่ขาด จะสร้างหรือไม่ → ถ้าสร้าง ให้สร้างก่อน commit
+ ☐ mysqldump nuxnan > nuxnan_backup_before_roster_update.sql
+
+ Phase 4 — Commit
+ ☐ สร้าง StudentRosterCommitService
+ ☐ สร้าง roster:commit command
+ ☐ รัน roster:commit {batch_id} --dry-run → ตรวจ
+ ☐ รัน roster:commit {batch_id} → จริง
+ ☐ ตรวจ partial failures (ถ้ามี)
+
+ Phase 5 — Card Sync
+ ☐ รัน students:sync-cards --preview → ตรวจ
+ ☐ รัน students:sync-cards --commit
+ ☐ รัน reconciliation queries (7 ข้อ)
+ ☐ สุ่มตรวจ 3-5 ห้อง เทียบกับ XLSX
+
+ Phase 6 — Cleanup
+ ☐ ปิด batch (status = completed)
+ ☐ เก็บ backup + audit log
+```
+
+### สรุปไฟล์ทั้งหมด
+
+**ไฟล์ใหม่:**
+| # | ไฟล์ | ระยะ |
+|---|------|------|
+| 1 | `app/Services/Import/ThaiDateParser.php` | 1 |
+| 2 | `app/Services/Import/StudentRosterXlsxParser.php` | 1 |
+| 3 | `app/Services/Import/StudentRosterUpdateService.php` | 2 |
+| 4 | `app/Services/Import/StudentRosterCommitService.php` | 4 |
+| 5 | `app/Console/Commands/RosterPreviewCommand.php` | 3 |
+| 6 | `app/Console/Commands/RosterCommitCommand.php` | 3 |
+| 7 | `database/migrations/xxxx_add_roster_update_fields_to_import_tables.php` | 2 |
+
+**ไฟล์แก้ไข:**
+| # | ไฟล์ | สิ่งที่แก้ |
+|---|------|----------|
+| 1 | `app/Models/StudentImportBatch.php` | เพิ่ม import_type, source_format |
+| 2 | `app/Models/StudentImportRow.php` | เพิ่ม action, matched_student_id, diff_data |
+| 3 | `app/Services/StudentCardSyncService.php` | แก้ numericGradeLevel() ให้ไม่ชนข้าม prefix (อ./ป./ม.) |
+
+**ไฟล์ที่ reuse (ไม่ต้องแก้):**
+| ไฟล์ | ใช้ตรงไหน |
+|------|----------|
+| `StudentIntakeService` | สร้างนักเรียนใหม่ 125 คน |
+| `StudentEnrollmentService` | สร้าง/ย้าย enrollment |
+| `StudentCardSyncService` | sync บัตรหลัง roster update |
+| `StudentImportService` | extend logic สำหรับ XLSX |
+
+### หัวใจของแผน
+
+> **"Parse → Match → Classify → Preview → Approve → Commit → Sync → Verify"**
+>
+> - ไม่มีขั้นตอนใดเขียนข้อมูลโดยไม่ผ่าน preview ก่อน
+> - ไม่ลบข้อมูลเดิม — เปลี่ยนสถานะหรือเพิ่มทับเท่านั้น
+> - Conflict 11 รายต้องผ่านคนตรวจ ห้ามเดา
+> - Reuse services ที่มีอยู่ (`IntakeService`, `EnrollmentService`, `CardSyncService`)
+> - Chunk transaction ป้องกัน partial failure ลาม
+> - Reconciliation ทุกครั้งหลัง commit

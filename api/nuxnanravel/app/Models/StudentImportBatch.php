@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class StudentImportBatch extends Model
 {
     protected $fillable = [
-        'academy_id', 'academic_year_id', 'filename', 'original_filename', 'status',
+        'academy_id', 'academic_year_id', 'import_type', 'source_format', 'filename', 'original_filename', 'status',
         'total_rows', 'valid_rows', 'invalid_rows', 'imported_rows', 'skipped_rows',
         'column_mapping', 'default_values', 'idempotency_key', 'created_by',
         'confirmed_by', 'confirmed_at', 'completed_at',

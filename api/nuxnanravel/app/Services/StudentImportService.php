@@ -7,6 +7,9 @@ use App\Models\ClassroomStudent;
 use App\Models\Student;
 use App\Models\StudentImportBatch;
 use App\Models\StudentImportRow;
+use App\Services\Import\StudentRosterCommitService;
+use App\Services\Import\StudentRosterUpdateService;
+use App\Services\Import\StudentRosterXlsxParser;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -25,6 +28,29 @@ class StudentImportService
     public function validateBatch(StudentImportBatch $batch): void
     {
         if (in_array($batch->status, ['cancelled', 'processing', 'completed'], true)) {
+            return;
+        }
+
+        // Route to XLSX Roster Update if applicable
+        if ($batch->import_type === 'roster_update' || str_ends_with(strtolower($batch->filename), '.xlsx')) {
+            $batch->update(['import_type' => 'roster_update', 'source_format' => 'xlsx']);
+            $batch->update(['status' => 'validating']);
+            $batch->rows()->delete();
+
+            $parser = app(StudentRosterXlsxParser::class);
+            $updateService = app(StudentRosterUpdateService::class);
+
+            try {
+                $filePath = Storage::disk('local')->path($batch->filename);
+                $parsed = $parser->parse($filePath);
+                $updateService->preview($batch->academy, $batch->academicYear, $batch, $parsed);
+            } catch (Throwable $exception) {
+                if ($batch->fresh()->status !== 'cancelled') {
+                    $batch->update(['status' => 'failed']);
+                }
+                throw $exception;
+            }
+
             return;
         }
 
@@ -88,6 +114,48 @@ class StudentImportService
         }
 
         $batch->update(['status' => 'processing']);
+
+        // Route to XLSX Roster Commit if applicable
+        if ($batch->import_type === 'roster_update') {
+            $commitService = app(StudentRosterCommitService::class);
+            $statuses = $retryFailed ? ['failed'] : ['valid', 'warning'];
+
+            $batch->rows()
+                ->whereIn('status', $statuses)
+                ->whereNotIn('action', ['conflict'])
+                ->orderBy('row_number')
+                ->chunkById(50, function ($rows) use ($batch, $operator, $commitService): void {
+                    foreach ($rows as $row) {
+                        try {
+                            $commitService->processRow($row, $operator);
+                        } catch (Throwable $exception) {
+                            Log::warning('Student import roster row failed', [
+                                'batch_id' => $batch->id,
+                                'row_id' => $row->id,
+                                'exception' => $exception,
+                            ]);
+                            $row->update([
+                                'status' => 'failed',
+                                'errors' => [['field' => '_system', 'message' => $exception->getMessage()]],
+                            ]);
+                        }
+                    }
+                });
+
+            if ($batch->rows()->where('status', 'imported')->exists()) {
+                $commitService->syncCards($batch, $operator);
+            }
+
+            $this->refreshCounters($batch);
+            $failed = $batch->rows()->where('status', 'failed')->exists();
+            $batch->update([
+                'status' => $failed ? 'partial' : 'completed',
+                'completed_at' => now(),
+            ]);
+
+            return;
+        }
+
         $statuses = $retryFailed ? ['failed'] : ['valid', 'warning'];
 
         $batch->rows()->whereIn('status', $statuses)->orderBy('row_number')->chunkById(100, function ($rows) use ($batch, $operator): void {
