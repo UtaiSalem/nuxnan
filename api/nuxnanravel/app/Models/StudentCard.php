@@ -13,6 +13,7 @@ class StudentCard extends Model
     protected $fillable = [
         'student_id',
         'academy_id',
+        'academic_year_id',
         'order_no',
         'full_name_thai',
         'class_level',
@@ -33,16 +34,6 @@ class StudentCard extends Model
     ];
 
     protected $appends = ['qr_content', 'qr_url', 'profile_image_url'];
-
-    /**
-     * Get the corresponding student from normalized database
-     */
-    public function getStudentAttribute()
-    {
-        return $this->getRelationValue('student') ?: Student::where('student_id', $this->student_number)
-            ->orWhere('citizen_id', $this->national_id)
-            ->first();
-    }
 
     /**
      * Get the universal QR content for this student card

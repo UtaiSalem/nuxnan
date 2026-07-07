@@ -6,6 +6,7 @@ use App\Models\AcademyPost;
 use App\Models\AcademyPostComment;
 use App\Models\AcademyPostLike;
 use App\Models\AssignmentAnswer;
+use App\Models\ClassroomStudent;
 use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\EventRegistration;
@@ -14,8 +15,10 @@ use App\Observers\AcademyPostCommentObserver;
 use App\Observers\AcademyPostLikeObserver;
 use App\Observers\AcademyPostObserver;
 use App\Observers\AssignmentAnswerObserver;
+use App\Observers\ClassroomStudentObserver;
 use App\Observers\CourseMemberObserver;
 use App\Observers\EventRegistrationObserver;
+use App\Observers\StudentObserver;
 use App\Policies\CoursePolicy;
 use App\Policies\EnrollmentPolicy;
 use App\Policies\StudentMasterProfilePolicy;
@@ -62,5 +65,7 @@ class AppServiceProvider extends ServiceProvider
         CourseMember::observe(CourseMemberObserver::class);
         EventRegistration::observe(EventRegistrationObserver::class);
         AssignmentAnswer::observe(AssignmentAnswerObserver::class);
+        Student::observe(StudentObserver::class);
+        ClassroomStudent::observe(ClassroomStudentObserver::class);
     }
 }

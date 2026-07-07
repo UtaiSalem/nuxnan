@@ -48,6 +48,7 @@ class StudentCardByStudentTest extends TestCase
             'user_id' => $owner->id,
             'student_id' => 'STU1001',
             'citizen_id' => '1234567890123',
+            'title_prefix_th' => 'เด็กชาย',
             'first_name_th' => 'สมปอง',
             'last_name_th' => 'ใจดี',
             'status' => 'studying',

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\Learn\Student\Card;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\StudentCardPublicResource;
+use App\Http\Resources\StudentCardResource;
 use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\Student;
@@ -12,6 +14,7 @@ use App\Services\StudentCardSyncService;
 use App\Services\StudentPhotoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class StudentCardController extends Controller
@@ -21,6 +24,29 @@ class StudentCardController extends Controller
         if ($academy && (int) $card->academy_id !== (int) ($academy instanceof Academy ? $academy->id : $academy)) {
             abort(404);
         }
+    }
+
+    private function resolveCardRouteParameters($academy, $studentCard): array
+    {
+        if (! $studentCard) {
+            $card = $academy instanceof StudentCard ? $academy : StudentCard::findOrFail($academy);
+
+            return [null, $card];
+        }
+
+        $academyModel = $academy instanceof Academy ? $academy : Academy::findOrFail($academy);
+        $card = $studentCard instanceof StudentCard ? $studentCard : StudentCard::findOrFail($studentCard);
+
+        return [$academyModel, $card];
+    }
+
+    private function resolveRoomRouteParameters($academy, $level, $room): array
+    {
+        if ($room === null) {
+            return [null, $academy, $level];
+        }
+
+        return [$academy, $level, $room];
     }
 
     /**
@@ -36,6 +62,47 @@ class StudentCardController extends Controller
         }
 
         return $query;
+    }
+
+    private function withStudentContext($query)
+    {
+        return $query->with([
+            'student.classroomEnrollments' => fn ($query) => $query
+                ->where('status', 'active')
+                ->with('classroom.academicYear'),
+        ]);
+    }
+
+    private function applyMasterSearch($query, string $search)
+    {
+        return $query->whereHas('student', function ($studentQuery) use ($search) {
+            $studentQuery->where(function ($fields) use ($search) {
+                $fields->where('first_name_th', 'like', '%'.$search.'%')
+                    ->orWhere('last_name_th', 'like', '%'.$search.'%')
+                    ->orWhere('student_id', 'like', '%'.$search.'%')
+                    ->orWhere('citizen_id', 'like', '%'.$search.'%');
+            });
+        });
+    }
+
+    private function applyCurrentClassFilters($query, $level = null, $section = null)
+    {
+        if ($level === null && $section === null) {
+            return $query;
+        }
+
+        return $query->whereHas('student.classroomEnrollments', function ($enrollmentQuery) use ($level, $section) {
+            $enrollmentQuery->where('status', 'active')
+                ->whereHas('classroom', function ($classroomQuery) use ($level, $section) {
+                    $classroomQuery->whereHas('academicYear', fn ($yearQuery) => $yearQuery->where('is_current', true));
+                    if ($level !== null) {
+                        $classroomQuery->where('grade_level', 'like', '%'.$level);
+                    }
+                    if ($section !== null) {
+                        $classroomQuery->where('section', $section);
+                    }
+                });
+        });
     }
 
     /**
@@ -173,27 +240,17 @@ class StudentCardController extends Controller
         $query = $academy ? $this->academyQuery($academy, $status) : StudentCard::query();
 
         if ($request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name_thai', 'like', '%'.$search.'%')
-                    ->orWhere('last_name_thai', 'like', '%'.$search.'%')
-                    ->orWhere('student_number', 'like', '%'.$search.'%')
-                    ->orWhere('national_id', 'like', '%'.$search.'%');
-            });
+            $this->applyMasterSearch($query, $request->search);
         }
 
-        if ($request->level) {
-            $query->where('class_level', $request->level);
-        }
+        $this->applyCurrentClassFilters($query, $request->level, $request->section);
 
-        if ($request->section) {
-            $query->where('class_section', $request->section);
-        }
-
-        $students = $query->orderBy('class_level')
+        $students = $this->withStudentContext($query)->orderBy('class_level')
             ->orderBy('class_section')
             ->orderBy('order_no')
             ->paginate(20);
+
+        $students->through(fn ($card) => new StudentCardResource($card));
 
         return response()->json([
             'success' => true,
@@ -205,13 +262,15 @@ class StudentCardController extends Controller
     /**
      * Student profile view
      */
-    public function profile(StudentCard $student_card, $academy = null)
+    public function profile($academy = null, $student_card = null)
     {
+        [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
+        $student_card->load('student.classroomEnrollments.classroom.academicYear');
 
         return response()->json([
             'success' => true,
-            'student' => $student_card,
+            'student' => new StudentCardResource($student_card),
         ]);
     }
 
@@ -220,17 +279,15 @@ class StudentCardController extends Controller
      */
     public function byStudent(Academy $academy, Student $student)
     {
-        $card = StudentCard::where('academy_id', $academy->id)
-            ->where(function ($q) use ($student) {
-                $q->where('student_id', $student->id)
-                    ->orWhere('student_number', $student->student_id)
-                    ->orWhere('national_id', $student->citizen_id);
-            })
+        abort_unless((int) $student->academy_id === (int) $academy->id, 404);
+
+        $card = $this->withStudentContext(StudentCard::where('academy_id', $academy->id))
+            ->where('student_id', $student->id)
             ->first();
 
         return response()->json([
             'success' => true,
-            'student' => $card,
+            'student' => $card ? new StudentCardResource($card) : null,
         ]);
     }
 
@@ -251,28 +308,18 @@ class StudentCardController extends Controller
         $query = $academy ? $this->academyQuery($academy, $status) : StudentCard::query();
 
         if ($request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name_thai', 'like', '%'.$search.'%')
-                    ->orWhere('last_name_thai', 'like', '%'.$search.'%')
-                    ->orWhere('student_number', 'like', '%'.$search.'%')
-                    ->orWhere('national_id', 'like', '%'.$search.'%');
-            });
+            $this->applyMasterSearch($query, $request->search);
         }
 
-        if ($request->level) {
-            $query->where('class_level', $request->level);
-        }
+        $this->applyCurrentClassFilters($query, $request->level, $request->section);
 
-        if ($request->section) {
-            $query->where('class_section', $request->section);
-        }
-
-        $students = $query->orderBy('class_level')
+        $students = $this->withStudentContext($query)->orderBy('class_level')
             ->orderBy('class_section')
             ->orderBy('order_no')
             ->orderBy('first_name_thai')
             ->paginate(50);
+
+        $students->through(fn ($card) => new StudentCardResource($card));
 
         return response()->json([
             'success' => true,
@@ -284,20 +331,22 @@ class StudentCardController extends Controller
     /**
      * Get students by level and room
      */
-    public function getStudentByRoom($level, $room, $academy = null)
+    public function getStudentByRoom(Request $request, $academy = null, $level = null, $room = null)
     {
+        [$academy, $level, $room] = $this->resolveRoomRouteParameters($academy, $level, $room);
         $baseQuery = $academy ? $this->academyQuery($academy, 'active') : StudentCard::where('student_status', 'active');
 
-        $students = $baseQuery
-            ->where('class_level', $level)
-            ->where('class_section', $room)
+        $this->applyCurrentClassFilters($baseQuery, $level, $room);
+        $students = $this->withStudentContext($baseQuery)
             ->orderBy('order_no')
             ->orderBy('first_name_thai')
             ->get();
 
+        $resourceClass = ($academy && $request->user()) ? StudentCardResource::class : StudentCardPublicResource::class;
+
         return response()->json([
             'success' => true,
-            'students' => $students,
+            'students' => $resourceClass::collection($students),
             'level' => $level,
             'room' => $room,
         ]);
@@ -306,20 +355,20 @@ class StudentCardController extends Controller
     /**
      * Admin: Get students by level and room
      */
-    public function adminGetStudentByRoom($level, $room, $academy = null)
+    public function adminGetStudentByRoom($academy = null, $level = null, $room = null)
     {
+        [$academy, $level, $room] = $this->resolveRoomRouteParameters($academy, $level, $room);
         $baseQuery = $academy ? $this->academyQuery($academy, 'active') : StudentCard::where('student_status', 'active');
 
-        $students = $baseQuery
-            ->where('class_level', $level)
-            ->where('class_section', $room)
+        $this->applyCurrentClassFilters($baseQuery, $level, $room);
+        $students = $this->withStudentContext($baseQuery)
             ->orderBy('order_no')
             ->orderBy('first_name_thai')
             ->get();
 
         return response()->json([
             'success' => true,
-            'students' => $students,
+            'students' => StudentCardResource::collection($students),
             'level' => $level,
             'room' => $room,
         ]);
@@ -410,8 +459,9 @@ class StudentCardController extends Controller
     /**
      * Upload/update student photo
      */
-    public function updateImage(Request $request, StudentCard $student_card, $academy = null)
+    public function updateImage(Request $request, $academy = null, $student_card = null)
     {
+        [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
         $request->validate([
             'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
@@ -457,17 +507,18 @@ class StudentCardController extends Controller
     /**
      * Update student number/code
      */
-    public function updateStudentID(Request $request, StudentCard $student_card, $academy = null)
+    public function updateStudentID(Request $request, $academy = null, $student_card = null)
     {
+        [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
         $request->validate([
             'student_number' => 'required|string|max:255',
         ]);
 
         try {
-            $student_card->update([
-                'student_number' => $request->input('student_number'),
-            ]);
+            if ($student = $student_card->student) {
+                $student->update(['student_id' => $request->input('student_number')]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -485,8 +536,9 @@ class StudentCardController extends Controller
     /**
      * Update student Thai name
      */
-    public function updateStudentNameTh(Request $request, StudentCard $student_card, $academy = null)
+    public function updateStudentNameTh(Request $request, $academy = null, $student_card = null)
     {
+        [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
         $request->validate([
             'title_name' => 'nullable|string|max:50',
@@ -499,12 +551,13 @@ class StudentCardController extends Controller
             $firstName = $request->input('first_name_thai', $student_card->first_name_thai);
             $lastName = $request->input('last_name_thai', $student_card->last_name_thai);
 
-            $student_card->update([
-                'title_name' => $titleName,
-                'first_name_thai' => $firstName,
-                'last_name_thai' => $lastName,
-                'full_name_thai' => trim($titleName.' '.$firstName.' '.$lastName),
-            ]);
+            if ($student = $student_card->student) {
+                $student->update([
+                    'title_prefix_th' => $titleName,
+                    'first_name_th' => $firstName,
+                    'last_name_th' => $lastName,
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -522,17 +575,18 @@ class StudentCardController extends Controller
     /**
      * Update student English name
      */
-    public function updateStudentNameEn(Request $request, StudentCard $student_card, $academy = null)
+    public function updateStudentNameEn(Request $request, $academy = null, $student_card = null)
     {
+        [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
         $request->validate([
             'first_name_english' => 'nullable|string|max:255',
         ]);
 
         try {
-            $student_card->update([
-                'first_name_english' => $request->input('first_name_english'),
-            ]);
+            if ($student = $student_card->student) {
+                $student->update(['first_name_en' => $request->input('first_name_english')]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -550,8 +604,9 @@ class StudentCardController extends Controller
     /**
      * Update full student card info
      */
-    public function update(Request $request, StudentCard $student_card, $academy = null)
+    public function update(Request $request, $academy = null, $student_card = null)
     {
+        [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
         $request->validate([
             'student_number' => 'nullable|string|max:255',
@@ -568,29 +623,52 @@ class StudentCardController extends Controller
         ]);
 
         try {
-            $data = $request->only([
-                'student_number', 'title_name', 'first_name_thai', 'last_name_thai',
-                'first_name_english', 'national_id', 'birth_date', 'class_level',
-                'class_section', 'card_issue_date', 'card_expiry_date',
-            ]);
-
-            // Auto-generate full_name_thai
-            $title = $data['title_name'] ?? $student_card->title_name;
-            $first = $data['first_name_thai'] ?? $student_card->first_name_thai;
-            $last = $data['last_name_thai'] ?? $student_card->last_name_thai;
-            $data['full_name_thai'] = trim($title.' '.$first.' '.$last);
-
-            // Auto-generate birth_date_string
-            if (! empty($data['birth_date'])) {
-                $data['birth_date_string'] = $this->convertDateToThaiFormat($data['birth_date']);
+            $student = $student_card->student;
+            if (! $student) {
+                return response()->json(['success' => false, 'message' => 'Student master record not found'], 422);
             }
 
-            $student_card->update($data);
+            DB::transaction(function () use ($request, $student, $student_card) {
+                $studentUpdates = [];
+                if ($request->has('student_number')) {
+                    $studentUpdates['student_id'] = $request->input('student_number');
+                }
+                if ($request->has('title_name')) {
+                    $studentUpdates['title_prefix_th'] = $request->input('title_name');
+                }
+                if ($request->has('first_name_thai')) {
+                    $studentUpdates['first_name_th'] = $request->input('first_name_thai');
+                }
+                if ($request->has('last_name_thai')) {
+                    $studentUpdates['last_name_th'] = $request->input('last_name_thai');
+                }
+                if ($request->has('first_name_english')) {
+                    $studentUpdates['first_name_en'] = $request->input('first_name_english');
+                }
+                if ($request->has('national_id')) {
+                    $studentUpdates['citizen_id'] = $request->input('national_id');
+                }
+                if ($request->has('birth_date')) {
+                    $studentUpdates['date_of_birth'] = $request->input('birth_date');
+                }
+
+                if (! empty($studentUpdates)) {
+                    $student->update($studentUpdates);
+                }
+
+                $cardUpdates = $request->only(['card_issue_date', 'card_expiry_date']);
+                if (! empty($cardUpdates)) {
+                    $student_card->update($cardUpdates);
+                }
+            });
+
+            $student_card = $student_card->fresh();
+            $student_card->load('student.classroomEnrollments.classroom.academicYear');
 
             return response()->json([
                 'success' => true,
                 'message' => 'บันทึกข้อมูลสำเร็จ',
-                'student' => $student_card->fresh(),
+                'student' => new StudentCardResource($student_card),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -626,6 +704,25 @@ class StudentCardController extends Controller
                 'first_name_english', 'national_id', 'birth_date', 'class_level', 'class_section',
             ]);
 
+            $student = Student::where('academy_id', $academyId)
+                ->where('student_id', $request->input('student_number'))
+                ->first();
+
+            if (! $student) {
+                $student = Student::create([
+                    'academy_id' => $academyId,
+                    'student_id' => $request->input('student_number'),
+                    'citizen_id' => $request->input('national_id'),
+                    'title_prefix_th' => $request->input('title_name'),
+                    'first_name_th' => $request->input('first_name_thai'),
+                    'last_name_th' => $request->input('last_name_thai'),
+                    'first_name_en' => $request->input('first_name_english'),
+                    'date_of_birth' => $request->input('birth_date'),
+                    'status' => 'active',
+                ]);
+            }
+
+            $data['student_id'] = $student->id;
             $data['academy_id'] = $academyId;
             $data['full_name_thai'] = trim(
                 ($data['title_name'] ?? '').' '.$data['first_name_thai'].' '.$data['last_name_thai']
@@ -641,7 +738,7 @@ class StudentCardController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'สร้างบัตรนักเรียนสำเร็จ',
-                'student' => $studentCard,
+                'student' => new StudentCardResource($studentCard),
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -670,8 +767,9 @@ class StudentCardController extends Controller
     /**
      * Delete student photo
      */
-    public function destroyPhoto(StudentCard $student_card, $academy = null)
+    public function destroyPhoto(Request $request, $academy = null, $student_card = null)
     {
+        [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
         try {
             $student = $student_card->student;

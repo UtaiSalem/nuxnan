@@ -14,11 +14,16 @@ class StudentCardSyncService
 {
     private function numericGradeLevel(?string $grade): int
     {
-        if (! preg_match('/(\d+)\s*$/u', trim((string) $grade), $matches)) {
-            throw new \InvalidArgumentException("Unsupported grade level: {$grade}");
+        $grade = trim((string) $grade);
+        if (preg_match('/^[อปม]\.?\s*(\d+)/ui', $grade, $matches)) {
+            return (int) $matches[1];
         }
 
-        return (int) $matches[1];
+        if (preg_match('/(\d+)/u', $grade, $matches)) {
+            return (int) $matches[1];
+        }
+
+        throw new \InvalidArgumentException("Unsupported grade level: {$grade}");
     }
 
     /**
@@ -48,6 +53,7 @@ class StudentCardSyncService
             ->where('students.academy_id', $academy->id)
             ->where('classroom_students.academic_year_id', $year->id)
             ->where('classroom_students.status', 'active')
+            ->where('classrooms.grade_level', 'like', 'ม.%')
             ->get();
 
         // 2. Get all active cards
@@ -83,9 +89,8 @@ class StudentCardSyncService
                 // Check if needs update
                 if ((int) $card->class_level !== $classLevelNumeric ||
                     (int) $card->class_section !== $classSectionNumeric ||
-                    $card->first_name_thai !== $enrollment->first_name_th ||
-                    $card->last_name_thai !== $enrollment->last_name_th ||
-                    $card->profile_image !== $enrollment->profile_image) {
+                    (int) $card->academic_year_id !== (int) $year->id ||
+                    (int) $card->order_no !== (int) $enrollment->student_number) {
 
                     $report['update'][] = [
                         'student_id' => $studentId,
@@ -190,6 +195,7 @@ class StudentCardSyncService
                     StudentCard::create([
                         'student_id' => $enrollment->s_id,
                         'academy_id' => $academy->id,
+                        'academic_year_id' => $year->id,
                         'student_number' => $enrollment->identifier,
                         'full_name_thai' => $fullName,
                         'title_name' => $title,
@@ -219,21 +225,14 @@ class StudentCardSyncService
                 if ($enrollment) {
                     $classLevelNumeric = $this->numericGradeLevel($enrollment->grade_level);
                     $classSectionNumeric = (int) $enrollment->section;
-                    $title = $enrollment->title_prefix_th ?? '';
-                    $fullName = trim("{$title} {$enrollment->first_name_th} {$enrollment->last_name_th}");
-
                     StudentCard::where('student_id', $item['student_id'])
                         ->where('academy_id', $academy->id)
                         ->where('student_status', 'active')
                         ->update([
                             'class_level' => $classLevelNumeric,
                             'class_section' => $classSectionNumeric,
+                            'academic_year_id' => $year->id,
                             'level_and_room' => "{$classLevelNumeric}/{$classSectionNumeric}",
-                            'full_name_thai' => $fullName,
-                            'title_name' => $title,
-                            'first_name_thai' => $enrollment->first_name_th,
-                            'last_name_thai' => $enrollment->last_name_th,
-                            'profile_image' => $enrollment->profile_image,
                             'order_no' => $enrollment->student_number,
                         ]);
                     $result['updated']++;
