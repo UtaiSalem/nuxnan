@@ -6,6 +6,7 @@ use App\Events\Enrollment\StudentDropped;
 use App\Events\Enrollment\StudentEnrolled;
 use App\Events\Enrollment\StudentGraduated;
 use App\Events\Enrollment\StudentPromoted;
+use App\Events\Enrollment\StudentRemovedFromClassroom;
 use App\Events\Enrollment\StudentRepeated;
 use App\Events\Enrollment\StudentTransferred;
 use App\Models\Classroom;
@@ -327,6 +328,54 @@ class StudentEnrollmentService
             }
 
             event(new StudentDropped($student, $closed, $reason, $batchId));
+
+            return $closed;
+        });
+    }
+
+    /**
+     * นำนักเรียนออกจากห้อง โดยยังคงสถานะนักเรียนเป็น active
+     *
+     * ต่างจาก dropStudent(): นักเรียนไม่พ้นสภาพ แค่ไม่สังกัดห้องใดๆ
+     */
+    public function removeFromClassroom(
+        Student $student,
+        Classroom $classroom,
+        string $reason = 'นำออกจากห้อง',
+        ?string $batchId = null,
+        ?int $userId = null
+    ): ClassroomStudent {
+        return DB::transaction(function () use ($student, $classroom, $reason, $batchId, $userId) {
+            $closed = $this->closeActiveEnrollment(
+                $student,
+                $classroom,
+                ClassroomStudent::STATUS_REMOVED,
+                $reason,
+                today(),
+                $batchId,
+                $userId
+            );
+
+            if (! $closed) {
+                throw new \InvalidArgumentException('ไม่พบการลงทะเบียนที่ active ของนักเรียนในห้องนี้');
+            }
+
+            // เคลียร์ห้องปัจจุบัน แต่คงสถานะนักเรียนเป็น active
+            $student->update([
+                'class_level' => null,
+                'class_section' => null,
+            ]);
+
+            // เคลียร์ห้องใน academic info snapshot ปัจจุบัน (ยังคง studying)
+            StudentAcademicInfo::where('student_id', $student->id)
+                ->where('is_current', true)
+                ->update([
+                    'classroom_id' => null,
+                    'current_class' => null,
+                    'classroom_full' => null,
+                ]);
+
+            event(new StudentRemovedFromClassroom($student, $closed, $reason, $batchId));
 
             return $closed;
         });

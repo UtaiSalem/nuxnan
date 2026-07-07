@@ -40,7 +40,7 @@ class ClassroomEnrollmentSchemaTest extends TestCase
 
     public function test_status_constants_cover_all_lifecycle_states(): void
     {
-        $expected = ['active', 'transferred', 'promoted', 'graduated', 'dropped', 'repeating', 'superseded'];
+        $expected = ['active', 'transferred', 'promoted', 'graduated', 'dropped', 'repeating', 'superseded', 'removed'];
         $this->assertEqualsCanonicalizing($expected, ClassroomStudent::$statuses);
     }
 

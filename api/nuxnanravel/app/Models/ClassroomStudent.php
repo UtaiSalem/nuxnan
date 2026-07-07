@@ -52,6 +52,8 @@ class ClassroomStudent extends Model
 
     const STATUS_SUPERSEDED = 'superseded';        // ปิดโดย repair (active row ซ้อน)
 
+    const STATUS_REMOVED = 'removed';              // นำออกจากห้อง แต่ยังเป็นนักเรียนอยู่
+
     public static array $statuses = [
         self::STATUS_ACTIVE,
         self::STATUS_TRANSFERRED,
@@ -60,6 +62,7 @@ class ClassroomStudent extends Model
         self::STATUS_DROPPED,
         self::STATUS_REPEATING,
         self::STATUS_SUPERSEDED,
+        self::STATUS_REMOVED,
     ];
 
     // Relationships
@@ -120,6 +123,7 @@ class ClassroomStudent extends Model
             self::STATUS_DROPPED => 'พ้นสภาพ',
             self::STATUS_REPEATING => 'ซ้ำชั้น',
             self::STATUS_SUPERSEDED => 'ปิดโดยระบบ',
+            self::STATUS_REMOVED => 'นำออกจากห้อง',
             default => 'ไม่ระบุ'
         };
     }

@@ -6,8 +6,13 @@ import Swal from 'sweetalert2'
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
 
 const props = defineProps({
-    studentInfo: { type: Object, required: true }
+    studentInfo: { type: Object, required: true },
+    canManage: { type: Boolean, default: false }
 })
+
+const emit = defineEmits(['transfer', 'remove'])
+
+const isActionMenuOpen = ref(false)
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
@@ -25,6 +30,7 @@ const editForm = reactive({
     last_name_thai: props.studentInfo.last_name_thai || '',
     full_name_thai: props.studentInfo.full_name_thai || [props.studentInfo.title_name, props.studentInfo.first_name_thai, props.studentInfo.last_name_thai].filter(Boolean).join(' '),
     first_name_english: props.studentInfo.first_name_english || '',
+    last_name_english: props.studentInfo.last_name_english || '',
     level: props.studentInfo.class_level < 4 ? 'มัธยมศึกษาตอนต้น' : 'มัธยมศึกษาตอนปลาย',
     birth_date: props.studentInfo.birth_date,
     national_id: props.studentInfo.national_id,
@@ -109,6 +115,7 @@ const handleSubmit = async () => {
                 first_name_thai: editForm.first_name_thai,
                 last_name_thai: editForm.last_name_thai,
                 first_name_english: editForm.first_name_english,
+                last_name_english: editForm.last_name_english,
                 birth_date: editForm.birth_date,
             },
         })
@@ -173,6 +180,25 @@ const studentPrefixName = (prefix) => {
                 <div @click="isEditModalOpen = true" class="absolute z-50 top-0 right-2 text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
                     <Icon icon="dashicons:edit" width="20" height="20" />
                 </div>
+                <div v-if="canManage" class="absolute z-50 top-0 right-12">
+                    <div @click="isActionMenuOpen = !isActionMenuOpen"
+                        class="text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
+                        <Icon icon="heroicons:ellipsis-vertical" width="20" height="20" />
+                    </div>
+                    <div v-if="isActionMenuOpen"
+                        class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                        <button @click="isActionMenuOpen = false; emit('transfer', studentInfo)"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 text-left">
+                            <Icon icon="heroicons:arrow-right-circle" class="w-4 h-4 text-blue-600" />
+                            ย้ายห้อง
+                        </button>
+                        <button @click="isActionMenuOpen = false; emit('remove', studentInfo)"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 text-left">
+                            <Icon icon="heroicons:user-minus" class="w-4 h-4" />
+                            นำออกจากห้อง
+                        </button>
+                    </div>
+                </div>
                 <div class="absolute z-10 top-6 md:top-[52px] right-2 text-white bg-blue-700 px-2 py-1 text-end rounded-md">
                     <div class="text-[1.8vw] sm:text-[14px] font-semibold">บัตรประจำตัวนักเรียน</div>
                     <div class="text-[1.4vw] sm:text-[10px] opacity-90">STUDENT CARD</div>
@@ -212,7 +238,7 @@ const studentPrefixName = (prefix) => {
                         <span class="w-[25%]"></span>
                         <span class="mx-[1%] text-transparent">:</span>
                         <span class="flex-1 text-[1.8vw] sm:text-sm font-normal text-gray-800">
-                            {{ editForm.first_name_english ? studentPrefixName(editForm.title_name) : '' }} {{ editForm.first_name_english }}
+                            {{ editForm.first_name_english ? studentPrefixName(editForm.title_name) : '' }} {{ [editForm.first_name_english, editForm.last_name_english].filter(Boolean).join(' ') }}
                         </span>
                     </div>
                     <div class="flex items-baseline mt-0.5">
@@ -312,8 +338,12 @@ const studentPrefixName = (prefix) => {
                                 <input type="text" v-model="editForm.last_name_thai" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล (อังกฤษ)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ (อังกฤษ)</label>
                                 <input type="text" v-model="editForm.first_name_english" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล (อังกฤษ)</label>
+                                <input type="text" v-model="editForm.last_name_english" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">เลขประจำตัวประชาชน</label>

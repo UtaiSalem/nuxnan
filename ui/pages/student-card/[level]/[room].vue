@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import Swal from 'sweetalert2'
 import StudentCardItem from '~/components/student-card/StudentCardItem.vue'
+import AddStudentModal from '~/components/student-card/AddStudentModal.vue'
+import TransferStudentModal from '~/components/student-card/TransferStudentModal.vue'
+import RemoveStudentModal from '~/components/student-card/RemoveStudentModal.vue'
 
 definePageMeta({ layout: false })
 
@@ -16,6 +20,70 @@ useHead({ title: computed(() => `บัตรนักเรียน ม.${leve
 const students = ref<any[]>([])
 const isLoading = ref(true)
 const searchTerm = ref('')
+
+const {
+    manageContext,
+    fetchManageContext,
+    searchAvailableStudents,
+    addStudent,
+    transferStudent,
+    removeStudent,
+} = useClassroomManagement(level, room)
+
+const showAddModal = ref(false)
+const showTransferModal = ref(false)
+const showRemoveModal = ref(false)
+const selectedStudent = ref<any | null>(null)
+
+const selectedStudentName = computed(() => selectedStudent.value?.full_name_thai
+    || [selectedStudent.value?.first_name_thai, selectedStudent.value?.last_name_thai].filter(Boolean).join(' ')
+    || '')
+
+const openTransferModal = (student: any) => {
+    selectedStudent.value = student
+    showTransferModal.value = true
+}
+
+const openRemoveModal = (student: any) => {
+    selectedStudent.value = student
+    showRemoveModal.value = true
+}
+
+const handleAdded = async () => {
+    await fetchStudents()
+    await fetchManageContext()
+    Swal.fire({ icon: 'success', title: 'เพิ่มนักเรียนเข้าห้องเรียบร้อย', timer: 1600, showConfirmButton: false })
+}
+
+const handleTransferConfirm = async (toClassroomId: number, reason: string | null) => {
+    const student = selectedStudent.value
+    if (!student) return
+    try {
+        const response = await transferStudent(student.student_id, toClassroomId, reason)
+        showTransferModal.value = false
+        students.value = students.value.filter(s => s.id !== student.id)
+        await fetchManageContext()
+        Swal.fire({ icon: 'success', title: response.message || 'ย้ายห้องเรียบร้อย', timer: 1800, showConfirmButton: false })
+    } catch (error: any) {
+        showTransferModal.value = false
+        Swal.fire({ icon: 'error', title: 'ย้ายห้องไม่สำเร็จ', text: error?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่' })
+    }
+}
+
+const handleRemoveConfirm = async (reason: string | null) => {
+    const student = selectedStudent.value
+    if (!student) return
+    try {
+        const response = await removeStudent(student.student_id, reason)
+        showRemoveModal.value = false
+        students.value = students.value.filter(s => s.id !== student.id)
+        await fetchManageContext()
+        Swal.fire({ icon: 'success', title: response.message || 'นำออกจากห้องเรียบร้อย', timer: 1800, showConfirmButton: false })
+    } catch (error: any) {
+        showRemoveModal.value = false
+        Swal.fire({ icon: 'error', title: 'นำออกจากห้องไม่สำเร็จ', text: error?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่' })
+    }
+}
 
 const filteredStudents = computed(() => {
     if (!searchTerm.value) return students.value
@@ -39,7 +107,10 @@ const fetchStudents = async () => {
     }
 }
 
-onMounted(fetchStudents)
+onMounted(() => {
+    fetchStudents()
+    fetchManageContext()
+})
 </script>
 
 <template>
@@ -82,6 +153,29 @@ onMounted(fetchStudents)
                 </div>
             </div>
 
+            <!-- Management toolbar (temporary, gated by backend config) -->
+            <div v-if="manageContext?.can_manage" class="bg-amber-50 border border-amber-300 rounded-2xl p-4 mb-6">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 text-amber-800">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        <div>
+                            <div class="font-semibold text-sm">ระบบจัดการชั่วคราว — ผู้ที่เข้าถึงหน้านี้สามารถแก้ไขข้อมูลห้องเรียนได้</div>
+                            <div class="text-xs text-amber-700">{{ manageContext.academy_name }} · ปีการศึกษา {{ manageContext.academic_year_name }} · ห้อง {{ manageContext.classroom_name }}</div>
+                        </div>
+                    </div>
+                    <button @click="showAddModal = true"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 flex items-center gap-2 text-sm font-medium">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        เพิ่มนักเรียน
+                    </button>
+                </div>
+            </div>
+
             <!-- Loading -->
             <div v-if="isLoading" class="flex items-center justify-center py-20">
                 <div class="text-center">
@@ -106,8 +200,36 @@ onMounted(fetchStudents)
                     v-for="student in filteredStudents"
                     :key="student.id"
                     :studentInfo="student"
+                    :canManage="!!manageContext?.can_manage"
+                    @transfer="openTransferModal"
+                    @remove="openRemoveModal"
                 />
             </div>
         </div>
+
+        <!-- Management modals -->
+        <AddStudentModal
+            :open="showAddModal"
+            :classroomName="manageContext?.classroom_name || `ม.${level}/${room}`"
+            :searchStudents="searchAvailableStudents"
+            :addStudent="addStudent"
+            @close="showAddModal = false"
+            @added="handleAdded"
+        />
+        <TransferStudentModal
+            :open="showTransferModal"
+            :studentName="selectedStudentName"
+            :currentClassroomName="manageContext?.classroom_name || `ม.${level}/${room}`"
+            :classrooms="manageContext?.available_classrooms || []"
+            @close="showTransferModal = false"
+            @confirm="handleTransferConfirm"
+        />
+        <RemoveStudentModal
+            :open="showRemoveModal"
+            :studentName="selectedStudentName"
+            :classroomName="manageContext?.classroom_name || `ม.${level}/${room}`"
+            @close="showRemoveModal = false"
+            @confirm="handleRemoveConfirm"
+        />
     </div>
 </template>
