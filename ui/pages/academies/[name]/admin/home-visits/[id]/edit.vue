@@ -61,8 +61,9 @@ onMounted(async () => {
 })
 
 const fetchVisit = async () => {
+  if (!academyId.value) return
   try {
-    const response: any = await api.get(`/api/home-visit/admin/visits/${visitId.value}`)
+    const response: any = await api.get(`/api/academies/${academyId.value}/home-visits/admin/visits/${visitId.value}`)
     visit.value = response.visit || response.data
     
     // Populate form
@@ -74,7 +75,7 @@ const fetchVisit = async () => {
       address: visit.value.address || '',
       observations: visit.value.observations || '',
       recommendations: visit.value.recommendations || '',
-      status: visit.value.status || 'pending'
+      status: visit.value.visit_status || 'pending'
     }
   } catch (err) {
     console.error('Failed to fetch visit:', err)
@@ -82,8 +83,9 @@ const fetchVisit = async () => {
 }
 
 const fetchZones = async () => {
+  if (!academyId.value) return
   try {
-    const response: any = await api.get('/api/home-visit/zones')
+    const response: any = await api.get(`/api/academies/${academyId.value}/home-visits/zones`)
     zones.value = response.zones || response.data || []
   } catch (err) {
     console.error('Failed to fetch zones:', err)
@@ -107,7 +109,7 @@ const saveVisit = async () => {
   errors.value = {}
   
   try {
-    await api.put(`/api/home-visit/admin/visits/${visitId.value}`, form.value)
+    await api.put(`/api/academies/${academyId.value}/home-visits/admin/visits/${visitId.value}`, form.value)
     navigateTo(`/academies/${academyName.value}/admin/home-visits/${visitId.value}`)
   } catch (err: any) {
     if (err.errors) {
@@ -228,7 +230,7 @@ const getStatusBadge = (status: string) => {
               >
                 <option value="">เลือกโซน</option>
                 <option v-for="zone in zones" :key="zone.id" :value="zone.id">
-                  {{ zone.name }}
+                  {{ zone.zone_name }}
                 </option>
               </select>
             </div>

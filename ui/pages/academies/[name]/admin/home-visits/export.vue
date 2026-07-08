@@ -22,14 +22,11 @@ const exportSuccess = ref(false)
 
 // Export options
 const exportOptions = ref({
-  format: 'xlsx',
+  format: 'csv',
   zone_id: '',
   status: '',
   date_from: '',
-  date_to: '',
-  include_photos: false,
-  include_student_info: true,
-  include_teacher_info: true
+  date_to: ''
 })
 
 // Academy Role
@@ -59,8 +56,9 @@ onMounted(async () => {
 })
 
 const fetchZones = async () => {
+  if (!academyId.value) return
   try {
-    const response: any = await api.get('/api/home-visit/zones')
+    const response: any = await api.get(`/api/academies/${academyId.value}/home-visits/zones`)
     zones.value = response.zones || response.data || []
   } catch (err) {
     console.error('Failed to fetch zones:', err)
@@ -74,8 +72,6 @@ const doExport = async () => {
   try {
     // Build query params
     const params = new URLSearchParams()
-    params.append('format', exportOptions.value.format)
-    
     if (exportOptions.value.zone_id) {
       params.append('zone_id', exportOptions.value.zone_id)
     }
@@ -88,18 +84,17 @@ const doExport = async () => {
     if (exportOptions.value.date_to) {
       params.append('date_to', exportOptions.value.date_to)
     }
-    if (exportOptions.value.include_photos) {
-      params.append('include_photos', '1')
-    }
-    if (exportOptions.value.include_student_info) {
-      params.append('include_student_info', '1')
-    }
-    if (exportOptions.value.include_teacher_info) {
-      params.append('include_teacher_info', '1')
-    }
-    
-    // Download file
-    window.open(`/api/home-visit/admin/export?${params.toString()}`, '_blank')
+    const { blob, filename } = await api.getBlob(
+      `/api/academies/${academyId.value}/home-visits/admin/export/visits?${params.toString()}`
+    )
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename || `home-visits-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
     exportSuccess.value = true
     
     setTimeout(() => {
@@ -113,9 +108,7 @@ const doExport = async () => {
 }
 
 const formatOptions = [
-  { value: 'xlsx', label: 'Excel (.xlsx)', icon: 'fluent:document-table-24-regular' },
-  { value: 'csv', label: 'CSV (.csv)', icon: 'fluent:document-text-24-regular' },
-  { value: 'pdf', label: 'PDF (.pdf)', icon: 'fluent:document-pdf-24-regular' }
+  { value: 'csv', label: 'CSV (.csv)', icon: 'fluent:document-text-24-regular' }
 ]
 
 const statusOptions = [
@@ -155,7 +148,7 @@ const statusOptions = [
           <!-- Format Selection -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">รูปแบบไฟล์</label>
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 gap-3">
               <label
                 v-for="format in formatOptions"
                 :key="format.value"
@@ -188,7 +181,7 @@ const statusOptions = [
               >
                 <option value="">ทุกโซน</option>
                 <option v-for="zone in zones" :key="zone.id" :value="zone.id">
-                  {{ zone.name }}
+                  {{ zone.zone_name }}
                 </option>
               </select>
             </div>
@@ -224,41 +217,6 @@ const statusOptions = [
             </div>
           </div>
 
-          <!-- Include Options -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">ข้อมูลที่ต้องการ</label>
-            <div class="space-y-3">
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  v-model="exportOptions.include_student_info"
-                  class="w-4 h-4 text-primary-600 rounded"
-                />
-                <span class="text-gray-900 dark:text-white">ข้อมูลนักเรียน (ชื่อ, ชั้น, เลขที่)</span>
-              </label>
-              
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  v-model="exportOptions.include_teacher_info"
-                  class="w-4 h-4 text-primary-600 rounded"
-                />
-                <span class="text-gray-900 dark:text-white">ข้อมูลครูผู้เยี่ยม</span>
-              </label>
-              
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  v-model="exportOptions.include_photos"
-                  class="w-4 h-4 text-primary-600 rounded"
-                />
-                <div>
-                  <span class="text-gray-900 dark:text-white">รวมรูปภาพ</span>
-                  <p class="text-sm text-gray-500">(อาจใช้เวลาดาวน์โหลดนานกว่าปกติ)</p>
-                </div>
-              </label>
-            </div>
-          </div>
         </div>
 
         <!-- Actions -->

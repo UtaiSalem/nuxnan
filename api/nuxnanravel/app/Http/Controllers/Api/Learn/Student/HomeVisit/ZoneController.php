@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
 
 use App\Http\Controllers\Controller;
+use App\Models\Academy;
 use App\Models\HomeVisitZone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -12,9 +13,15 @@ class ZoneController extends Controller
     /**
      * Get all zones (for dropdown)
      */
-    public function index(Request $request)
+    public function index(Request $request, ?Academy $academy = null)
     {
-        $query = HomeVisitZone::query();
+        $query = HomeVisitZone::query()->withCount('homeVisits');
+
+        if ($academy) {
+            $query->where('academy_id', $academy->id);
+        } else {
+            $query->whereNull('academy_id');
+        }
 
         // Filter active only if requested
         if ($request->active_only) {
@@ -32,13 +39,9 @@ class ZoneController extends Controller
     /**
      * Get all zones with pagination (for admin management)
      */
-    public function list(Request $request)
+    public function list(Request $request, Academy $academy)
     {
-        if (! session('homevisit_admin_authenticated')) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $query = HomeVisitZone::withCount('homeVisits');
+        $query = HomeVisitZone::where('academy_id', $academy->id)->withCount('homeVisits');
 
         // Search
         if ($request->search) {
@@ -65,13 +68,9 @@ class ZoneController extends Controller
     /**
      * Show specific zone
      */
-    public function show($id)
+    public function show(Academy $academy, $id)
     {
-        if (! session('homevisit_admin_authenticated')) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $zone = HomeVisitZone::withCount('homeVisits')->findOrFail($id);
+        $zone = HomeVisitZone::where('academy_id', $academy->id)->withCount('homeVisits')->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -82,12 +81,8 @@ class ZoneController extends Controller
     /**
      * Create new zone (Admin only)
      */
-    public function store(Request $request)
+    public function store(Request $request, Academy $academy)
     {
-        if (! session('homevisit_admin_authenticated')) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
         $validator = Validator::make($request->all(), [
             'zone_name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -106,7 +101,8 @@ class ZoneController extends Controller
         $data = $validator->validated();
 
         // Generate zone_code from zone_name
-        $data['zone_code'] = $this->generateZoneCode($data['zone_name']);
+        $data['academy_id'] = $academy->id;
+        $data['zone_code'] = $this->generateZoneCode($data['zone_name'], $academy);
 
         $zone = HomeVisitZone::create($data);
 
@@ -120,13 +116,9 @@ class ZoneController extends Controller
     /**
      * Update zone (Admin only)
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Academy $academy, $id)
     {
-        if (! session('homevisit_admin_authenticated')) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $zone = HomeVisitZone::findOrFail($id);
+        $zone = HomeVisitZone::where('academy_id', $academy->id)->findOrFail($id);
 
         $validator = Validator::make($request->all(), [
             'zone_name' => 'required|string|max:255',
@@ -147,7 +139,7 @@ class ZoneController extends Controller
 
         // Update zone_code if zone_name changed
         if ($data['zone_name'] !== $zone->zone_name) {
-            $data['zone_code'] = $this->generateZoneCode($data['zone_name']);
+            $data['zone_code'] = $this->generateZoneCode($data['zone_name'], $academy, $zone->id);
         }
 
         $zone->update($data);
@@ -162,13 +154,9 @@ class ZoneController extends Controller
     /**
      * Delete zone (Admin only)
      */
-    public function destroy($id)
+    public function destroy(Academy $academy, $id)
     {
-        if (! session('homevisit_admin_authenticated')) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $zone = HomeVisitZone::withCount('homeVisits')->findOrFail($id);
+        $zone = HomeVisitZone::where('academy_id', $academy->id)->withCount('homeVisits')->findOrFail($id);
 
         // Check if zone has home visits
         if ($zone->home_visits_count > 0) {
@@ -189,13 +177,9 @@ class ZoneController extends Controller
     /**
      * Toggle zone active status (Admin only)
      */
-    public function toggleStatus($id)
+    public function toggleStatus(Academy $academy, $id)
     {
-        if (! session('homevisit_admin_authenticated')) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $zone = HomeVisitZone::findOrFail($id);
+        $zone = HomeVisitZone::where('academy_id', $academy->id)->findOrFail($id);
         $zone->is_active = ! $zone->is_active;
         $zone->save();
 
@@ -209,12 +193,8 @@ class ZoneController extends Controller
     /**
      * Reorder zones (Admin only)
      */
-    public function reorder(Request $request)
+    public function reorder(Request $request, Academy $academy)
     {
-        if (! session('homevisit_admin_authenticated')) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
         $validator = Validator::make($request->all(), [
             'zones' => 'required|array',
             'zones.*.id' => 'required|exists:home_visit_zones,id',
@@ -229,7 +209,8 @@ class ZoneController extends Controller
         }
 
         foreach ($request->zones as $zoneData) {
-            HomeVisitZone::where('id', $zoneData['id'])
+            HomeVisitZone::where('academy_id', $academy->id)
+                ->where('id', $zoneData['id'])
                 ->update(['display_order' => $zoneData['display_order']]);
         }
 
@@ -242,10 +223,10 @@ class ZoneController extends Controller
     /**
      * Generate unique zone code from zone name
      */
-    private function generateZoneCode($zoneName)
+    private function generateZoneCode($zoneName, Academy $academy, ?int $ignoreId = null)
     {
         // Remove special characters and convert to uppercase
-        $baseCode = strtoupper(preg_replace('/[^a-zA-Z0-9\s]/', '', $zoneName));
+        $baseCode = 'A'.$academy->id.'_'.strtoupper(preg_replace('/[^a-zA-Z0-9\s]/', '', $zoneName));
         $baseCode = preg_replace('/\s+/', '_', trim($baseCode));
 
         // Limit to 50 characters
@@ -255,7 +236,9 @@ class ZoneController extends Controller
         $code = $baseCode;
         $counter = 1;
 
-        while (HomeVisitZone::where('zone_code', $code)->exists()) {
+        while (HomeVisitZone::where('id', '!=', $ignoreId)
+            ->where('zone_code', $code)
+            ->exists()) {
             $code = $baseCode.'_'.$counter;
             $counter++;
         }

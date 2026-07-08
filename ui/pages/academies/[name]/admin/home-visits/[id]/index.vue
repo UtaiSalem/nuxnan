@@ -48,8 +48,9 @@ onMounted(async () => {
 })
 
 const fetchVisit = async () => {
+  if (!academyId.value) return
   try {
-    const response: any = await api.get(`/api/home-visit/admin/visits/${visitId.value}`)
+    const response: any = await api.get(`/api/academies/${academyId.value}/home-visits/admin/visits/${visitId.value}`)
     visit.value = response.visit || response.data
   } catch (err) {
     console.error('Failed to fetch visit:', err)
@@ -57,9 +58,10 @@ const fetchVisit = async () => {
 }
 
 const deleteVisit = async () => {
+  if (!academyId.value) return
   isDeleting.value = true
   try {
-    await api.delete(`/api/home-visit/admin/visits/${visitId.value}`)
+    await api.delete(`/api/academies/${academyId.value}/home-visits/admin/visits/${visitId.value}`)
     navigateTo(`/academies/${academyName}/admin/home-visits`)
   } catch (err) {
     console.error('Failed to delete:', err)

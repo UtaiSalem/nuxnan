@@ -10,6 +10,7 @@ class HomeVisitZone extends Model
     use HasFactory;
 
     protected $fillable = [
+        'academy_id',
         'zone_name',
         'description',
         'zone_code',

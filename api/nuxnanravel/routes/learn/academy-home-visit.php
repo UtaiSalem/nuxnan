@@ -51,15 +51,17 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
         // ================================================
         // Zone Management
         // ================================================
-        Route::prefix('zones')->name('zones.')->group(function () {
+        Route::middleware('academy.permission:home_visits.view')->prefix('zones')->name('zones.')->group(function () {
             Route::get('/', [ZoneController::class, 'index'])->name('index');
             Route::get('/list', [ZoneController::class, 'list'])->name('list');
-            Route::post('/', [ZoneController::class, 'store'])->name('store');
             Route::get('/{id}', [ZoneController::class, 'show'])->name('show');
-            Route::put('/{id}', [ZoneController::class, 'update'])->name('update');
-            Route::delete('/{id}', [ZoneController::class, 'destroy'])->name('destroy');
-            Route::put('/{id}/toggle-status', [ZoneController::class, 'toggleStatus'])->name('toggle-status');
-            Route::post('/reorder', [ZoneController::class, 'reorder'])->name('reorder');
+            Route::middleware('academy.permission:home_visits.manage')->group(function () {
+                Route::post('/', [ZoneController::class, 'store'])->name('store');
+                Route::put('/{id}', [ZoneController::class, 'update'])->name('update');
+                Route::delete('/{id}', [ZoneController::class, 'destroy'])->name('destroy');
+                Route::put('/{id}/toggle-status', [ZoneController::class, 'toggleStatus'])->name('toggle-status');
+                Route::post('/reorder', [ZoneController::class, 'reorder'])->name('reorder');
+            });
         });
 
         // ================================================
@@ -165,15 +167,20 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
         // ================================================
         // Admin Routes
         // ================================================
-        Route::prefix('admin')->name('admin.')->group(function () {
+        Route::middleware('academy.permission:home_visits.view')->prefix('admin')->name('admin.')->group(function () {
             Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
             Route::get('/dashboard/mock', [AdminController::class, 'dashboardMock'])->name('dashboard.mock');
             Route::get('/students', [AdminController::class, 'students'])->name('students');
             Route::get('/students/{id}', [AdminController::class, 'showStudent'])->name('students.show');
-            Route::put('/students/{id}', [AdminController::class, 'updateStudent'])->name('students.update');
+            Route::middleware('academy.permission:home_visits.manage')->put('/students/{id}', [AdminController::class, 'updateStudent'])->name('students.update');
             Route::get('/visits', [AdminController::class, 'visits'])->name('visits');
+            Route::middleware('academy.permission:home_visits.manage')->post('/visits', [AdminController::class, 'storeVisit'])->name('visits.store');
             Route::get('/visits/{id}', [AdminController::class, 'showVisit'])->name('visits.show');
-            Route::put('/visits/{id}/status', [AdminController::class, 'updateVisitStatus'])->name('visits.update.status');
+            Route::middleware('academy.permission:home_visits.manage')->group(function () {
+                Route::put('/visits/{id}', [AdminController::class, 'updateVisit'])->name('visits.update');
+                Route::delete('/visits/{id}', [AdminController::class, 'destroyVisit'])->name('visits.destroy');
+                Route::put('/visits/{id}/status', [AdminController::class, 'updateVisitStatus'])->name('visits.update.status');
+            });
             Route::get('/export/visits', [AdminController::class, 'exportVisits'])->name('export.visits');
             Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
 

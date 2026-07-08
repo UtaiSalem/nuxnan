@@ -65,8 +65,9 @@ onMounted(async () => {
 })
 
 const fetchZones = async () => {
+  if (!academyId.value) return
   try {
-    const response: any = await api.get('/api/home-visit/zones')
+    const response: any = await api.get(`/api/academies/${academyId.value}/home-visits/zones`)
     zones.value = response.zones || response.data || []
   } catch (err) {
     console.error('Failed to fetch zones:', err)
@@ -74,9 +75,10 @@ const fetchZones = async () => {
 }
 
 const fetchStudents = async () => {
+  if (!academyId.value) return
   try {
-    const response: any = await api.get('/api/home-visit/students')
-    students.value = response.students || response.data || []
+    const response: any = await api.get(`/api/academies/${academyId.value}/home-visits/admin/students?per_page=100`)
+    students.value = response.students?.data || response.students || []
   } catch (err) {
     console.error('Failed to fetch students:', err)
   }
@@ -87,9 +89,9 @@ const filteredStudents = computed(() => {
   const search = studentSearch.value.toLowerCase()
   return students.value.filter(s => 
     s.full_name?.toLowerCase().includes(search) ||
-    s.first_name_thai?.toLowerCase().includes(search) ||
-    s.last_name_thai?.toLowerCase().includes(search) ||
-    s.student_number?.includes(search)
+    s.first_name_th?.toLowerCase().includes(search) ||
+    s.last_name_th?.toLowerCase().includes(search) ||
+    s.student_id?.includes(search)
   ).slice(0, 20)
 })
 
@@ -136,7 +138,7 @@ const saveVisit = async () => {
   errors.value = {}
   
   try {
-    await api.post('/api/home-visit/admin/visits', form.value)
+    await api.post(`/api/academies/${academyId.value}/home-visits/admin/visits`, form.value)
     navigateTo(`/academies/${academyName.value}/admin/home-visits`)
   } catch (err: any) {
     if (err.errors) {
@@ -217,10 +219,10 @@ const purposes = [
                 <img :src="student.avatar || '/images/default-avatar.png'" class="w-10 h-10 rounded-full object-cover" />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium text-gray-900 dark:text-white truncate">
-                    {{ student.full_name || `${student.first_name_thai} ${student.last_name_thai}` }}
+                    {{ student.full_name || `${student.first_name_th} ${student.last_name_th}` }}
                   </p>
                   <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ student.student_number }} • ม.{{ student.class_level }}/{{ student.class_section }}
+                    {{ student.student_id }} • ม.{{ student.class_level }}/{{ student.class_section }}
                   </p>
                 </div>
               </button>
@@ -234,10 +236,10 @@ const purposes = [
             <img :src="selectedStudent.avatar || '/images/default-avatar.png'" class="w-14 h-14 rounded-full object-cover" />
             <div class="flex-1">
               <p class="font-medium text-gray-900 dark:text-white">
-                {{ selectedStudent.full_name || `${selectedStudent.first_name_thai} ${selectedStudent.last_name_thai}` }}
+                {{ selectedStudent.full_name || `${selectedStudent.first_name_th} ${selectedStudent.last_name_th}` }}
               </p>
               <p class="text-sm text-gray-600 dark:text-gray-400">
-                {{ selectedStudent.student_number }} • ม.{{ selectedStudent.class_level }}/{{ selectedStudent.class_section }}
+                {{ selectedStudent.student_id }} • ม.{{ selectedStudent.class_level }}/{{ selectedStudent.class_section }}
               </p>
             </div>
             <button type="button" @click="clearStudent" class="p-2 text-gray-400 hover:text-red-500">
@@ -284,7 +286,7 @@ const purposes = [
               >
                 <option value="">เลือกโซน</option>
                 <option v-for="zone in zones" :key="zone.id" :value="zone.id">
-                  {{ zone.name }}
+                  {{ zone.zone_name }}
                 </option>
               </select>
             </div>

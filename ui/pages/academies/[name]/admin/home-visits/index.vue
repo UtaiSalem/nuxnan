@@ -79,28 +79,12 @@ const fetchStatistics = async () => {
   if (!academyId.value) return
   
   try {
-    // Try academy-based API first
     const response: any = await api.get(`/api/academies/${academyId.value}/home-visits/statistics`)
     if (response.success) {
       stats.value = response.statistics
     }
   } catch (err) {
-    // Fallback to legacy API
-    try {
-      const response: any = await api.get('/api/home-visit/admin/dashboard')
-      if (response.success) {
-        stats.value = {
-          totalVisits: response.total_visits || 0,
-          completedVisits: response.completed_visits || 0,
-          pendingVisits: response.pending_visits || 0,
-          totalStudents: response.total_students || 0,
-          visitedStudents: response.visited_students || 0,
-          visitRate: response.visit_rate || 0
-        }
-      }
-    } catch (legacyErr) {
-      console.error('Failed to fetch statistics:', legacyErr)
-    }
+    console.error('Failed to fetch statistics:', err)
   }
 }
 
@@ -113,13 +97,7 @@ const fetchZones = async () => {
       zones.value = response.zones || []
     }
   } catch (err) {
-    // Fallback to legacy
-    try {
-      const response: any = await api.get('/api/home-visit/zones')
-      zones.value = response.zones || response || []
-    } catch (legacyErr) {
-      console.error('Failed to fetch zones:', legacyErr)
-    }
+    console.error('Failed to fetch zones:', err)
   }
 }
 
@@ -135,25 +113,13 @@ const fetchVisits = async () => {
     if (dateTo.value) params.append('date_to', dateTo.value)
     params.append('page', currentPage.value.toString())
     
-    // Try academy-based API first
     const response: any = await api.get(`/api/academies/${academyId.value}/home-visits/admin/visits?${params.toString()}`)
     if (response.success) {
       visits.value = response.visits?.data || response.visits || []
       totalPages.value = response.visits?.last_page || 1
     }
   } catch (err) {
-    // Fallback to legacy API
-    try {
-      const params = new URLSearchParams()
-      if (searchQuery.value) params.append('search', searchQuery.value)
-      if (selectedStatus.value) params.append('status', selectedStatus.value)
-      
-      const response: any = await api.get(`/api/home-visit/admin/visits?${params.toString()}`)
-      visits.value = response.visits?.data || response.visits || []
-      totalPages.value = response.visits?.last_page || 1
-    } catch (legacyErr) {
-      console.error('Failed to fetch visits:', legacyErr)
-    }
+    console.error('Failed to fetch visits:', err)
   }
 }
 
@@ -344,7 +310,7 @@ const formatDate = (date: string) => {
               @change="handleFilter"
             >
               <option value="">ทุกโซน</option>
-              <option v-for="zone in zones" :key="zone.id" :value="zone.id">{{ zone.name }}</option>
+              <option v-for="zone in zones" :key="zone.id" :value="zone.id">{{ zone.zone_name }}</option>
             </select>
             
             <select
@@ -406,15 +372,15 @@ const formatDate = (date: string) => {
                   <div class="flex items-center gap-3">
                     <img 
                       :src="visit.student?.profile_image || '/images/default-avatar.png'"
-                      :alt="visit.student?.first_name_thai"
+                      :alt="visit.student?.first_name_th"
                       class="w-10 h-10 rounded-full object-cover"
                     />
                     <div>
                       <p class="text-sm font-medium text-gray-900 dark:text-white">
-                        {{ visit.student?.first_name_thai }} {{ visit.student?.last_name_thai }}
+                        {{ visit.student?.first_name_th }} {{ visit.student?.last_name_th }}
                       </p>
                       <p class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ visit.student?.student_number }}
+                        {{ visit.student?.student_id }}
                       </p>
                     </div>
                   </div>

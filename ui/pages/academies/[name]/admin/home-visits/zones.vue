@@ -29,12 +29,8 @@ const deletingZone = ref<any>(null)
 const form = ref({
   name: '',
   description: '',
-  color: '#3B82F6',
-  teacher_ids: [] as number[]
+  color: '#3B82F6'
 })
-
-// Teachers
-const teachers = ref<any[]>([])
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -63,13 +59,10 @@ onMounted(async () => {
 })
 
 const fetchData = async () => {
+  if (!academyId.value) return
   try {
-    const [zonesRes, teachersRes]: any[] = await Promise.all([
-      api.get('/api/home-visit/zones'),
-      api.get('/api/home-visit/teachers')
-    ])
+    const zonesRes: any = await api.get(`/api/academies/${academyId.value}/home-visits/zones`)
     zones.value = zonesRes.zones || zonesRes.data || []
-    teachers.value = teachersRes.teachers || teachersRes.data || []
   } catch (err) {
     console.error('Failed to fetch data:', err)
   }
@@ -80,8 +73,7 @@ const openCreateModal = () => {
   form.value = {
     name: '',
     description: '',
-    color: '#3B82F6',
-    teacher_ids: []
+    color: '#3B82F6'
   }
   showModal.value = true
 }
@@ -89,23 +81,27 @@ const openCreateModal = () => {
 const openEditModal = (zone: any) => {
   editingZone.value = zone
   form.value = {
-    name: zone.name || '',
+    name: zone.zone_name || '',
     description: zone.description || '',
-    color: zone.color || '#3B82F6',
-    teacher_ids: zone.teachers?.map((t: any) => t.id) || []
+    color: zone.color || '#3B82F6'
   }
   showModal.value = true
 }
 
 const saveZone = async () => {
-  if (!form.value.name.trim()) return
+  if (!form.value.name.trim() || !academyId.value) return
   
   isSaving.value = true
   try {
+    const payload = {
+      zone_name: form.value.name,
+      description: form.value.description,
+      color: form.value.color
+    }
     if (editingZone.value) {
-      await api.put(`/api/home-visit/admin/zones/${editingZone.value.id}`, form.value)
+      await api.put(`/api/academies/${academyId.value}/home-visits/zones/${editingZone.value.id}`, payload)
     } else {
-      await api.post('/api/home-visit/admin/zones', form.value)
+      await api.post(`/api/academies/${academyId.value}/home-visits/zones`, payload)
     }
     showModal.value = false
     await fetchData()
@@ -122,10 +118,10 @@ const confirmDelete = (zone: any) => {
 }
 
 const deleteZone = async () => {
-  if (!deletingZone.value) return
+  if (!deletingZone.value || !academyId.value) return
   
   try {
-    await api.delete(`/api/home-visit/admin/zones/${deletingZone.value.id}`)
+    await api.delete(`/api/academies/${academyId.value}/home-visits/zones/${deletingZone.value.id}`)
     showDeleteModal.value = false
     deletingZone.value = null
     await fetchData()
@@ -206,7 +202,7 @@ const colors = [
                     class="w-3 h-3 rounded-full" 
                     :style="{ backgroundColor: zone.color || '#3B82F6' }"
                   ></span>
-                  {{ zone.name }}
+                  {{ zone.zone_name }}
                 </h3>
                 <p v-if="zone.description" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {{ zone.description }}
@@ -229,40 +225,9 @@ const colors = [
               </div>
             </div>
             
-            <!-- Stats -->
-            <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
-              <span class="flex items-center gap-1">
-                <Icon name="fluent:person-24-regular" class="w-4 h-4" />
-                {{ zone.teachers?.length || 0 }} ครู
-              </span>
-              <span class="flex items-center gap-1">
-                <Icon name="fluent:people-24-regular" class="w-4 h-4" />
-                {{ zone.students_count || 0 }} นักเรียน
-              </span>
-            </div>
-            
-            <!-- Teachers -->
-            <div v-if="zone.teachers && zone.teachers.length > 0" class="pt-3 border-t border-gray-100 dark:border-gray-700">
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">ครูประจำโซน:</p>
-              <div class="flex flex-wrap gap-2">
-                <div
-                  v-for="teacher in zone.teachers.slice(0, 3)"
-                  :key="teacher.id"
-                  class="flex items-center gap-1"
-                >
-                  <img 
-                    :src="teacher.avatar || '/images/default-avatar.png'"
-                    class="w-6 h-6 rounded-full object-cover"
-                  />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">{{ teacher.name }}</span>
-                </div>
-                <span 
-                  v-if="zone.teachers.length > 3"
-                  class="text-sm text-gray-500"
-                >
-                  +{{ zone.teachers.length - 3 }}
-                </span>
-              </div>
+            <div class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-3">
+              <Icon name="fluent:home-24-regular" class="w-4 h-4" />
+              {{ zone.home_visits_count || 0 }} รายการเยี่ยมบ้าน
             </div>
           </div>
         </div>
@@ -320,33 +285,6 @@ const colors = [
               </div>
             </div>
             
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                ครูประจำโซน
-              </label>
-              <div class="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
-                <label
-                  v-for="teacher in teachers"
-                  :key="teacher.id"
-                  class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                >
-                  <input
-                    type="checkbox"
-                    :value="teacher.id"
-                    v-model="form.teacher_ids"
-                    class="w-4 h-4 text-primary-600 rounded"
-                  />
-                  <img 
-                    :src="teacher.avatar || '/images/default-avatar.png'"
-                    class="w-8 h-8 rounded-full object-cover"
-                  />
-                  <span class="text-gray-900 dark:text-white">{{ teacher.name }}</span>
-                </label>
-              </div>
-              <p v-if="teachers.length === 0" class="text-sm text-gray-500 p-3 text-center">
-                ไม่พบรายชื่อครู
-              </p>
-            </div>
           </div>
           
           <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">

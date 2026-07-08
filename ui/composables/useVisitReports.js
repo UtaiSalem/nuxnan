@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue'
-import { router } from '@inertiajs/vue3'
 
 export function useVisitReports(allVisits, zones) {
   const showFilters = ref(false)
@@ -102,16 +101,29 @@ export function useVisitReports(allVisits, zones) {
     isExporting.value = true
     try {
       const api = useApi();
+      const route = useRoute()
+      const academyName = route.params.name
+      if (!academyName) {
+        throw new Error('Academy context is required for export')
+      }
+      const academyResponse = await api.get(`/api/academies/${academyName}`)
+      const academyId = academyResponse?.academy?.id
+      if (!academyId) {
+        throw new Error('Academy could not be resolved')
+      }
       // Validate we have visits to export
       if (!filteredVisits.value || filteredVisits.value.length === 0) {
         alert('ไม่มีข้อมูลที่จะส่งออก กรุณาเลือกข้อมูลก่อน')
         return
       }
 
-      const { blob, filename } = await api.getBlob('/api/home-visit/admin/visits/export/excel', {
-        filters: filters.value,
-        visits: filteredVisits.value.map(v => v.id)
-      }, 'POST');
+      const params = new URLSearchParams()
+      if (filters.value.startDate) params.set('date_from', filters.value.startDate)
+      if (filters.value.endDate) params.set('date_to', filters.value.endDate)
+      if (filters.value.status) params.set('status', filters.value.status)
+      const { blob, filename } = await api.getBlob(
+        `/api/academies/${academyId}/home-visits/admin/export/visits?${params.toString()}`
+      )
 
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')

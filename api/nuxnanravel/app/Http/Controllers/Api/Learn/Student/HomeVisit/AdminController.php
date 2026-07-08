@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
 
-use App\Exports\HomeVisitsExport;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Classroom;
@@ -14,7 +13,6 @@ use App\Services\StudentEnrollmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
-use Maatwebsite\Excel\Excel;
 
 class AdminController extends Controller
 {
@@ -283,7 +281,7 @@ class AdminController extends Controller
 
         $students = $query->orderBy('first_name_th')
             ->orderBy('last_name_th')
-            ->paginate(20)
+            ->paginate(min(max($request->integer('per_page', 20), 1), 100))
             ->withQueryString();
 
         // Get unique classrooms for filter
@@ -424,6 +422,18 @@ class AdminController extends Controller
             $query->where('visit_status', $request->status);
         }
 
+        if ($request->zone_id) {
+            $query->where('zone_id', $request->zone_id);
+        }
+
+        if ($request->search) {
+            $query->whereHas('student', function ($studentQuery) use ($request) {
+                $studentQuery->where('first_name_th', 'like', "%{$request->search}%")
+                    ->orWhere('last_name_th', 'like', "%{$request->search}%")
+                    ->orWhere('student_id', 'like', "%{$request->search}%");
+            });
+        }
+
         // Teacher filter
         if ($request->teacher) {
             $query->where('visitor_name', 'like', "%{$request->teacher}%");
@@ -460,10 +470,11 @@ class AdminController extends Controller
             ->filter();
 
         return response()->json([
+            'success' => true,
             'visits' => $visits,
             'classrooms' => $classrooms,
             'teachers' => $teachers,
-            'filters' => $request->only(['date_from', 'date_to', 'status', 'teacher', 'classroom_id', 'classroom']),
+            'filters' => $request->only(['date_from', 'date_to', 'status', 'zone_id', 'search', 'teacher', 'classroom_id', 'classroom']),
         ]);
     }
 
@@ -477,6 +488,88 @@ class AdminController extends Controller
         return response()->json([
             'visit' => $visit,
         ]);
+    }
+
+    public function storeVisit(Request $request, Academy $academy)
+    {
+        $validated = $this->validateVisit($request, $academy);
+        $student = Student::where('academy_id', $academy->id)->findOrFail($validated['student_id']);
+
+        $visit = StudentHomeVisit::create($this->visitPayload($validated, $academy, $student));
+
+        return response()->json([
+            'success' => true,
+            'visit' => $visit->load('student'),
+        ], 201);
+    }
+
+    public function updateVisit(Request $request, Academy $academy, $id)
+    {
+        $visit = StudentHomeVisit::where('academy_id', $academy->id)->findOrFail($id);
+        $validated = $this->validateVisit($request, $academy, false);
+
+        $visit->update($this->visitPayload($validated, $academy));
+
+        return response()->json([
+            'success' => true,
+            'visit' => $visit->fresh()->load('student'),
+        ]);
+    }
+
+    public function destroyVisit(Academy $academy, $id)
+    {
+        $visit = StudentHomeVisit::where('academy_id', $academy->id)->findOrFail($id);
+        $visit->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    private function validateVisit(Request $request, Academy $academy, bool $requireStudent = true): array
+    {
+        return $request->validate([
+            'student_id' => [$requireStudent ? 'required' : 'sometimes', 'integer', Rule::exists('students', 'id')->where('academy_id', $academy->id)],
+            'zone_id' => ['nullable', 'integer', Rule::exists('home_visit_zones', 'id')->where('academy_id', $academy->id)],
+            'visit_date' => ['required', 'date'],
+            'visit_time' => ['nullable', 'date_format:H:i'],
+            'purpose' => ['nullable', 'string', 'max:2000'],
+            'address' => ['nullable', 'string', 'max:2000'],
+            'observations' => ['nullable', 'string', 'max:5000'],
+            'recommendations' => ['nullable', 'string', 'max:2000'],
+            'status' => ['required', Rule::in(['pending', 'rescheduled', 'scheduled', 'in-progress', 'completed', 'cancelled'])],
+        ]);
+    }
+
+    private function visitPayload(array $validated, Academy $academy, ?Student $student = null): array
+    {
+        $user = auth('api')->user();
+        $notes = array_filter([
+            $validated['purpose'] ?? null,
+            isset($validated['address']) ? 'ที่อยู่: '.$validated['address'] : null,
+        ]);
+
+        $payload = [
+            'academy_id' => $academy->id,
+            'student_id' => $student?->id ?? ($validated['student_id'] ?? null),
+            'zone_id' => $validated['zone_id'] ?? null,
+            'visit_date' => $validated['visit_date'],
+            'visit_time' => $validated['visit_time'] ?? null,
+            'visitor_name' => $user?->name ?? 'Academy administrator',
+            'visitor_position' => 'Academy staff',
+            'visit_status' => $validated['status'],
+            'observations' => $validated['observations'] ?? null,
+            'notes' => $notes ? implode("\n", $notes) : null,
+            'recommendations' => $validated['recommendations'] ?? null,
+            'created_by' => $user?->id,
+        ];
+
+        if ($payload['student_id'] === null) {
+            unset($payload['student_id']);
+        }
+        if ($payload['created_by'] === null) {
+            unset($payload['created_by']);
+        }
+
+        return $payload;
     }
 
     /**
@@ -520,6 +613,9 @@ class AdminController extends Controller
         }
         if ($request->status) {
             $query->where('visit_status', $request->status);
+        }
+        if ($request->zone_id) {
+            $query->where('zone_id', $request->zone_id);
         }
 
         $visits = $query->orderBy('visit_date', 'desc')->get();
@@ -572,8 +668,8 @@ class AdminController extends Controller
                     $classroomName,
                     $visit->visitor_name,
                     $visit->visit_status,
-                    $visit->visit_purpose,
-                    $visit->visit_summary,
+                    $visit->notes,
+                    $visit->observations,
                 ]);
             }
 
@@ -690,121 +786,5 @@ class AdminController extends Controller
         }
 
         return response()->json($query->get());
-    }
-
-    /**
-     * Download individual visit report as PDF
-     */
-    public function downloadReport($visitId)
-    {
-        $visit = StudentHomeVisit::with([
-            'student',
-            'zone',
-            'participants',
-            'images',
-            'creator',
-        ])->findOrFail($visitId);
-
-        // TODO: Implement PDF generation with DomPDF or TCPDF
-        // For now, return JSON
-        return response()->json([
-            'message' => 'PDF generation not yet implemented',
-            'visit' => $visit,
-        ]);
-
-        /* Example implementation with DomPDF:
-        $pdf = \PDF::loadView('reports.home-visit-detail', [
-            'visit' => $visit
-        ]);
-
-        return $pdf->download("home-visit-report-{$visitId}.pdf");
-        */
-    }
-
-    /**
-     * Export multiple visits to Excel
-     */
-    public function exportToExcel(Request $request)
-    {
-        try {
-            $visitIds = $request->get('visits', []);
-
-            // Validate we have visits to export
-            if (empty($visitIds)) {
-                return response()->json([
-                    'message' => 'ไม่มีข้อมูลที่จะส่งออก กรุณาเลือกข้อมูลก่อน',
-                ], 400);
-            }
-
-            $visits = StudentHomeVisit::with([
-                'student',
-                'zone',
-                'participants',
-                'images',
-            ])->whereIn('id', $visitIds)->get();
-
-            // Check if visits found
-            if ($visits->isEmpty()) {
-                return response()->json([
-                    'message' => 'ไม่พบข้อมูลการเยี่ยมบ้านที่เลือก',
-                ], 404);
-            }
-
-            // Generate filename
-            $filename = 'home-visits-'.now()->format('Y-m-d').'.xlsx';
-
-            // Use Laravel Excel to export
-            return \Maatwebsite\Excel\Facades\Excel::download(
-                new HomeVisitsExport($visits),
-                $filename,
-                Excel::XLSX,
-                [
-                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                ]
-            );
-        } catch (\Exception $e) {
-            \Log::error('Excel Export Error: '.$e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'message' => 'เกิดข้อผิดพลาดในการส่งออกข้อมูล: '.$e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Export multiple visits to PDF
-     */
-    public function exportToPDF(Request $request)
-    {
-        $visitIds = $request->get('visits', []);
-
-        $visits = StudentHomeVisit::with([
-            'student',
-            'zone',
-            'participants',
-            'images',
-        ])->whereIn('id', $visitIds)->get();
-
-        $filters = $request->get('filters');
-
-        // TODO: Implement PDF generation with DomPDF or TCPDF
-        // For now, return JSON
-        return response()->json([
-            'message' => 'PDF export not yet implemented',
-            'visits_count' => $visits->count(),
-            'filters' => $filters,
-        ]);
-
-        /* Example implementation with DomPDF:
-        $pdf = \PDF::loadView('reports.home-visits-summary', [
-            'visits' => $visits,
-            'filters' => $filters,
-            'generated_at' => now()->format('d/m/Y H:i:s')
-        ]);
-
-        return $pdf->download('home-visits-summary-' . now()->format('Y-m-d') . '.pdf');
-        */
     }
 }

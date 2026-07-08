@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Api\Learn\Student\HomeVisit\AdminController;
 use App\Http\Controllers\Api\Learn\Student\HomeVisit\HomeVisitAuthController;
 use App\Http\Controllers\Api\Learn\Student\HomeVisit\TeacherController;
 use App\Http\Controllers\Api\Learn\Student\HomeVisit\ZoneController;
@@ -137,31 +136,8 @@ Route::prefix('home-visit')->name('homevisit.')->group(function () {
         Route::put('/academic-info/bulk-update', [AcademicInfoController::class, 'bulkUpdate'])->name('academic-info.bulk-update');
     });
 
-    // Admin Routes (protected by admin session authentication)
-    Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-        Route::get('/dashboard/mock', [AdminController::class, 'dashboardMock'])->name('dashboard.mock');
-        Route::get('/students', [AdminController::class, 'students'])->name('students');
-        Route::get('/students/{id}', [AdminController::class, 'showStudent'])->name('students.show');
-        Route::put('/students/{id}', [AdminController::class, 'updateStudent'])->name('students.update');
-        Route::get('/visits', [AdminController::class, 'visits'])->name('visits');
-        Route::get('/visits/{id}', [AdminController::class, 'showVisit'])->name('visits.show');
-        Route::put('/visits/{id}/status', [AdminController::class, 'updateVisitStatus'])->name('visits.update.status');
-        Route::get('/export/visits', [AdminController::class, 'exportVisits'])->name('export.visits');
-        Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
-        Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
-
-        // Zone Management Routes
-        Route::prefix('zones')->name('zones.')->group(function () {
-            Route::get('/', [ZoneController::class, 'list'])->name('list');
-            Route::post('/', [ZoneController::class, 'store'])->name('store');
-            Route::get('/{id}', [ZoneController::class, 'show'])->name('show');
-            Route::put('/{id}', [ZoneController::class, 'update'])->name('update');
-            Route::delete('/{id}', [ZoneController::class, 'destroy'])->name('destroy');
-            Route::put('/{id}/toggle-status', [ZoneController::class, 'toggleStatus'])->name('toggle-status');
-            Route::post('/reorder', [ZoneController::class, 'reorder'])->name('reorder');
-        });
-    });
+    // The legacy admin API was removed. Academy administration is available at
+    // /api/academies/{academy}/home-visits and is protected by JWT auth.
 
     // Public/Shared Routes for Zones (accessible by teachers)
     Route::get('/zones', [ZoneController::class, 'index'])->name('zones.index');

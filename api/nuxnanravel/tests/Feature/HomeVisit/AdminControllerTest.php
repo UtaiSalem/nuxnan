@@ -6,6 +6,7 @@ use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\Classroom;
+use App\Models\HomeVisitZone;
 use App\Models\Student;
 use App\Models\StudentHomeVisit;
 use App\Models\User;
@@ -429,6 +430,78 @@ class AdminControllerTest extends TestCase
         $response->assertOk();
         $this->assertCount(1, $response->json('visits.data'));
         $this->assertEquals($student->id, $response->json('visits.data.0.student.id'));
+    }
+
+    public function test_academy_admin_can_create_update_and_delete_a_scoped_visit(): void
+    {
+        [$admin, $academy, $student] = $this->setupAcademy('visit_crud');
+        [, $otherAcademy, $otherStudent] = $this->setupAcademy('visit_crud_other');
+
+        $this->actingAs($admin, 'api')
+            ->postJson("/api/academies/{$academy->id}/home-visits/admin/visits", [
+                'student_id' => $otherStudent->id,
+                'visit_date' => '2026-07-09',
+                'status' => 'pending',
+            ])
+            ->assertUnprocessable();
+
+        $created = $this->actingAs($admin, 'api')
+            ->postJson("/api/academies/{$academy->id}/home-visits/admin/visits", [
+                'student_id' => $student->id,
+                'visit_date' => '2026-07-09',
+                'purpose' => 'Initial visit',
+                'status' => 'pending',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('visit.academy_id', $academy->id)
+            ->assertJsonPath('visit.student_id', $student->id);
+
+        $visitId = $created->json('visit.id');
+
+        $this->actingAs($admin, 'api')
+            ->putJson("/api/academies/{$academy->id}/home-visits/admin/visits/{$visitId}", [
+                'visit_date' => '2026-07-10',
+                'status' => 'completed',
+            ])
+            ->assertOk()
+            ->assertJsonPath('visit.visit_status', 'completed');
+
+        $this->actingAs($admin, 'api')
+            ->deleteJson("/api/academies/{$otherAcademy->id}/home-visits/admin/visits/{$visitId}")
+            ->assertForbidden();
+
+        $this->actingAs($admin, 'api')
+            ->deleteJson("/api/academies/{$academy->id}/home-visits/admin/visits/{$visitId}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('student_home_visits', ['id' => $visitId]);
+    }
+
+    public function test_zones_are_scoped_to_academy_and_legacy_admin_route_is_gone(): void
+    {
+        [$admin, $academy] = $this->setupAcademy('zone_scope');
+        [, $otherAcademy] = $this->setupAcademy('zone_scope_other');
+
+        $zone = HomeVisitZone::create([
+            'academy_id' => $academy->id,
+            'zone_name' => 'North',
+            'zone_code' => 'A'.$academy->id.'_NORTH',
+        ]);
+        HomeVisitZone::create([
+            'academy_id' => $otherAcademy->id,
+            'zone_name' => 'South',
+            'zone_code' => 'A'.$otherAcademy->id.'_SOUTH',
+        ]);
+
+        $this->actingAs($admin, 'api')
+            ->getJson("/api/academies/{$academy->id}/home-visits/zones")
+            ->assertOk()
+            ->assertJsonCount(1, 'zones')
+            ->assertJsonPath('zones.0.id', $zone->id);
+
+        $this->actingAs($admin, 'api')
+            ->getJson('/api/home-visit/admin/visits')
+            ->assertNotFound();
     }
 
     private function setupAcademy(string $tag): array
