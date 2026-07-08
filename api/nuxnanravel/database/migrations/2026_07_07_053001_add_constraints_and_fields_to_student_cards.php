@@ -22,7 +22,7 @@ return new class extends Migration
             Schema::table('student_cards', function (Blueprint $table) {
                 $table->dropForeign(['student_id']);
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Ignore if foreign key doesn't exist
         }
 
@@ -33,12 +33,12 @@ return new class extends Migration
             // Add new foreign key with cascade onDelete
             $table->foreign('student_id')->references('id')->on('students')->onDelete('cascade');
 
-            if (!Schema::hasColumn('student_cards', 'academic_year_id')) {
+            if (! Schema::hasColumn('student_cards', 'academic_year_id')) {
                 $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->onDelete('set null');
             }
 
             // Add generated column for active state unique constraint if not exists
-            if (!Schema::hasColumn('student_cards', 'is_active_flag')) {
+            if (! Schema::hasColumn('student_cards', 'is_active_flag')) {
                 $table->boolean('is_active_flag')->virtualAs("CASE WHEN student_status = 'active' THEN 1 ELSE NULL END");
             }
         });
@@ -47,7 +47,7 @@ return new class extends Migration
         $conn = Schema::getConnection();
         $dbName = $conn->getDatabaseName();
         $driver = $conn->getDriverName();
-        
+
         $indexExists = false;
         if ($driver === 'sqlite') {
             try {
@@ -58,7 +58,7 @@ return new class extends Migration
                         break;
                     }
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // Fallback
             }
         } else {
@@ -69,10 +69,10 @@ return new class extends Migration
                 AND TABLE_NAME = 'student_cards' 
                 AND INDEX_NAME = 'uq_student_card_active'
             ", [$dbName]);
-            $indexExists = !empty($indexExistsQueryResult);
+            $indexExists = ! empty($indexExistsQueryResult);
         }
 
-        if (!$indexExists) {
+        if (! $indexExists) {
             Schema::table('student_cards', function (Blueprint $table) {
                 $table->unique(['student_id', 'academy_id', 'is_active_flag'], 'uq_student_card_active');
             });
@@ -87,17 +87,21 @@ return new class extends Migration
         Schema::table('student_cards', function (Blueprint $table) {
             try {
                 $table->dropUnique('uq_student_card_active');
-            } catch (\Exception $e) {}
+            } catch (Exception $e) {
+            }
             try {
                 $table->dropColumn('is_active_flag');
-            } catch (\Exception $e) {}
+            } catch (Exception $e) {
+            }
             try {
                 $table->dropForeign(['academic_year_id']);
                 $table->dropColumn('academic_year_id');
-            } catch (\Exception $e) {}
+            } catch (Exception $e) {
+            }
             try {
                 $table->dropForeign(['student_id']);
-            } catch (\Exception $e) {}
+            } catch (Exception $e) {
+            }
         });
 
         Schema::table('student_cards', function (Blueprint $table) {

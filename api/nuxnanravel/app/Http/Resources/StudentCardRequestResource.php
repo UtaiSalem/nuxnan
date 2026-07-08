@@ -35,6 +35,9 @@ class StudentCardRequestResource extends JsonResource
             'cancelled_at' => $this->cancelled_at,
             'rejected_at' => $this->rejected_at,
             'requested_by' => $this->whenLoaded('requestedBy', fn () => ['id' => $this->requestedBy?->id, 'name' => $this->requestedBy?->name]),
+            'classroom' => $this->whenLoaded('classroom', fn () => $this->classroom
+                ? new ClassroomSummaryResource($this->classroom)
+                : null),
             'audit_logs' => $this->whenLoaded('auditLogs'),
         ];
     }

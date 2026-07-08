@@ -1,4 +1,4 @@
-import type { StudentCardRequestType } from '~/types/studentCardRequest'
+import type { StudentCardRequest, ClassroomSummary, StudentCardRequestType } from '~/types/studentCardRequest'
 
 export const useStudentCardRequests = (academyId: Ref<number | null>) => {
   const api = useApi()
@@ -9,16 +9,33 @@ export const useStudentCardRequests = (academyId: Ref<number | null>) => {
   }
 
   return {
-    list: async (params = '') => { requireAcademy(); return await api.get(`${base.value}${params ? `?${params}` : ''}`) as any },
-    counts: async () => { requireAcademy(); return await api.get(`${base.value}/counts`) as any },
-    show: async (id: number) => { requireAcademy(); return await api.get(`${base.value}/${id}`) as any },
-    myClassrooms: async () => { requireAcademy(); return await api.get(`${base.value}/my-classrooms`) as any },
-    classroomStudents: async (id: number) => { requireAcademy(); return await api.get(`${base.value}/classrooms/${id}/students`) as any },
-    submit: async (payload: { student_id: number; classroom_id: number; request_type: StudentCardRequestType; reason?: string; priority?: string }) => {
-      requireAcademy(); return await api.post(base.value, payload) as any
+    list: async (params = ''): Promise<{ data: StudentCardRequest[] }> => {
+      requireAcademy()
+      return await api.get(`${base.value}${params ? `?${params}` : ''}`) as { data: StudentCardRequest[] }
     },
-    transition: async (id: number, action: 'approve' | 'reject' | 'start' | 'complete' | 'cancel', payload: Record<string, any> = {}) => {
-      requireAcademy(); return await api.patch(`${base.value}/${id}/${action}`, payload) as any
+    counts: async (): Promise<{ data: Record<string, number> }> => {
+      requireAcademy()
+      return await api.get(`${base.value}/counts`) as { data: Record<string, number> }
+    },
+    show: async (id: number): Promise<{ data: StudentCardRequest }> => {
+      requireAcademy()
+      return await api.get(`${base.value}/${id}`) as { data: StudentCardRequest }
+    },
+    myClassrooms: async (): Promise<{ data: ClassroomSummary[] }> => {
+      requireAcademy()
+      return await api.get(`${base.value}/my-classrooms`) as { data: ClassroomSummary[] }
+    },
+    classroomStudents: async (id: number): Promise<{ data: { classroom: ClassroomSummary; students: any[] } }> => {
+      requireAcademy()
+      return await api.get(`${base.value}/classrooms/${id}/students`) as { data: { classroom: ClassroomSummary; students: any[] } }
+    },
+    submit: async (payload: { student_id: number; classroom_id: number; request_type: StudentCardRequestType; reason?: string; priority?: string }): Promise<{ data: StudentCardRequest }> => {
+      requireAcademy()
+      return await api.post(base.value, payload) as { data: StudentCardRequest }
+    },
+    transition: async (id: number, action: 'approve' | 'reject' | 'start' | 'complete' | 'cancel', payload: Record<string, any> = {}): Promise<{ data: StudentCardRequest }> => {
+      requireAcademy()
+      return await api.patch(`${base.value}/${id}/${action}`, payload) as { data: StudentCardRequest }
     },
   }
 }

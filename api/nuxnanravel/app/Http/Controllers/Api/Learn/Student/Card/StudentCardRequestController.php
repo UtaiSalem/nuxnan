@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BulkStoreStudentCardRequest;
 use App\Http\Requests\RejectStudentCardRequest;
 use App\Http\Requests\StoreStudentCardRequest;
+use App\Http\Resources\ClassroomSummaryResource;
 use App\Http\Resources\StudentCardRequestResource;
 use App\Models\Academy;
 use App\Models\Classroom;
@@ -31,7 +32,9 @@ class StudentCardRequestController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
-        $query = StudentCardRequest::query()->with('requestedBy')->where('academy_id', $academy->id);
+        $query = StudentCardRequest::query()
+            ->with(['requestedBy', 'classroom.homeroomTeacher:id,name,profile_photo_path', 'classroom.academicYear:id,name'])
+            ->where('academy_id', $academy->id);
         $query->when($validated['status'] ?? null, fn ($q, $value) => $q->where('status', $value));
         $query->when($validated['priority'] ?? null, fn ($q, $value) => $q->where('priority', $value));
         $query->when($validated['classroom_id'] ?? null, fn ($q, $value) => $q->where('classroom_id', $value));
@@ -46,7 +49,9 @@ class StudentCardRequestController extends Controller
     {
         $this->ensureAcademy($academy, $studentCardRequest);
 
-        return new StudentCardRequestResource($studentCardRequest->load(['requestedBy', 'auditLogs']));
+        return new StudentCardRequestResource($studentCardRequest->load([
+            'requestedBy', 'auditLogs', 'classroom.homeroomTeacher:id,name,profile_photo_path', 'classroom.academicYear:id,name',
+        ]));
     }
 
     public function counts(Academy $academy)
@@ -57,17 +62,29 @@ class StudentCardRequestController extends Controller
 
     public function myClassrooms(Request $request, Academy $academy)
     {
-        return response()->json(['data' => Classroom::query()->where('academy_id', $academy->id)
-            ->where('homeroom_teacher_id', $request->user()->id)->where('is_active', true)->get()]);
+        $classrooms = Classroom::query()
+            ->with(['homeroomTeacher:id,name,profile_photo_path', 'academicYear:id,name'])
+            ->withCount(['classroomStudents as student_count' => fn ($query) => $query->active()])
+            ->where('academy_id', $academy->id)
+            ->where('homeroom_teacher_id', $request->user()->id)
+            ->where('is_active', true)
+            ->get();
+
+        return response()->json(['data' => ClassroomSummaryResource::collection($classrooms)]);
     }
 
     public function classroomStudents(Request $request, Academy $academy, Classroom $classroom)
     {
         abort_unless((int) $classroom->academy_id === (int) $academy->id && (int) $classroom->homeroom_teacher_id === (int) $request->user()->id, 403);
+        $classroom->load(['homeroomTeacher:id,name,profile_photo_path', 'academicYear:id,name'])
+            ->loadCount(['classroomStudents as student_count' => fn ($query) => $query->active()]);
         $students = ClassroomStudent::query()->with(['student.studentCard'])
             ->where('academy_id', $academy->id)->where('classroom_id', $classroom->id)->active()->get();
 
-        return response()->json(['data' => $students]);
+        return response()->json(['data' => [
+            'classroom' => new ClassroomSummaryResource($classroom),
+            'students' => $students,
+        ]]);
     }
 
     public function store(StoreStudentCardRequest $request, Academy $academy): StudentCardRequestResource
