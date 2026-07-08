@@ -464,4 +464,224 @@ class AcademicYearRolloverServiceTest extends TestCase
         $this->assertNotNull($batch->undo_closed_at);
         $this->assertFalse($batch->isUndoable());
     }
+
+    public function test_commit_excludes_skip_entries_from_before_snapshots(): void
+    {
+        $userMapping = [
+            [
+                'student_id' => $this->studentActive1->id,
+                'action' => 'promote',
+                'from_classroom_id' => $this->class1_1_2568->id,
+                'to_classroom_id' => $this->class2_1_2569->id,
+            ],
+            [
+                'student_id' => $this->studentActive6->id,
+                'action' => 'skip',
+                'from_classroom_id' => $this->class6_1_2568->id,
+                'to_classroom_id' => null,
+            ],
+        ];
+
+        $plan = $this->service->planRollover($this->academy, $this->year2568, $this->year2569, $userMapping);
+        $batch = $this->service->commitRollover($plan, $this->admin);
+
+        $before = $batch->plan_summary['before'];
+        $this->assertArrayHasKey($this->studentActive1->id, $before);
+        $this->assertArrayNotHasKey($this->studentActive6->id, $before);
+    }
+
+    public function test_undo_succeeds_when_skipped_student_has_unrelated_active_enrollment(): void
+    {
+        // 1. Commit with studentActive1 (promote) and studentActive6 (skip)
+        $userMapping = [
+            [
+                'student_id' => $this->studentActive1->id,
+                'action' => 'promote',
+                'from_classroom_id' => $this->class1_1_2568->id,
+                'to_classroom_id' => $this->class2_1_2569->id,
+            ],
+            [
+                'student_id' => $this->studentActive6->id,
+                'action' => 'skip',
+                'from_classroom_id' => $this->class6_1_2568->id,
+                'to_classroom_id' => null,
+            ],
+        ];
+
+        $plan = $this->service->planRollover($this->academy, $this->year2568, $this->year2569, $userMapping);
+        $batch = $this->service->commitRollover($plan, $this->admin);
+
+        // 2. Mock that skipped student Active6 gets enrolled in some unrelated active classroom in the meantime (e.g. another year or same year different room)
+        $unrelatedClass = Classroom::create([
+            'academy_id' => $this->academy->id,
+            'academic_year_id' => $this->year2569->id,
+            'grade_level' => 'ม.6',
+            'section' => '2',
+            'name' => 'ม.6/2',
+            'capacity' => 50,
+            'is_active' => true,
+            'status' => 'active',
+        ]);
+        $this->enrollService->enrollStudent($this->studentActive6, $unrelatedClass);
+
+        // 3. Undo should succeed because studentActive6 is skip, hence not in beforeSnapshots keys checked by E8
+        $undoneBatch = $this->service->undoRollover($batch->id, $this->admin);
+        $this->assertEquals('undone', $undoneBatch->status);
+    }
+
+    public function test_undo_does_not_delete_target_year_sai_for_skip_students(): void
+    {
+        // Create a target year SAI for skip student Active6 prior to rollover
+        StudentAcademicInfo::create([
+            'student_id' => $this->studentActive6->id,
+            'classroom_id' => $this->class6_1_2568->id, // just dummy
+            'academic_year' => '2569',
+            'is_current' => true,
+        ]);
+
+        $userMapping = [
+            [
+                'student_id' => $this->studentActive1->id,
+                'action' => 'promote',
+                'from_classroom_id' => $this->class1_1_2568->id,
+                'to_classroom_id' => $this->class2_1_2569->id,
+            ],
+            [
+                'student_id' => $this->studentActive6->id,
+                'action' => 'skip',
+                'from_classroom_id' => $this->class6_1_2568->id,
+                'to_classroom_id' => null,
+            ],
+        ];
+
+        $plan = $this->service->planRollover($this->academy, $this->year2568, $this->year2569, $userMapping);
+        $batch = $this->service->commitRollover($plan, $this->admin);
+
+        // Undo
+        $this->service->undoRollover($batch->id, $this->admin);
+
+        // Active6's 2569 SAI should STILL exist because she was skipped and not affected by undo delete
+        $this->assertDatabaseHas('student_academic_info', [
+            'student_id' => $this->studentActive6->id,
+            'academic_year' => '2569',
+        ]);
+    }
+
+    public function test_undo_does_not_flip_is_current_of_from_year_sai_for_skip_students(): void
+    {
+        // Seed from-year SAI for skip student Active6 as is_current = false
+        $sai = StudentAcademicInfo::where('student_id', $this->studentActive6->id)
+            ->where('academic_year', '2568')
+            ->first();
+        if ($sai) {
+            $sai->update(['is_current' => false]);
+        } else {
+            StudentAcademicInfo::create([
+                'student_id' => $this->studentActive6->id,
+                'classroom_id' => $this->class6_1_2568->id,
+                'academic_year' => '2568',
+                'is_current' => false,
+            ]);
+        }
+
+        $userMapping = [
+            [
+                'student_id' => $this->studentActive1->id,
+                'action' => 'promote',
+                'from_classroom_id' => $this->class1_1_2568->id,
+                'to_classroom_id' => $this->class2_1_2569->id,
+            ],
+            [
+                'student_id' => $this->studentActive6->id,
+                'action' => 'skip',
+                'from_classroom_id' => $this->class6_1_2568->id,
+                'to_classroom_id' => null,
+            ],
+        ];
+
+        $plan = $this->service->planRollover($this->academy, $this->year2568, $this->year2569, $userMapping);
+        $batch = $this->service->commitRollover($plan, $this->admin);
+
+        // Undo
+        $this->service->undoRollover($batch->id, $this->admin);
+
+        // Active6's 2568 SAI should STILL be is_current = false
+        $this->assertDatabaseHas('student_academic_info', [
+            'student_id' => $this->studentActive6->id,
+            'academic_year' => '2568',
+            'is_current' => false,
+        ]);
+    }
+
+    public function test_undo_uses_frozen_year_name_even_if_academic_year_renamed(): void
+    {
+        $userMapping = [
+            [
+                'student_id' => $this->studentActive1->id,
+                'action' => 'promote',
+                'from_classroom_id' => $this->class1_1_2568->id,
+                'to_classroom_id' => $this->class2_1_2569->id,
+            ],
+        ];
+
+        $plan = $this->service->planRollover($this->academy, $this->year2568, $this->year2569, $userMapping);
+        $batch = $this->service->commitRollover($plan, $this->admin);
+
+        // Rename the actual academic year names
+        $this->year2568->update(['name' => '2568-renamed']);
+        $this->year2569->update(['name' => '2569-renamed']);
+
+        // Undo should still delete '2569' and restore '2568' because it used the frozen year names
+        $this->service->undoRollover($batch->id, $this->admin);
+
+        // Assert 2569 SAI deleted
+        $this->assertDatabaseMissing('student_academic_info', [
+            'student_id' => $this->studentActive1->id,
+            'academic_year' => '2569',
+        ]);
+        // Assert 2568 SAI is active again
+        $this->assertDatabaseHas('student_academic_info', [
+            'student_id' => $this->studentActive1->id,
+            'academic_year' => '2568',
+            'is_current' => true,
+        ]);
+    }
+
+    public function test_undo_demotes_other_current_sai_when_restoring_from_year_row(): void
+    {
+        $userMapping = [
+            [
+                'student_id' => $this->studentActive1->id,
+                'action' => 'promote',
+                'from_classroom_id' => $this->class1_1_2568->id,
+                'to_classroom_id' => $this->class2_1_2569->id,
+            ],
+        ];
+
+        $plan = $this->service->planRollover($this->academy, $this->year2568, $this->year2569, $userMapping);
+        $batch = $this->service->commitRollover($plan, $this->admin);
+
+        // Seed a third unrelated SAI as is_current = true
+        StudentAcademicInfo::create([
+            'student_id' => $this->studentActive1->id,
+            'classroom_id' => $this->class1_1_2568->id,
+            'academic_year' => '2570',
+            'is_current' => true,
+        ]);
+
+        // Undo
+        $this->service->undoRollover($batch->id, $this->admin);
+
+        // 2570 should be demoted to is_current = false, and 2568 restored to is_current = true
+        $this->assertDatabaseHas('student_academic_info', [
+            'student_id' => $this->studentActive1->id,
+            'academic_year' => '2570',
+            'is_current' => false,
+        ]);
+        $this->assertDatabaseHas('student_academic_info', [
+            'student_id' => $this->studentActive1->id,
+            'academic_year' => '2568',
+            'is_current' => true,
+        ]);
+    }
 }

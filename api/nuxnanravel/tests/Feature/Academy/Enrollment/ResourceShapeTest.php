@@ -15,7 +15,6 @@ use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ResourceShapeTest extends TestCase
@@ -115,7 +114,7 @@ class ResourceShapeTest extends TestCase
             'from_academic_year_id' => $this->fromYear->id,
             'to_academic_year_id' => $this->toYear->id,
             'status' => 'committed',
-            'committed_at' => Carbon::parse('2026-06-21 09:00:00'),
+            'committed_at' => now(),
             'committed_by_user_id' => $this->owner->id,
             'plan_summary' => [
                 'before' => [

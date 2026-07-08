@@ -416,6 +416,79 @@ class RolloverControllerWriteTest extends TestCase
         $this->assertNotNull($response->json('batch.undo_closed_at'));
     }
 
+    public function test_undo_end_to_end_after_commit_with_mixed_skip_and_promote_returns_ok(): void
+    {
+        // Cache a plan with student (promote) and otherStudent (skip)
+        // Since otherStudent is in otherAcademy, let's create student2 in this academy instead for mixed plan
+        $student2 = Student::create([
+            'academy_id' => $this->academy->id,
+            'user_id' => User::factory()->create()->id,
+            'first_name_th' => 'สมเกียรติ',
+            'last_name_th' => 'รักดี',
+            'student_id' => 'LC002',
+            'citizen_id' => '1111111111112',
+            'status' => 'active',
+        ]);
+        ClassroomStudent::create([
+            'academy_id' => $this->academy->id,
+            'classroom_id' => $this->classroomA->id,
+            'academic_year_id' => $this->year2568->id,
+            'student_id' => $student2->id,
+            'student_number' => 11,
+            'status' => ClassroomStudent::STATUS_ACTIVE,
+            'enrolled_at' => now()->subMonth(),
+        ]);
+
+        $planId = (string) Str::uuid();
+        Cache::put($this->planCacheKey($planId), [
+            'academy_id' => $this->academy->id,
+            'from_academic_year_id' => $this->year2568->id,
+            'to_academic_year_id' => $this->year2569->id,
+            'entries' => [
+                [
+                    'student_id' => $this->student->id,
+                    'action' => 'promote',
+                    'from_classroom_id' => $this->classroomA->id,
+                    'to_classroom_id' => $this->classroomC->id,
+                    'reason' => 'เลื่อนชั้นปกติ',
+                ],
+                [
+                    'student_id' => $student2->id,
+                    'action' => 'skip',
+                    'from_classroom_id' => $this->classroomA->id,
+                    'to_classroom_id' => null,
+                    'reason' => 'ข้ามย้ายห้อง',
+                ],
+            ],
+            'summary' => [
+                'promote' => 1,
+                'graduate' => 0,
+                'repeat' => 0,
+                'drop' => 0,
+                'new_intake' => 0,
+                'skip' => 1,
+            ],
+            'warnings' => [],
+        ], 900);
+
+        // Commit via controller
+        $commitResponse = $this->actingAs($this->owner, 'api')
+            ->postJson(route('api.academy.rollover.commit', $this->academy), [
+                'plan_id' => $planId,
+                'confirm_text' => '2569',
+            ]);
+        $commitResponse->assertStatus(201);
+        $batchId = $commitResponse->json('batch.id');
+
+        // Undo via controller
+        $response = $this->actingAs($this->owner, 'api')
+            ->postJson(route('api.academy.rollover.undo', [$this->academy, $batchId]), []);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('batch.status', 'undone');
+    }
+
     private function cachePlanForOwner(array $overrides = []): string
     {
         $planId = (string) Str::uuid();

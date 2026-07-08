@@ -374,15 +374,17 @@ class AcademicYearRolloverService
 
             foreach ($plan->entries as $e) {
                 $student = Student::findOrFail($e['student_id']);
-
-                // Keep record of student current fields
-                $beforeSnapshots[$student->id] = [
-                    'status' => $student->status,
-                    'class_level' => $student->class_level,
-                    'class_section' => $student->class_section,
-                ];
-
                 $action = $e['action'] ?? 'skip';
+
+                // Keep record of student current fields ONLY if not skipping
+                if ($action !== 'skip') {
+                    $beforeSnapshots[$student->id] = [
+                        'status' => $student->status,
+                        'class_level' => $student->class_level,
+                        'class_section' => $student->class_section,
+                    ];
+                }
+
                 $fromClassroomId = $e['from_classroom_id'] ?? null;
                 $toClassroomId = $e['to_classroom_id'] ?? null;
                 $reason = $e['reason'] ?? '';
@@ -427,6 +429,8 @@ class AcademicYearRolloverService
                 'plan_summary' => [
                     'before' => $beforeSnapshots,
                     'entries' => $plan->entries,
+                    'from_academic_year_name' => $fromYear->name,
+                    'to_academic_year_name' => $toYear->name,
                 ],
             ]);
 
@@ -487,6 +491,9 @@ class AcademicYearRolloverService
             }
 
             // 2. Restore student fields and StudentAcademicInfo snapshots
+            $frozenFromYearName = $planSummary['from_academic_year_name'] ?? $batch->fromAcademicYear->name;
+            $frozenToYearName = $planSummary['to_academic_year_name'] ?? $batch->toAcademicYear->name;
+
             foreach ($beforeSnapshots as $studentId => $oldFields) {
                 $student = Student::find($studentId);
                 if ($student) {
@@ -497,16 +504,23 @@ class AcademicYearRolloverService
                         'class_section' => $oldFields['class_section'],
                     ]);
 
-                    // Delete new year SAI row
+                    // Delete new year SAI row scoped to academy
                     StudentAcademicInfo::where('student_id', $studentId)
-                        ->where('academic_year', $batch->toAcademicYear->name)
+                        ->whereHas('classroom', fn ($q) => $q->where('academy_id', $batch->academy_id))
+                        ->where('academic_year', $frozenToYearName)
                         ->delete();
 
                     // Restore old year SAI row to is_current = true
-                    // E5: update before insert (here we update it back)
                     StudentAcademicInfo::where('student_id', $studentId)
-                        ->where('academic_year', $batch->fromAcademicYear->name)
+                        ->whereHas('classroom', fn ($q) => $q->where('academy_id', $batch->academy_id))
+                        ->where('academic_year', $frozenFromYearName)
                         ->update(['is_current' => true]);
+
+                    // Demote other SAI rows for this student in this academy to false
+                    StudentAcademicInfo::where('student_id', $studentId)
+                        ->whereHas('classroom', fn ($q) => $q->where('academy_id', $batch->academy_id))
+                        ->where('academic_year', '!=', $frozenFromYearName)
+                        ->update(['is_current' => false]);
                 }
             }
 
