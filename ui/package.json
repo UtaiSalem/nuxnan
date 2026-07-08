@@ -11,6 +11,8 @@
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 nuxt dev",
     "generate": "cross-env NODE_OPTIONS=--max-old-space-size=8192 nuxt generate",
     "preview": "cross-env NODE_OPTIONS=--max-old-space-size=2048 nuxt preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
@@ -89,6 +91,7 @@
     "@types/dompurify": "^3.0.5",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^24.10.1",
+    "@vue/test-utils": "^2.4.11",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
@@ -99,6 +102,7 @@
     "tailwindcss": "^3.4.17",
     "vidstack": "^1.12.13",
     "vite": "^6.0.0",
+    "vitest": "^4.1.10",
     "vue-tsc": "^3.3.1"
   }
 }

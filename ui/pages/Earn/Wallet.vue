@@ -654,6 +654,12 @@ onMounted(async () => {
         </p>
       </div>
 
+      <!-- Loading state -->
+      <div v-if="isLoading" class="mb-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300 flex items-center gap-3">
+        <Icon icon="eos-icons:loading" class="w-6 h-6 animate-spin" />
+        <span>กำลังโหลดข้อมูลกระเป๋าเงิน...</span>
+      </div>
+
       <!-- Wallet Balance Card -->
       <BaseCard class="mb-6 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 border-0">
         <div class="text-white p-2">
@@ -664,7 +670,8 @@ onMounted(async () => {
               </div>
               <div>
                 <p class="text-white/80 text-sm mb-1">ยอดเงินคงเหลือ</p>
-                <p class="text-4xl lg:text-5xl font-bold">{{ formatMoney(walletBalance) }}</p>
+                <div v-if="isLoading && !walletBalance" class="h-10 w-32 bg-white/20 animate-pulse rounded"></div>
+                <p v-else class="text-4xl lg:text-5xl font-bold">{{ formatMoney(walletBalance) }}</p>
               </div>
             </div>
             
@@ -702,6 +709,17 @@ onMounted(async () => {
           </div>
         </div>
       </BaseCard>
+
+      <!-- Composables Error state -->
+      <div 
+        v-if="error" 
+        class="mb-6 p-4 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+      >
+        <div class="flex items-center gap-3">
+          <Icon icon="mdi:alert-circle" class="w-6 h-6" />
+          <span>เกิดข้อผิดพลาด: {{ error }}</span>
+        </div>
+      </div>
 
       <!-- Tab Navigation -->
       <div class="flex gap-2 mb-6 overflow-x-auto pb-2">

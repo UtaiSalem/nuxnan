@@ -33,9 +33,24 @@ export const useWallet = () => {
         throw new Error(response.message || 'Failed to get wallet balance')
       }
 
-      // Response shape can vary; try common fields
       const data = response.data || {}
+      
+      // Determine next balance check order: total_balance, cash_balance, balance, wallet, current_wallet, current_balance
+      const hasBalanceKey = 
+        'total_balance' in data || 
+        'cash_balance' in data || 
+        'balance' in data || 
+        'wallet' in data || 
+        'current_wallet' in data || 
+        'current_balance' in data
+
+      if (!hasBalanceKey) {
+        throw new Error('API response does not contain any valid balance keys')
+      }
+
       const nextWallet =
+        data.total_balance ??
+        data.cash_balance ??
         data.balance ??
         data.wallet ??
         data.current_wallet ??
