@@ -172,14 +172,51 @@ class WalletController extends Controller
         }
 
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:100', // Minimum 100 THB
-            'method' => 'required|string|max:50',
+            'amount' => 'required|numeric|min:25', // Minimum 25 THB
+            'method' => 'required|string|in:bank_transfer,promptpay',
             'bank_account' => 'required|array',
             'bank_account.bank_name' => 'required|string|max:50',
             'bank_account.account_number' => 'required|string|max:20',
             'bank_account.account_name' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
         ]);
+
+        // Method-specific validation and normalization of the destination.
+        if ($validated['method'] === 'promptpay') {
+            // Normalize the PromptPay number: keep digits only.
+            $number = preg_replace('/\D/', '', $validated['bank_account']['account_number']);
+
+            // Accept a Thai mobile number (10 digits, 0[689]xxxxxxxx) or a
+            // national ID (13 digits).
+            if (! preg_match('/^(0[689]\d{8}|\d{13})$/', $number)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'หมายเลขพร้อมเพย์ไม่ถูกต้อง (ต้องเป็นเบอร์มือถือ 10 หลัก หรือเลขบัตรประชาชน 13 หลัก)',
+                    'errors' => [
+                        'bank_account.account_number' => ['หมายเลขพร้อมเพย์ไม่ถูกต้อง'],
+                    ],
+                ], 422);
+            }
+
+            $validated['bank_account']['account_number'] = $number;
+            $validated['bank_account']['bank_name'] = 'promptpay';
+        } else {
+            // bank_transfer: guard against a spoofed PromptPay marker.
+            $allowedBanks = ['kbank', 'scb', 'bbl', 'ktb', 'bay', 'tmb', 'ttb', 'gsb', 'baac', 'uob', 'cimb', 'lhbank', 'tisco', 'kkp'];
+
+            if (! in_array(strtolower($validated['bank_account']['bank_name']), $allowedBanks, true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'กรุณาเลือกธนาคารที่รองรับ',
+                    'errors' => [
+                        'bank_account.bank_name' => ['ธนาคารไม่ถูกต้อง'],
+                    ],
+                ], 422);
+            }
+
+            // Store the account number as digits only for consistency.
+            $validated['bank_account']['account_number'] = preg_replace('/\D/', '', $validated['bank_account']['account_number']);
+        }
 
         try {
             $result = $this->walletService->withdraw(
