@@ -9,6 +9,7 @@ use App\Models\StudentCard;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\GoneHttpException;
 
 class StudentCardSyncService
 {
@@ -137,6 +138,10 @@ class StudentCardSyncService
      */
     public function commitSync(Academy $academy, AcademicYear $year, User $by): array
     {
+        if ((bool) $academy->getSettings()?->card_request_flow_enabled) {
+            throw new GoneHttpException('Legacy student card sync is disabled. Use student card requests instead.');
+        }
+
         $result = [
             'created' => 0,
             'updated' => 0,

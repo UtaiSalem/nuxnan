@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\StudentCardRequestStatus;
 use App\Events\Enrollment\StudentDropped;
 use App\Events\Enrollment\StudentEnrolled;
 use App\Events\Enrollment\StudentGraduated;
@@ -13,6 +14,7 @@ use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\Student;
 use App\Models\StudentAcademicInfo;
+use App\Models\StudentCardRequest;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -217,6 +219,22 @@ class StudentEnrollmentService
 
             // สร้าง enrollment ใหม่
             $opened = $this->enrollStudent($student, $toClassroom, null, $batchId, $userId, false);
+
+            if ((int) $fromClassroom->academy_id !== (int) $toClassroom->academy_id) {
+                StudentCardRequest::query()
+                    ->where('student_id', $student->id)
+                    ->where('academy_id', $fromClassroom->academy_id)
+                    ->whereIn('status', [
+                        StudentCardRequestStatus::Pending->value,
+                        StudentCardRequestStatus::Approved->value,
+                        StudentCardRequestStatus::InProgress->value,
+                    ])
+                    ->update([
+                        'status' => StudentCardRequestStatus::Cancelled->value,
+                        'cancelled_at' => now(),
+                        'admin_notes' => 'ยกเลิกอัตโนมัติเนื่องจากนักเรียนย้ายโรงเรียน',
+                    ]);
+            }
 
             if ($closed) {
                 event(new StudentTransferred($student, $closed, $opened, $batchId));

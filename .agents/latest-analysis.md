@@ -2,6 +2,7 @@
 
 ## Implementation update — 2026-07-06
 
+- 2026-07-08 migration verification: `2026_07_08_000001_create_student_card_requests_table.php` ran successfully in batch 79. It now explicitly uses InnoDB and matches the signed integer key type of `student_cards.id`. Verified the table, unique index, foreign keys, and `academy_settings.card_request_flow_enabled`.
 - 2026-07-07 old-card display fix: active grades 2, 3, 5, and 6 retain `national_id` and `birth_date` for all 442/357/303/288 records. Per explicit user direction, the temporary `makeHidden()` filter was removed from the public room endpoint so the existing Nuxt card can render complete identity data before authentication is revisited. Verified live `GET /api/student-card/2/1` returns `national_id`, `birth_date`, `birth_date_string`, and `profile_image_url`; PHP syntax passes. Security follow-up remains: protect or mask PII before production exposure.
 - 2026-07-07 identity-data audit: exactly 476 active 2569 cards (the entire new-intake cohort) lack national ID and birth date; their linked `students` rows also lack both fields, so card sync did not erase recoverable values. No import batch/row data exists, linked user profiles contain no birthdate/metadata, and no authoritative 2569 intake source file was found in the repository. Recovery requires the registrar's original intake data and must not infer sensitive identity fields.
 - 2026-07-07 photo-path analysis: completed migration of 1,529/1,531 student photos to canonical identity paths (`images/students/profiles/{student_id}.{ext}`). Integrated `profile_image_url` accessors in Student/StudentCard models. Replaced legacy manual path resolution logic on the frontend with backend-owned URL endpoints. Resolved E2E findings (including Controller imports, path formatting, null checks, and frontend fallback cleanup). E2E integration tests passing successfully.
@@ -1603,3 +1604,520 @@ ORDER BY cs.student_number;
 > - Reuse services ที่มีอยู่ (`IntakeService`, `EnrollmentService`, `CardSyncService`)
 > - Chunk transaction ป้องกัน partial failure ลาม
 > - Reconciliation ทุกครั้งหลัง commit
+
+---
+
+# Work Plan — Student Card Request System (2026-07-08)
+
+**สถานะ:** วางแผน (ยังไม่เริ่มพัฒนา)
+**ขอบเขต:** เพิ่มระบบคำร้องทำบัตรครอบระบบ `student_cards` เดิม เพื่อแทนที่การสร้างบัตรอัตโนมัติจาก `StudentCardSyncService` และแก้ปัญหาบัตรซ้ำที่ต้นเหตุ
+**Source:** ต่อยอดจากข้อเสนอผู้ใช้ ผ่านการตรวจเทียบ codebase จริง
+
+---
+
+## User Analysis Input
+
+### สรุปข้อเสนอเดิม (workflow)
+
+1. ครูประจำชั้นเปิดรายชื่อนักเรียนในห้องตน
+2. ระบบแสดงสถานะรายคน: มีบัตรใช้อยู่ / ไม่มีบัตร / รอดำเนินการ / กำลังทำ / เสร็จแล้ว
+3. ครูเลือกนักเรียนที่ต้องทำบัตร ส่งคำร้องรายคนหรือหลายคน
+4. Admin ผู้ทำบัตรตรวจคำร้อง
+5. Admin รับงาน ปฏิเสธ หรือทำบัตร
+6. เมื่อทำเสร็จ Admin เชื่อมคำร้องกับ `student_cards` และเปลี่ยนสถานะเป็นเสร็จสิ้น
+
+**Request types:** `first_issue`, `replacement`, `renewal`
+**State machine:** `pending → approved → in_progress → completed` (+ `rejected`, `cancelled`)
+
+---
+
+## การวิเคราะห์เทียบกับ Codebase จริง
+
+### สิ่งที่ตรงกับโค้ดปัจจุบันแล้ว
+
+1. **Unique constraint ป้องกัน active card ซ้ำ มีอยู่แล้ว** — `uq_student_card_active` บน `(student_id, academy_id, is_active_flag)` ใน `2026_07_07_053001_add_constraints_and_fields_to_student_cards.php` ใช้ virtual column `is_active_flag` ที่เป็น NULL เมื่อ `student_status != 'active'` แผนของผู้ใช้กำหนดให้เป็น "ด่านสุดท้าย" — ถูกต้อง แต่ไม่ต้องสร้างเพิ่ม
+2. **`Classroom.homeroom_teacher_id`** มีอยู่และเป็น FK ไปที่ `users.id` — ใช้ได้ตามแผน
+3. **Middleware `academy.permission:...`** รองรับ dotted-permission ผ่าน `hasAnyPermission()` แล้ว (`CheckAcademyPermission.php`)
+4. **`ClassroomStudent.status = 'active'`** เป็น SoT ของ enrollment ตามที่แผนใช้อ้าง
+
+### สิ่งที่ต้องแก้จากแผนเดิม
+
+5. **`StudentCardSyncService` คือต้นเหตุของบัตรซ้ำ ไม่ใช่แค่ผลข้างเคียง** — `commitSync()` วนสร้างบัตรให้ **ทุก** active enrollment ที่ไม่มีบัตร (`StudentCardSyncService.php:181`) และตอน rollover 2568→2569 เพิ่ง created 476 (worklog 2026-07-06) ระบบคำร้องใหม่จะไร้ประโยชน์ถ้ายัง trigger service นี้ต่ออัตโนมัติ — **ต้องปิด/บล็อค endpoint `POST /student-cards/admin/sync/commit` และไม่เรียกจาก rollover อีก** เป็น deliverable ที่ 1 ไม่ใช่ footnote
+6. **Permission naming ควรตามแบบเดิม (dotted)** ไม่ใช่ underscore — ใช้ `students.cards.request` (ครู) + `students.cards.produce` (แอดมิน/ผู้ทำบัตร) แทน `manage_student_cards` เพื่อสอดคล้องกับ `students.manage`, `home_visits.manage` ที่มีอยู่ และเข้ากับ hierarchical check
+7. **Frontend `/teacher/*` route ยังไม่มีเลย** — ทั้ง project อยู่ใต้ `/admin/*` การเปิด `/academies/[name]/teacher/student-card-requests` คือการเปิด teacher portal แยกใหม่ ซึ่งเป็นการตัดสินใจโครงสร้างขนาดใหญ่ ต้องตัดสินก่อน:
+   - (A) วางไว้ใต้ `/admin/student-cards/requests` เหมือน admin เดิม แล้วซ่อน section ที่ครูไม่มีสิทธิ์ — เร็ว ใช้ layout เดิม
+   - (B) สร้าง `/teacher/` portal จริง — สะอาดกว่า แต่ต้องออกแบบ layout+sidebar+menu ใหม่ทั้งชุด
+8. **นักเรียนถูกลบ → ประวัติคำร้องหาย** — แผนกำหนด FK `student_id` ต้องเลือก policy ก่อน แนะนำเก็บ snapshot (`full_name_snapshot`, `student_number_snapshot`, `grade_level_snapshot`, `section_snapshot`) ณ เวลาส่ง และใช้ `onDelete('set null')` เพื่อไม่ให้ประวัติหาย เหมือน StudentCard ที่เก็บ `full_name_thai`, `class_level` แบบ frozen อยู่แล้ว
+9. **การ complete ต้องเชื่อมกับ StudentCard ยังไง** — ต้องเลือก:
+   - **สร้าง row ใหม่เสมอ** (แนะนำ) — expire card เดิม + insert card ใหม่ในทรานแซกชั่นเดียว ให้ audit trail สมบูรณ์และเข้ากับ unique constraint เดิม
+   - **แก้ในตัวเดิม** — เร็วกว่าแต่ audit หาย ไม่แนะนำ
+10. **Rollover hook** — หลังจาก request flow ใช้จริง `AcademicYearRolloverService` ที่ trigger card sync อัตโนมัติต้องเปลี่ยนพฤติกรรม แผนควรระบุชัดเจนว่า "rollover จะไม่สร้างบัตรอีกต่อไป — จะให้ครูส่ง `renewal` ผ่านระบบคำร้องเท่านั้น"
+11. **`StudentCard` ใช้ `Auditable` trait อยู่แล้ว** — `StudentCardRequest` ก็ควรใช้ trait นี้ เพื่อให้ transition ทุกครั้งมี audit log ครบ
+
+### สิ่งที่แผนเดิมขาด
+
+12. **Data backfill** — บัตร active 2,138 ใบใน DB ปัจจุบันไม่มีคำร้องผูก อย่างน้อยควรระบุใน rollout ว่า card ที่มีอยู่แล้วจะถือเป็น `origin='legacy'` หรือทำ synthetic `completed` request เพื่อ audit ครบวง
+13. **Idempotency ของ bulk submit** — ต้องเป็น per-student result ไม่ใช่ transaction เดียวที่ล้มทั้งชุด (ครูเลือก 40 คน มี 3 คนคำร้องซ้อน → 37 ผ่าน 3 skip พร้อมเหตุผลรายคน)
+14. **State machine ใน service** — แผนบอกให้รวมใน service เดียว แต่ควรระบุ helper `StudentCardRequestService::transition($request, $toStatus, $actor, ?$reason)` ที่ validate FROM→TO ก่อน เพื่อกันข้ามขั้นตอนแบบ single point
+15. **Real-time notification** — ระบบมี Laravel Reverb อยู่แล้ว ครูควรได้รับ broadcast เมื่อ admin อนุมัติ/ปฏิเสธ/เสร็จ (ไม่ต้อง refresh)
+16. **Race condition ที่ complete** — 2 admin กด complete พร้อมกันสำหรับคำร้องเดียว → ต้อง `lockForUpdate()` + re-check status ในทรานแซกชั่น
+17. **Priority / urgency** — โรงเรียนมักเจอ "หายกลางเทอม ต้องได้พรุ่งนี้" ควรมี `priority` (normal/urgent)
+18. **แยก `reason` (ครูกรอก) กับ `admin_notes` (แอดมินจดภายใน)** — 2 field ต่างเจตนา ไม่ควรใช้ column เดียว
+19. **`existing_card_id` policy สำหรับ replacement** — ครูต้องเลือกใบเดิม (dropdown) หรือระบบดึงมาให้อัตโนมัติ? ควรระบุ (แนะนำ auto-fetch จาก unique active card)
+20. **Rate limiting** — ครูกด "ส่งคำร้อง 200 คน" ในห้องผิด → ต้อง cap หรือมี confirmation modal
+
+---
+
+## Work Plan — ฉบับปรับปรุงสมบูรณ์
+
+### ระยะที่ 0: Prerequisite Decisions (ตอบก่อนเริ่ม)
+
+**เป้าหมาย:** ยืนยันการตัดสินใจโครงสร้างที่กระทบทั้งระบบ ก่อนเขียน migration
+
+| # | คำถาม | ค่าที่แนะนำ | ผลกระทบ |
+|---|-------|-------------|----------|
+| 0.1 | Teacher portal โครงสร้าง (A) หรือ (B) | (A) — วางใต้ `/admin/student-cards/requests` | (B) เป็นงานเพิ่ม 3–5 วัน สำหรับ layout/sidebar/menu |
+| 0.2 | Card lifecycle policy | สร้าง row ใหม่เสมอ | audit trail สมบูรณ์, unique constraint เดิมใช้ได้ตรงๆ |
+| 0.3 | Rollover behavior หลัง feature live | ปิด auto card sync ถาวร | rollover จะจัดการ enrollment อย่างเดียว, บัตรผ่านคำร้อง |
+| 0.4 | Legacy card ทำ synthetic request | ทำเลย `origin='legacy'` | reports "บัตรที่ผลิตในปีนี้" ไม่เพี้ยน |
+| 0.5 | `existing_card_id` สำหรับ replacement/renewal | auto-fetch จาก active card | ครูไม่ต้องเลือก, ลด error |
+| 0.6 | Complete → auto-open print page | Redirect ไปหน้า print card หลัง complete | เชื่อมกับ workflow admin เดิม |
+
+**ผลลัพธ์:** เอกสารสรุปคำตอบ 6 ข้อ ใช้เป็น decision log
+
+---
+
+### ระยะที่ 1: Foundation — Schema + State Machine (Backend Core)
+
+**เป้าหมาย:** สร้าง table + model + service state machine พร้อม constraint ครบ
+
+**Deliverables:**
+
+1. **Migration `create_student_card_requests_table`** ฟิลด์เต็มชุด:
+   - Core: `academy_id`, `academic_year_id`, `classroom_id`, `student_id` (nullable, `onDelete set null`), `request_type` (enum: `first_issue`|`replacement`|`renewal`), `status` (enum ตาม state machine)
+   - Snapshots ณ เวลาส่ง: `full_name_snapshot`, `student_number_snapshot`, `grade_level_snapshot`, `section_snapshot`
+   - Linkage: `existing_card_id` (nullable), `result_card_id` (nullable)
+   - Reason/notes: `reason` (จากครู, required เมื่อ replacement/renewal), `admin_notes` (nullable), `rejection_reason` (nullable)
+   - Actors + timestamps: `requested_by`, `approved_by`, `processed_by`, `requested_at`, `approved_at`, `started_at`, `completed_at`, `cancelled_at`, `rejected_at`
+   - Metadata: `priority` (default `normal`), `origin` (default `teacher`, สำหรับ backfill ใช้ `legacy`)
+   - Standard: `timestamps`
+
+2. **Indexes:**
+   - `(academy_id, status)`
+   - `(academy_id, classroom_id, status)`
+   - `(student_id, status)`
+   - **Partial unique** `(student_id, academy_id) WHERE status IN ('pending','approved','in_progress')` เพื่อป้องกันคำร้องเปิดซ้อน (MySQL 8+ ใช้ generated column trick เหมือน `is_active_flag`)
+
+3. **Model `StudentCardRequest`** ใช้ `Auditable` trait, relationships ครบ (`academy`, `academicYear`, `classroom`, `student`, `existingCard`, `resultCard`, `requestedBy`, `approvedBy`, `processedBy`), casts วันที่
+
+4. **Enum classes** — `RequestStatus`, `RequestType`, `RequestOrigin` (PHP 8.4 backed enums)
+
+5. **`StudentCardRequestService`** (state machine core):
+   - `transition($request, $toStatus, User $actor, array $context = [])` — validate transition matrix ก่อน, throw `InvalidStateTransition` ถ้าข้าม, บันทึก actor+timestamp+reason
+   - `create(...)`, `bulkCreate(...)` (return per-row result), `cancel(...)`
+   - `complete(...)` — ทรานแซกชั่นเดียว: `lockForUpdate()` request, expire `existing_card_id` (ถ้ามี), insert new StudentCard, set `result_card_id`, status=`completed`
+
+**Verify:** unit test transition matrix, partial unique constraint enforced
+
+---
+
+### ระยะที่ 2: Policy + Authorization
+
+**เป้าหมาย:** สิทธิ์ครู/แอดมินตามหลักการ least privilege
+
+**Deliverables:**
+
+1. **Permission keys ใหม่ใน `AcademyRole::SYSTEM_ROLES`:**
+   - `students.cards.request` → เพิ่มให้ role `teacher` (ครูประจำชั้นเท่านั้น, มี extra check เลเยอร์ที่ 2 ใน controller)
+   - `students.cards.produce` → เพิ่มให้ role `admin`, `owner`, `director`, และเปิดให้ create custom role `card_admin` ถ้าโรงเรียนอยากแยกคน
+
+2. **Update `AcademyRoleSeeder`** แบบ `updateOrCreate` เพื่อ backfill permission ให้ role เดิมทุก academy (pattern เดียวกับ registrar seeding เดือน 07-05)
+
+3. **`StudentCardRequestPolicy`:**
+   - `viewClassroom($user, Classroom)` — `homeroom_teacher_id` ตรง OR มี `students.manage`
+   - `create($user, Classroom)`, `cancel($user, Request)` — เจ้าของ request (ครู) หรือมี `students.cards.produce`
+   - `approve/reject/start/complete($user, Request)` — ต้องมี `students.cards.produce` เท่านั้น
+
+4. **FormRequest classes:** `StoreStudentCardRequestRequest`, `BulkStoreStudentCardRequestRequest`, `RejectRequest` (บังคับ `rejection_reason`)
+
+**Verify:** feature test — ครูห้องอื่นได้ 403, admin ไม่มี produce permission ได้ 403
+
+---
+
+### ระยะที่ 3: API Layer
+
+**เป้าหมาย:** REST API ตาม intent-based transitions (ไม่ใช่ raw status update)
+
+**Routes ใต้ `/api/academies/{academy}/student-card-requests`:**
+
+**Teacher-facing** (ต้องมี `students.cards.request` + homeroom check ใน controller):
+- `GET  /my-classrooms` — คืน classrooms ที่ user เป็น homeroom
+- `GET  /classrooms/{classroom}/students` — รายชื่อ + สถานะบัตร + คำร้องล่าสุด (join StudentCard + latest open request)
+- `POST /`
+- `POST /bulk` — return `{ results: [{ student_id, status: 'created'|'skipped', reason }] }`
+- `PATCH /{request}/cancel`
+
+**Admin/Producer-facing** (ต้องมี `students.cards.produce`):
+- `GET  /` — queue with filters: `year`, `classroom`, `type`, `status`, `priority`, `search`
+- `GET  /{request}` — รายละเอียด + snapshot + audit log
+- `PATCH /{request}/approve`
+- `PATCH /{request}/reject` (body: `rejection_reason` required)
+- `PATCH /{request}/start`
+- `PATCH /{request}/complete` — trigger `StudentCardRequestService::complete()`
+- `POST  /bulk-approve`, `POST /bulk-start` — power features
+
+**Shared:**
+- `GET /counts` — สรุปตัวเลข dashboard (pending, approved, in_progress, done_today)
+
+**Verify:** ทุก route มี test สำหรับ 200 (happy path), 403 (permission), 422 (validation), 409 (invalid state)
+
+---
+
+### ระยะที่ 4: Disable Legacy Bulk Creation (ต้องทำก่อน UI)
+
+**เป้าหมาย:** ปิดต้นทางของบัตรซ้ำ ก่อนที่ user จะเริ่มใช้ระบบใหม่
+
+**Deliverables:**
+
+1. **Gate `POST /academies/{academy}/student-cards/admin/sync/commit`** ให้ throw 410 Gone หรืออ่านเฉพาะ preview (คงไว้เพื่อ inspect)
+2. **ตัด hook จาก `AcademicYearRolloverService::commitRollover`** ที่เรียก StudentCardSync (ถ้ามี — ตรวจ code path จริง — worklog 2026-07-06 ระบุว่า rollover trigger card sync จริง)
+3. **Feature flag `academies.settings.card_request_flow_enabled`** (boolean) เพื่อ rollout ทีละ academy:
+   - flag=false → ยังใช้ legacy sync ได้
+   - flag=true → บล็อค legacy, บังคับใช้ request flow
+4. **Backfill script `students:seed-legacy-card-requests`** — สร้าง synthetic `completed` request ให้ card active ทุกใบที่มี ณ วันเปิด flag ตั้ง `origin='legacy'`, `requested_by`=system user เก็บ audit ครบวง
+
+**Verify:** integration test — flag=true → legacy sync return 410; rollover ไม่สร้าง card ใหม่
+
+---
+
+### ระยะที่ 5: Teacher UI
+
+**เป้าหมาย:** หน้าเดียวจบ ครูส่งคำร้องได้ในไม่กี่คลิก
+
+**Deliverables:**
+
+1. **หน้า `student-card-requests`** (path ตามผล ระยะ 0.1 — default: `/admin/student-cards/requests/my-classrooms`)
+2. **Sub-page:** เลือก classroom → ตารางนักเรียน + status badge (`no_card`, `active_card`, `pending_request`, `in_progress`, `completed_recent`)
+3. **`SubmitRequestModal.vue`:**
+   - เลือก `request_type` (ถ้ามีบัตร active — บังคับ `replacement`/`renewal`, ปิด `first_issue`)
+   - บังคับกรอก `reason` เมื่อไม่ใช่ `first_issue`
+   - Auto-fetch `existing_card_id` จาก active card
+4. **Composable `useStudentCardRequests.ts`** (wrapper API + type-safe result)
+5. **Bulk selection** — checkbox + submit modal + confirmation "คุณกำลังจะส่ง N คำร้อง"
+6. **Filter:** "แสดงเฉพาะคนที่ยังไม่มีบัตร"
+7. **Reverb subscription:** update badge เมื่อ admin เปลี่ยนสถานะ
+
+**Verify:** manual E2E — ครูเข้าหน้า, เลือก 5 คน (มี 1 คนมีคำร้องซ้อน), ส่ง → เห็น 4 ok + 1 skip พร้อมเหตุผล
+
+---
+
+### ระยะที่ 6: Admin UI
+
+**เป้าหมาย:** คิวงานแอดมินใช้ง่าย รองรับ batch printing
+
+**Deliverables:**
+
+1. **หน้า queue** พร้อม stat cards (pending/approved/in_progress/done_today)
+2. **Filter panel + persistent table** (PrimeVue DataTable ตาม convention)
+3. **Row actions:** view detail, approve, reject (modal บังคับ reason), start, complete
+4. **Bulk actions:** approve, start (สำหรับ batch printing)
+5. **หน้ารายละเอียด:** snapshot + timeline (audit log) + ปุ่มไปหน้า print card (เชื่อมระบบเดิม `/admin/student-cards/{result_card_id}/print`)
+
+**Verify:** manual E2E — admin เข้าหน้า, filter pending, bulk approve 10 คำร้อง, กด complete รายคน → บัตรจริงถูกสร้าง + link `result_card_id` ครบ
+
+---
+
+### ระยะที่ 7: Notifications
+
+**เป้าหมาย:** ครู/แอดมินไม่ต้อง refresh หน้า
+
+**Deliverables:**
+
+1. **Event classes:** `RequestSubmitted`, `RequestApproved`, `RequestRejected`, `RequestStarted`, `RequestCompleted`, `RequestCancelled`
+2. **Broadcast ผ่าน Reverb** (private channel per user)
+3. **In-app notification store integration** (มี `NotificationService` อยู่แล้ว)
+
+**Verify:** manual — ครูเปิดหน้าค้างไว้, admin approve → badge เปลี่ยนสถานะ live
+
+---
+
+### ระยะที่ 8: Tests
+
+**Coverage เป้าหมาย:**
+
+- [x] ครูส่งได้เฉพาะห้องตน + 403 กรณีอื่น
+- [x] ห้ามคำร้องเปิดซ้อน (test partial unique constraint)
+- [x] บังคับ `reason` เมื่อ replacement/renewal
+- [x] Admin transition ข้ามขั้นตอน → `InvalidStateTransition`
+- [x] Race: 2 admin กด complete พร้อมกัน → 1 สำเร็จ 1 fail ชัดเจน (ผ่าน `lockForUpdate` + status re-check)
+- [x] ย้ายห้องหลังส่ง → snapshot ยังถูก
+- [x] Legacy sync commit endpoint → 410 Gone เมื่อ flag=true
+- [x] Rollover ไม่ auto-create card อีก
+- [x] Backfill script สร้าง synthetic request ครบทุก card active
+- [x] Bulk submit per-row result (37 ok / 3 skipped ไม่ล้มทั้งชุด)
+- [x] Audit trail ทุก transition มี actor + timestamp
+- [x] E2E: ครูส่ง → admin approve → start → complete → บัตรใหม่สร้าง + บัตรเก่า expire
+
+---
+
+### ระยะที่ 9: Rollout Playbook
+
+**เป้าหมาย:** ปลอดภัย ค่อยเป็นค่อยไป, มีทาง rollback
+
+**ขั้นตอน:**
+
+1. Deploy code — flag ทุก academy = false (behavior เดิม)
+2. เลือก academy pilot 1 แห่ง → run backfill → flip flag = true → ทดสอบ 1 สัปดาห์
+3. Rollout เพิ่มทีละกลุ่ม (monitor error rate)
+4. ปิด legacy endpoints ถาวรเมื่อทุก academy = true (post-deploy migration ลบ code path)
+
+---
+
+## ข้อควรระวังที่ยังต้องตัดสินใจ
+
+1. **Homeroom เดี่ยว** — `classrooms.homeroom_teacher_id` มีคนเดียว ถ้าครูลาออก/เปลี่ยน — คำร้องเก่าที่ครูคนเก่าส่งไว้จะยัง valid (เพราะเช็คสิทธิ์ที่ point-in-time) แต่คนใหม่จะเห็นได้เพราะเช็คสิทธิ์ live — ยืนยันว่าเป็น behavior ที่ต้องการ
+2. **QR / print integration** — เมื่อ admin กด complete ระบบจะ redirect ไปหน้าพิมพ์เดิม (link `/admin/student-cards/{result_card_id}/print`) — ต้องยืนยัน route นี้มีอยู่จริง
+3. **นักเรียนย้าย academy** — ถ้า transfer ข้าม academy คำร้อง academy เดิมค้าง — ต้อง auto-cancel เมื่อ enrollment ย้าย (hook ที่ `StudentEnrollmentService::transferStudent`)
+
+---
+
+## ไฟล์หลักที่คาดว่าจะเพิ่ม/แก้
+
+### Backend
+
+**สร้างใหม่:**
+- `database/migrations/xxxx_create_student_card_requests_table.php`
+- `app/Models/StudentCardRequest.php`
+- `app/Enums/{RequestStatus,RequestType,RequestOrigin}.php`
+- `app/Services/StudentCardRequestService.php`
+- `app/Http/Controllers/Api/Learn/Student/Card/StudentCardRequestController.php`
+- `app/Http/Requests/{StoreStudentCardRequestRequest,BulkStoreStudentCardRequestRequest,RejectStudentCardRequestRequest}.php`
+- `app/Http/Resources/StudentCardRequestResource.php`
+- `app/Policies/StudentCardRequestPolicy.php`
+- `app/Events/StudentCard/{RequestSubmitted,RequestApproved,RequestRejected,RequestStarted,RequestCompleted,RequestCancelled}.php`
+- `app/Exceptions/InvalidStateTransition.php`
+- `app/Console/Commands/SeedLegacyCardRequests.php`
+- `routes/learn/academy-student-card-request.php`
+- Tests: `tests/Feature/Api/Academy/StudentCardRequest/*Test.php`
+
+**แก้ไข:**
+- `app/Models/AcademyRole.php` — เพิ่ม 2 permission keys ใน SYSTEM_ROLES
+- `database/seeders/AcademyRoleSeeder.php` — backfill permission ให้ role เดิม
+- `app/Services/StudentCardSyncService.php` — gate `commitSync()` ตาม feature flag
+- `app/Services/AcademicYearRolloverService.php` — ตัด card sync hook
+- `app/Http/Controllers/Api/Learn/Student/Card/StudentCardController.php` — gate `syncCommit()` action
+- `app/Services/StudentEnrollmentService.php` — auto-cancel open requests เมื่อ transfer ข้าม academy
+- `bootstrap/app.php` (or `RouteServiceProvider`) — register route file ใหม่
+- `app/Models/{Student,StudentCard,Classroom}.php` — เพิ่ม `cardRequests()` relationship
+
+### Frontend
+
+**สร้างใหม่:**
+- `ui/pages/academies/[name]/admin/student-cards/requests/index.vue` (teacher view)
+- `ui/pages/academies/[name]/admin/student-cards/requests/queue.vue` (admin view)
+- `ui/pages/academies/[name]/admin/student-cards/requests/[id].vue` (detail)
+- `ui/composables/useStudentCardRequests.ts`
+- `ui/components/school/studentCard/SubmitRequestModal.vue`
+- `ui/components/school/studentCard/RequestStatusBadge.vue`
+- `ui/components/school/studentCard/RequestQueueTable.vue`
+- `ui/components/school/studentCard/RequestTimelineDrawer.vue`
+- `ui/types/studentCardRequest.ts`
+
+**แก้ไข:**
+- `ui/pages/academies/[name]/admin.vue` — เพิ่ม sidebar link "คำร้องทำบัตร"
+- `ui/pages/academies/[name]/admin/index.vue` — quick action
+- `ui/i18n/locales/{th,en}/*.json` — ข้อความใหม่
+
+---
+
+## หัวใจของแผน
+
+> **"Request first, sync never. Snapshot everything."**
+>
+> - ปิดต้นเหตุก่อน (StudentCardSyncService::commitSync + rollover hook) — feature ใหม่ไร้ประโยชน์ถ้าท่อเก่ายังเปิด
+> - Snapshot ทุก field ที่จะเปลี่ยนได้ (ชื่อ, เลข, ห้อง) เพื่อประวัติไม่หายเมื่อ student mutate
+> - State machine ใน service เดียว, transition ต้องผ่าน `transition()` — ห้าม controller update raw status
+> - Partial unique constraint + `lockForUpdate` + re-check status = 3 ชั้นกัน race + duplicate
+> - Feature flag + backfill script = rollout safe ทีละ academy, revert ได้ทุกเวลา
+> - Reuse `Auditable` trait + Reverb + PrimeVue DataTable — ไม่สร้าง infra ใหม่
+
+---
+
+# Work Plan — Student Card Request System (2026-07-08)
+
+## 1. User Analysis Input
+- **ประเภทของคำร้อง (Request Types)**: `first_issue` (ออกบัตรครั้งแรก), `replacement` (ออกบัตรแทนใบเดิม/หาย), `renewal` (ต่ออายุบัตร)
+- **State Machine**:
+  - `pending` (สร้างคำร้องโดยครูประจำชั้น)
+  - `approved` (อนุมัติโดย admin)
+  - `rejected` (ปฏิเสธโดย admin พร้อมระบุเหตุผล)
+  - `in_progress` (เริ่มกระบวนการจัดทำ/พิมพ์บัตร)
+  - `completed` (จัดทำเสร็จสิ้นและออกบัตรใหม่สำเร็จ)
+  - `cancelled` (ยกเลิกโดยผู้ส่งคำร้องก่อนได้รับการประมวลผล)
+
+---
+
+## 2. การวิเคราะห์เปรียบเทียบกับ Codebase จริง
+
+### จุดที่ตรงกับโค้ดปัจจุบันแล้ว (ไม่ต้องแก้ไขหรือทำเพิ่ม)
+1. **Unique Constraint**: มี unique constraint บน `(student_id, academy_id, is_active_flag)` ใน migration `2026_07_07_053001_add_constraints_and_fields_to_student_cards.php` โดยใช้ virtual column `is_active_flag` ที่มีค่าเป็น NULL เมื่อ `student_status != 'active'` เพื่อป้องกันการมี active card ซ้ำ
+2. **Homeroom Teacher Link**: `Classroom.homeroom_teacher_id` เชื่อมโยงกับ `users.id` เรียบร้อยแล้ว
+3. **Dotted-Permission Middleware**: `CheckAcademyPermission` รองรับ dotted format ผ่าน `hasAnyPermission()` แล้ว
+4. **Enrollment Source of Truth**: `ClassroomStudent.status = 'active'` คือข้อมูลที่เป็น Source of Truth หลักสำหรับ enrollment
+
+### จุดที่ต้องแก้ไขและปรับปรุงแผนอย่างเร่งด่วน
+1. **ปิดกั้น Auto Sync / Legacy Sync**: `StudentCardSyncService::commitSync()` คือสาเหตุหลักของการสร้างบัตรซ้ำโดยอัตโนมัติ ต้องปิด/บล็อก endpoint `POST /student-cards/admin/sync/commit` และตัดการเรียกออกจากกระบวนการ rollover
+2. **การตั้งชื่อ Permission**: ใช้รูปแบบ dotted-permission แบบเดิม ได้แก่ `students.cards.request` (ครูประจำชั้นในการส่งคำร้อง) และ `students.cards.produce` (แอดมินในการอนุมัติและจัดทำบัตร) แทนการใช้ `manage_student_cards`
+3. **โครงสร้าง UI สำหรับคุณครู**: เลือกใช้แนวทาง **(A) วางไว้ใต้ `/admin/student-cards/requests`** โดยแชร์ layout เดิมของ admin แต่จำกัดการเข้าถึงและซ่อนปุ่มหรือส่วนการทำงานที่ไม่มีสิทธิ์ เพื่อความรวดเร็วและใช้โครงสร้างเดิม
+4. **นโยบายเมื่อนักเรียนถูกลบ**: ใช้ snapshots ของฟิลด์ต่าง ๆ (`full_name_snapshot`, `student_number_snapshot`, `grade_level_snapshot`, `section_snapshot`) ณ เวลาที่ยื่นคำร้อง และใช้การทำงานแบบ `onDelete('set null')` บน `student_id` ของตารางคำร้องเพื่อไม่ให้ประวัติคำร้องสูญหาย
+5. **การ Complete คำร้อง**: เลือกใช้แนวทาง **สร้างแถว (row) ใหม่เสมอในตาราง StudentCard** พร้อมทั้งเปลี่ยนสถานะบัตรเดิมให้หมดอายุ (expire) และสร้างบัตรใหม่ในทรานแซกชั่นเดียวกัน เพื่อให้ประวัติการตรวจสอบ (Audit Trail) สมบูรณ์
+6. **Rollover Hook**: กำหนดให้ไม่มีการสร้างการ์ดโดยอัตโนมัติจาก rollover อีกต่อไป โดยการต่ออายุบัตรจะใช้คำร้องแบบ `renewal` ผ่านระบบนี้เท่านั้น
+7. **Audit Log สำหรับคำร้อง**: ใช้ `Auditable` trait บนโมเดล `StudentCardRequest` เพื่อบันทึกประวัติการเปลี่ยนผ่านสถานะอย่างครอบคลุม
+
+### สิ่งที่ระบบต้องมีเพิ่มเติม
+- **Data Backfill**: รัน script backfill เพื่อตั้งค่าบัตรปัจจุบันที่มีอยู่แล้วเป็น `origin='legacy'` หรือทำ synthetic completed request
+- **Idempotency**: การทำ bulk submit จะต้องส่งผลลัพธ์แยกตามรายบุคคล (per-student result) หากมีบางคนที่เกิดข้อผิดพลาดหรือมีคำร้องเปิดอยู่ คนอื่น ๆ ใน batch ต้องดำเนินต่อได้และข้ามเฉพาะคนที่มีปัญหาพร้อมให้เหตุผล
+- **State Machine Guard**: ใช้ `StudentCardRequestService::transition($request, $toStatus, $actor, ?$reason)` เพื่อตรวจสอบ transition matrix ป้องกันการเปลี่ยนสถานะแบบข้ามขั้นตอน
+- **Real-time Notification**: ใช้ Laravel Reverb ในการยิงอัพเดตสถานะของคำร้องแบบ real-time
+- **Race Condition Prevention**: ใช้ `lockForUpdate()` และ re-check status ในทรานแซกชั่นขณะอนุมัติ/ทำเสร็จ
+- **Priority**: เพิ่มฟิลด์ `priority` (normal/urgent) สำหรับความเร่งด่วนของคำร้อง
+- **แยกฟิลด์เหตุผล**: แยก `reason` (ครูกรอกเหตุผลขอทำบัตรใหม่) กับ `admin_notes` (แอดมินจดบันทึกภายใน) และ `rejection_reason` (สาเหตุที่แอดมินปฏิเสธ) ออกจากกันอย่างชัดเจน
+- **Link บัตรเก่าอัตโนมัติ**: ระบบจะเลือก `existing_card_id` ของบัตร active ล่าสุดของนักเรียนคนนั้นให้อัตโนมัติเมื่อขอทำบัตรใหม่ (replacement/renewal)
+- **Rate limiting / Confirmation**: มี confirmation modal บนหน้าจอครูก่อนจะกดส่ง bulk request
+
+---
+
+## 3. Work Plan 10 ระยะ (Phases 0–9)
+
+### เฟส 0 — Prerequisite Decisions
+1. **UI Structure**: ใช้โครงสร้าง (A) วางไว้ใต้ `/admin/student-cards/requests`
+2. **Card Lifecycle Policy**: สร้าง row ใหม่เสมอใน `student_cards` พร้อม expire ใบเดิม
+3. **Rollover Behavior**: ปิดระบบ auto card sync หลัง rollover โดยสิ้นเชิง
+4. **Legacy Card Handling**: ตั้งค่า `origin='legacy'` ให้กับบัตรเก่าในระบบ
+
+### เฟส 1 — Foundation (Backend Schema + State Machine)
+1. **Migration**: สร้างตาราง `student_card_requests`
+   - ฟิลด์เชื่อมโยง: `academy_id`, `academic_year_id`, `classroom_id`, `student_id` (nullable, set null on delete), `existing_card_id` (nullable), `result_card_id` (nullable)
+   - ฟิลด์ระบุประเภท/สถานะ: `request_type` (enum), `status` (enum)
+   - Snapshots: `full_name_snapshot`, `student_number_snapshot`, `grade_level_snapshot`, `section_snapshot`
+   - เหตุผล/บันทึก: `reason` (ครูส่ง), `admin_notes` (บันทึกภายใน), `rejection_reason` (เหตุผลปฏิเสธ)
+   - ผู้ดำเนินการ + Timestamps: `requested_by`, `approved_by`, `processed_by`, `requested_at`, `approved_at`, `started_at`, `completed_at`, `cancelled_at`, `rejected_at`
+   - อื่น ๆ: `priority` (enum: normal, urgent), `origin` (enum: teacher, legacy)
+2. **Indexes**: สร้าง composite index `(academy_id, status)` และสร้าง partial unique constraint `(student_id, academy_id) WHERE status IN ('pending', 'approved', 'in_progress')`
+3. **Model & Enums**: โมเดล `StudentCardRequest` พร้อมใช้ `Auditable` trait และสร้าง PHP 8.4 Backed Enums (`RequestStatus`, `RequestType`, `RequestOrigin`)
+4. **StudentCardRequestService**: พัฒนาแกนหลักของ state machine
+   - `transition($request, $toStatus, User $actor, array $context = [])`
+   - `create(...)`, `bulkCreate(...)`
+   - `complete(...)` (ใน transaction พร้อม `lockForUpdate` + expire บัตรเดิม + insert บัตรใหม่)
+
+### เฟส 2 — Policy + Authorization
+1. **Permission Integration**: อัพเดท `AcademyRole::SYSTEM_ROLES`
+   - `students.cards.request` (สำหรับบทบาท `teacher`)
+   - `students.cards.produce` (สำหรับบทบาท `admin`, `owner`, `director`, `card_admin`)
+2. **Seeder Update**: รัน `AcademyRoleSeeder` แบบ `updateOrCreate` เพื่อปรับปรุง permissions
+3. **StudentCardRequestPolicy**: ตรวจสอบสิทธิ์ระดับ homeroom teacher และสิทธิ์ในการจัดการของ admin
+4. **Form Requests**: สร้าง `StoreStudentCardRequestRequest`, `BulkStoreStudentCardRequestRequest`, และ `RejectRequest`
+
+### เฟส 3 — API Layer
+- **Routes Base**: `/api/academies/{academy}/student-card-requests`
+- **Teacher Endpoints** (สิทธิ์ `students.cards.request` + Homeroom check):
+  - `GET /my-classrooms`
+  - `GET /classrooms/{classroom}/students`
+  - `POST /` และ `POST /bulk` (คืนผลลัพธ์ per-row)
+  - `PATCH /{request}/cancel`
+- **Admin Endpoints** (สิทธิ์ `students.cards.produce`):
+  - `GET /` (Queue filter ตามสถานะ, ชั้น, ห้อง, ความสำคัญ)
+  - `GET /{request}` (ดูข้อมูลอย่างละเอียดรวมถึง audit log)
+  - `PATCH /{request}/approve`
+  - `PATCH /{request}/reject`
+  - `PATCH /{request}/start`
+  - `PATCH /{request}/complete`
+  - `POST /bulk-approve`, `POST /bulk-start`
+- **Shared Endpoints**:
+  - `GET /counts` (นับสถิติจำนวนคำร้องในระบบ)
+
+### เฟส 4 — Disable Legacy Bulk Creation (สำคัญ)
+1. บล็อก endpoint `POST /academies/{academy}/student-cards/admin/sync/commit` (คืนค่า 410 Gone เมื่อ flag ทำงาน)
+2. ตัดการเรียก card sync จาก `AcademicYearRolloverService`
+3. เพิ่ม Feature Flag `academies.settings.card_request_flow_enabled` เพื่อใช้เปิดปิดฟีเจอร์นี้รายโรงเรียน
+4. สร้าง script `students:seed-legacy-card-requests` เพื่อ backfill ข้อมูลการ์ดเดิมที่มีอยู่
+
+### เฟส 5 — Teacher UI
+1. พัฒนาส่วนขอทำบัตรนักเรียนภายใต้ `/admin/student-cards/requests`
+2. แสดงตารางรายชื่อนักเรียนในห้องเรียน พร้อมแสดง status badge ของบัตรและการส่งคำร้องปัจจุบัน
+3. สร้าง `SubmitRequestModal.vue` รองรับการระบุเหตุผลและการเลือกประเภทคำร้องอัตโนมัติ
+4. สร้าง composable `useStudentCardRequests.ts`
+
+### เฟส 6 — Admin UI
+1. ปรับปรุงหน้าคิวงานการ์ดของแอดมิน แสดงสถานะสถิติแยกการทำงาน
+2. ตาราง PrimeVue DataTable กรองข้อมูลละเอียด มี Bulk actions ในการ approve/start
+3. หน้าแสดงรายละเอียดคำร้องและ Audit logs พร้อมปุ่มเชื่อมโยงสำหรับการพิมพ์บัตร
+
+### เฟส 7 — Notifications
+1. Event Classes สำหรับสเตทของคำร้องทั้งหมด
+2. เชื่อมต่อ Reverb Broadcast ในการส่ง notification live ไปยังหน้าผู้ใช้
+3. บันทึกและเรียกใช้งานผ่าน `NotificationService`
+
+### เฟส 8 — Tests (การตรวจสอบความถูกต้อง)
+- สิทธิ์ครูประจำชั้นในการส่งคำร้องและสิทธิ์ของแอดมิน
+- การป้องกันการส่งคำร้องซ้ำซ้อน (partial unique index)
+- การทำงานในเงื่อนไขการแก้ไขบัตรหายหรือหมดอายุต้องระบุเหตุผล
+- การป้องกัน Race condition ด้วย `lockForUpdate`
+- ทดสอบการตัด legacy sync และการทำงานหลังการ rollover
+- ทดสอบ bulk submit แบบแยกผลลัพธ์อิสระต่อกัน
+
+### เฟส 9 — Rollout Playbook
+1. Deploy โค้ดโดยปิด flag (`false`)
+2. รัน script backfill ข้อมูลและเปิด flag (`true`) สำหรับโรงเรียนนำร่อง
+3. ทยอยเปิดใช้งานทั่วไปและเคลียร์โค้ดเก่าที่เลิกใช้
+
+---
+
+## 4. ข้อควรระวัง, ไฟล์หลัก และหัวใจของแผน
+
+### ข้อควรระวัง
+1. **ครูประจำชั้นเปลี่ยนคน**: ข้อมูลผู้ส่ง (snapshot) จะยังคงสิทธิ์การยื่นเดิม แต่ครูประจำชั้นคนปัจจุบันจะเห็นและจัดการคำร้องต่อของห้องเรียนนั้นได้ (live check)
+2. **การเชื่อมระบบพิมพ์บัตร**: เมื่อ complete แอดมินสามารถเปิดหน้าพิมพ์การ์ดใบใหม่ที่ถูกสร้างได้ทันที
+3. **การย้ายโรงเรียนของนักเรียน**: ยกเลิกคำร้องของนักเรียนอัตโนมัติ หากนักเรียนถูกย้าย (transfer) ไปยัง academy อื่น
+
+### ไฟล์หลักที่จะเพิ่มหรือแก้ไข
+
+#### Backend
+- **สร้างใหม่**:
+  - `database/migrations/2026_07_08_000001_create_student_card_requests_table.php`
+  - `app/Models/StudentCardRequest.php`
+  - `app/Enums/StudentCardRequestStatus.php`
+  - `app/Enums/StudentCardRequestType.php`
+  - `app/Enums/StudentCardRequestOrigin.php`
+  - `app/Services/StudentCardRequestService.php`
+  - `app/Http/Controllers/Api/Learn/Student/Card/StudentCardRequestController.php`
+  - `app/Http/Requests/StoreStudentCardRequest.php`
+  - `app/Http/Requests/BulkStoreStudentCardRequest.php`
+  - `app/Http/Requests/RejectStudentCardRequest.php`
+  - `app/Policies/StudentCardRequestPolicy.php`
+  - `app/Console/Commands/SeedLegacyCardRequests.php`
+  - `routes/learn/academy-student-card-request.php`
+- **แก้ไข**:
+  - `app/Models/AcademyRole.php`
+  - `database/seeders/AcademyRoleSeeder.php`
+  - `app/Services/StudentCardSyncService.php`
+  - `app/Services/AcademicYearRolloverService.php`
+  - `app/Services/StudentEnrollmentService.php`
+
+#### Frontend
+- **สร้างใหม่**:
+  - `ui/pages/academies/[name]/admin/student-cards/requests/index.vue`
+  - `ui/pages/academies/[name]/admin/student-cards/requests/queue.vue`
+  - `ui/pages/academies/[name]/admin/student-cards/requests/[id].vue`
+  - `ui/composables/useStudentCardRequests.ts`
+  - `ui/components/school/studentCard/SubmitRequestModal.vue`
+  - `ui/components/school/studentCard/RequestStatusBadge.vue`
+- **แก้ไข**:
+  - `ui/pages/academies/[name]/admin.vue`
+  - `ui/pages/academies/[name]/admin/index.vue`
+
+### หัวใจของแผน
+> **"Request first, sync never. Snapshot everything."**
+> - จัดการต้นเหตุ (ปิด Auto Sync)
+> - เก็บ Snapshot ข้อมูลของเด็ก ณ วันที่ขอทำบัตร เพื่อป้องกันข้อมูลสูญหายหรือเพี้ยนในอนาคต
+> - ป้องกันข้อขัดแย้งของสถานะ (Race Condition) ด้วย database locks และ state machine ที่เข้มงวด

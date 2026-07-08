@@ -49,6 +49,8 @@ class AcademyPermission extends Model
             ['name' => 'students.activate_account', 'display_name' => 'เปิดใช้งานบัญชีนักเรียน'],
             ['name' => 'students.export', 'display_name' => 'ส่งออกข้อมูลนักเรียน'],
             ['name' => 'students.delete', 'display_name' => 'ลบนักเรียน'],
+            ['name' => 'students.cards.request', 'display_name' => 'ส่งคำร้องขอทำบัตรนักเรียน'],
+            ['name' => 'students.cards.produce', 'display_name' => 'อนุมัติและจัดทำบัตรนักเรียน'],
         ],
         'teachers' => [
             ['name' => 'teachers.view', 'display_name' => 'ดูข้อมูลครู'],

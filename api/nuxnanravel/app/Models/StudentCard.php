@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StudentCard extends Model
 {
@@ -59,6 +60,11 @@ class StudentCard extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function sourceRequests(): HasMany
+    {
+        return $this->hasMany(StudentCardRequest::class, 'existing_card_id');
     }
 
     /**

@@ -236,6 +236,11 @@ class Student extends Model
         return $this->hasOne(StudentCard::class);
     }
 
+    public function cardRequests(): HasMany
+    {
+        return $this->hasMany(StudentCardRequest::class);
+    }
+
     /**
      * Get the corresponding student card (Legacy)
      * Use manual query to avoid collation issues

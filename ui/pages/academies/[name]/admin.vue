@@ -146,6 +146,12 @@ const menuItems = computed(() => [
         show: can('students.view'),
       },
       {
+        name: 'คำร้องทำบัตร',
+        icon: 'fluent:person-card-24-regular',
+        to: `/academies/${academyName.value}/admin/student-cards/requests`,
+        show: can('students.cards.request') || can('students.cards.produce'),
+      },
+      {
         name: 'การเข้าเรียน',
         icon: 'fluent:clipboard-task-24-regular',
         to: `/academies/${academyName.value}/admin/school-attendance`,

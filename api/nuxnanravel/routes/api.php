@@ -214,6 +214,7 @@ require __DIR__.'/learn/student.php';
 
 // Academy-based Student Card and Home Visit Routes (NEW - under academy management)
 require __DIR__.'/learn/academy-student-card.php';
+require __DIR__.'/learn/academy-student-card-request.php';
 require __DIR__.'/learn/academy-home-visit.php';
 
 // Student Profile Routes (view student profile by academy context)

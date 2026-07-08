@@ -425,6 +425,13 @@ class StudentCardController extends Controller
      */
     public function syncCommit(Request $request, Academy $academy, StudentCardSyncService $syncService)
     {
+        if ((bool) $academy->getSettings()?->card_request_flow_enabled) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Legacy student card sync is disabled. Use student card requests instead.',
+            ], 410);
+        }
+
         $request->validate([
             'academic_year_id' => ['nullable', 'integer'],
             'confirmation' => ['required', 'in:SYNC'],
