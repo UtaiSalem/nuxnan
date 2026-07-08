@@ -7,6 +7,7 @@ use App\Models\ClassroomStudent;
 use App\Models\Student;
 use App\Models\StudentImportBatch;
 use App\Models\StudentImportRow;
+use App\Services\Import\RosterReconciliationService;
 use App\Services\Import\StudentRosterCommitService;
 use App\Services\Import\StudentRosterUpdateService;
 use App\Services\Import\StudentRosterXlsxParser;
@@ -28,6 +29,31 @@ class StudentImportService
     public function validateBatch(StudentImportBatch $batch): void
     {
         if (in_array($batch->status, ['cancelled', 'processing', 'completed'], true)) {
+            return;
+        }
+
+        // Route to JSON Roster Reconciliation if applicable
+        if ($batch->import_type === 'roster_reconciliation' || str_ends_with(strtolower($batch->filename), '.json')) {
+            $batch->update(['import_type' => 'roster_reconciliation', 'source_format' => 'json']);
+            $batch->update(['status' => 'validating']);
+            $batch->rows()->delete();
+
+            $reconciliationService = app(RosterReconciliationService::class);
+
+            try {
+                $filePath = Storage::disk('local')->path($batch->filename);
+                $jsonData = json_decode(file_get_contents($filePath), true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new \RuntimeException('Invalid JSON import file.');
+                }
+                $reconciliationService->preview($batch->academy, $batch->academicYear, $batch, $jsonData);
+            } catch (Throwable $exception) {
+                if ($batch->fresh()->status !== 'cancelled') {
+                    $batch->update(['status' => 'failed']);
+                }
+                throw $exception;
+            }
+
             return;
         }
 
@@ -114,6 +140,49 @@ class StudentImportService
         }
 
         $batch->update(['status' => 'processing']);
+
+        // Route to JSON Roster Reconciliation if applicable
+        if ($batch->import_type === 'roster_reconciliation') {
+            $reconciliationService = app(RosterReconciliationService::class);
+            $reconciliationService->assignHomeroomTeachers($batch, $operator);
+            $statuses = $retryFailed ? ['failed'] : ['valid', 'warning'];
+
+            $batch->rows()
+                ->whereIn('status', $statuses)
+                ->orderBy('row_number')
+                ->chunkById(50, function ($rows) use ($batch, $operator, $reconciliationService): void {
+                    foreach ($rows as $row) {
+                        try {
+                            $reconciliationService->processRow($row, $operator);
+                        } catch (Throwable $exception) {
+                            Log::warning('Roster reconciliation row failed', [
+                                'batch_id' => $batch->id,
+                                'row_id' => $row->id,
+                                'exception' => $exception,
+                            ]);
+                            $row->update([
+                                'status' => 'failed',
+                                'errors' => [['field' => '_system', 'message' => $exception->getMessage()]],
+                            ]);
+                        }
+                    }
+                });
+
+            // Card sync
+            if ($batch->rows()->where('status', 'imported')->exists()) {
+                $commitService = app(StudentRosterCommitService::class);
+                $commitService->syncCards($batch, $operator);
+            }
+
+            $this->refreshCounters($batch);
+            $failed = $batch->rows()->where('status', 'failed')->exists();
+            $batch->update([
+                'status' => $failed ? 'partial' : 'completed',
+                'completed_at' => now(),
+            ]);
+
+            return;
+        }
 
         // Route to XLSX Roster Commit if applicable
         if ($batch->import_type === 'roster_update') {

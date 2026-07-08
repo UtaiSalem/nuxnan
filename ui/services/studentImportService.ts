@@ -17,12 +17,16 @@ export const useStudentImportService = () => {
     academyName: string, 
     file: File, 
     academicYearId?: number | null, 
-    defaults?: Record<string, any>
+    defaults?: Record<string, any>,
+    importType?: string
   ): Promise<StudentImportBatch> => {
     const formData = new FormData()
     formData.append('file', file)
     if (academicYearId) {
       formData.append('academic_year_id', String(academicYearId))
+    }
+    if (importType) {
+      formData.append('import_type', importType)
     }
     if (defaults) {
       Object.entries(defaults).forEach(([key, value]) => {

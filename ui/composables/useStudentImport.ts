@@ -40,12 +40,13 @@ export const useStudentImport = (academyName?: string) => {
   const uploadFile = async (
     file: File, 
     academicYearId?: number | null, 
-    defaults?: Record<string, any>
+    defaults?: Record<string, any>,
+    importType = 'new_intake'
   ): Promise<StudentImportBatch | null> => {
     if (!academyName) throw new Error('Academy name is required')
     isUploading.value = true
     try {
-      const batch = await service.uploadBatch(academyName, file, academicYearId, defaults)
+      const batch = await service.uploadBatch(academyName, file, academicYearId, defaults, importType)
       currentBatch.value = batch
       if (batch.status === 'validating' || batch.status === 'uploaded') {
         startPolling(batch.id)

@@ -18,8 +18,17 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">2. ตั้งค่าเริ่มต้น (ตัวเลือกเสริม)</h3>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">2. ตั้งค่าการนำเข้า</h3>
         <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              รูปแบบการทำงาน <span class="text-red-500">*</span>
+            </label>
+            <select v-model="importType" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+              <option value="new_intake">นำเข้านักเรียนใหม่ (New Intake)</option>
+              <option value="roster_reconciliation">จัดห้องเรียนใหม่ (Roster Reconciliation ด้วย Student Code)</option>
+            </select>
+          </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               ปีการศึกษา <span class="text-red-500">*</span>
@@ -29,7 +38,7 @@
               <option v-for="year in academicYears" :key="year.id" :value="year.id">{{ year.name || year.year }}</option>
             </select>
           </div>
-          <div>
+          <div v-if="importType === 'new_intake'">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ระดับชั้น/ห้อง (ถ้านำเข้าทีละห้อง)</label>
             <select v-model="classroomId" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
               <option :value="null">-- ไม่ตั้งค่าเริ่มต้น --</option>
@@ -50,9 +59,9 @@
           @dragover.prevent
           @drop.prevent="handleDrop"
         >
-          <input type="file" ref="fileInput" accept=".csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileSelect" :disabled="isUploading" />
+          <input type="file" ref="fileInput" accept=".csv,.json" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileSelect" :disabled="isUploading" />
           <Icon icon="fluent:cloud-arrow-up-24-regular" class="w-12 h-12 mx-auto text-gray-400 mb-3" />
-          <p class="text-sm text-gray-600 dark:text-gray-400">ลากไฟล์ CSV มาวางที่นี่ หรือ <span class="text-primary-600 font-medium">คลิกเพื่อเลือกไฟล์</span></p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">ลากไฟล์ CSV หรือ JSON มาวางที่นี่ หรือ <span class="text-primary-600 font-medium">คลิกเพื่อเลือกไฟล์</span></p>
           <p class="text-xs text-gray-500 mt-2" v-if="selectedFile">ไฟล์ที่เลือก: {{ selectedFile.name }}</p>
         </div>
 
@@ -90,6 +99,7 @@ const academicYears = ref<any[]>([])
 const classrooms = ref<any[]>([])
 const academicYearId = ref<number | null>(null)
 const classroomId = ref<number | null>(null)
+const importType = ref('new_intake')
 
 const dragActive = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -129,10 +139,11 @@ const handleDrop = (e: DragEvent) => {
   dragActive.value = false
   if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
     const file = e.dataTransfer.files[0]
-    if (file.name.endsWith('.csv') || file.type === 'text/csv') {
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    if (ext === 'csv' || ext === 'json') {
       selectedFile.value = file
     } else {
-      alert('กรุณาอัปโหลดไฟล์ CSV เท่านั้น')
+      alert('กรุณาอัปโหลดไฟล์ CSV หรือ JSON เท่านั้น')
     }
   }
 }
@@ -156,7 +167,7 @@ const submitUpload = async () => {
   if (!selectedFile.value || !academicYearId.value) return
   try {
     const defaults: Record<string, any> = {}
-    if (classroomId.value) {
+    if (importType.value === 'new_intake' && classroomId.value) {
       const selectedRoom = classrooms.value.find(r => r.id === classroomId.value)
       if (selectedRoom) {
         defaults.grade_level = selectedRoom.grade_level
@@ -164,7 +175,12 @@ const submitUpload = async () => {
       }
     }
     
-    await uploadFile(selectedFile.value, academicYearId.value, Object.keys(defaults).length > 0 ? defaults : undefined)
+    await uploadFile(
+      selectedFile.value,
+      academicYearId.value,
+      Object.keys(defaults).length > 0 ? defaults : undefined,
+      importType.value
+    )
     emit('next')
   } catch (e) {
     alert('เกิดข้อผิดพลาดในการอัปโหลด กรุณาลองใหม่อีกครั้ง')

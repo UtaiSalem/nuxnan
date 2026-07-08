@@ -95,6 +95,7 @@ class Student extends Model
         'enrollment_date',
         'class_level',
         'class_section',
+        'remarks',
     ];
 
     protected $casts = [

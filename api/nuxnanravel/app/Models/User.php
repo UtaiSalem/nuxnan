@@ -64,6 +64,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'wallet',
         'profile_photo_path',
         'verified',
+        'is_placeholder',
+        'must_reset_password',
         'email_verified_at',
         'phone_verified_at',
         'password',
@@ -105,6 +107,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     {
         return [
             'verified' => 'boolean',
+            'is_placeholder' => 'boolean',
+            'must_reset_password' => 'boolean',
             'email_verified_at' => 'datetime',
             'created_at' => 'datetime:Y-m-d H:i:s',
             'updated_at' => 'datetime:Y-m-d H:i:s',

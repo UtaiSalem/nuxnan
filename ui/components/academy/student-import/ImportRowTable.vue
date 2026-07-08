@@ -25,6 +25,7 @@
             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">แถว</th>
             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อ-สกุล (ดิบ)</th>
             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เลขประจำตัว</th>
+            <th v-if="currentBatch?.import_type === 'roster_reconciliation'" scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การดำเนินการ</th>
             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">สถานะการตรวจสอบ</th>
           </tr>
         </thead>
@@ -39,7 +40,25 @@
             <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
               <div class="flex flex-col gap-0.5">
                 <span>รหัส: {{ row.raw_data.student_code || '-' }}</span>
-                <span class="text-xs">เลข ปชช: {{ row.raw_data.citizen_id || '-' }}</span>
+                <span class="text-xs" v-if="row.raw_data.citizen_id">เลข ปชช: {{ row.raw_data.citizen_id }}</span>
+              </div>
+            </td>
+            <td v-if="currentBatch?.import_type === 'roster_reconciliation'" class="px-4 py-3 text-sm">
+              <div class="flex flex-col gap-1">
+                <span :class="getActionClass(row.action)" class="px-2 py-0.5 rounded-full text-xs font-medium inline-block w-fit">
+                  {{ getActionLabel(row.action) }}
+                </span>
+                <span v-if="row.diff_data" class="text-xs text-gray-500">
+                  <template v-if="row.diff_data.from_classroom">
+                    {{ row.diff_data.from_classroom }} &rarr; {{ row.diff_data.to_classroom }}
+                  </template>
+                  <template v-else-if="row.diff_data.last_classroom">
+                    ห้องเรียนเดิม: {{ row.diff_data.last_classroom }}
+                  </template>
+                  <template v-else-if="row.diff_data.to_classroom">
+                    เข้าห้อง: {{ row.diff_data.to_classroom }}
+                  </template>
+                </span>
               </div>
             </td>
             <td class="px-4 py-3">
@@ -51,7 +70,7 @@
             </td>
           </tr>
           <tr v-if="rows.length === 0 && !isLoading">
-            <td colspan="4" class="px-4 py-8 text-center text-sm text-gray-500">
+            <td :colspan="currentBatch?.import_type === 'roster_reconciliation' ? 5 : 4" class="px-4 py-8 text-center text-sm text-gray-500">
               ไม่พบข้อมูล
             </td>
           </tr>
@@ -100,7 +119,7 @@ const props = defineProps<{
 
 const route = useRoute()
 const academyName = route.params.name as string
-const { fetchBatch } = useStudentImport(academyName)
+const { fetchBatch, currentBatch } = useStudentImport(academyName)
 const { getRows } = useStudentImportService()
 
 const rows = ref<StudentImportRow[]>([])
@@ -138,10 +157,38 @@ onMounted(() => {
 })
 
 const formatName = (data: any) => {
+  if (data.full_name) return data.full_name
+  if (data.fullName) return data.fullName
   const parts = []
   if (data.title_th) parts.push(data.title_th)
   if (data.first_name_th) parts.push(data.first_name_th)
   if (data.last_name_th) parts.push(data.last_name_th)
   return parts.join(' ') || 'ไม่ระบุชื่อ'
+}
+
+const getActionLabel = (action: string) => {
+  return {
+    promote_student: 'เลื่อนชั้น',
+    unchanged: 'ไม่มีการเปลี่ยนแปลง',
+    transfer_within_year: 'ย้ายห้องเรียน',
+    repeat_student: 'ซ้ำชั้น',
+    re_enroll: 'ลงทะเบียนใหม่',
+    new_intake: 'นักเรียนใหม่',
+    auto_graduate: 'จบการศึกษาอัตโนมัติ',
+    flag_missing: 'ตกหล่น (ไม่พบในจัดห้อง)',
+  }[action] || action
+}
+
+const getActionClass = (action: string) => {
+  return {
+    promote_student: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
+    unchanged: 'bg-gray-50 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300 border border-gray-200 dark:border-gray-800',
+    transfer_within_year: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800',
+    repeat_student: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-200 dark:border-red-800',
+    re_enroll: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800',
+    new_intake: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800',
+    auto_graduate: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800',
+    flag_missing: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600',
+  }[action] || 'bg-gray-100 text-gray-800'
 }
 </script>

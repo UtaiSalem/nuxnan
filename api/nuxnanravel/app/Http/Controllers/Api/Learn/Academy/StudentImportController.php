@@ -45,6 +45,7 @@ class StudentImportController extends Controller
             $batch = StudentImportBatch::create([
                 'academy_id' => $academy->id,
                 'academic_year_id' => $request->integer('academic_year_id'),
+                'import_type' => $request->input('import_type', 'new_intake'),
                 'filename' => $path,
                 'original_filename' => $file->getClientOriginalName(),
                 'status' => 'uploaded',

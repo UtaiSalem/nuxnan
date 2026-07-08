@@ -22,8 +22,9 @@ class UploadStudentImportRequest extends FormRequest
         $academy = $this->route('academy');
 
         return [
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+            'file' => ['required', 'file', 'mimes:csv,txt,json', 'max:5120'],
             'academic_year_id' => ['required', 'integer', Rule::exists('academic_years', 'id')->where('academy_id', $academy->id)],
+            'import_type' => ['sometimes', 'string', Rule::in(['new_intake', 'roster_update', 'roster_reconciliation'])],
             'idempotency_key' => ['nullable', 'string', 'max:64'],
             'defaults' => ['sometimes', 'array'],
             'defaults.grade_level' => ['nullable', 'string', 'max:10'],
