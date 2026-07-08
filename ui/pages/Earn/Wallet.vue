@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 // If using Nuxt 3 with Pinia, the correct path is usually '@/stores/auth'
 import { useAuthStore } from '@/stores/auth'
@@ -36,7 +36,10 @@ const {
   cancelDepositRequest,
   formatMoney,
   calculateFee,
-  getNetAmount
+  getNetAmount,
+  normalizePromptPay,
+  validatePromptPay,
+  formatPromptPay
 } = useWallet()
 
 const { points, convertToWallet, formatPoints } = usePoints()
@@ -62,11 +65,37 @@ const depositForm = ref({
 
 const withdrawForm = ref({
   amount: 100,
-  method: 'bank_transfer',
+  method: 'bank_transfer' as 'bank_transfer' | 'promptpay',
   bank_account: {
     bank_name: '',
     account_number: '',
     account_name: ''
+  }
+})
+
+// PromptPay input (kept separate so the user can type with dashes/spaces)
+const promptpayRaw = ref('')
+const promptpayDigits = computed(() => normalizePromptPay(promptpayRaw.value))
+const promptpayValid = computed(() => validatePromptPay(promptpayDigits.value))
+
+// Switch destination channel: reset the destination fields to avoid stale values
+const setWithdrawMethod = (method: 'bank_transfer' | 'promptpay') => {
+  if (withdrawForm.value.method === method) return
+  withdrawForm.value.method = method
+  withdrawForm.value.bank_account.bank_name = method === 'promptpay' ? 'promptpay' : ''
+  withdrawForm.value.bank_account.account_number = ''
+  if (method === 'promptpay') {
+    // Prefill with the user's phone number when available
+    promptpayRaw.value = authStore.user?.phone_number || ''
+  } else {
+    promptpayRaw.value = ''
+  }
+}
+
+// Keep bank_name pinned to 'promptpay' whenever that channel is active
+watch(() => withdrawForm.value.method, (method) => {
+  if (method === 'promptpay') {
+    withdrawForm.value.bank_account.bank_name = 'promptpay'
   }
 })
 
@@ -347,11 +376,16 @@ const handleWithdraw = async () => {
   try {
     isProcessing.value = true
     processSuccess.value = false
-    
+
+    // For PromptPay, send the normalized number as the account_number
+    const bankAccount = withdrawForm.value.method === 'promptpay'
+      ? { ...withdrawForm.value.bank_account, bank_name: 'promptpay', account_number: promptpayDigits.value }
+      : withdrawForm.value.bank_account
+
     await withdraw({
       amount: withdrawForm.value.amount,
       method: withdrawForm.value.method,
-      bank_account: withdrawForm.value.bank_account
+      bank_account: bankAccount
     })
     
     processSuccess.value = true
@@ -685,7 +719,7 @@ onMounted(async () => {
               </button>
               <button
                 class="px-4 py-2 bg-white/20 text-white font-semibold rounded-xl hover:bg-white/30 transition-colors flex items-center gap-2 backdrop-blur"
-                :disabled="walletBalance < 100"
+                :disabled="walletBalance < 25"
                 @click="activeTab = 'withdraw'"
               >
                 <Icon icon="mdi:minus" class="w-5 h-5" />
@@ -1126,40 +1160,96 @@ onMounted(async () => {
               </div>
             </div>
             
-            <!-- Bank Account -->
+            <!-- Destination channel toggle -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ธนาคาร</label>
-              <select 
-                v-model="withdrawForm.bank_account.bank_name"
-                class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">เลือกธนาคาร</option>
-                <option v-for="bank in bankOptions" :key="bank.value" :value="bank.value">
-                  {{ bank.icon }} {{ bank.label }}
-                </option>
-              </select>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ช่องทางรับเงิน</label>
+              <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
+                <button
+                  type="button"
+                  class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                  :class="withdrawForm.method === 'bank_transfer'
+                    ? 'bg-white dark:bg-gray-800 text-primary-600 shadow'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-600/50'"
+                  @click="setWithdrawMethod('bank_transfer')"
+                >
+                  <Icon icon="mdi:bank" class="w-5 h-5" />
+                  โอนเข้าบัญชีธนาคาร
+                </button>
+                <button
+                  type="button"
+                  class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                  :class="withdrawForm.method === 'promptpay'
+                    ? 'bg-white dark:bg-gray-800 text-primary-600 shadow'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-600/50'"
+                  @click="setWithdrawMethod('promptpay')"
+                >
+                  <Icon icon="mdi:qrcode" class="w-5 h-5" />
+                  พร้อมเพย์
+                </button>
+              </div>
             </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เลขบัญชี</label>
-              <input 
-                v-model="withdrawForm.bank_account.account_number"
-                type="text"
-                class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="ระบุเลขบัญชี"
-              >
-            </div>
-            
+
+            <!-- Bank transfer fields -->
+            <template v-if="withdrawForm.method === 'bank_transfer'">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ธนาคาร</label>
+                <select
+                  v-model="withdrawForm.bank_account.bank_name"
+                  class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">เลือกธนาคาร</option>
+                  <option v-for="bank in bankOptions" :key="bank.value" :value="bank.value">
+                    {{ bank.icon }} {{ bank.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เลขบัญชี</label>
+                <input
+                  v-model="withdrawForm.bank_account.account_number"
+                  type="text"
+                  class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="ระบุเลขบัญชี"
+                >
+              </div>
+            </template>
+
+            <!-- PromptPay fields -->
+            <template v-else>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">หมายเลขพร้อมเพย์</label>
+                <input
+                  v-model="promptpayRaw"
+                  type="text"
+                  inputmode="numeric"
+                  class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  :class="promptpayRaw && !promptpayValid
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-gray-200 dark:border-gray-600'"
+                  placeholder="เบอร์มือถือ 10 หลัก หรือเลขบัตรประชาชน 13 หลัก"
+                >
+                <p v-if="promptpayRaw && !promptpayValid" class="text-sm text-red-500 mt-1">
+                  <Icon icon="mdi:alert-circle" class="w-4 h-4 inline" />
+                  หมายเลขไม่ถูกต้อง (เบอร์มือถือ 10 หลัก หรือเลขบัตรประชาชน 13 หลัก)
+                </p>
+                <p v-else-if="promptpayValid" class="text-sm text-green-600 mt-1">
+                  <Icon icon="mdi:check-circle" class="w-4 h-4 inline" />
+                  {{ formatPromptPay(promptpayRaw) }}
+                </p>
+              </div>
+            </template>
+
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ชื่อบัญชี</label>
-              <input 
+              <input
                 v-model="withdrawForm.bank_account.account_name"
                 type="text"
                 class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="ระบุชื่อบัญชี"
               >
             </div>
-            
+
             <!-- Fee Preview -->
             <div class="bg-gray-100 dark:bg-gray-700 rounded-xl p-4">
               <div class="flex justify-between mb-2">
@@ -1179,7 +1269,12 @@ onMounted(async () => {
             <!-- Submit Button -->
             <button 
               class="w-full py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isProcessing || withdrawForm.amount < 100 || withdrawForm.amount > walletBalance || !withdrawForm.bank_account.bank_name"
+              :disabled="isProcessing
+                || withdrawForm.amount < 25
+                || withdrawForm.amount > walletBalance
+                || !withdrawForm.bank_account.account_name
+                || (withdrawForm.method === 'bank_transfer' && !withdrawForm.bank_account.bank_name)
+                || (withdrawForm.method === 'promptpay' && !promptpayValid)"
               @click="handleWithdraw"
             >
               <Icon v-if="isProcessing" icon="mdi:loading" class="w-5 h-5 animate-spin inline mr-2" />

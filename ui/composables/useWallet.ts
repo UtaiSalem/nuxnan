@@ -113,7 +113,7 @@ export const useWallet = () => {
    */
   const withdraw = async (data: {
     amount: number
-    method: string
+    method: 'bank_transfer' | 'promptpay'
     bank_account: {
       bank_name: string
       account_number: string
@@ -394,6 +394,27 @@ export const useWallet = () => {
   }
 
   /**
+   * Strip everything but digits from a PromptPay number
+   */
+  const normalizePromptPay = (raw: string): string => (raw || '').replace(/\D/g, '')
+
+  /**
+   * Validate a PromptPay number: Thai mobile (10 digits, 0[689]xxxxxxxx) or
+   * national ID (13 digits)
+   */
+  const validatePromptPay = (digits: string): boolean => /^(0[689]\d{8}|\d{13})$/.test(digits)
+
+  /**
+   * Format a PromptPay number for display (081-234-5678 / 1-2345-67890-12-3)
+   */
+  const formatPromptPay = (raw: string): string => {
+    const digits = normalizePromptPay(raw)
+    if (digits.length === 10) return digits.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')
+    if (digits.length === 13) return digits.replace(/(\d{1})(\d{4})(\d{5})(\d{2})(\d{1})/, '$1-$2-$3-$4-$5')
+    return digits
+  }
+
+  /**
    * Convert wallet to points (for advertising support)
    */
   const convertToPoints = async (amount: number) => {
@@ -461,5 +482,8 @@ export const useWallet = () => {
     canWithdraw,
     calculateFee,
     getNetAmount,
+    normalizePromptPay,
+    validatePromptPay,
+    formatPromptPay,
   }
 }
