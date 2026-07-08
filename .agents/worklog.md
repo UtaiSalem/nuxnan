@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-07-09 — Home Visit Admin Refactor (branch: `fix/home-visit-admin-classroom-refactor`)
+
+### งานที่ทำ
+- **Root cause fix**: `student_academic_info.classroom` ถูกลบไปตั้งแต่ migration `2026_04_08_050000` แต่ `AdminController` ยังอ้าง → 500 บน `/students`, `/visits`, `updateStudent`, และ CSV export
+- **Multi-academy isolation**: ผูก `Academy $academy` + scope `academy_id` ให้ทุก admin endpoint (statistics/dashboard/students/visits/show*/update*/export/getAllVisits)
+- **updateStudent เปลี่ยนห้องผ่าน enrollment service**: validate `classroom_id` ด้วย `Rule::exists` ที่ผูก academy → `StudentEnrollmentService::enrollStudent/transferStudent/promoteStudent/removeFromClassroom` (ไม่เขียน string ลง academic_info โดยตรง)
+- **CSV/filter fixes**: null-safe visit_date, ใช้ `currentAcademicInfo->classroom_full`, แทน `teacher_name` (column ไม่มี) ด้วย `visitor_name`, พอร์ต SQL `CAST AS SIGNED` ให้ SQLite/MySQL ใช้ร่วมกันได้
+- **`dashboardMock` gate ด้วย env** (local/testing เท่านั้น)
+- **Backfill migration** `2026_07_09_000001_backfill_academic_info_classroom_id_from_current_enrollment.php` — idempotent, match academic_year name ก่อน fallback `is_current`/latest, log ก่อน/หลัง
+- **Tests: 15 passed / 50 assertions** ครอบคลุม scoping, filter, transfer enrollment, cross-academy rejection, CSV output, legacy compat, mock 404 + migration idempotent/tie-break/no-enrollment
+
+### Commits (บน branch `fix/home-visit-admin-classroom-refactor`)
+- `c8aa028c` refactor(home-visit): scope admin endpoints to academy and drop legacy classroom column
+- `16a559f5` test(home-visit): admin controller and backfill migration coverage
+
+### ⚠️ Follow-ups ที่ยังไม่ได้ทำ (สำคัญ)
+1. **Legacy routes `/api/home-visit/admin/*`** ใน `routes/homevisit/homevisit.php:141-164` ยัง active และเรียก controller methods ที่ต้องการ `Academy $academy` → **จะพัง** เมื่อ frontend เก่า (`ui/pages/Learn/Student/HomeVisit/`) หรือ page ใหม่บาง endpoint ที่ยัง hard-code `/api/home-visit/admin/*` เรียกเข้ามา  ต้องเลือก: (a) ลบ route group นี้ + migrate frontend, หรือ (b) ทำ shim ที่ resolve academy จาก session
+2. **Frontend Phase 6**: `ui/composables/useVisitReports.js`, `pages/academies/[name]/admin/home-visits/*.vue` ยังใช้ URL `/api/home-visit/admin/*` และ payload/shape เดิม (ส่ง `classroom` string, รับ dropdown เป็น list string) — ต้องอัปเดตให้ใช้ `classroom_id` + shape ใหม่ `{id, name, grade_level, section}`
+3. **Dead methods**: `downloadReport`, `exportToExcel`, `exportToPDF` ใน AdminController ไม่มี route ชี้ (ไม่กระทบตอนนี้ แต่ถ้าจะเปิดใช้ ต้องเพิ่ม Academy binding)
+4. **Pre-existing failing test** (ไม่เกี่ยวกับ refactor): `Tests\Feature\Academy\Enrollment\ResourceShapeTest::rollover_batch_resource_reports_undoable_state` — fail แม้บน branch เดิม (ยืนยันด้วย `git stash && test`)
+5. **PR**: branch นี้ยังไม่ได้ push/เปิด PR — พร้อม merge ถ้า resolve legacy route + frontend migration แล้ว
+
+### ที่ทำงานถัดไปควรเริ่มจาก
+- Follow-up 1 (legacy route decision) ก่อน merge branch นี้
+- Follow-up 2 (frontend migration) เป็น PR แยก
+
+---
+
 ## 2026-07-05 — API Bug Fixes & Admin Smoke Test (Session 2)
 
 ### งานที่ทำ
