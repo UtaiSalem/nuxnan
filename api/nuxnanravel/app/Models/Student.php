@@ -409,4 +409,12 @@ class Student extends Model
     {
         return app(StudentPhotoService::class)->url($this);
     }
+
+    /**
+     * Get the student's current classroom full name.
+     */
+    public function getCurrentClassroomFullAttribute(): ?string
+    {
+        return $this->currentAcademicInfo?->classroom_full;
+    }
 }

@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
 
 use App\Exports\HomeVisitsExport;
 use App\Http\Controllers\Controller;
+use App\Models\Academy;
+use App\Models\Classroom;
 use App\Models\HomeVisitZone;
 use App\Models\Student;
 use App\Models\StudentCard;
 use App\Models\StudentHomeVisit;
+use App\Services\StudentEnrollmentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Excel;
 
 class AdminController extends Controller
@@ -16,15 +21,17 @@ class AdminController extends Controller
     /**
      * Get statistics for academy admin dashboard
      */
-    public function statistics()
+    public function statistics(Academy $academy)
     {
-        $totalStudents = StudentCard::count();
-        $totalVisits = StudentHomeVisit::count();
-        $completedVisits = StudentHomeVisit::where('visit_status', 'completed')->count();
-        $pendingVisits = StudentHomeVisit::where('visit_status', 'pending')->count();
+        $totalStudents = Student::where('academy_id', $academy->id)->count();
+        $totalVisits = StudentHomeVisit::where('academy_id', $academy->id)->count();
+        $completedVisits = StudentHomeVisit::where('academy_id', $academy->id)->where('visit_status', 'completed')->count();
+        $pendingVisits = StudentHomeVisit::where('academy_id', $academy->id)->where('visit_status', 'pending')->count();
 
         // Calculate visited students (distinct)
-        $visitedStudents = StudentHomeVisit::distinct('student_id')->count('student_id');
+        $visitedStudents = StudentHomeVisit::where('academy_id', $academy->id)
+            ->distinct()
+            ->count('student_id');
         $visitRate = $totalStudents > 0 ? round(($visitedStudents / $totalStudents) * 100, 1) : 0;
 
         return response()->json([
@@ -43,20 +50,22 @@ class AdminController extends Controller
     /**
      * Admin Dashboard
      */
-    public function dashboard()
+    public function dashboard(Academy $academy)
     {
         $stats = [
-            'total_students' => Student::count(),
-            'total_visits' => StudentHomeVisit::count(),
-            'visits_this_month' => StudentHomeVisit::whereMonth('visit_date', now()->month)
+            'total_students' => Student::where('academy_id', $academy->id)->count(),
+            'total_visits' => StudentHomeVisit::where('academy_id', $academy->id)->count(),
+            'visits_this_month' => StudentHomeVisit::where('academy_id', $academy->id)
+                ->whereMonth('visit_date', now()->month)
                 ->whereYear('visit_date', now()->year)
                 ->count(),
-            'pending_visits' => StudentHomeVisit::where('visit_status', 'pending')->count(),
-            'completed_visits' => StudentHomeVisit::where('visit_status', 'completed')->count(),
+            'pending_visits' => StudentHomeVisit::where('academy_id', $academy->id)->where('visit_status', 'pending')->count(),
+            'completed_visits' => StudentHomeVisit::where('academy_id', $academy->id)->where('visit_status', 'completed')->count(),
         ];
 
         // Recent visits
-        $recentVisits = StudentHomeVisit::with('student')
+        $recentVisits = StudentHomeVisit::where('academy_id', $academy->id)
+            ->with('student')
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
@@ -67,7 +76,8 @@ class AdminController extends Controller
             $date = now()->subMonths($i);
             $monthlyVisits[] = [
                 'month' => $date->format('M Y'),
-                'visits' => StudentHomeVisit::whereMonth('visit_date', $date->month)
+                'visits' => StudentHomeVisit::where('academy_id', $academy->id)
+                    ->whereMonth('visit_date', $date->month)
                     ->whereYear('visit_date', $date->year)
                     ->count(),
             ];
@@ -77,8 +87,8 @@ class AdminController extends Controller
             'stats' => $stats,
             'recentVisits' => $recentVisits,
             'monthlyVisits' => $monthlyVisits,
-            'allVisits' => $this->getAllVisitsForReports(),
-            'zones' => HomeVisitZone::all(),
+            'allVisits' => $this->getAllVisitsForReports($academy),
+            'zones' => HomeVisitZone::where('academy_id', $academy->id)->get(),
         ]);
     }
 
@@ -86,8 +96,12 @@ class AdminController extends Controller
      * Admin Dashboard with Mock Data for Testing
      * เฉพาะสำหรับการทดสอบ VisitFeed
      */
-    public function dashboardMock()
+    public function dashboardMock(Academy $academy)
     {
+        if (! app()->environment('local', 'testing')) {
+            abort(404);
+        }
+
         // Generate mock data
         $mockData = $this->generateMockData();
 
@@ -194,17 +208,18 @@ class AdminController extends Controller
     /**
      * Get all visits for reports with full relationships
      */
-    private function getAllVisitsForReports()
+    private function getAllVisitsForReports(Academy $academy)
     {
-        return StudentHomeVisit::with([
-            'student' => function ($query) {
-                $query->select('id', 'first_name_th', 'last_name_th', 'nickname', 'student_id', 'citizen_id', 'email', 'phone');
-            },
-            'zone:id,zone_name,zone_code',
-            'participants:id,home_visit_id,participant_name,participant_position,participant_role',
-            'images:id,home_visit_id,image_path,image_type,image_description',
-            'creator:id,name,email',
-        ])
+        return StudentHomeVisit::where('academy_id', $academy->id)
+            ->with([
+                'student' => function ($query) {
+                    $query->select('id', 'first_name_th', 'last_name_th', 'nickname', 'student_id', 'citizen_id', 'email', 'phone');
+                },
+                'zone:id,zone_name,zone_code',
+                'participants:id,home_visit_id,participant_name,participant_position,participant_role',
+                'images:id,home_visit_id,image_path,image_type,image_description',
+                'creator:id,name,email',
+            ])
             ->withCount('images')
             ->orderBy('visit_date', 'desc')
             ->get();
@@ -213,39 +228,51 @@ class AdminController extends Controller
     /**
      * Student Management
      */
-    public function students(Request $request)
+    public function students(Request $request, Academy $academy)
     {
-        $query = Student::with(['academicInfo', 'contacts']);
+        $query = Student::where('academy_id', $academy->id)->with(['academicInfo.classroom', 'contacts']);
 
         // Search functionality - include StudentCard search
         if ($request->search) {
-            $query->where(function ($q) use ($request) {
+            $query->where(function ($q) use ($request, $academy) {
                 $q->where('first_name_th', 'like', "%{$request->search}%")
                     ->orWhere('last_name_th', 'like', "%{$request->search}%")
                     ->orWhere('student_id', 'like', "%{$request->search}%")
                     ->orWhere('citizen_id', 'like', "%{$request->search}%")
                   // Also search by matching StudentCard data
-                    ->orWhereIn('student_id', function ($subquery) use ($request) {
+                    ->orWhereIn('student_id', function ($subquery) use ($request, $academy) {
                         $subquery->select('student_number')
                             ->from('student_cards')
-                            ->where('first_name_thai', 'like', "%{$request->search}%")
-                            ->orWhere('last_name_thai', 'like', "%{$request->search}%")
-                            ->orWhere('student_number', 'like', "%{$request->search}%");
+                            ->where('academy_id', $academy->id)
+                            ->where(function ($subq) use ($request) {
+                                $subq->where('first_name_thai', 'like', "%{$request->search}%")
+                                    ->orWhere('last_name_thai', 'like', "%{$request->search}%")
+                                    ->orWhere('student_number', 'like', "%{$request->search}%");
+                            });
                     })
-                    ->orWhereIn('citizen_id', function ($subquery) use ($request) {
+                    ->orWhereIn('citizen_id', function ($subquery) use ($request, $academy) {
                         $subquery->select('national_id')
                             ->from('student_cards')
-                            ->where('first_name_thai', 'like', "%{$request->search}%")
-                            ->orWhere('last_name_thai', 'like', "%{$request->search}%")
-                            ->orWhere('national_id', 'like', "%{$request->search}%");
+                            ->where('academy_id', $academy->id)
+                            ->where(function ($subq) use ($request) {
+                                $subq->where('first_name_thai', 'like', "%{$request->search}%")
+                                    ->orWhere('last_name_thai', 'like', "%{$request->search}%")
+                                    ->orWhere('national_id', 'like', "%{$request->search}%");
+                            });
                     });
             });
         }
 
         // Filter by classroom through academic info
-        if ($request->classroom) {
+        if ($request->filled('classroom_id')) {
             $query->whereHas('academicInfo', function ($q) use ($request) {
-                $q->where('classroom', $request->classroom);
+                $q->where('classroom_id', $request->classroom_id);
+            });
+        } elseif ($request->filled('classroom')) {
+            Log::warning('Legacy classroom string filter used in students()');
+            $query->whereHas('academicInfo', function ($q) use ($request) {
+                $q->where('classroom_full', $request->classroom)
+                    ->orWhere('current_class', $request->classroom);
             });
         }
 
@@ -254,34 +281,36 @@ class AdminController extends Controller
             $query->where('status', $request->status);
         }
 
-        $students = $query->orderBy('first_name')
-            ->orderBy('last_name')
+        $students = $query->orderBy('first_name_th')
+            ->orderBy('last_name_th')
             ->paginate(20)
             ->withQueryString();
 
-        // Get unique classrooms for filter from academic info
-        $classrooms = Student::join('student_academic_info', 'students.id', '=', 'student_academic_info.student_id')
-            ->distinct()
-            ->orderBy('student_academic_info.current_class')
-            ->pluck('student_academic_info.current_class')
-            ->filter();
+        // Get unique classrooms for filter
+        $classrooms = Classroom::where('academy_id', $academy->id)
+            ->select('id', 'name', 'grade_level', 'section')
+            ->orderBy('grade_level')
+            ->orderByRaw('CAST(section AS SIGNED)')
+            ->get();
 
         return response()->json([
             'students' => $students,
             'classrooms' => $classrooms,
-            'filters' => $request->only(['search', 'classroom', 'status']),
+            'filters' => $request->only(['search', 'classroom_id', 'classroom', 'status']),
         ]);
     }
 
     /**
      * View/Edit Student Details
      */
-    public function showStudent($id)
+    public function showStudent(Academy $academy, $id)
     {
-        $student = Student::with(['academicInfo', 'addresses', 'contacts', 'guardians.contacts', 'healthInfo'])
+        $student = Student::where('academy_id', $academy->id)
+            ->with(['academicInfo', 'addresses', 'contacts', 'guardians.contacts', 'healthInfo'])
             ->findOrFail($id);
 
-        $visits = StudentHomeVisit::where('student_id', $id)
+        $visits = StudentHomeVisit::where('academy_id', $academy->id)
+            ->where('student_id', $id)
             ->orderBy('visit_date', 'desc')
             ->get();
 
@@ -294,14 +323,14 @@ class AdminController extends Controller
     /**
      * Update Student Information
      */
-    public function updateStudent(Request $request, $id)
+    public function updateStudent(Request $request, Academy $academy, $id)
     {
-        $student = Student::findOrFail($id);
+        $student = Student::where('academy_id', $academy->id)->findOrFail($id);
 
         $validatedData = $request->validate([
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
-            'classroom' => 'required|string|max:20',
+            'classroom_id' => ['nullable', 'integer', Rule::exists('classrooms', 'id')->where('academy_id', $academy->id)],
             'national_id' => 'nullable|string|max:13',
             'student_id' => 'nullable|string|max:20',
             'phone_number' => 'nullable|string|max:20',
@@ -315,47 +344,72 @@ class AdminController extends Controller
         ]);
 
         // Update student basic info
-        $student->update([
-            'first_name' => $validatedData['first_name'],
-            'last_name' => $validatedData['last_name'],
-            'national_id' => $validatedData['national_id'],
-            'student_id' => $validatedData['student_id'],
-        ]);
+        $studentData = [
+            'first_name_th' => $validatedData['first_name'],
+            'last_name_th' => $validatedData['last_name'],
+        ];
+        if (array_key_exists('national_id', $validatedData)) {
+            $studentData['citizen_id'] = $validatedData['national_id'];
+        }
+        if (array_key_exists('student_id', $validatedData)) {
+            $studentData['student_id'] = $validatedData['student_id'];
+        }
+        $student->update($studentData);
 
-        // Update academic info
-        if ($student->academicInfo) {
-            $student->academicInfo->update([
-                'classroom' => $validatedData['classroom'],
-            ]);
+        // Update classroom enrollment if changed
+        $newClassroomId = $validatedData['classroom_id'] ?? null;
+        $currentClassroom = $student->currentEnrollment?->classroom;
+
+        if (array_key_exists('classroom_id', $validatedData) && $newClassroomId) {
+            $newClassroom = Classroom::where('academy_id', $academy->id)->findOrFail($newClassroomId);
+            if (! $currentClassroom) {
+                app(StudentEnrollmentService::class)->enrollStudent($student, $newClassroom);
+            } elseif ($currentClassroom->id !== (int) $newClassroomId) {
+                if ($currentClassroom->academic_year_id === $newClassroom->academic_year_id) {
+                    app(StudentEnrollmentService::class)->transferStudent($student, $currentClassroom, $newClassroom);
+                } else {
+                    app(StudentEnrollmentService::class)->promoteStudent($student, $newClassroom);
+                }
+            }
+        } elseif (array_key_exists('classroom_id', $validatedData) && ! $newClassroomId) {
+            if ($currentClassroom) {
+                app(StudentEnrollmentService::class)->removeFromClassroom($student, $currentClassroom);
+            }
         }
 
         // Update contact info
-        if ($student->contacts->isNotEmpty()) {
+        if ($student->contacts->isNotEmpty() && array_key_exists('phone_number', $validatedData)) {
             $student->contacts->first()->update([
-                'phone' => $validatedData['phone_number'],
+                'contact_value' => $validatedData['phone_number'],
             ]);
         }
 
         // Update address info
         if ($student->addresses->isNotEmpty()) {
-            $student->addresses->first()->update([
-                'house_number' => $validatedData['house_number'],
-                'subdistrict' => $validatedData['subdistrict'],
-                'district' => $validatedData['district'],
-                'province' => $validatedData['province'],
-                'postal_code' => $validatedData['postal_code'],
-            ]);
+            $addressData = [];
+            foreach (['house_number', 'subdistrict', 'district', 'province', 'postal_code'] as $field) {
+                if (array_key_exists($field, $validatedData)) {
+                    $addressData[$field] = $validatedData[$field];
+                }
+            }
+            if (! empty($addressData)) {
+                $student->addresses->first()->update($addressData);
+            }
         }
 
-        return redirect()->back()->with('success', 'อัพเดทข้อมูลนักเรียนเรียบร้อยแล้ว');
+        return response()->json([
+            'success' => true,
+            'message' => 'อัพเดทข้อมูลนักเรียนเรียบร้อยแล้ว',
+            'student' => $student->load(['academicInfo.classroom', 'contacts', 'addresses']),
+        ]);
     }
 
     /**
      * Home Visit Reports
      */
-    public function visits(Request $request)
+    public function visits(Request $request, Academy $academy)
     {
-        $query = StudentHomeVisit::with('student');
+        $query = StudentHomeVisit::where('academy_id', $academy->id)->with('student.academicInfo.classroom');
 
         // Date range filter
         if ($request->date_from) {
@@ -372,13 +426,19 @@ class AdminController extends Controller
 
         // Teacher filter
         if ($request->teacher) {
-            $query->where('teacher_name', 'like', "%{$request->teacher}%");
+            $query->where('visitor_name', 'like', "%{$request->teacher}%");
         }
 
         // Classroom filter
-        if ($request->classroom) {
+        if ($request->filled('classroom_id')) {
             $query->whereHas('student.academicInfo', function ($q) use ($request) {
-                $q->where('classroom', $request->classroom);
+                $q->where('classroom_id', $request->classroom_id);
+            });
+        } elseif ($request->filled('classroom')) {
+            Log::warning('Legacy classroom string filter used in visits()');
+            $query->whereHas('student.academicInfo', function ($q) use ($request) {
+                $q->where('classroom_full', $request->classroom)
+                    ->orWhere('current_class', $request->classroom);
             });
         }
 
@@ -387,31 +447,32 @@ class AdminController extends Controller
             ->withQueryString();
 
         // Get unique classrooms and teachers for filters
-        $classrooms = Student::join('student_academic_info', 'students.id', '=', 'student_academic_info.student_id')
-            ->distinct()
-            ->orderBy('student_academic_info.current_class')
-            ->pluck('student_academic_info.current_class')
-            ->filter();
+        $classrooms = Classroom::where('academy_id', $academy->id)
+            ->select('id', 'name', 'grade_level', 'section')
+            ->orderBy('grade_level')
+            ->orderByRaw('CAST(section AS SIGNED)')
+            ->get();
 
-        $teachers = StudentHomeVisit::distinct()
-            ->orderBy('teacher_name')
-            ->pluck('teacher_name')
+        $teachers = StudentHomeVisit::where('academy_id', $academy->id)
+            ->distinct()
+            ->orderBy('visitor_name')
+            ->pluck('visitor_name')
             ->filter();
 
         return response()->json([
             'visits' => $visits,
             'classrooms' => $classrooms,
             'teachers' => $teachers,
-            'filters' => $request->only(['date_from', 'date_to', 'status', 'teacher', 'classroom']),
+            'filters' => $request->only(['date_from', 'date_to', 'status', 'teacher', 'classroom_id', 'classroom']),
         ]);
     }
 
     /**
      * View Visit Details
      */
-    public function showVisit($id)
+    public function showVisit(Academy $academy, $id)
     {
-        $visit = StudentHomeVisit::with('student')->findOrFail($id);
+        $visit = StudentHomeVisit::where('academy_id', $academy->id)->with('student')->findOrFail($id);
 
         return response()->json([
             'visit' => $visit,
@@ -421,9 +482,9 @@ class AdminController extends Controller
     /**
      * Update Visit Status
      */
-    public function updateVisitStatus(Request $request, $id)
+    public function updateVisitStatus(Request $request, Academy $academy, $id)
     {
-        $visit = StudentHomeVisit::findOrFail($id);
+        $visit = StudentHomeVisit::where('academy_id', $academy->id)->findOrFail($id);
 
         $request->validate([
             'visit_status' => 'required|in:pending,in-progress,completed,cancelled',
@@ -436,15 +497,19 @@ class AdminController extends Controller
             'updated_at' => now(),
         ]);
 
-        return redirect()->back()->with('success', 'อัพเดทสถานะการเยี่ยมบ้านเรียบร้อยแล้ว');
+        return response()->json([
+            'success' => true,
+            'message' => 'อัพเดทสถานะการเยี่ยมบ้านเรียบร้อยแล้ว',
+            'visit' => $visit,
+        ]);
     }
 
     /**
      * Export Reports
      */
-    public function exportVisits(Request $request)
+    public function exportVisits(Request $request, Academy $academy)
     {
-        $query = StudentHomeVisit::with('student');
+        $query = StudentHomeVisit::where('academy_id', $academy->id)->with('student.academicInfo.classroom');
 
         // Apply same filters as visits method
         if ($request->date_from) {
@@ -484,11 +549,28 @@ class AdminController extends Controller
             ]);
 
             foreach ($visits as $visit) {
+                $studentName = 'N/A';
+                if ($visit->student) {
+                    $studentName = $visit->student->first_name_th.' '.$visit->student->last_name_th;
+                }
+
+                $classroomName = 'N/A';
+                if ($visit->student && $visit->student->currentAcademicInfo) {
+                    $classroomName = $visit->student->currentAcademicInfo->classroom_full ?? 'N/A';
+                }
+
+                $visitDate = 'N/A';
+                if ($visit->visit_date) {
+                    $visitDate = $visit->visit_date instanceof \DateTimeInterface
+                        ? $visit->visit_date->format('d/m/Y')
+                        : date('d/m/Y', strtotime($visit->visit_date));
+                }
+
                 fputcsv($file, [
-                    $visit->visit_date->format('d/m/Y'),
-                    $visit->student->full_name_thai ?? 'N/A',
-                    $visit->student->classroom ?? 'N/A',
-                    $visit->teacher_name,
+                    $visitDate,
+                    $studentName,
+                    $classroomName,
+                    $visit->visitor_name,
                     $visit->visit_status,
                     $visit->visit_purpose,
                     $visit->visit_summary,
@@ -504,15 +586,31 @@ class AdminController extends Controller
     /**
      * Admin Settings
      */
-    public function settings()
+    public function settings(Academy $academy)
     {
         return response()->json(['success' => true]);
     }
 
     /**
+     * Reports summary stub
+     */
+    public function reports(Academy $academy)
+    {
+        return response()->json(['message' => 'Reports not implemented yet']);
+    }
+
+    /**
+     * Export reports stub
+     */
+    public function exportReports(Request $request, Academy $academy)
+    {
+        return response()->json(['message' => 'Export reports not implemented yet']);
+    }
+
+    /**
      * Logout Admin
      */
-    public function logout()
+    public function logout(Academy $academy)
     {
         session()->forget('homevisit_admin_authenticated');
 
@@ -522,9 +620,9 @@ class AdminController extends Controller
     /**
      * API: Get all visits with filters for reports
      */
-    public function getAllVisits(Request $request)
+    public function getAllVisits(Request $request, Academy $academy)
     {
-        $query = StudentHomeVisit::with([
+        $query = StudentHomeVisit::where('academy_id', $academy->id)->with([
             'student' => function ($q) {
                 $q->select('id', 'first_name_th', 'last_name_th', 'nickname', 'student_id', 'citizen_id', 'email', 'phone');
             },
@@ -548,7 +646,10 @@ class AdminController extends Controller
         }
 
         if ($request->filled('zoneId')) {
-            $query->where('zone_id', $request->zoneId);
+            $query->where('zone_id', $request->zoneId)
+                ->whereIn('zone_id', function ($subq) use ($academy) {
+                    $subq->select('id')->from('home_visit_zones')->where('academy_id', $academy->id);
+                });
         }
 
         if ($request->filled('teacherName')) {
