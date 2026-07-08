@@ -10,6 +10,7 @@ import TopicOrderWidget from './TopicOrderWidget.vue'
 import LessonInteractionTabs from './LessonInteractionTabs.vue'
 import Swal from 'sweetalert2'
 import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
+import { getYoutubeVideoId, getYoutubeThumbnailUrl, getYoutubeEmbedUrl } from '~/utils/youtube'
 
 interface Props {
   lesson: any
@@ -351,47 +352,11 @@ const displayOrder = computed(() => {
   return props.lesson?.order ?? 1
 })
 
-// Extract YouTube video ID from various URL formats
-const getYoutubeVideoId = (url: string): string | null => {
-  if (!url) return null
-
-  // Already just a video ID (11 characters)
-  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
-    return url
-  }
-
-  // Various YouTube URL patterns
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.+&v=)([a-zA-Z0-9_-]{11})/, // youtube.com/watch?v=ID
-    /youtu\.be\/([a-zA-Z0-9_-]{11})/, // youtu.be/ID
-    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/, // youtube.com/embed/ID
-    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/, // youtube.com/v/ID
-    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/, // youtube.com/shorts/ID
-  ]
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern)
-    if (match && match[1]) {
-      return match[1]
-    }
-  }
-
-  return null
-}
-
 // Computed YouTube embed URL
 const youtubeVideoId = computed(() => getYoutubeVideoId(props.lesson.youtube_url))
 const hasYoutubeVideo = computed(() => !!youtubeVideoId.value)
-const youtubeEmbedUrl = computed(() => {
-  if (!youtubeVideoId.value) return null
-  return `https://www.youtube.com/embed/${youtubeVideoId.value}`
-})
-
-// YouTube thumbnail URL (high quality)
-const youtubeThumbnailUrl = computed(() => {
-  if (!youtubeVideoId.value) return null
-  return `https://img.youtube.com/vi/${youtubeVideoId.value}/maxresdefault.jpg`
-})
+const youtubeEmbedUrl = computed(() => getYoutubeEmbedUrl(youtubeVideoId.value))
+const youtubeThumbnailUrl = computed(() => getYoutubeThumbnailUrl(youtubeVideoId.value))
 
 // Video modal methods
 const openVideoModal = () => {

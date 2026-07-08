@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import { getYoutubeVideoId, getYoutubeEmbedUrl } from '~/utils/youtube'
 
 interface Props {
   youtubeUrl?: string
@@ -19,46 +20,13 @@ const isVisible = ref(false)
 const isAnimating = ref(true)
 const iframeLoaded = ref(false)
 
-// Extract YouTube video ID from URL
-const getYoutubeVideoId = (url: string): string | null => {
-  if (!url) return null
-
-  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
-    return url
-  }
-
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.+&v=)([a-zA-Z0-9_-]{11})/,
-    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
-  ]
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern)
-    if (match && match[1]) {
-      return match[1]
-    }
-  }
-
-  return null
-}
-
 const youtubeVideoId = computed(() =>
   props.youtubeUrl ? getYoutubeVideoId(props.youtubeUrl) : null
 )
 
 // YouTube embed URL with autoplay
 const youtubeEmbedUrl = computed(() => {
-  if (!youtubeVideoId.value) return null
-  const params = new URLSearchParams({
-    autoplay: '1',
-    rel: '0',
-    modestbranding: '1',
-    playsinline: '1',
-  })
-  return `https://www.youtube-nocookie.com/embed/${youtubeVideoId.value}?${params.toString()}`
+  return getYoutubeEmbedUrl(youtubeVideoId.value, true)
 })
 
 // Close modal

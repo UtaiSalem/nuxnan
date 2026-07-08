@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
 import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
+import VideoModal from '~/components/media/VideoModal.vue'
+import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '~/utils/youtube'
 
 interface Props {
   topic: any
@@ -26,6 +28,28 @@ const isCompleted = computed(() => props.status === 'completed')
 const isInProgress = computed(() => props.status === 'in_progress')
 
 const isExpanded = ref(false)
+
+// Video state and computation
+const showVideoModal = ref(false)
+const youtubeVideoId = computed(() => getYoutubeVideoId(props.topic.youtube_url))
+const hasYoutubeVideo = computed(() => !!youtubeVideoId.value)
+const isInvalidYoutubeUrl = computed(() => !!props.topic.youtube_url && !youtubeVideoId.value)
+
+// Handle maxresdefault thumbnail error fallback to hqdefault
+const youtubeThumbnailUrl = ref('')
+watch(youtubeVideoId, (newId) => {
+  if (newId) {
+    youtubeThumbnailUrl.value = getYoutubeThumbnailUrl(newId) || ''
+  } else {
+    youtubeThumbnailUrl.value = ''
+  }
+}, { immediate: true })
+
+const handleThumbnailError = () => {
+  if (youtubeVideoId.value && youtubeThumbnailUrl.value.includes('maxresdefault')) {
+    youtubeThumbnailUrl.value = `https://img.youtube.com/vi/${youtubeVideoId.value}/hqdefault.jpg`
+  }
+}
 
 // Image gallery
 const showImageGallery = ref(false)
@@ -165,6 +189,47 @@ const handleImageError = (event: Event) => {
           <RichTextViewer :content="topic.content" />
         </div>
 
+        <!-- Video Section -->
+        <div v-if="hasYoutubeVideo" class="relative rounded-xl overflow-hidden cursor-pointer group shadow border border-gray-200 dark:border-gray-700 aspect-video max-w-2xl mx-auto" @click="showVideoModal = true">
+          <img
+            :src="youtubeThumbnailUrl"
+            :alt="topic.title"
+            class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            @error="handleThumbnailError"
+          />
+          <div class="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/50 transition-all">
+            <div class="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-lg transform transition-all group-hover:scale-110">
+              <Icon icon="fluent:play-24-filled" class="w-7 h-7 text-white ml-0.5" />
+            </div>
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+            <div class="flex items-center justify-between animate-fade-in">
+              <span class="text-white text-sm font-medium truncate">{{ topic.title }}</span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-600 text-white text-xs font-semibold">
+                <Icon icon="logos:youtube-icon" class="w-3 h-3" />
+                YouTube
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Invalid YouTube URL Fallback -->
+        <div v-else-if="isInvalidYoutubeUrl" class="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center justify-between gap-3 max-w-2xl mx-auto">
+          <div class="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 text-sm">
+            <Icon icon="fluent:alert-24-regular" class="w-5 h-5 flex-shrink-0" />
+            <span>รูปแบบลิงก์วิดีโอไม่ถูกต้อง</span>
+          </div>
+          <a
+            :href="topic.youtube_url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-bold rounded transition-colors"
+          >
+            เปิดบน YouTube
+            <Icon icon="fluent:open-24-regular" class="w-3.5 h-3.5" />
+          </a>
+        </div>
+
         <!-- Images Gallery -->
         <div v-if="topic.images && topic.images.length > 0" class="grid grid-cols-2 gap-2">
           <img
@@ -217,6 +282,14 @@ const handleImageError = (event: Event) => {
       :start-index="galleryStartIndex"
       :title="topic.title"
       @close="showImageGallery = false"
+    />
+
+    <!-- Topic Video Modal -->
+    <VideoModal
+      v-if="showVideoModal"
+      :youtube-url="topic.youtube_url"
+      :title="topic.title"
+      @close="showVideoModal = false"
     />
   </div>
 </template>
