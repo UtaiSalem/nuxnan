@@ -350,3 +350,46 @@
   - H3: Grade normalization within `StudentPhotoService`.
 - **Verification**: Formatted with Pint and verified all 8 unit tests in the StudentCard feature suite pass.
 
+---
+
+## 2026-07-08 — Roster Reconciliation with Student Code
+
+### งานที่ทำ
+- **Roster Reconciliation Logic**: พัฒนา `RosterReconciliationService` และปรับแต่ง `StudentImportService` เพื่อรองรับการนำเข้าแบบ Reconciliation โดยอิง `student_code` เป็น Key
+- **JSON Import Support**: ปรับปรุงหน้าอัปโหลดในฝั่ง Frontend (`StepUpload.vue`, `studentImportService.ts`, `useStudentImport.ts`) และ API validation ให้สามารถรองรับไฟล์ JSON ได้
+- **Artisan Extract Command**: สร้าง `ExtractRosterPdfCommand` สำหรับสกัด/แปลงข้อมูลจากไฟล์ PDF ไปเป็นโครงสร้าง canonical JSON
+- **Reconciliation UI Preview**: ปรับปรุง `ImportRowTable.vue` เพื่อแสดงป้ายสถานะของการดำเนินการจัดห้องเรียน (เช่น เลื่อนชั้น, ซ้ำชั้น, ย้ายห้อง, นำเข้าใหม่) พร้อมแสดงรายละเอียดการเปลี่ยนแปลง (diff_data)
+- **Tests & Verification**: เพิ่มและรัน `RosterReconciliationTest` ผ่านการตรวจสอบ 10 assertions ทั้งหมด พร้อมตรวจสอบว่า `StudentImportControllerTest` ยังสามารถรันผ่านได้ตามปกติ
+
+### Commits
+- Roster Reconciliation implementation complete.
+
+---
+
+## 2026-07-08 — Topic Youtube Video Support
+
+### งานที่ทำ
+- **YouTube URL Parser Utility**: สร้างไฟล์ยูทิลิตี้กลาง [youtube.ts](file:///c:/wamp64/www/nuxnan/ui/utils/youtube.ts) ยุบรวม logic การดึง ID, สร้าง thumbnail และ embed URL (ใช้ `youtube-nocookie.com`) ช่วยให้การ parse URL มีความเป็นหนึ่งเดียวและลดความซ้ำซ้อน
+- **VideoModal Refactoring**: ปรับปรุง [VideoModal.vue](file:///c:/wamp64/www/nuxnan/ui/components/media/VideoModal.vue) ให้ดึงตัวแกะ URL จากยูทิลิตี้กลาง
+- **LessonPost Refactoring**: ปรับปรุง [LessonPost.vue](file:///c:/wamp64/www/nuxnan/ui/components/learn/course/lesson/LessonPost.vue) ให้ดึงตัวแกะ URL จากยูทิลิตี้กลาง
+- **Topic Video Preview & Playback**: เพิ่มกล่องแสดงพรีวิววิดีโอ (สัดส่วน 16:9 พร้อมปุ่ม Play) และรองรับการเปิดวิดีโอผ่าน [VideoModal.vue](file:///c:/wamp64/www/nuxnan/ui/components/media/VideoModal.vue) ใน [TopicAccordion.vue](file:///c:/wamp64/www/nuxnan/ui/components/learn/course/lesson/TopicAccordion.vue) โดยแยกสถานะ modal ออกต่อหนึ่ง accordion instance อย่างชัดเจน
+- **Robust Error/Fallback Handling**:
+  - รองรับการ fallback รูปภาพพรีวิวจาก `maxresdefault` ไปเป็น `hqdefault` กรณีรูปขนาดใหญ่ไม่มี
+  - แสดงลิงก์ "เปิดบน YouTube" และข้อความแจ้งเตือนอย่างชัดเจน หากลิงก์ที่กรอกผิดรูปแบบ (Invalid URL)
+  - ซ่อนส่วนวิดีโอทั้งหมดหาก `youtube_url` มีค่าว่าง
+- **Build Verification**: รัน `npm run build` ในไดเรกทอรี `ui` ผ่านการทดสอบเรียบร้อย
+
+### Commits
+- Implement centralized YouTube parser utility and integrate video preview in TopicAccordion.
+
+---
+
+## 2026-07-08 — Roster Reconciliation Bug Fixes (Session 2)
+
+### งานที่ทำ
+- **M1: source_academic_year_id** — บันทึก `source_academic_year_id` ลงใน `diff_data` ตอน `preview()` สำหรับ action `promote_student` และ `repeat_student` ป้องกันปัญหาชื่อปีไม่ต่อเนื่องหรือมีปีที่เว้นไป
+- **M3: student_number** — รองรับการซิงค์ `student_number` (เลขที่) เมื่อมีข้อมูลจาก JSON หรือใช้ลำดับ index จาก JSON เข้าสู่ฐานข้อมูล สำหรับ actions ทุกประเภท (`unchanged`, `new_intake`, `promote_student`, `repeat_student`, `re_enroll`)
+- **M4: refreshCounters** — แก้ไข DRY violation โดยยกเลิกการเขียนฟังก์ชัน `refreshBatchCounters` ซ้ำใน `RosterReconciliationService` และเรียกใช้งาน `refreshCounters` จาก `StudentImportService` แทน
+- **M5: remarks** — สร้าง migration `2026_07_08_000002_add_remarks_to_students_table` เพิ่มคอลัมน์ `remarks` ลงในตาราง `students` พร้อมทั้งเพิ่มลงใน `$fillable` ของโมเดล `Student` เพื่อแก้ปัญหาการเซฟ remarks เป็น silent no-op
+- **N6: useStudentCardRequests Type Safety** — แก้ไข type ของ `useStudentCardRequests` composable แทนที่จะเป็น `as any` เพื่อเพิ่มความเสถียรและความปลอดภัยทางประเภทข้อมูล (Type Safety)
+- **Tests & Verification** — เพิ่มการทดสอบใน `RosterReconciliationTest` สำหรับกรณี `unchanged` (การซิงค์ student number), `auto_graduate` ของนักเรียน ม.6, และ `ambiguous` teacher matching (ยืนยันผลการหาครูที่ชื่อซ้ำกัน) ผลการรัน Unit Test ผ่านทั้งหมด 26 assertions และจัดรูปแบบโค้ด PHP ด้วย Pint

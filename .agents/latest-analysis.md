@@ -1,7 +1,18 @@
 # แผนปรับปรุงระบบบัตรนักเรียน — ฉบับสมบูรณ์
 
+## Implementation update — 2026-07-08
+
+- **Roster Reconciliation Fixes**: Resolved feedback items:
+  - M1: Saved `source_academic_year_id` inside `diff_data` during the `preview()` step for both `promote_student` and `repeat_student` actions.
+  - M3: Added synchronization of `student_number` (class sequence index) for `unchanged`, `new_intake`, `promote_student`, `repeat_student`, and `re_enroll` actions.
+  - M4: Deduplicated batch counters update logic by reusing `StudentImportService::refreshCounters`.
+  - M5: Added database migration `2026_07_08_000002_add_remarks_to_students_table` to support storing intake incomplete flags in `remarks` and added `remarks` to the `Student` fillable array.
+  - N6: Added type safety to `useStudentCardRequests` by replacing `any` casts with explicit types.
+  - Test Verification: Wrote additional feature tests for `unchanged` number update, `auto_graduate` for ม.6, and `ambiguous` teacher matching. All 26 assertions pass.
+
 ## Implementation update — 2026-07-06
 
+- 2026-07-08 topic youtube integration: Created centralized YouTube URL parser utility `ui/utils/youtube.ts` and refactored `LessonPost.vue` & `VideoModal.vue`. Added a responsive 16:9 video preview section and modal integration in `TopicAccordion.vue` with robust fallbacks for broken/missing URLs and maxresdefault thumbnails. Build successful.
 - 2026-07-08 migration verification: `2026_07_08_000001_create_student_card_requests_table.php` ran successfully in batch 79. It now explicitly uses InnoDB and matches the signed integer key type of `student_cards.id`. Verified the table, unique index, foreign keys, and `academy_settings.card_request_flow_enabled`.
 - 2026-07-07 old-card display fix: active grades 2, 3, 5, and 6 retain `national_id` and `birth_date` for all 442/357/303/288 records. Per explicit user direction, the temporary `makeHidden()` filter was removed from the public room endpoint so the existing Nuxt card can render complete identity data before authentication is revisited. Verified live `GET /api/student-card/2/1` returns `national_id`, `birth_date`, `birth_date_string`, and `profile_image_url`; PHP syntax passes. Security follow-up remains: protect or mask PII before production exposure.
 - 2026-07-07 identity-data audit: exactly 476 active 2569 cards (the entire new-intake cohort) lack national ID and birth date; their linked `students` rows also lack both fields, so card sync did not erase recoverable values. No import batch/row data exists, linked user profiles contain no birthdate/metadata, and no authoritative 2569 intake source file was found in the repository. Recovery requires the registrar's original intake data and must not infer sensitive identity fields.
@@ -2121,3 +2132,29 @@ ORDER BY cs.student_number;
 > - จัดการต้นเหตุ (ปิด Auto Sync)
 > - เก็บ Snapshot ข้อมูลของเด็ก ณ วันที่ขอทำบัตร เพื่อป้องกันข้อมูลสูญหายหรือเพี้ยนในอนาคต
 > - ป้องกันข้อขัดแย้งของสถานะ (Race Condition) ด้วย database locks และ state machine ที่เข้มงวด
+
+---
+
+## 2026-07-08 — Roster Reconciliation with Student Code
+
+### การเปลี่ยนแปลงหลัก
+- เปลี่ยนขอบเขตจากการเขียนข้อมูลนักเรียนใหม่ทั้งหมด มาเป็นการจัดห้องเรียนใหม่ (Enrollment Reconciliation) โดยใช้ `student_code` เป็นหลัก
+- บันทึกและวิเคราะห์ไฟล์ PDF (Companion JSON) เพื่อหาความแตกต่างและจับคู่ห้องเรียน/ครูประจำชั้น
+
+### ไฟล์ที่สร้าง/แก้ไข
+- **สร้างใหม่**:
+  - [ExtractRosterPdfCommand.php](file:///c:/wamp64/www/nuxnan/api/nuxnanravel/app/Console/Commands/ExtractRosterPdfCommand.php)
+  - [RosterReconciliationService.php](file:///c:/wamp64/www/nuxnan/api/nuxnanravel/app/Services/Import/RosterReconciliationService.php)
+  - [RosterReconciliationTest.php](file:///c:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/RosterReconciliationTest.php)
+- **แก้ไข**:
+  - [UploadStudentImportRequest.php](file:///c:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Requests/Academy/Enrollment/UploadStudentImportRequest.php)
+  - [StudentImportService.php](file:///c:/wamp64/www/nuxnan/api/nuxnanravel/app/Services/StudentImportService.php)
+  - [StudentImportController.php](file:///c:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/StudentImportController.php)
+  - [studentImportService.ts](file:///c:/wamp64/www/nuxnan/ui/services/studentImportService.ts)
+  - [useStudentImport.ts](file:///c:/wamp64/www/nuxnan/ui/composables/useStudentImport.ts)
+  - [StepUpload.vue](file:///c:/wamp64/www/nuxnan/ui/components/academy/student-import/StepUpload.vue)
+  - [ImportRowTable.vue](file:///c:/wamp64/www/nuxnan/ui/components/academy/student-import/ImportRowTable.vue)
+
+### ผลการทดสอบ
+- รัน `RosterReconciliationTest` ผ่านทั้งหมด 10 assertions
+- รัน `StudentImportControllerTest` ผ่านเรียบร้อย
