@@ -16,4 +16,6 @@ return [
 
     'public_management' => env('PUBLIC_STUDENT_CARD_MANAGEMENT', false),
 
+    'public_requests' => env('PUBLIC_STUDENT_CARD_REQUESTS', false),
+
 ];
