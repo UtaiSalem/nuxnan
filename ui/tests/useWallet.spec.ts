@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useWallet } from '../composables/useWallet'
+import { useWallet, WITHDRAW_MIN_AMOUNT } from '../composables/useWallet'
 
 // Mock useRuntimeConfig
 vi.stubGlobal('useRuntimeConfig', () => ({
@@ -84,5 +84,28 @@ describe('useWallet.ts unit tests', () => {
     
     await expect(getBalance()).rejects.toThrow('API response does not contain any valid balance keys')
     expect(mockSetWallet).not.toHaveBeenCalled()
+  })
+})
+
+describe('useWallet canWithdraw', () => {
+  it('exposes the shared minimum withdrawal constant', () => {
+    expect(WITHDRAW_MIN_AMOUNT).toBe(25)
+  })
+
+  it('allows withdrawing exactly the minimum when balance is sufficient', () => {
+    const { canWithdraw } = useWallet()
+    // mockUser.wallet = 100
+    expect(canWithdraw(WITHDRAW_MIN_AMOUNT)).toBe(true)
+  })
+
+  it('rejects amounts below the minimum', () => {
+    const { canWithdraw } = useWallet()
+    expect(canWithdraw(WITHDRAW_MIN_AMOUNT - 1)).toBe(false)
+  })
+
+  it('rejects amounts above the available balance', () => {
+    const { canWithdraw } = useWallet()
+    // mockUser.wallet = 100
+    expect(canWithdraw(101)).toBe(false)
   })
 })

@@ -9,9 +9,12 @@ use App\Models\CourseGroupMember;
 use App\Models\CourseMember;
 use App\Models\CoursePurchase;
 use App\Models\CourseQuizResult;
+use App\Models\Lesson;
 use App\Models\Notification;
+use App\Models\Topic;
 use App\Models\User;
 use App\Models\UserAnswerQuestion;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -53,9 +56,7 @@ class CourseMemberRemovalService
         $quizResultsCount = CourseQuizResult::where('course_id', $course->id)->where('user_id', $member->user_id)->count();
         $answerCount = UserAnswerQuestion::where('course_id', $course->id)->where('user_id', $member->user_id)->count();
 
-        $assignmentAnswerCount = AssignmentAnswer::whereHas('assignment', function ($q) use ($course) {
-            $q->where('course_id', $course->id);
-        })->where('user_id', $member->user_id)->count();
+        $assignmentAnswerCount = $this->assignmentAnswersForCourseMember($course, $member)->count();
 
         return [
             'is_self' => $isSelf,
@@ -137,9 +138,7 @@ class CourseMemberRemovalService
             // 3. Cleanup Tier A & B
 
             // Assignments cleanup (files)
-            $assignmentAnswers = AssignmentAnswer::whereHas('assignment', function ($q) use ($course) {
-                $q->where('course_id', $course->id);
-            })->where('user_id', $member->user_id)->get();
+            $assignmentAnswers = $this->assignmentAnswersForCourseMember($course, $member)->get();
 
             foreach ($assignmentAnswers as $answer) {
                 if ($answer->images()->count() > 0) {
@@ -229,5 +228,33 @@ class CourseMemberRemovalService
                 'refund_amount' => $refundAmount,
             ];
         });
+    }
+
+    private function assignmentAnswersForCourseMember(Course $course, CourseMember $member): Builder
+    {
+        return AssignmentAnswer::query()
+            ->where('user_id', $member->user_id)
+            ->whereHas('assignment', function (Builder $query) use ($course) {
+                $query->where(function (Builder $assignmentQuery) use ($course) {
+                    $assignmentQuery
+                        ->where(function (Builder $directCourseQuery) use ($course) {
+                            $directCourseQuery
+                                ->where('assignmentable_type', Course::class)
+                                ->where('assignmentable_id', $course->id);
+                        })
+                        ->orWhere(function (Builder $lessonQuery) use ($course) {
+                            $lessonQuery
+                                ->where('assignmentable_type', Lesson::class)
+                                ->whereIn('assignmentable_id', $course->courseLessons()->select('id'));
+                        })
+                        ->orWhere(function (Builder $topicQuery) use ($course) {
+                            $topicQuery
+                                ->where('assignmentable_type', Topic::class)
+                                ->whereIn('assignmentable_id', Topic::query()
+                                    ->where('course_id', $course->id)
+                                    ->select('id'));
+                        });
+                });
+            });
     }
 }
