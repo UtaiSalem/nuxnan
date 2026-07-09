@@ -103,8 +103,8 @@ const populateForm = () => {
     show_course_list: academy.value.show_course_list ?? true,
   }
   
-  avatarPreview.value = academy.value.avatar
-  coverPreview.value = academy.value.cover
+  avatarPreview.value = academy.value.logo_url || academy.value.logo
+  coverPreview.value = academy.value.cover_url || academy.value.cover
 }
 
 const onAvatarChange = (e: Event) => {

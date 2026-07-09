@@ -2365,3 +2365,42 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Likely remaining mismatch is UX/default affordance: `Earn/Wallet.vue` initializes `withdrawForm.amount` to 100 and quick withdrawal chips start at `[100, 500, 1000, 2000, 5000]`, so users never see 25 as a selectable minimum even though validation allows it.
 - Proposed implementation files: `ui/pages/Earn/Wallet.vue`, `ui/composables/useWallet.ts`, `ui/tests/useWallet.spec.ts`, `api/nuxnanravel/app/Http/Controllers/Api/WalletController.php`, `api/nuxnanravel/tests/Feature/Wallet/WithdrawTest.php`; optional config/constants only if the team wants a single source of truth for minimum/fee.
 - Verification plan: add/confirm tests for 24 rejected and 25 accepted, add unit coverage for `canWithdraw(25)`, then run focused Wallet feature tests and frontend wallet unit/build checks.
+
+## 2026-07-10 - Academy Admin Settings SQL Unknown Column Inspection
+
+- User reported `SQLSTATE[42S22] Unknown column 'description'` on `/academies/{name}/admin/settings` when saving academy settings.
+- Flow traced: `ui/pages/academies/[name]/admin/settings.vue` posts `FormData` to `POST /api/academies/{academy}/settings`; route exists and maps to `Api\Learn\Academy\AcademyController@updateSettings`.
+- Root cause: `updateSettings()` fills `academies` with `name`, `name_en`, `description`, `description_en`, `email`, `phone`, `website`, `address`, `province`, `country`, but the live DB columns for `academies` are only `id,user_id,name,slogan,address,email,phone,director,established_year,type,accreditation,accreditation_body,total_students,total_teachers,membership_fees_points,courses_offered,facilities,academy_timings,holidays,social_media_links,student_editable_fields,approval_flow,logo,cover,created_at,updated_at`.
+- Secondary mismatch: `updateSettings()` writes `academy_settings.privacy`, `allow_student_registration`, `allow_parent_registration`, `show_member_list`, and `show_course_list`, but live `academy_settings` has only `id,academy_id,auto_accept_members,card_request_flow_enabled,created_at,updated_at`.
+- `AcademyResource` also does not return the settings page's direct fields (`description`, `name_en`, `description_en`, `website`, `province`, `country`) and only exposes `setting`.
+- Recommended fix: add an idempotent migration for the intended missing academy/profile/settings columns, update `Academy::$fillable`/casts as needed, align `AcademyResource`, and add focused backend coverage for settings update with all fields.
+
+### Work Plan — Academy Admin Settings Schema Fix (ฉบับละเอียด, 2026-07-10) — DONE
+- **Status**: Completed on 2026-07-10
+- **Summary**:
+  - Resolved `SQLSTATE[42S22] Unknown column 'description'` settings error by adding missing fields in migrations.
+  - Added casts for settings flags in `AcademySetting`.
+  - Added request validation, `name_slug` collision checks, and direct `join_mode` mapping in `AcademyController`.
+  - Flattened nested configurations and added new properties to `AcademyResource` to resolve state resets on UI reload.
+  - Switched `settings.vue` avatar preview reference from `avatar` to `logo_url`/`logo`.
+  - Wrote and passed the `AcademySettingsUpdateTest` (4 tests, 52 assertions).
+  - Formatted codebase using Laravel Pint.
+
+#### ขั้นที่ 1 — ยืนยัน schema จริงบน DB (read-only, กันพลาด) - DONE
+#### ขั้นที่ 2 — เขียน migration แบบ idempotent - DONE (Migration `2026_07_10_000001_add_settings_fields_to_academies_and_settings.php` run successfully)
+#### ขั้นที่ 3 — อัพเดท Models - DONE (`Academy.php` and `AcademySetting.php` updated)
+#### ขั้นที่ 4 — ปรับ AcademyController@updateSettings - DONE (`AcademyController.php` updated with validation, non-lossy join_mode & unique slug checks)
+#### ขั้นที่ 5 — ปรับ AcademyResource - DONE (`AcademyResource.php` updated with flattened configuration mapping)
+#### ขั้นที่ 6 — ปรับ Frontend `settings.vue` - DONE (`settings.vue` line 106 updated)
+#### ขั้นที่ 7 — ทดสอบ - DONE (Feature test `AcademySettingsUpdateTest.php` created and verified)
+#### ขั้นที่ 8 — Verify ปลายทาง - DONE
+
+**สรุปไฟล์ที่แตะ:**
+- `database/migrations/2026_07_10_000001_add_settings_fields_to_academies_and_settings.php` [NEW]
+- `app/Models/Academy.php` [MODIFY]
+- `app/Models/AcademySetting.php` [MODIFY]
+- `app/Http/Controllers/Api/Learn/Academy/AcademyController.php` [MODIFY]
+- `app/Http/Resources/Learn/Academy/AcademyResource.php` [MODIFY]
+- `ui/pages/academies/[name]/admin/settings.vue` [MODIFY]
+- `tests/Feature/Academy/AcademySettingsUpdateTest.php` [NEW]
+

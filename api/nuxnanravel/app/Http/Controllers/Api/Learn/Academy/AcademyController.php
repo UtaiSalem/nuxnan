@@ -492,6 +492,21 @@ class AcademyController extends Controller
             }
         }
 
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'name_en' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'description_en' => 'nullable|string',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'website' => 'nullable|string|url|max:255',
+            'address' => 'nullable|string',
+            'province' => 'nullable|string|max:100',
+            'country' => 'nullable|string|max:100',
+            'privacy' => 'nullable|string|in:public,private',
+            'join_mode' => 'nullable|string|in:open,approval,invite_only',
+        ]);
+
         try {
             // Update basic info
             $academy->fill($request->only([
@@ -501,7 +516,14 @@ class AcademyController extends Controller
 
             // Generate slug if name changed
             if ($request->has('name') && $academy->isDirty('name')) {
-                $academy->name_slug = \Str::slug($request->name);
+                $slug = \Str::slug($request->name);
+                $originalSlug = $slug;
+                $counter = 1;
+                while (Academy::where('name_slug', $slug)->where('id', '!=', $academy->id)->exists()) {
+                    $slug = $originalSlug.'-'.$counter;
+                    $counter++;
+                }
+                $academy->name_slug = $slug;
             }
 
             // Handle avatar upload
@@ -524,27 +546,30 @@ class AcademyController extends Controller
 
             // Update academy settings
             $setting = $academy->academySetting;
-            if ($setting) {
-                if ($request->has('privacy')) {
-                    $setting->privacy = $request->privacy;
-                }
-                if ($request->has('join_mode')) {
-                    $setting->auto_accept_members = $request->join_mode === 'open' ? 1 : 0;
-                }
-                if ($request->has('allow_student_registration')) {
-                    $setting->allow_student_registration = $request->boolean('allow_student_registration');
-                }
-                if ($request->has('allow_parent_registration')) {
-                    $setting->allow_parent_registration = $request->boolean('allow_parent_registration');
-                }
-                if ($request->has('show_member_list')) {
-                    $setting->show_member_list = $request->boolean('show_member_list');
-                }
-                if ($request->has('show_course_list')) {
-                    $setting->show_course_list = $request->boolean('show_course_list');
-                }
-                $setting->save();
+            if (! $setting) {
+                $setting = new AcademySetting(['academy_id' => $academy->id]);
             }
+
+            if ($request->has('privacy')) {
+                $setting->privacy = $request->privacy;
+            }
+            if ($request->has('join_mode')) {
+                $setting->join_mode = $request->join_mode;
+                $setting->auto_accept_members = $request->join_mode === 'open' ? 1 : 0;
+            }
+            if ($request->has('allow_student_registration')) {
+                $setting->allow_student_registration = $request->boolean('allow_student_registration');
+            }
+            if ($request->has('allow_parent_registration')) {
+                $setting->allow_parent_registration = $request->boolean('allow_parent_registration');
+            }
+            if ($request->has('show_member_list')) {
+                $setting->show_member_list = $request->boolean('show_member_list');
+            }
+            if ($request->has('show_course_list')) {
+                $setting->show_course_list = $request->boolean('show_course_list');
+            }
+            $setting->save();
 
             return response()->json([
                 'success' => true,
