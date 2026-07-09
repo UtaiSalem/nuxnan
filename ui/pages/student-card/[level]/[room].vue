@@ -5,6 +5,8 @@ import StudentCardItem from '~/components/student-card/StudentCardItem.vue'
 import AddStudentModal from '~/components/student-card/AddStudentModal.vue'
 import TransferStudentModal from '~/components/student-card/TransferStudentModal.vue'
 import RemoveStudentModal from '~/components/student-card/RemoveStudentModal.vue'
+import RequestCardModal from '~/components/student-card/RequestCardModal.vue'
+import { usePublicCardRequest } from '~/composables/usePublicCardRequest'
 
 definePageMeta({ layout: false })
 
@@ -30,9 +32,12 @@ const {
     removeStudent,
 } = useClassroomManagement(level, room)
 
+const { submitCardRequest } = usePublicCardRequest(level, room)
+
 const showAddModal = ref(false)
 const showTransferModal = ref(false)
 const showRemoveModal = ref(false)
+const showRequestModal = ref(false)
 const selectedStudent = ref<any | null>(null)
 
 const selectedStudentName = computed(() => selectedStudent.value?.full_name_thai
@@ -47,6 +52,15 @@ const openTransferModal = (student: any) => {
 const openRemoveModal = (student: any) => {
     selectedStudent.value = student
     showRemoveModal.value = true
+}
+
+const openRequestModal = (student: any) => {
+    selectedStudent.value = student
+    showRequestModal.value = true
+}
+
+const handleRequestSubmitted = () => {
+    Swal.fire({ icon: 'success', title: 'ส่งคำร้องขอทำบัตรนักเรียนสำเร็จ', timer: 1800, showConfirmButton: false })
 }
 
 const handleAdded = async () => {
@@ -121,7 +135,7 @@ onMounted(() => {
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div class="space-y-2">
                         <h1 class="text-2xl font-bold text-gray-800">ข้อมูลนักเรียน</h1>
-                        <div class="flex gap-4">
+                        <div class="flex flex-wrap items-center gap-3">
                             <span class="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg font-bold">
                                 ชั้น ม.{{ level }}/{{ room }}
                             </span>
@@ -131,6 +145,13 @@ onMounted(() => {
                                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
                                 <span class="font-medium">{{ students.length }} คน</span>
+                            </div>
+                            <div v-if="manageContext?.classroom_id" class="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-gray-600">
+                                <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                </svg>
+                                <span class="font-medium">ครูประจำชั้น: <span class="text-gray-800">{{ manageContext.homeroom_teacher_name || 'ยังไม่ได้กำหนด' }}</span></span>
                             </div>
                         </div>
                     </div>
@@ -201,8 +222,10 @@ onMounted(() => {
                     :key="student.id"
                     :studentInfo="student"
                     :canManage="!!manageContext?.can_manage"
+                    :canRequest="!!manageContext?.can_request"
                     @transfer="openTransferModal"
                     @remove="openRemoveModal"
+                    @request="openRequestModal"
                 />
             </div>
         </div>
@@ -230,6 +253,13 @@ onMounted(() => {
             :classroomName="manageContext?.classroom_name || `ม.${level}/${room}`"
             @close="showRemoveModal = false"
             @confirm="handleRemoveConfirm"
+        />
+        <RequestCardModal
+            :open="showRequestModal"
+            :student="selectedStudent"
+            :submitRequest="submitCardRequest"
+            @close="showRequestModal = false"
+            @submitted="handleRequestSubmitted"
         />
     </div>
 </template>
