@@ -66,6 +66,12 @@ class Academy extends Model
         'social_media_links',
         'logo',
         'cover',
+        'name_en',
+        'description_en',
+        'website',
+        'province',
+        'country',
+        'name_slug',
     ];
 
     /**
