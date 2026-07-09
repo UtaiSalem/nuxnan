@@ -6,6 +6,71 @@
 
 ---
 
+## 2026-07-09 — PromptPay Withdrawal Channel (branch: `fix/home-visit-admin-classroom-refactor`)
+
+### งานที่ทำ
+เพิ่มช่องทางถอนเงินผ่าน "พร้อมเพย์" ต่อจากการถอนเข้าบัญชีธนาคารเดิม โดยใช้ `wallet_transactions.metadata` (JSON) — **ไม่มี migration**
+
+**Policy ที่ล็อก (ผู้ใช้เลือก):**
+- ถอนขั้นต่ำ **25 บาท**, ค่าธรรมเนียม **13%** (ยึดตาม UI เดิม → แก้ backend ให้ตรง)
+- รับพร้อมเพย์ 2 รูปแบบ: เบอร์มือถือ 10 หลัก (`0[689]xxxxxxxx`) + เลขบัตร ปชช. 13 หลัก
+- field `method` เดิม รับค่า `'bank_transfer' | 'promptpay'`, marker คือ `bank_account.bank_name = 'promptpay'`
+
+**Backend**
+- `WalletService::withdraw()` — fee 13% (method-aware: `internal_deduction` = 0 กัน deduct pathway พัง), เพิ่ม `metadata.destination_type`
+- `WalletController::withdraw()` — `amount` min 25, `method` in list, validate/normalize เบอร์พร้อมเพย์ (ตัด `-`/space), whitelist ธนาคาร, กันปลอม bank_name
+- test ใหม่ `tests/Feature/Wallet/WithdrawTest.php` — 11 cases ผ่านหมด
+
+**Frontend**
+- `useWallet.ts` — type union + helper `normalizePromptPay`/`validatePromptPay`/`formatPromptPay`
+- `Wallet.vue` — segmented toggle บัญชีธนาคาร/พร้อมเพย์, autofill เบอร์จาก profile, inline validation, min 25
+- `nuxnan-admin/wallet/pending.vue` — label/icon/badge dynamic + fallback record เก่า (ไม่มี `destination_type`)
+
+### Verification
+- Backend 11/11 ผ่าน, Pint passed, `npm run build` สำเร็จ ไม่มี type error
+- ⚠️ `WalletAndPointsTest > user can earn points` fail แต่ **fail บน baseline ด้วย** (pre-existing, เรื่อง points ไม่เกี่ยวงานนี้)
+- ยังไม่ได้ verify ในเบราว์เซอร์ (หน้า Wallet อยู่หลัง auth middleware)
+
+### Commit
+- Backend: WalletService + WalletController + WithdrawTest
+- Frontend: useWallet.ts + Wallet.vue + pending.vue
+- (โน้ต `.agents/` ปล่อยไว้ไม่ commit เพื่อไม่ปนกับงาน rollover ที่ยังค้าง)
+
+---
+
+## 2026-07-09 — Rollover Harden Live Verification (branch: `fix/home-visit-admin-classroom-refactor`)
+
+### งานที่ทำ
+- **Regression tests ผ่าน 41/41 (106 assertions)** จาก 3 ไฟล์: `AcademicYearRolloverServiceTest`, `RolloverControllerWriteTest`, `ResourceShapeTest` — รวม 7 harden tests ใหม่ (skip/undo/rename/demote invariants) และ end-to-end mixed skip+promote → undo
+- **Dry-run health checks** — `enrollment:repair-dirty-data --dry-run` พบ 3 duplicate active enrollments ในปี 2569 (student 2824/2846/2868) และ `enrollment:backfill-academic-info --dry-run` รายงาน 1929 SAI จะสร้างเพิ่ม (drift สะสมจาก rollover 2568→2569 เดิม)
+- **Baseline clean-up** — รัน `enrollment:repair-dirty-data --commit`: 3 duplicate rows ถูก superseded, dry-run รอบสองยืนยัน 0 drift
+- **Synthetic test student** — insert `id=2944 T-ROLLOVER-1` ใน 2569 M1/1 (isolated: single active enrollment, single current SAI, ไม่มีบัตร)
+- **Live end-to-end test (commit + undo cycle) — ผ่าน 15/15 assertions** สร้างปี 2570 + ห้อง M2/1 ชั่วคราว รัน `AcademicYearRolloverService::commitRollover()` แบบ minimal plan (promote entry เดียว) แล้ว undo กลับ verify ทุก field:
+   - `plan_summary.from_academic_year_name='2569'` / `to_academic_year_name='2570'` (harden invariant — frozen names)
+   - `beforeSnapshots` มี student id (แสดงว่า promote ไม่ใช่ skip)
+   - Post-commit: student.class_level='2', old CS 'promoted' + rollover_batch_id, new CS 'active' + rollover_batch_id, old SAI is_current=0, new SAI is_current=1 grade='ม.2'
+   - Post-undo: student/CS/SAI กลับ baseline เป๊ะ, new CS+SAI ถูกลบ
+- **Cleanup** — ลบ synthetic student + 2570 + M2/1 + rollover batch ครบ dry-run health check รอบสาม: 0 drift
+
+### ไฟล์ที่แก้ / เพิ่ม
+- ไม่มี code change ใน session นี้ (harden commit `95127816` ทำไว้แล้วก่อนหน้า)
+- Persistent DB change: 3 rows ใน `classroom_students` เปลี่ยน status จาก duplicate `active` → `superseded` (baseline hardening ก่อน live test) — enrollment count ปี 2569 เดิม 2215 active → ปัจจุบัน 2212 active + 3 superseded (สุทธิเท่าเดิม)
+
+### สิ่งที่ยืนยันจาก session นี้
+- Commit 95127816 hardening ทำงานถูกต้องบนข้อมูลจริง (ไม่ใช่แค่ SQLite in-memory ในเทส)
+- Undo pipeline คืนสถานะได้ถูกต้อง แม้เป็น full-service pathway (ไม่ใช่แค่ database transaction rollback)
+- Go/No-Go gate: ✅ ผ่านทั้งหมด — regression tests, dry-run health checks, live test student, baseline restored, ไม่มี drift
+
+### หมายเหตุก่อน live rollover ห้องจริง
+- ยังมี **1929 missing SAI drift** จาก rollover เก่า — ไม่กระทบ commit/undo (test verified) แต่ควรรัน `enrollment:backfill-academic-info` (commit mode) ก่อน rollover จริงรอบใหม่ เพื่อ baseline สะอาด
+- Branch นี้ยังไม่ merge เข้า main — harden commit + home-visit refactor ยังอยู่บน `fix/home-visit-admin-classroom-refactor`
+
+### Scratchpad artifacts (ลบได้)
+- `%TEMP%/…/scratchpad/create_synthetic_student.php`
+- `%TEMP%/…/scratchpad/live_rollover_test.php`
+
+---
+
 ## 2026-07-09 — Home Visit Admin Refactor (branch: `fix/home-visit-admin-classroom-refactor`)
 
 ### งานที่ทำ
