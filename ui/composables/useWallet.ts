@@ -1,6 +1,12 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 
+/** Minimum withdrawal amount in THB (mirrors backend validation) */
+export const WITHDRAW_MIN_AMOUNT = 25
+
+/** Withdrawal fee rate (13%, mirrors backend calculation) */
+export const WITHDRAW_FEE_RATE = 0.13
+
 export const useWallet = () => {
   const authStore = useAuthStore()
   const config = useRuntimeConfig()
@@ -279,14 +285,14 @@ export const useWallet = () => {
    * Check if user can withdraw (minimum 25 THB)
    */
   const canWithdraw = (amount: number): boolean => {
-    return amount >= 25 && wallet.value >= amount
+    return amount >= WITHDRAW_MIN_AMOUNT && wallet.value >= amount
   }
 
   /**
    * Calculate withdrawal fee
    */
   const calculateFee = (amount: number): number => {
-    return amount * 0.13 // 13%
+    return amount * WITHDRAW_FEE_RATE
   }
 
   /**
@@ -485,5 +491,9 @@ export const useWallet = () => {
     normalizePromptPay,
     validatePromptPay,
     formatPromptPay,
+
+    // Constants
+    WITHDRAW_MIN_AMOUNT,
+    WITHDRAW_FEE_RATE,
   }
 }

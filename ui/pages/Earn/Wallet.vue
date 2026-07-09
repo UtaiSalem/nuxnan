@@ -39,7 +39,8 @@ const {
   getNetAmount,
   normalizePromptPay,
   validatePromptPay,
-  formatPromptPay
+  formatPromptPay,
+  WITHDRAW_MIN_AMOUNT
 } = useWallet()
 
 const { points, convertToWallet, formatPoints } = usePoints()
@@ -64,7 +65,7 @@ const depositForm = ref({
 })
 
 const withdrawForm = ref({
-  amount: 100,
+  amount: WITHDRAW_MIN_AMOUNT,
   method: 'bank_transfer' as 'bank_transfer' | 'promptpay',
   bank_account: {
     bank_name: '',
@@ -190,7 +191,7 @@ const processMessage = ref('')
 
 // Quick amounts
 const quickDepositAmounts = [100, 300, 500, 1000, 2000, 5000]
-const quickWithdrawAmounts = [100, 500, 1000, 2000, 5000]
+const quickWithdrawAmounts = [WITHDRAW_MIN_AMOUNT, 100, 500, 1000, 2000, 5000]
 
 // Bank options
 const bankOptions = [
@@ -1130,18 +1131,18 @@ onMounted(async () => {
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">จำนวนเงิน</label>
               <div class="relative">
-                <input 
+                <input
                   v-model.number="withdrawForm.amount"
                   type="number"
-                  min="25"
+                  :min="WITHDRAW_MIN_AMOUNT"
                   :max="walletBalance"
                   step="1"
                   class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="ระบุจำนวนเงิน (ขั้นต่ำ 25 บาท)"
+                  :placeholder="`ระบุจำนวนเงิน (ขั้นต่ำ ${WITHDRAW_MIN_AMOUNT} บาท)`"
                 >
                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">บาท</span>
               </div>
-              <p class="text-sm text-gray-500 mt-1">ยอดเงินคงเหลือ: {{ formatMoney(walletBalance) }} | ถอนขั้นต่ำ 25 บาท</p>
+              <p class="text-sm text-gray-500 mt-1">ยอดเงินคงเหลือ: {{ formatMoney(walletBalance) }} | ถอนขั้นต่ำ {{ WITHDRAW_MIN_AMOUNT }} บาท</p>
               
               <!-- Quick Amounts -->
               <div class="flex flex-wrap gap-2 mt-3">
@@ -1270,7 +1271,7 @@ onMounted(async () => {
             <button 
               class="w-full py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="isProcessing
-                || withdrawForm.amount < 25
+                || withdrawForm.amount < WITHDRAW_MIN_AMOUNT
                 || withdrawForm.amount > walletBalance
                 || !withdrawForm.bank_account.account_name
                 || (withdrawForm.method === 'bank_transfer' && !withdrawForm.bank_account.bank_name)
