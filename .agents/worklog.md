@@ -6,6 +6,41 @@
 
 ---
 
+## 2026-07-10 — Academy Admin Settings Schema Fix
+
+### งานที่ทำ
+แก้ไขบั๊ก `SQLSTATE[42S22] Unknown column 'description'` ที่หน้าการตั้งค่าข้อมูลโรงเรียน `/academies/{name}/admin/settings` โดยดำเนินการดังนี้:
+
+- **Database Migrations**
+  - สร้างและรัน migration `2026_07_10_000001_add_settings_fields_to_academies_and_settings` เพื่อเพิ่มคอลัมน์ใน `academies` (`name_en`, `description`, `description_en`, `website`, `province`, `country`, `name_slug`) และใน `academy_settings` (`privacy`, `join_mode`, `allow_student_registration`, `allow_parent_registration`, `show_member_list`, `show_course_list`) พร้อม idempotent check และ auto-backfill `name_slug` สำหรับโรงเรียนที่มีอยู่เดิม
+- **Backend Eloquent Models**
+  - เพิ่ม attributes ใหม่ลงใน `$fillable` ของ `Academy` และเพิ่ม `$casts` boolean ใน `AcademySetting`
+  - **Cache invalidation fix**: เพิ่ม boot hook ใน `AcademySetting` (`saved`/`deleted` → `Cache::forget("academy_settings_{id}")`) เพราะ `Academy::getSettings()` cache ค่าไว้ 24 ชม. และเดิมล้าง cache เฉพาะตอน `Academy` row dirty — ทำให้การแก้ "เฉพาะ setting" (เช่น สลับ privacy โดยไม่แก้ชื่อโรงเรียน) คืนค่าเก่าค้างนานถึง 24 ชม.
+- **Backend Controller & Resource**
+  - เพิ่ม request validation ใน `AcademyController@updateSettings`, รองรับการบันทึก `join_mode` แบบ non-lossy, ป้องกัน collision ของ `name_slug`, และสร้าง setting row ถ้ายังไม่มี
+  - flatten ฟิลด์ setting ขึ้น top-level ใน `AcademyResource` ป้องกันหน้า UI รีเซ็ตค่ากลับ default ทุกครั้งหลังโหลด/บันทึก
+- **Frontend**
+  - อัปเดต `settings.vue` avatar/cover preview ให้ชี้ `logo_url`/`cover_url` (แทนคีย์ `avatar` เดิมที่ไม่มีอยู่จริง)
+- **Code Quality & Testing**
+  - `AcademySettingsUpdateTest` — **5 เทส / 57 assertions ผ่านหมด** ครอบคลุม full-field round-trip, permission denial, validation, slug collision, และ **regression test พิสูจน์ว่าการแก้ setting อย่างเดียวไม่คืนค่าค้าง cache** (ปิด hook แล้วเทสต์ fail จริง → ยืนยันว่าเทสต์มีความหมาย)
+  - จัดการ format ด้วย Laravel Pint
+
+### ไฟล์ที่สร้างใหม่/แก้ไข
+- `database/migrations/2026_07_10_000001_add_settings_fields_to_academies_and_settings.php` [NEW]
+- `tests/Feature/Academy/AcademySettingsUpdateTest.php` [NEW]
+- `app/Models/Academy.php` [MODIFY]
+- `app/Models/AcademySetting.php` [MODIFY]
+- `app/Http/Controllers/Api/Learn/Academy/AcademyController.php` [MODIFY]
+- `app/Http/Resources/Learn/Academy/AcademyResource.php` [MODIFY]
+- `ui/pages/academies/[name]/admin/settings.vue` [MODIFY]
+
+### Branch / Git State
+- แตก branch `fix/academy-admin-settings-schema` → commit 3 ชุด (`59af6c73` backend, `2886dba0` frontend, `e1a12493` tests) → **merge เข้า `main` แล้ว** (`263ee465`, `--no-ff`) และ push origin เรียบร้อย
+- Migration รันบน DB `nuxnan` แล้ว (ยืนยันคอลัมน์ครบทั้ง `academies` และ `academy_settings`)
+- Uncommitted ที่เหลือ (ไม่เกี่ยวงานนี้ ปล่อยไว้): `.agents/implementation_plan.md` และ `2026_07_10_013214_modify_id_in_user_usage_events_table.php` (untracked, มีอยู่ก่อน session)
+
+---
+
 ## 2026-07-09 — PromptPay Withdrawal Channel (branch: `fix/home-visit-admin-classroom-refactor`)
 
 ### งานที่ทำ
