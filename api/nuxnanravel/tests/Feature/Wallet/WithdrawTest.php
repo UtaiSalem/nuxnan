@@ -141,6 +141,25 @@ class WithdrawTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_withdraw_allows_exactly_25(): void
+    {
+        [$user, $token] = $this->actingUser(50);
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->postJson('/api/wallet/withdraw', [
+                'amount' => 25,
+                'method' => 'bank_transfer',
+                'bank_account' => [
+                    'bank_name' => 'kbank',
+                    'account_number' => '1234567890',
+                    'account_name' => 'สมชาย ใจดี',
+                ],
+            ]);
+
+        $response->assertStatus(200)->assertJson(['success' => true]);
+        $this->assertSame(1, WalletTransaction::where('user_id', $user->id)->count());
+    }
+
     public function test_withdraw_rejects_unknown_method(): void
     {
         [, $token] = $this->actingUser();
