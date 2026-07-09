@@ -70,10 +70,15 @@ class WalletService
                 return null;
             }
 
-            // Calculate fee (0.5% min 10 THB)
-            $fee = max($amount * 0.005, 10);
+            // Calculate fee (13% for real withdrawals; internal deductions incur no fee)
+            $fee = $method === 'internal_deduction' ? 0 : $amount * 0.13;
             $netAmount = $amount - $fee;
             $balanceAfter = $balanceBefore - $amount;
+
+            // Determine destination channel from the bank_name marker
+            $destinationType = ($bankAccount['bank_name'] ?? null) === 'promptpay'
+                ? 'promptpay'
+                : 'bank_transfer';
 
             // Update user wallet
             $user->update([
@@ -91,6 +96,7 @@ class WalletService
                 'description' => $description ?? "ถอนเงินผ่าน {$method}",
                 'metadata' => [
                     'method' => $method,
+                    'destination_type' => $destinationType,
                     'bank_account' => $bankAccount,
                     'fee' => $fee,
                     'net_amount' => $netAmount,

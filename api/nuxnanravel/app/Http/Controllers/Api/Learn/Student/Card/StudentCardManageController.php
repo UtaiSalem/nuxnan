@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Learn\Student\Card;
 
+use App\Http\Controllers\Api\Learn\Student\Card\Concerns\ResolvesStudentCardRoom;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StudentCard\AddStudentToRoomRequest;
 use App\Http\Requests\StudentCard\RemoveStudentFromRoomRequest;
@@ -22,6 +23,8 @@ use Illuminate\Http\Request;
  */
 class StudentCardManageController extends Controller
 {
+    use ResolvesStudentCardRoom;
+
     public function __construct(
         private readonly StudentEnrollmentService $enrollmentService
     ) {}
@@ -29,26 +32,6 @@ class StudentCardManageController extends Controller
     private function ensureManagementEnabled(): void
     {
         abort_unless(config('student-card.public_management'), 403, 'ระบบจัดการชั่วคราวถูกปิดใช้งาน');
-    }
-
-    private function resolveClassroomFromUrl(string $level, string $room): Classroom
-    {
-        $classrooms = Classroom::query()
-            ->where('grade_level', 'like', '%'.$level)
-            ->where('section', $room)
-            ->where('status', 'active')
-            ->whereHas('academicYear', fn ($query) => $query->where('is_current', true))
-            ->with(['academy', 'academicYear'])
-            ->get();
-
-        abort_if($classrooms->isEmpty(), 404, 'ไม่พบห้องเรียนในปีการศึกษาปัจจุบัน');
-        abort_if(
-            $classrooms->count() > 1,
-            409,
-            'พบห้องเรียนตรงกันมากกว่าหนึ่งโรงเรียน ไม่สามารถระบุห้องได้'
-        );
-
-        return $classrooms->first();
     }
 
     private function activeEnrollmentCount(Classroom $classroom): int
@@ -61,14 +44,27 @@ class StudentCardManageController extends Controller
      */
     public function context(string $level, string $room): JsonResponse
     {
-        if (! config('student-card.public_management')) {
+        $classroom = $this->resolveClassroomFromUrl($level, $room);
+        $academy = $classroom->academy;
+        $cardRequestFlowEnabled = $academy ? (bool) ($academy->getSettings()?->card_request_flow_enabled) : false;
+
+        $canManage = (bool) config('student-card.public_management');
+        $canRequest = (bool) config('student-card.public_requests') && $cardRequestFlowEnabled;
+
+        if (! $canManage) {
             return response()->json([
                 'success' => true,
                 'can_manage' => false,
+                'can_request' => $canRequest,
+                'academy_id' => $classroom->academy_id,
+                'academy_name' => $classroom->academy?->name,
+                'classroom_id' => $classroom->id,
+                'classroom_name' => $classroom->display_name,
+                'academic_year_id' => $classroom->academic_year_id,
+                'academic_year_name' => $classroom->academicYear?->name,
+                'homeroom_teacher_name' => $classroom->homeroomTeacher?->name,
             ]);
         }
-
-        $classroom = $this->resolveClassroomFromUrl($level, $room);
 
         $availableClassrooms = Classroom::query()
             ->where('academy_id', $classroom->academy_id)
@@ -90,12 +86,14 @@ class StudentCardManageController extends Controller
         return response()->json([
             'success' => true,
             'can_manage' => true,
+            'can_request' => $canRequest,
             'academy_id' => $classroom->academy_id,
             'academy_name' => $classroom->academy?->name,
             'classroom_id' => $classroom->id,
             'classroom_name' => $classroom->display_name,
             'academic_year_id' => $classroom->academic_year_id,
             'academic_year_name' => $classroom->academicYear?->name,
+            'homeroom_teacher_name' => $classroom->homeroomTeacher?->name,
             'student_count' => $this->activeEnrollmentCount($classroom),
             'capacity' => $classroom->capacity,
             'available_classrooms' => $availableClassrooms,

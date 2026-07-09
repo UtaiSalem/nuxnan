@@ -2158,3 +2158,177 @@ ORDER BY cs.student_number;
 ### ผลการทดสอบ
 - รัน `RosterReconciliationTest` ผ่านทั้งหมด 10 assertions
 - รัน `StudentImportControllerTest` ผ่านเรียบร้อย
+
+---
+
+## 2026-07-09 - Wallet Withdrawal PromptPay Planning
+
+- Scope is plan-only: add PromptPay as a withdrawal destination alongside bank transfer.
+- Current flow: `ui/pages/Earn/Wallet.vue` posts through `ui/composables/useWallet.ts` to `POST /api/wallet/withdraw`; backend validation is in `WalletController::withdraw`; transaction metadata is stored by `WalletService::withdraw`; admin queue reads `metadata.bank_account` in `ui/pages/nuxnan-admin/wallet/pending.vue`.
+- Recommended contract: keep `bank_account` metadata for compatibility, add `method='promptpay'`, `bank_account.bank_name='promptpay'`, `bank_account.account_number=<promptpay_id>`, optional `metadata.destination_type='promptpay'`, and normalize digits server-side.
+- No migration appears necessary if storing destination details in existing `wallet_transactions.metadata` JSON.
+- Related cleanup to include in implementation: align withdrawal minimum (UI says 25, submit/API enforce 100) and fee preview (UI 13%, backend 0.5% min 10).
+- Verification plan: focused API feature tests for bank withdrawal still works, PromptPay phone/national-id validation, invalid PromptPay rejected, pending admin response displays destination; frontend build/type check if UI changes.
+
+## 2026-07-09 - Public Student Card Request Button Planning
+
+- Scope is plan-only: add a temporary public "request new student card" action to `/student-card/{level}/{room}` for each displayed student card.
+- Existing request infrastructure already exists: `student_card_requests` migration/model/enums, `StudentCardRequestService`, authenticated academy routes in `routes/learn/academy-student-card-request.php`, admin queue pages, `useStudentCardRequests.ts`, and `SubmitRequestModal.vue`.
+- Recommended implementation: add a narrow public endpoint under `routes/studentcard/studentcard.php`, guarded by a config flag such as `student-card.public_requests` (or reusing `public_management` if the temporary window is exactly the same), resolve classroom from `{level}/{room}` like `StudentCardManageController`, then create a request through the same service path with `origin=teacher` or a new `public` origin.
+- Main contract gap: `StudentCardRequestService::create()` currently requires a non-null `User $actor` and sets `requested_by`; public requests need either nullable/system actor support plus submitter snapshot fields, or a dedicated public create method that sets `requested_by=null` safely.
+- Frontend files likely touched: `ui/pages/student-card/[level]/[room].vue`, `ui/components/student-card/StudentCardItem.vue`, optionally reuse/adapt `ui/components/school/studentCard/SubmitRequestModal.vue`, and a small public composable if the call is reused.
+- Backend files likely touched: `api/nuxnanravel/config/student-card.php`, `routes/studentcard/studentcard.php`, `StudentCardRequestController` or a small public controller method, `StudentCardRequestService`, `StudentCardRequestOrigin`, and focused tests for public create, duplicate-open prevention, disabled flag, wrong-room/student rejection, and public throttling.
+- Risks: current public card endpoint exposes student identity data; this temporary page should be feature-flagged, throttled, not expose admin-only actions, and should prevent duplicate open requests through the existing unique/open-request logic.
+
+## 2026-07-09 - Student69 Homeroom Teacher DB Assignment
+
+- Read `docs/api/student69.pdf` (68 pages) and extracted 53 unique classroom homeroom-teacher headers for academic year 2569.
+- Updated live DB `classrooms.homeroom_teacher_id` for academy 1 / academic_year_id 2 on all 53 classrooms found in the PDF.
+- Matching summary: 42 exact user matches, 5 loose normalized matches, 3 manual existing-user matches (`ม.1/3` -> user 17406, `ม.2/7` -> user 17403, `ม.4/8` -> user 17069), and 3 placeholder teacher users created for names not found (`ม.1/4` user 17483, `ม.3/4` user 17484, `ม.3/7` user 17485).
+- Added/ensured `academy_members` teacher membership (`role=teacher`, `academy_role_id=4`, `status=1`) for the 3 placeholders and existing user 17069.
+- Verification: current year 2569 has 54 classrooms total; 53 have homeroom teachers; only `ม.4/9` remains unset because it is not present in `student69.pdf`.
+
+---
+
+## 2026-07-09 — Work Plan (ฉบับละเอียด, ตรวจ codebase จริงแล้ว)
+
+> วางแผนอย่างเดียว ยังไม่เขียนโค้ด · ทุกข้อผ่านการ verify กับไฟล์จริง
+
+### ผลการตรวจ codebase (ยืนยัน/แก้ไข note เดิม)
+
+| # | ข้อเท็จจริงที่ยืนยัน | ผลต่อแผน |
+|---|----------------------|-----------|
+| A | `student_card_requests.origin` เป็น `string(16)` default `'teacher'` (migration บรรทัด 24) **ไม่ใช่ DB enum** | เพิ่มค่า `'public'` ได้โดย **ไม่ต้องเขียน migration** — แค่เพิ่ม case ใน `StudentCardRequestOrigin` |
+| B | `requested_by` เป็น `nullable` + `nullOnDelete` (บรรทัด 32) | ตั้ง `requested_by = null` สำหรับ public ได้ปลอดภัย |
+| C | payload บนหน้า public คือ **`StudentCard`** ผ่าน `StudentCardPublicResource` → `id` = **card id**, ส่วน Student FK คือ field **`student_id`** (Resource บรรทัด 28) และ **อาจเป็น null** สำหรับบัตร legacy | ปุ่มต้องส่ง `studentInfo.student_id` (ไม่ใช่ `studentInfo.id`) และต้อง guard กรณี null → 422 |
+| D | ทุกใบบนหน้านี้เป็น `student_status = active` (query กรอง active) และ `StudentCardRequestService::create()` จะ **reject** `first_issue` ถ้ามีบัตร active อยู่ (บรรทัด 61-63) | ประเภทคำร้อง public ต้อง default เป็น **`replacement`** (บัตรหาย/ชำรุด) หรือ **`renewal`** — **ห้ามส่ง `first_issue`** |
+| E | มี unique index `uq_student_card_request_open` บน `(student_id, academy_id, is_open_flag)` (บรรทัด 47) + service เช็ค `whereIn status pending/approved/in_progress` (บรรทัด 45-48) | กันส่งซ้ำได้ 2 ชั้น (DB + service) โดยไม่ต้องเพิ่ม logic |
+| F | `StudentCardManageController::resolveClassroomFromUrl()` เป็น `private` และเป็น logic กลางที่ resolve `{level}/{room}` → classroom (+academy) พร้อมตอบ 409 ถ้าเจอหลายโรงเรียน | ควร **extract เป็น trait/service ที่ใช้ร่วมกัน** เพื่อให้ endpoint ใหม่ใช้ logic เดียวกัน (DRY) |
+| G | มี flag ระดับ academy อยู่แล้ว: `academy_settings.card_request_flow_enabled` (migration 2026_07_08 บรรทัด 51-53) | ควร gate **สองชั้น**: global config flag + per-academy flag |
+| H | `create()` hardcode `origin = Teacher` และ `requested_by = $actor->id`; รับ `$data['classroom_id']` เป็น optional filter ของ active enrollment | ต้อง refactor แยกแกน แล้วส่ง `classroom_id` ที่ resolve จาก URL เข้าไป → บังคับว่านักเรียนต้องอยู่ห้องตาม URL จริง |
+| I | หน้า `[level]/[room].vue` ใช้ pattern **Swal + modal เฉพาะทาง** (AddStudentModal ฯลฯ) และเรียก API ด้วย `$fetch` ผ่าน composable `useClassroomManagement` | ทำ modal + composable public ใหม่ให้เข้ากับ pattern นี้ **ดีกว่า** retrofit `SubmitRequestModal.vue` (ตัวนั้นผูก academy/auth shape) |
+
+---
+
+### ขั้นตอนการทำงาน (ทีละขั้น)
+
+#### ขั้นที่ 1 — Config: เพิ่ม flag public requests
+**ไฟล์:** `api/nuxnanravel/config/student-card.php`
+- เพิ่ม key `'public_requests' => env('PUBLIC_STUDENT_CARD_REQUESTS', false)`
+- แยกจาก `public_management` เพราะ "ส่งคำร้อง" เสี่ยงต่ำกว่า "เพิ่ม/ย้าย/ลบนักเรียน" (เปิด-ปิดอิสระได้)
+- อัปเดต `.env.example` (ไม่แตะ `.env` จริง)
+
+#### ขั้นที่ 2 — Enum: เพิ่ม origin `public`
+**ไฟล์:** `api/nuxnanravel/app/Enums/StudentCardRequestOrigin.php`
+- เพิ่ม `case Public = 'public';`
+- **ไม่ต้องมี migration** (column เป็น string อยู่แล้ว — ข้อ A)
+
+#### ขั้นที่ 3 — Extract room resolver ให้ใช้ร่วมกัน (DRY)
+**สร้าง:** `app/Http/Controllers/Api/Learn/Student/Card/Concerns/ResolvesStudentCardRoom.php` (trait)
+- ย้าย logic `resolveClassroomFromUrl(string $level, string $room): Classroom` ออกมาจาก `StudentCardManageController` (คงพฤติกรรมเดิม: 404 ถ้าไม่พบ, 409 ถ้าหลายโรงเรียน)
+- `StudentCardManageController` `use` trait นี้แทน method เดิม (regression risk ต่ำ, พฤติกรรมเท่าเดิม)
+- Controller ใหม่ก็ `use` trait เดียวกัน
+
+#### ขั้นที่ 4 — Service: รองรับ public actor (refactor แบบไม่ทำ logic ซ้ำ)
+**ไฟล์:** `app/Services/StudentCardRequestService.php`
+- แยกแกนกลางของ `create()` เป็น private:
+  `buildRequest(Academy $academy, Student $student, ?User $actor, StudentCardRequestOrigin $origin, array $data): StudentCardRequest`
+  - ย้าย validation ทั้งหมด (academy match, active enrollment, open-request check, existing-card + request_type rules) มาไว้ที่นี่
+  - `'origin' => $origin`, `'requested_by' => $actor?->id`
+- `create(...)` เดิม → เรียก `buildRequest($academy, $student, $actor, StudentCardRequestOrigin::Teacher, $data)` (พฤติกรรมเดิมทุกอย่าง)
+- เพิ่ม `createPublic(Academy $academy, Student $student, array $data): StudentCardRequest`
+  → `buildRequest($academy, $student, null, StudentCardRequestOrigin::Public, $data)`
+  - บันทึกที่มาใน `reason` เช่น `"ส่งจากหน้า public /student-card/{level}/{room}"` (+ ชื่อ/เบอร์ผู้แจ้งถ้าเก็บ)
+
+#### ขั้นที่ 5 — Endpoint: public request (แคบ + throttle + gate 2 ชั้น)
+**ไฟล์ route:** `routes/studentcard/studentcard.php` (ใน group `student-card` เดิม)
+```
+Route::middleware('throttle:10,1')
+    ->post('{level}/{room}/requests', [StudentCardManageController::class ...หรือ controller ใหม่..., 'submitRequest'])
+    ->name('manage.submit-request');
+```
+**Controller method** `submitRequest(Request $request, string $level, string $room)`:
+1. `abort_unless(config('student-card.public_requests'), 403)` — global gate (ข้อ G)
+2. resolve classroom จาก trait (ขั้นที่ 3) → ได้ `classroom` + `academy`
+3. เช็ค per-academy: `abort_unless(academy_settings.card_request_flow_enabled, 403)` — academy gate
+4. validate body: `student_id` (required, int), `request_type` (`in:replacement,renewal` — **ไม่รับ first_issue**, ข้อ D), `reason` (nullable string), optional `requester_name`/`requester_phone` (nullable)
+5. โหลด `Student::find(student_id)`; ถ้า null หรือ `student_id` ของ card เป็น null → 422 "บัตรนี้ยังไม่ผูกข้อมูลนักเรียน" (ข้อ C)
+6. ยืนยันว่านักเรียนอยู่ห้องตาม URL: ส่ง `$data['classroom_id'] = $classroom->id` เข้า service (service กรอง active enrollment ตาม classroom_id — ข้อ H)
+7. เรียก `service->createPublic($academy, $student, $data)` ใน try/catch `ValidationException` → 422 พร้อม message เดิม (เช่น "already has an open card request")
+8. ตอบ **slim JSON**: `{ success: true, request_id, status, message: 'ส่งคำร้องแล้ว' }` — ไม่ leak field admin
+
+**หมายเหตุ:** จะทำเป็น method ใน `StudentCardManageController` (ใช้ trait ร่วม) หรือแยก `PublicStudentCardRequestController` ก็ได้ — แนะนำแยก controller เพื่อความชัดของ scope public
+
+#### ขั้นที่ 6 — Frontend composable
+**สร้าง:** `ui/composables/usePublicCardRequest.ts` (mirror pattern `useClassroomManagement`)
+```ts
+async function submitCardRequest(studentId, requestType, reason?, requester?) {
+  return $fetch(`${apiBase}/api/student-card/${level}/${room}/requests`, {
+    method: 'POST',
+    body: { student_id: studentId, request_type: requestType, reason, ...requester }
+  })
+}
+```
+
+#### ขั้นที่ 7 — Frontend UI: ปุ่ม + modal ยืนยัน
+**แก้ `ui/components/student-card/StudentCardItem.vue`:**
+- เพิ่ม prop `canRequest: Boolean`
+- เพิ่มปุ่ม "ขอทำบัตรใหม่" (เช่นในเมนู action มุมขวา หรือปุ่มมุมบัตร) → `emit('request', studentInfo)`
+- **ห้ามส่ง `first_issue`** — ปล่อยให้หน้าแม่เลือกประเภท (replacement/renewal)
+
+**แก้ `ui/pages/student-card/[level]/[room].vue`:**
+- เพิ่ม state ตรวจว่าเปิด public requests ไหม (อ่านจาก `manage-context` ที่มีอยู่ หรือเพิ่ม field `can_request` ใน context endpoint) → ส่ง `:canRequest` ให้การ์ด
+- `openRequestModal(student)` → เปิด modal ใหม่ `RequestCardModal.vue` (สไตล์เดียวกับ AddStudentModal): แสดง **ชื่อเด็กให้ยืนยัน** + เลือกประเภท (บัตรหาย/ชำรุด = replacement, หมดอายุ = renewal) + ช่องเหตุผล (+ ชื่อ/เบอร์ผู้แจ้ง optional)
+- submit → `usePublicCardRequest().submitCardRequest(student.student_id, type, reason, requester)`
+  - **ใช้ `student.student_id`** (Student FK) ไม่ใช่ `student.id` (card id) — ข้อ C
+- UX: ปุ่ม disable+loading ระหว่างส่ง; สำเร็จ → Swal "ส่งคำร้องแล้ว"; ถ้ามีคำร้องค้าง → แสดง message จาก backend ("มีคำร้องที่ยังดำเนินการอยู่แล้ว")
+
+**สร้าง:** `ui/components/student-card/RequestCardModal.vue`
+
+#### ขั้นที่ 8 — (ถ้าจำเป็น) เปิด `can_request` ใน context
+**ไฟล์:** `StudentCardManageController::context()`
+- เพิ่ม `'can_request' => (bool) config('student-card.public_requests') && (academy card_request_flow_enabled)` ใน response
+- ให้หน้า/การ์ดแสดงปุ่มเฉพาะเมื่อเปิดจริง (ตอนนี้ `context()` ตอบแม้ `public_management` ปิด — จึงเป็นที่แขวน flag public_requests ได้พอดี)
+
+#### ขั้นที่ 9 — Tests (backend feature)
+**สร้าง:** `tests/Feature/StudentCard/PublicCardRequestTest.php`
+- flag global ปิด → `POST .../requests` = **403**
+- academy `card_request_flow_enabled` ปิด → **403**
+- ส่ง `replacement` สำเร็จ → 200/201, `origin=public`, `requested_by=null`
+- ส่งซ้ำเมื่อมี open request (pending/approved/in_progress) → **422**
+- `first_issue` บนนักเรียนที่มีบัตร active → **422**
+- นักเรียนไม่อยู่ห้องตาม URL (classroom_id ไม่ match) → **422**
+- card ที่ `student_id = null` → **422** (ไม่ 500)
+- throttle: ยิงเกิน limit → **429**
+- `replacement/renewal` เมื่อไม่มีบัตร active → **422** (ตาม logic เดิม)
+
+#### ขั้นที่ 10 — ตรวจสอบ + rollout
+- `./vendor/bin/pint` (backend), Nuxt build check (frontend)
+- Manual smoke: เปิด flag → เห็นปุ่ม, ส่งคำร้อง, คำร้องโผล่ในคิวแอดมิน `academy-student-card-request` (index กรอง `origin` ได้ ควรเห็น `public`)
+- **ปิด flag ทันทีหลังใช้เสร็จ** (ทั้ง global + academy) ตามเจตนาชั่วคราว
+
+---
+
+### ไฟล์สรุป (สร้าง/แก้)
+
+| ไฟล์ | Action |
+|------|--------|
+| `config/student-card.php` | แก้ — เพิ่ม `public_requests` |
+| `.env.example` | แก้ — เพิ่ม `PUBLIC_STUDENT_CARD_REQUESTS` |
+| `app/Enums/StudentCardRequestOrigin.php` | แก้ — เพิ่ม `Public` |
+| `.../Card/Concerns/ResolvesStudentCardRoom.php` | สร้าง — trait resolve ห้อง |
+| `StudentCardManageController.php` | แก้ — ใช้ trait + (option) method `submitRequest` + `can_request` ใน context |
+| `PublicStudentCardRequestController.php` | สร้าง (ถ้าเลือกแยก controller) |
+| `app/Services/StudentCardRequestService.php` | แก้ — refactor `buildRequest()` + เพิ่ม `createPublic()` |
+| `routes/studentcard/studentcard.php` | แก้ — เพิ่ม route `POST {level}/{room}/requests` (throttle) |
+| `ui/composables/usePublicCardRequest.ts` | สร้าง |
+| `ui/components/student-card/RequestCardModal.vue` | สร้าง |
+| `ui/components/student-card/StudentCardItem.vue` | แก้ — ปุ่ม + emit `request` |
+| `ui/pages/student-card/[level]/[room].vue` | แก้ — modal + submit ผ่าน `student_id` |
+| `tests/Feature/StudentCard/PublicCardRequestTest.php` | สร้าง |
+
+### จุดที่ต้องระวังที่สุด (highlight)
+1. **`student_id` vs `id`** บน payload — ส่งผิดจะสร้างคำร้องให้ผิดคน/พัง (ข้อ C)
+2. **ห้าม `first_issue`** — จะถูก reject เสมอบนหน้านี้ (ข้อ D)
+3. **Gate 2 ชั้น + throttle** — public + PII จึงต้อง flag ปิดได้ทันที (ข้อ G)
+4. **ส่ง `classroom_id` เข้า service** — บังคับ scope ห้องตาม URL (ข้อ H)

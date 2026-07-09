@@ -7,10 +7,11 @@ import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
 
 const props = defineProps({
     studentInfo: { type: Object, required: true },
-    canManage: { type: Boolean, default: false }
+    canManage: { type: Boolean, default: false },
+    canRequest: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['transfer', 'remove'])
+const emit = defineEmits(['transfer', 'remove', 'request'])
 
 const isActionMenuOpen = ref(false)
 
@@ -163,9 +164,10 @@ const studentPrefixName = (prefix) => {
 </script>
 
 <template>
-    <div class="flex justify-center items-center">
-        <div :style="cardBgStyle"
-            class="w-full max-w-[640px] aspect-[1.95/1.20] relative overflow-hidden rounded-2xl shadow-lg border border-gray-300">
+    <div class="flex justify-center">
+        <div class="w-full max-w-[680px] bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-shadow p-3 sm:p-4">
+            <div :style="cardBgStyle"
+                class="w-full aspect-[1.95/1.20] relative overflow-hidden rounded-2xl shadow-lg border border-gray-300">
 
             <!-- Top Section -->
             <div class="h-[20%] relative" style="background: linear-gradient(135deg, transparent 40%, #4a90e2 0%);">
@@ -180,22 +182,27 @@ const studentPrefixName = (prefix) => {
                 <div @click="isEditModalOpen = true" class="absolute z-50 top-0 right-2 text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
                     <Icon icon="dashicons:edit" width="20" height="20" />
                 </div>
-                <div v-if="canManage" class="absolute z-50 top-0 right-12">
+                <div v-if="canManage || canRequest" class="absolute z-50 top-0 right-12">
                     <div @click="isActionMenuOpen = !isActionMenuOpen"
                         class="text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
                         <Icon icon="heroicons:ellipsis-vertical" width="20" height="20" />
                     </div>
                     <div v-if="isActionMenuOpen"
                         class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                        <button @click="isActionMenuOpen = false; emit('transfer', studentInfo)"
+                        <button v-if="canManage" @click="isActionMenuOpen = false; emit('transfer', studentInfo)"
                             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 text-left">
                             <Icon icon="heroicons:arrow-right-circle" class="w-4 h-4 text-blue-600" />
                             ย้ายห้อง
                         </button>
-                        <button @click="isActionMenuOpen = false; emit('remove', studentInfo)"
+                        <button v-if="canManage" @click="isActionMenuOpen = false; emit('remove', studentInfo)"
                             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 text-left">
                             <Icon icon="heroicons:user-minus" class="w-4 h-4" />
                             นำออกจากห้อง
+                        </button>
+                        <button v-if="canRequest" @click="isActionMenuOpen = false; emit('request', studentInfo)"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 text-left">
+                            <Icon icon="heroicons:credit-card" class="w-4.5 h-4.5 text-blue-600" />
+                            ขอทำบัตรใหม่
                         </button>
                     </div>
                 </div>
@@ -363,6 +370,31 @@ const studentPrefixName = (prefix) => {
                     </DialogPanel>
                 </div>
             </Dialog>
+            </div>
+
+            <!-- Action footer — ระบุชัดว่าปุ่มปฏิบัติการเป็นของบัตรใบนี้ -->
+            <div v-if="canManage || canRequest"
+                class="mt-3 pt-3 border-t border-dashed border-gray-200 flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-1.5 text-xs text-gray-500 mr-auto min-w-0">
+                    <Icon icon="heroicons:identification" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span class="truncate">จัดการบัตรของ <span class="font-semibold text-gray-700">{{ displayFullNameThai }}</span></span>
+                </div>
+                <button v-if="canManage" @click="emit('transfer', studentInfo)"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition shadow-sm">
+                    <Icon icon="heroicons:arrow-right-circle" class="w-4 h-4" />
+                    ย้ายห้อง
+                </button>
+                <button v-if="canManage" @click="emit('remove', studentInfo)"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition shadow-sm">
+                    <Icon icon="heroicons:user-minus" class="w-4 h-4" />
+                    นำออกจากห้อง
+                </button>
+                <button v-if="canRequest" @click="emit('request', studentInfo)"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm">
+                    <Icon icon="heroicons:credit-card" class="w-4 h-4" />
+                    ขอทำบัตรใหม่
+                </button>
+            </div>
         </div>
     </div>
 </template>

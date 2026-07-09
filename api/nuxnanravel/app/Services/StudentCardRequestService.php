@@ -25,6 +25,16 @@ class StudentCardRequestService
 
     public function create(Academy $academy, Student $student, User $actor, array $data): StudentCardRequest
     {
+        return $this->buildRequest($academy, $student, $actor, StudentCardRequestOrigin::Teacher, $data);
+    }
+
+    public function createPublic(Academy $academy, Student $student, array $data): StudentCardRequest
+    {
+        return $this->buildRequest($academy, $student, null, StudentCardRequestOrigin::Public, $data);
+    }
+
+    private function buildRequest(Academy $academy, Student $student, ?User $actor, StudentCardRequestOrigin $origin, array $data): StudentCardRequest
+    {
         if ((int) $student->academy_id !== (int) $academy->id) {
             throw ValidationException::withMessages(['student_id' => 'Student does not belong to this academy.']);
         }
@@ -71,13 +81,13 @@ class StudentCardRequestService
             'request_type' => $type,
             'status' => StudentCardRequestStatus::Pending,
             'priority' => $data['priority'] ?? 'normal',
-            'origin' => StudentCardRequestOrigin::Teacher,
+            'origin' => $origin,
             'full_name_snapshot' => $student->full_name_th,
             'student_number_snapshot' => $student->student_id,
             'grade_level_snapshot' => $enrollment->classroom->grade_level,
             'section_snapshot' => $enrollment->classroom->section,
             'reason' => $data['reason'] ?? null,
-            'requested_by' => $actor->id,
+            'requested_by' => $actor?->id,
             'requested_at' => now(),
         ]);
     }

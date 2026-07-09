@@ -214,6 +214,20 @@ const getBankName = (bankCode: string) => {
   return banks[bankCode?.toLowerCase()] || bankCode || 'ไม่ระบุ'
 }
 
+// Whether a withdrawal request targets PromptPay.
+// Falls back to the bank_name marker for records created before destination_type existed.
+const isPromptPay = (request: any) =>
+  request?.metadata?.destination_type === 'promptpay'
+  || request?.metadata?.bank_account?.bank_name === 'promptpay'
+
+// Format a PromptPay number for readability (081-234-5678 / national ID).
+const formatPromptPay = (raw: string) => {
+  const digits = (raw || '').replace(/\D/g, '')
+  if (digits.length === 10) return digits.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')
+  if (digits.length === 13) return digits.replace(/(\d{1})(\d{4})(\d{5})(\d{2})(\d{1})/, '$1-$2-$3-$4-$5')
+  return digits || raw
+}
+
 onMounted(() => {
   fetchPendingRequests()
 })
@@ -328,17 +342,29 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Bank Info (for withdrawals) -->
+            <!-- Bank / PromptPay Info (for withdrawals) -->
             <div v-if="activeTab === 'withdrawals' && request.metadata?.bank_account" class="flex-1 min-w-0 bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-              <p class="text-xs text-slate-400 mb-1">ข้อมูลบัญชีธนาคาร</p>
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-xs text-slate-400">
+                  {{ isPromptPay(request) ? 'ข้อมูลพร้อมเพย์' : 'ข้อมูลบัญชีธนาคาร' }}
+                </p>
+                <span
+                  class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                  :class="isPromptPay(request)
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                    : 'bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-300'"
+                >
+                  {{ isPromptPay(request) ? 'PromptPay' : 'Bank' }}
+                </span>
+              </div>
               <div class="space-y-1">
-                <p class="text-sm font-medium text-slate-800 dark:text-white flex items-center gap-2">
+                <p v-if="!isPromptPay(request)" class="text-sm font-medium text-slate-800 dark:text-white flex items-center gap-2">
                   <Icon icon="fluent:building-bank-24-regular" class="w-4 h-4 text-hopeui-info" />
                   {{ getBankName(request.metadata.bank_account.bank_name) }}
                 </p>
                 <p class="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                  <Icon icon="fluent:document-number-24-regular" class="w-4 h-4 text-slate-400" />
-                  {{ request.metadata.bank_account.account_number }}
+                  <Icon :icon="isPromptPay(request) ? 'fluent:phone-24-regular' : 'fluent:document-number-24-regular'" class="w-4 h-4 text-slate-400" />
+                  {{ isPromptPay(request) ? formatPromptPay(request.metadata.bank_account.account_number) : request.metadata.bank_account.account_number }}
                 </p>
                 <p class="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
                   <Icon icon="fluent:person-24-regular" class="w-4 h-4 text-slate-400" />

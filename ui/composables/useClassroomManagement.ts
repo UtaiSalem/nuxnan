@@ -16,6 +16,7 @@ export interface ManageContext {
     classroom_name?: string
     academic_year_id?: number
     academic_year_name?: string
+    homeroom_teacher_name?: string | null
     student_count?: number
     capacity?: number | null
     available_classrooms?: ManageClassroomOption[]

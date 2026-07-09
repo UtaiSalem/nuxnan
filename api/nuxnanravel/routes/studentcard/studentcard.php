@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Learn\Student\Card\PublicStudentCardRequestController;
 use App\Http\Controllers\Api\Learn\Student\Card\StudentCardController;
 use App\Http\Controllers\Api\Learn\Student\Card\StudentCardManageController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,10 @@ Route::prefix('student-card')->name('student-card.')->group(function () {
             Route::post('/students', [StudentCardManageController::class, 'addStudent'])->name('add-student');
             Route::post('/students/{student}/transfer', [StudentCardManageController::class, 'transferStudent'])->name('transfer-student');
             Route::delete('/students/{student}', [StudentCardManageController::class, 'removeStudent'])->name('remove-student');
+        });
+
+        Route::middleware('throttle:10,1')->group(function () {
+            Route::post('/requests', [PublicStudentCardRequestController::class, 'submitRequest'])->name('submit-request');
         });
     });
 
