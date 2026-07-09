@@ -222,12 +222,11 @@ const removeFromGroup = async (member: any) => {
   const memberName = getMemberName(member)
   if (!confirm(`ยืนยันการนำ "${memberName}" ออกจากกลุ่มนี้? (สมาชิกยังคงอยู่ในรายวิชา)`)) return
 
-  const userId = member.user_id || member.user?.id
-  if (!userId) return
+  if (!member.id) return
 
   isRemovingFromGroup.value = member.id
   try {
-    await api.post(`/api/courses/${course.value.id}/groups/${groupId.value}/members/${userId}/unMemberGroup`, {})
+    await api.delete(`/api/courses/${course.value.id}/groups/${groupId.value}/members/${member.id}`)
     await loadGroup()
   } catch (error: any) {
     alert(error.data?.message || 'ไม่สามารถนำสมาชิกออกจากกลุ่มได้')

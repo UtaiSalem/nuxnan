@@ -117,7 +117,12 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
 
     Route::post('/{course}/groups/{group}/members', [CourseGroupMemberController::class, 'store']);
     Route::delete('/{course}/members/groups/{group}', [CourseGroupMemberController::class, 'unMemberGroup']);
-    Route::delete('/{course}/groups/{group}/members/{member}', [CourseGroupMemberController::class, 'unMemberGroup']);
+    // NOTE: DELETE /{course}/groups/{group}/members/{member} is handled by
+    // CourseGroupMemberController@destroy (see the /courses/{course}/groups group below),
+    // which removes the CourseGroupMember row AND resets CourseMember group state.
+    // A duplicate route pointing to unMemberGroup() used to shadow it and only cleared
+    // course_members.group_id, leaving course_group_members stale — removed to avoid
+    // route-cache ordering flipping to the incomplete handler.
 
     Route::resource('/{course}/quizzes/{quiz}/questions', CourseQuizQuestionController::class)->names('course.quiz.questions');
     Route::resource('/{course}/quizzes/{quiz}/results', CourseQuizResultController::class);

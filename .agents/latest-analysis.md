@@ -2332,3 +2332,36 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 2. **ห้าม `first_issue`** — จะถูก reject เสมอบนหน้านี้ (ข้อ D)
 3. **Gate 2 ชั้น + throttle** — public + PII จึงต้อง flag ปิดได้ทันที (ข้อ G)
 4. **ส่ง `classroom_id` เข้า service** — บังคับ scope ห้องตาม URL (ข้อ H)
+
+---
+
+## 2026-07-10 - Course Member Removal / Last Access Group Check
+
+- User reported production errors from 2026-06-30: `PATCH /api/courses/25/members/update-last-access-group` returned 404, and `GET/POST /api/courses/25/members/3843/removal-preview|remove` returned 400 with SQL unknown column around assignment cleanup.
+- Local route list currently includes `PATCH api/courses/{course}/members/update-last-access-group`, `GET api/courses/{course}/members/{member}/removal-preview`, and `POST api/courses/{course}/members/{member}/remove`; no `bootstrap/cache/routes*.php` route cache file exists locally.
+- Root cause still present for removal preview/remove: `CourseMemberRemovalService` filters `AssignmentAnswer::whereHas('assignment', fn => where('course_id', ...))`, but `assignments` is polymorphic (`assignmentable_type`, `assignmentable_id`) and has no direct `course_id` column. This matches the production SQL error.
+- Existing `CourseMemberRemovalTest` passes 5 tests / 14 assertions, but it does not cover `removalPreview()` or assignment-answer cleanup through the polymorphic assignment relation, so it does not catch this bug.
+- Worktree note: untracked `api/nuxnanravel/database/migrations/2026_07_10_013214_modify_id_in_user_usage_events_table.php` existed before this check and was not touched.
+
+## 2026-07-10 - Course Member Removal Fix Applied
+
+- Fixed `CourseMemberRemovalService` to find `AssignmentAnswer` rows through polymorphic assignments attached directly to the course, to course lessons, or to course topics instead of querying the nonexistent `assignments.course_id` column.
+- Reused the same helper query for both preview counts and execute cleanup, so `removal-preview` and `remove` now follow the same course scope.
+- Added regression coverage in `CourseMemberRemovalTest` for preview count across course/lesson/topic assignments and for deleting only answers belonging to the removed course.
+- Verification: `./vendor/bin/pint app/Services/CourseMemberRemovalService.php tests/Feature/CourseMemberRemovalTest.php` passed; `php artisan test --filter=CourseMemberRemovalTest` passed 7 tests / 19 assertions. PHPUnit metadata deprecation warnings and local Xdebug log warning are pre-existing/noise.
+- Remaining production action: `update-last-access-group` route exists locally, so the reported 404 should be handled by deploying this code and clearing/rebuilding production route cache.
+
+## 2026-07-10 - Course Group Member Removal Route Fix Applied
+
+- Frontend `groups/[groupId].vue` now calls `DELETE /api/courses/{course}/groups/{group}/members/{member.id}` (previously `POST .../unMemberGroup`, which had no matching route).
+- Found a duplicate `DELETE /{course}/groups/{group}/members/{member}` route in `routes/learn/course.php` pointing to `unMemberGroup()`, colliding with the `destroy()` route registered under the `/courses/{course}/groups` group. `unMemberGroup()` only nulls `course_members.group_id` and leaves the `course_group_members` row intact, so `isMember`/pending state could go stale.
+- At runtime Laravel resolved the URL to `destroy()` (last-registered wins on identical URIs), but that is fragile under `route:cache`. Removed the colliding duplicate route so `destroy()` (which deletes the `course_group_members` row AND resets `CourseMember` group state) is the unambiguous handler.
+- Added `CourseGroupMemberRemovalTest` asserting the DELETE endpoint removes the `course_group_members` row and resets `course_members.group_id`/`group_member_status` while keeping the course membership. Pint + test pass (1 test / 6 assertions).
+
+## 2026-07-10 - Withdrawal Minimum 25 THB Planning
+
+- User requested a plan to resolve inconsistent withdrawal minimums and set the minimum withdrawable amount to 25 THB.
+- Current inspection: `WalletController::withdraw()` already validates `amount` with `min:25`; `useWallet.canWithdraw()` also uses 25; `Earn/Wallet.vue` has input `min="25"`, disabled guard `withdrawForm.amount < 25`, and Thai helper text saying minimum 25 THB.
+- Likely remaining mismatch is UX/default affordance: `Earn/Wallet.vue` initializes `withdrawForm.amount` to 100 and quick withdrawal chips start at `[100, 500, 1000, 2000, 5000]`, so users never see 25 as a selectable minimum even though validation allows it.
+- Proposed implementation files: `ui/pages/Earn/Wallet.vue`, `ui/composables/useWallet.ts`, `ui/tests/useWallet.spec.ts`, `api/nuxnanravel/app/Http/Controllers/Api/WalletController.php`, `api/nuxnanravel/tests/Feature/Wallet/WithdrawTest.php`; optional config/constants only if the team wants a single source of truth for minimum/fee.
+- Verification plan: add/confirm tests for 24 rejected and 25 accepted, add unit coverage for `canWithdraw(25)`, then run focused Wallet feature tests and frontend wallet unit/build checks.
