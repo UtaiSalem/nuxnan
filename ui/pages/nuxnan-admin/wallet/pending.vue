@@ -463,8 +463,32 @@ onMounted(() => {
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showApproveModal = false"></div>
         <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl transform transition-all scale-100">
           <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">ยืนยันการอนุมัติ</h3>
-          <p class="text-slate-600 dark:text-slate-300 mb-4">
-            คุณต้องการอนุมัติ{{ activeTab === 'withdrawals' ? 'การถอนเงิน' : 'คำขอเติมเงิน' }} <span class="font-bold text-green-600">{{ formatCurrency(selectedRequest?.amount || 0) }}</span> ใช่หรือไม่?
+
+          <!-- Withdrawal: show the amount the admin must actually transfer (net), not the gross request -->
+          <template v-if="activeTab === 'withdrawals'">
+            <p class="text-slate-600 dark:text-slate-300 mb-3">
+              ยืนยันการอนุมัติคำขอถอนเงินรายการนี้ใช่หรือไม่?
+            </p>
+            <div class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 mb-4 space-y-1.5 text-sm">
+              <div class="flex justify-between">
+                <span class="text-slate-500">ยอดถอน</span>
+                <span class="text-slate-700 dark:text-slate-200">{{ formatCurrency(selectedRequest?.amount || 0) }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500">ค่าธรรมเนียม</span>
+                <span class="text-red-500">- {{ formatCurrency(selectedRequest?.metadata?.fee || 0) }}</span>
+              </div>
+              <div class="flex justify-between pt-1.5 border-t border-slate-200 dark:border-slate-600">
+                <span class="font-semibold text-slate-800 dark:text-white">ยอดที่ต้องโอนจริง</span>
+                <span class="font-bold text-green-600 text-base">
+                  {{ formatCurrency(selectedRequest?.metadata?.net_amount ?? selectedRequest?.amount ?? 0) }}
+                </span>
+              </div>
+            </div>
+          </template>
+
+          <p v-else class="text-slate-600 dark:text-slate-300 mb-4">
+            คุณต้องการอนุมัติคำขอเติมเงิน <span class="font-bold text-green-600">{{ formatCurrency(selectedRequest?.amount || 0) }}</span> ใช่หรือไม่?
           </p>
 
           <!-- Admin note for deposits -->

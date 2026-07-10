@@ -217,10 +217,11 @@ class WithdrawTest extends TestCase
         $this->assertSame('0812345678', $tx->metadata['bank_account']['account_number']);
     }
 
-    public function test_withdraw_calculates_13_percent_fee(): void
+    public function test_withdraw_applies_minimum_fee_floor_for_small_amounts(): void
     {
         [$user, $token] = $this->actingUser();
 
+        // 100 * 0.5% = 0.50, below the 10 THB floor → fee = 10.
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->postJson('/api/wallet/withdraw', [
                 'amount' => 100,
@@ -235,8 +236,58 @@ class WithdrawTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'data' => [
-                    'fee' => 13,
-                    'net_amount' => 87,
+                    'fee' => 10,
+                    'net_amount' => 90,
+                ],
+            ]);
+    }
+
+    public function test_withdraw_applies_percentage_fee_above_the_floor(): void
+    {
+        [$user, $token] = $this->actingUser();
+
+        // 5000 * 0.5% = 25, above the 10 THB floor → fee = 25.
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->postJson('/api/wallet/withdraw', [
+                'amount' => 5000,
+                'method' => 'bank_transfer',
+                'bank_account' => [
+                    'bank_name' => 'kbank',
+                    'account_number' => '1234567890',
+                    'account_name' => 'สมชาย ใจดี',
+                ],
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'data' => [
+                    'fee' => 25,
+                    'net_amount' => 4975,
+                ],
+            ]);
+    }
+
+    public function test_withdraw_rounds_fee_to_two_decimals(): void
+    {
+        [$user, $token] = $this->actingUser();
+
+        // 3333 * 0.5% = 16.665 → rounded to 16.67, net = 3316.33.
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->postJson('/api/wallet/withdraw', [
+                'amount' => 3333,
+                'method' => 'bank_transfer',
+                'bank_account' => [
+                    'bank_name' => 'kbank',
+                    'account_number' => '1234567890',
+                    'account_name' => 'สมชาย ใจดี',
+                ],
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'data' => [
+                    'fee' => 16.67,
+                    'net_amount' => 3316.33,
                 ],
             ]);
     }

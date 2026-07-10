@@ -70,9 +70,12 @@ class WalletService
                 return null;
             }
 
-            // Calculate fee (13% for real withdrawals; internal deductions incur no fee)
-            $fee = $method === 'internal_deduction' ? 0 : $amount * 0.13;
-            $netAmount = $amount - $fee;
+            // Calculate fee. Internal deductions incur no fee; real withdrawals use
+            // the configured percentage with a minimum floor (see config/wallet.php).
+            $fee = $method === 'internal_deduction'
+                ? 0
+                : round(max($amount * config('wallet.withdraw.fee_rate'), config('wallet.withdraw.fee_min')), 2);
+            $netAmount = round($amount - $fee, 2);
             $balanceAfter = $balanceBefore - $amount;
 
             // Determine destination channel from the bank_name marker

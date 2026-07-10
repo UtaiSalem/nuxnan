@@ -2416,3 +2416,21 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Remaining `git grep` for `home-visit/admin` outside generated `.agents`/public assets finds only backend legacy test coverage at `api/nuxnanravel/tests/Feature/HomeVisit/AdminControllerTest.php:503`; this cleanup intentionally removed only the broken admin UI source.
 - Backlog gap: legacy UI had per-visit PDF report and bulk PDF export. Academy admin replacement currently has CSV/Excel-style export only via `/admin/export/visits`; add PDF report/export separately if schools still require it.
 
+## 2026-07-10 - Wallet Withdrawal Fee Audit
+
+- User asked to inspect `/nuxnan-admin/wallet/pending` for duplicate or incorrect withdrawal fee deduction and confirm whether the configured fee is 13% or 10 THB.
+- Current source of truth: `WalletService::withdraw()` deducts the requested gross `amount` from the user's wallet once, stores `metadata.fee = amount * 0.13`, and stores `metadata.net_amount = amount - fee`; `internal_deduction` is exempt from fee.
+- Admin approval flow does not deduct again: `approveWithdrawal()` only changes status from `pending` to `completed`; rejection refunds the original gross `amount` to the user and marks the transaction cancelled.
+- Frontend user wallet and admin helpers both calculate/display 13%; `Earn/Wallet.vue` initializes withdrawal amount to 25, quick chips include 25, and preview labels fee as 13%. Admin pending page displays gross `request.amount` as the large amount, then fee/net separately from metadata.
+- No fixed 10 THB withdrawal fee was found in wallet withdrawal paths. Matches for 10 THB are unrelated flows such as deposit minimum, wallet-to-points conversion minimum, or ad formulas.
+- Verification: `php artisan test --filter=WithdrawTest` passed 12 tests / 28 assertions, including 24 rejected, 25 accepted, and 100 THB -> fee 13 / net 87. Warnings were pre-existing PHPUnit doc-comment metadata and local Xdebug log noise.
+
+## 2026-07-10 - Wallet Pending Page Live Data Check
+
+- User shared screenshot from `http://localhost:3000/nuxnan-admin/wallet/pending`; the pending withdrawal page shows two rows with `fee = 10` THB.
+- Read-only DB check confirmed the page is displaying stored `wallet_transactions.metadata`, not recalculating in the frontend:
+  - Transaction `185`, user `พัชรี  หนูวงค์`, amount `148.99`, stored fee `10`, stored net `138.99`; current 13% policy would be fee `19.37`, net `129.62`.
+  - Transaction `12`, user `Utai Salem`, amount `100`, stored fee `10`, stored net `90`; current 13% policy would be fee `13`, net `87`.
+- Conclusion: these pending records are stale/legacy or were created by a previous fee rule; approving them now will not recalculate the fee. Admin should transfer the stored `net_amount` if preserving the original request terms, or reject/recreate/update the request if enforcing current 13% policy.
+- UI risk remains: approval modal currently emphasizes gross `selectedRequest.amount`, not the net transfer amount, so admins can accidentally approve while thinking the large amount is what should be transferred.
+

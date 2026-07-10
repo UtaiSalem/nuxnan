@@ -1,11 +1,18 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 
-/** Minimum withdrawal amount in THB (mirrors backend validation) */
+/**
+ * Withdrawal rules — must mirror api/nuxnanravel/config/wallet.php.
+ * Fee = max(amount * WITHDRAW_FEE_RATE, WITHDRAW_FEE_MIN), rounded to 2 dp.
+ */
+/** Minimum withdrawal amount in THB */
 export const WITHDRAW_MIN_AMOUNT = 25
 
-/** Withdrawal fee rate (13%, mirrors backend calculation) */
-export const WITHDRAW_FEE_RATE = 0.13
+/** Percentage fee rate (0.005 = 0.5%) */
+export const WITHDRAW_FEE_RATE = 0.005
+
+/** Minimum fee floor in THB */
+export const WITHDRAW_FEE_MIN = 10
 
 export const useWallet = () => {
   const authStore = useAuthStore()
@@ -289,10 +296,11 @@ export const useWallet = () => {
   }
 
   /**
-   * Calculate withdrawal fee
+   * Calculate withdrawal fee: max(amount * rate, min floor), rounded to 2 dp.
+   * Mirrors WalletService::withdraw() in the backend.
    */
   const calculateFee = (amount: number): number => {
-    return amount * WITHDRAW_FEE_RATE
+    return Math.round(Math.max(amount * WITHDRAW_FEE_RATE, WITHDRAW_FEE_MIN) * 100) / 100
   }
 
   /**
@@ -396,7 +404,7 @@ export const useWallet = () => {
    */
   const getNetAmount = (amount: number): number => {
     const fee = calculateFee(amount)
-    return amount - fee
+    return Math.round((amount - fee) * 100) / 100
   }
 
   /**
@@ -495,5 +503,6 @@ export const useWallet = () => {
     // Constants
     WITHDRAW_MIN_AMOUNT,
     WITHDRAW_FEE_RATE,
+    WITHDRAW_FEE_MIN,
   }
 }

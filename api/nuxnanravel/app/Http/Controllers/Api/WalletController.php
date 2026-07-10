@@ -172,7 +172,7 @@ class WalletController extends Controller
         }
 
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:25', // Minimum 25 THB
+            'amount' => 'required|numeric|min:'.config('wallet.withdraw.min_amount'),
             'method' => 'required|string|in:bank_transfer,promptpay',
             'bank_account' => 'required|array',
             'bank_account.bank_name' => 'required|string|max:50',

@@ -40,7 +40,9 @@ const {
   normalizePromptPay,
   validatePromptPay,
   formatPromptPay,
-  WITHDRAW_MIN_AMOUNT
+  WITHDRAW_MIN_AMOUNT,
+  WITHDRAW_FEE_RATE,
+  WITHDRAW_FEE_MIN
 } = useWallet()
 
 const { points, convertToWallet, formatPoints } = usePoints()
@@ -1258,7 +1260,7 @@ onMounted(async () => {
                 <span class="font-medium text-gray-900 dark:text-white">{{ formatMoney(withdrawPreview.amount) }}</span>
               </div>
               <div class="flex justify-between mb-2">
-                <span class="text-gray-600 dark:text-gray-400">ค่าธรรมเนียม (13%)</span>
+                <span class="text-gray-600 dark:text-gray-400">ค่าธรรมเนียม ({{ (WITHDRAW_FEE_RATE * 100).toFixed(1) }}% ขั้นต่ำ {{ formatMoney(WITHDRAW_FEE_MIN) }})</span>
                 <span class="font-medium text-red-500">-{{ formatMoney(withdrawPreview.fee) }}</span>
               </div>
               <div class="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
