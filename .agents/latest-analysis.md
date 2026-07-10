@@ -2404,3 +2404,15 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - `ui/pages/academies/[name]/admin/settings.vue` [MODIFY]
 - `tests/Feature/Academy/AcademySettingsUpdateTest.php` [NEW]
 
+---
+
+## 2026-07-10 - Home Visit Admin Dead UI Cleanup
+
+- Removed orphaned legacy Nuxt/Inertia admin home-visit UI under `ui/pages/Learn/Student/HomeVisit/Admin/` plus `ui/composables/useVisitReports.js`.
+- Scope intentionally did not touch `HomeVisit/Student/`, `HomeVisit/Teacher/`, `HomeVisit/Auth/`, `HomeVisit/Components/`, or `HomeVisit/Composables/`.
+- Pre-delete verification: `useVisitReports` consumers were only inside deleted `Admin/Components`; no `ui/` link/string target remained for `Learn/Student/HomeVisit/Admin`; academy admin replacement entry remains at `ui/pages/academies/[name]/admin.vue:169`.
+- Post-delete verification: `rg` over `ui/` finds no `useVisitReports`, `home-visit/admin`, `/api/home-visit/admin`, or `HomeVisit/Admin`; `npx.cmd nuxi prepare` passed; `npm.cmd run build` passed.
+- Browser smoke on `http://127.0.0.1:3010/academies/original-academy-name/admin/home-visits`, `/zones`, `/create`, and `/export` reached the auth guard with no Nuxt error and no console errors. Full API smoke was blocked by lack of authenticated browser session.
+- Remaining `git grep` for `home-visit/admin` outside generated `.agents`/public assets finds only backend legacy test coverage at `api/nuxnanravel/tests/Feature/HomeVisit/AdminControllerTest.php:503`; this cleanup intentionally removed only the broken admin UI source.
+- Backlog gap: legacy UI had per-visit PDF report and bulk PDF export. Academy admin replacement currently has CSV/Excel-style export only via `/admin/export/visits`; add PDF report/export separately if schools still require it.
+
