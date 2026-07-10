@@ -6,6 +6,29 @@
 
 ---
 
+## 2026-07-10 — Home Visit Admin Legacy Cleanup
+
+### งานที่ทำ
+ลบ dead code ฝั่ง Home Visit Admin ที่เป็น legacy Inertia (`axios` + `router.visit`/`router.post`) ซึ่งถูกแทนที่ด้วยหน้า Nuxt-native ใหม่ `pages/academies/[name]/admin/home-visits/*` (index/create/export/zones/[id]) ที่ link ใน sidebar แล้ว (`admin.vue:169`) และยิง `/api/academies/{academy}/home-visits/*` (auth:api + academy.permission)
+
+- **ลบ (scope แคบ เฉพาะที่พัง):** `pages/Learn/Student/HomeVisit/Admin/` ทั้งโฟลเดอร์ (16 ไฟล์: Dashboard + Components/* + MockData) + `composables/useVisitReports.js` (orphaned — ใช้เฉพาะ 2 component ในโฟลเดอร์เก่า)
+- **คงไว้ (ไม่แตะ):** `HomeVisit/Student/`, `Teacher/`, `Auth/`, `Components/`, `Composables/` — portal เก่ายังเรียก `/api/home-visit/student/*` + `/teacher/*` ที่ยังมีอยู่ ไม่พัง
+- เหตุ regression: legacy admin routes `/api/home-visit/admin/*` ถูกลบไปแล้ว (ดู `routes/homevisit/homevisit.php:139-140`) → หน้าเก่าเรียกแล้ว 404 (และใช้ Inertia router ที่ไม่มีใน Nuxt อยู่แล้ว)
+
+### Verification
+- `npm run build` ผ่าน (Build complete) ไม่มี broken import
+- grep ทั้ง repo: 0 reference ค้าง (`useVisitReports` / `home-visit/admin`)
+- git: commit `e849b161` (ลบ 17 ไฟล์ / −5,122 บรรทัด) — ยืนยัน commit ไม่แตะไฟล์ non-Admin
+
+### ⚠️ Feature gap ที่ต้องตามต่อ (backlog — ยังไม่ block)
+- **PDF export หาย**: หน้าเก่ามี per-visit PDF report (`/admin/visits/{id}/report`) + bulk PDF export (`/admin/visits/export/pdf`) แต่หน้าใหม่มีแค่ **Excel** export (`/admin/export/visits`) — ถ้าโรงเรียนต้องใช้รายงาน PDF จริง ต้องเพิ่ม endpoint + ปุ่มใน `academies/[name]/admin/home-visits/export.vue` ใหม่
+- **Runtime smoke test ยังไม่ทำ**: build ผ่านแล้วแต่ยังไม่ได้ login เปิดหน้า admin จริงเพื่อ verify API ตอน runtime
+
+### Branch / Git State
+- Branch `main`, commit `e849b161` — pushed origin แล้ว
+
+---
+
 ## 2026-07-10 — Academy Admin Settings Schema Fix
 
 ### งานที่ทำ
