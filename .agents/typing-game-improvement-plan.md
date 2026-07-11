@@ -219,9 +219,16 @@
 - 5.4 submit → 200 + สร้าง session record (`session_id` คืนมา)
 - 5.6 regression: word_typing / time_attack / letter_runner / key_training → 200 ทุกโหมด
 
-**⏳ ยังต้อง verify ผ่าน UI (ต้อง login — ผมทำเองไม่ได้):**
-- 5.1 key mapping (TH lessons: `[ ] \ - =` → `บ ล ฃ ข ช`), 5.2 Phaser focus (Monster Battle / Falling Words), 5.3 lobby config (key_training เห็น Language+Lesson ไม่เห็น Difficulty), 5.4 หน้า `/result` render จริง
-- **note:** อีก 3 ตาราง (`typing_daily_challenges`, `typing_race_rooms`, `typing_tournaments`) ยังเป็น ENUM 3 ค่า — ไม่พังตอนนี้เพราะไม่รับโหมดใหม่ แต่ pattern เดียวกัน ถ้าจะเพิ่มโหมดในกิจกรรมพวกนี้ต้องแปลงด้วย
+**✅ verified via UI (browser, user logged in — 2026-07-11):**
+- 5.1 key mapping: เข้า key_training TH แถวบน → เป้าหมาย `ฃ` ต้องกด `[\]` (Backslash), dispatch `code:'Backslash'` แล้วเกม advance = mapping ถูก; Thai LAYOUT_MAP ยืนยัน `BracketLeft:บ BracketRight:ล Backslash:ฃ Minus:ข Equal:ช`; เล่นบทเรียน home-row จนจบสำเร็จ
+- 5.2 Phaser focus (Monster Battle): input auto-focus (`activeElement=INPUT`); blur แล้วหลัง 200ms focus เด้งกลับ input (keepFocus @blur ทำงาน); gameOver guard `if(!gameOver)` (code line 304) + จบเกมเด้ง `/result` สะอาด
+- 5.3 lobby config: key_training เห็น **Language+Lesson ไม่มี Difficulty**; Monster Battle เห็น **Difficulty**; สลับภาษา EN→TH lesson list อัปเดตทันที; ค่า lang sync จาก lobby เข้าหน้าเกม (ไม่ reset)
+- 5.4 หน้า `/result`: เล่น key_training จบ → auto-nav `/play/games/typing/result` แสดง "SESSION COMPLETE!" + WPM/Accuracy/Score/XP+bonus; DB row `key_training` acc=100 ถูกสร้าง (ถ้าไม่แก้ migration = 500); `/result` มี guard เด้ง lobby ถ้าเข้าตรงโดยไม่มี result (ปกติ)
+- 5.6 regression via UI: Word Typing เข้าเล่นได้ (input auto-focus) — ไม่กระทบจาก enum→varchar
+
+**note:** อีก 3 ตาราง (`typing_daily_challenges`, `typing_race_rooms`, `typing_tournaments`) ยังเป็น ENUM 3 ค่า — ไม่พังตอนนี้เพราะไม่รับโหมดใหม่ แต่ pattern เดียวกัน ถ้าจะเพิ่มโหมดในกิจกรรมพวกนี้ต้องแปลงด้วย
+
+**ข้อสังเกตเล็ก (ไม่ block):** ปุ่ม "START TRAINING"/mode card ที่ push `router.push('/play/...')` ตัวพิมพ์เล็ก ขณะ route lobby เป็น `/Play/...` — ใช้งานได้ (vue-router case-insensitive) แต่ควรทำ case ให้สม่ำเสมอ; หลังจบเกม 1 รอบ store `selectedMode` reset เป็น word_typing (default) — ต้องเลือกโหมดใหม่ก่อนเล่นซ้ำ
 
 ---
 
