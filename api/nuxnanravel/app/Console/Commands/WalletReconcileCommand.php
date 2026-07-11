@@ -56,6 +56,10 @@ class WalletReconcileCommand extends Command
         $this->info('=== Withdrawal refund integrity ===');
         $this->line("Returned withdrawals: {$ri['returned_withdrawals']}   Refunds issued: {$ri['withdrawal_refunds']}   Diff: {$ri['diff']} (".($ri['balanced'] ? 'OK' : 'MISMATCH').')');
 
+        $li = $summary['locked_balance_integrity'];
+        $this->info('=== Locked balance integrity ===');
+        $this->line("locked_balance column: {$li['locked_column']}   Active withdrawals: {$li['active_withdrawals']}   Diff: {$li['diff']} (".($li['balanced'] ? 'OK' : 'MISMATCH').')');
+
         if ($this->option('mismatched')) {
             $mismatched = $recon->findMismatchedUsers();
             if ($mismatched) {

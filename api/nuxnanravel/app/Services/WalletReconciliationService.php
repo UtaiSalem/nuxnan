@@ -162,6 +162,30 @@ class WalletReconciliationService
     }
 
     /**
+     * users.locked_balance is a materialized cache of the money held against
+     * in-flight withdrawals; it must equal the sum of active withdrawal amounts.
+     *
+     * @return array{locked_column:string, active_withdrawals:string, diff:string, balanced:bool}
+     */
+    public function checkLockedBalance(): array
+    {
+        $lockedColumn = (float) User::sum('locked_balance');
+
+        $activeWithdrawals = (float) WalletTransaction::where('transaction_type', 'withdraw')
+            ->whereIn('status', self::WITHDRAWAL_HELD)
+            ->sum('amount');
+
+        $diff = round($lockedColumn - $activeWithdrawals, 2);
+
+        return [
+            'locked_column' => number_format($lockedColumn, 2, '.', ''),
+            'active_withdrawals' => number_format($activeWithdrawals, 2, '.', ''),
+            'diff' => number_format($diff, 2, '.', ''),
+            'balanced' => abs($diff) < 0.01,
+        ];
+    }
+
+    /**
      * Global money-in / money-out summary derived from ledger deltas, plus the
      * key integrity checks. This is the single source of truth for "did any
      * money get created or destroyed?".
@@ -179,6 +203,7 @@ class WalletReconciliationService
         $mismatched = $this->findMismatchedUsers();
         $negatives = $this->findNegativeBalances();
         $refundIntegrity = $this->checkWithdrawalRefundIntegrity();
+        $lockedIntegrity = $this->checkLockedBalance();
 
         return [
             'money_in' => number_format($moneyIn, 2, '.', ''),
@@ -189,12 +214,14 @@ class WalletReconciliationService
             'money_out_within_money_in' => $moneyOut <= $moneyIn + 0.001,
             'withdrawals' => $this->withdrawalBreakdown(),
             'withdrawal_refund_integrity' => $refundIntegrity,
+            'locked_balance_integrity' => $lockedIntegrity,
             'mismatched_user_count' => count($mismatched),
             'negative_balance_count' => count($negatives),
             'healthy' => abs($ledgerNet - $walletTotal) < 0.01
                 && count($mismatched) === 0
                 && count($negatives) === 0
-                && $refundIntegrity['balanced'],
+                && $refundIntegrity['balanced']
+                && $lockedIntegrity['balanced'],
         ];
     }
 }
