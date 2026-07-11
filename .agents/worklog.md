@@ -6,6 +6,29 @@
 
 ---
 
+## 2026-07-11 — Student Intake Phase 2-3 verify + typing migration regression fix
+
+### สิ่งที่พบ
+- **Student Intake Phase 2-3 เสร็จสมบูรณ์แล้ว** (ทำในเซสชันหลัง 2026-07-05 — worklog TODO เก่า stale):
+  - **Phase 2 Backend:** `StudentIntakeController` (store/duplicate-check/index/stats/export) + `StudentIntakeService` + `StoreStudentIntakeRequest`/`CheckStudentDuplicateRequest` + `EnrollmentPolicy` + routes `api/academies/{academy}/student-intakes/*` — **`StudentIntakeControllerTest` ผ่าน 8/8** (atomic intake, permission registrar/students.manage, duplicate block, cross-academy reject, full-classroom rollback, academy-scoped duplicate check)
+  - **Phase 3 UI:** 5-step wizard `IntakeWizard.vue` (Identity/Personal/Admission/Guardian/Review) + `DuplicateWarning.vue` + `useStudentIntake.ts` composable + `studentIntakeService` — reachable จากปุ่ม "รับนักเรียนใหม่" ใน `students/index.vue`
+  - payload frontend ↔ backend `StoreStudentIntakeRequest` keys ตรงกัน (identity/personal/admission/previous_school/guardians+contacts/account)
+
+### 🔴 Regression ที่แก้
+- migration typing `9f084ff1` (`2026_07_11_100001_..._game_mode_to_string`) ใช้ raw `ALTER TABLE ... MODIFY` = **MySQL-only syntax** → พังทุกเทสต์ที่ใช้ SQLite (`SQLSTATE near "MODIFY"`) ตอนแรก verify ด้วย curl เลยไม่เจอ
+- **แก้:** driver-guarded — MySQL ใช้ raw MODIFY (ที่ verify แล้ว), driver อื่น (SQLite) ใช้ Schema `->change()`
+- migration รันบน WAMP MySQL ไปแล้ว (ไม่ re-run) → WAMP ยังถูกต้อง; fix มีผลกับ test SQLite + fresh deploy
+- **ยืนยัน:** `tests/Feature/Api/Academy` กลับมาเขียว **75/75** (270 assertions)
+
+### ยังค้าง (backlog จริง — คนละเรื่องกับ intake)
+- Student List DataTable (G2), Account Activation Page (G3), Import History Page (G1) — ยังไม่ทำ
+- Intake UI runtime verify (ต้อง login — JWT หมดอายุ) ยังไม่ได้ทำ
+
+### Git
+- commit นี้: migration fix + worklog
+
+---
+
 ## 2026-07-11 — Typing runtime verify + Home Visit smoke test + PDF export
 
 ### งานที่ทำ
