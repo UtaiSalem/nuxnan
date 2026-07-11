@@ -117,6 +117,54 @@ class WalletReconciliationTest extends TestCase
         $this->assertNull($this->wallet->recordOpeningBalance($user->fresh()));
     }
 
+    public function test_locked_balance_tracks_active_withdrawals_through_lifecycle(): void
+    {
+        $admin = User::factory()->create();
+        $user = User::factory()->create(['wallet' => 0]);
+        $this->wallet->deposit($user, 1000, 'bank_transfer');
+
+        // Withdraw: money moves from spendable wallet into locked_balance.
+        $tx = $this->wallet->withdraw($user, '200', 'bank_transfer', $this->bank());
+        $user->refresh();
+        $this->assertSame('800.00', (string) $user->wallet);
+        $this->assertSame('200.00', (string) $user->locked_balance);
+
+        $balance = $this->wallet->getBalance($user);
+        $this->assertSame('800.00', $balance['available_balance']);
+        $this->assertSame('200.00', $balance['locked_balance']);
+        $this->assertSame('1000.00', $balance['total_balance']);
+        $this->assertTrue($this->recon->checkLockedBalance()['balanced']);
+
+        // Pay it out: locked is released, wallet unchanged (money genuinely left).
+        $this->wallet->approveWithdrawal($tx->fresh(), $admin);
+        $this->wallet->processWithdrawal($tx->fresh(), $admin);
+        $this->wallet->markWithdrawalPaid($tx->fresh(), 'REF-1', $admin);
+        $user->refresh();
+        $this->assertSame('800.00', (string) $user->wallet);
+        $this->assertSame('0.00', (string) $user->locked_balance);
+
+        // Another withdrawal, then rejected: locked returns to spendable wallet.
+        $tx2 = $this->wallet->withdraw($user, '100', 'bank_transfer', $this->bank());
+        $this->assertSame('100.00', (string) $user->fresh()->locked_balance);
+        $this->wallet->rejectWithdrawal($tx2->fresh(), 'bad details', $admin);
+        $user->refresh();
+        $this->assertSame('800.00', (string) $user->wallet);
+        $this->assertSame('0.00', (string) $user->locked_balance);
+
+        $this->assertTrue($this->recon->summary()['healthy']);
+    }
+
+    public function test_withdraw_fee_uses_decimal_safe_math(): void
+    {
+        $user = User::factory()->create(['wallet' => 5000]);
+
+        // 1001 * 0.005 = 5.005 -> rounds half-up to 5.01 (the classic float pitfall).
+        $tx = $this->wallet->withdraw($user, '1001', 'bank_transfer', $this->bank());
+
+        $this->assertSame('5.01', (string) $tx->fee);
+        $this->assertSame('995.99', (string) $tx->net_amount);
+    }
+
     public function test_flagging_legacy_withdrawal_clears_refund_integrity(): void
     {
         // Simulate a pre-hardening cancelled withdrawal: money left the wallet
