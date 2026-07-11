@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-07-11 — Student Card Public PII (mask → revert) + doc sync
+
+### งานที่ทำ
+- **ตรวจพบช่องโหว่:** public (no-auth) `GET /api/student-card/{level}/{room}` คืน PII เต็ม (`national_id` + `birth_date`) ของนักเรียนทั้งห้อง — `StudentCardPublicResource` เดิม**คืนค่าเท่ากับ resource authenticated เป๊ะ** (แยก class ไว้แต่ไม่ได้ mask อะไรเลย)
+- **แก้ mask (`5130fc5a`):** mask `national_id` เหลือ 2 กลุ่มท้าย + ตัด `birth_date` เป็น null เฉพาะ anonymous, authenticated/admin ยังเห็นเต็ม + frontend รองรับค่า masked + เทสต์ e2e ผ่าน route จริง
+- **Revert (`183f5a6e`) — ตามคำสั่งเจ้าของ:** เปิด public PII เต็มกลับ **ชั่วคราว** เพราะผู้ใช้ยังไม่พร้อม login (คุมการเข้าถึงเองผ่านการแจก URL)
+
+### ⚠️ Security decision ที่ค้าง (ต้องตัดสินก่อน production)
+- public route เปิด PII เต็มโดยเจตนา = ความเสี่ยงที่ยอมรับชั่วคราว
+- **แผนที่ตกลง:** เมื่อผู้ใช้ login ได้ → **ลบ route public ทิ้ง** จำกัดเป็น admin/ผู้มีสิทธิ์ (ไม่ใช่ mask) — โค้ด mask กู้กลับได้โดย revert `183f5a6e`
+- บันทึกใน memory `project_public_student_card_pii.md` แล้ว (กัน mask ซ้ำ)
+
+### Doc sync
+- อัปเดต `latest-analysis.md` "แผนดำเนินงานเป็นเฟส" XP/PP: เฟส 0–3 mark `[x]` done (ตรงกับ commit `af434d89`/`a1a23d30`), เฟส 4 คง `[ ]` optional + เพิ่มบล็อกสถานะ (verification + deploy steps ยังค้าง)
+
+### Git
+- `main` = `origin/main` (push แล้ว): `5130fc5a` mask + `183f5a6e` revert
+
+---
+
 ## 2026-07-11 — Game XP/PP Reward Policy (เฟส 0–3 + hardening)
 
 ### งานที่ทำ

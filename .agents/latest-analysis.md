@@ -2490,19 +2490,22 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 
 ### แผนดำเนินงานเป็นเฟส (action items)
 
-**เฟส 1 — หยุดเลือด (ทำก่อน, เสี่ยงสูงสุด)**
-- [ ] ลบบล็อก PP `floor(score/100)` ใน `TypingSessionController.php:74-79` → ให้ XP อย่างเดียว
-- [ ] regression test: หลังเล่น session → `user->pp` เท่าเดิม, `user->xp` เพิ่ม
+> **สถานะ (อัปเดต 2026-07-11):** เฟส 0–3 **implement เสร็จ + commit แล้ว** (`af434d89`, `a1a23d30`) — ดูรายละเอียดใน `.agents/worklog.md` หัวข้อ "Game XP/PP Reward Policy" รวมถึง `TypingRewardPolicyTest` ผ่าน 5/5
+> **ยังค้าง:** (1) browser/runtime verification ตาม `typing-game-improvement-plan.md` ยังไม่ทำ (2) deploy steps: รัน migration `idempotency_key` + reseed `GamificationSeeder` (3) เฟส 4 ยังไม่ทำ (optional)
 
-**เฟส 2 — ปิดช่องโหว่จุดที่ยังจ่าย PP**
-- [ ] Daily Challenge: อ่าน `wpm`/`accuracy` จาก `TypingSession` ที่ persist + เช็ค `session->user_id === user->id` + เช็ค `challenge_date === today` (แก้ B)
-- [ ] Tournament: คำนวณและ persist `rank` ตอนปิดทัวร์นาเมนต์ (ต่อยอด `CreateWeeklyTypingTournament` เพิ่ม finalize) ก่อนเปิด `claim()` (แก้ C)
+**เฟส 1 — หยุดเลือด (ทำก่อน, เสี่ยงสูงสุด)** ✅ done
+- [x] ลบบล็อก PP `floor(score/100)` ใน `TypingSessionController.php:74-79` → ให้ XP อย่างเดียว
+- [x] regression test: หลังเล่น session → `user->pp` เท่าเดิม, `user->xp` เพิ่ม
 
-**เฟส 3 — ย้ายมาใช้ governance ที่มีอยู่**
-- [ ] แปลง PP payout ทั้งหมดให้ผ่าน `PointRule` + `awardByRule()` แทน `earn()` (แก้ A)
-- [ ] เพิ่ม idempotency key/unique constraint บน `points_transactions` (`source_type`,`source_id`,`user_id`) (แก้ D)
+**เฟส 2 — ปิดช่องโหว่จุดที่ยังจ่าย PP** ✅ done
+- [x] Daily Challenge: อ่าน `wpm`/`accuracy` จาก `TypingSession` ที่ persist + เช็ค `session->user_id === user->id` + เช็ค `challenge_date === today` (แก้ B)
+- [x] Tournament: คำนวณและ persist `rank` ตอนปิดทัวร์นาเมนต์ (ใช้ `FinalizeTypingTournaments` + schedule hourly) ก่อนเปิด `claim()` (แก้ C)
 
-**เฟส 4 — Admin Event framework (ถ้าต้องการกิจกรรมพิเศษ)**
+**เฟส 3 — ย้ายมาใช้ governance ที่มีอยู่** ✅ done
+- [x] แปลง PP payout ทั้งหมดให้ผ่าน `PointRule` + `awardGoverned()` แทน `earn()` ตรง (แก้ A)
+- [x] เพิ่ม idempotency key/unique constraint บน `points_transactions` (`idempotency_key` nullable+unique) (แก้ D)
+
+**เฟส 4 — Admin Event framework (ถ้าต้องการกิจกรรมพิเศษ)** ⬜ ยังไม่ทำ (optional/backlog)
 - [ ] ตาราง event + PP budget + เพดานผู้รับ + audit trail + กันรับซ้ำ
 
 **เหตุผลลำดับ:** เฟส 1 แยกและทำก่อนเพราะเป็นจุดเดียวที่ปั๊มได้ไม่จำกัดและแปลงเป็นเงินได้; Daily Challenge / Tournament มีเพดานตามธรรมชาติ (วันละครั้ง / อันดับ) จึงเป็นความเสี่ยงรองที่ตามไปปิด
