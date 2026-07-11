@@ -5,12 +5,19 @@
 > ⚠️ งานนี้แตะ **schema เงิน + เขียน ledger เงินจริง** — ทำช่วง low-traffic + ใน maintenance mode + มี backup ก่อนเสมอ
 > ทุกขั้นที่เขียน ledger มี **dry-run ให้ดูก่อน** — อย่าข้าม gate ✅
 
-ตั้งตัวแปร path ก่อน (ปรับ DB creds ให้ตรง `.env` production):
+ตั้งตัวแปร path + อ่าน DB creds จาก `.env` ของ server (ไม่ hardcode — ตรงกับ production เสมอ):
 ```bash
 API=/var/www/vhosts/nuxnan.com/httpdocs/api/nuxnanravel
 UI=/var/www/vhosts/nuxnan.com/httpdocs/ui
 cd "$API"
+
+# ดึงชื่อ DB / user จาก .env (password จะถูกถามตอนรัน mysqldump/mysql ด้วย -p)
+DB_NAME=$(sed -n 's/^DB_DATABASE=//p'  "$API/.env" | tr -d '"' | head -1)
+DB_USER=$(sed -n 's/^DB_USERNAME=//p' "$API/.env" | tr -d '"' | head -1)
+echo "DB_NAME=$DB_NAME  DB_USER=$DB_USER"
+# คาดว่า (production):  DB_NAME=nuxnan_nuxnan_db   DB_USER=nuxnan_nuxnan_admin
 ```
+✅ ตรวจว่า `DB_NAME`/`DB_USER` ตรงกับ production ก่อนไปต่อ
 
 ---
 
@@ -26,8 +33,8 @@ git rev-parse --abbrev-ref HEAD    # ควรเป็น main
 ```bash
 BK=/var/www/vhosts/nuxnan.com/backups/db
 mkdir -p "$BK"
-# ใช้ค่าจาก .env (DB_DATABASE/DB_USERNAME/DB_PASSWORD)
-mysqldump -u nuxnan_user -p nuxnan_db | gzip > "$BK/pre_wallet_deploy_$(date +%Y%m%d_%H%M%S).sql.gz"
+# ใช้ $DB_USER/$DB_NAME จาก setup ด้านบน (จะถาม password ด้วย -p)
+mysqldump -u "$DB_USER" -p "$DB_NAME" | gzip > "$BK/pre_wallet_deploy_$(date +%Y%m%d_%H%M%S).sql.gz"
 ls -lh "$BK" | tail -3
 ```
 ✅ **Gate 1:** ไฟล์ backup มีขนาด > 0
@@ -127,9 +134,9 @@ cd "$API" && php artisan schedule:list | grep wallet:reconcile
   UPDATE wallet_transactions SET metadata=JSON_REMOVE(metadata,'$.legacy_no_refund_ledger')
     WHERE JSON_EXTRACT(metadata,'$.legacy_no_refund_ledger') IS NOT NULL;
   ```
-- **พังหนัก:** restore จาก backup §1:
+- **พังหนัก:** restore จาก backup §1 (ใช้ `$DB_USER`/`$DB_NAME` จาก setup; ถ้าเปิด shell ใหม่ derive ซ้ำจาก §setup):
   ```bash
-  gunzip < "$BK/pre_wallet_deploy_*.sql.gz" | mysql -u nuxnan_user -p nuxnan_db
+  gunzip < "$BK/pre_wallet_deploy_"*.sql.gz | mysql -u "$DB_USER" -p "$DB_NAME"
   ```
 - migration ย้อน: `php artisan migrate:rollback --step=5` (000005 down คืน wallet เป็น double — แต่ค่าเป็น decimal สะอาดแล้ว ปลอดภัยกว่าเดิม)
 
