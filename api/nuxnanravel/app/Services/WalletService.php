@@ -19,8 +19,9 @@ class WalletService
     {
         return DB::transaction(function () use ($user, $amount, $method, $reference, $description, $metadata) {
             $user = $this->lockUser($user->id);
-            $balanceBefore = $user->wallet;
-            $balanceAfter = $balanceBefore + $amount;
+            $amount = bcround((string) $amount, 2);
+            $balanceBefore = (string) $user->wallet;
+            $balanceAfter = bcadd($balanceBefore, $amount, 2);
 
             // Update user wallet
             $user->update([
@@ -169,19 +170,20 @@ class WalletService
             // deadlocks when two transfers touch the same pair of users.
             [$fromUser, $toUser] = $this->lockUserPair($fromUser->id, $toUser->id);
 
-            $fromBalanceBefore = $fromUser->wallet;
+            $amount = bcround((string) $amount, 2);
+            $fromBalanceBefore = (string) $fromUser->wallet;
 
             // Check if sender has enough balance
-            if ($fromBalanceBefore < $amount) {
+            if (bccomp($fromBalanceBefore, $amount, 2) < 0) {
                 return [
                     'success' => false,
                     'message' => 'ยอดเงินของคุณไม่เพียงพอ',
                 ];
             }
 
-            $fromBalanceAfter = $fromBalanceBefore - $amount;
-            $toBalanceBefore = $toUser->wallet;
-            $toBalanceAfter = $toBalanceBefore + $amount;
+            $fromBalanceAfter = bcsub($fromBalanceBefore, $amount, 2);
+            $toBalanceBefore = (string) $toUser->wallet;
+            $toBalanceAfter = bcadd($toBalanceBefore, $amount, 2);
 
             // Update sender wallet
             $fromUser->update([
@@ -240,8 +242,9 @@ class WalletService
     {
         return DB::transaction(function () use ($user, $walletAmount, $points, $exchangeRate) {
             $user = $this->lockUser($user->id);
-            $walletBalanceBefore = $user->wallet;
-            $walletBalanceAfter = $walletBalanceBefore + $walletAmount;
+            $walletAmount = bcround((string) $walletAmount, 2);
+            $walletBalanceBefore = (string) $user->wallet;
+            $walletBalanceAfter = bcadd($walletBalanceBefore, $walletAmount, 2);
 
             // Update user wallet
             $user->update([
@@ -280,19 +283,20 @@ class WalletService
         return DB::transaction(function () use ($user, $amount) {
             $user = $this->lockUser($user->id);
             $exchangeRate = 1200; // 1 THB = 1200 points
+            $amount = bcround((string) $amount, 2);
             $pointsAmount = $amount * $exchangeRate;
 
-            $walletBalanceBefore = $user->wallet;
+            $walletBalanceBefore = (string) $user->wallet;
 
             // Check if user has enough wallet balance
-            if ($walletBalanceBefore < $amount) {
+            if (bccomp($walletBalanceBefore, $amount, 2) < 0) {
                 return [
                     'success' => false,
                     'message' => 'ยอดเงินของคุณไม่เพียงพอ',
                 ];
             }
 
-            $walletBalanceAfter = $walletBalanceBefore - $amount;
+            $walletBalanceAfter = bcsub($walletBalanceBefore, $amount, 2);
 
             // Update user wallet
             $user->update([
@@ -345,13 +349,14 @@ class WalletService
     {
         return DB::transaction(function () use ($user, $amount, $actionType, $reason) {
             $user = $this->lockUser($user->id);
-            $balanceBefore = $user->wallet;
+            $amount = bcround((string) $amount, 2);
+            $balanceBefore = (string) $user->wallet;
 
             if ($actionType === 'add') {
-                $balanceAfter = $balanceBefore + $amount;
+                $balanceAfter = bcadd($balanceBefore, $amount, 2);
                 $transactionType = 'admin_adjust';
             } elseif ($actionType === 'deduct') {
-                $balanceAfter = $balanceBefore - $amount;
+                $balanceAfter = bcsub($balanceBefore, $amount, 2);
                 $transactionType = 'admin_adjust';
             } elseif ($actionType === 'set') {
                 $balanceAfter = $amount;
@@ -866,8 +871,8 @@ class WalletService
 
         return DB::transaction(function () use ($request, $adminNote) {
             $user = $this->lockUser($request->user_id);
-            $balanceBefore = $user->wallet;
-            $balanceAfter = $balanceBefore + $request->amount;
+            $balanceBefore = (string) $user->wallet;
+            $balanceAfter = bcadd($balanceBefore, (string) $request->amount, 2);
 
             // Update user wallet
             $user->update([
@@ -953,31 +958,32 @@ class WalletService
     public function purchaseCourse(User $user, Course $course, ?float $overridePrice = null): WalletTransaction
     {
         // Calculate price - use override, tuition_fees, or price
-        $originalPrice = $course->tuition_fees ?? $course->price ?? 0;
-        $finalPrice = $overridePrice ?? $originalPrice;
+        $originalPrice = bcround((string) ($course->tuition_fees ?? $course->price ?? 0), 2);
+        $finalPrice = $overridePrice !== null ? bcround((string) $overridePrice, 2) : $originalPrice;
 
         // Apply discount if exists and no override
         if ($overridePrice === null && $course->discount > 0) {
-            $finalPrice = $originalPrice - ($originalPrice * $course->discount / 100);
+            $discountAmount = bcdiv(bcmul($originalPrice, (string) $course->discount, 6), '100', 2);
+            $finalPrice = bcsub($originalPrice, $discountAmount, 2);
         }
 
         return DB::transaction(function () use ($user, $course, $finalPrice, $originalPrice) {
             // Lock the buyer (and the course owner, if a payout is due) up front
             // in a deadlock-safe order so balances can't be raced.
-            $ownerId = ($course->user_id && $course->user_id !== $user->id && $finalPrice > 0)
+            $ownerId = ($course->user_id && $course->user_id !== $user->id && bccomp($finalPrice, '0', 2) > 0)
                 ? (int) $course->user_id
                 : null;
             $locked = $this->lockUsers(array_filter([$user->id, $ownerId]));
             $user = $locked[$user->id];
 
-            $balanceBefore = $user->wallet;
+            $balanceBefore = (string) $user->wallet;
 
             // Check if user has enough balance
-            if ($balanceBefore < $finalPrice) {
+            if (bccomp($balanceBefore, $finalPrice, 2) < 0) {
                 throw new \Exception('ยอดเงินในกระเป๋าไม่เพียงพอ');
             }
 
-            $balanceAfter = $balanceBefore - $finalPrice;
+            $balanceAfter = bcsub($balanceBefore, $finalPrice, 2);
 
             // Update user wallet
             $user->update([
@@ -1007,8 +1013,8 @@ class WalletService
             if ($ownerId) {
                 $owner = $locked[$ownerId] ?? null;
                 if ($owner) {
-                    $ownerBalanceBefore = $owner->wallet;
-                    $ownerBalanceAfter = $ownerBalanceBefore + $finalPrice;
+                    $ownerBalanceBefore = (string) $owner->wallet;
+                    $ownerBalanceAfter = bcadd($ownerBalanceBefore, $finalPrice, 2);
 
                     $owner->update([
                         'wallet' => $ownerBalanceAfter,
@@ -1058,8 +1064,9 @@ class WalletService
     {
         return DB::transaction(function () use ($user, $course, $amount, $reason) {
             $user = $this->lockUser($user->id);
-            $balanceBefore = $user->wallet;
-            $balanceAfter = $balanceBefore + $amount;
+            $amount = bcround((string) $amount, 2);
+            $balanceBefore = (string) $user->wallet;
+            $balanceAfter = bcadd($balanceBefore, $amount, 2);
 
             // Update user wallet
             $user->update([

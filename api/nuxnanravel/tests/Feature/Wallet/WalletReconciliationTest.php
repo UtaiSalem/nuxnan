@@ -154,6 +154,27 @@ class WalletReconciliationTest extends TestCase
         $this->assertTrue($this->recon->summary()['healthy']);
     }
 
+    public function test_deposit_and_transfer_use_decimal_safe_math(): void
+    {
+        $a = User::factory()->create(['wallet' => 0]);
+        $b = User::factory()->create(['wallet' => 0]);
+
+        // 0.1 + 0.2 is the canonical float-rounding trap; bcmath keeps it exact.
+        $this->wallet->deposit($a, 0.1, 'bank_transfer');
+        $this->wallet->deposit($a, 0.2, 'bank_transfer');
+        $this->assertSame('0.30', (string) $a->fresh()->wallet);
+
+        $this->wallet->deposit($b, 100, 'bank_transfer');
+        $this->wallet->transfer($b->fresh(), $a->fresh(), 33.33);
+        $this->assertSame('66.67', (string) $b->fresh()->wallet);
+        $this->assertSame('33.63', (string) $a->fresh()->wallet);
+
+        // Ledger stays perfectly reconciled.
+        $this->assertTrue($this->recon->reconcileUser($a->fresh())['balanced']);
+        $this->assertTrue($this->recon->reconcileUser($b->fresh())['balanced']);
+        $this->assertTrue($this->recon->summary()['healthy']);
+    }
+
     public function test_withdraw_fee_uses_decimal_safe_math(): void
     {
         $user = User::factory()->create(['wallet' => 5000]);
