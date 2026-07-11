@@ -13,6 +13,8 @@ use App\Services\StudentEnrollmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Mpdf\Mpdf;
+use Mpdf\Output\Destination;
 
 class AdminController extends Controller
 {
@@ -620,6 +622,54 @@ class AdminController extends Controller
 
         $visits = $query->orderBy('visit_date', 'desc')->get();
 
+        $statusLabels = [
+            'pending' => 'รอดำเนินการ',
+            'completed' => 'เยี่ยมแล้ว',
+            'cancelled' => 'ยกเลิก',
+        ];
+
+        $rows = $visits->map(function ($visit) use ($statusLabels) {
+            $studentName = 'N/A';
+            if ($visit->student) {
+                $studentName = trim($visit->student->first_name_th.' '.$visit->student->last_name_th);
+            }
+
+            $classroomName = 'N/A';
+            if ($visit->student && $visit->student->currentAcademicInfo) {
+                $classroomName = $visit->student->currentAcademicInfo->classroom_full ?? 'N/A';
+            }
+
+            $visitDate = 'N/A';
+            if ($visit->visit_date) {
+                $visitDate = $visit->visit_date instanceof \DateTimeInterface
+                    ? $visit->visit_date->format('d/m/Y')
+                    : date('d/m/Y', strtotime($visit->visit_date));
+            }
+
+            return [
+                'visit_date' => $visitDate,
+                'student_name' => $studentName,
+                'classroom' => $classroomName,
+                'visitor_name' => $visit->visitor_name ?? '',
+                'status_key' => $visit->visit_status,
+                'status_label' => $statusLabels[$visit->visit_status] ?? $visit->visit_status,
+                'notes' => $visit->notes ?? '',
+                'observations' => $visit->observations ?? '',
+            ];
+        })->all();
+
+        if (strtolower((string) $request->input('format', 'csv')) === 'pdf') {
+            return $this->exportVisitsPdf($academy, $rows, $request);
+        }
+
+        return $this->exportVisitsCsv($rows);
+    }
+
+    /**
+     * Stream the mapped home-visit rows as a UTF-8 CSV download.
+     */
+    private function exportVisitsCsv(array $rows)
+    {
         $filename = 'home-visits-'.now()->format('Y-m-d').'.csv';
 
         $headers = [
@@ -627,13 +677,12 @@ class AdminController extends Controller
             'Content-Disposition' => "attachment; filename={$filename}",
         ];
 
-        $callback = function () use ($visits) {
+        $callback = function () use ($rows) {
             $file = fopen('php://output', 'w');
 
             // Add BOM for UTF-8
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
-            // CSV Header
             fputcsv($file, [
                 'วันที่เยี่ยม',
                 'ชื่อ-นามสกุลนักเรียน',
@@ -644,32 +693,15 @@ class AdminController extends Controller
                 'สรุปผลการเยี่ยม',
             ]);
 
-            foreach ($visits as $visit) {
-                $studentName = 'N/A';
-                if ($visit->student) {
-                    $studentName = $visit->student->first_name_th.' '.$visit->student->last_name_th;
-                }
-
-                $classroomName = 'N/A';
-                if ($visit->student && $visit->student->currentAcademicInfo) {
-                    $classroomName = $visit->student->currentAcademicInfo->classroom_full ?? 'N/A';
-                }
-
-                $visitDate = 'N/A';
-                if ($visit->visit_date) {
-                    $visitDate = $visit->visit_date instanceof \DateTimeInterface
-                        ? $visit->visit_date->format('d/m/Y')
-                        : date('d/m/Y', strtotime($visit->visit_date));
-                }
-
+            foreach ($rows as $row) {
                 fputcsv($file, [
-                    $visitDate,
-                    $studentName,
-                    $classroomName,
-                    $visit->visitor_name,
-                    $visit->visit_status,
-                    $visit->notes,
-                    $visit->observations,
+                    $row['visit_date'],
+                    $row['student_name'],
+                    $row['classroom'],
+                    $row['visitor_name'],
+                    $row['status_key'],
+                    $row['notes'],
+                    $row['observations'],
                 ]);
             }
 
@@ -677,6 +709,64 @@ class AdminController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Render the mapped home-visit rows as a Thai landscape PDF via mPDF.
+     */
+    private function exportVisitsPdf(Academy $academy, array $rows, Request $request)
+    {
+        $statusLabels = [
+            'pending' => 'รอดำเนินการ',
+            'completed' => 'เยี่ยมแล้ว',
+            'cancelled' => 'ยกเลิก',
+        ];
+
+        $filterParts = [];
+        if ($request->date_from) {
+            $filterParts[] = 'ตั้งแต่ '.$request->date_from;
+        }
+        if ($request->date_to) {
+            $filterParts[] = 'ถึง '.$request->date_to;
+        }
+        if ($request->status) {
+            $filterParts[] = 'สถานะ '.($statusLabels[$request->status] ?? $request->status);
+        }
+
+        $html = view('exports.home-visits-pdf', [
+            'academyName' => $academy->name,
+            'rows' => $rows,
+            'generatedAt' => now()->format('d/m/Y H:i'),
+            'filterSummary' => implode(' · ', $filterParts),
+        ])->render();
+
+        $tempDir = storage_path('app/mpdf');
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4-L',
+            'default_font' => 'garuda',
+            'margin_left' => 10,
+            'margin_right' => 10,
+            'margin_top' => 12,
+            'margin_bottom' => 12,
+            'tempDir' => $tempDir,
+        ]);
+        $mpdf->WriteHTML($html);
+
+        $filename = 'home-visits-'.now()->format('Y-m-d').'.pdf';
+
+        return response(
+            $mpdf->Output($filename, Destination::STRING_RETURN),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "attachment; filename={$filename}",
+            ]
+        );
     }
 
     /**

@@ -72,6 +72,7 @@ const doExport = async () => {
   try {
     // Build query params
     const params = new URLSearchParams()
+    params.append('format', exportOptions.value.format)
     if (exportOptions.value.zone_id) {
       params.append('zone_id', exportOptions.value.zone_id)
     }
@@ -90,7 +91,7 @@ const doExport = async () => {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = filename || `home-visits-${new Date().toISOString().slice(0, 10)}.csv`
+    link.download = filename || `home-visits-${new Date().toISOString().slice(0, 10)}.${exportOptions.value.format}`
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -108,7 +109,8 @@ const doExport = async () => {
 }
 
 const formatOptions = [
-  { value: 'csv', label: 'CSV (.csv)', icon: 'fluent:document-text-24-regular' }
+  { value: 'csv', label: 'CSV (.csv)', icon: 'fluent:document-text-24-regular' },
+  { value: 'pdf', label: 'PDF (.pdf)', icon: 'fluent:document-pdf-24-regular' }
 ]
 
 const statusOptions = [
