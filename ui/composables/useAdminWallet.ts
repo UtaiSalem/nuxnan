@@ -147,15 +147,25 @@ export const useAdminWallet = () => {
 
   // Calculate withdrawal fee
   const calculateFee = (amount: number) => {
-    const feePercentage = 0.13 // 13%
-    const calculatedFee = amount * feePercentage
-    return calculatedFee
+    return Math.round(Math.max(amount * 0.005, 5) * 100) / 100
   }
 
   // Calculate net amount after fee
   const calculateNetAmount = (amount: number) => {
     const fee = calculateFee(amount)
     return amount - fee
+  }
+
+  const processWithdrawal = async (transactionId: number) => {
+    return $fetch(`${apiBase}/api/admin/wallet/withdrawals/${transactionId}/process`, { method: 'POST', headers: { Authorization: `Bearer ${authStore.token}` } })
+  }
+
+  const markWithdrawalPaid = async (transactionId: number, paymentReference: string) => {
+    return $fetch(`${apiBase}/api/admin/wallet/withdrawals/${transactionId}/paid`, { method: 'POST', headers: { Authorization: `Bearer ${authStore.token}` }, body: { payment_reference: paymentReference } })
+  }
+
+  const markWithdrawalFailed = async (transactionId: number, reason: string) => {
+    return $fetch(`${apiBase}/api/admin/wallet/withdrawals/${transactionId}/failed`, { method: 'POST', headers: { Authorization: `Bearer ${authStore.token}` }, body: { reason } })
   }
 
   return {
@@ -172,5 +182,8 @@ export const useAdminWallet = () => {
     formatPercentage,
     calculateFee,
     calculateNetAmount,
+    processWithdrawal,
+    markWithdrawalPaid,
+    markWithdrawalFailed,
   }
 }
