@@ -172,7 +172,7 @@ class StudentCardSSOTTest extends TestCase
         $this->assertEquals('ยอดดี', $student->last_name_th);
     }
 
-    public function test_public_room_endpoint_returns_card_identity_data_from_student_master()
+    public function test_public_room_endpoint_masks_pii_but_serves_non_sensitive_identity()
     {
         [$owner, $admin, $academy, $student, $enrollment, $card] = $this->setupStudentAndAcademy();
 
@@ -184,9 +184,14 @@ class StudentCardSSOTTest extends TestCase
         $data = $response->json('students');
         $this->assertNotEmpty($data);
 
-        $this->assertSame($student->citizen_id, $data[0]['national_id']);
-        $this->assertSame('2010-01-15', $data[0]['birth_date']);
-        $this->assertSame('15/01/2010', $data[0]['birth_date_string']);
+        // Non-sensitive identity still resolves from the student master record.
+        $this->assertSame('เด็กชาย สมปอง ใจดี', $data[0]['full_name_thai']);
+
+        // Sensitive PII is masked/withheld for anonymous visitors.
+        $this->assertSame('x-xxxx-xxxxx-12-3', $data[0]['national_id']);
+        $this->assertNotSame($student->citizen_id, $data[0]['national_id']);
+        $this->assertNull($data[0]['birth_date']);
+        $this->assertNull($data[0]['birth_date_string']);
     }
 
     public function test_moving_enrollment_changes_room_api_immediately(): void

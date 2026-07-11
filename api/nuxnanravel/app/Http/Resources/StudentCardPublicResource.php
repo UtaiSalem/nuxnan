@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,20 +14,18 @@ class StudentCardPublicResource extends JsonResource
         $enrollment = $student?->classroomEnrollments
             ?->first(fn ($item) => $item->status === 'active' && $item->classroom?->academicYear?->is_current);
 
-        $birthDate = $student?->date_of_birth ?: $this->birth_date;
-        $birthDateValue = $birthDate
-            ? Carbon::parse($birthDate)->format('Y-m-d')
-            : null;
-        $birthDateString = $birthDate
-            ? Carbon::parse($birthDate)->format('d/m/Y')
-            : $this->birth_date_string;
+        // PII masking: this resource serves the unauthenticated public endpoint.
+        // The national ID is partially masked and the date of birth is withheld
+        // entirely so a physical-looking card can still be shown without leaking
+        // sensitive identity fields to anonymous visitors.
+        $rawNationalId = $student ? $student->citizen_id : $this->national_id;
 
         return [
             'id' => $this->id,
             'student_id' => $this->student_id,
             'academy_id' => $this->academy_id,
             'student_number' => $student ? $student->student_id : $this->student_number,
-            'national_id' => $student ? $student->citizen_id : $this->national_id,
+            'national_id' => $this->maskNationalId($rawNationalId),
             'title_name' => $student ? $student->title_prefix_th : $this->title_name,
             'first_name_thai' => $student ? $student->first_name_th : $this->first_name_thai,
             'last_name_thai' => $student ? $student->last_name_th : $this->last_name_thai,
@@ -38,8 +35,8 @@ class StudentCardPublicResource extends JsonResource
             'full_name_english' => $student
                 ? trim($student->first_name_en.' '.$student->last_name_en)
                 : $this->first_name_english,
-            'birth_date' => $birthDateValue,
-            'birth_date_string' => $birthDateString,
+            'birth_date' => null,
+            'birth_date_string' => null,
             'class_level' => $enrollment ? $this->numericGradeLevel($enrollment->classroom->grade_level) : $this->class_level,
             'class_section' => $enrollment ? (int) $enrollment->classroom->section : $this->class_section,
             'level_and_room' => $enrollment ? $this->numericGradeLevel($enrollment->classroom->grade_level).'/'.$enrollment->classroom->section : $this->level_and_room,
@@ -64,5 +61,33 @@ class StudentCardPublicResource extends JsonResource
         }
 
         return (int) $matches[1];
+    }
+
+    /**
+     * Partially mask a Thai national ID for public display.
+     *
+     * A 13-digit ID (groups 1-4-5-2-1) keeps only its final two groups
+     * (3 digits) visible, e.g. "x-xxxx-xxxxx-12-3". Unknown formats keep at
+     * most the last two digits. Empty values return null.
+     */
+    private function maskNationalId(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D/', '', (string) $value);
+
+        if ($digits === '') {
+            return null;
+        }
+
+        if (strlen($digits) !== 13) {
+            $tail = substr($digits, -2);
+
+            return str_repeat('x', max(0, strlen($digits) - strlen($tail))).$tail;
+        }
+
+        return 'x-xxxx-xxxxx-'.substr($digits, 10, 2).'-'.substr($digits, 12, 1);
     }
 }

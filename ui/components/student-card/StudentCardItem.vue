@@ -39,8 +39,11 @@ const editForm = reactive({
 
 const formattedIdNumber = computed(() => {
     if (!editForm.national_id) return ''
-    const s = String(editForm.national_id).replace(/\D/g, '')
-    if (s.length !== 13) return s
+    const raw = String(editForm.national_id)
+    const s = raw.replace(/\D/g, '')
+    // Non-13-digit values include already-masked public strings (e.g.
+    // "x-xxxx-xxxxx-12-3"); show them as-is instead of stripping the mask.
+    if (s.length !== 13) return raw
     return s.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d{1})/, '$1-$2-$3-$4-$5')
 })
 
