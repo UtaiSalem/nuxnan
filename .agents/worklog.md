@@ -6,6 +6,58 @@
 
 ---
 
+## 2026-07-12 — Withdrawal & Wallet Hardening ครบวงจร (8 PRs merged เข้า main)
+
+> งานใหญ่: วิเคราะห์ → review งานที่ Codex/Gemini ทำ → แก้บั๊กวิกฤต → ตรวจ invariant เงินเข้า-ออก → baseline บน DB จริง → bcmath + locked_balance → decimal(15,2) → เก็บกวาด **ทั้งหมด merge เข้า `main` แล้ว (PR #3–#8)** เอกสารเต็มอยู่ที่ [`.agents/withdrawal-review-findings.md`](withdrawal-review-findings.md) + [`.agents/withdrawal-system-hardening-plan.md`](withdrawal-system-hardening-plan.md)
+
+### PR ที่ merge เข้า main (8 PRs)
+- **#3** Withdrawal hardening — atomic state machine 9 สถานะ + `lockForUpdate` ทุกจุด + maker-checker (ยอด ≥10,000 ต้อง 2 admin) + daily/monthly limit + `WithdrawalPolicy` (approve/reject = SUPER_ADMIN+ADMIN, MODERATOR = view) + audit ครบ + mask bank PII (เต็มเข้ารหัสใน `destination_snapshot`)
+- **#4** ลบ dead code `WalletController::approveWithdrawal/rejectWithdrawal` (ไม่มี route ชี้)
+- **#5** bcmath (เส้นถอนเงิน) + คอลัมน์ `users.locked_balance` (materialized: wallet = ยอดใช้ได้, total = wallet+locked) + `checkLockedBalance` reconciliation
+- **#6** bcmath ครบทุกเมธอด (deposit/transfer/adminAdjust/points/purchase/refund)
+- **#7** fix `PointsService::updateUserLevel` crash เมื่อ `$user->xp` null (user เพิ่งสร้าง) → แก้บั๊ก `user can earn points` ที่ค้างมานาน
+- **#8** 🔑 **`users.wallet` เป็น `double` (float!) มาตลอด** = ต้นตอ float drift จริง → แปลงเป็น `decimal(15,2) unsigned`; fee/net_amount (10,2)→(15,2)
+
+### เครื่องมือใหม่ (บน main)
+- `WalletReconciliationService` + `php artisan wallet:reconcile [--user --mismatched]` — สรุป money-in/out, wallet↔ledger ต่อ user, ยอดถอน 9 สถานะ, refund integrity, locked integrity, ยอดติดลบ; **คืน exit≠0 เมื่อไม่ healthy**
+- `php artisan wallet:baseline [--commit --force --user]` — opening-balance baseline (dry-run default, idempotent)
+- `php artisan wallet:flag-legacy-withdrawals [--commit]` — flag รายการ returned เก่าที่ไม่มี refund ledger
+- **Daily schedule** `wallet:reconcile` 03:30 + log alert (`routes/console.php`) → ผลที่ `storage/logs/wallet-reconcile.log`
+- `app/Helpers/BcMathHelper.php` (`bcround`/`bcmax`)
+
+### ✅ สถานะ DB จริง (nuxnan บน WAMP) — Ledger HEALTHY
+- รัน migration แล้วบน dev: 000001–000005 (withdrawal fields, status enum, opening_balance type, locked_balance, decimal(15,2))
+- baseline 385 users (opening_balance), flag 2 legacy cancelled, normalize wallet=ledger, แปลง wallet double→decimal
+- reconcile: money out ≤ money in **OK**, wallet==ledger **OK**, 0 mismatched, 0 negatives, refund+locked integrity **OK**
+- backup tables ลบหมดแล้ว
+
+### ⚠️ Deploy notes (ต้องทำบน production ตามลำดับ)
+1. `php artisan migrate` — รัน 000001–000005 (โดยเฉพาะ **000005 แปลง wallet double→decimal**; lossless ถ้าข้อมูล 2-decimal อยู่แล้ว)
+2. `composer dump-autoload` (autoload.files เพิ่ม BcMathHelper — ไม่งั้น `bcround` ไม่โหลด)
+3. `php artisan wallet:baseline --commit --force` — ถ้า production มี wallet ที่ไม่มี ledger กำกับ (เหมือน dev) ต้อง baseline **ก่อนเปิดถอนเงินจริง** (dry-run ดูก่อน)
+4. `php artisan wallet:flag-legacy-withdrawals --commit` — ถ้ามีรายการ returned เก่าไม่มี refund
+5. ยืนยัน **cron `* * * * * php artisan schedule:run`** ทำงานบน server (ไม่งั้น daily reconcile ไม่รัน)
+6. หลัง deploy: `php artisan wallet:reconcile` ต้องขึ้น HEALTHY
+
+### งานที่ค้าง (backlog — ไม่ block)
+- [ ] Precision uniformity เล็กน้อย: `wallet_transactions.amount/balance_before/balance_after` เป็น decimal(20,2) บน dev แต่ (10,2) บน fresh install — ทั้งคู่ decimal ปลอดภัย ไม่รีบ
+- [ ] Double-entry control accounts (แผนไว้เป็น optional ตอน scale ใหญ่ — ไม่ทำตอนนี้)
+- [ ] Frontend: `ui/composables/useAdminWallet.ts` + `pending.vue` ใช้ `$fetch` ตรง (ผิด convention `useApi`) — pre-existing, ยังไม่แก้
+- [ ] Load test ถอนพร้อมกันจริงหลาย process (row-lock พิสูจน์เต็มต้องใช้หลาย connection — unit test ทำไม่ได้)
+- [ ] Security follow-up เดิม: ลบ public student-card route (ดู memory `project_public_student_card_pii`)
+
+### Context สำคัญ
+- **โมเดล locked_balance:** `wallet` = ยอดใช้ได้เสมอ (หักทันทีตอน withdraw), `locked_balance` = เงินกันไว้ = Σ active withdrawals (pending/under_review/approved/processing). withdraw: wallet−, locked+. paid: locked− (เงินออกจริง). reject/cancel/failed: wallet+, locked− + สร้าง refund ledger. อย่าเปลี่ยน semantics นี้ — reconciliation ทั้งหมดอิงมัน
+- **Ledger เป็น source of truth:** ทุกการแก้ wallet มี WalletTransaction row ที่ delta = balance_after−balance_before → `wallet == Σ delta` เสมอ ห้ามแก้ wallet โดยไม่มี ledger row (นี่คือสิ่งที่ทำให้ reconcile ตรง)
+- **`gh` CLI ติดตั้งแล้ว** (v2.96.0) แต่ยังไม่ `gh auth login` — ใช้ token จาก Git Credential Manager ผ่าน `GH_TOKEN` (scope: repo,workflow,gist — ไม่มี read:org จึงต้องใช้ `gh api` REST สำหรับ pr edit/merge ไม่ใช่ `gh pr edit`)
+
+### Branch / Git State
+- Branch: `main` (sync กับ origin) — **push แล้วทุก PR**
+- Uncommitted: หลังอัปเดต worklog นี้จะมี worklog รอ commit
+- ทุก feature branch (#3–#8) ลบทั้ง local + remote แล้ว
+
+---
+
 ## 2026-07-11 — Runtime verify Intake + G1-G3 → เจอ+แก้ 3 บั๊ก (build ผ่านแต่ runtime พัง)
 
 > ⚠️ แก้ความเข้าใจจาก entry ก่อนหน้า: intake + G1-G3 "มี code + test/build ผ่าน" **แต่ใช้งานจริงไม่ได้** — runtime verify (login จริง, ขับ UI) พบ 3 บั๊ก ทั้งหมดแก้แล้ว commit `bc57c1db` (push แล้ว)
