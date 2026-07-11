@@ -6,7 +6,7 @@
 
 ---
 
-## 2026-07-11 — Student Intake Phase 2-3 verify + typing migration regression fix
+## 2026-07-11 — Backlog audit (Intake + G1-G3 all done) + typing migration regression fix
 
 ### สิ่งที่พบ
 - **Student Intake Phase 2-3 เสร็จสมบูรณ์แล้ว** (ทำในเซสชันหลัง 2026-07-05 — worklog TODO เก่า stale):
@@ -20,9 +20,15 @@
 - migration รันบน WAMP MySQL ไปแล้ว (ไม่ re-run) → WAMP ยังถูกต้อง; fix มีผลกับ test SQLite + fresh deploy
 - **ยืนยัน:** `tests/Feature/Api/Academy` กลับมาเขียว **75/75** (270 assertions)
 
-### ยังค้าง (backlog จริง — คนละเรื่องกับ intake)
-- Student List DataTable (G2), Account Activation Page (G3), Import History Page (G1) — ยังไม่ทำ
-- Intake UI runtime verify (ต้อง login — JWT หมดอายุ) ยังไม่ได้ทำ
+### G1-G3 ตรวจแล้ว — เสร็จหมดเช่นกัน (stale เหมือน intake)
+- **G1 Import History:** ✅ backend `student-imports` CRUD ครบ (index/upload/template/show/cancel/confirm/errors/retry/rows), `StudentImportControllerTest` **5/5**; frontend `import-history.vue` (listBatches+pagination) + `import.vue`→`ImportWizard`
+- **G2 Student DataTable:** ✅ `StudentDataTable.vue` + `students/index.vue` wired (list/stats/export), ปุ่ม "รับนักเรียนใหม่"
+- **G3 Account Activation:** ✅ public page `activate-student/[token].vue` + `StudentActivationController` (show/activate, token เข้ารหัส `token_hash`); **runtime verified** error state (token มั่ว → "ไม่สามารถเปิดบัญชีได้"); happy path ต้อง pending invitation (มี 0 records) + ติดกฎกรอกรหัสผ่าน
+
+### ยังค้างจริง (verification + deferred — ไม่มีโค้ดใหม่ใน intake/G1-G3)
+- **Runtime verify UI admin** (ต้อง login): intake wizard, import wizard, StudentDataTable, G3 happy path — build/test ผ่านแต่ยังไม่ขับ UI จริง (บทเรียนจากบั๊ก 500 typing: build ผ่าน ≠ runtime ผ่าน)
+- Home Visit [id] detail page (0 records ยังทดสอบไม่ได้)
+- Deploy steps สะสม (ดูด้านล่าง), security follow-up ลบ public student-card route, typing 2 ข้อสังเกตเล็ก
 
 ### Git
 - commit นี้: migration fix + worklog
@@ -281,11 +287,13 @@
 - `b1fe7dc9` fix(api): resolve dashboardStats 500 and HomeVisit middleware error
 
 ### งานถัดไป (Backlog)
-- [ ] Student Intake Phase 2-3 (Single Student Intake backend + Registrar UI)
-- [ ] Student List DataTable (Phase G2)
-- [ ] Student Account Activation Page (Phase G3)
-- [ ] Import History Page (Phase G1)
-- [ ] Fix home-visits schema mismatch (student_academic_info.classroom)
+- [x] Student Intake Phase 2-3 (Single Student Intake backend + Registrar UI) — **done** (verified 2026-07-11, test 8/8)
+- [x] Student List DataTable (Phase G2) — **done** (StudentDataTable.vue + index wired)
+- [x] Student Account Activation Page (Phase G3) — **done** (public page + controller; error state verified)
+- [x] Import History Page (Phase G1) — **done** (import-history.vue + backend CRUD, test 5/5)
+- [x] Fix home-visits schema mismatch (student_academic_info.classroom) — **done** (home-visit refactor 2026-07-09/10)
+
+> ⚠️ ทั้งชุดนี้ถูก implement ในเซสชันหลัง 2026-07-05 แต่ checkbox ไม่ได้อัปเดต — ยืนยัน done ทั้งหมดวันที่ 2026-07-11 (ดู entry บนสุด)
 
 ---
 
