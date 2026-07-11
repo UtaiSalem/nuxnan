@@ -1,4 +1,4 @@
-import { ref, reactive } from 'vue'
+import { ref, reactive, toValue, type MaybeRefOrGetter } from 'vue'
 import { uuid } from '~/utils/uuid'
 import type {
   StudentIntakePayload,
@@ -50,8 +50,9 @@ const payload = reactive<StudentIntakePayload>({
 })
 // -----------------------------------
 
-export const useStudentIntake = (academyName?: string) => {
+export const useStudentIntake = (academyId?: MaybeRefOrGetter<string | number | null>) => {
   const service = useStudentIntakeService()
+  const resolveAcademyId = () => toValue(academyId) as string | number
 
   // Guardian Management
   const addGuardianContact = (guardianId: string) => {
@@ -130,8 +131,8 @@ export const useStudentIntake = (academyName?: string) => {
     
     try {
       const result = await service.checkDuplicate(
-        academyName, 
-        payload.identity.student_id, 
+        resolveAcademyId(),
+        payload.identity.student_id,
         payload.identity.citizen_id
       )
       
@@ -161,7 +162,7 @@ export const useStudentIntake = (academyName?: string) => {
         return rest
       })
       
-      const result = await service.submitIntake(academyName, cleanPayload)
+      const result = await service.submitIntake(resolveAcademyId(), cleanPayload)
       return result
     } catch (error) {
       console.error('Submission failed', error)

@@ -15,35 +15,67 @@
 
     <!-- Stepper Content -->
     <div class="p-6">
-      <Stepper v-model:value="activeStep" :linear="true">
-        <StepList>
-          <Step value="1">1. อัปโหลดไฟล์</Step>
-          <Step value="2">2. ตรวจสอบข้อมูล</Step>
-          <Step value="3">3. ยืนยันการนำเข้า</Step>
-        </StepList>
-        <StepPanels>
-          <StepPanel value="1">
-            <StepUpload @next="handleNext('2')" />
-          </StepPanel>
-          <StepPanel value="2">
-            <StepPreview @back="handleBack('1')" @next="handleNext('3')" />
-          </StepPanel>
-          <StepPanel value="3">
-            <StepConfirm @back="handleBack('2')" @done="handleDone" />
-          </StepPanel>
-        </StepPanels>
-      </Stepper>
+      <!-- Stepper header -->
+      <nav class="mb-8">
+        <ol class="flex items-center">
+          <li
+            v-for="(step, i) in steps"
+            :key="step.value"
+            class="flex items-center"
+            :class="i < steps.length - 1 ? 'flex-1' : ''"
+          >
+            <div class="flex items-center gap-2 shrink-0">
+              <div
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors"
+                :class="stepCircleClass(step.value)"
+              >
+                <Icon v-if="isCompleted(step.value)" icon="fluent:checkmark-24-filled" class="w-4 h-4" />
+                <span v-else>{{ i + 1 }}</span>
+              </div>
+              <span
+                class="hidden sm:block text-sm font-medium"
+                :class="activeStep === step.value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'"
+              >
+                {{ step.label }}
+              </span>
+            </div>
+            <div
+              v-if="i < steps.length - 1"
+              class="mx-2 h-0.5 flex-1 rounded transition-colors"
+              :class="isCompleted(step.value) ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'"
+            />
+          </li>
+        </ol>
+      </nav>
+
+      <!-- Panels (v-show keeps step state; linear flow enforced via next/back only) -->
+      <div v-show="activeStep === '1'">
+        <StepUpload @next="handleNext('2')" />
+      </div>
+      <div v-show="activeStep === '2'">
+        <StepPreview @back="handleBack('1')" @next="handleNext('3')" />
+      </div>
+      <div v-show="activeStep === '3'">
+        <StepConfirm @back="handleBack('2')" @done="handleDone" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onBeforeUnmount } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStudentImport } from '../../../composables/useStudentImport'
 import StepUpload from './StepUpload.vue'
 import StepPreview from './StepPreview.vue'
 import StepConfirm from './StepConfirm.vue'
+
+const steps = [
+  { value: '1', label: '1. อัปโหลดไฟล์' },
+  { value: '2', label: '2. ตรวจสอบข้อมูล' },
+  { value: '3', label: '3. ยืนยันการนำเข้า' },
+]
 
 const activeStep = ref('1')
 const router = useRouter()
@@ -51,6 +83,14 @@ const route = useRoute()
 const academyName = route.params.name as string
 const academyId = inject<Ref<number | null>>('academyId', ref(null))
 const { resetState, currentBatch } = useStudentImport(String(academyId.value || ''))
+
+const isCompleted = (value: string) => Number(activeStep.value) > Number(value)
+
+const stepCircleClass = (value: string) => {
+  if (activeStep.value === value) return 'bg-primary-600 text-white'
+  if (isCompleted(value)) return 'bg-primary-500 text-white'
+  return 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+}
 
 const handleNext = (nextStep: string) => {
   activeStep.value = nextStep

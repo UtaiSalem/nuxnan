@@ -6,9 +6,9 @@ export const useStudentIntakeService = () => {
   /**
    * Check for duplicate student records
    */
-  const checkDuplicate = async (academyName: string, studentId: string, citizenId?: string | null): Promise<DuplicateCheckResult> => {
+  const checkDuplicate = async (academyId: string | number, studentId: string, citizenId?: string | null): Promise<DuplicateCheckResult> => {
     try {
-      const response = await api.get(`/api/academies/${academyName}/student-intakes/duplicate-check`, {
+      const response = await api.get(`/api/academies/${academyId}/student-intakes/duplicate-check`, {
         params: {
           student_id: studentId,
           citizen_id: citizenId || undefined
@@ -24,9 +24,9 @@ export const useStudentIntakeService = () => {
   /**
    * Submit single student intake data
    */
-  const submitIntake = async (academyName: string, payload: StudentIntakePayload): Promise<StudentIntakeResult> => {
+  const submitIntake = async (academyId: string | number, payload: StudentIntakePayload): Promise<StudentIntakeResult> => {
     try {
-      const response = await api.post(`/api/academies/${academyName}/student-intakes`, payload)
+      const response = await api.post(`/api/academies/${academyId}/student-intakes`, payload)
       return response as any as StudentIntakeResult
     } catch (error: any) {
       console.error('Failed to submit student intake:', error)
@@ -35,10 +35,10 @@ export const useStudentIntakeService = () => {
   }
 
   const listStudents = async (
-    academyName: string,
+    academyId: string | number,
     params: { page?: number; per_page?: number; search?: string; status?: string; classroom_id?: number; account_status?: string; sort_field?: string; sort_order?: string }
   ): Promise<StudentListResponse> => {
-    const response = await api.get(`/api/academies/${academyName}/student-intakes/list`, { params })
+    const response = await api.get(`/api/academies/${academyId}/student-intakes/list`, { params })
     return response as any as StudentListResponse
   }
 

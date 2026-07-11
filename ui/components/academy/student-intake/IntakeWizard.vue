@@ -13,9 +13,28 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
-const { submit, resetForm } = useStudentIntake(props.academyName)
+// The API binds {academy} by id, so intake calls must use the id (not the name).
+// Pass the ref so the id is resolved lazily (the parent provides it async).
+const academyId = inject<Ref<number | null>>('academyId', ref(null))
+const { submit, resetForm } = useStudentIntake(academyId)
+
+const steps = [
+  { value: '1', label: 'ข้อมูลเบื้องต้น' },
+  { value: '2', label: 'ข้อมูลส่วนตัว' },
+  { value: '3', label: 'ข้อมูลการเรียน' },
+  { value: '4', label: 'ผู้ปกครอง' },
+  { value: '5', label: 'ยืนยัน' },
+]
 
 const activeStep = ref('1')
+
+const isCompleted = (value: string) => Number(activeStep.value) > Number(value)
+
+const stepCircleClass = (value: string) => {
+  if (activeStep.value === value) return 'bg-primary-600 text-white'
+  if (isCompleted(value)) return 'bg-primary-500 text-white'
+  return 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+}
 
 const handleNext = (nextStep: string) => {
   activeStep.value = nextStep
@@ -52,31 +71,54 @@ const handleSubmit = async () => {
 
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-    <Stepper v-model:value="activeStep">
-      <StepList>
-        <Step value="1">ข้อมูลเบื้องต้น</Step>
-        <Step value="2">ข้อมูลส่วนตัว</Step>
-        <Step value="3">ข้อมูลการเรียน</Step>
-        <Step value="4">ผู้ปกครอง</Step>
-        <Step value="5">ยืนยัน</Step>
-      </StepList>
-      <StepPanels>
-        <StepPanel value="1">
-          <StepIdentity @next="handleNext('2')" />
-        </StepPanel>
-        <StepPanel value="2">
-          <StepPersonal @back="handleBack('1')" @next="handleNext('3')" />
-        </StepPanel>
-        <StepPanel value="3">
-          <StepAdmission @back="handleBack('2')" @next="handleNext('4')" />
-        </StepPanel>
-        <StepPanel value="4">
-          <StepGuardian @back="handleBack('3')" @next="handleNext('5')" />
-        </StepPanel>
-        <StepPanel value="5">
-          <StepReview @back="handleBack('4')" @submit="handleSubmit" />
-        </StepPanel>
-      </StepPanels>
-    </Stepper>
+    <!-- Stepper header -->
+    <nav class="mb-8">
+      <ol class="flex items-center">
+        <li
+          v-for="(step, i) in steps"
+          :key="step.value"
+          class="flex items-center"
+          :class="i < steps.length - 1 ? 'flex-1' : ''"
+        >
+          <div class="flex items-center gap-2 shrink-0">
+            <div
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors"
+              :class="stepCircleClass(step.value)"
+            >
+              <Icon v-if="isCompleted(step.value)" icon="fluent:checkmark-24-filled" class="w-4 h-4" />
+              <span v-else>{{ i + 1 }}</span>
+            </div>
+            <span
+              class="hidden md:block text-sm font-medium"
+              :class="activeStep === step.value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'"
+            >
+              {{ step.label }}
+            </span>
+          </div>
+          <div
+            v-if="i < steps.length - 1"
+            class="mx-2 h-0.5 flex-1 rounded transition-colors"
+            :class="isCompleted(step.value) ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'"
+          />
+        </li>
+      </ol>
+    </nav>
+
+    <!-- Panels (v-show keeps step state when navigating back) -->
+    <div v-show="activeStep === '1'">
+      <StepIdentity @next="handleNext('2')" />
+    </div>
+    <div v-show="activeStep === '2'">
+      <StepPersonal @back="handleBack('1')" @next="handleNext('3')" />
+    </div>
+    <div v-show="activeStep === '3'">
+      <StepAdmission @back="handleBack('2')" @next="handleNext('4')" />
+    </div>
+    <div v-show="activeStep === '4'">
+      <StepGuardian @back="handleBack('3')" @next="handleNext('5')" />
+    </div>
+    <div v-show="activeStep === '5'">
+      <StepReview @back="handleBack('4')" @submit="handleSubmit" />
+    </div>
   </div>
 </template>

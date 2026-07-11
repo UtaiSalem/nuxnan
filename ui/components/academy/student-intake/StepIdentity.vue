@@ -4,10 +4,10 @@ import { useStudentIntake } from '~/composables/useStudentIntake'
 import DuplicateWarning from './DuplicateWarning.vue'
 
 const emit = defineEmits(['next'])
-const route = useRoute()
-const academyName = computed(() => route.params.name as string)
+// The API binds {academy} by id, so the duplicate check must use the id (not the name).
+const academyId = inject<Ref<number | null>>('academyId', ref(null))
 
-const { payload, isCheckingDuplicate, duplicateMatches, checkDuplicate } = useStudentIntake(academyName.value)
+const { payload, isCheckingDuplicate, duplicateMatches, checkDuplicate } = useStudentIntake(academyId)
 const isNextClicked = ref(false)
 const overrideDuplicate = ref(false)
 

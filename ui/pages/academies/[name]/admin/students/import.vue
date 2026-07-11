@@ -29,7 +29,7 @@ import ImportWizard from '../../../../components/academy/student-import/ImportWi
 
 definePageMeta({
   layout: false,
-  middleware: ['auth', 'academy-role'],
+  middleware: ['auth'],
 })
 
 const route = useRoute()
