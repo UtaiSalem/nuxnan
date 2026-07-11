@@ -201,8 +201,27 @@
 - [ ] (ถ้าเพิ่ม lesson ทดลอง) กด Space → ปุ่มไฮไลต์ correct/wrong
 
 **5.6 regression**
-- [ ] Word/Time Attack/Sentence ยังเล่น + submit ได้
-- [ ] `letter_runner` (ยัง comment ใน lobby) ไม่ถูกกระทบ
+- [x] Word/Time Attack ยังเล่น + submit ได้ (API 200) — *sentence ยังไม่ยิงตรง (enum เดิมมีอยู่แล้ว, คาดว่าปกติ)*
+- [x] `letter_runner` ไม่ถูกกระทบ (API 200)
+
+---
+
+## Runtime Verification Results — 2026-07-11
+
+ทดสอบระดับ API จริง (mint JWT ผ่าน tinker, ยิง `POST /api/typing/sessions` ด้วย payload เดียวกับที่ mode emit; ไม่สามารถ login ผ่าน UI ได้เพราะ policy ห้ามกรอกรหัสผ่าน)
+
+**🔴 เจอ + แก้ blocker:** `typing_sessions.game_mode` เป็น ENUM 7 ค่า ไม่มี `key_training`/`letter_runner` → submit จบเกมได้ **500** `Data truncated for column 'game_mode'` (validation ผ่าน = **ไม่ใช่ 422 แล้ว** แต่ตายตอน insert)
+- **แก้:** migration `2026_07_11_100001_change_typing_sessions_game_mode_to_string` เปลี่ยนเป็น `VARCHAR(32)` — รันบน DB จริงแล้ว
+- **หลังแก้:** key_training submit → **200**, `xp` เพิ่ม (+24), `pp` เท่าเดิม (ยืนยัน policy XP-only), response มี wpm/accuracy/score/xp/bonus ครบสำหรับ `/result`
+
+**✅ verified via API:**
+- 5.4 submit ไม่ 422 (validation รับ `difficulty`,`time_elapsed>=1` ครบ)
+- 5.4 submit → 200 + สร้าง session record (`session_id` คืนมา)
+- 5.6 regression: word_typing / time_attack / letter_runner / key_training → 200 ทุกโหมด
+
+**⏳ ยังต้อง verify ผ่าน UI (ต้อง login — ผมทำเองไม่ได้):**
+- 5.1 key mapping (TH lessons: `[ ] \ - =` → `บ ล ฃ ข ช`), 5.2 Phaser focus (Monster Battle / Falling Words), 5.3 lobby config (key_training เห็น Language+Lesson ไม่เห็น Difficulty), 5.4 หน้า `/result` render จริง
+- **note:** อีก 3 ตาราง (`typing_daily_challenges`, `typing_race_rooms`, `typing_tournaments`) ยังเป็น ENUM 3 ค่า — ไม่พังตอนนี้เพราะไม่รับโหมดใหม่ แต่ pattern เดียวกัน ถ้าจะเพิ่มโหมดในกิจกรรมพวกนี้ต้องแปลงด้วย
 
 ---
 
