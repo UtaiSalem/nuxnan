@@ -4,6 +4,7 @@ use App\Jobs\RefreshLeaderboardCache;
 use App\Jobs\ResetDailyQuests;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -22,3 +23,13 @@ Schedule::command('typing:finalize-tournaments')->hourly();
 // Pre-create cycles for gamification
 Schedule::command('gamification:init-cycles')->weeklyOn(0, '00:01'); // Sunday midnight
 Schedule::command('gamification:init-cycles')->monthlyOn(1, '00:01'); // 1st of month
+
+// Wallet ledger reconciliation — daily money-in/out integrity check.
+// The command exits non-zero when the ledger is unhealthy (wallet != ledger,
+// negative balances, or money out exceeds money in), which triggers the alert.
+Schedule::command('wallet:reconcile')
+    ->dailyAt('03:30')
+    ->appendOutputTo(storage_path('logs/wallet-reconcile.log'))
+    ->onFailure(function () {
+        Log::critical('[wallet:reconcile] ledger integrity check FAILED — investigate before processing payouts.');
+    });

@@ -20,6 +20,19 @@ class WalletTransaction extends Model
         'description',
         'metadata',
         'status',
+        'reviewed_by',
+        'reviewed_at',
+        'rejection_reason',
+        'admin_note',
+        'payment_reference',
+        'processed_at',
+        'failed_at',
+        'idempotency_key',
+        'version',
+        'fee',
+        'net_amount',
+        'destination_type',
+        'destination_snapshot',
         'reference_number',
     ];
 
@@ -28,6 +41,12 @@ class WalletTransaction extends Model
         'balance_before' => 'decimal:2',
         'balance_after' => 'decimal:2',
         'metadata' => 'array',
+        'fee' => 'decimal:2',
+        'net_amount' => 'decimal:2',
+        'reviewed_at' => 'datetime',
+        'processed_at' => 'datetime',
+        'failed_at' => 'datetime',
+        'version' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -38,6 +57,28 @@ class WalletTransaction extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function canTransitionTo(string $newStatus): bool
+    {
+        $allowed = [
+            'pending' => ['under_review', 'cancelled'],
+            'under_review' => ['approved', 'rejected'],
+            'approved' => ['processing', 'failed'],
+            'processing' => ['paid', 'failed'],
+            'paid' => [],
+            'completed' => [],
+            'rejected' => [],
+            'failed' => [],
+            'cancelled' => [],
+        ];
+
+        return in_array($newStatus, $allowed[$this->status] ?? [], true);
     }
 
     /**

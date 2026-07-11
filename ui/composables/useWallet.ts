@@ -13,6 +13,10 @@ export const WITHDRAW_FEE_RATE = 0.005
 
 /** Minimum fee floor in THB */
 export const WITHDRAW_FEE_MIN = 5
+export const WITHDRAW_DAILY_LIMIT = 100000
+export const WITHDRAW_MONTHLY_LIMIT = 500000
+
+export type WithdrawalStatus = 'pending' | 'under_review' | 'approved' | 'processing' | 'completed' | 'paid' | 'rejected' | 'failed' | 'cancelled'
 
 export const useWallet = () => {
   const authStore = useAuthStore()
@@ -133,6 +137,7 @@ export const useWallet = () => {
       account_name: string
     }
     description?: string
+    idempotency_key?: string
   }) => {
     try {
       isLoading.value = true
@@ -143,7 +148,7 @@ export const useWallet = () => {
         headers: {
           'Authorization': `Bearer ${authStore.token}`,
         },
-        body: data,
+        body: { ...data, idempotency_key: data.idempotency_key || crypto.randomUUID() },
       }) as any
 
       if (response.success) {

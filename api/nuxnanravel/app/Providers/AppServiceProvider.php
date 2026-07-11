@@ -11,6 +11,7 @@ use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\EventRegistration;
 use App\Models\Student;
+use App\Models\WalletTransaction;
 use App\Observers\AcademyPostCommentObserver;
 use App\Observers\AcademyPostLikeObserver;
 use App\Observers\AcademyPostObserver;
@@ -22,6 +23,7 @@ use App\Observers\StudentObserver;
 use App\Policies\CoursePolicy;
 use App\Policies\EnrollmentPolicy;
 use App\Policies\StudentMasterProfilePolicy;
+use App\Policies\WithdrawalPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -46,6 +48,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Schema::defaultStringLength(191);
         Gate::policy(Course::class, CoursePolicy::class);
+        Gate::policy(WalletTransaction::class, WithdrawalPolicy::class);
         Gate::policy(Student::class, StudentMasterProfilePolicy::class);
 
         // Enrollment & Rollover Policy Gates

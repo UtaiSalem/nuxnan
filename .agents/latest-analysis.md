@@ -2684,3 +2684,26 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Added point rules for `typing_daily_challenge` and `typing_tournament_prize`. Typing achievements currently have no `pp_reward` column, so the conditional achievement PP step was not applicable.
 - Verification: Pint passed; `TypingRewardPolicyTest` passed 4 tests / 21 assertions; migration `--pretend` produced the expected nullable column and unique index. Grep found no remaining direct `->earn()` call under Play API controllers (rg exit 1 because there were zero matches).
 - Deployment requirements: run the new migration and run `GamificationSeeder` (or create equivalent point-rule records) before relying on configured governance caps.
+
+## 2026-07-11 - Withdrawal and approval system audit (plan only)
+
+- Scope inspected: `WalletService`, `WalletController`, `AdminWalletController`, wallet routes, `WalletTransaction` model/migration, and `WithdrawTest`.
+- Critical findings: withdrawal reads/updates `users.wallet` without `lockForUpdate`; money uses PHP floats; approval/rejection are not atomic state transitions; approval does not persist reviewer/time; rejection refunds wallet without a compensating wallet ledger row; destination bank data is stored in unrestricted JSON; duplicate pending withdrawals are not prevented; admin authorization differs between routes/controllers and includes duplicate approval endpoints.
+- Existing reusable infrastructure: `Auditable` trait, `AuditLogService`, `AuditRequest` middleware, and existing transaction balance snapshots.
+- Intended design: separate immutable withdrawal request/review/settlement records or extend the transaction with explicit lifecycle fields, use decimal integer minor units or strict decimal handling, row locks/idempotency/state machine, maker-checker for high-risk amounts, masked sensitive data, append-only audit events visible in user/admin scopes, reconciliation jobs, and focused concurrency/security tests.
+- Verification plan: migration dry-run, Laravel feature/concurrency tests, Pint, API contract checks, and reconciliation report against legacy transactions before rollout.
+
+## 2026-07-11 - Withdrawal Part A implementation
+
+- Implemented only Codex-owned Money Engine files: withdrawal-field/status migrations, `WalletTransaction` lifecycle metadata/transitions, and `WalletService` locking/idempotency/audit/refund/lifecycle methods.
+- No controller, route, policy, config, or frontend files were changed.
+- Verification: PHP lint passed; `tests/Feature/Wallet/WithdrawTest.php` passed 14/14 (32 assertions); Pint passed on touched backend files.
+- Follow-up required by Gemini: update controller calls to pass reviewer/admin arguments and wire the new lifecycle endpoints; migrations should be reviewed before production execution.
+
+## 2026-07-11 - Part B interface handoff completed by Codex
+
+- Updated Gemini-owned interface files: wallet/admin controllers, wallet routes, config, withdrawal policy registration, and wallet composables.
+- Removed duplicate withdrawal approval/rejection route registrations from `routes/earn/points-wallet.php`; canonical admin routes remain under `routes/admin/admin.php`.
+- Controllers now pass reviewer/admin arguments, return persisted status, enforce ADMIN/SUPER_ADMIN approval/rejection, accept idempotency keys, and expose process/paid/failed lifecycle endpoints.
+- Frontend composables now support 9 statuses, idempotent withdrawal submission, configured limits, locked balance compatibility, and lifecycle API helpers.
+- Verification: PHP lint, route list, Pint, and `WithdrawTest` 14/14 passed. `npm run build` could not complete in the available window; PowerShell blocked `npm.ps1`, and `npm.cmd run build` was terminated after no output.

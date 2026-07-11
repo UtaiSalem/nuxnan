@@ -49,13 +49,13 @@ class AdminWalletController extends Controller
 
         $totalWallet = User::sum('wallet');
         $totalWithdrawals = WalletTransaction::where('transaction_type', 'withdraw')
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['rejected', 'cancelled', 'failed'])
             ->count();
         $pendingWithdrawals = WalletTransaction::where('transaction_type', 'withdraw')
             ->where('status', 'pending')
             ->count();
         $completedWithdrawals = WalletTransaction::where('transaction_type', 'withdraw')
-            ->where('status', 'completed')
+            ->whereIn('status', ['completed', 'paid'])
             ->count();
         $totalDeposits = WalletTransaction::where('transaction_type', 'deposit')
             ->where('status', 'completed')
@@ -200,14 +200,6 @@ class AdminWalletController extends Controller
     public function approveWithdrawal(Request $request, int $transactionId): JsonResponse
     {
         $user = Auth::user();
-
-        if (! $user || ! $user->isSuperAdmin()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
-        }
-
         $transaction = WalletTransaction::find($transactionId);
 
         if (! $transaction) {
@@ -217,7 +209,20 @@ class AdminWalletController extends Controller
             ], 404);
         }
 
-        $result = $this->walletService->approveWithdrawal($transaction);
+        if (! $user || $user->cannot('approve', $transaction)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $validated = $request->validate(['admin_note' => 'nullable|string|max:500', 'payment_reference' => 'nullable|string|max:100']);
+
+        try {
+            $result = $this->walletService->approveWithdrawal($transaction, $user, $validated['admin_note'] ?? null, $validated['payment_reference'] ?? null);
+        } catch (\DomainException|\RuntimeException $e) {
+            return $this->mapWithdrawalException($e);
+        }
 
         if (! $result) {
             return response()->json([
@@ -231,9 +236,22 @@ class AdminWalletController extends Controller
             'message' => 'Withdrawal approved successfully',
             'data' => [
                 'transaction_id' => $transaction->id,
-                'status' => 'completed',
+                'status' => $transaction->refresh()->status,
             ],
         ]);
+    }
+
+    /**
+     * Map service-layer domain/concurrency exceptions to HTTP responses
+     * (see Shared Contract §B/§E): DomainException -> 422, RuntimeException -> 409.
+     */
+    private function mapWithdrawalException(\Throwable $e): JsonResponse
+    {
+        if ($e instanceof \DomainException) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['success' => false, 'message' => 'มีการแก้ไขรายการพร้อมกัน กรุณาลองใหม่'], 409);
     }
 
     /**
@@ -243,7 +261,7 @@ class AdminWalletController extends Controller
     {
         $user = Auth::user();
 
-        if (! $this->isAdminUser($user)) {
+        if (! $user || ! ($user->isSuperAdmin() || $user->hasRole('ADMIN'))) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -289,18 +307,6 @@ class AdminWalletController extends Controller
     public function rejectWithdrawal(Request $request, int $transactionId): JsonResponse
     {
         $user = Auth::user();
-
-        if (! $this->isAdminUser($user)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
-        }
-
-        $validated = $request->validate([
-            'reason' => 'required|string|max:255',
-        ]);
-
         $transaction = WalletTransaction::find($transactionId);
 
         if (! $transaction) {
@@ -310,7 +316,20 @@ class AdminWalletController extends Controller
             ], 404);
         }
 
-        $result = $this->walletService->rejectWithdrawal($transaction, $validated['reason']);
+        if (! $user || $user->cannot('reject', $transaction)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $validated = $request->validate(['reason' => 'required|string|max:255', 'admin_note' => 'nullable|string|max:500']);
+
+        try {
+            $result = $this->walletService->rejectWithdrawal($transaction, $validated['reason'], $user, $validated['admin_note'] ?? null);
+        } catch (\DomainException|\RuntimeException $e) {
+            return $this->mapWithdrawalException($e);
+        }
 
         if (! $result) {
             return response()->json([
@@ -324,10 +343,77 @@ class AdminWalletController extends Controller
             'message' => 'Withdrawal rejected successfully',
             'data' => [
                 'transaction_id' => $transaction->id,
-                'status' => 'cancelled',
+                'status' => $transaction->refresh()->status,
                 'reason' => $validated['reason'],
             ],
         ]);
+    }
+
+    public function showWithdrawal(int $transactionId): JsonResponse
+    {
+        $user = Auth::user();
+        $transaction = WalletTransaction::with('user')->find($transactionId);
+
+        if (! $transaction || $transaction->transaction_type !== 'withdraw') {
+            return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
+        }
+
+        if (! $user || $user->cannot('view', $transaction)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Records the first reviewer and moves pending -> under_review, which
+        // the maker-checker control depends on.
+        $this->walletService->viewWithdrawal($transaction, $user);
+
+        return response()->json(['success' => true, 'data' => $transaction->refresh()]);
+    }
+
+    public function processWithdrawal(Request $request, int $transactionId): JsonResponse
+    {
+        $user = Auth::user();
+        $transaction = WalletTransaction::find($transactionId);
+        if (! $transaction) {
+            return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
+        }
+        if (! $user || $user->cannot('approve', $transaction)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        $ok = $this->walletService->processWithdrawal($transaction, $user);
+
+        return response()->json(['success' => $ok, 'data' => ['transaction_id' => $transaction->id, 'status' => $transaction->refresh()->status]], $ok ? 200 : 409);
+    }
+
+    public function markWithdrawalPaid(Request $request, int $transactionId): JsonResponse
+    {
+        $user = Auth::user();
+        $transaction = WalletTransaction::find($transactionId);
+        if (! $transaction) {
+            return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
+        }
+        if (! $user || $user->cannot('approve', $transaction)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        $data = $request->validate(['payment_reference' => 'required|string|max:100']);
+        $ok = $this->walletService->markWithdrawalPaid($transaction, $data['payment_reference'], $user);
+
+        return response()->json(['success' => $ok, 'data' => ['transaction_id' => $transaction->id, 'status' => $transaction->refresh()->status]], $ok ? 200 : 409);
+    }
+
+    public function markWithdrawalFailed(Request $request, int $transactionId): JsonResponse
+    {
+        $user = Auth::user();
+        $transaction = WalletTransaction::find($transactionId);
+        if (! $transaction) {
+            return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
+        }
+        if (! $user || $user->cannot('approve', $transaction)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        $data = $request->validate(['reason' => 'required|string|max:255']);
+        $ok = $this->walletService->markWithdrawalFailed($transaction, $data['reason'], $user);
+
+        return response()->json(['success' => $ok, 'data' => ['transaction_id' => $transaction->id, 'status' => $transaction->refresh()->status]], $ok ? 200 : 409);
     }
 
     /**
