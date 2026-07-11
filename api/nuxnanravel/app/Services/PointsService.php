@@ -6,6 +6,7 @@ use App\Models\LevelDefinition;
 use App\Models\PointRule;
 use App\Models\PointsTransaction;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -14,9 +15,9 @@ class PointsService
     /**
      * Earn points for a user
      */
-    public function earn(User $user, float $amount, string $sourceType, ?int $sourceId = null, ?string $description = null, ?array $metadata = null, int $xpAmount = 0): PointsTransaction
+    public function earn(User $user, float $amount, string $sourceType, ?int $sourceId = null, ?string $description = null, ?array $metadata = null, int $xpAmount = 0, ?string $idempotencyKey = null): PointsTransaction
     {
-        return DB::transaction(function () use ($user, $amount, $sourceType, $sourceId, $description, $metadata, $xpAmount) {
+        return DB::transaction(function () use ($user, $amount, $sourceType, $sourceId, $description, $metadata, $xpAmount, $idempotencyKey) {
             $balanceBefore = $user->pp;
             $balanceAfter = $balanceBefore + $amount;
 
@@ -41,6 +42,7 @@ class PointsService
                 'balance_after' => $balanceAfter,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
+                'idempotency_key' => $idempotencyKey,
                 'description' => $description,
                 'metadata' => $metadata,
                 'status' => 'completed',
@@ -61,6 +63,47 @@ class PointsService
 
             return $transaction;
         });
+    }
+
+    /**
+     * Award PP through rule limits and a database-backed idempotency key.
+     */
+    public function awardGoverned(User $user, float $amount, string $ruleKey, string $idempotencyKey, ?int $sourceId = null, ?string $description = null, ?array $metadata = null): ?PointsTransaction
+    {
+        if ($amount <= 0 || PointsTransaction::where('idempotency_key', $idempotencyKey)->exists()) {
+            return null;
+        }
+
+        $rule = $this->getRule($ruleKey);
+        if ($rule && ! $this->canEarnFromRule($user, $rule)) {
+            Log::info('Governed PP award blocked by rule limit', [
+                'user_id' => $user->id,
+                'rule_key' => $ruleKey,
+                'amount' => $amount,
+                'idempotency_key' => $idempotencyKey,
+            ]);
+
+            return null;
+        }
+
+        try {
+            return $this->earn(
+                $user,
+                $amount,
+                $rule?->source_type ?? $ruleKey,
+                $sourceId,
+                $description ?? $rule?->rule_name,
+                $metadata,
+                0,
+                $idempotencyKey
+            );
+        } catch (QueryException $exception) {
+            if (PointsTransaction::where('idempotency_key', $idempotencyKey)->exists()) {
+                return null;
+            }
+
+            throw $exception;
+        }
     }
 
     /**
@@ -397,12 +440,18 @@ class PointsService
             return false;
         }
 
-        // Check daily limits
-        $today = now()->toDateString();
-        $dailyLimit = $user->dailyPointLimits()->where('date', $today)->first();
+        // Check daily limits (scoped to this rule's source, mirroring the
+        // monthly check below — the aggregate dailyPointLimits.points_earned
+        // would otherwise let PP earned from unrelated sources block this rule).
+        if ($rule->max_daily_earnings) {
+            $startOfDay = now()->startOfDay();
+            $dailyEarned = PointsTransaction::where('user_id', $user->id)
+                ->where('source_type', $rule->source_type)
+                ->where('transaction_type', 'earn')
+                ->where('created_at', '>=', $startOfDay)
+                ->sum('amount');
 
-        if ($dailyLimit && $rule->max_daily_earnings) {
-            if ($dailyLimit->points_earned >= $rule->max_daily_earnings) {
+            if ($dailyEarned >= $rule->max_daily_earnings) {
                 return false;
             }
         }

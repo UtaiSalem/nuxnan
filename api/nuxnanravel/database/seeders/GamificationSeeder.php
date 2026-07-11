@@ -92,6 +92,28 @@ class GamificationSeeder extends Seeder
                 'source_type' => 'quiz_pass',
                 'base_amount' => 50,
             ],
+            [
+                'rule_key' => 'typing_daily_challenge',
+                'rule_name' => 'Daily Typing Challenge',
+                'action_type' => 'earn',
+                'source_type' => 'typing_daily_challenge',
+                'base_amount' => 0,
+                // No daily cap: canEarnFromRule's daily check is a cross-source
+                // aggregate, so any max_daily_earnings here would let unrelated PP
+                // earned the same day silently block the challenge payout. The
+                // idempotency_key already guarantees one payout per challenge/day.
+                // Explicit null so re-seeding clears any legacy value.
+                'max_daily_earnings' => null,
+                'max_monthly_earnings' => 200,
+            ],
+            [
+                'rule_key' => 'typing_tournament_prize',
+                'rule_name' => 'Typing Tournament Prize',
+                'action_type' => 'earn',
+                'source_type' => 'typing_tournament_prize',
+                'base_amount' => 0,
+                'max_monthly_earnings' => 500,
+            ],
         ];
 
         foreach ($rules as $rule) {

@@ -18,6 +18,7 @@ class PointsTransaction extends Model
         'balance_after',
         'source_type',
         'source_id',
+        'idempotency_key',
         'description',
         'metadata',
         'status',

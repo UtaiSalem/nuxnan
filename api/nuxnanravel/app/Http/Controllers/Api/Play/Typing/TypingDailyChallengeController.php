@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api\Play\Typing;
 
 use App\Http\Controllers\Controller;
 use App\Models\TypingDailyChallenge;
+use App\Models\TypingSession;
 use App\Models\TypingUserDailyChallenge;
 use App\Services\PointsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TypingDailyChallengeController extends Controller
 {
@@ -31,65 +34,78 @@ class TypingDailyChallengeController extends Controller
             'success' => true,
             'challenge' => $challenge,
             'completed' => $userEntry?->completed ?? false,
-            'user_score' => $userEntry?->score ?? null,
+            'user_score' => $userEntry?->score,
         ]);
     }
 
     public function complete(Request $request, TypingDailyChallenge $challenge)
     {
         $user = Auth::user();
-
-        // ตรวจว่าทำแล้วหรือยัง
-        $existing = TypingUserDailyChallenge::where([
-            'user_id' => $user->id,
-            'challenge_id' => $challenge->id,
-        ])->first();
-
-        if ($existing?->completed) {
-            return response()->json(['success' => false, 'message' => 'Already completed today.'], 422);
-        }
-
         $validated = $request->validate([
             'session_id' => 'required|exists:typing_sessions,id',
-            'score' => 'required|integer|min:0',
-            'wpm' => 'required|integer|min:0',
-            'accuracy' => 'required|numeric|min:0|max:100',
         ]);
 
-        $completed = $validated['wpm'] >= $challenge->target_wpm
-                  && $validated['accuracy'] >= $challenge->target_acc;
+        return DB::transaction(function () use ($validated, $user, $challenge) {
+            $session = TypingSession::lockForUpdate()->findOrFail($validated['session_id']);
+            $sessionAlreadyUsed = TypingUserDailyChallenge::where('session_id', $session->id)->exists();
+            $existing = TypingUserDailyChallenge::where([
+                'user_id' => $user->id,
+                'challenge_id' => $challenge->id,
+            ])->lockForUpdate()->first();
 
-        TypingUserDailyChallenge::updateOrCreate(
-            ['user_id' => $user->id, 'challenge_id' => $challenge->id],
-            [
-                'session_id' => $validated['session_id'],
-                'completed' => $completed,
-                'score' => $validated['score'],
-                'wpm' => $validated['wpm'],
-                'accuracy' => $validated['accuracy'],
-                'completed_at' => $completed ? now() : null,
-            ]
-        );
+            if ($existing?->completed) {
+                return response()->json(['success' => false, 'message' => 'Already completed today.'], 422);
+            }
 
-        // มอบรางวัลเมื่อผ่าน
-        if ($completed) {
-            app(PointsService::class)->addXp($user, $challenge->xp_reward);
-            app(PointsService::class)->earn(
-                $user,
-                $challenge->pp_reward,
-                'daily_challenge',
-                $challenge->id,
-                "Daily Typing Challenge: {$challenge->challenge_date}"
+            if ((int) $session->user_id !== (int) $user->id
+                || $session->game_mode !== 'daily_challenge'
+                || (int) $session->challenge_id !== (int) $challenge->id
+                || ! $challenge->challenge_date->isToday()
+                || $sessionAlreadyUsed) {
+                throw ValidationException::withMessages([
+                    'session_id' => ['The session is not eligible for this daily challenge.'],
+                ]);
+            }
+
+            $completed = $session->wpm >= $challenge->target_wpm
+                && $session->accuracy >= $challenge->target_acc;
+
+            TypingUserDailyChallenge::updateOrCreate(
+                ['user_id' => $user->id, 'challenge_id' => $challenge->id],
+                [
+                    'session_id' => $session->id,
+                    'completed' => $completed,
+                    'score' => $session->score,
+                    'wpm' => $session->wpm,
+                    'accuracy' => $session->accuracy,
+                    'completed_at' => $completed ? now() : null,
+                ]
             );
-        }
 
-        return response()->json([
-            'success' => true,
-            'completed' => $completed,
-            'rewards' => $completed ? [
-                'xp' => $challenge->xp_reward,
-                'pp' => $challenge->pp_reward,
-            ] : null,
-        ]);
+            if ($completed) {
+                $pointsService = app(PointsService::class);
+                $pointsService->addXp($user, $challenge->xp_reward);
+                $ppTransaction = $pointsService->awardGoverned(
+                    $user,
+                    $challenge->pp_reward,
+                    'typing_daily_challenge',
+                    "daily_challenge:{$challenge->id}:{$user->id}",
+                    $challenge->id,
+                    "Daily Typing Challenge: {$challenge->challenge_date->toDateString()}",
+                    ['session_id' => $session->id]
+                );
+            }
+
+            $ppAwarded = isset($ppTransaction) ? (float) $ppTransaction->amount : 0;
+
+            return response()->json([
+                'success' => true,
+                'completed' => $completed,
+                'rewards' => $completed ? [
+                    'xp' => $challenge->xp_reward,
+                    'pp' => $ppAwarded,
+                ] : null,
+            ]);
+        });
     }
 }

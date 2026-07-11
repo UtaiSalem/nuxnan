@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-07-11 — Game XP/PP Reward Policy (เฟส 0–3 + hardening)
+
+### งานที่ทำ
+ปรับนโยบายการให้คะแนนในเกมพิมพ์ดีด: **XP ให้ได้เต็มที่ (behavior-funded), PP ให้เฉพาะกิจกรรมมีเพดาน (budget-funded)** เพราะ PP แปลงเป็นเงินจริงได้ (`1200 pp = 1 บาท`)
+
+- **เฟส 0:** migration `2026_07_11_000001_add_idempotency_key_to_points_transactions` (nullable+unique, additive) + `PointsService::awardGoverned()` (เช็ค idempotency → rule limit → `earn()` + catch `QueryException`); `earn()` รับ `idempotency_key` param ท้าย (default null)
+- **เฟส 1:** ลบ PP `floor(score/100)` ใน `TypingSessionController` → typing session ปกติให้ XP อย่างเดียว
+- **เฟส 2 Daily Challenge:** อ่าน wpm/accuracy จาก `TypingSession` ใน DB (ไม่เชื่อ client), guard owner/game_mode/challenge_id/`isToday()`/session ซ้ำ, ห่อ `DB::transaction`+`lockForUpdate`, จ่ายผ่าน `awardGoverned`
+- **เฟส 2 Tournament:** `claim()` guard `rank===null` + `lockForUpdate` + atomic; ใช้ `FinalizeTypingTournaments` (มีอยู่เดิม + schedule `->hourly()`) set rank; เพิ่ม tie-break `best_session_id`
+- **เฟส 3:** payout ผ่าน `awardGoverned` ทั้งหมด + seed rules `typing_daily_challenge`, `typing_tournament_prize`
+- **Hardening:** แก้ `canEarnFromRule` daily-check ให้ scope ตาม source (mirror monthly) กันบั๊ก aggregate cross-source; `awardGoverned` log เมื่อโดน limit ตัด
+
+### Verification
+- `TypingRewardPolicyTest` ผ่าน 5/5 (25 assertions); Points/Gamification/Reward/Quest อื่นผ่าน 43; Pint ผ่านทุกไฟล์
+- บั๊กเดิมนอกขอบเขต (ไม่แก้): `WalletAndPointsTest::test_user_can_earn_points` ล้มบนโค้ดเดิมด้วย (`updateUserLevel` + `xp` null); `updateDailyLimits` มี edge case เฉพาะ SQLite (production MySQL `DATE` ไม่เกิด)
+
+### ⚠️ ต้องทำตอน deploy
+- **reseed `GamificationSeeder`** บน env ที่เคย seed `typing_daily_challenge.max_daily_earnings=10` เพื่อล้างเป็น null (ตั้ง explicit null แล้ว updateOrCreate จะเขียนทับ)
+- รัน migration `php artisan migrate` (เพิ่มคอลัมน์ `idempotency_key`)
+
+### Backlog (ยังไม่ทำ)
+- เฟส 4 Admin Event framework (optional); Achievement PP (ยังไม่มีฟิลด์ `pp_reward` ในโมเดล)
+- รายละเอียดเต็มใน `.agents/latest-analysis.md` section "Work Plan — นโยบายการให้คะแนน XP / PP ในเกม"
+
+### Branch / Git State
+- Branch `main` — commit ชุดนี้ยังไม่ push (รอ confirm)
+
+---
+
 ## 2026-07-10 — Home Visit Admin Legacy Cleanup
 
 ### งานที่ทำ

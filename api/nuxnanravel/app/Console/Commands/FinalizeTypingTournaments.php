@@ -31,9 +31,11 @@ class FinalizeTypingTournaments extends Command
         foreach ($toFinish as $tournament) {
             $tournament->update(['status' => 'finished']);
 
-            // Assign ranks by best_score
+            // Assign ranks by best_score; tie-break by whoever reached it first
+            // (lower best_session_id = earlier attempt) for deterministic, fair order.
             $entries = TypingTournamentEntry::where('tournament_id', $tournament->id)
                 ->orderByDesc('best_score')
+                ->orderBy('best_session_id')
                 ->get();
 
             foreach ($entries as $i => $entry) {

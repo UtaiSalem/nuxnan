@@ -2434,3 +2434,250 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Conclusion: these pending records are stale/legacy or were created by a previous fee rule; approving them now will not recalculate the fee. Admin should transfer the stored `net_amount` if preserving the original request terms, or reject/recreate/update the request if enforcing current 13% policy.
 - UI risk remains: approval modal currently emphasizes gross `selectedRequest.amount`, not the net transfer amount, so admins can accidentally approve while thinking the large amount is what should be transferred.
 
+## 2026-07-11 - Game XP / PP Reward Audit
+
+- User wants game play to award XP only and never increase PP; inspection was read-only and no application code was changed.
+- Generic games using `POST /api/game/scores` only persist `GameScore`; `GameScoreController::store()` does not award XP or PP.
+- Typing game normal sessions currently award both: `TypingSessionController::store()` calls `PointsService::addXp()` and then awards PP as `floor(score / 100)` with source `typing_game`.
+- Typing daily challenge completion currently awards both configured `xp_reward` and `pp_reward` in `TypingDailyChallengeController::complete()`.
+- Typing tournament attempts award XP only, but `TypingTournamentController::claim()` can award PP prizes configured in `prize_*_pp` fields. Classroom race result submission awards XP only.
+- Intended implementation: remove/disable all game-origin PP awards (normal typing session, daily challenge, tournament claim), preserve XP awards, align API reward payloads/UI labels and add focused regression tests asserting user PP is unchanged while XP increases.
+- Risk: decide whether tournament PP prizes are considered game play rewards; under the stated goal they should also be zero/disabled, including existing configured tournament and daily-challenge PP values.
+
+---
+
+## Work Plan — นโยบายการให้คะแนน XP / PP ในเกม (2026-07-11)
+
+**สถานะ:** วางแผน (ยังไม่เริ่มพัฒนา) — ตรวจ codebase จริงแล้ว
+**ที่มา:** ผู้ใช้ร่างนโยบายว่ากิจกรรมใดควรได้ PP; รอบนี้ตรวจโค้ดจริงเพื่อ ground แผนและหาช่องโหว่เพิ่ม
+
+### หลักการหลัก (grounded)
+
+- **PP = เงินจริง** — `PointsService::convertPointsToWallet()` แปลง `1200 pp = 1 บาท` เข้ากระเป๋าเงินได้ (`app/Services/PointsService.php:465`). ทุก PP ที่จ่ายออกคือหนี้สินทางการเงิน ไม่ใช่แต้มเกม → นี่คือเหตุผลจริงที่ห้ามจ่าย PP จากการเล่นซ้ำ
+- **XP ปลอดภัย** — `addXp()` ขับเลเวลอย่างเดียว ไม่มีมูลค่าเงิน (`app/Services/PointsService.php:69`) → ให้ XP ได้เต็มที่ทุกกิจกรรม
+- **กรอบนโยบาย:** XP = จ่ายจากพฤติกรรม (behavior-funded, ไม่จำกัด) / PP = จ่ายจากงบประมาณ (budget-funded, มีเพดานเสมอ)
+
+### กฎเหล็ก — ก่อนจ่าย PP ทุกครั้งต้องครบทุกข้อ
+
+1. เป็นกิจกรรม daily / one-time / event ที่มีวันหมดอายุเท่านั้น
+2. มีเพดานจำนวนครั้งต่อผู้ใช้ (ใช้ `PointRule.max_daily_earnings` / `cooldown_minutes` ที่มีอยู่แล้ว)
+3. backend ตัดสินผลสำเร็จจากข้อมูลที่ persist แล้ว ไม่ใช่จาก request payload
+4. มี unique reward key (`source_type` + `source_id` + `user_id`) กันจ่ายซ้ำระดับ DB
+5. จำนวน PP เป็นค่าคงที่กำหนดล่วงหน้า ไม่คำนวณจาก `score` ที่ client ส่ง
+6. จ่ายผ่าน `awardByRule()` ไม่ใช่ `earn()` ตรงๆ เพื่อให้ limit engine ทำงาน
+
+### ช่องโหว่จริงในโค้ด (ต้องปิดในแผนนี้)
+
+- **A. `earn()` ข้าม limit ทั้งหมด** — เฉพาะ `awardByRule()` เช็ค `canEarnFromRule` (daily cap/cooldown/monthly) แต่ typing ทุกจุดเรียก `earn()` ตรง (`app/Services/PointsService.php:305` เทียบ `TypingSessionController.php:77`) → PP จากเกมไม่มีเพดานใดๆ
+- **B. Daily Challenge เชื่อคะแนนจาก client** — `wpm`/`accuracy`/`score` มาจาก request, ไม่ cross-check กับ `typing_sessions` ที่อ้าง `session_id`, ไม่เช็คว่า session เป็นของ user, ไม่เช็คว่า challenge เป็นของวันนี้ (`TypingDailyChallengeController.php:52-60`) → ยิง `wpm=9999` ผ่านเป้ารับ PP ได้
+- **C. Tournament `claim()` อ่าน `$entry->rank` ที่ไม่เคยถูก set** — flow `attempt()` ไม่เคยคำนวณ/persist `rank`, `getPrizesFor` match rank 1/2/3 (`TypingTournamentController.php:221`, `Models/TypingTournament.php:94`) → รางวัลอันดับอาจตกไป default (pp=0) หรือถ้ามี job set rank ต้องคุม idempotency
+- **D. ไม่มี unique reward key** — กันซ้ำด้วย flag เฉพาะกิจ; normal session ไม่มีกันซ้ำเลย → เสี่ยง double-award ตอน retry/race
+- **E. คะแนนดิบมาจาก client ทุกจุด** — `correct_chars`, `time_elapsed` ฯลฯ ส่งจาก client แล้ว server คำนวณต่อ → "server คำนวณ score" เชื่อได้แค่เท่า input
+
+### ตารางนโยบายฉบับลงมือได้
+
+| กิจกรรม | XP | PP | กลไกที่ต้องมี |
+|---|---|---|---|
+| Typing session ปกติ (ทุกโหมด) | `calculateXp()` เดิม | 0 — ลบสูตร `floor(score/100)` | เก็บ score ไว้ทำ leaderboard เท่านั้น |
+| Generic games (`/game/scores`) | ยังไม่ให้ (ถูกแล้ว) | 0 | ถ้าจะเพิ่ม reward อย่าเชื่อ `score`/`level` จาก request |
+| Classroom Race แต่ละครั้ง | ให้ | 0 | กันสร้างห้องปั๊ม PP |
+| Tournament attempt | ให้ (ต่อครั้ง) | 0 | XP อย่างเดียวตอนเล่น |
+| Daily Challenge สำเร็จ | 20–50 | 1–3 | 1 ครั้ง/user/วัน + fix B |
+| รางวัลอันดับ Tournament | ตามอันดับ | 1:50 / 2:30 / 3:15 | fix C (คำนวณ+persist rank) + idempotent claim |
+| Achievement ครั้งเดียว | ให้ | 2–20 ตามความยาก | `TypingUserAchievement` unique อยู่แล้ว + เพิ่ม `pp_reward` one-time |
+| Achievement ทำซ้ำได้ | ให้ | 0 | XP อย่างเดียว |
+| Event โดยผู้ดูแล | ให้ | ตามงบ | start/end, เพดานผู้รับ, PP budget รวม, ผู้อนุมัติ |
+
+### แผนดำเนินงานเป็นเฟส (action items)
+
+**เฟส 1 — หยุดเลือด (ทำก่อน, เสี่ยงสูงสุด)**
+- [ ] ลบบล็อก PP `floor(score/100)` ใน `TypingSessionController.php:74-79` → ให้ XP อย่างเดียว
+- [ ] regression test: หลังเล่น session → `user->pp` เท่าเดิม, `user->xp` เพิ่ม
+
+**เฟส 2 — ปิดช่องโหว่จุดที่ยังจ่าย PP**
+- [ ] Daily Challenge: อ่าน `wpm`/`accuracy` จาก `TypingSession` ที่ persist + เช็ค `session->user_id === user->id` + เช็ค `challenge_date === today` (แก้ B)
+- [ ] Tournament: คำนวณและ persist `rank` ตอนปิดทัวร์นาเมนต์ (ต่อยอด `CreateWeeklyTypingTournament` เพิ่ม finalize) ก่อนเปิด `claim()` (แก้ C)
+
+**เฟส 3 — ย้ายมาใช้ governance ที่มีอยู่**
+- [ ] แปลง PP payout ทั้งหมดให้ผ่าน `PointRule` + `awardByRule()` แทน `earn()` (แก้ A)
+- [ ] เพิ่ม idempotency key/unique constraint บน `points_transactions` (`source_type`,`source_id`,`user_id`) (แก้ D)
+
+**เฟส 4 — Admin Event framework (ถ้าต้องการกิจกรรมพิเศษ)**
+- [ ] ตาราง event + PP budget + เพดานผู้รับ + audit trail + กันรับซ้ำ
+
+**เหตุผลลำดับ:** เฟส 1 แยกและทำก่อนเพราะเป็นจุดเดียวที่ปั๊มได้ไม่จำกัดและแปลงเป็นเงินได้; Daily Challenge / Tournament มีเพดานตามธรรมชาติ (วันละครั้ง / อันดับ) จึงเป็นความเสี่ยงรองที่ตามไปปิด
+
+---
+
+### วิเคราะห์เพิ่มเติมและรายละเอียดทางเทคนิคเชิงลึก (2026-07-11)
+
+จากการวิเคราะห์ระบบตรวจสอบประวัติการให้รางวัล PP/XP ในเกมเพิ่มเติม พบประเด็นความปลอดภัยทางเทคนิคที่ต้องกำหนดไว้ในแผนงานดังนี้:
+
+#### 1. มาตรการป้องกันการ Replay Attack ใน Daily Challenge
+* **ประเด็น:** ผู้ใช้อาจใช้ `session_id` ของการเล่นปกติธรรมดา (เช่น `game_mode = 'word_typing'`) หรือ `session_id` เก่าของวันอื่นมาส่งเพื่อเคลมรางวัล Daily Challenge
+* **แนวทางแก้ไขทางเทคนิค:**
+  - เพิ่มการตรวจสอบใน `TypingDailyChallengeController::complete()` ว่า `TypingSession` ที่ส่งมานั้นมี `game_mode === 'daily_challenge'` และ `challenge_id === $challenge->id`
+  - ตรวจสอบว่า `session->completed_at` มีวันที่ตรงกับ `challenge->challenge_date`
+  - ตรวจสอบในตาราง `typing_user_daily_challenges` ว่า `session_id` นี้ยังไม่เคยถูกใช้ในการทำ Challenge ใดๆ สำเร็จมาก่อน (เพื่อกันการใช้ session เดียวส่งซ้ำหลายบัญชีหรือส่งซ้ำในระบบ)
+
+#### 2. กลไกการแจกรางวัลทัวร์นาเมนต์แบบ Idempotent (กันการเบิกซ้ำจาก Race Condition)
+* **ประเด็น:** ในตอนที่เรียก `claim()` รางวัลทัวร์นาเมนต์ หากมีการกดส่ง Request ซ้ำๆ พร้อมกัน (Race Condition) อาจทำให้เกิด Double-Claiming (ได้รับ PP หลายรอบก่อนที่ `prize_claimed = true` จะถูกเขียนลง DB)
+* **แนวทางแก้ไขทางเทคนิค:**
+  - ใช้ `DB::transaction()` ร่วมกับ Pessimistic Locking เช่น `lockForUpdate()` ในการดึง `TypingTournamentEntry`
+    ```php
+    $entry = TypingTournamentEntry::where([
+        'tournament_id' => $tournament->id,
+        'user_id' => $user->id,
+    ])->lockForUpdate()->firstOrFail();
+    ```
+  - เพิ่ม `Unique Index` ในตาราง `points_transactions` (ตามเฟส 3) เพื่อให้ระดับฐานข้อมูลช่วยสกัดการบันทึกรายการซ้ำแบบสมบูรณ์ โดยใช้ key จาก `source_type` ('tournament_claim'), `source_id` ($tournament->id) และ `user_id`
+
+#### 3. การย้ายมาใช้ PointRule Governance (ขจัด Magic Numbers)
+* **ประเด็น:** ในโค้ดปัจจุบันมีการเรียก `earn()` โดยใส่แต้มแบบ Hardcode เช่น `$challenge->pp_reward` หรือ `$prizes['pp']`
+* **แนวทางแก้ไขทางเทคนิค:**
+  - กำหนด Rule Key ลงในตาราง `point_rules` ได้แก่ `typing_daily_challenge` และ `typing_tournament_prize`
+  - ใน `PointsService` ให้เรียกใช้ `awardByRule($user, 'typing_daily_challenge', $challenge->id, ...)` ซึ่งจะช่วยควบคุมโควตา Daily/Monthly limit และ Cooldown ได้อย่างเป็นระบบส่วนกลาง ดีกว่าการทำ ad-hoc logic ใน controller แต่ละตัว
+  - อัปเดต `GamificationSeeder.php` ให้รองรับ Rule Key เหล่านี้เป็นค่าเริ่มต้น
+
+#### Review เทียบ codebase จริง — 2 จุดต้องปรับก่อน implement (2026-07-11)
+
+ตรวจ schema/โค้ดจริงแล้ว ยืนยันว่ามาตรการข้างต้นทำได้ (มี `challenge_id`, `game_mode`, `completed_at` ใน `typing_sessions`; มี `session_id` ใน `typing_user_daily_challenges`) แต่มี 2 จุดที่ต้องแก้แบบก่อนนำไป implement:
+
+**จุดที่ 1 — อย่าใส่ Unique Index บน `(source_type, source_id, user_id)` โดยตรง (จะทำ transaction ปกติพัง)**
+* **ประเด็น:** `points_transactions` ปัจจุบันมีแค่ index ธรรมดา ไม่ unique (`migration ...create_points_transactions_table.php:31`) และคอลัมน์ 3 ตัวนี้ถูกใช้ซ้ำโดยธุรกรรมที่ **ควรเกิดซ้ำได้**:
+  - `transfer_out` / `transfer_in` ใช้ `source_id = user ปลายทาง` → โอนให้คนเดิม 2 ครั้งจะชน unique
+  - `admin_adjust`, `points_to_wallet` มี `source_id = null`
+* **แนวทางที่ปลอดภัยกว่า (แทนข้อ D / เฟส 3):** เพิ่มคอลัมน์ใหม่ `idempotency_key` (string, nullable) + unique index บนคอลัมน์นี้ตัวเดียว แล้วเติมค่า **เฉพาะ payout ครั้งเดียว** เช่น `tournament_prize:{tournament_id}:{user_id}` และ `daily_challenge:{challenge_id}:{user_id}` — flow เดิมทั้งหมด (transfer/admin/conversion) ไม่กระทบเพราะปล่อย `idempotency_key = null`
+
+**จุดที่ 2 — `awardByRule()` จ่ายค่า "คงที่" ต่อ rule จึงแทนรางวัลตามอันดับไม่ได้**
+* **ประเด็น:** `PointRule::calculateAmount()` = `base_amount × multiplier` (`app/Models/PointRule.php:95`) → rule เดียว `typing_tournament_prize` ให้ 50/30/15 ตามอันดับไม่ได้ และ Daily Challenge เก็บ `pp_reward` แบบ **ราย challenge** ไม่ใช่ค่า global
+* **แนวทางเลือกทางใดทางหนึ่ง (ปรับข้อ 3 ด้านบน):**
+  - (ก) แยก rule key ต่ออันดับ: `typing_tournament_prize_1st` / `_2nd` / `_3rd`
+  - (ข) เพิ่มเมธอดใหม่ใน `PointsService` เช่น `awardGoverned($user, $amount, $ruleKey, $idempotencyKey)` ที่รับ `$amount` ชัดเจนแต่ยังผ่าน limit + idempotency engine — เก็บ amount ไว้ที่ challenge/tournament ได้เหมือนเดิม (ยืดหยุ่นกว่า, แนะนำ)
+
+**ข้อสังเกตเสริมสำหรับเฟส 2**
+* `claim()` ปัจจุบัน **ไม่มี `DB::transaction` เลย** (`TypingTournamentController.php:205-245`) → การใส่ `lockForUpdate()` ตามข้อ 2 ต้องห่อทั้ง `addXp + earn + entry->update` ให้ atomic พร้อมกันในธุรกรรมเดียว
+* `canEarnFromRule` ใช้ cooldown/daily-cap แบบ aggregate ตาม `source_type` → ใช้เป็นตัวกัน "รับครั้งเดียวต่อทัวร์นาเมนต์/challenge" ไม่ได้ ต้องพึ่ง `idempotency_key` เป็นตัวกันหลัก ส่วน rule limit ใช้คุมเพดานรวมเท่านั้น
+* Consistency: โค้ดเดิมใช้ `source_type = 'tournament'` (`TypingTournamentController.php:228`) ส่วน deep-dive ข้อ 2 เขียน `'tournament_claim'` — เลือกใช้ค่าเดียวให้ตรงกันตอน implement
+
+---
+
+### แผน Implementation ฉบับลงมือ (2026-07-11)
+
+**ลำดับ deploy จริงที่แนะนำ:** 1 → 0 → 2 → 3 (เฟส 1 แยก deploy ก่อนได้ทันทีเพื่อหยุด PP farm; เฟส 0 เป็นฐานของ 2–3)
+
+#### เฟส 0 — Infrastructure ร่วม (ทำก่อน เพราะเฟส 2–3 พึ่งพา)
+
+**0.1 เพิ่ม `idempotency_key` ใน `points_transactions`**
+- ไฟล์ใหม่: `database/migrations/2026_07_11_xxxxxx_add_idempotency_key_to_points_transactions.php`
+- `$table->string('idempotency_key')->nullable()->unique()->after('source_id');`
+- เติมใน `PointsTransaction::$fillable`
+- Additive/ปลอดภัยกับข้อมูลเดิม (null ทั้งหมด ไม่ชน unique)
+
+**0.2 เพิ่มเมธอด `awardGoverned()` ใน `PointsService`**
+- ลายเซ็น: `awardGoverned(User $user, float $amount, string $ruleKey, string $idempotencyKey, ?int $sourceId, ?string $description, ?array $metadata): ?PointsTransaction`
+- ลำดับภายใน:
+  1. ถ้า `PointsTransaction::where('idempotency_key', $key)->exists()` → return null (กันซ้ำ)
+  2. โหลด rule ผ่าน `getRule($ruleKey)`; ถ้ามี rule → เช็ค `canEarnFromRule()` (เพดานรวม/cooldown)
+  3. เรียก `earn()` โดยส่ง `$idempotencyKey` ต่อเข้าไป
+- ปรับ `earn()` ให้รับ+บันทึก `idempotency_key` (เพิ่ม param ท้ายสุด default null → ไม่กระทบ caller เดิม)
+- ครอบ try/catch `QueryException` (กัน unique-violation จาก race) → return null
+- แก้รากช่องโหว่ **A + D** ให้เป็นเครื่องมือกลาง
+
+#### เฟส 1 — หยุดเลือด (เสี่ยงสูงสุด, deploy แยกได้ทันที ไม่พึ่งเฟส 0)
+
+**1.1** ลบบล็อก PP `floor($scores['score']/100)` + `earn(...)` ใน `TypingSessionController.php:74-79` → เหลือ `addXp()` อย่างเดียว; ตัด `PointsService` ออกจาก constructor ถ้าไม่ถูกใช้ที่อื่นในไฟล์ (เช็คก่อน)
+**1.2** เช็คฝั่ง UI `ui/components/games/typing/` ว่ามีโชว์ "PP earned" ไหม (response ไม่มี field `pp` อยู่แล้ว)
+**1.3 Test** — `tests/Feature/Play/Typing/TypingSessionRewardTest.php`: หลังยิง session → `user->fresh()->pp` เท่าเดิม, `xp` เพิ่ม, ไม่มี row `points_transactions` `source_type='typing_game'`
+
+#### เฟส 2 — ปิดช่องโหว่จุดที่ยังจ่าย PP (ต้องมีเฟส 0 ก่อน)
+
+**2.1 Daily Challenge — ยืนยันผลจาก session จริง (แก้ B + Replay)** — `TypingDailyChallengeController::complete()`
+- validation รับแค่ `session_id` (ตัด `score/wpm/accuracy` จาก client)
+- `TypingSession::findOrFail($session_id)` แล้ว guard: `user_id===user`, `game_mode==='daily_challenge'`, `challenge_id===$challenge->id`, `challenge_date` เป็นวันนี้, `session_id` ยังไม่ถูกใช้ใน `typing_user_daily_challenges` แถวใด
+- คำนวณ `completed` จาก `$session->wpm`/`$session->accuracy` (ค่าจาก DB) เทียบ `target_wpm`/`target_acc`
+- จ่ายผ่าน `awardGoverned($user, $challenge->pp_reward, 'typing_daily_challenge', "daily_challenge:{$challenge->id}:{$user->id}", ...)`
+
+**2.2 Tournament — คำนวณ+persist `rank` ก่อน claim (แก้ C)**
+- ต่อยอด `CreateWeeklyTypingTournament.php` หรือสร้าง command `FinalizeTypingTournament`
+- ตอนปิดทัวร์: จัดอันดับ `TypingTournamentEntry` ตาม `best_score` DESC แล้วเขียน `rank` ทีละแถว (คอลัมน์ `rank` มีอยู่แล้ว — `getPrizesFor` ใช้ `$entry->rank`)
+- schedule ให้รันตอน `ends_at` ผ่าน (`Console/Kernel.php` หรือ status flip)
+
+**2.3 Tournament claim — atomic + idempotent (แก้ D + race)** — `TypingTournamentController::claim()`
+- ห่อทั้งเมธอดด้วย `DB::transaction()` (ปัจจุบันไม่มี transaction เลย)
+- `$entry = ...->lockForUpdate()->firstOrFail();`
+- จ่ายผ่าน `awardGoverned($user, $prizes['pp'], 'typing_tournament_prize', "tournament_prize:{$tournament->id}:{$user->id}", ...)`
+- คง `prize_claimed` เป็น guard ชั้นแรก, `idempotency_key` เป็น guard ชั้น DB
+
+**2.4 Test**
+- `TypingDailyChallengeRewardTest`: session ปลอม (game_mode ผิด / คนละ user / คนละวัน / ใช้ซ้ำ) → ไม่จ่าย; session ถูกต้องผ่านเป้า → จ่าย 1 ครั้ง, เรียกซ้ำไม่จ่ายเพิ่ม
+- `TypingTournamentClaimTest`: claim ปกติจ่ายตาม rank; claim ซ้ำ/พร้อมกันจ่ายครั้งเดียว
+
+#### เฟส 3 — ย้ายทุก payout เข้า governance (ต้องมีเฟส 0, 2)
+
+**3.1** `GamificationSeeder.php`: เพิ่ม rule keys `typing_daily_challenge`, `typing_tournament_prize` (ตั้ง `max_daily/monthly_earnings` เป็นเพดานรวม ไม่ใช่ตัวกันซ้ำ)
+**3.2** `grep '->earn(' app/Http/Controllers/Api/Play/` → ต้องเหลือแต่ `awardGoverned()`
+**3.3 Achievement PP (ถ้าเปิด)** — `TypingScoreService::checkAchievements()` จ่าย `pp_reward` ผ่าน `awardGoverned(... "achievement:{$achievement->id}:{$user->id}")` เฉพาะ achievement one-time
+
+#### เฟส 4 — Admin Event framework (optional)
+- ตาราง `pp_events` (start/end, `pp_budget`, `max_recipients`, `pp_per_user`, `created_by`); payout ผ่าน `awardGoverned()` + ตรวจ budget คงเหลือก่อนจ่าย; ยังไม่ลงรายละเอียดจนกว่าจะยืนยันความต้องการ
+
+#### ตารางความเสี่ยง & rollback
+
+| เฟส | Deploy แยก | ความเสี่ยงถ้าไม่ทำ | Rollback |
+|---|---|---|---|
+| 0 | ได้ (additive) | — | drop column / ลบเมธอด |
+| 1 | ได้ (ไม่พึ่ง 0) | สูงสุด — ปั๊มเงินได้ | revert 1 ไฟล์ |
+| 2 | ต้องมี 0 ก่อน | โกง challenge / prize ไม่จ่าย | revert controller |
+| 3 | ต้องมี 0,2 | โค้ดกระจาย ไม่มีเพดานรวม | revert seeder+controller |
+
+---
+
+### ผลตรวจสอบหลัง implement เฟส 0–3 (2026-07-11)
+
+**สถานะ:** implement เฟส 0–3 เสร็จ (เฟส 4 optional ยังไม่ทำ) — ตรวจ diff จริง + รัน test แล้ว
+
+**ยืนยันตรงตามแผน:**
+- เฟส 0: migration `2026_07_11_000001_add_idempotency_key_to_points_transactions` (nullable+unique, additive), `PointsService::awardGoverned()` เช็ค idempotency → rule → `earn()` + catch `QueryException`, ปรับ `earn()` รับ `idempotency_key` (param ท้าย default null)
+- เฟส 1: ลบ `floor(score/100)` ใน `TypingSessionController` เหลือ XP อย่างเดียว
+- เฟส 2 Daily: อ่านค่าจาก `TypingSession` ใน DB, guard ครบ (owner / `game_mode==='daily_challenge'` / `challenge_id` / `challenge_date->isToday()` / session ซ้ำ), ห่อ `DB::transaction`+`lockForUpdate`, จ่ายผ่าน `awardGoverned('typing_daily_challenge', "daily_challenge:{cid}:{uid}")` — `challenge_date` cast เป็น `date` แล้วจึงเรียก `->isToday()` ได้
+- เฟส 2 Tournament: `FinalizeTypingTournaments` set `rank` ตาม `best_score` DESC + schedule `->hourly()` (`routes/console.php:20`), `claim()` guard `rank===null` + `lockForUpdate` + atomic + `awardGoverned('typing_tournament_prize', "tournament_prize:{tid}:{uid}")`
+- เฟส 3: payout ทุกจุดผ่าน `awardGoverned()`, seed rules `typing_daily_challenge` + `typing_tournament_prize`
+- Test ใหม่ `tests/Feature/Play/Typing/TypingRewardPolicyTest.php` — ผ่าน 4/4 (21 assertions): normal session ไม่ให้ PP / daily challenge จ่ายครั้งเดียว / ปฏิเสธ session คนอื่น / tournament claim ranked+idempotent
+
+**บั๊กที่พบและแก้แล้ว (ทาง ก):**
+- **อาการ:** `canEarnFromRule()` daily-check เทียบ `max_daily_earnings` กับ `dailyPointLimits.points_earned` ซึ่งเป็นยอดรวม PP ข้ามทุกแหล่งของวันนั้น (`PointsService.php:404-408`) ไม่ scope ตาม source เหมือน monthly-check. seeder เดิมตั้ง `typing_daily_challenge.max_daily_earnings = 10` → ถ้าผู้ใช้ได้ PP ≥10 จากแหล่งอื่นวันเดียวกัน (เช่น รับรางวัลทัวร์นาเมนต์ 20 PP, quiz_pass 50) `awardGoverned` จะคืน null แต่ controller ยัง mark `completed=true` + จ่าย XP → **PP หายถาวร**. ฟีเจอร์ทัวร์นาเมนต์กับ daily challenge รบกวนกันเอง
+- **เหตุที่ test เดิมไม่จับ:** `RefreshDatabase` ไม่รัน `GamificationSeeder` → `getRule()` คืน null → ข้าม `canEarnFromRule`
+- **แก้:** ตั้ง `max_daily_earnings => null` (explicit) ใน rule `typing_daily_challenge` ที่ `GamificationSeeder.php` พร้อม comment — `idempotency_key` การันตี once/day อยู่แล้วจึงซ้ำซ้อน; ใช้ explicit null เพื่อให้ reseed ล้างค่า `10` เดิมใน DB (`updateOrCreate` ไม่ล้าง key ที่หายไป); คง `max_monthly_earnings` ไว้ (scope ตาม source ถูกต้อง). Pint + test ผ่าน
+- **หมายเหตุ deploy:** ต้อง reseed rule (`GamificationSeeder`) บน env ที่เคย seed ค่า 10 ไปแล้ว เพื่อให้ค่าใน `point_rules` ถูกล้างเป็น null
+
+**งานค้าง/ข้อเสนอ (ยังไม่ทำ):**
+- เพิ่ม regression test แบบ **seed rule จริง + ให้ผู้ใช้ earn PP ก่อน** แล้ว assert daily challenge ยังจ่าย PP (กันบั๊ก aggregate-limit ถอยหลัง)
+- (พิจารณาภายหลัง) แก้รากถาวรทาง ข: ปรับ daily-check ใน `canEarnFromRule` ให้ scope ตาม `source_type` เหมือน monthly-check — กระทบทุก rule ต้องเทสต์เพิ่ม
+- Silent denial UX: เมื่อ limit ตัด PP ผู้ใช้เห็น `pp:0` โดยไม่รู้สาเหตุ ควร log/แจ้ง
+- Finalize tie-break: `best_score` เท่ากันได้ rank arbitrary — ควร tie-break ด้วย `attempts`/เวลาถ้าต้องการความยุติธรรม
+- Achievement PP: ยังไม่มีฟิลด์ `pp_reward` ในโมเดล จึงยังไม่ได้ย้ายส่วน PP (ตามที่ผู้ใช้ระบุ)
+
+### รอบปิดงาน — ทำ hardening ที่ค้างครบ (2026-07-11)
+
+ดำเนินการงานค้างที่เหลือทั้งหมด (ยกเว้นเฟส 4 optional):
+- **ทาง ข (แก้รากถาวร):** ปรับ daily-check ใน `PointsService::canEarnFromRule()` ให้ query `points_transactions` แบบ scope ตาม `source_type` ของวันนี้ (mirror monthly-check) แทนการอ่าน aggregate `dailyPointLimits.points_earned`. ปลอดภัยเพราะ**ไม่มี rule เดิมใดตั้ง `max_daily_earnings`** (login/lesson/quiz ไม่ตั้ง) — เป็นการปิดกับดักสำหรับ rule อนาคต
+- **Regression test:** `test_daily_challenge_pays_despite_cross_source_daily_earnings` — สร้าง rule `typing_daily_challenge` ที่มี `max_daily_earnings=5` + ผู้ใช้มี earn 50 PP จาก `quiz_pass` วันเดียวกัน → daily challenge ยังจ่าย PP (53.00) พิสูจน์ว่า cross-source ไม่บล็อกอีก
+- **Silent-denial log:** `awardGoverned()` เพิ่ม `Log::info` เมื่อถูก rule limit ตัด (ก่อน return null) เพื่อ observability
+- **Finalize tie-break:** `FinalizeTypingTournaments` เพิ่ม `->orderBy('best_session_id')` เป็น tie-break หลัง `best_score` (คนทำได้ก่อนได้อันดับดีกว่า) — deterministic
+- **ผลรัน:** `TypingRewardPolicyTest` ผ่าน 5/5 (25 assertions); Points/Gamification/Reward/Quest อื่นผ่าน 43 ตัว; Pint ผ่านทุกไฟล์
+
+**บั๊กเดิมที่พบระหว่างทาง (นอกขอบเขต ไม่แก้):**
+- `WalletAndPointsTest::test_user_can_earn_points` ล้มบนโค้ดเดิมด้วย (ยืนยันด้วยการ stash) — `earn()` → `updateUserLevel()` เรียก `where('xp_required','<=',$user->xp)` เมื่อ `xp` เป็น null (test ไม่ตั้ง xp / ไม่ seed LevelDefinition). ไม่เกี่ยวกับงาน XP/PP game reward
+- `updateDailyLimits()` มี edge case เฉพาะ SQLite in-memory: `date` cast serialize พร้อมเวลา ทำให้ `where('date', toDateString())` ไม่ match row เดิม → ซ้ำ insert เมื่อ earn 2 ครั้ง/วัน/ผู้ใช้. Production ใช้ MySQL `DATE` column จึงไม่เกิด — เป็น test-env เท่านั้น
+
+## 2026-07-11 - Governed Typing Game PP Rewards Implemented
+
+- Implemented phases 0-3 of the recorded typing reward plan; phase 4 admin event framework remains optional and was not implemented.
+- Normal typing sessions now award XP only and no longer create `typing_game` PP transactions.
+- Added nullable unique `points_transactions.idempotency_key`, model fillable support, and `PointsService::awardGoverned()` with rule-limit and duplicate/race protection.
+- Daily challenge completion now trusts only a persisted session owned by the caller, tied to the same challenge and today's challenge date; client score/WPM/accuracy values are ignored. XP and governed PP are paid atomically and duplicate completion is rejected.
+- Tournament claims now lock the entry in a transaction, require a finalized rank, award governed PP with an idempotency key, and record/report the PP amount actually paid. The existing hourly `typing:finalize-tournaments` command already calculates and persists ranks.
+- Added point rules for `typing_daily_challenge` and `typing_tournament_prize`. Typing achievements currently have no `pp_reward` column, so the conditional achievement PP step was not applicable.
+- Verification: Pint passed; `TypingRewardPolicyTest` passed 4 tests / 21 assertions; migration `--pretend` produced the expected nullable column and unique index. Grep found no remaining direct `->earn()` call under Play API controllers (rg exit 1 because there were zero matches).
+- Deployment requirements: run the new migration and run `GamificationSeeder` (or create equivalent point-rule records) before relying on configured governance caps.

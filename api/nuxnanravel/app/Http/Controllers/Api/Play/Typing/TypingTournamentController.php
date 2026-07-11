@@ -209,38 +209,47 @@ class TypingTournamentController extends Controller
         }
 
         $user = Auth::user();
-        $entry = TypingTournamentEntry::where([
-            'tournament_id' => $tournament->id,
-            'user_id' => $user->id,
-        ])->firstOrFail();
 
-        if ($entry->prize_claimed) {
-            return response()->json(['success' => false, 'message' => 'Prize already claimed.'], 422);
-        }
+        return DB::transaction(function () use ($tournament, $user) {
+            $entry = TypingTournamentEntry::where([
+                'tournament_id' => $tournament->id,
+                'user_id' => $user->id,
+            ])->lockForUpdate()->firstOrFail();
 
-        $prizes = $tournament->getPrizesFor($entry->rank ?? 999);
+            if ($entry->prize_claimed) {
+                return response()->json(['success' => false, 'message' => 'Prize already claimed.'], 422);
+            }
 
-        $pointsService = app(PointsService::class);
-        $pointsService->addXp($user, $prizes['xp']);
+            if ($entry->rank === null) {
+                return response()->json(['success' => false, 'message' => 'Tournament rankings are not finalized.'], 422);
+            }
 
-        if ($prizes['pp'] > 0) {
-            $pointsService->earn(
-                $user, $prizes['pp'], 'tournament',
-                $tournament->id, "Tournament Prize: {$tournament->name} (Rank #{$entry->rank})"
+            $prizes = $tournament->getPrizesFor($entry->rank);
+            $pointsService = app(PointsService::class);
+            $pointsService->addXp($user, $prizes['xp']);
+            $ppTransaction = $pointsService->awardGoverned(
+                $user,
+                $prizes['pp'],
+                'typing_tournament_prize',
+                "tournament_prize:{$tournament->id}:{$user->id}",
+                $tournament->id,
+                "Tournament Prize: {$tournament->name} (Rank #{$entry->rank})",
+                ['rank' => $entry->rank]
             );
-        }
+            $ppAwarded = $ppTransaction ? (int) $ppTransaction->amount : 0;
 
-        $entry->update([
-            'prize_claimed' => true,
-            'prize_xp' => $prizes['xp'],
-            'prize_pp' => $prizes['pp'],
-        ]);
+            $entry->update([
+                'prize_claimed' => true,
+                'prize_xp' => $prizes['xp'],
+                'prize_pp' => $ppAwarded,
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'rank' => $entry->rank,
-            'prize_xp' => $prizes['xp'],
-            'prize_pp' => $prizes['pp'],
-        ]);
+            return response()->json([
+                'success' => true,
+                'rank' => $entry->rank,
+                'prize_xp' => $prizes['xp'],
+                'prize_pp' => $ppAwarded,
+            ]);
+        });
     }
 }

@@ -71,13 +71,6 @@ class TypingSessionController extends Controller
         if ($user) {
             $this->pointsService->addXp($user, $xp);
 
-            if ($scores['score'] > 0) {
-                $ppAmount = floor($scores['score'] / 100);
-                if ($ppAmount > 0) {
-                    $this->pointsService->earn($user, $ppAmount, 'typing_game', $session->id, "Typing Game: {$data['game_mode']}");
-                }
-            }
-
             $newAchievements = $this->scoreService->checkAchievements($user, $session);
         }
 
