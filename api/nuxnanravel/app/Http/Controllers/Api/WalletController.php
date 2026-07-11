@@ -224,7 +224,8 @@ class WalletController extends Controller
                 $validated['amount'],
                 $validated['method'],
                 $validated['bank_account'],
-                $validated['description'] ?? null
+                $validated['description'] ?? null,
+                $request->header('Idempotency-Key', $request->input('idempotency_key'))
             );
 
             if (! $result) {
@@ -519,7 +520,8 @@ class WalletController extends Controller
                 ], 404);
             }
 
-            $result = $this->walletService->approveWithdrawal($transaction);
+            $validated = $request->validate(['admin_note' => 'nullable|string|max:500', 'payment_reference' => 'nullable|string|max:100']);
+            $result = $this->walletService->approveWithdrawal($transaction, $user, $validated['admin_note'] ?? null, $validated['payment_reference'] ?? null);
 
             if (! $result) {
                 return response()->json([
@@ -533,7 +535,7 @@ class WalletController extends Controller
                 'message' => 'Withdrawal approved successfully',
                 'data' => [
                     'transaction_id' => $transaction->id,
-                    'status' => 'completed',
+                    'status' => $transaction->refresh()->status,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -571,7 +573,7 @@ class WalletController extends Controller
                 ], 404);
             }
 
-            $result = $this->walletService->rejectWithdrawal($transaction, $validated['reason']);
+            $result = $this->walletService->rejectWithdrawal($transaction, $validated['reason'], $user, $validated['admin_note'] ?? null);
 
             if (! $result) {
                 return response()->json([
@@ -585,7 +587,7 @@ class WalletController extends Controller
                 'message' => 'Withdrawal rejected successfully',
                 'data' => [
                     'transaction_id' => $transaction->id,
-                    'status' => 'cancelled',
+                    'status' => $transaction->refresh()->status,
                     'reason' => $validated['reason'],
                 ],
             ]);

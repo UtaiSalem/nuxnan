@@ -60,11 +60,6 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/deposit-requests', [WalletController::class, 'getDepositRequests']);
         Route::delete('/deposit-requests/{id}', [WalletController::class, 'cancelDepositRequest']);
 
-        // Admin routes
-        Route::middleware('role:admin')->group(function () {
-            Route::post('/withdrawals/{id}/approve', [WalletController::class, 'approveWithdrawal']);
-            Route::post('/withdrawals/{id}/reject', [WalletController::class, 'rejectWithdrawal']);
-        });
     });
 
     // Gamification Routes (require auth)
@@ -123,20 +118,6 @@ Route::middleware('auth:api')->group(function () {
             Route::get('/users/{userId}/transactions', [AdminPointsController::class, 'userTransactions']);
             Route::get('/leaderboard', [AdminPointsController::class, 'leaderboard']);
             Route::get('/analytics', [AdminPointsController::class, 'analytics']);
-        });
-
-        // Admin Wallet Routes
-        Route::prefix('wallet')->group(function () {
-            Route::get('/stats', [AdminWalletController::class, 'stats']);
-            Route::get('/withdrawals/pending', [AdminWalletController::class, 'pendingWithdrawals']);
-            Route::post('/withdrawals/{transactionId}/approve', [AdminWalletController::class, 'approveWithdrawal']);
-            Route::post('/withdrawals/{transactionId}/reject', [AdminWalletController::class, 'rejectWithdrawal']);
-            Route::get('/deposit-requests/pending', [AdminWalletController::class, 'pendingDepositRequests']);
-            Route::post('/deposit-requests/{requestId}/approve', [AdminWalletController::class, 'approveDepositRequest']);
-            Route::post('/deposit-requests/{requestId}/reject', [AdminWalletController::class, 'rejectDepositRequest']);
-            Route::post('/users/{userId}/adjust', [AdminWalletController::class, 'adjustWallet']);
-            Route::get('/users/{userId}/transactions', [AdminWalletController::class, 'userTransactions']);
-            Route::get('/analytics', [AdminWalletController::class, 'analytics']);
         });
 
         // Admin Deposit Request Routes (using AdminWalletController)

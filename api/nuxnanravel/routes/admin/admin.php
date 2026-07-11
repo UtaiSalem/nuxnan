@@ -519,8 +519,12 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::get('/stats', [AdminWalletController::class, 'stats'])->name('admin.wallet.stats');
         Route::get('/withdrawals/pending', [AdminWalletController::class, 'pendingWithdrawals'])->name('admin.wallet.withdrawals.pending');
         Route::get('/deposit-requests/pending', [AdminWalletController::class, 'pendingDepositRequests'])->name('admin.wallet.deposits.pending');
+        Route::get('/withdrawals/{id}', [AdminWalletController::class, 'showWithdrawal'])->whereNumber('id')->name('admin.wallet.withdrawals.show');
         Route::post('/withdrawals/{id}/approve', [AdminWalletController::class, 'approveWithdrawal'])->name('admin.wallet.withdrawals.approve');
         Route::post('/withdrawals/{id}/reject', [AdminWalletController::class, 'rejectWithdrawal'])->name('admin.wallet.withdrawals.reject');
+        Route::post('/withdrawals/{id}/process', [AdminWalletController::class, 'processWithdrawal'])->name('admin.wallet.withdrawals.process');
+        Route::post('/withdrawals/{id}/paid', [AdminWalletController::class, 'markWithdrawalPaid'])->name('admin.wallet.withdrawals.paid');
+        Route::post('/withdrawals/{id}/failed', [AdminWalletController::class, 'markWithdrawalFailed'])->name('admin.wallet.withdrawals.failed');
         Route::post('/deposit-requests/{id}/approve', [AdminWalletController::class, 'approveDepositRequest'])->name('admin.wallet.deposits.approve');
         Route::post('/deposit-requests/{id}/reject', [AdminWalletController::class, 'rejectDepositRequest'])->name('admin.wallet.deposits.reject');
     });
