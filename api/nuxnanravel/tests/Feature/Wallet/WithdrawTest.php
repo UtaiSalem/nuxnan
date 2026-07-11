@@ -64,7 +64,10 @@ class WithdrawTest extends TestCase
         $tx = WalletTransaction::where('user_id', $user->id)->first();
         $this->assertSame('promptpay', $tx->metadata['destination_type']);
         $this->assertSame('promptpay', $tx->metadata['bank_account']['bank_name']);
-        $this->assertSame('0812345678', $tx->metadata['bank_account']['account_number']);
+        // metadata keeps only a masked account number; the full value is stored
+        // encrypted in destination_snapshot.
+        $this->assertSame('******5678', $tx->metadata['bank_account']['account_number']);
+        $this->assertSame('0812345678', decrypt($tx->destination_snapshot)['account_number']);
     }
 
     public function test_withdraw_via_promptpay_with_national_id_succeeds(): void
@@ -214,7 +217,9 @@ class WithdrawTest extends TestCase
         $response->assertStatus(200);
 
         $tx = WalletTransaction::where('user_id', $user->id)->first();
-        $this->assertSame('0812345678', $tx->metadata['bank_account']['account_number']);
+        // Dashes are normalized before storage; metadata is masked, snapshot holds the full value.
+        $this->assertSame('******5678', $tx->metadata['bank_account']['account_number']);
+        $this->assertSame('0812345678', decrypt($tx->destination_snapshot)['account_number']);
     }
 
     public function test_withdraw_applies_minimum_fee_floor_for_small_amounts(): void
