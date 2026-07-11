@@ -375,7 +375,9 @@ class PointsService
      */
     protected function updateUserLevel(User $user): void
     {
-        $xp = $user->xp;
+        // A freshly created user may have a null xp; treat it as 0 so the
+        // comparison below doesn't fail with "Illegal operator and value combination".
+        $xp = (int) ($user->xp ?? 0);
 
         // Find the highest level where xp_required <= current xp
         $levelDef = LevelDefinition::where('xp_required', '<=', $xp)
