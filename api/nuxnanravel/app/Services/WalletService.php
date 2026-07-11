@@ -76,14 +76,14 @@ class WalletService
                 throw new \DomainException('A withdrawal is already pending');
             }
 
-            $amount = number_format((float) $amount, 2, '.', '');
+            $amount = bcround((string) $amount, 2);
 
             $this->assertWithinWithdrawLimits($user, $amount);
 
             $balanceBefore = (string) $user->wallet;
 
-            // Check if user has enough balance
-            if ($balanceBefore < $amount) {
+            // Check if user has enough spendable balance.
+            if (bccomp($balanceBefore, $amount, 2) < 0) {
                 Log::warning('Insufficient wallet balance', [
                     'user_id' => $user->id,
                     'required' => $amount,
@@ -96,20 +96,25 @@ class WalletService
             // Calculate fee. Internal deductions incur no fee; real withdrawals use
             // the configured percentage with a minimum floor (see config/wallet.php).
             $fee = $method === 'internal_deduction'
-                ? 0
-                : round(max($amount * config('wallet.withdraw.fee_rate'), config('wallet.withdraw.fee_min')), 2);
-            $fee = number_format((float) $fee, 2, '.', '');
-            $netAmount = number_format((float) $amount - (float) $fee, 2, '.', '');
-            $balanceAfter = $balanceBefore - $amount;
+                ? '0.00'
+                : bcround(bcmax(
+                    bcmul($amount, (string) config('wallet.withdraw.fee_rate'), 6),
+                    (string) config('wallet.withdraw.fee_min'),
+                    6
+                ), 2);
+            $netAmount = bcsub($amount, $fee, 2);
+            $balanceAfter = bcsub($balanceBefore, $amount, 2);
 
             // Determine destination channel from the bank_name marker
             $destinationType = ($bankAccount['bank_name'] ?? null) === 'promptpay'
                 ? 'promptpay'
                 : 'bank_transfer';
 
-            // Update user wallet
+            // Move the amount out of spendable wallet and into locked_balance
+            // (held until the withdrawal is paid or refunded).
             $user->update([
                 'wallet' => $balanceAfter,
+                'locked_balance' => bcadd((string) $user->locked_balance, $amount, 2),
             ]);
 
             // Create transaction record
@@ -389,18 +394,15 @@ class WalletService
      */
     public function getBalance(User $user): array
     {
-        $locked = WalletTransaction::where('user_id', $user->id)
-            ->where('transaction_type', 'withdraw')
-            ->whereIn('status', ['pending', 'under_review', 'approved', 'processing'])
-            ->sum('amount');
-        $available = number_format((float) $user->wallet, 2, '.', '');
+        $available = bcround((string) $user->wallet, 2);
+        $locked = bcround((string) $user->locked_balance, 2);
 
         return [
             'cash_balance' => $available,
             'reward_balance' => 0, // Can be implemented later
-            'locked_balance' => number_format((float) $locked, 2, '.', ''),
+            'locked_balance' => $locked,
             'available_balance' => $available,
-            'total_balance' => number_format((float) $user->wallet + (float) $locked, 2, '.', ''),
+            'total_balance' => bcadd($available, $locked, 2),
             'currency' => 'THB',
         ];
     }
@@ -463,9 +465,15 @@ class WalletService
     {
         return DB::transaction(function () use ($transaction, $paymentReference, $admin) {
             $tx = WalletTransaction::whereKey($transaction->id)->lockForUpdate()->first();
-            if (! $tx || $tx->status !== 'processing') {
+            if (! $tx || $tx->transaction_type !== 'withdraw' || $tx->status !== 'processing') {
                 return false;
             }
+
+            // The money genuinely leaves now: release it from locked_balance
+            // (it was already removed from spendable wallet at request time).
+            $user = User::query()->whereKey($tx->user_id)->lockForUpdate()->firstOrFail();
+            $user->update(['locked_balance' => bcsub((string) $user->locked_balance, (string) $tx->amount, 2)]);
+
             $tx->update(['status' => 'paid', 'payment_reference' => $paymentReference, 'processed_at' => now(), 'version' => $tx->version + 1]);
             app(AuditLogService::class)->log('withdrawal.paid', $tx, ['status' => 'processing'], ['status' => 'paid'], 'wallet', ['admin_id' => $admin->id]);
 
@@ -627,9 +635,13 @@ class WalletService
     {
         $balanceBefore = (string) $user->wallet;
         $amount = (string) $tx->amount;
-        $balanceAfter = number_format((float) $balanceBefore + (float) $amount, 2, '.', '');
+        $balanceAfter = bcadd($balanceBefore, $amount, 2);
 
-        $user->update(['wallet' => $balanceAfter]);
+        // Return the money to spendable wallet and release it from locked_balance.
+        $user->update([
+            'wallet' => $balanceAfter,
+            'locked_balance' => bcsub((string) $user->locked_balance, $amount, 2),
+        ]);
 
         $refund = WalletTransaction::create([
             'user_id' => $user->id,
@@ -662,27 +674,27 @@ class WalletService
     {
         $counted = ['pending', 'under_review', 'approved', 'processing', 'completed', 'paid'];
 
-        $daily = (float) config('wallet.withdraw.daily_limit', 0);
-        if ($daily > 0) {
-            $sum = (float) WalletTransaction::where('user_id', $user->id)
+        $daily = (string) config('wallet.withdraw.daily_limit', 0);
+        if (bccomp($daily, '0', 2) > 0) {
+            $sum = (string) WalletTransaction::where('user_id', $user->id)
                 ->where('transaction_type', 'withdraw')
                 ->whereIn('status', $counted)
                 ->whereDate('created_at', now()->toDateString())
                 ->sum('amount');
-            if ($sum + (float) $amount > $daily) {
+            if (bccomp(bcadd($sum, $amount, 2), $daily, 2) > 0) {
                 throw new \DomainException('เกินวงเงินถอนสูงสุดต่อวัน');
             }
         }
 
-        $monthly = (float) config('wallet.withdraw.monthly_limit', 0);
-        if ($monthly > 0) {
-            $sum = (float) WalletTransaction::where('user_id', $user->id)
+        $monthly = (string) config('wallet.withdraw.monthly_limit', 0);
+        if (bccomp($monthly, '0', 2) > 0) {
+            $sum = (string) WalletTransaction::where('user_id', $user->id)
                 ->where('transaction_type', 'withdraw')
                 ->whereIn('status', $counted)
                 ->whereYear('created_at', now()->year)
                 ->whereMonth('created_at', now()->month)
                 ->sum('amount');
-            if ($sum + (float) $amount > $monthly) {
+            if (bccomp(bcadd($sum, $amount, 2), $monthly, 2) > 0) {
                 throw new \DomainException('เกินวงเงินถอนสูงสุดต่อเดือน');
             }
         }

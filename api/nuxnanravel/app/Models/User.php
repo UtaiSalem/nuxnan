@@ -62,6 +62,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'no_of_ref',
         'pp',
         'wallet',
+        'locked_balance',
         'profile_photo_path',
         'verified',
         'is_placeholder',
@@ -125,6 +126,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'no_of_ref' => 'integer',
             'pp' => 'decimal:2',
             'wallet' => 'decimal:2',
+            'locked_balance' => 'decimal:2',
             'anonymized_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
