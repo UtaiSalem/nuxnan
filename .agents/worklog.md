@@ -6,6 +6,36 @@
 
 ---
 
+## 2026-07-11 — Typing runtime verify + Home Visit smoke test + PDF export
+
+### งานที่ทำ
+- **Typing runtime verification (เฟส 0–3 ที่ทำไว้แล้ว):** verify ผ่าน API + UI จริง (user login) — เจอ + แก้ **blocker 500** `typing_sessions.game_mode` ENUM ไม่มี `key_training`/`letter_runner` → migration `2026_07_11_100001_change_typing_sessions_game_mode_to_string` แปลงเป็น VARCHAR(32) (รันแล้ว); ยืนยัน submit 200, XP+, PP เท่าเดิม, key mapping ไทย, Phaser focus, /result, regression ครบ (ดู `typing-game-improvement-plan.md` section "Runtime Verification Results")
+- **Home Visit admin runtime smoke test:** เปิดหน้า admin จริงใน browser (ปิด gap worklog เดิม) — index/create/export โหลดได้ ทุก API 200 ไม่มี 500 (statistics/zones/admin-visits/admin-students); มี 0 visit records
+- **Home Visit PDF export (feature ใหม่):** เพิ่ม PDF ควบ CSV ในหน้า export admin
+  - ติดตั้ง `mpdf/mpdf` (bundle ฟอนต์ไทย Garuda ในตัว)
+  - `AdminController::exportVisits` build rows ครั้งเดียว branch `?format=csv|pdf`; PDF = Blade view A4 แนวนอนไทย (`resources/views/exports/home-visits-pdf.blade.php`)
+  - Frontend `export.vue`: เพิ่มตัวเลือก PDF + **ส่ง `format` param** (เดิมไม่ส่ง → fallback CSV เสมอ)
+
+### Verification
+- Typing: `TypingRewardPolicyTest` + StudentCard suite ผ่าน; runtime submit key_training 200; regression modes 200
+- PDF: curl endpoint CSV+PDF → 200; PDF เป็น `%PDF-1.4` 39KB, Garuda subset embed, `pdftotext -enc UTF-8` ดึงไทยถูกต้อง (ชื่อโรงเรียน/หัวตาราง/ชื่อนักเรียน); Pint ผ่าน
+- ลบ test data (9 typing_sessions + temp visit) + คืน user.xp baseline 309; ลบ temp PDF/HTML ใน public/ หมด
+
+### ⚠️ Deploy notes (สะสม)
+- รัน migration: `idempotency_key` (points_transactions) + `game_mode` VARCHAR (typing_sessions)
+- reseed `GamificationSeeder` (เคลียร์ `max_daily_earnings` เดิมเป็น null)
+- `composer install` (dependency ใหม่ `mpdf/mpdf`) + temp dir `storage/app/mpdf` (โค้ด auto-mkdir)
+
+### ยังค้าง (backlog)
+- Typing UI 2 ข้อสังเกตเล็ก: route case `/play` vs `/Play`, mode reset เป็น word_typing หลังจบเกม
+- Home Visit: [id] detail page ยัง smoke test ไม่ได้ (0 records); PDF option บน UI ยัง verify ตอน login ไม่ได้ (JWT หมดอายุ) — โค้ดยืนยันแล้ว
+- Student Intake Phase 2–3, DataTable/Activation/Import History, home-visit schema, Student Card Request System (ยังเป็นแผน)
+
+### Git
+- commits: `9f084ff1` typing fix, `b3a0bf8f` typing doc, `8e1ccfe0` home-visit PDF (+ `5130fc5a`/`183f5a6e` student-card PII mask→revert, `89a51f38` doc sync ก่อนหน้า)
+
+---
+
 ## 2026-07-11 — Student Card Public PII (mask → revert) + doc sync
 
 ### งานที่ทำ
