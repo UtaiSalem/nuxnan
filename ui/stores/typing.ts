@@ -11,6 +11,7 @@ export const useTypingStore = defineStore('typing', () => {
   const selectedLang       = ref<Lang>('en')
   const selectedDifficulty = ref<Difficulty>('easy')
   const selectedTimeLimit  = ref<number>(60)  // Time Attack in seconds
+  const selectedKeyLesson  = ref<'home_row' | 'top_row' | 'bottom_row' | 'numbers' | 'mixed'>('home_row')
 
   // Last result
   const lastResult = ref<{
@@ -44,7 +45,7 @@ export const useTypingStore = defineStore('typing', () => {
   }
 
   return {
-    selectedMode, selectedLang, selectedDifficulty, selectedTimeLimit,
+    selectedMode, selectedLang, selectedDifficulty, selectedTimeLimit, selectedKeyLesson,
     lastResult, personalBests,
     setResult, setPersonalBests, setConfig,
   }

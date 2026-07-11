@@ -22,7 +22,7 @@ return [
         'fee_rate' => (float) env('WALLET_WITHDRAW_FEE_RATE', 0.005),
 
         // Minimum fee floor in THB — applied when the percentage is smaller.
-        'fee_min' => (float) env('WALLET_WITHDRAW_FEE_MIN', 10),
+        'fee_min' => (float) env('WALLET_WITHDRAW_FEE_MIN', 5),
     ],
 
 ];

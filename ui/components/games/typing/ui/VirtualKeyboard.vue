@@ -179,7 +179,7 @@ const isRTL       = computed(() => props.lang === 'ar')
 
         <!-- Space bar — centered under the keyboard block -->
         <div class="flex justify-center">
-          <div class="h-8 sm:h-9 md:h-10 w-48 sm:w-56 md:w-64 flex items-center justify-center rounded-lg border text-[10px] sm:text-xs font-bold select-none bg-slate-800 border-slate-600 text-slate-500 tracking-widest">
+          <div :class="[keyClasses('Space'), 'h-8 sm:h-9 md:h-10 w-48 sm:w-56 md:w-64 tracking-widest']">
             SPACE
           </div>
         </div>

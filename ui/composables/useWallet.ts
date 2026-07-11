@@ -12,7 +12,7 @@ export const WITHDRAW_MIN_AMOUNT = 25
 export const WITHDRAW_FEE_RATE = 0.005
 
 /** Minimum fee floor in THB */
-export const WITHDRAW_FEE_MIN = 10
+export const WITHDRAW_FEE_MIN = 5
 
 export const useWallet = () => {
   const authStore = useAuthStore()

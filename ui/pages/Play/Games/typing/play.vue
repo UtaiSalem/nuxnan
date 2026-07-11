@@ -73,7 +73,7 @@ const currentModeComponent = computed(() => {
       <!-- Game Stage -->
 
       <!-- Key Training — standalone, no API words needed -->
-      <KeyTrainingMode v-if="isKeyTraining" />
+      <KeyTrainingMode v-if="isKeyTraining" @finished="onFinished" />
 
       <!-- Phaser-based modes (Monster Battle, Falling Words) -->
       <ClientOnly v-else-if="isPhaserMode">

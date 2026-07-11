@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { useTypingStore } from '~/stores/typing'
 import VirtualKeyboard from '../ui/VirtualKeyboard.vue'
 import {
   useKeyTraining,
@@ -7,14 +8,17 @@ import {
   FINGER_STYLES,
   KEY_FINGER_BY_CODE,
   LESSON_ORDER,
+  LAYOUT_MAP,
   type KeyLesson,
   type TrainingLang,
 } from '~/composables/useKeyTraining'
 
 // ── Language & Lesson selection ────────────────────────────────────────────
 
-const selectedLang   = ref<TrainingLang>('en')
-const selectedLesson = ref<KeyLesson>('home_row')
+const store = useTypingStore()
+const emit = defineEmits<{ (e: 'finished', result: Record<string, unknown>): void }>()
+const selectedLang   = ref<TrainingLang>(store.selectedLang)
+const selectedLesson = ref<KeyLesson>(store.selectedKeyLesson)
 
 const LANG_OPTIONS: { id: TrainingLang; label: string; flag: string; dir: string }[] = [
   { id: 'en', label: 'English', flag: '🇬🇧', dir: 'ltr' },
@@ -24,11 +28,13 @@ const LANG_OPTIONS: { id: TrainingLang; label: string; flag: string; dir: string
 
 // When language changes, reset lesson to home_row and re-init
 watch(selectedLang, () => {
+  store.selectedLang = selectedLang.value
   selectedLesson.value = 'home_row'
   if (gameState.value === 'idle') init()
 })
 
 watch(selectedLesson, () => {
+  store.selectedKeyLesson = selectedLesson.value
   if (gameState.value === 'idle') init()
 })
 
@@ -53,7 +59,7 @@ function onKeyDown(e: KeyboardEvent) {
   if (gameState.value !== 'playing') return
   // Ignore modifier / function / arrow keys
   if (e.ctrlKey || e.altKey || e.metaKey) return
-  if (!e.code.match(/^(Key|Digit|Semicolon|Quote|Comma|Period|Slash|Space)/)) return
+  if (!(e.code in LAYOUT_MAP[selectedLang.value])) return
   e.preventDefault()
   handleKeyCode(e.code)
 }
@@ -111,6 +117,24 @@ function nextLesson() {
     ? LESSON_ORDER[lessonIdx + 1]
     : LESSON_ORDER[0]
 }
+
+watch(gameState, (state) => {
+  if (state !== 'finished') return
+  emit('finished', {
+    session_token: uuid(),
+    game_mode: 'key_training',
+    language: selectedLang.value,
+    difficulty: 'beginner',
+    correct_chars: correctCount.value,
+    total_chars: attempts.value.length,
+    correct_words: Math.round(correctCount.value / 5),
+    total_words: Math.round(sequence.value.length / 5),
+    mistakes: attempts.value.length - correctCount.value,
+    max_combo: maxStreak.value,
+    time_elapsed: Math.max(1, elapsedSeconds.value),
+    time_limit: 0,
+  })
+})
 </script>
 
 <template>

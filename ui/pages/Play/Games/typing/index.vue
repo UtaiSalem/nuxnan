@@ -3,6 +3,7 @@ import { Icon } from '@iconify/vue'
 import { useTypingStore } from '~/stores/typing'
 import type { GameMode, Lang, Difficulty } from '~/stores/typing'
 import { useAuthStore } from '~/stores/auth'
+import { LESSON_INFO_BY_LANG, LESSON_ORDER, type KeyLesson } from '~/composables/useKeyTraining'
 
 definePageMeta({
   layout: 'main',
@@ -23,6 +24,7 @@ const modes = [
 ]
 
 const isKeyTraining = computed(() => store.selectedMode === 'key_training')
+const keyLessons = computed(() => LESSON_ORDER.map(id => ({ id, ...LESSON_INFO_BY_LANG[store.selectedLang][id] })))
 
 const languages = [
   { id: 'en', name: 'English',  flag: '🇬🇧' },
@@ -115,10 +117,25 @@ function start() {
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 lg:p-7 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 lg:space-y-7">
 
           <!-- Key Training: no language/difficulty needed -->
-          <div v-if="isKeyTraining" class="text-center py-4 space-y-3">
+          <div v-if="false" class="text-center py-4 space-y-3">
             <div class="text-5xl">⌨️</div>
             <p class="font-bold text-slate-700 dark:text-slate-200">Key Training Mode</p>
             <p class="text-sm text-slate-500 dark:text-slate-400">เลือก lesson ได้ใน game — ไม่ต้องตั้งค่า language/difficulty</p>
+          </div>
+
+          <div v-if="isKeyTraining" class="space-y-5">
+            <div class="space-y-3">
+              <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Language</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button v-for="lang in languages" :key="lang.id" @click="store.selectedLang = lang.id as Lang" class="py-3 px-2 rounded-xl border-2 font-bold transition-all text-xs" :class="store.selectedLang === lang.id ? 'border-primary-500 bg-primary-500 text-white' : 'border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'">{{ lang.flag }} {{ lang.name }}</button>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Lesson</label>
+              <div class="space-y-2">
+                <button v-for="lesson in keyLessons" :key="lesson.id" @click="store.selectedKeyLesson = lesson.id as KeyLesson" class="w-full p-3 rounded-xl border-2 text-left transition-all" :class="store.selectedKeyLesson === lesson.id ? 'border-primary-500 bg-primary-500 text-white' : 'border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'"><span class="font-bold">{{ lesson.emoji }} {{ lesson.name }}</span><span class="block text-xs opacity-70 mt-1">{{ lesson.desc }}</span></button>
+              </div>
+            </div>
           </div>
 
           <!-- Language (hidden for key_training) -->

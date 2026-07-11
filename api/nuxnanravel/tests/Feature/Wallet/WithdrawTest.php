@@ -221,7 +221,7 @@ class WithdrawTest extends TestCase
     {
         [$user, $token] = $this->actingUser();
 
-        // 100 * 0.5% = 0.50, below the 10 THB floor → fee = 10.
+        // 100 * 0.5% = 0.50, below the 5 THB floor → fee = 5.
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->postJson('/api/wallet/withdraw', [
                 'amount' => 100,
@@ -236,8 +236,8 @@ class WithdrawTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'data' => [
-                    'fee' => 10,
-                    'net_amount' => 90,
+                    'fee' => 5,
+                    'net_amount' => 95,
                 ],
             ]);
     }
