@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-07-11 — Runtime verify Intake + G1-G3 → เจอ+แก้ 3 บั๊ก (build ผ่านแต่ runtime พัง)
+
+> ⚠️ แก้ความเข้าใจจาก entry ก่อนหน้า: intake + G1-G3 "มี code + test/build ผ่าน" **แต่ใช้งานจริงไม่ได้** — runtime verify (login จริง, ขับ UI) พบ 3 บั๊ก ทั้งหมดแก้แล้ว commit `bc57c1db` (push แล้ว)
+
+### บั๊กที่เจอ + แก้ (ทั้งหมด pre-existing, build/test ไม่จับ)
+1. **PrimeVue ไม่เคยถูก wire เข้า app** (มี `primevue` v4 ใน package.json แต่ไม่มี plugin `app.use(PrimeVue)` เลย — มีแค่ VueDatePicker plugin) → `<Stepper>` (IntakeWizard, ImportWizard) + `<Dialog>` (StudentAccountActivationModal) resolve ไม่ได้ → wizard render ทุก step ซ้อนกัน, modal ใช้ API ผิด
+   - **แก้:** rewrite เป็น stack จริงของแอป — custom Tailwind stepper + Headless UI Dialog + เติม `import { Icon } from '@iconify/vue'`
+2. **intake ยิง API ด้วยชื่อโรงเรียน (Thai) แทน id** — `duplicate-check` + `submit` เรียก `/api/academies/{academyName}/...` แต่ route bind `{academy}` ด้วย **id** → 404 ทุกครั้ง → wizard เดินไม่ได้เลย
+   - **แก้:** `studentIntakeService` + `useStudentIntake` + `StepIdentity`/`IntakeWizard` ใช้ academyId (inject จาก admin parent, resolve lazy ด้วย `toValue` เพราะ parent fetch async)
+3. **หน้า import 500 ทั้งหน้า** — `import.vue` `definePageMeta({ middleware: ['auth','academy-role'] })` แต่ middleware `academy-role` ไม่มีอยู่จริง (มีแค่ admin-guest/auth/guest/nuxnan-admin/plearnd-admin)
+   - **แก้:** เหลือ `['auth']`
+
+### Verify runtime (browser, login)
+- **G2 DataTable:** ✅ โหลดจริง (stats กำลังเรียน 2662/รับใหม่ 521/ยังไม่มีห้อง 719/รอเปิดบัญชี 46), search กรองได้, pagination, action buttons
+- **Intake wizard:** ✅ stepper Tailwind เดิน step 1→2, `duplicate-check` → **200** (ใช้ id แล้ว), แสดงเฉพาะ step active
+- **G1 Import:** ✅ หน้าโหลด (ไม่ 500), ImportWizard stepper 3 steps render
+- **G3 Activation:** ✅ modal (Headless UI) เปิด/ปิด, icons ครบ; public page error state verified ก่อนหน้า
+- **`npm run build`:** ✅ ผ่าน (exit 0, ไม่มี "Failed to resolve component" — ยืนยัน dev SSR warning เป็น artifact)
+
+### ไฟล์ที่แก้ (7)
+`StudentAccountActivationModal.vue`, `IntakeWizard.vue`, `ImportWizard.vue`, `StepIdentity.vue`, `studentIntakeService.ts`, `useStudentIntake.ts`, `import.vue`
+
+### ยังค้าง
+- intake **submit จริง** (สร้างนักเรียน) ยังไม่ทดสอบ (เลี่ยง side effect); StepPreview/StepConfirm ของ import ยังไม่ขับจนจบ
+- PrimeVue ยังอยู่ใน package.json แต่ไม่ได้ใช้ — พิจารณาถอดออก (มี component อื่นใช้ `<Dialog>`/`<DataTable>` แบบ PrimeVue อีกไหม ควร audit)
+- deploy notes สะสม (migrations, GamificationSeeder, composer install mpdf)
+
+---
+
 ## 2026-07-11 — Backlog audit (Intake + G1-G3 all done) + typing migration regression fix
 
 ### สิ่งที่พบ
