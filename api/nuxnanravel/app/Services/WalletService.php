@@ -18,6 +18,7 @@ class WalletService
     public function deposit(User $user, float $amount, string $method, ?string $reference = null, ?string $description = null, ?array $metadata = null): WalletTransaction
     {
         return DB::transaction(function () use ($user, $amount, $method, $reference, $description, $metadata) {
+            $user = $this->lockUser($user->id);
             $balanceBefore = $user->wallet;
             $balanceAfter = $balanceBefore + $amount;
 
@@ -54,10 +55,32 @@ class WalletService
     /**
      * Withdraw money from user wallet
      */
-    public function withdraw(User $user, float $amount, string $method, array $bankAccount, ?string $description = null): ?WalletTransaction
+    public function withdraw(User $user, string $amount, string $method, array $bankAccount, ?string $description = null, ?string $idempotencyKey = null): ?WalletTransaction
     {
-        return DB::transaction(function () use ($user, $amount, $method, $bankAccount, $description) {
-            $balanceBefore = $user->wallet;
+        return DB::transaction(function () use ($user, $amount, $method, $bankAccount, $description, $idempotencyKey) {
+            $user = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            if ($idempotencyKey) {
+                $existing = WalletTransaction::where('idempotency_key', $idempotencyKey)->lockForUpdate()->first();
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
+            $activeStatuses = ['pending', 'under_review', 'approved', 'processing'];
+            $maxPending = (int) config('wallet.withdraw.max_pending_requests', 1);
+            if ($maxPending > 0 && WalletTransaction::where('user_id', $user->id)
+                ->where('transaction_type', 'withdraw')
+                ->whereIn('status', $activeStatuses)
+                ->count() >= $maxPending) {
+                throw new \DomainException('A withdrawal is already pending');
+            }
+
+            $amount = number_format((float) $amount, 2, '.', '');
+
+            $this->assertWithinWithdrawLimits($user, $amount);
+
+            $balanceBefore = (string) $user->wallet;
 
             // Check if user has enough balance
             if ($balanceBefore < $amount) {
@@ -75,7 +98,8 @@ class WalletService
             $fee = $method === 'internal_deduction'
                 ? 0
                 : round(max($amount * config('wallet.withdraw.fee_rate'), config('wallet.withdraw.fee_min')), 2);
-            $netAmount = round($amount - $fee, 2);
+            $fee = number_format((float) $fee, 2, '.', '');
+            $netAmount = number_format((float) $amount - (float) $fee, 2, '.', '');
             $balanceAfter = $balanceBefore - $amount;
 
             // Determine destination channel from the bank_name marker
@@ -93,6 +117,8 @@ class WalletService
                 'user_id' => $user->id,
                 'transaction_type' => 'withdraw',
                 'amount' => $amount,
+                'fee' => $fee,
+                'net_amount' => $netAmount,
                 'balance_before' => $balanceBefore,
                 'balance_after' => $balanceAfter,
                 'currency' => 'THB',
@@ -100,12 +126,21 @@ class WalletService
                 'metadata' => [
                     'method' => $method,
                     'destination_type' => $destinationType,
-                    'bank_account' => $bankAccount,
+                    'bank_account' => $this->maskBankAccount($bankAccount),
                     'fee' => $fee,
                     'net_amount' => $netAmount,
                 ],
+                'destination_type' => $destinationType,
+                'destination_snapshot' => encrypt($bankAccount),
+                'idempotency_key' => $idempotencyKey,
                 'status' => 'pending', // Withdrawals need approval
             ]);
+
+            app(AuditLogService::class)->log('withdrawal.created', $transaction, null, [
+                'status' => $transaction->status,
+                'amount' => $transaction->amount,
+                'fee' => $transaction->fee,
+            ], 'wallet');
 
             Log::info('Wallet withdrawal request', [
                 'user_id' => $user->id,
@@ -125,6 +160,10 @@ class WalletService
     public function transfer(User $fromUser, User $toUser, float $amount, ?string $message = null): array
     {
         return DB::transaction(function () use ($fromUser, $toUser, $amount, $message) {
+            // Lock both rows in a deterministic order (ascending id) to avoid
+            // deadlocks when two transfers touch the same pair of users.
+            [$fromUser, $toUser] = $this->lockUserPair($fromUser->id, $toUser->id);
+
             $fromBalanceBefore = $fromUser->wallet;
 
             // Check if sender has enough balance
@@ -194,35 +233,38 @@ class WalletService
      */
     public function addFromPointsConversion(User $user, float $walletAmount, int $points, int $exchangeRate): array
     {
-        $walletBalanceBefore = $user->wallet;
-        $walletBalanceAfter = $walletBalanceBefore + $walletAmount;
+        return DB::transaction(function () use ($user, $walletAmount, $points, $exchangeRate) {
+            $user = $this->lockUser($user->id);
+            $walletBalanceBefore = $user->wallet;
+            $walletBalanceAfter = $walletBalanceBefore + $walletAmount;
 
-        // Update user wallet
-        $user->update([
-            'wallet' => $walletBalanceAfter,
-        ]);
+            // Update user wallet
+            $user->update([
+                'wallet' => $walletBalanceAfter,
+            ]);
 
-        // Create wallet transaction (WalletService responsibility)
-        $walletTransaction = WalletTransaction::create([
-            'user_id' => $user->id,
-            'transaction_type' => 'conversion',
-            'amount' => $walletAmount,
-            'balance_before' => $walletBalanceBefore,
-            'balance_after' => $walletBalanceAfter,
-            'currency' => 'THB',
-            'description' => "รับจากการแปลง {$points} แต้ม",
-            'metadata' => [
-                'exchange_rate' => $exchangeRate,
-                'conversion_type' => 'points_to_money',
-                'points_amount' => $points,
-            ],
-            'status' => 'completed',
-        ]);
+            // Create wallet transaction (WalletService responsibility)
+            $walletTransaction = WalletTransaction::create([
+                'user_id' => $user->id,
+                'transaction_type' => 'conversion',
+                'amount' => $walletAmount,
+                'balance_before' => $walletBalanceBefore,
+                'balance_after' => $walletBalanceAfter,
+                'currency' => 'THB',
+                'description' => "รับจากการแปลง {$points} แต้ม",
+                'metadata' => [
+                    'exchange_rate' => $exchangeRate,
+                    'conversion_type' => 'points_to_money',
+                    'points_amount' => $points,
+                ],
+                'status' => 'completed',
+            ]);
 
-        return [
-            'new_balance' => $walletBalanceAfter,
-            'transaction_id' => $walletTransaction->id,
-        ];
+            return [
+                'new_balance' => $walletBalanceAfter,
+                'transaction_id' => $walletTransaction->id,
+            ];
+        });
     }
 
     /**
@@ -231,6 +273,7 @@ class WalletService
     public function convertWalletToPoints(User $user, float $amount): array
     {
         return DB::transaction(function () use ($user, $amount) {
+            $user = $this->lockUser($user->id);
             $exchangeRate = 1200; // 1 THB = 1200 points
             $pointsAmount = $amount * $exchangeRate;
 
@@ -296,6 +339,7 @@ class WalletService
     public function adminAdjust(User $user, float $amount, string $actionType, ?string $reason = null): WalletTransaction
     {
         return DB::transaction(function () use ($user, $amount, $actionType, $reason) {
+            $user = $this->lockUser($user->id);
             $balanceBefore = $user->wallet;
 
             if ($actionType === 'add') {
@@ -345,13 +389,131 @@ class WalletService
      */
     public function getBalance(User $user): array
     {
+        $locked = WalletTransaction::where('user_id', $user->id)
+            ->where('transaction_type', 'withdraw')
+            ->whereIn('status', ['pending', 'under_review', 'approved', 'processing'])
+            ->sum('amount');
+        $available = number_format((float) $user->wallet, 2, '.', '');
+
         return [
-            'cash_balance' => $user->wallet,
+            'cash_balance' => $available,
             'reward_balance' => 0, // Can be implemented later
-            'locked_balance' => 0, // Can be implemented later
-            'total_balance' => $user->wallet,
+            'locked_balance' => number_format((float) $locked, 2, '.', ''),
+            'available_balance' => $available,
+            'total_balance' => number_format((float) $user->wallet + (float) $locked, 2, '.', ''),
             'currency' => 'THB',
         ];
+    }
+
+    /**
+     * Admin opens a pending withdrawal to review it. This records the first
+     * reviewer (reviewed_by) and moves it to under_review, which the
+     * maker-checker control on approveWithdrawal() depends on.
+     */
+    public function viewWithdrawal(WalletTransaction $transaction, User $viewer): void
+    {
+        DB::transaction(function () use ($transaction, $viewer) {
+            $tx = WalletTransaction::whereKey($transaction->id)->lockForUpdate()->first();
+
+            if ($tx && $tx->transaction_type === 'withdraw' && $tx->status === 'pending') {
+                $tx->update([
+                    'status' => 'under_review',
+                    'reviewed_by' => $viewer->id,
+                    'reviewed_at' => now(),
+                    'version' => $tx->version + 1,
+                ]);
+                app(AuditLogService::class)->log('withdrawal.submitted_for_review', $tx, ['status' => 'pending'], ['status' => 'under_review', 'reviewed_by' => $viewer->id], 'wallet');
+            }
+
+            app(AuditLogService::class)->log('withdrawal.viewed', $tx ?? $transaction, null, null, 'wallet', ['viewer_id' => $viewer->id]);
+        });
+    }
+
+    public function cancelWithdrawal(WalletTransaction $transaction, User $user): bool
+    {
+        return DB::transaction(function () use ($transaction, $user) {
+            $tx = WalletTransaction::whereKey($transaction->id)->lockForUpdate()->first();
+            if (! $tx || $tx->transaction_type !== 'withdraw' || $tx->user_id !== $user->id || $tx->status !== 'pending') {
+                return false;
+            }
+            $account = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            // Money was already deducted from the wallet when the request was
+            // created, so a cancellation must refund it with a matching ledger
+            // entry (keep this consistent with rejectWithdrawal()).
+            $refund = $this->refundWithdrawalToWallet($tx, $account, "คืนเงินจากการยกเลิกคำขอถอน #{$tx->id}", 'withdrawal_cancellation');
+
+            $tx->update([
+                'status' => 'cancelled',
+                'metadata' => array_merge($tx->metadata ?? [], ['refund_transaction_id' => $refund->id]),
+                'version' => $tx->version + 1,
+            ]);
+            app(AuditLogService::class)->log('withdrawal.cancelled', $tx, ['status' => 'pending'], ['status' => 'cancelled'], 'wallet');
+
+            return true;
+        });
+    }
+
+    public function processWithdrawal(WalletTransaction $transaction, User $admin): bool
+    {
+        return $this->transitionWithdrawal($transaction, 'processing', $admin, 'withdrawal.processing');
+    }
+
+    public function markWithdrawalPaid(WalletTransaction $transaction, string $paymentReference, User $admin): bool
+    {
+        return DB::transaction(function () use ($transaction, $paymentReference, $admin) {
+            $tx = WalletTransaction::whereKey($transaction->id)->lockForUpdate()->first();
+            if (! $tx || $tx->status !== 'processing') {
+                return false;
+            }
+            $tx->update(['status' => 'paid', 'payment_reference' => $paymentReference, 'processed_at' => now(), 'version' => $tx->version + 1]);
+            app(AuditLogService::class)->log('withdrawal.paid', $tx, ['status' => 'processing'], ['status' => 'paid'], 'wallet', ['admin_id' => $admin->id]);
+
+            return true;
+        });
+    }
+
+    public function markWithdrawalFailed(WalletTransaction $transaction, string $reason, User $admin): bool
+    {
+        return DB::transaction(function () use ($transaction, $reason, $admin) {
+            $tx = WalletTransaction::whereKey($transaction->id)->lockForUpdate()->first();
+            if (! $tx || $tx->transaction_type !== 'withdraw' || ! in_array($tx->status, ['approved', 'processing'], true)) {
+                return false;
+            }
+
+            // The payout failed, but the money was already deducted from the
+            // wallet when the request was created. Refund it (with a ledger
+            // entry) so the user is not charged for a transfer that never
+            // happened.
+            $user = User::query()->whereKey($tx->user_id)->lockForUpdate()->firstOrFail();
+            $refund = $this->refundWithdrawalToWallet($tx, $user, "คืนเงินจากการโอนล้มเหลว #{$tx->id}", 'withdrawal_failure');
+
+            $tx->update([
+                'status' => 'failed',
+                'failed_at' => now(),
+                'rejection_reason' => $reason,
+                'metadata' => array_merge($tx->metadata ?? [], ['refund_transaction_id' => $refund->id]),
+                'version' => $tx->version + 1,
+            ]);
+            app(AuditLogService::class)->log('withdrawal.failed', $tx, null, ['status' => 'failed', 'reason' => $reason, 'refund_transaction_id' => $refund->id], 'wallet', ['admin_id' => $admin->id]);
+
+            return true;
+        });
+    }
+
+    private function transitionWithdrawal(WalletTransaction $transaction, string $status, User $actor, string $event): bool
+    {
+        return DB::transaction(function () use ($transaction, $status, $actor, $event) {
+            $tx = WalletTransaction::whereKey($transaction->id)->lockForUpdate()->first();
+            if (! $tx || ! $tx->canTransitionTo($status)) {
+                return false;
+            }
+            $old = $tx->status;
+            $tx->update(['status' => $status, 'version' => $tx->version + 1]);
+            app(AuditLogService::class)->log($event, $tx, ['status' => $old], ['status' => $status], 'wallet', ['admin_id' => $actor->id]);
+
+            return true;
+        });
     }
 
     /**
@@ -386,57 +548,299 @@ class WalletService
     /**
      * Approve withdrawal
      */
-    public function approveWithdrawal(WalletTransaction $transaction): bool
+    public function approveWithdrawal(WalletTransaction $transaction, User $reviewer, ?string $adminNote = null, ?string $paymentReference = null): bool
     {
-        if ($transaction->transaction_type !== 'withdraw' || $transaction->status !== 'pending') {
-            return false;
-        }
+        return DB::transaction(function () use ($transaction, $reviewer, $adminNote, $paymentReference) {
+            $tx = WalletTransaction::query()->whereKey($transaction->id)->lockForUpdate()->first();
+            if (! $tx || $tx->transaction_type !== 'withdraw' || ! in_array($tx->status, ['pending', 'under_review'], true)) {
+                return false;
+            }
 
-        $transaction->update([
-            'status' => 'completed',
-        ]);
+            // Maker-checker: high-value withdrawals require two distinct admins.
+            // A first reviewer must have opened it (reviewed_by, set by
+            // viewWithdrawal()) and the approver must be a different person.
+            $threshold = (float) config('wallet.withdraw.maker_checker_threshold', PHP_INT_MAX);
+            if ((float) $tx->amount >= $threshold
+                && ($tx->reviewed_by === null || $tx->reviewed_by === $reviewer->id)) {
+                throw new \DomainException('ยอดถอนนี้ต้องให้ผู้ดูแลระบบอีกคนเป็นผู้ตรวจก่อนอนุมัติ (maker-checker)');
+            }
 
-        Log::info('Withdrawal approved', [
-            'transaction_id' => $transaction->id,
-            'user_id' => $transaction->user_id,
-        ]);
+            $old = ['status' => $tx->status];
+            $tx->update([
+                'status' => 'approved',
+                'reviewed_by' => $tx->reviewed_by ?? $reviewer->id,
+                'reviewed_at' => now(),
+                'admin_note' => $adminNote,
+                'payment_reference' => $paymentReference,
+                'metadata' => array_merge($tx->metadata ?? [], ['approved_by' => $reviewer->id]),
+                'version' => $tx->version + 1,
+            ]);
+            app(AuditLogService::class)->log('withdrawal.approved', $tx, $old, ['status' => $tx->status, 'approved_by' => $reviewer->id], 'wallet');
 
-        return true;
+            return true;
+        });
     }
 
     /**
      * Reject withdrawal
      */
-    public function rejectWithdrawal(WalletTransaction $transaction, string $reason): bool
+    public function rejectWithdrawal(WalletTransaction $transaction, string $reason, User $reviewer, ?string $adminNote = null): bool
     {
-        if ($transaction->transaction_type !== 'withdraw' || $transaction->status !== 'pending') {
-            return false;
-        }
+        return DB::transaction(function () use ($transaction, $reason, $reviewer, $adminNote) {
+            $tx = WalletTransaction::query()->whereKey($transaction->id)->lockForUpdate()->first();
+            if (! $tx || $tx->transaction_type !== 'withdraw' || ! in_array($tx->status, ['pending', 'under_review'], true)) {
+                return false;
+            }
+            $user = User::query()->whereKey($tx->user_id)->lockForUpdate()->firstOrFail();
+            $oldStatus = $tx->status;
 
-        return DB::transaction(function () use ($transaction, $reason) {
-            $user = $transaction->user;
-            $balanceBefore = $user->wallet;
-            $amount = $transaction->amount;
+            // Refund to user wallet with a matching ledger entry.
+            $refund = $this->refundWithdrawalToWallet($tx, $user, "คืนเงินจากการปฏิเสธคำขอถอน #{$tx->id}", 'withdrawal_reversal');
 
-            // Refund to user wallet
-            $user->update([
-                'wallet' => $balanceBefore + $amount,
+            $tx->update([
+                'status' => 'rejected',
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+                'rejection_reason' => $reason,
+                'admin_note' => $adminNote,
+                'metadata' => array_merge($tx->metadata ?? [], ['refund_transaction_id' => $refund->id]),
+                'version' => $tx->version + 1,
             ]);
-
-            // Update transaction status
-            $transaction->update([
-                'status' => 'cancelled',
-                'metadata' => array_merge($transaction->metadata ?? [], ['rejection_reason' => $reason]),
-            ]);
+            app(AuditLogService::class)->log('withdrawal.rejected', $tx, ['status' => $oldStatus], ['status' => $tx->status, 'reason' => $reason], 'wallet');
 
             Log::info('Withdrawal rejected', [
-                'transaction_id' => $transaction->id,
+                'transaction_id' => $tx->id,
                 'user_id' => $user->id,
                 'reason' => $reason,
             ]);
 
             return true;
         });
+    }
+
+    /**
+     * Refund a withdrawal's amount back to the user's wallet and record a
+     * compensating ledger entry + audit event. Callers MUST already hold row
+     * locks on both $tx and $user inside a DB transaction.
+     */
+    private function refundWithdrawalToWallet(WalletTransaction $tx, User $user, string $description, string $refundType): WalletTransaction
+    {
+        $balanceBefore = (string) $user->wallet;
+        $amount = (string) $tx->amount;
+        $balanceAfter = number_format((float) $balanceBefore + (float) $amount, 2, '.', '');
+
+        $user->update(['wallet' => $balanceAfter]);
+
+        $refund = WalletTransaction::create([
+            'user_id' => $user->id,
+            'transaction_type' => 'refund',
+            'amount' => $amount,
+            'balance_before' => $balanceBefore,
+            'balance_after' => $balanceAfter,
+            'currency' => $tx->currency,
+            'description' => $description,
+            'metadata' => ['withdrawal_transaction_id' => $tx->id, 'refund_type' => $refundType],
+            'reference_number' => "WDR-{$tx->id}",
+            'status' => 'completed',
+        ]);
+
+        app(AuditLogService::class)->log('withdrawal.refunded', $refund, null, [
+            'withdrawal_transaction_id' => $tx->id,
+            'refund_type' => $refundType,
+            'amount' => $amount,
+        ], 'wallet');
+
+        return $refund;
+    }
+
+    /**
+     * Enforce per-day and per-month withdrawal ceilings (config/wallet.php).
+     * Counts only withdrawals that still hold value (excludes rejected/
+     * cancelled/failed which were refunded).
+     */
+    private function assertWithinWithdrawLimits(User $user, string $amount): void
+    {
+        $counted = ['pending', 'under_review', 'approved', 'processing', 'completed', 'paid'];
+
+        $daily = (float) config('wallet.withdraw.daily_limit', 0);
+        if ($daily > 0) {
+            $sum = (float) WalletTransaction::where('user_id', $user->id)
+                ->where('transaction_type', 'withdraw')
+                ->whereIn('status', $counted)
+                ->whereDate('created_at', now()->toDateString())
+                ->sum('amount');
+            if ($sum + (float) $amount > $daily) {
+                throw new \DomainException('เกินวงเงินถอนสูงสุดต่อวัน');
+            }
+        }
+
+        $monthly = (float) config('wallet.withdraw.monthly_limit', 0);
+        if ($monthly > 0) {
+            $sum = (float) WalletTransaction::where('user_id', $user->id)
+                ->where('transaction_type', 'withdraw')
+                ->whereIn('status', $counted)
+                ->whereYear('created_at', now()->year)
+                ->whereMonth('created_at', now()->month)
+                ->sum('amount');
+            if ($sum + (float) $amount > $monthly) {
+                throw new \DomainException('เกินวงเงินถอนสูงสุดต่อเดือน');
+            }
+        }
+    }
+
+    /**
+     * Mask a bank account so only the last 4 digits remain, for safe storage
+     * in the (unencrypted) metadata column. Full details live encrypted in
+     * destination_snapshot.
+     */
+    private function maskBankAccount(array $bankAccount): array
+    {
+        $number = (string) ($bankAccount['account_number'] ?? '');
+        $masked = strlen($number) > 4
+            ? str_repeat('*', strlen($number) - 4).substr($number, -4)
+            : $number;
+
+        return [
+            'bank_name' => $bankAccount['bank_name'] ?? '',
+            'account_number' => $masked,
+            'account_name' => $bankAccount['account_name'] ?? '',
+        ];
+    }
+
+    /**
+     * Record a one-time opening-balance baseline for a user whose current
+     * wallet is not fully backed by ledger history (e.g. seeded balances or
+     * pre-hardening legacy data). This does NOT move money — it inserts a
+     * single reconciling ledger row so that afterwards:
+     *
+     *     users.wallet == Σ (balance_after - balance_before)
+     *
+     * Idempotent: a user who already has an opening_balance row, or who is
+     * already balanced, is skipped (returns null).
+     */
+    public function recordOpeningBalance(User $user): ?WalletTransaction
+    {
+        return DB::transaction(function () use ($user) {
+            // Locking blocks any concurrent wallet mutation for this user, so
+            // the ledger sum we read below is stable for the insert.
+            $user = $this->lockUser($user->id);
+
+            $alreadyBaselined = WalletTransaction::where('user_id', $user->id)
+                ->where('transaction_type', 'opening_balance')
+                ->exists();
+            if ($alreadyBaselined) {
+                return null;
+            }
+
+            $ledger = (float) WalletTransaction::where('user_id', $user->id)
+                ->sum(DB::raw('balance_after - balance_before'));
+            $wallet = (float) $user->wallet;
+            $diff = round($wallet - $ledger, 2);
+
+            if (abs($diff) < 0.01) {
+                return null; // already reconciled — nothing to record
+            }
+
+            $tx = WalletTransaction::create([
+                'user_id' => $user->id,
+                'transaction_type' => 'opening_balance',
+                'amount' => number_format(abs($diff), 2, '.', ''),
+                'balance_before' => number_format($ledger, 2, '.', ''),
+                'balance_after' => number_format($wallet, 2, '.', ''),
+                'currency' => 'THB',
+                'description' => 'ยอดยกมา (opening balance baseline)',
+                'metadata' => [
+                    'baseline' => true,
+                    'ledger_before' => number_format($ledger, 2, '.', ''),
+                    'recorded_at' => now()->toDateTimeString(),
+                ],
+                'reference_number' => 'OPENING_BALANCE',
+                'status' => 'completed',
+            ]);
+
+            app(AuditLogService::class)->log('wallet.opening_balance', $tx, null, [
+                'wallet' => number_format($wallet, 2, '.', ''),
+                'ledger_before' => number_format($ledger, 2, '.', ''),
+                'diff' => number_format($diff, 2, '.', ''),
+            ], 'wallet');
+
+            return $tx;
+        });
+    }
+
+    /**
+     * Flag a legacy returned withdrawal (rejected/cancelled/failed created by
+     * pre-hardening code) that has no paired refund ledger row. Its money is
+     * accounted for by the opening-balance baseline, so this only marks it so
+     * the refund-integrity report stops treating it as an unrefunded payout.
+     * Does not move money. Idempotent.
+     */
+    public function flagLegacyWithdrawal(WalletTransaction $withdrawal): ?WalletTransaction
+    {
+        return DB::transaction(function () use ($withdrawal) {
+            $tx = WalletTransaction::whereKey($withdrawal->id)->lockForUpdate()->first();
+
+            if (! $tx || $tx->transaction_type !== 'withdraw'
+                || ! in_array($tx->status, ['rejected', 'cancelled', 'failed'], true)) {
+                return null;
+            }
+
+            // A properly refunded (post-hardening) or already-flagged row is skipped.
+            if (isset($tx->metadata['refund_transaction_id']) || ! empty($tx->metadata['legacy_no_refund_ledger'])) {
+                return null;
+            }
+
+            $tx->update([
+                'metadata' => array_merge($tx->metadata ?? [], [
+                    'legacy_no_refund_ledger' => true,
+                    'legacy_flagged_at' => now()->toDateTimeString(),
+                ]),
+            ]);
+
+            app(AuditLogService::class)->log('withdrawal.flagged_legacy', $tx, null, [
+                'reason' => 'returned withdrawal predates the refund-ledger requirement; money reconciled via opening-balance baseline',
+            ], 'wallet');
+
+            return $tx;
+        });
+    }
+
+    /**
+     * Pessimistically lock a single user row for a read-modify-write on the
+     * wallet. MUST be called inside a DB transaction. Every method that mutates
+     * users.wallet goes through a lock so concurrent operations serialize and
+     * can never overdraw (money out can never exceed money in).
+     */
+    private function lockUser(int $id): User
+    {
+        return User::query()->whereKey($id)->lockForUpdate()->firstOrFail();
+    }
+
+    /**
+     * Lock several user rows in ascending-id order (deadlock-safe) and return
+     * them keyed by id. Used by operations that touch two wallets at once.
+     */
+    private function lockUsers(array $ids): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        sort($ids);
+
+        $users = [];
+        foreach ($ids as $id) {
+            $users[$id] = $this->lockUser($id);
+        }
+
+        return $users;
+    }
+
+    /**
+     * Lock a pair of users deadlock-safely and return them in [from, to] order.
+     */
+    private function lockUserPair(int $fromId, int $toId): array
+    {
+        $locked = $this->lockUsers([$fromId, $toId]);
+
+        return [$locked[$fromId], $locked[$toId]];
     }
 
     /**
@@ -449,7 +853,7 @@ class WalletService
         }
 
         return DB::transaction(function () use ($request, $adminNote) {
-            $user = $request->user;
+            $user = $this->lockUser($request->user_id);
             $balanceBefore = $user->wallet;
             $balanceAfter = $balanceBefore + $request->amount;
 
@@ -546,6 +950,14 @@ class WalletService
         }
 
         return DB::transaction(function () use ($user, $course, $finalPrice, $originalPrice) {
+            // Lock the buyer (and the course owner, if a payout is due) up front
+            // in a deadlock-safe order so balances can't be raced.
+            $ownerId = ($course->user_id && $course->user_id !== $user->id && $finalPrice > 0)
+                ? (int) $course->user_id
+                : null;
+            $locked = $this->lockUsers(array_filter([$user->id, $ownerId]));
+            $user = $locked[$user->id];
+
             $balanceBefore = $user->wallet;
 
             // Check if user has enough balance
@@ -580,8 +992,8 @@ class WalletService
             ]);
 
             // Pay to course owner if course has user_id
-            if ($course->user_id && $course->user_id !== $user->id && $finalPrice > 0) {
-                $owner = User::find($course->user_id);
+            if ($ownerId) {
+                $owner = $locked[$ownerId] ?? null;
                 if ($owner) {
                     $ownerBalanceBefore = $owner->wallet;
                     $ownerBalanceAfter = $ownerBalanceBefore + $finalPrice;
@@ -633,6 +1045,7 @@ class WalletService
     public function refundCoursePurchase(User $user, Course $course, float $amount, ?string $reason = null): WalletTransaction
     {
         return DB::transaction(function () use ($user, $course, $amount, $reason) {
+            $user = $this->lockUser($user->id);
             $balanceBefore = $user->wallet;
             $balanceAfter = $balanceBefore + $amount;
 
