@@ -296,7 +296,7 @@ const updatePost = async () => {
       const academyId = props.post.academy_id || props.post.academy?.id
       if (!academyId) throw new Error('ไม่พบ academy ของโพสต์นี้')
 
-      response = await api.post(`/api/academies/${academyId}/posts/${props.post.id}`, {
+      response = await api.patch(`/api/academies/${academyId}/posts/${props.post.id}`, {
         content: postText.value
       })
     } else {
