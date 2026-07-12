@@ -15,10 +15,14 @@
       </div>
 
       <!-- Actions -->
-      <div class="flex justify-center gap-4 mb-6">
+      <div class="flex flex-wrap justify-center gap-4 mb-6">
           <NuxtLink to="/earn/advertise/create" class="flex items-center px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 shadow-md transition-colors">
               <Icon icon="mdi:plus-circle" class="mr-2 w-5 h-5"/>
               ลงโฆษณาสินค้า
+          </NuxtLink>
+          <NuxtLink to="/earn/advertise/manage" class="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-md transition-colors">
+              <Icon icon="mdi:settings" class="mr-2 w-5 h-5"/>
+              จัดการแคมเปญของคุณ
           </NuxtLink>
           <NuxtLink to="/earn/donates/create" class="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 shadow-md transition-colors">
               <Icon icon="flat-color-icons:donate" class="mr-2 w-5 h-5"/>

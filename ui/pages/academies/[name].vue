@@ -7,6 +7,7 @@ import FeedPost from '~/components/play/feed/FeedPost.vue'
 import CourseCard from '~/components/learn/course/CourseCard.vue'
 import EventFormModal from '~/components/academy/events/EventFormModal.vue'
 import { useCourseGrouping } from '~/composables/useCourseGrouping'
+import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
 
 definePageMeta({
   layout: 'main',
@@ -2288,6 +2289,8 @@ watch(() => route.hash, (newHash) => {
             :academy-name="academyName"
           />
 
+          <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-sidebar" />
+
           <!-- Upcoming Events -->
           <SchoolUpcomingEvents :academy-id="academy.id" @view-all="switchTab('events')" />
 
@@ -2410,6 +2413,7 @@ watch(() => route.hash, (newHash) => {
           :academy-id="academy.id"
           :academy-name="academyName"
         />
+        <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-mobile-sidebar" />
         <SchoolUpcomingEvents :academy-id="academy.id" @view-all="(() => { switchTab('events'); showMobileRightDrawer = false; })" />
         <SchoolClassroomLeaderboard :academy-id="academy.id" cycle="month" />
       </div>
