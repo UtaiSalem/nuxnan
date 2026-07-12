@@ -125,6 +125,17 @@ class CourseMemberController extends Controller
 
     public function show(Course $course, CourseMember $member)
     {
+        // Guard against viewing a member that belongs to a different course.
+        if ($member->course_id !== $course->id) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบข้อมูลสมาชิก'], 404);
+        }
+
+        // Only the member themself or a course admin may view a member's progress.
+        $authUser = auth()->user();
+        if ($member->user_id !== $authUser->id && ! $course->isAdmin($authUser)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $member->load(['user', 'group', 'course']);
         $userId = $member->user_id;
 
