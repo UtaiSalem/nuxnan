@@ -257,6 +257,26 @@ const getProgressBarColor = (score, max) => {
     return 'bg-gradient-to-r from-red-400 to-red-500';
 };
 
+const getActivityLabel = (activity, type) => {
+    if (activity?.status === 'none') return type === 'assignment' ? 'ไม่มีแบบฝึกหัด' : 'ไม่มีแบบทดสอบ';
+    const labels = {
+        not_attempted: 'ยังไม่ส่ง',
+        submitted: 'รอตรวจ',
+        awaiting_grading: 'รอตรวจ',
+        scored: 'ตรวจแล้ว',
+        passed: 'ผ่าน',
+        failed: 'ไม่ผ่าน',
+    };
+    return labels[activity?.status] || 'ยังไม่ทำ';
+};
+
+const getActivityClass = (activity) => {
+    if (activity?.status === 'passed' || activity?.status === 'scored') return 'text-green-600';
+    if (activity?.status === 'failed') return 'text-red-600';
+    if (activity?.status === 'submitted' || activity?.status === 'awaiting_grading') return 'text-amber-600';
+    return 'text-gray-500';
+};
+
 // Grade color helper
 const getGradeColor = (grade) => {
     if (!grade || grade === '-') return { text: 'text-gray-500 dark:text-gray-400', ring: '#9CA3AF', ringStop: '#6B7280' };
@@ -798,20 +818,53 @@ const showGradeAcceptance = computed(() => {
                                           {{ lesson.completed ? 'เรียนแล้ว' : 'ยังไม่เรียน' }}
                                       </span>
                                   </div>
-                                  <!-- Progress Bar -->
-                                  <div v-if="data.lessons.length > 0" class="mt-2">
-                                      <div class="flex items-center justify-between mb-1">
-                                          <span class="text-xs text-gray-500">ความคืบหน้า</span>
-                                          <span class="text-xs font-medium" :class="lesson.completed ? 'text-green-600' : 'text-gray-400'">
-                                              {{ lesson.completed ? '100%' : '0%' }}
-                                          </span>
+                                  <!-- Reading + Activity progress -->
+                                  <div class="mt-1 space-y-2.5">
+                                      <!-- Reading progress (topic-based) -->
+                                      <div v-if="lesson.reading_progress?.total_topics > 0">
+                                          <div class="flex items-center justify-between mb-1 text-xs">
+                                              <span class="text-gray-500">การอ่านบทเรียน</span>
+                                              <span class="font-medium" :class="lesson.reading_progress.progress_percentage >= 100 ? 'text-green-600' : 'text-blue-600'">
+                                                  {{ lesson.reading_progress.progress_percentage }}% ({{ lesson.reading_progress.completed_topics }}/{{ lesson.reading_progress.total_topics }} หัวข้อ)
+                                              </span>
+                                          </div>
+                                          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                                              <div
+                                                  class="h-full rounded-full transition-all duration-500 ease-out"
+                                                  :class="lesson.reading_progress.progress_percentage >= 100 ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gradient-to-r from-blue-400 to-blue-500'"
+                                                  :style="{ width: `${lesson.reading_progress.progress_percentage}%` }"
+                                              ></div>
+                                          </div>
                                       </div>
-                                      <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
-                                          <div
-                                              class="h-full rounded-full transition-all duration-500 ease-out"
-                                              :class="lesson.completed ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gray-400 dark:bg-gray-600'"
-                                              :style="{ width: lesson.completed ? '100%' : '0%' }"
-                                          ></div>
+
+                                      <!-- Activity scores (assignments / quizzes) -->
+                                      <template v-for="activity in [
+                                          { key: 'assignments', label: 'คะแนนแบบฝึกหัด', color: 'bg-purple-500', type: 'assignment' },
+                                          { key: 'quizzes', label: 'คะแนนแบบทดสอบ', color: 'bg-amber-500', type: 'quiz' }
+                                      ]" :key="activity.key">
+                                          <div v-if="lesson.activity_progress?.[activity.key] && lesson.activity_progress[activity.key].status !== 'none'">
+                                              <div class="flex items-center justify-between mb-1 text-xs">
+                                                  <span class="text-gray-500">{{ activity.label }}</span>
+                                                  <span v-if="canShowScore && lesson.activity_progress[activity.key].score !== null" class="font-bold" :class="getActivityClass(lesson.activity_progress[activity.key])">
+                                                      {{ lesson.activity_progress[activity.key].score }}/{{ lesson.activity_progress[activity.key].max_score }} ({{ lesson.activity_progress[activity.key].score_percentage }}%)
+                                                  </span>
+                                                  <span v-else-if="canShowScore" class="font-medium" :class="getActivityClass(lesson.activity_progress[activity.key])">
+                                                      {{ getActivityLabel(lesson.activity_progress[activity.key], activity.type) }}
+                                                  </span>
+                                                  <span v-else class="text-gray-400 italic">ซ่อนคะแนน</span>
+                                              </div>
+                                              <div class="w-full h-2.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                                                  <div
+                                                      class="h-full rounded-full transition-all duration-500"
+                                                      :class="canShowScore && lesson.activity_progress[activity.key].score !== null ? activity.color : 'bg-gray-400 dark:bg-gray-600'"
+                                                      :style="{ width: `${canShowScore && lesson.activity_progress[activity.key].score !== null ? lesson.activity_progress[activity.key].score_percentage : 0}%` }"
+                                                  ></div>
+                                              </div>
+                                          </div>
+                                      </template>
+
+                                      <div v-if="!lesson.reading_progress?.total_topics && !lesson.has_graded_activity" class="text-xs text-gray-400">
+                                          ไม่มีหัวข้ออ่านหรือกิจกรรมในบทเรียนนี้
                                       </div>
                                   </div>
                               </div>
