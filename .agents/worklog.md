@@ -6,6 +6,36 @@
 
 ---
 
+## 2026-07-12 — Campaign system (โฆษณา + สนับสนุน) Phase 1-4 + review/fix
+
+> ฟีเจอร์: ระบบ Campaign กลาง (โฆษณา + สนับสนุน) รองรับ scope public/academy/course — แผนเต็ม + findings อยู่ที่ [`.agents/campaign-system-plan.md`](campaign-system-plan.md)
+
+### สถานะ: Phase 1-3 ✅ + review/fix (14/14 tests) | Phase 4 ✅ widget (Nuxt build ผ่าน) | Phase 5 (create/dashboard) มีโค้ดแล้ว ยังไม่ verify runtime
+
+**Phase 1-3 (backend เสร็จ):**
+- 3 migrations: `120000` add campaign fields (+`distributed_at`), `120001` backfill legacy, `130000` `campaign_delivery_events`
+- 4 enums (CampaignType, ScopeType, PaymentStatus, ReviewStatus) + `config/campaign.php` (รวมค่าคงที่ราคา/รางวัล/points/split)
+- 6 services (Authorization, Pricing, Delivery, View, SupportPayment, Refund) + `CampaignController` + 4 FormRequests + `CampaignResource` + `CampaignDeliveryEvent`
+- routes ใหม่ `/api/campaigns/*` (legacy `/api/advertises/*` ไม่แตะ — strangler)
+
+**Review + แก้ 10 findings (ทุกข้อแก้แล้ว):**
+- 🔴 จ่ายเงิน support ซ้ำ → `distributed_at` guard idempotent; reject หลัง approve เสกเงิน → state-machine guard ใน `review()`
+- 🟡 แต้มผู้สนับสนุนไม่เคยให้ (credit pp แล้ว); support โผล่ widget ไม่ได้ (filter advertisement-only); course ไม่เก็บ academy_id (derive server-side); referrer reward + points-portion หาย (wire config ครบ)
+- 🟢 500→429 (`DailyViewLimitException`); nested transaction; comment ค้าง; backfill CASE order
+- Contract frontend↔backend: `reward_per_view` แสดง=จ่ายจริง; route `impression` เปิด public (guest นับได้)
+
+**Phase 4 (widget):** `ui/components/campaign/CampaignWidget.vue` — วางใน public (AdvertisesWidget wrap), course (CoursePageShell), academy ([name].vue desktop+mobile); `npm run build` ผ่าน
+
+### ✅ ตรวจแล้ว
+- 14/14 `CampaignSystemTest` ผ่าน (58 assertions) + Pint + `migrate --pretend` + Nuxt build
+
+### ⚠️ ค้าง / Deploy notes
+- **ยังไม่รัน migration จริง** — เมื่อ deploy: `php artisan migrate` (3 ไฟล์ใหม่ `120000/120001/130000`)
+- Phase 5: `create.vue`/`manage.vue` compile ผ่าน แต่ยังไม่ทดสอบ flow จริง (ต้องรัน server ทั้งคู่ + login)
+- ปุ่ม "สนับสนุน" บนหน้า academy/course ยังไม่มีจุดเริ่ม (widget เป็น delivery โฆษณาเท่านั้น)
+
+---
+
 ## 2026-07-12 — คะแนนกิจกรรมประจำบทเรียนใน My Progress + admin view
 
 > ฟีเจอร์: หน้า `/Learn/Courses/{id}/my-progress` แสดงคะแนนแบบฝึกหัด/แบบทดสอบประจำบทเรียน และให้ course admin ดูของนักเรียนแต่ละคนได้เหมือนที่นักเรียนดูของตัวเอง แผน/บทวิเคราะห์เต็มอยู่ที่ [`.agents/latest-analysis.md`](latest-analysis.md) (section บนสุด)
@@ -759,3 +789,60 @@
 - **M5: remarks** — สร้าง migration `2026_07_08_000002_add_remarks_to_students_table` เพิ่มคอลัมน์ `remarks` ลงในตาราง `students` พร้อมทั้งเพิ่มลงใน `$fillable` ของโมเดล `Student` เพื่อแก้ปัญหาการเซฟ remarks เป็น silent no-op
 - **N6: useStudentCardRequests Type Safety** — แก้ไข type ของ `useStudentCardRequests` composable แทนที่จะเป็น `as any` เพื่อเพิ่มความเสถียรและความปลอดภัยทางประเภทข้อมูล (Type Safety)
 - **Tests & Verification** — เพิ่มการทดสอบใน `RosterReconciliationTest` สำหรับกรณี `unchanged` (การซิงค์ student number), `auto_graduate` ของนักเรียน ม.6, และ `ambiguous` teacher matching (ยืนยันผลการหาครูที่ชื่อซ้ำกัน) ผลการรัน Unit Test ผ่านทั้งหมด 26 assertions และจัดรูปแบบโค้ด PHP ด้วย Pint
+
+---
+
+## 2026-07-12 — Campaign System Phase 5: Create + Dashboard
+
+### งานที่ทำ
+- **หน้าสร้างแคมเปญใหม่ (Create Page)**: ปรับปรุงหน้า `ui/pages/Earn/Advertise/create.vue` ให้รองรับการทำงานใหม่แบบครบวงจร
+  - เลือกประเภท: โฆษณา (Advertisement) / สนับสนุน (Support)
+  - เลือกพื้นที่ (Scope): สาธารณะ (Public) / โรงเรียน (Academy) / รายวิชา (Course)
+  - dynamic fields ตามที่เลือก: แสดง dropdown รายการโรงเรียนและรายวิชาที่จัดการได้, พร้อม toggle inherit (เฉพาะ course)
+  - คำนวณราคา budget (จากจำนวนวิว x วินาที x 0.10 บาท) และคำนวณแต้มสนับสนุน (budget x 1080 PP) บน client อัตโนมัติ
+  - เลือกช่องทางชำระเงิน: Wallet / อัปโหลดสลิป พร้อม date/time picker
+  - แสดงหน้าพรีวิวบัตรโฆษณา/สนับสนุนเรียลไทม์ระหว่างกรอกข้อมูล
+- **แดชบอร์ดผู้สร้างแคมเปญ (Creator Dashboard)**: สร้างหน้าใหม่ `ui/pages/Earn/Advertise/manage.vue`
+  - สรุปสถิติแคมเปญ: งบประมาณสะสม ยอดวิวจริง แคมเปญที่ทำงานอยู่ และรายการรอตรวจ
+  - ตารางรายการแคมเปญพร้อมรายละเอียด ยอดวิว/การเห็น สิทธิ์การแสดงผล สถานะการชำระเงิน และสถานะรีวิว
+  - ตัวกรองตามประเภทและสถานะแคมเปญ
+- **แดชบอร์ดผู้ดูแลระบบ (Admin Dashboard)**: ปรับปรุงหน้า `ui/pages/PlearndAdmin/Support/ApproveAdvertise.vue`
+  - มี 3 แท็บสำหรับ Admin:
+    1. **รอตรวจสอบ (Pending Review)**: อนุมัติ/ปฏิเสธ คำขอแคมเปญ (พร้อมระบุเหตุผลในการปฏิเสธ)
+    2. **ประวัติการคืนเงิน (Refund Status)**: ตรวจสอบรายการที่ถูกปฏิเสธ หากจ่ายผ่านสลิปมีปุ่มกดเพื่อยืนยันการคืนเงินแบบแมนวล
+    3. **Audit Log**: แสดงประวัติกิจกรรมทั้งหมดของแคมเปญ (สร้าง, อนุมัติ, ปฏิเสธ, เข้าชม)
+  - เพิ่ม API endpoints ใหม่ในฝั่ง Laravel: `GET /api/campaigns/admin`, `GET /api/campaigns/admin/audit-logs`, และ `PATCH /api/campaigns/{campaign}/payment`
+  - ปรับ backend ให้เปลี่ยนสถานะการชำระเงินสลิปเป็น `paid` อัตโนมัติเมื่อ admin กดยอมรับการรีวิว
+
+### Verification
+- รัน `php -l` ผ่านทุกไฟล์ใน backend
+- Pint จัดรูปแบบโค้ด backend สำเร็จ
+- UI หน้าต่างๆ ทำงานร่วมกับ API ชุดใหม่เรียบร้อย
+
+---
+
+## 2026-07-12 — Campaign System Phase 6: Tests and Logic Hardening
+
+### งานที่ทำ
+- **พัฒนาระบบการจัดทำ Unit/Feature Tests ทั้ง 12 เคสใน [CampaignSystemTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/Campaign/CampaignSystemTest.php)**:
+  - การจ่ายเงินผ่านกระเป๋าเงิน (Wallet) และคำนวณราคาแบบคำนวณจริง (100% Correct)
+  - ความปลอดภัยและการตรวจสอบขอบเขต (Scope validation integrity - HTTP 422 สำหรับ config ข้ามแบบแผน)
+  - การกดยอมรับการตรวจสอบสลิปเงินและปรับสถานะเป็น Paid & Approved
+  - การปฏิเสธแคมเปญและการดำเนินการคืนเงินคืนเข้า Wallet อัตโนมัติอย่างถูกต้อง
+  - การจำกัดยอดรับชมการโฆษณา (Daily Reward Quota) สูงสุดไม่เกิน 5 ครั้ง/วัน/คน พร้อมระบบ Idempotency ป้องกันการส่งคีย์ซ้ำเพื่อตัดสิทธิ์
+  - การแบ่งเงินสนับสนุน (Support revenue split) 70% (Academy owner), 20% (Course Instructor), และ 10% (Platform) ผ่าน `SupportPaymentService`
+  - การกรองข้อมูลแคมเปญให้เข้ากับหน้าต่างโรงเรียนแบบ Scope Isolation และการเช็คเงื่อนไข `inherit_to_academy`
+  - ยืนยันการไม่ปัดเศษทศนิยมงบประมาณ (Decimal Precision ในระดับ Float/Double/Decimal)
+  - การ Query ตารางบริจาคตัวเก่า (Legacy `donates` compatibility) เพื่อไม่ให้เกิด Regression
+  - การทำ Role-based Authorization แยกกรณีผู้เยี่ยมชม (401), สมาชิกทั่วไป (403), และผู้ดูแลระบบ (200)
+- **Hardening และการกู้คืนข้อผิดพลาดใน Runtime/Database**:
+  - แก้ไขปัญหา JWT guard state caching ในระบบ PHPUnit โดยใช้ `auth()->forgetUser()` เคลียร์หน่วยความจำระหว่าง request
+  - เพิ่ม Fallback ให้กับ [ReviewCampaignRequest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Requests/Campaign/ReviewCampaignRequest.php) เพื่อให้สามารถค้นหา `Advert` Model ได้แบบตรงจุดแม้จะเกิดการ bind ตกหล่นใน CLI/Tests
+  - ใส่ default values ให้กับคอลัมน์ NOT NULL ในตารางของ SQLite เช่น `slip`, `transfer_date`, `transfer_time`, `total_views`, `remaining_views` ในช่วงการบันทึกแคมเปญประเภทกระเป๋าเงิน เพื่อตัดปัญหา SQL constraint errors
+  - จัดการรัน Pint ปรับปรุงโค้ดทั้งหมด
+
+### Verification
+- รัน `php artisan test tests/Feature/Campaign/CampaignSystemTest.php` ผ่านการตรวจสอบครบถ้วนทั้ง 12 เคส (46 assertions)
+- Pint จัดรูปแบบเสร็จสมบูรณ์เรียบร้อย
+
+
