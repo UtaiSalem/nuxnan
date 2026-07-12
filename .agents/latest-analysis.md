@@ -1,3 +1,164 @@
+# แผนแก้ไข: ห้องเรียนซ้ำ (Duplicate Classroom) — ฉบับตรวจสอบกับโค้ดจริง + ทีละขั้นตอน
+
+**วันที่:** 2026-07-12
+**สถานะ:** เสร็จสิ้น (แก้ไขโค้ดและทดสอบผ่านแล้ว 100%)
+**อาการ:** การ์ดห้องเรียนซ้ำในหน้า Academy — เช่น `ม.1/1` ปีเดียวกันโผล่ 2 ใบ ต่างกันแค่ `classroom_code` (เช่น `UDEDR1` กับ `03LWXC`)
+
+---
+
+## บทวิเคราะห์เทียบกับ codebase จริง (ยืนยัน root cause ทุกจุด)
+
+ตรวจไฟล์จริงแล้ว ยืนยันว่า **ไม่ใช่ปัญหา re-render ฝั่งหน้าเว็บ** แต่เป็นปัญหา **data integrity + API contract** ที่มีสาเหตุร่วมกันหลายชั้น:
+
+### สาเหตุที่ 1 (แกนกลาง) — unique index ผูกกับคอลัมน์ที่เป็น NULL ได้
+- Migration `2026_02_03_000005_create_classrooms_table.php:31`:
+  `$table->unique(['academy_id', 'academic_year_id', 'grade_level', 'section'], 'classrooms_unique')`
+- แต่บรรทัด 18: `academic_year_id` เป็น **nullable**
+- MySQL ถือว่า `NULL != NULL` ใน unique index → ถ้า `academic_year_id` เป็น NULL หลายแถวที่ `(academy_id, NULL, 'ม.1', '1')` **ไม่ชนกัน** → สร้างซ้ำได้ไม่จำกัด
+
+### สาเหตุที่ 2 — มี "ปีการศึกษา" สองฟิลด์ที่ไม่ sync กัน
+- Migration `2026_04_07_000001_upgrade_classroom_management_system.php:31` เพิ่ม `academic_year` (string, nullable) เข้ามาอีกฟิลด์
+- ตอนนี้จึงมี **`academic_year_id` (FK, nullable)** และ **`academic_year` (string, nullable)** ควบคู่ โดยไม่มี invariant บังคับให้ตรงกัน
+- unique index ใช้ตัว FK (ที่เป็น NULL ได้) แต่ validation ฝั่ง store บังคับเฉพาะตัว string
+
+### สาเหตุที่ 3 — validation ยอมให้ FK ปีเป็น NULL
+- `ClassroomController::store()` (บรรทัด 173-183):
+  - `'academic_year_id' => 'nullable|exists:academic_years,id'`
+  - `'academic_year' => 'required|string|max:10'`
+- นักเรียนสร้างห้องโดยไม่ส่ง `academic_year_id` → แถวมี FK = NULL → หลุด unique index (สาเหตุ 1)
+
+### สาเหตุที่ 4 — service ไม่มี application-level duplicate check เลย
+- `ClassroomService::createClassroom()` (บรรทัด 76-92) `Classroom::create($data)` ตรงๆ ไม่เช็คซ้ำ พึ่ง DB unique index อย่างเดียว
+- docblock อ้าง "BR-4: academic_year is mandatory" แต่ **ไม่ได้ enforce** ในโค้ด service
+
+### สาเหตุที่ 5 (หลักฐานชิ้นสำคัญ) — ฟอร์ม admin สองชุดส่งฟิลด์ปีไม่ตรงกัน
+- `ui/pages/academies/[name]/admin/classrooms.vue:221-224` — POST ส่งเฉพาะ `academic_year` (string) **ไม่ส่ง `academic_year_id`** → แถวที่สร้างมี FK = NULL → หลุด index → **นี่คือทางที่ทำให้เกิดห้องซ้ำ**
+- `ui/pages/academies/[name]/admin/gradebook/classrooms/index.vue:152,178` — POST ส่ง `academic_year_id` (FK) และบังคับ required ฝั่ง client
+- สองฟอร์มเขียนลงตารางเดียวกันด้วย contract คนละแบบ → ข้อมูลปนกัน บางแถวมี FK บางแถว NULL
+
+### สาเหตุที่ 6 — `update()` ก็เปิดช่องซ้ำเช่นกัน
+- `ClassroomController::update()` (บรรทัด 207-218) แก้ `grade_level`/`section`/`academic_year` ได้ โดย **ไม่ตรวจ uniqueness ซ้ำ** → ย้ายห้องไปชนกับที่มีอยู่ได้
+
+### ผลลัพธ์ปลายทาง (ทำไมหน้าเว็บโชว์ซ้ำ)
+- `academies/[name].vue` เรียก `listClassrooms()` ครั้งเดียว คืนทุกแถวรวมทั้งที่ซ้ำ → การ์ดซ้ำเป็นเพราะ **ข้อมูลซ้ำจริงใน DB** ไม่ใช่ frontend bug
+
+---
+
+## จุดตัดสินใจเชิงออกแบบ (ต้องเคลียร์ก่อนเขียน migration)
+
+| # | ประเด็น | ตัวเลือก | คำแนะนำ |
+|---|---------|----------|---------|
+| D1 | ฟิลด์ปีที่เป็น source of truth | (ก) `academic_year_id` FK · (ข) `academic_year` string | **(ก)** — เพราะ rollover/enrollment/transcript ทั้งระบบ key ด้วย `academic_year_id`; ให้ string เป็น cache ที่ sync จาก FK |
+| D2 | `semester` อยู่ใน unique key ไหม | (ก) ไม่รวม (คงพฤติกรรมเดิม) · (ข) รวม | **(ก)** index เดิมไม่รวม semester อยู่แล้ว โรงเรียนนี้ใช้ห้องแบบราย "ปี" (rollover) — คงเดิมไว้ ลดความเสี่ยง |
+| D3 | ห้อง `archived` ควรกันซ้ำกับห้อง `active` ใหม่ไหม | (ก) กันเสมอทุกสถานะ (แก้ = un-archive) · (ข) กันเฉพาะ active (ต้องใช้ generated column) | **(ก)** — MySQL ไม่รองรับ partial unique index; วิธี (ก) race-proof และง่ายกว่า ถ้าอยากคืนห้องเดิมให้ un-archive |
+| D4 | ห้องซ้ำเดิมจัดการยังไง | (ก) merge เข้าห้องหลัก แล้วลบที่เหลือ · (ข) archive ที่เหลือ | **(ก)** ถ้าห้องซ้ำมีสมาชิก/นักเรียนกระจายกัน ต้อง merge; ถ้าซ้ำเปล่า archive/ลบได้เลย — ตัดสินรายกรณีจากผล audit |
+
+---
+
+## Work Plan — แก้ห้องเรียนซ้ำ (ทีละขั้นตอน, ปลอดภัยต่อ production data)
+
+### ขั้นที่ 0 — เคลียร์จุดตัดสินใจ D1–D4 ข้างต้น
+ยืนยันกับผู้ใช้/นายทะเบียนก่อน โดยเฉพาะ D3 (archived) และ D4 (วิธีจัดการห้องซ้ำเดิม) เพราะกระทบข้อมูลจริง
+
+### ขั้นที่ 1 — Audit แบบอ่านอย่างเดียว (ยังไม่แตะข้อมูล)
+เป้าหมาย: รู้ขนาดปัญหาจริงก่อนแก้ รันผ่าน tinker/read-only query:
+
+1.1 หาแถวที่ `academic_year_id` เป็น NULL (ต้นเหตุ):
+```sql
+SELECT academy_id, academic_year, COUNT(*) c
+FROM classrooms WHERE academic_year_id IS NULL
+GROUP BY academy_id, academic_year;
+```
+1.2 หากลุ่มห้องซ้ำจริง (จับคู่ด้วย "ปีเชิงตรรกะ" = COALESCE ของทั้งสองฟิลด์):
+```sql
+SELECT academy_id,
+       COALESCE(academic_year_id, 0) yid,
+       academic_year, grade_level, section, COUNT(*) c,
+       GROUP_CONCAT(id) ids, GROUP_CONCAT(classroom_code) codes
+FROM classrooms
+GROUP BY academy_id, COALESCE(academic_year_id,0), academic_year, grade_level, section
+HAVING c > 1;
+```
+1.3 หาแถวที่ FK กับ string ปีไม่ตรงกัน (data drift):
+```sql
+SELECT c.id, c.academic_year_id, c.academic_year, ay.name
+FROM classrooms c LEFT JOIN academic_years ay ON ay.id = c.academic_year_id
+WHERE c.academic_year_id IS NOT NULL AND ay.name <> c.academic_year;
+```
+1.4 สำหรับแต่ละ id ในกลุ่มซ้ำ นับ dependents ทุกตาราง (ดูขั้น 3 สำหรับรายชื่อ FK) เพื่อรู้ว่าห้องไหนควรเป็น "ห้องหลัก"
+
+**ผลลัพธ์:** ตารางสรุปจำนวนห้องซ้ำ + ห้อง NULL-FK + แผน merge รายกรณี
+
+### ขั้นที่ 2 — Backfill `academic_year_id` จาก `academic_year` (ทำให้ FK ครบก่อน)
+ก่อนบังคับ NOT NULL หรือแก้ index ต้องเติม FK ให้ครบ:
+
+2.1 เขียน migration (idempotent, ห่อ transaction) ที่:
+- สำหรับแต่ละแถว `academic_year_id IS NULL AND academic_year IS NOT NULL`:
+  หา `academic_years` ของ `academy_id` เดียวกันที่ `name = academic_year` → เซ็ต FK
+- ถ้าไม่พบปีนั้นในตาราง `academic_years` → **find-or-create** ปีนั้นให้ academy (ตามนโยบาย D1) หรือ log ไว้ให้ตรวจ manual (เลือกได้)
+2.2 หลัง backfill รัน query 1.1 ซ้ำ ต้องเหลือ 0 (หรือเหลือเฉพาะเคสไม่มี string ปีจริง — ต้องแก้ manual)
+2.3 **ยังไม่แตะ unique index ในขั้นนี้** เพราะข้อมูลซ้ำยังอยู่
+
+### ขั้นที่ 3 — Merge/จัดการห้องซ้ำเดิม (data migration ที่ต้อง backup ก่อน)
+⚠️ ขั้นที่อันตรายที่สุด — ต้อง `mysqldump nuxnan` ก่อน และรัน dry-run ก่อน commit
+
+3.1 **Enumerate FK ที่ชี้ `classrooms.id` ทั้งหมดก่อน** (พบอย่างน้อย 12 ตาราง: `classroom_students`, `classroom_members`, `classroom_groups`, `classroom_invitations`, `semester_transcripts`/`transcripts`, `class_schedules`, `behavior_records`, `behavior_sessions`, `typing_sessions`, `student_card_requests`, `student_academic_info.classroom_id`, finance tables) — ยืนยันด้วย:
+```sql
+SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE
+WHERE REFERENCED_TABLE_NAME = 'classrooms' AND REFERENCED_TABLE_SCHEMA = 'nuxnan';
+```
+3.2 สำหรับแต่ละกลุ่มซ้ำ เลือก **survivor** (ห้องที่มี dependents มากสุด/เก่าสุด) แล้ว re-point FK ของทุกตารางจากห้องที่แพ้ → survivor
+3.3 ระวัง **unique collision ตอน re-point**: เช่น `classroom_members` unique `(classroom_id, user_id)` — ถ้า user เดียวกันอยู่ทั้งสองห้อง การ re-point จะชน → ต้อง dedupe (เก็บ active/ใหม่สุด, ลบ/soft-remove อีกอัน) ก่อน re-point; ตรวจ pattern นี้กับทุกตารางที่มี unique รวม classroom_id
+3.4 หลัง re-point แล้วห้องที่แพ้ไม่มี dependents → ลบ (D4-ก) หรือ archive (D4-ข)
+3.5 ทำเป็น command/มีโหมด `--dry-run` พิมพ์แผน merge ก่อน แล้วค่อย `--commit`; ห่อ DB transaction ต่อกลุ่ม
+3.6 หลังเสร็จ รัน query 1.2 ซ้ำ ต้องเหลือ 0 กลุ่มซ้ำ
+
+### ขั้นที่ 4 — ปิดช่องสร้างซ้ำในอนาคต (validation + index)
+ทำ **หลัง** ข้อมูลสะอาดแล้วเท่านั้น:
+
+4.1 **App-level validation** ใน `store()` (และ `update()`):
+- resolve `academic_year_id` จาก input ให้ได้เสมอ (รับ id หรือ string แล้ว find-or-create) ก่อน insert
+- เพิ่ม `Rule::unique('classrooms')` scoped: `academy_id + academic_year_id + grade_level + section` (ignore ตัวเองใน update); ให้ error ภาษาไทยที่อ่านรู้เรื่อง เช่น "มีห้อง ม.1/1 ปีการศึกษานี้อยู่แล้ว"
+4.2 **ย้าย logic ไป `ClassroomService::createClassroom()`** ให้ resolve FK + เช็คซ้ำในที่เดียว (ทั้งสองฟอร์มเรียกผ่าน service เดียว) — sync `academic_year` string จาก `academicYear->name` เสมอ (D1: FK เป็นหลัก)
+4.3 **Race condition**: ห่อ `createClassroom()` ใน transaction + `try/catch` จับ `QueryException` (SQLSTATE 23000 duplicate) แล้วคืน 422 friendly — validation กันได้ 99% แต่ catch กัน 2 request พร้อมกัน
+4.4 **Migration แก้ schema** (หลัง backfill+merge):
+- `academic_year_id` → **NOT NULL** (ตอนนี้ backfill ครบแล้ว) + คง `onDelete('set null')`? → ถ้า NOT NULL ต้องเปลี่ยนเป็น `restrict`/`cascade` ให้สอดคล้อง (ตัดสินใจ: ปีการศึกษาไม่ควรถูกลบทั้งที่มีห้อง → `restrict`)
+- drop unique เดิม แล้วสร้างใหม่ `(academy_id, academic_year_id, grade_level, section)` (ตอนนี้ FK NOT NULL แล้ว NULL-trap หายไป) — ตาม D2 ไม่รวม semester, ตาม D3 ไม่กรอง status
+- (ออปชัน) พิจารณา drop คอลัมน์ `academic_year` string ทิ้ง หรือคงไว้เป็น denormalized cache ที่ service sync ให้เสมอ — **แนะนำคงไว้** เพราะหลายหน้า filter/display ใช้ string อยู่ (`getStatistics`, `admin/classrooms.vue`) การลบกระทบกว้าง
+
+### ขั้นที่ 5 — รวมฟอร์ม frontend ให้ contract เดียว
+5.1 `admin/classrooms.vue` — เพิ่มการส่ง `academic_year_id` (เลือกจาก dropdown ปีการศึกษา) ให้ตรงกับ `gradebook/classrooms/index.vue`; ถ้าจะคง string ไว้ด้วยก็ได้ แต่ FK ต้องมาเสมอ
+5.2 จัดการ error 422 duplicate ที่ backend คืน → แสดง toast/inline ภาษาไทย ไม่ให้ผู้ใช้กดซ้ำจนงง
+5.3 ตรวจว่าทั้งสองหน้าใช้แหล่งรายการปีการศึกษาเดียวกัน (จาก `academic_years` ของ academy)
+
+### ขั้นที่ 6 — Verification
+6.1 Feature test (`tests/Feature/.../ClassroomUniquenessTest.php`):
+- สร้างห้องเดิมซ้ำปีเดียวกัน → 422
+- สร้างห้องเดียวกันคนละปี → 201 (สองแถว)
+- สร้างโดยส่งแค่ `academic_year` string (จำลองฟอร์มเก่า) → ต้อง resolve FK และกันซ้ำได้
+- `update()` ย้ายห้องไปชนของเดิม → 422
+- ยิงสอง request พร้อมกัน (จำลอง) → มีแค่ 1 สำเร็จ
+- ห้อง archived + สร้าง active ซ้ำ → พฤติกรรมตาม D3
+6.2 Migration test บน DB สำเนา: backfill + merge แล้ว query 1.1/1.2 = 0
+6.3 `./vendor/bin/pint` + Nuxt build/type check
+6.4 เปิดหน้า `academies/{name}` ด้วย in-app browser ยืนยันการ์ด `ม.1/1` เหลือใบเดียว
+
+### สรุปไฟล์ที่เกี่ยวข้อง
+| ไฟล์ | Action |
+|------|--------|
+| `database/migrations/xxxx_backfill_classroom_academic_year_id.php` | สร้าง — เติม FK จาก string (ขั้น 2) |
+| `app/Console/Commands/MergeDuplicateClassrooms.php` (+`--dry-run`) | สร้าง — merge ห้องซ้ำ (ขั้น 3) |
+| `database/migrations/xxxx_fix_classrooms_unique_and_notnull.php` | สร้าง — FK NOT NULL + rebuild unique (ขั้น 4.4) |
+| `app/Services/ClassroomService.php` (`createClassroom`,`updateClassroom`) | แก้ — resolve FK + เช็คซ้ำ + sync string + transaction (ขั้น 4.2-4.3) |
+| `app/Http/Controllers/Api/Learn/Academy/ClassroomController.php` (`store`,`update`) | แก้ — Rule::unique + catch duplicate (ขั้น 4.1) |
+| `ui/pages/academies/[name]/admin/classrooms.vue` | แก้ — ส่ง `academic_year_id` + handle 422 (ขั้น 5) |
+| `ui/pages/academies/[name]/admin/gradebook/classrooms/index.vue` | ตรวจ — ให้ contract ตรงกัน |
+| `tests/Feature/.../ClassroomUniquenessTest.php` | สร้าง — ทดสอบ (ขั้น 6) |
+
+**ลำดับสำคัญ:** audit → backfill FK → merge ซ้ำ → *ค่อย* บังคับ NOT NULL/unique → validation → frontend → test. ห้ามสลับลำดับ (ถ้าแก้ index ก่อน merge migration จะ fail เพราะข้อมูลซ้ำยังอยู่)
+
+---
+
 # แผนปรับปรุง: คะแนนกิจกรรมประจำบทเรียนในหน้า My Progress — ฉบับตรวจสอบกับโค้ดจริง
 
 **วันที่:** 2026-07-12

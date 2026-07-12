@@ -6,6 +6,73 @@
 
 ---
 
+## 2026-07-13 — แก้ `gradebook.php` ไม่ถูกโหลด (route หายทั้งไฟล์)
+
+> ค้นพบระหว่างแก้ dropdown ปีการศึกษา: `routes/api.php` **ไม่เคย `require .../learn/gradebook.php`** เลย (ยืนยันด้วย git history — ลืมตั้งแต่แรก ไม่ใช่ปิดโดยตั้งใจ) → ทุก route ในไฟล์นั้นตาย
+
+### สถานะ: เสร็จสิ้น (Option A) + verify ครบ
+
+**ผลกระทบเดิม (endpoint ตาย):** course gradebook, subjects, grade-scales, assessment-categories, transcripts (academy+student+me), academic-years write/semesters → หน้า `admin/gradebook/*`, `my-transcript`, `Learn/Courses/{id}/gradebook/*`, rollover `createAcademicYear` พังเงียบ
+
+**การแก้ (Option A — require ทั้งไฟล์):**
+- `routes/api.php` — เพิ่ม `require __DIR__.'/learn/gradebook.php';` (ถัดจาก course.php ก่อน student.php → academy.php โหลดก่อน)
+- `routes/learn/academy.php` — ลบ route `academic-years` ชั่วคราว + import `AcademicYearController` ที่เพิ่มไว้เมื่อวาน (gradebook.php ให้ครบชุดแล้ว)
+- `ui/composables/useSchoolManagement.ts` — แก้ path ผิด `/gradebook/academic-years` → `/academic-years` (3 จุด: years/semesters/current) ⚠️ หมายเหตุ: `getSemesters` (GET) ยังไม่มี route backend รองรับ (gradebook.php มีแค่ POST/PUT semesters) — เป็น gap แยก
+
+### ✅ ตรวจแล้ว
+- `route:list`: course gradebook 10 routes คืนครบ, subjects/grade-scales/transcripts ครบ, **duplicate method+uri = 0** (Laravel dedupe by key, gradebook override academy.php ชี้ controller เดียวกัน), academic-years GET index = 1 (ไม่ซ้ำ)
+- **Security:** non-admin POST `/subjects`,`/grade-scales`,`/transcripts/*`,`/academic-years` → **403 ทุกจุด** (controller gate เอง)
+- **Happy path:** admin GET revived endpoints → 200 ทุกจุด (ทั้ง curl และ in-browser fetch จาก origin :3000 + CORS)
+- Pint ผ่าน
+
+### Option B (cleanup) — เสร็จแล้ว (2026-07-13)
+ย้าย route ออกจาก gradebook.php ไปไฟล์ที่โหลดอยู่ แล้ว **ลบ gradebook.php ทิ้ง**:
+- **course.php** — course gradebook (10 routes) เป็น group `['auth:api']` แยก (ไม่มี `verified` — รักษา middleware เดิม)
+- **student.php** — student transcripts (`/students/{student}/transcripts/*`) + `/students/me/*` (transcripts, card)
+- **academy.php** — academic-years CRUD+semesters, subjects, grade-scales, assessment-categories, transcripts (academy), `{academy}/students` index/show
+- **academy.php classrooms update** — เปลี่ยน `PATCH` เป็น `match(['put','patch'])` เพราะ frontend ทั้ง 2 ฟอร์มใช้ **PUT** (ก่อน Option A การแก้ห้องผ่าน UI พังเงียบ — Option A กู้คืนผ่าน PUT ของ gradebook.php, Option B ย้ายมาไว้ที่ academy.php)
+- `api.php` — เอา require gradebook.php ออก; **ลบไฟล์ gradebook.php**
+
+**Verify (diff-based):** จับ golden route set (1690) ก่อน แล้วเทียบหลัง (1689) — ต่างกันแค่ที่ตั้งใจ: `PATCH` + `PUT classrooms/{classroom}` (2 route) → รวมเป็น `PATCH,PUT` (1 route) · **route อื่นเหมือนเดิมทุกตัว, duplicate = 0** · ClassroomUniquenessTest 4/4 ผ่าน · smoke test endpoint ที่ย้าย (subjects/grade-scales/transcripts/course-gradebook/students-me/classroom-PUT) → 200 · Pint ผ่าน
+
+### 🐞 bug เดิมที่เจอ (แยกต่างหาก ไม่ใช่จาก refactor)
+`GET /api/academies/{academy}/students` และ `/classrooms/students` (ClassroomController@getAllStudents) คืน **500** — `Unknown column 'current_student_number' in 'order clause'` (ใช้ alias จาก `addSelect` ใน `orderByRaw` — MySQL อ้าง alias ใน ORDER BY กับ subselect ไม่ได้) มีมาก่อน refactor (อยู่ใน golden) → ควรแก้แยก (ย้าย order logic หรือใช้ subquery ซ้ำใน ORDER BY)
+
+### Backend gap (ยังเหลือ)
+ไม่มี `GET .../academic-years/{year}/semesters` (มีแค่ POST/PUT) — semesters ฝังมากับ academic-years index (`->with('semesters')`) อยู่แล้ว ถ้า `getSemesters` ถูกเรียกจริงต้องเพิ่ม route
+
+---
+
+## 2026-07-12 — "ห้องเรียนซ้ำ" ในหน้า Academy
+
+> อาการ: การ์ดห้องเรียนซ้ำ (เช่น ม.1/1 โผล่ 2 ใบ) ในหน้า `academies/[name]` แท็บห้องเรียน
+> **บทเรียนสำคัญ:** root cause แรกที่วิเคราะห์ (NULL-trap ใน unique index) **ผิด** — การ์ดที่เห็นเป็นคู่คือ**ห้องเดียวกันคนละปีการศึกษา** (2568 vs 2569) ไม่ใช่ห้องซ้ำจริง ต้นตอจริงคือ **หน้าเว็บดึงห้องทุกปีมาโชว์รวมกันโดยไม่กรองปี**
+
+### สถานะ: เสร็จสิ้น + verify ในเบราว์เซอร์จริงแล้ว (โหลดหน้าสด login เจ้าของ)
+
+**Part 1 — สุขอนามัยข้อมูล (orthogonal กับบั๊กที่เห็น แต่ทำไว้เป็นการกันซ้ำ*ปีเดียวกัน*จริง):**
+- Migration `2026_07_12_140000_backfill_classroom_academic_year_id.php` — backfill `academic_year_id` จาก `academic_year` string (find-or-create ปีถ้าไม่มี)
+- Migration `2026_07_12_150000_fix_classrooms_unique_and_notnull.php` — `academic_year_id` เป็น NOT NULL + UNIQUE `(academy_id, academic_year_id, grade_level, section)`, FK `onDelete restrict` (รองรับ SQLite ในเทสต์)
+- Command `classrooms:merge` (`app/Console/Commands/MergeDuplicateClassrooms.php`) — ยุบห้องซ้ำ + re-point FK ทุกตารางที่อ้าง `classrooms.id` (มี `--commit`, default dry-run)
+- `ClassroomService.php` — `resolveAcademicYear` + `checkUniqueness` (app-level) + catch QueryException 23000 กัน race
+- `ClassroomController@store/@update` — validation ยืดหยุ่นรับทั้ง `academic_year_id`/`academic_year`
+- `admin/classrooms.vue` — ส่ง `academic_year_id` ให้สอดคล้องทั้งฟอร์มสร้าง/แก้ไข
+- ⚠️ **ลำดับ deploy เครื่องอื่น:** ต้องรัน `classrooms:merge --commit` **ก่อน** migrate ถึง 150000 ไม่งั้น 150000 fail ตอนสร้าง unique index (merge ยังไม่ได้ผูกใน migration chain)
+
+**Part 2 — แก้บั๊กที่เห็นจริง (กรองปีการศึกษา):**
+- `ClassroomController@index` — ถ้าไม่ส่ง filter ปี → default เป็นปีปัจจุบันของ academy (มี escape hatch `?all_years=1`); เพิ่ม `use App\Models\AcademicYear`
+- `academies/[name].vue` — เพิ่ม dropdown เลือกปีการศึกษาเฉพาะแท็บห้องเรียน (default ปีปัจจุบัน + ตัวเลือก "ทุกปีการศึกษา"), `fetchAcademicYears()`, ส่ง `academic_year_id`/`all_years` ตามที่เลือก, โหลดปีก่อนโหลดห้องตอนเปิดแท็บ
+- **เพิ่ม route `GET /api/academies/{academy}/academic-years`** ใน `routes/learn/academy.php` → `AcademicYearController@index`
+  - 🔴 **ค้นพบสำคัญ:** `routes/learn/gradebook.php` **ไม่เคยถูก `require` ใน `routes/api.php`** → ทุก route ในไฟล์นั้นหายหมด (academic-years CRUD, `/current`, course gradebook routes ฯลฯ) หน้า admin อื่นที่เรียก endpoint เหล่านี้ก็น่าจะพังเงียบ — **เป็นงานแยกที่ต้องสะสาง** (ควร require gradebook.php หรือย้าย route ที่ใช้จริงออกมา ระวัง route ซ้ำกับ academy.php)
+
+### ✅ ตรวจแล้ว
+- 4/4 `ClassroomUniquenessTest` ผ่าน (11 assertions)
+- Pint ผ่าน / Nuxt production build ผ่าน (exit 0)
+- ข้อมูลจริง: กรองปี 2569 → 54 ห้อง, ม.1/1 เหลือใบเดียว (105 → 54)
+- **Browser จริง:** `academic-years` → 200 + dropdown ขึ้น "2569 (ปัจจุบัน)/2568/ทุกปีการศึกษา", default=2569, `classrooms?academic_year_id=2` → 200
+
+---
+
 ## 2026-07-12 — Campaign system (โฆษณา + สนับสนุน) Phase 1-4 + review/fix
 
 > ฟีเจอร์: ระบบ Campaign กลาง (โฆษณา + สนับสนุน) รองรับ scope public/academy/course — แผนเต็ม + findings อยู่ที่ [`.agents/campaign-system-plan.md`](campaign-system-plan.md)
