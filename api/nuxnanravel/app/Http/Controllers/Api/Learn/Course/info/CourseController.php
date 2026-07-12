@@ -319,13 +319,13 @@ class CourseController extends Controller
     }
 
     /**
-     * Search courses where user is admin for quiz duplication
+     * Search courses where user is admin for quiz duplication or campaign creation
      */
     public function searchCourses(Request $request)
     {
         $query = $request->input('q', '');
 
-        if (strlen($query) < 2) {
+        if (strlen($query) < 2 && ! $request->boolean('all')) {
             return response()->json([
                 'success' => true,
                 'courses' => [],
@@ -335,21 +335,25 @@ class CourseController extends Controller
         $user = auth()->user();
 
         // Get courses where user is admin
-        $courses = Course::where(function ($q) use ($user) {
+        $coursesQuery = Course::where(function ($q) use ($user) {
             $q->where('user_id', $user->id)
                 ->orWhereHas('courseMembers', function ($q2) use ($user) {
                     $q2->where('user_id', $user->id)
                         ->whereIn('role', ['admin', 'teacher', 'instructor']);
                 });
-        })
-            ->where(function ($q) use ($query) {
+        });
+
+        if (strlen($query) >= 2) {
+            $coursesQuery->where(function ($q) use ($query) {
                 $q->where('name', 'like', '%'.$query.'%')
                     ->orWhere('title', 'like', '%'.$query.'%')
                     ->orWhere('code', 'like', '%'.$query.'%');
-            })
-            ->select(['id', 'name', 'title', 'code', 'cover_image'])
+            });
+        }
+
+        $courses = $coursesQuery->select(['id', 'name', 'title', 'code', 'cover_image', 'academy_id'])
             ->orderBy('updated_at', 'desc')
-            ->limit(10)
+            ->limit($request->boolean('all') ? 100 : 10)
             ->get();
 
         return response()->json([

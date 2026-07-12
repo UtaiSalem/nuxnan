@@ -200,6 +200,7 @@ Route::middleware(['auth:api', 'super-admin'])->prefix('super-admins')->group(fu
 // Include other route files
 require __DIR__.'/earn/donate.php';
 require __DIR__.'/earn/advert.php';
+require __DIR__.'/earn/campaign.php';
 require __DIR__.'/earn/points-wallet.php';
 require __DIR__.'/earn/coupons.php';
 require __DIR__.'/earn/qr.php';
