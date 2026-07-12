@@ -89,6 +89,8 @@ export interface ApiError extends Error {
   retryCount: number;
   /** Whether this error is retryable */
   isRetryable: boolean;
+  /** True when the session could not be refreshed and the user was logged out */
+  isSessionExpired?: boolean;
   /** Original error object */
   originalError?: any;
 }
@@ -509,9 +511,15 @@ export const useApi = () => {
             // Update token and retry immediately (don't count as retry)
             continue;
           } else {
-            // Refresh failed, logout
+            // Refresh failed → session is unrecoverable. Log the user out and
+            // throw a clear error instead of returning undefined, which callers
+            // would crash on via `response.success` (Cannot read properties of
+            // undefined). This keeps call()'s contract consistent: it always
+            // throws on failure.
             await authStore.logout();
-            return undefined as any;
+            apiError.type = 'authError';
+            apiError.isSessionExpired = true;
+            throw apiError;
           }
         }
 
