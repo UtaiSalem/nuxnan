@@ -12,6 +12,10 @@ const props = defineProps({
   post: {
     type: Object,
     default: null
+  },
+  postType: {
+    type: String,
+    default: 'Post'
   }
 })
 
@@ -284,7 +288,20 @@ const updatePost = async () => {
       options.tagged_users = taggedFriends.value.map(f => f.id)
     }
     
-    const response = await updatePostApi(props.post.id, postText.value, options)
+    // Academy and course posts use their scoped endpoints and different models.
+    // Calling /api/posts/{id} for an AcademyPost makes Laravel resolve the id
+    // against App\Models\Post and return a misleading 404.
+    let response
+    if (props.postType === 'AcademyPost') {
+      const academyId = props.post.academy_id || props.post.academy?.id
+      if (!academyId) throw new Error('ไม่พบ academy ของโพสต์นี้')
+
+      response = await api.post(`/api/academies/${academyId}/posts/${props.post.id}`, {
+        content: postText.value
+      })
+    } else {
+      response = await updatePostApi(props.post.id, postText.value, options)
+    }
     
     if (response.success) {
       emit('post-updated', response.post)

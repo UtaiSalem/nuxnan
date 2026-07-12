@@ -3197,6 +3197,7 @@ const handlePollUpdate = (updatedPoll) => {
       v-if="!isNested && isOwnPost"
       :show="showEditModal" 
       :post="postData" 
+      :post-type="actionTo"
       @close="showEditModal = false" 
       @post-updated="handlePostUpdated" 
     />
