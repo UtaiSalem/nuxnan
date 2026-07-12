@@ -53,6 +53,7 @@ const classroomForm = ref({
   name: '',
   grade_level: '',
   academic_year: '',
+  academic_year_id: null as number | null,
   homeroom_teacher_id: null as number | null,
   capacity: 40
 })
@@ -82,6 +83,28 @@ const academicYears = computed(() => {
   return years
 })
 
+const dbAcademicYears = ref<any[]>([])
+const fetchAcademicYears = async () => {
+  if (!academyId.value) return
+  try {
+    const res: any = await api.get(`/api/academies/${academyId.value}/academic-years`)
+    if (res.success) {
+      dbAcademicYears.value = res.academicYears || []
+    }
+  } catch (err) {
+    console.error('Failed to fetch academic years:', err)
+  }
+}
+
+watch(() => classroomForm.value.academic_year, (newYear) => {
+  if (newYear && dbAcademicYears.value.length > 0) {
+    const found = dbAcademicYears.value.find((y: any) => y.name === newYear)
+    classroomForm.value.academic_year_id = found ? found.id : null
+  } else {
+    classroomForm.value.academic_year_id = null
+  }
+})
+
 onMounted(async () => {
   try {
     const response: any = await api.get(`/api/academies/${academyName.value}`)
@@ -99,7 +122,8 @@ onMounted(async () => {
       await Promise.all([
         fetchClassrooms(),
         fetchGradeLevels(),
-        fetchStatistics()
+        fetchStatistics(),
+        fetchAcademicYears()
       ])
     }
   } catch (err) {
@@ -203,6 +227,7 @@ const openEditModal = (classroom: any) => {
     name: classroom.name,
     grade_level: classroom.grade_level || '',
     academic_year: classroom.academic_year || '',
+    academic_year_id: classroom.academic_year_id || null,
     homeroom_teacher_id: classroom.homeroom_teacher_id,
     capacity: classroom.capacity || 40
   }
@@ -222,6 +247,7 @@ const createClassroom = async () => {
       name: classroomForm.value.name,
       grade_level: classroomForm.value.grade_level,
       academic_year: classroomForm.value.academic_year,
+      academic_year_id: classroomForm.value.academic_year_id || undefined,
       homeroom_teacher_id: classroomForm.value.homeroom_teacher_id || undefined,
       capacity: classroomForm.value.capacity
     })
@@ -267,6 +293,7 @@ const updateClassroom = async () => {
       name: classroomForm.value.name,
       grade_level: classroomForm.value.grade_level,
       academic_year: classroomForm.value.academic_year,
+      academic_year_id: classroomForm.value.academic_year_id || undefined,
       homeroom_teacher_id: classroomForm.value.homeroom_teacher_id || undefined,
       capacity: classroomForm.value.capacity
     })

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Academy\Enrollment\ClassroomStudentResource;
+use App\Models\AcademicYear;
 use App\Models\Academy;
+use App\Models\AnnualTranscript;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\Student;
@@ -39,6 +41,20 @@ class ClassroomController extends Controller
     public function index(Request $request, int $academyId): JsonResponse
     {
         $filters = $request->only(['academic_year_id', 'academic_year', 'semester', 'grade_level', 'status']);
+
+        // When no academic-year filter is supplied, default to the academy's current
+        // academic year so listings don't mix classrooms across years (which look like
+        // duplicate cards). Pass ?all_years=1 to opt out and return every year.
+        if (empty($filters['academic_year_id']) && empty($filters['academic_year']) && ! $request->boolean('all_years')) {
+            $currentYear = AcademicYear::where('academy_id', $academyId)
+                ->where('is_current', true)
+                ->first();
+
+            if ($currentYear) {
+                $filters['academic_year_id'] = $currentYear->id;
+            }
+        }
+
         $withMembers = $request->boolean('include_members', false);
 
         $classrooms = $this->classroomService->listClassrooms($academyId, $filters, $withMembers);
@@ -171,8 +187,8 @@ class ClassroomController extends Controller
         }
 
         $validated = $request->validate([
-            'academic_year_id' => 'nullable|exists:academic_years,id',
-            'academic_year' => 'required|string|max:10',
+            'academic_year_id' => 'nullable|integer|exists:academic_years,id',
+            'academic_year' => 'required_without:academic_year_id|nullable|string|max:10',
             'semester' => 'nullable|integer|in:1,2',
             'grade_level' => 'required|string|max:10',
             'section' => 'required|string|max:10',
@@ -205,10 +221,11 @@ class ClassroomController extends Controller
         $classroom = Classroom::where('academy_id', $academyId)->findOrFail($id);
 
         $validated = $request->validate([
+            'academic_year_id' => 'nullable|integer|exists:academic_years,id',
+            'academic_year' => 'nullable|string|max:10',
             'grade_level' => 'string|max:10',
             'section' => 'string|max:10',
             'name' => 'nullable|string|max:50',
-            'academic_year' => 'string|max:10',
             'semester' => 'nullable|integer|in:1,2',
             'homeroom_teacher_id' => 'nullable|exists:users,id',
             'room_location' => 'nullable|string|max:100',
@@ -625,7 +642,7 @@ class ClassroomController extends Controller
         }
 
         $query = Student::where('academy_id', $academyId)
-            ->with(['user', 'classroom', 'studentCard', 'currentEnrollment.classroom']);
+            ->with(['user', 'studentCard', 'currentEnrollment.classroom']);
 
         // Apply filters
         if ($request->filled('classroom_id')) {
@@ -640,19 +657,25 @@ class ClassroomController extends Controller
         }
 
         // Include latest GPA and active classroom metadata without assuming columns exist on students.
-        $query->addSelect([
-            'current_student_number' => \DB::raw("(SELECT classroom_students.student_number FROM classroom_students WHERE classroom_students.student_id = students.id AND classroom_students.status = 'active' ORDER BY classroom_students.created_at DESC LIMIT 1)"),
-            'current_classroom_id' => \DB::raw("(SELECT classroom_students.classroom_id FROM classroom_students WHERE classroom_students.student_id = students.id AND classroom_students.status = 'active' ORDER BY classroom_students.created_at DESC LIMIT 1)"),
-            'gpa' => \DB::raw('(SELECT gpa FROM semester_transcripts WHERE semester_transcripts.student_id = students.id ORDER BY created_at DESC LIMIT 1)'),
-            'gpax' => \DB::raw('(SELECT gpax FROM annual_transcripts WHERE annual_transcripts.student_id = students.id ORDER BY created_at DESC LIMIT 1)'),
-        ]);
+        // Note: the alias must be embedded in the raw SQL (…"as current_student_number"). Passing a
+        // DB::raw() expression as the value of addSelect([alias => …]) does NOT apply the array-key
+        // alias — that shortcut only works for Closure/Builder subqueries — so the column would
+        // otherwise be named after the whole expression and no "current_student_number" alias exists.
+        // The active-student-number subquery is also reused verbatim in ORDER BY below.
+        $studentNumberSubquery = "(SELECT classroom_students.student_number FROM classroom_students WHERE classroom_students.student_id = students.id AND classroom_students.status = 'active' ORDER BY classroom_students.created_at DESC LIMIT 1)";
+
+        $query->select('students.*')
+            ->selectRaw("{$studentNumberSubquery} as current_student_number")
+            ->selectRaw("(SELECT classroom_students.classroom_id FROM classroom_students WHERE classroom_students.student_id = students.id AND classroom_students.status = 'active' ORDER BY classroom_students.created_at DESC LIMIT 1) as current_classroom_id")
+            ->selectRaw('(SELECT gpa FROM semester_transcripts WHERE semester_transcripts.student_id = students.id ORDER BY created_at DESC LIMIT 1) as gpa')
+            ->selectRaw('(SELECT gpax FROM annual_transcripts WHERE annual_transcripts.student_id = students.id ORDER BY created_at DESC LIMIT 1) as gpax');
 
         $perPage = $request->query('per_page', 20);
         $students = $query
             ->orderBy('class_level')
             ->orderBy('class_section')
-            ->orderByRaw('current_student_number IS NULL')
-            ->orderBy('current_student_number')
+            ->orderByRaw("{$studentNumberSubquery} IS NULL")
+            ->orderByRaw($studentNumberSubquery)
             ->orderBy('student_id')
             ->orderBy('first_name_th')
             ->paginate($perPage);
@@ -692,8 +715,19 @@ class ClassroomController extends Controller
 
         $student = Student::where('academy_id', $academyId)
             ->where('id', $studentId)
-            ->with(['user', 'classroom', 'studentCard'])
+            ->with(['user', 'studentCard', 'currentEnrollment.classroom'])
             ->firstOrFail();
+
+        // The Student model has no `classroom` relation. Surface the active enrollment's
+        // classroom, student_number and latest GPAX as flat attributes so the frontend
+        // (gradebook transcript page reads student.classroom?.name, student.student_number,
+        // student.gpax) keeps working — mirroring getAllStudents() above.
+        $enrollment = $student->currentEnrollment;
+        $student->setAttribute('classroom', $enrollment?->classroom);
+        $student->setAttribute('student_number', $enrollment?->student_number);
+        $student->setAttribute('gpax', AnnualTranscript::where('student_id', $student->id)
+            ->latest('created_at')
+            ->value('gpax'));
 
         return response()->json([
             'success' => true,

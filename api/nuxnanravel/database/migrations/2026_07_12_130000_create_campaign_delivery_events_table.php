@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamp('created_at')->useCurrent();
             $table->index(['advert_id', 'event_type']);
             $table->index(['user_id', 'created_at']);
-            $table->unique(['advert_id', 'user_id', 'idempotency_key']);
+            $table->unique(['advert_id', 'user_id', 'idempotency_key'], 'campaign_delivery_events_unique');
         });
     }
 

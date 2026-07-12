@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\Classroom;
 use App\Models\ClassroomMember;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * ClassroomService — CRUD and helper operations for classrooms.
@@ -67,6 +69,71 @@ class ClassroomService
     }
 
     /**
+     * Resolve academic_year_id and academic_year string on the data array.
+     */
+    private function resolveAcademicYear(int $academyId, array &$data): void
+    {
+        if (! empty($data['academic_year_id'])) {
+            $ay = DB::table('academic_years')->where('academy_id', $academyId)->where('id', $data['academic_year_id'])->first();
+            if ($ay) {
+                $data['academic_year'] = $ay->name;
+            }
+        } elseif (! empty($data['academic_year'])) {
+            $academicYearName = $data['academic_year'];
+            $ay = DB::table('academic_years')
+                ->where('academy_id', $academyId)
+                ->where('name', $academicYearName)
+                ->first();
+
+            if (! $ay) {
+                $yearInt = intval($academicYearName);
+                if ($yearInt > 0) {
+                    $adYear = $yearInt - 543;
+                    $startDate = "{$adYear}-05-16";
+                    $endDate = ($adYear + 1).'-03-31';
+                } else {
+                    $startDate = date('Y-05-16');
+                    $endDate = date('Y-03-31', strtotime('+1 year'));
+                }
+
+                $academicYearId = DB::table('academic_years')->insertGetId([
+                    'academy_id' => $academyId,
+                    'name' => $academicYearName,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'is_current' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $data['academic_year_id'] = $academicYearId;
+            } else {
+                $data['academic_year_id'] = $ay->id;
+            }
+        }
+    }
+
+    /**
+     * Check if a classroom already exists in the academy.
+     */
+    private function checkUniqueness(int $academyId, array $data, ?int $ignoreId = null): void
+    {
+        $query = Classroom::where('academy_id', $academyId)
+            ->where('academic_year_id', $data['academic_year_id'])
+            ->where('grade_level', $data['grade_level'])
+            ->where('section', $data['section']);
+
+        if ($ignoreId) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        if ($query->exists()) {
+            throw ValidationException::withMessages([
+                'grade_level' => ["มีห้อง {$data['grade_level']}/{$data['section']} ปีการศึกษานี้อยู่แล้ว"],
+            ]);
+        }
+    }
+
+    /**
      * Create a new classroom. Auto-generates classroom_code.
      *
      * @param  array  $data  Validated data
@@ -77,18 +144,31 @@ class ClassroomService
     {
         $data['academy_id'] = $academyId;
         $data['created_by'] = Auth::id();
+
+        $this->resolveAcademicYear($academyId, $data);
         $data['name'] = $data['name'] ?? "{$data['grade_level']}/{$data['section']}";
 
-        return DB::transaction(function () use ($data) {
-            $classroom = Classroom::create($data);
+        $this->checkUniqueness($academyId, $data);
 
-            // If homeroom_teacher_id is set, auto-add as teacher member
-            if (! empty($data['homeroom_teacher_id'])) {
-                $this->addTeacherMember($classroom, $data['homeroom_teacher_id']);
+        try {
+            return DB::transaction(function () use ($data) {
+                $classroom = Classroom::create($data);
+
+                // If homeroom_teacher_id is set, auto-add as teacher member
+                if (! empty($data['homeroom_teacher_id'])) {
+                    $this->addTeacherMember($classroom, $data['homeroom_teacher_id']);
+                }
+
+                return $classroom->load(['academicYear', 'homeroomTeacher']);
+            });
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23000') {
+                throw ValidationException::withMessages([
+                    'grade_level' => ["มีห้อง {$data['grade_level']}/{$data['section']} ปีการศึกษานี้อยู่แล้ว"],
+                ]);
             }
-
-            return $classroom->load(['academicYear', 'homeroomTeacher']);
-        });
+            throw $e;
+        }
     }
 
     /**
@@ -96,9 +176,29 @@ class ClassroomService
      */
     public function updateClassroom(Classroom $classroom, array $data): Classroom
     {
-        $classroom->update($data);
+        // Copy existing values if they are not passed to resolveAcademicYear
+        $mergedData = array_merge([
+            'academic_year_id' => $classroom->academic_year_id,
+            'academic_year' => $classroom->academic_year,
+            'grade_level' => $classroom->grade_level,
+            'section' => $classroom->section,
+        ], $data);
 
-        return $classroom->fresh(['academicYear', 'homeroomTeacher']);
+        $this->resolveAcademicYear($classroom->academy_id, $mergedData);
+        $this->checkUniqueness($classroom->academy_id, $mergedData, $classroom->id);
+
+        try {
+            $classroom->update($mergedData);
+
+            return $classroom->fresh(['academicYear', 'homeroomTeacher']);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23000') {
+                throw ValidationException::withMessages([
+                    'grade_level' => ["มีห้อง {$mergedData['grade_level']}/{$mergedData['section']} ปีการศึกษานี้อยู่แล้ว"],
+                ]);
+            }
+            throw $e;
+        }
     }
 
     /**

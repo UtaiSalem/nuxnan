@@ -37,6 +37,9 @@ const members = ref<any[]>([])
 const groups = ref<any[]>([])
 const activities = ref<any[]>([])
 const classrooms = ref<any[]>([])
+const academicYears = ref<any[]>([])
+// null = ยังไม่ได้ตั้งค่า (backend จะ default เป็นปีปัจจุบัน) · 'all' = ทุกปี · number = ปีที่เลือก
+const selectedClassroomYear = ref<number | 'all' | null>(null)
 const events = ref<any[]>([])
 const pinnedAnnouncements = ref<any[]>([])
 const isLoading = ref(true)
@@ -513,13 +516,36 @@ const classroomMembers = ref<any[]>([])
 const classroomStudents = ref<any[]>([])
 const isLoadingClassroomDetail = ref(false)
 
-// Fetch classrooms with member counts
+// Fetch academic years for the classroom-year filter, default to the current year
+const fetchAcademicYears = async () => {
+  if (!academy.value) return
+  try {
+    const response: any = await api.get(`/api/academies/${academy.value.id}/academic-years`)
+    if (response.success) {
+      academicYears.value = response.academicYears || []
+      if (selectedClassroomYear.value === null) {
+        const current = academicYears.value.find((y: any) => y.is_current)
+        selectedClassroomYear.value = current?.id ?? academicYears.value[0]?.id ?? 'all'
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch academic years:', err)
+  }
+}
+
+// Fetch classrooms with member counts, scoped to the selected academic year
 const fetchClassrooms = async () => {
   if (!academy.value) return
-  
+
   isLoadingTab.value = true
   try {
-    const response: any = await api.get(`/api/academies/${academy.value.id}/classrooms?include_members=1`)
+    const params = new URLSearchParams({ include_members: '1' })
+    if (selectedClassroomYear.value === 'all') {
+      params.set('all_years', '1')
+    } else if (selectedClassroomYear.value) {
+      params.set('academic_year_id', String(selectedClassroomYear.value))
+    }
+    const response: any = await api.get(`/api/academies/${academy.value.id}/classrooms?${params.toString()}`)
     if (response.success) {
       classrooms.value = JSON.parse(JSON.stringify(response.data || response.classrooms || []))
     }
@@ -528,6 +554,11 @@ const fetchClassrooms = async () => {
   } finally {
     isLoadingTab.value = false
   }
+}
+
+// Re-fetch classrooms when the year filter changes
+const onClassroomYearChange = async () => {
+  await fetchClassrooms()
 }
 
 // Fetch classroom detail with members
@@ -746,6 +777,7 @@ const switchTab = async (tabId: string) => {
       }
       break
     case 'classrooms':
+      if (academicYears.value.length === 0) await fetchAcademicYears()
       if (classrooms.value.length === 0) await fetchClassrooms()
       break
     case 'events':
@@ -1948,9 +1980,25 @@ watch(() => route.hash, (newHash) => {
 
             <!-- Classroom List View -->
             <div v-else>
-              <!-- Header with Admin Link -->
-              <div v-if="academy.authIsAcademyAdmin" class="flex justify-end mb-4">
+              <!-- Header: Year Filter + Admin Link -->
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div class="flex items-center gap-2">
+                  <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-orange-500" />
+                  <label for="classroom-year-filter" class="text-sm font-medium text-gray-600 dark:text-gray-300">ปีการศึกษา</label>
+                  <select
+                    id="classroom-year-filter"
+                    v-model="selectedClassroomYear"
+                    @change="onClassroomYearChange"
+                    class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-vikinger-dark-200 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-vikinger-purple/40"
+                  >
+                    <option v-for="y in academicYears" :key="y.id" :value="y.id">
+                      {{ y.name }}{{ y.is_current ? ' (ปัจจุบัน)' : '' }}
+                    </option>
+                    <option value="all">ทุกปีการศึกษา</option>
+                  </select>
+                </div>
                 <NuxtLink
+                  v-if="academy.authIsAcademyAdmin"
                   :to="`/academies/${academyName}/admin/classrooms`"
                   class="px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium text-sm hover:bg-vikinger-purple/90 transition-colors flex items-center gap-2"
                 >
@@ -1961,7 +2009,7 @@ watch(() => route.hash, (newHash) => {
 
               <div v-if="classrooms.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
                 <Icon icon="fluent:board-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                <p class="text-gray-500 dark:text-gray-400">ยังไม่มีห้องเรียน</p>
+                <p class="text-gray-500 dark:text-gray-400">ยังไม่มีห้องเรียนในปีการศึกษานี้</p>
                 <p v-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">ไปที่ "จัดการห้องเรียน" เพื่อสร้างห้องเรียนใหม่</p>
               </div>
 
