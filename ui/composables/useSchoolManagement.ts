@@ -67,14 +67,14 @@ export const useSchoolManagement = () => {
     api.call(`/api/academies/${academyId}/schedules/${scheduleId}`, { method: 'DELETE' })
 
   // Academic Years & Semesters
-  const getAcademicYears = (academyId: number) => 
-    api.call(`/api/academies/${academyId}/gradebook/academic-years`)
+  const getAcademicYears = (academyId: number) =>
+    api.call(`/api/academies/${academyId}/academic-years`)
 
-  const getSemesters = (academyId: number, yearId: number) => 
-    api.call(`/api/academies/${academyId}/gradebook/academic-years/${yearId}/semesters`)
+  const getSemesters = (academyId: number, yearId: number) =>
+    api.call(`/api/academies/${academyId}/academic-years/${yearId}/semesters`)
 
-  const getCurrentAcademicYear = (academyId: number) => 
-    api.call(`/api/academies/${academyId}/gradebook/academic-years/current`)
+  const getCurrentAcademicYear = (academyId: number) =>
+    api.call(`/api/academies/${academyId}/academic-years/current`)
 
   // ============================================================
   // PHASE 2: FINANCE SYSTEM

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Learn\Academy\GradebookController;
 use App\Http\Controllers\Api\Learn\Course\admins\CourseAdminController;
 use App\Http\Controllers\Api\Learn\Course\assignments\AssignmentAnswerController;
 use App\Http\Controllers\Api\Learn\Course\assignments\AssignmentController;
@@ -458,4 +459,26 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/external-
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/score-breakdown')->group(function () {
     Route::get('/', [CourseScoreBreakdownController::class, 'index'])->name('course.score-breakdown.index');
     Route::post('/resync', [CourseScoreBreakdownController::class, 'resync'])->name('course.score-breakdown.resync');
+});
+
+// Course Gradebook Routes (moved from gradebook.php — auth:api only, no "verified")
+Route::middleware(['auth:api'])->prefix('/courses/{course}')->group(function () {
+    Route::get('/gradebook', [GradebookController::class, 'index'])->name('api.course.gradebook.index');
+
+    // Assessments
+    Route::post('/gradebook/assessments', [GradebookController::class, 'storeAssessment'])->name('api.course.gradebook.assessments.store');
+    Route::put('/gradebook/assessments/{assessment}', [GradebookController::class, 'updateAssessment'])->name('api.course.gradebook.assessments.update');
+    Route::delete('/gradebook/assessments/{assessment}', [GradebookController::class, 'destroyAssessment'])->name('api.course.gradebook.assessments.destroy');
+
+    // Scores
+    Route::get('/gradebook/assessments/{assessment}/scores', [GradebookController::class, 'getScores'])->name('api.course.gradebook.scores.index');
+    Route::put('/gradebook/assessments/{assessment}/scores', [GradebookController::class, 'updateScores'])->name('api.course.gradebook.scores.update');
+    Route::put('/gradebook/assessments/{assessment}/scores/{student}', [GradebookController::class, 'updateScore'])->name('api.course.gradebook.scores.updateSingle');
+
+    // Course grades
+    Route::get('/gradebook/grades', [GradebookController::class, 'getCourseGrades'])->name('api.course.gradebook.grades.index');
+    Route::post('/gradebook/grades/publish', [GradebookController::class, 'publishGrades'])->name('api.course.gradebook.grades.publish');
+
+    // Student view
+    Route::get('/gradebook/my-grades', [GradebookController::class, 'getStudentGrades'])->name('api.course.gradebook.my-grades');
 });

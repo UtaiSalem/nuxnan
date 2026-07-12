@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\Learn\Academy\AcademicYearController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyActivityController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyCourseController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\Api\Learn\Academy\EmergencyAlertController;
 use App\Http\Controllers\Api\Learn\Academy\ExpenseController;
 use App\Http\Controllers\Api\Learn\Academy\FeeStructureController;
 use App\Http\Controllers\Api\Learn\Academy\GamificationController;
+use App\Http\Controllers\Api\Learn\Academy\GradeScaleController;
 use App\Http\Controllers\Api\Learn\Academy\GuardianController;
 use App\Http\Controllers\Api\Learn\Academy\InviteLinkController;
 use App\Http\Controllers\Api\Learn\Academy\LeaveRequestController;
@@ -55,6 +57,8 @@ use App\Http\Controllers\Api\Learn\Academy\StudentAccountController;
 use App\Http\Controllers\Api\Learn\Academy\StudentImportController;
 use App\Http\Controllers\Api\Learn\Academy\StudentIntakeController;
 use App\Http\Controllers\Api\Learn\Academy\StudentLifecycleController;
+use App\Http\Controllers\Api\Learn\Academy\SubjectController;
+use App\Http\Controllers\Api\Learn\Academy\TranscriptController;
 use App\Http\Controllers\Api\Learn\Academy\TuitionFeeController;
 use Illuminate\Support\Facades\Route;
 
@@ -369,6 +373,58 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // ============================================
+    // Gradebook & Academic Management (moved from gradebook.php)
+    // ============================================
+
+    // Academic Years & Semesters
+    Route::prefix('{academy}/academic-years')->group(function () {
+        Route::get('/', [AcademicYearController::class, 'index'])->name('api.academy.academic-years.index');
+        Route::post('/', [AcademicYearController::class, 'store'])->name('api.academy.academic-years.store');
+        Route::get('/current', [AcademicYearController::class, 'getCurrent'])->name('api.academy.academic-years.current');
+        Route::put('/{academicYear}', [AcademicYearController::class, 'update'])->name('api.academy.academic-years.update');
+        Route::delete('/{academicYear}', [AcademicYearController::class, 'destroy'])->name('api.academy.academic-years.destroy');
+        Route::post('/{academicYear}/semesters', [AcademicYearController::class, 'storeSemester'])->name('api.academy.semesters.store');
+        Route::put('/{academicYear}/semesters/{semester}', [AcademicYearController::class, 'updateSemester'])->name('api.academy.semesters.update');
+    });
+
+    // Subjects
+    Route::prefix('{academy}/subjects')->group(function () {
+        Route::get('/', [SubjectController::class, 'index'])->name('api.academy.subjects.index');
+        Route::post('/', [SubjectController::class, 'store'])->name('api.academy.subjects.store');
+        Route::get('/groups', [SubjectController::class, 'getGroups'])->name('api.academy.subjects.groups');
+        Route::get('/{subject}', [SubjectController::class, 'show'])->name('api.academy.subjects.show');
+        Route::put('/{subject}', [SubjectController::class, 'update'])->name('api.academy.subjects.update');
+        Route::delete('/{subject}', [SubjectController::class, 'destroy'])->name('api.academy.subjects.destroy');
+    });
+
+    // Grade Scales & Assessment Categories
+    Route::prefix('{academy}/grade-scales')->group(function () {
+        Route::get('/', [GradeScaleController::class, 'index'])->name('api.academy.grade-scales.index');
+        Route::post('/', [GradeScaleController::class, 'store'])->name('api.academy.grade-scales.store');
+        Route::get('/{gradeScale}', [GradeScaleController::class, 'show'])->name('api.academy.grade-scales.show');
+        Route::put('/{gradeScale}', [GradeScaleController::class, 'update'])->name('api.academy.grade-scales.update');
+        Route::delete('/{gradeScale}', [GradeScaleController::class, 'destroy'])->name('api.academy.grade-scales.destroy');
+    });
+    Route::prefix('{academy}/assessment-categories')->group(function () {
+        Route::get('/', [GradeScaleController::class, 'getCategories'])->name('api.academy.assessment-categories.index');
+        Route::post('/', [GradeScaleController::class, 'storeCategory'])->name('api.academy.assessment-categories.store');
+    });
+
+    // Transcripts (academy-level)
+    Route::prefix('{academy}/transcripts')->group(function () {
+        Route::post('/semester/generate', [TranscriptController::class, 'generateSemesterTranscript'])->name('api.academy.transcripts.semester.generate');
+        Route::post('/semester/publish', [TranscriptController::class, 'publishSemesterTranscripts'])->name('api.academy.transcripts.semester.publish');
+        Route::post('/annual/generate', [TranscriptController::class, 'generateAnnualTranscript'])->name('api.academy.transcripts.annual.generate');
+        Route::get('/overview', [TranscriptController::class, 'getAcademyTranscriptOverview'])->name('api.academy.transcripts.overview');
+    });
+
+    // Academy Students (listing/detail via ClassroomController)
+    Route::prefix('{academy}/students')->group(function () {
+        Route::get('/', [ClassroomController::class, 'getAllStudents'])->name('api.academy.students.index');
+        Route::get('/{student}', [ClassroomController::class, 'getStudent'])->name('api.academy.students.show');
+    });
+
+    // ============================================
     // Classroom Management Routes (ห้องเรียน)
     // ============================================
     Route::prefix('{academy}/classrooms')->group(function () {
@@ -382,7 +438,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::prefix('{academy}/classrooms/{classroom}')->group(function () {
         Route::get('enrollments', [ClassroomController::class, 'listEnrollments'])->name('api.academy.classrooms.enrollments');
         Route::get('/', [ClassroomController::class, 'show'])->name('api.academy.classrooms.show');
-        Route::patch('/', [ClassroomController::class, 'update'])->name('api.academy.classrooms.update');
+        Route::match(['put', 'patch'], '/', [ClassroomController::class, 'update'])->name('api.academy.classrooms.update');
         Route::delete('/', [ClassroomController::class, 'destroy'])->name('api.academy.classrooms.destroy');
         Route::post('archive', [ClassroomController::class, 'archive'])->name('api.academy.classrooms.archive');
 
