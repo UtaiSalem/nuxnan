@@ -2871,3 +2871,10 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 
 - Added separate visual progress bars for assignment and quiz scores in the lesson progress view, using each activity's percentage and retaining status text when no score exists.
 - Verification: `git diff --check` passed; PHP syntax was previously verified from `api/nuxnanravel`. Authenticated browser verification remains pending.
+## 2026-07-12 - Advertise flow hardening
+
+- Scope: `/earn/advertise` create/list flow and `AdvertController`.
+- Findings: client-controlled `advertiser_id`, weak numeric/date validation, client-trusted price, wallet debit outside the persistence transaction, inactive/empty ads visible in list, and frontend missing title/file validation.
+- Changes: server derives advertiser from authenticated user, validates campaign enums/ranges/date/time and recalculates expected amount, atomically persists wallet-paid ad creation, filters active ads with remaining views, and adds frontend title/media validation/removes owner id from payload.
+- Remaining risk: view reward flow still has legacy decrement before the reward transaction and should be covered by a dedicated transactional ledger refactor; no schema change made in this pass.
+- Verification: PHP lint, Pint, `git diff --check`, and Nuxt build planned.

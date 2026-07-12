@@ -134,8 +134,20 @@ async function submitForm() {
          totalMoneyAdvert.value = expectedCost;
     }
 
+    if (!title.value.trim()) {
+        Swal.fire('แจ้งเตือน', 'กรุณาระบุหัวข้อโฆษณา', 'warning')
+        return
+    }
+
     if (!mediaImage.value) {
         Swal.fire('แจ้งเตือน', 'กรุณาอัปโหลดรูปภาพโฆษณา', 'warning')
+        return
+    }
+
+    const mediaFile = mediaImage.value.file
+    const allowedMedia = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'video/mp4', 'video/webm', 'video/ogg']
+    if (!allowedMedia.includes(mediaFile.type) || mediaFile.size > 20 * 1024 * 1024) {
+        Swal.fire('แจ้งเตือน', 'ไฟล์โฆษณาต้องเป็น JPG, PNG, GIF, SVG, MP4, WEBM หรือ OGG และมีขนาดไม่เกิน 20MB', 'warning')
         return
     }
 
@@ -151,7 +163,6 @@ async function submitForm() {
 
     isLoading.value = true
     const advertData = new FormData()
-    advertData.append('advertiser_id', authStore.user?.id)
     advertData.append('title', title.value)
     if(description.value) advertData.append('description', description.value)
     if(mediaLink.value) advertData.append('media_link', mediaLink.value)

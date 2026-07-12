@@ -10,6 +10,7 @@ use App\Models\Advert;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class AdvertController extends Controller
@@ -17,13 +18,13 @@ class AdvertController extends Controller
     public function index()
     {
         return response()->json([
-            'adverts' => AdvertResource::collection(Advert::with('advertiser')->where('status', 1)->orderBy('remaining_views', 'DESC')->latest()->paginate()),
+            'adverts' => AdvertResource::collection(Advert::with('advertiser')->where('status', 1)->where('remaining_views', '>', 0)->orderBy('remaining_views', 'DESC')->latest()->paginate()),
         ]);
     }
 
     public function getMoreAdvertisings()
     {
-        $adverts = Advert::with('advertiser')->where('status', 1)->orderBy('remaining_views', 'DESC')->latest()->paginate();
+        $adverts = Advert::with('advertiser')->where('status', 1)->where('remaining_views', '>', 0)->orderBy('remaining_views', 'DESC')->latest()->paginate();
 
         return response()->json([
             'success' => true,
@@ -88,15 +89,14 @@ class AdvertController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'advertiser_id' => '',
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'media_link' => 'nullable|string|url',
-            'amounts' => 'required',
-            'duration' => 'required',
-            'total_views' => 'required',
-            'transfer_date' => 'required',
-            'transfer_time' => 'required',
+            'description' => 'nullable|string|max:5000',
+            'media_link' => 'nullable|url|max:2048',
+            'amounts' => 'required|numeric|min:0.01',
+            'duration' => 'required|integer|in:5,10,15,30,60',
+            'total_views' => 'required|integer|min:100|max:100000',
+            'transfer_date' => 'required|date',
+            'transfer_time' => ['required', 'date_format:H:i'],
             'slip' => 'nullable|image|mimes:jpg,jpeg,png,gif,svg|max:2048',
             'media_image' => 'required|mimes:jpg,jpeg,png,gif,svg,mp4,webm,ogg|max:20480',
         ]);
@@ -116,9 +116,14 @@ class AdvertController extends Controller
                 Storage::disk('public')->putFileAs('images/adverts/medias', $media_file, $media_filename);
             }
 
+            $expectedAmount = round($validated['total_views'] * $validated['duration'] * 0.10, 2);
+            if (abs((float) $validated['amounts'] - $expectedAmount) > 0.01) {
+                return response()->json(['success' => false, 'message' => 'ยอดเงินไม่ถูกต้อง ระบบคำนวณใหม่ได้ '.number_format($expectedAmount, 2).' บาท'], 422);
+            }
+
             $newAdvert = new Advert;
             $newAdvert->user_id = auth()->id();
-            $newAdvert->advertiser_id = $validated['advertiser_id'];
+            $newAdvert->advertiser_id = auth()->id();
             $newAdvert->title = $validated['title'];
             $newAdvert->description = $validated['description'] ?? null;
             $newAdvert->media_link = $validated['media_link'] ?? null;
@@ -126,7 +131,7 @@ class AdvertController extends Controller
             $newAdvert->duration = $validated['duration'];
             $newAdvert->total_views = $validated['total_views'];
             $newAdvert->remaining_views = $validated['total_views'];
-            $newAdvert->transfer_date = Carbon::parse($request->transfer_date);
+            $newAdvert->transfer_date = Carbon::parse($validated['transfer_date']);
             $newAdvert->transfer_time = $validated['transfer_time'];
             $newAdvert->slip = $slip_filename ?? null;
             $newAdvert->media_image = $media_filename;
@@ -136,16 +141,6 @@ class AdvertController extends Controller
             } else {
                 // Pay with Wallet
                 $user = auth()->user();
-                $expectedAmount = $validated['total_views'] * $validated['duration'] * 0.10;
-
-                // Allow small floating point difference (e.g. 0.01)
-                if (abs($validated['amounts'] - $expectedAmount) > 0.1) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'ยอดเงินไม่ถูกต้อง (ระบบคำนวณใหม่ได้ '.number_format($expectedAmount, 2).' บาท)',
-                    ], 400);
-                }
-
                 if ($user->wallet < $validated['amounts']) {
                     return response()->json([
                         'success' => false,
@@ -153,11 +148,19 @@ class AdvertController extends Controller
                     ], 402);
                 }
 
-                $user->decrement('wallet', $validated['amounts']);
                 $newAdvert->status = 1; // Auto Approve
             }
 
-            $newAdvert->save();
+            DB::transaction(function () use ($newAdvert, $validated) {
+                if ($newAdvert->status === 1) {
+                    $user = User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+                    if ((float) $user->wallet < (float) $validated['amounts']) {
+                        abort(402, 'ยอดเงินในกระเป๋าไม่เพียงพอ');
+                    }
+                    $user->decrement('wallet', $validated['amounts']);
+                }
+                $newAdvert->save();
+            });
 
             $activity = new Activity;
             $activity->user_id = $newAdvert->user_id;
@@ -204,6 +207,7 @@ class AdvertController extends Controller
             // 2. Atomic Check & Decrement Remaining Views
             // Returns 1 if successful, 0 if condition failed (e.g., remaining_views was 0)
             $affected = Advert::where('id', $advert->id)
+                ->where('status', 1)
                 ->where('remaining_views', '>', 0)
                 ->decrement('remaining_views');
 
@@ -216,7 +220,7 @@ class AdvertController extends Controller
             }
 
             // 3. Process Rewards (In Transaction to ensure consistency)
-            \DB::transaction(function () use ($authUser, $advert, $pointsRequired) {
+            DB::transaction(function () use ($authUser, $advert, $pointsRequired) {
                 // Attach Viewer record
                 $advert->viewers()->attach($authUser->id);
 
