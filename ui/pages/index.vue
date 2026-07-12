@@ -183,7 +183,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
 
     <div v-else>
       <Head>
-        <Title>NUXNAN — เรียนบ้าง เล่นบ้าง สร้างรายได้</Title>
+        <Title>nuxnan — เรียนบ้าง เล่นบ้าง สร้างรายได้</Title>
       </Head>
 
       <!-- Global loading overlay -->
@@ -206,7 +206,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
             <!-- Logo -->
             <div class="flex items-center shrink-0 whitespace-nowrap">
               <span class="hidden sm:inline text-sm text-gray-400 font-light">www.</span>
-              <span class="audiowide-font text-base sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500">NUXNAN</span>
+              <span class="audiowide-font text-base sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500">nuxnan</span>
               <span class="hidden sm:inline text-sm text-gray-400 font-light">.com</span>
             </div>
             <!-- Auth -->
@@ -264,7 +264,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
             class="font-bold leading-none mb-4 sm:mb-6 hero-enter whitespace-nowrap"
             style="animation-delay: 80ms"
           >
-            <span class="text-lg sm:text-3xl text-gray-400 font-light">www.</span><span class="audiowide-font text-5xl sm:text-7xl md:text-8xl lg:text-9xl bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">NUXNAN</span><span class="text-lg sm:text-3xl text-gray-400 font-light">.com</span>
+            <span class="text-lg sm:text-3xl text-gray-400 font-light">www.</span><span class="audiowide-font text-5xl sm:text-7xl md:text-8xl lg:text-9xl bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">nuxnan</span><span class="text-lg sm:text-3xl text-gray-400 font-light">.com</span>
           </h1>
 
           <!-- Tagline -->
@@ -391,7 +391,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
           <div class="text-center mb-10 sm:mb-16">
             <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4 font-prompt">
               ทำอะไรได้บ้างบน
-              <span class="audiowide-font bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">NUXNAN</span>?
+              <span class="audiowide-font bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">nuxnan</span>?
             </h2>
             <p class="text-gray-500 text-sm sm:text-base md:text-lg max-w-2xl mx-auto font-prompt">
               แพลตฟอร์มเดียวที่รวม
@@ -580,7 +580,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
             <!-- Copyright -->
             <p class="text-xs sm:text-sm text-gray-400 flex items-center gap-1.5 font-prompt">
               <IconWrapper icon="solar:copyright-bold-duotone" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              2024 NUXNAN. All rights reserved.
+              2024 nuxnan. All rights reserved.
             </p>
           </div>
         </div>

@@ -307,7 +307,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
               />
               <span
                 class="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20 shadow-xl audiowide-font"
-                >เรียนบ้าง เล่นบ้าง สร้างรายได้ด้วย NUXNAN</span
+                >เรียนบ้าง เล่นบ้าง สร้างรายได้ด้วย nuxnan</span
               >
               <IconWrapper
                 icon="fluent:emoji:money-bag"
@@ -319,7 +319,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
             <span class="text-3xl md:text-5xl font-light">www.</span
             ><b
               class="audiowide-font text-4xl md:text-8xl bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 drop-shadow-[0_0_30px_rgba(168,85,247,0.5)]"
-              >Nuxnan</b
+              >nuxnan</b
             ><span class="text-3xl md:text-5xl font-light">.com</span>
           </h3>
           <div
