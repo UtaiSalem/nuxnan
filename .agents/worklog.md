@@ -6,6 +6,30 @@
 
 ---
 
+## 2026-07-12 — คะแนนกิจกรรมประจำบทเรียนใน My Progress + admin view
+
+> ฟีเจอร์: หน้า `/Learn/Courses/{id}/my-progress` แสดงคะแนนแบบฝึกหัด/แบบทดสอบประจำบทเรียน และให้ course admin ดูของนักเรียนแต่ละคนได้เหมือนที่นักเรียนดูของตัวเอง แผน/บทวิเคราะห์เต็มอยู่ที่ [`.agents/latest-analysis.md`](latest-analysis.md) (section บนสุด)
+
+### Branch: `feat/my-progress-lesson-activity-scores` (push แล้ว, ยังไม่ merge)
+- **`fe0e5ae4`** — Backend `CourseMemberController::show()`: โหลด lesson `questions` + ดึงคำตอบ bulk (กัน N+1), รวมคะแนน lesson-embedded questions เข้าคะแนนบทเรียน, เพิ่ม `reading_progress` (ตาม topic) และ `activity_progress` (แยก assignment/quiz) ต่อบทเรียน; Frontend `MyProgressDetails.vue` แสดง progress การอ่าน + คะแนนแบบฝึกหัด/แบบทดสอบ เคารพ `canShowScore`
+- **`47cc4829`** — Backend: authorization gate ใน `show()` (เจ้าของ member หรือ course admin เท่านั้น → ปิด IDOR) + กัน member ข้ามคอร์ส (404); Frontend `ProgressList.vue` (modal admin) แสดงคะแนนบทเรียนชุดเดียวกับนักเรียน คงปุ่ม reset เฉพาะ admin
+
+### Context สำคัญ
+- **endpoint จริงที่หน้าใช้คือ `show()`** (route `/members/{member}/progress`) ไม่ใช่ `memberProgress()` (route `/admin/progress` — ไม่ถูกเรียกจาก frontend เลย). งานรวม contract ที่ `show()` ตัวเดียว
+- **"แบบทดสอบประจำบทเรียน" = lesson-embedded `questions`** (morphMany, ตรวจผ่าน `LessonAnswerQuestion`) เท่านั้น — `CourseQuiz` ไม่มี `lesson_id` ผูกบทเรียนไม่ได้
+- ตรรกะคะแนนบทเรียนอยู่ใน `resolveLessonScoreStatus()` — ยัง all-or-nothing (ซ่อนคะแนนถ้ามีชิ้นรอตรวจ/ขาด)
+
+### ✅ ตรวจแล้ว / ⚠️ ค้าง
+- ✅ `php -l` + Pint + Nuxt build ผ่าน
+- ⚠️ **ยังไม่ทดสอบ browser ด้วย login จริง** (ไม่มี credential) — ต้องตรวจ: บทเรียน 3 กรณี (เฉพาะฝึกหัด/เฉพาะทดสอบ/ทั้งสอง), admin เปิดดูของนักเรียน, non-admin/non-owner ได้ 403
+- ⚠️ **ยังไม่เปิด PR** — `gh` ไม่อยู่บน PATH ของ session นี้ (แม้ worklog เก่าจะระบุว่าติดตั้ง v2.96.0). ลิงก์เปิด PR: https://github.com/UtaiSalem/nuxnan/pull/new/feat/my-progress-lesson-activity-scores
+- 📌 backlog เสริม: แท็บ admin `memberProgress()` ยังมี N+1 + logic แยก (ไม่ถูกใช้ ไม่ block); เปลี่ยน `memberProgress()` ให้ใช้ helper เดียวกันถ้าจะ reuse ภายหลัง
+
+### ไฟล์ uncommitted ที่ **ไม่เกี่ยว** กับงานนี้ (ค้างบน branch, เว้นไว้ให้เจ้าของแยก)
+`EditPostModal.vue` (academy post edit endpoint), `FeedPost.vue`, `pages/academies/[name].vue`, `pages/index.vue`, `pages/welcome.vue`
+
+---
+
 ## 2026-07-12 — Withdrawal & Wallet Hardening ครบวงจร (8 PRs merged เข้า main)
 
 > งานใหญ่: วิเคราะห์ → review งานที่ Codex/Gemini ทำ → แก้บั๊กวิกฤต → ตรวจ invariant เงินเข้า-ออก → baseline บน DB จริง → bcmath + locked_balance → decimal(15,2) → เก็บกวาด **ทั้งหมด merge เข้า `main` แล้ว (PR #3–#8)** เอกสารเต็มอยู่ที่ [`.agents/withdrawal-review-findings.md`](withdrawal-review-findings.md) + [`.agents/withdrawal-system-hardening-plan.md`](withdrawal-system-hardening-plan.md)

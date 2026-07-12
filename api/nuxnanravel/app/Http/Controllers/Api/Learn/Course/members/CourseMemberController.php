@@ -20,6 +20,8 @@ use App\Models\CourseQuizResult;
 use App\Models\LessonAnswerQuestion;
 use App\Models\LessonProgress;
 use App\Models\Notification;
+use App\Models\Question;
+use App\Models\TopicReadProgress;
 use App\Models\UserAnswerQuestion;
 use App\Services\AttendanceEligibilityService;
 use App\Services\CourseMemberRemovalService;
@@ -123,6 +125,17 @@ class CourseMemberController extends Controller
 
     public function show(Course $course, CourseMember $member)
     {
+        // Guard against viewing a member that belongs to a different course.
+        if ($member->course_id !== $course->id) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบข้อมูลสมาชิก'], 404);
+        }
+
+        // Only the member themself or a course admin may view a member's progress.
+        $authUser = auth()->user();
+        if ($member->user_id !== $authUser->id && ! $course->isAdmin($authUser)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $member->load(['user', 'group', 'course']);
         $userId = $member->user_id;
 
@@ -130,6 +143,7 @@ class CourseMemberController extends Controller
         $rawLessons = $this->orderedCourseLessons($course)->with([
             'topics.assignments',
             'assignments',
+            'questions',
         ])->get();
 
         $lessonIds = $rawLessons->pluck('id');
@@ -137,6 +151,12 @@ class CourseMemberController extends Controller
             ->where('user_id', $userId)
             ->get()
             ->keyBy('lesson_id');
+
+        $publishedTopics = $rawLessons->flatMap(fn ($lesson) => $lesson->topics->where('status', 'published'));
+        $topicProgressMap = TopicReadProgress::whereIn('topic_id', $publishedTopics->pluck('id'))
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('topic_id');
 
         $courseAssignments = $course->courseAssignments;
 
@@ -148,27 +168,52 @@ class CourseMemberController extends Controller
             ->get()
             ->keyBy('assignment_id');
 
+        $allQuestionIds = $rawLessons->flatMap(fn ($lesson) => $lesson->questions->pluck('id'))->unique();
+        $questionAnswerMap = LessonAnswerQuestion::whereIn('question_id', $allQuestionIds)
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('question_id');
+
         $passingThreshold = $course->passing_score;
 
-        $lessons = $rawLessons->map(function ($lesson) use ($progressMap, $answerMap, $passingThreshold) {
+        $lessons = $rawLessons->map(function ($lesson) use ($progressMap, $topicProgressMap, $answerMap, $questionAnswerMap, $passingThreshold) {
             $progress = $progressMap->get($lesson->id);
 
             $completed = $progress && $progress->status === 'completed';
+            $topics = $lesson->topics->where('status', 'published');
+            $totalTopics = $topics->count();
+            $completedTopics = $topics->filter(fn ($topic) => $topicProgressMap->get($topic->id)?->status === TopicReadProgress::STATUS_COMPLETED)->count();
+            $readingPercentage = $totalTopics > 0 ? (int) round(($completedTopics / $totalTopics) * 100) : 0;
 
             // Graded activities (assignments) attached directly to the lesson or to its topics
             $gradedAssignments = $lesson->assignments
                 ->merge($lesson->topics->flatMap->assignments)
                 ->filter(fn ($assignment) => $assignment->status === 1);
 
-            $gradedQuizzes = collect();
+            $gradedQuizzes = $lesson->questions;
 
-            $hasGradedActivity = $gradedAssignments->isNotEmpty();
+            $hasGradedActivity = $gradedAssignments->isNotEmpty() || $gradedQuizzes->isNotEmpty();
+
+            $assignmentStatus = $this->resolveLessonScoreStatus(
+                $gradedAssignments,
+                collect(),
+                $answerMap,
+                collect(),
+                $passingThreshold
+            );
+            $quizStatus = $this->resolveLessonScoreStatus(
+                collect(),
+                $gradedQuizzes,
+                collect(),
+                $questionAnswerMap,
+                $passingThreshold
+            );
 
             $statusData = $this->resolveLessonScoreStatus(
                 $gradedAssignments,
                 $gradedQuizzes,
                 $answerMap,
-                collect(), // empty quiz map
+                $questionAnswerMap,
                 $passingThreshold
             );
 
@@ -177,6 +222,12 @@ class CourseMemberController extends Controller
                 'title' => $lesson->title,
                 'completed' => $completed,
                 'progress_percentage' => $completed ? 100 : 0,
+                'reading_progress' => [
+                    'total_topics' => $totalTopics,
+                    'completed_topics' => $completedTopics,
+                    'progress_percentage' => $readingPercentage,
+                    'status' => $totalTopics === 0 ? 'none' : ($readingPercentage >= 100 ? 'completed' : ($readingPercentage > 0 ? 'in_progress' : 'not_started')),
+                ],
                 'status_label' => $completed ? 'เสร็จสิ้น' : 'ยังไม่เริ่ม',
                 'has_graded_activity' => $hasGradedActivity,
                 'score_status' => $statusData['status'],
@@ -185,8 +236,12 @@ class CourseMemberController extends Controller
                 'score_percentage' => $statusData['score_percentage'],
                 'activity_counts' => [
                     'assignments' => $gradedAssignments->count(),
-                    'quizzes' => $gradedQuizzes->count(),
-                    'questions' => 0,
+                    'quizzes' => 0,
+                    'questions' => $gradedQuizzes->count(),
+                ],
+                'activity_progress' => [
+                    'assignments' => $assignmentStatus,
+                    'quizzes' => $quizStatus,
                 ],
             ];
         });
@@ -1690,6 +1745,22 @@ class CourseMemberController extends Controller
         }
 
         foreach ($gradedQuizzes as $quiz) {
+            if ($quiz instanceof Question) {
+                $questionAnswer = $quizAnswerMap->get($quiz->id);
+                $totalMaxScore += $quiz->points ?? 1;
+
+                if (! $questionAnswer) {
+                    $hasMissing = true;
+                } else {
+                    $hasAttempted = true;
+                    if ($questionAnswer->is_correct) {
+                        $totalScore += $quiz->points ?? 1;
+                    }
+                }
+
+                continue;
+            }
+
             $result = $quizAnswerMap->get($quiz->id);
             $quizMaxScore = $quiz->total_score;
             if (! $quizMaxScore || $quizMaxScore == 0) {

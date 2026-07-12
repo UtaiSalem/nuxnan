@@ -1,3 +1,120 @@
+# แผนปรับปรุง: คะแนนกิจกรรมประจำบทเรียนในหน้า My Progress — ฉบับตรวจสอบกับโค้ดจริง
+
+**วันที่:** 2026-07-12
+**สถานะ:** วางแผน (ยังไม่แก้โค้ดฟีเจอร์)
+**หน้า/ขอบเขต:** `/Learn/Courses/{id}/my-progress` → แสดงคะแนนแบบฝึกหัด/แบบทดสอบประจำบทเรียนในแท็บ "บทเรียน"
+
+---
+
+## บทวิเคราะห์เทียบกับ codebase จริง (แก้ไขสมมติฐานของแผนเดิม)
+
+แผนเดิมตั้งสมมติฐานว่าต้องแก้ `memberProgress()` และเพิ่ม field ให้ `lessons` ตั้งแต่ต้น — แต่จากการอ่านโค้ดจริงพบว่าสมมติฐานนี้ **คลาดเคลื่อนในหลายจุด**:
+
+### จุดที่ 1 (สำคัญที่สุด) — endpoint ที่หน้าใช้จริงคือ `show()` ไม่ใช่ `memberProgress()`
+- `MyProgressDetails.vue:109` เรียก `GET /api/courses/{courseId}/members/{memberId}/progress`
+- Route `routes/learn/course.php:267` → `CourseMemberController@show` (ไม่ใช่ `memberProgress`)
+- `memberProgress()` ผูกกับ route `/{member}/admin/progress` (course.php:281) เป็น **ตัวแปรฝั่ง admin คนละตัว**
+- **ผลกระทบต่อแผน:** งานหลักต้องแก้ที่ `show()` เป็นอันดับแรก ไม่ใช่ `memberProgress()`
+
+### จุดที่ 2 — `show()` มีโครงคะแนนบทเรียนอยู่แล้ว (แต่ frontend ไม่ได้ใช้)
+`show()` (CourseMemberController.php:153-192) คืน `lessons` แต่ละตัวพร้อม field ครบชุดอยู่แล้ว:
+`score_status`, `score`, `max_score`, `score_percentage`, `has_graded_activity`, `activity_counts{assignments,quizzes,questions}` — ผ่าน helper `resolveLessonScoreStatus()` (บรรทัด 1653)
+- Type `ui/types/lessonScore.ts` (`LessonProgressSummary`) และ widget `CourseLessonProgressWidget.vue` **รองรับ shape นี้อยู่แล้ว**
+- **แต่** `MyProgressDetails.vue` แท็บ "บทเรียน" (บรรทัด 774-820) เรนเดอร์เฉพาะ `lesson.completed` เป็น 0%/100% เท่านั้น — **ทิ้ง field คะแนนที่ backend ส่งมาแล้วทั้งหมด**
+- **ผลกระทบต่อแผน:** งาน frontend คือ "แสดง field ที่มีอยู่" ไม่ใช่ "สร้าง contract ใหม่"
+
+### จุดที่ 3 — "แบบทดสอบประจำบทเรียน" ในระบบนี้ = คำถามฝังในบทเรียน (lesson-embedded questions) เท่านั้น
+- `Lesson` model: `assignments()` = morphMany, `questions()` = morphMany (`questionable`), `topics()` = hasMany (topics ก็มี assignments)
+- `CourseQuiz` **ไม่มี `lesson_id`** → แบบทดสอบระดับคอร์สผูกกับบทเรียนไม่ได้ ต้องอยู่ระดับคอร์สต่อไป
+- แบบทดสอบประจำบทเรียนจริง ๆ คือ `lesson->questions` ตรวจผ่าน `LessonAnswerQuestion` (ดูตัวอย่างการคำนวณที่ `memberProgress()` บรรทัด 993-1019 คือ `is_correct=true` → sum(points))
+- **ผลกระทบต่อแผน:** แผนเดิมที่เขียนว่า "แบบทดสอบของบทเรียน + แบบทดสอบจากคำถามภายในบทเรียน" ยุบเหลือแหล่งเดียว = lesson questions
+
+### จุดที่ 4 — `show()` ยังไม่รวมคะแนน quiz/questions เข้า lesson score
+ใน `show()` บรรทัด 163 `$gradedQuizzes = collect();` (ว่างเสมอ) และ `activity_counts.questions` = 0, `quizzes` = 0 ตายตัว → คะแนนบทเรียนตอนนี้นับเฉพาะ assignment ยังไม่นับ lesson questions
+
+### จุดที่ 5 — ระวัง N+1 ในการดึงคำตอบ questions
+`memberProgress()` ดึง `LessonAnswerQuestion` ทีละบทเรียนในลูป (บรรทัด 997) = N+1 — **ห้ามลอก pattern นี้** ต้อง bulk `whereIn('question_id', allQuestionIds)` แล้ว group เอง เหมือนที่ `show()` ทำกับ assignment (`answerMap`, บรรทัด 146)
+
+### จุดที่ 6 — ตรรกะคะแนนแบบ all-or-nothing ต้องตัดสินใจเชิงออกแบบ
+`resolveLessonScoreStatus()` จะซ่อนคะแนน (score=null, status=`awaiting_grading`/`submitted`) ถ้ามีกิจกรรมใด "ขาด/รอตรวจ" แม้เพียงชิ้นเดียว — เมื่อผสม questions (ตรวจอัตโนมัติ มีคะแนนทันที) กับ assignment (รอครูตรวจ) คะแนน question จะถูกซ่อนไปด้วย ต้องตัดสินใจว่า:
+- (ก) คงแบบ all-or-nothing (แสดงคะแนนเฉพาะเมื่อครบ) — สอดคล้องพฤติกรรมปัจจุบัน หรือ
+- (ข) แสดงคะแนนบางส่วน (earned/max ของเฉพาะที่ตรวจแล้ว) + ป้าย "ยังมีรายการรอตรวจ"
+- **แนะนำ (ข)** เพราะเป้าหมายคือ "เห็นคะแนนแบบฝึกหัด/แบบทดสอบประจำบทเรียน" ระหว่างเรียน
+
+### จุดที่ 7 — สิทธิ์การเห็นคะแนน (`canShowScore`) ต้องใช้กับคะแนนบทเรียนด้วย
+`MyProgressDetails.vue:275` gate การแสดงคะแนน assignment/quiz ด้วย `isCourseAdmin || member.order_number` — คะแนนกิจกรรมบทเรียนที่เพิ่มใหม่ต้อง gate ด้วยกติกาเดียวกัน (สถานะเรียนจบยังแสดงได้เสมอ)
+
+---
+
+## Work Plan — คะแนนกิจกรรมประจำบทเรียน (ทีละขั้นตอน)
+
+### ขั้นที่ 0 — ตัดสินใจเชิงออกแบบก่อนเขียนโค้ด (ต้องเคลียร์ก่อน)
+1. **โหมดคะแนน:** all-or-nothing (ก) หรือ partial (ข) — แนะนำ (ข)
+2. **นิยาม "ผ่าน/ไม่ผ่าน" ของบทเรียน:** ใช้ `course.passing_score` (มีส่งเข้า `resolveLessonScoreStatus` แล้ว) หรือเกณฑ์ต่อบทเรียน — ปัจจุบันมีแค่ course-level → ใช้ค่านี้
+3. **การเลือกคะแนน quiz:** questions ตรวจครั้งเดียว (ไม่มี attempt หลายครั้งเหมือน CourseQuiz) → ใช้ผลรวม `is_correct` ปัจจุบัน ไม่ต้องเลือก best attempt
+4. **ยืนยันขอบเขต:** คะแนนบทเรียน = assignments (lesson + topics) + lesson questions เท่านั้น; CourseQuiz ยังคงอยู่แท็บแบบทดสอบระดับคอร์ส
+
+### ขั้นที่ 1 — Backend: รวม lesson questions เข้า lesson score (แก้ `show()`)
+ไฟล์: `api/nuxnanravel/app/Http/Controllers/Api/Learn/Course/members/CourseMemberController.php`
+
+1.1 เพิ่ม eager-load `questions` ให้ lessons (บรรทัด 130-133): `->with(['topics.assignments','assignments','questions'])`
+1.2 Bulk-fetch คำตอบ questions (กัน N+1):
+   - รวบรวม `$allQuestionIds = $rawLessons->flatMap->questions->pluck('id')`
+   - `$questionAnswerMap = LessonAnswerQuestion::whereIn('question_id',$allQuestionIds)->where('user_id',$userId)->get()->groupBy('question_id')`
+1.3 ขยาย `resolveLessonScoreStatus()` (หรือเพิ่ม branch) ให้รับ lesson questions:
+   - max ต่อบทเรียน += `sum(question.points ?? 1)`
+   - earned += `sum(points ที่ is_correct=true)`
+   - นับ attempted จากการมีคำตอบใด ๆ ของ question ในบทเรียน
+   - questions ตรวจอัตโนมัติ → ไม่เข้า `hasPending`
+1.4 แก้ `activity_counts` ให้สะท้อนจริง: `assignments` = จำนวน assignment ที่เผยแพร่, `questions` = จำนวน question, `quizzes` = 0 (ไม่มี CourseQuiz ผูกบทเรียน) — หรือรวม questions เป็น "แบบทดสอบ" ตาม label ที่ frontend ต้องการ
+1.5 ถ้าเลือกโหมด (ข) partial: ปรับ `resolveLessonScoreStatus` ให้คืน `score`/`max_score` ของเฉพาะรายการที่ตรวจแล้ว พร้อม flag `has_pending`
+1.6 กัน permission/edge เดิมไว้ (target_groups ของ assignment, published status)
+
+### ขั้นที่ 2 — Backend: ยกตรรกะเป็น helper เดียว + sync `memberProgress()`
+2.1 ย้ายตรรกะคะแนนบทเรียนไปเป็น service/method กลาง (เช่น `LessonScoreService::forMember($lesson,$user,...)`) เพื่อไม่ให้ `show()` กับ `memberProgress()` คำนวณต่างกัน
+2.2 ให้ `memberProgress()` (แท็บ admin) ใช้ helper เดียวกัน — ปัจจุบันมันแยกคะแนน lesson questions ไปกองในแท็บ quizzes (บรรทัด 1032) และ N+1; แก้ให้สอดคล้อง
+2.3 คง `assignments`/`quizzes` แบบ list แยกใน response ไว้ตามเดิม (ไม่กระทบแท็บอื่น)
+
+### ขั้นที่ 3 — Frontend: แสดงคะแนนบทเรียนในแท็บ "บทเรียน"
+ไฟล์: `ui/components/learn/course/MyProgressDetails.vue` (บรรทัด 774-820)
+3.1 ในลูป `v-for="lesson in data.lessons"` เพิ่มบล็อกแสดง (gate ด้วย `canShowScore` + `lesson.has_graded_activity`):
+   - คะแนนกิจกรรม เช่น `8/10 (80%)` เมื่อ `lesson.score !== null`
+   - จำนวนกิจกรรม เช่น `แบบฝึกหัด 1/2 · แบบทดสอบ 1/1` จาก `activity_counts`
+   - ป้ายสถานะจาก `score_status`: `passed`/`failed`/`awaiting_grading`/`submitted`/`not_attempted`/`none`
+3.2 คงแถบ "ความคืบหน้าการอ่าน" (0/100%) ไว้แยกจาก "คะแนนกิจกรรม" — เป็นคนละมิติ
+3.3 ปรับ `getTabCount('lessons')`/badge ถ้าต้องการนับ "บทเรียนที่มีคะแนนผ่าน" (ออปชัน)
+3.4 ทางเลือกลดโค้ดซ้ำ: reuse `CourseLessonProgressWidget.vue` (รับ `LessonProgressSummary[]` อยู่แล้ว) แทนการเขียน markup ใหม่ — แต่ต้องปรับ style ให้เข้ากับแท็บ
+3.5 อัปเดต type ให้ `data.lessons` เป็น `LessonProgressSummary[]` (ไฟล์นี้เป็น `<script setup>` ยังไม่ `lang="ts"` → อาจแค่ import type ไว้อ้างอิง)
+
+### ขั้นที่ 4 — Edge cases ที่ต้องทดสอบ
+- บทเรียนมีเฉพาะแบบฝึกหัด / เฉพาะ questions / มีทั้งสอง / ไม่มีเลย (`score_status='none'`)
+- ยังไม่ทำ (`not_attempted`), ส่ง assignment แล้วรอตรวจ (`submitted`/`awaiting_grading`)
+- questions ตรวจอัตโนมัติแล้วแต่ assignment ยังรอตรวจ (ทดสอบโหมด ก vs ข)
+- ผ่าน/ไม่ผ่านตาม `course.passing_score`
+- assignment อยู่ใน topic ย่อย (`topics.assignments`)
+- นักเรียนอยู่กลุ่มที่ไม่ถูก assign (`target_groups`) → ต้องไม่ถูกนับ
+- นักเรียนไม่มี `order_number` และไม่ใช่ admin → ต้องซ่อนคะแนน (แต่เห็นสถานะเรียนจบ)
+
+### ขั้นที่ 5 — Verification
+- Laravel feature test สำหรับ `show()` response: ยืนยัน field `score`/`activity_counts`/`score_status` ต่อ edge case + นับจำนวน query (กัน N+1)
+- `./vendor/bin/pint`
+- Nuxt build/type check
+- ทดสอบหน้า `/Learn/Courses/24/my-progress` ด้วยข้อมูลจริงในแต่ละกรณี (ทั้งมุมมองนักเรียนและ admin ผ่าน `?member_id=`)
+
+### สรุปไฟล์ที่เกี่ยวข้อง
+| ไฟล์ | Action |
+|------|--------|
+| `CourseMemberController.php` (`show`, `resolveLessonScoreStatus`, `memberProgress`) | แก้ — รวม questions, กัน N+1, ยก helper |
+| `app/Services/LessonScoreService.php` (ใหม่, ออปชัน) | สร้าง — contract คะแนนบทเรียนตัวเดียว |
+| `ui/components/learn/course/MyProgressDetails.vue` | แก้ — แสดงคะแนน/จำนวน/สถานะในแท็บบทเรียน |
+| `ui/types/lessonScore.ts` | ตรวจ/ปรับถ้าเพิ่ม field เช่น `has_pending` |
+| `ui/components/learn/course/CourseLessonProgressWidget.vue` | ออปชัน reuse |
+| `tests/Feature/...MemberProgressTest.php` (ใหม่) | สร้าง — ทดสอบ response |
+
+**หมายเหตุ:** ไม่จำเป็นต้องมี migration — ตาราง `assignment_answers`, `lesson_answer_questions`, `lesson_progress` มีข้อมูลพอแล้ว งานหลักคือ aggregate + จัดรูปแบบ response + เรนเดอร์ frontend
+
+---
+
 # แผนปรับปรุงระบบบัตรนักเรียน — ฉบับสมบูรณ์
 
 ## Implementation update — 2026-07-08
@@ -2707,3 +2824,50 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Controllers now pass reviewer/admin arguments, return persisted status, enforce ADMIN/SUPER_ADMIN approval/rejection, accept idempotency keys, and expose process/paid/failed lifecycle endpoints.
 - Frontend composables now support 9 statuses, idempotent withdrawal submission, configured limits, locked balance compatibility, and lifecycle API helpers.
 - Verification: PHP lint, route list, Pint, and `WithdrawTest` 14/14 passed. `npm run build` could not complete in the available window; PowerShell blocked `npm.ps1`, and `npm.cmd run build` was terminated after no output.
+
+## 2026-07-12 - Welcome site name casing
+
+- Updated `ui/pages/welcome.vue` so the visible site name uses lowercase `nuxnan` in both welcome branding locations.
+- Verification: focused text search and `git diff --check`.
+## 2026-07-12 - Academy post edit 404
+
+- Root cause: `FeedPost` rendered the shared `EditPostModal` for `AcademyPost`, but the modal always called `/api/posts/{id}`. Laravel therefore resolved the id against `App\\Models\\Post` instead of `AcademyPost`.
+- Fix: pass `actionTo` into the modal and use `/api/academies/{academy_id}/posts/{post_id}` for academy posts; regular posts retain the existing `usePosts().updatePost` flow.
+- Verification planned: frontend type/build check and focused Laravel route/controller inspection.
+## 2026-07-12 - Academy responsive columns (corrected)
+
+- The academy page previously switched to three columns at the Tailwind `xl` breakpoint (1280px), shrinking the center feed.
+- Corrected `ui/pages/academies/[name].vue`: 1280–1420px keeps the left widgets and center feed while hiding the right widgets; 1421px+ restores all three columns. Below 1280px, the existing left + center layout remains.
+- Verification planned: `git diff --check` and frontend build if available.
+
+## 2026-07-12 - Student course progress: lesson activity scores (analysis/plan)
+
+- Scope inspected: `ui/pages/Learn/Courses/[id]/my-progress.vue`, `ui/components/learn/course/MyProgressDetails.vue`, `ui/composables/useCourseLearningProgress.ts`, `ui/types/lessonScore.ts`, `CourseMemberController::memberProgress`, lesson/assignment/quiz models and routes.
+- Finding: the page calls `/api/courses/{course}/members/{member}/progress`. The endpoint already returns separate assignment and quiz scores, but its `lessons` payload only contains lesson completion; it does not aggregate lesson-linked assignment/quiz results into each lesson. It also currently builds course quizzes separately and lesson question quizzes as a flat list, so the UI cannot reliably show per-lesson activity score.
+- Intended design: extend the endpoint contract with normalized per-lesson activity summaries (counts, earned/max, percentage, status, and activity items or references), include direct/topic lesson assignments and both quiz sources; preserve separate assignment/quiz lists for existing tabs. Update `LessonProgressSummary` and the lesson tab/card to show completion progress plus activity score/status, including not attempted, submitted/awaiting grading, passed/failed, and no-activity states. Keep score visibility rules aligned with existing `canShowScore` behavior.
+- Important consistency check: the newer `CourseLessonProgressWidget`/`lessonScore` contract already models score status, but `MyProgressDetails` uses a separate untyped rendering path. Reuse one normalized contract or a shared mapper to avoid divergent calculations.
+- Risks: assignment scope/group filtering, topic assignments, best quiz attempt vs latest attempt, lesson quizzes based on `LessonAnswerQuestion`, hidden scores/order-number authorization, and avoiding N+1 queries. No migration is expected unless the current result tables lack the needed relations.
+- Verification plan: backend feature tests for mixed lesson activities and status edge cases; API response contract test; frontend type/build check; manual page check for lessons with assignment only, quiz only, both, unattempted, pending grading, passed, and failed.
+
+## 2026-07-12 - Student course progress: implementation completed
+
+- Updated `CourseMemberController::show()` to eager-load lesson questions, bulk-load `LessonAnswerQuestion` records, and include lesson-embedded question scores in the existing lesson score resolver without changing the endpoint shape used by the page.
+- Updated `MyProgressDetails.vue` to render per-lesson activity count, activity status, score/max score, percentage, and score-hidden state while preserving the existing `canShowScore` rule.
+- Verification: PHP lint passed; Laravel Pint passed after formatting; `git diff --check` passed. Nuxt build was started with `npm.cmd run build` but produced no output within the available window and was stopped; manual browser/API verification remains to be run with authenticated course data.
+
+## 2026-07-12 - Student course progress: separate activity statuses
+
+- Extended the lesson payload with `activity_progress.assignments` and `activity_progress.quizzes`, keeping reading completion separate. Assignment and lesson-question quiz statuses are calculated independently.
+- Updated `MyProgressDetails.vue` to show three distinct rows in priority order: reading, assignment, quiz. Each row displays score/percentage when available, otherwise the appropriate status such as no activity, not submitted, awaiting grading, passed, or failed.
+- Verification: PHP lint, Pint, and `git diff --check` passed. Frontend build/manual authenticated browser verification remains pending.
+
+## 2026-07-12 - Reading progress per lesson implemented
+
+- `CourseMemberController::show()` now bulk-loads published topic reading records for the member and returns `reading_progress` per lesson with total topics, completed topics, percentage, and status.
+- `MyProgressDetails.vue` now uses that percentage for the reading progress bar and displays `completed/total` topics; lessons without topics show an explicit empty state.
+- Verification: PHP lint, Pint, and `git diff --check` passed. Authenticated browser verification remains pending.
+
+## 2026-07-12 - Activity score progress bars
+
+- Added separate visual progress bars for assignment and quiz scores in the lesson progress view, using each activity's percentage and retaining status text when no score exists.
+- Verification: `git diff --check` passed; PHP syntax was previously verified from `api/nuxnanravel`. Authenticated browser verification remains pending.
