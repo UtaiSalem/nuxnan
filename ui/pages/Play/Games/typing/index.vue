@@ -116,13 +116,7 @@ function start() {
         
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 lg:p-7 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 lg:space-y-7">
 
-          <!-- Key Training: no language/difficulty needed -->
-          <div v-if="false" class="text-center py-4 space-y-3">
-            <div class="text-5xl">⌨️</div>
-            <p class="font-bold text-slate-700 dark:text-slate-200">Key Training Mode</p>
-            <p class="text-sm text-slate-500 dark:text-slate-400">เลือก lesson ได้ใน game — ไม่ต้องตั้งค่า language/difficulty</p>
-          </div>
-
+          <!-- Key Training: language + lesson selection -->
           <div v-if="isKeyTraining" class="space-y-5">
             <div class="space-y-3">
               <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Language</label>
