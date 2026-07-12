@@ -1224,7 +1224,7 @@ watch(() => route.hash, (newHash) => {
       </div>
       
       <!-- Tab Content -->
-      <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-5 xl:grid-cols-[260px_minmax(0,1fr)_320px]">
+      <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-5 min-[1421px]:grid-cols-[260px_minmax(0,1fr)_320px]">
         <!-- Left Sidebar -->
         <aside class="hidden lg:block lg:sticky lg:top-[86px] lg:space-y-5">
           <SchoolQuickMenu
@@ -2271,7 +2271,7 @@ watch(() => route.hash, (newHash) => {
         </main>
         
         <!-- Right Sidebar -->
-        <aside class="hidden xl:block xl:sticky xl:top-[86px] xl:space-y-6">
+        <aside class="hidden min-[1421px]:block min-[1421px]:sticky min-[1421px]:top-[86px] min-[1421px]:space-y-6">
           <!-- Quick Stats -->
           <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
             <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
