@@ -113,6 +113,8 @@ class ClassroomManagementTest extends TestCase
     public function test_manage_context_reports_disabled_when_config_off(): void
     {
         config(['student-card.public_management' => false]);
+        [$academy, $year] = $this->makeAcademy();
+        $this->makeClassroom($academy, $year);
 
         $response = $this->getJson('/api/student-card/1/1/manage-context');
 
