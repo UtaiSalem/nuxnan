@@ -71,7 +71,7 @@ const menuItems = computed(() => [
       },
       {
         name: 'บทบาทและสิทธิ์',
-        icon: 'fluent:shield-person-24-regular',
+        icon: 'fluent:shield-24-regular',
         to: `/academies/${academyName.value}/admin/roles`,
         show: can('members.manage') || can('roles.view'),
       },
@@ -141,13 +141,13 @@ const menuItems = computed(() => [
       },
       {
         name: 'บัตรนักเรียน',
-        icon: 'fluent:person-card-24-regular',
+        icon: 'fluent:contact-card-24-regular',
         to: `/academies/${academyName.value}/admin/student-cards`,
         show: can('students.view'),
       },
       {
         name: 'คำร้องทำบัตร',
-        icon: 'fluent:person-card-24-regular',
+        icon: 'fluent:clipboard-checkmark-24-regular',
         to: `/academies/${academyName.value}/admin/student-cards/requests`,
         show: can('students.cards.request') || can('students.cards.produce'),
       },
@@ -276,8 +276,10 @@ onMounted(async () => {
 })
 
 const isActiveRoute = (path: string, exact = false) => {
-  if (exact) return route.path === path
-  return route.path === path || route.path.startsWith(path + '/')
+  // route.path is percent-encoded for Thai academy names; menu paths are decoded
+  const current = decodeURIComponent(route.path)
+  if (exact) return current === path
+  return current === path || current.startsWith(path + '/')
 }
 
 const toggleSidebar = () => {
@@ -315,7 +317,7 @@ const toggleSidebar = () => {
           
           <!-- Role Badge -->
           <div :class="['flex items-center gap-2 px-3 py-2 rounded-lg', roleColor]">
-            <Icon :name="roleIcon" class="w-5 h-5" />
+            <Icon :icon="roleIcon" class="w-5 h-5" />
             <span class="font-medium text-sm hidden sm:inline">{{ roleDisplayName }}</span>
           </div>
         </div>
@@ -326,37 +328,37 @@ const toggleSidebar = () => {
         @click="toggleSidebar"
         class="lg:hidden w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
       >
-        <Icon name="fluent:navigation-24-regular" class="w-5 h-5" />
+        <Icon icon="fluent:navigation-24-regular" class="w-5 h-5" />
         <span>{{ isSidebarOpen ? 'ซ่อนเมนู' : 'แสดงเมนู' }}</span>
       </button>
 
       <div class="flex flex-col lg:flex-row gap-6">
       <!-- Sidebar Navigation -->
-      <aside 
+      <aside
         :class="[
-          'bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300',
+          'bg-white dark:bg-gray-800 rounded-xl shadow-[0_0_30px_rgba(14,165,233,0.05)] overflow-hidden transition-all duration-300',
           isSidebarOpen ? 'block' : 'hidden lg:block',
           'lg:w-64 lg:flex-shrink-0'
         ]"
       >
-        <!-- Navigation -->
+        <!-- Navigation (HopeUI sidebar-default style) -->
         <nav class="p-4 space-y-4 max-h-[70vh] lg:max-h-none overflow-y-auto">
           <div v-for="group in menuItems" :key="group.group" v-show="group.items.some(item => item.show)">
-            <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-3">
+            <h3 class="mb-2 px-3 text-[13px] font-normal uppercase tracking-[.18rem] text-gray-900 dark:text-gray-100">
               {{ group.group }}
             </h3>
-            <ul class="space-y-1">
+            <ul class="space-y-0.5">
               <li v-for="item in group.items" :key="item.name" v-show="item.show">
                 <NuxtLink
                   :to="item.to"
                   :class="[
-                    'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
+                    'flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-300 ease-in-out',
                     isActiveRoute(item.to, item.exact)
-                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      ? 'bg-primary-500 text-white shadow-[0_10px_20px_-10px_rgba(14,165,233,0.6)]'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-400'
                   ]"
                 >
-                  <Icon :name="item.icon" class="w-5 h-5 flex-shrink-0" />
+                  <Icon :icon="item.icon" class="w-5 h-5 flex-shrink-0" />
                   <span class="text-sm">{{ item.name }}</span>
                   <span 
                     v-if="item.badge" 
@@ -374,9 +376,9 @@ const toggleSidebar = () => {
         <div class="p-4 border-t border-gray-200 dark:border-gray-700">
           <NuxtLink
             :to="`/academies/${academyName}`"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-gray-600 dark:text-gray-300 transition-all duration-300 hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-400"
           >
-            <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
             <span class="text-sm">กลับหน้าโรงเรียน</span>
           </NuxtLink>
         </div>

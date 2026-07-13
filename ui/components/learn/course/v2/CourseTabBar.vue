@@ -148,7 +148,9 @@ watch(activeTab, (newTab, oldTab) => {
 <template>
   <div class="w-full py-2">
     <div
-      class="flex items-stretch h-[80px] rounded-2xl bg-white dark:bg-vikinger-dark-200 border-2 border-gray-100 dark:border-vikinger-dark-50/20 shadow-lg backdrop-blur-xl overflow-hidden"
+      role="tablist"
+      aria-label="Course navigation"
+      class="flex items-stretch h-[72px] sm:h-[80px] rounded-2xl bg-white dark:bg-vikinger-dark-200 border-2 border-gray-100 dark:border-vikinger-dark-50/20 shadow-lg backdrop-blur-xl overflow-hidden"
     >
       <!-- ปุ่มซ้าย -->
       <button
@@ -168,7 +170,7 @@ watch(activeTab, (newTab, oldTab) => {
       <!-- Scroll area -->
       <div
         ref="scrollContainer"
-        class="flex flex-1 overflow-x-auto tab-scroll scroll-smooth pb-1"
+        class="relative flex flex-1 min-w-0 overflow-x-auto tab-scroll scroll-smooth pb-1"
       >
         <NuxtLink
           v-for="(tab, index) in tabs"
@@ -178,7 +180,7 @@ watch(activeTab, (newTab, oldTab) => {
           :aria-selected="activeTab === tab.id"
           :title="tab.name"
           :aria-label="tab.name"
-          class="relative flex-shrink-0 flex-1 min-w-[82px] flex flex-col items-center justify-center gap-2 transition-all duration-300 group px-3 overflow-hidden"
+            class="relative flex-shrink-0 flex-1 min-w-[82px] sm:min-w-[92px] flex flex-col items-center justify-center gap-1.5 sm:gap-2 transition-all duration-300 group px-2.5 sm:px-3 overflow-hidden"
           :class="[
             index > 0
               ? 'border-l border-gray-200/50 dark:border-vikinger-dark-50/20'
@@ -190,11 +192,11 @@ watch(activeTab, (newTab, oldTab) => {
         >
           <Icon
             :icon="tab.icon"
-            class="w-[26px] h-[26px] transition-all duration-300"
+            class="w-6 h-6 sm:w-[26px] sm:h-[26px] transition-all duration-300"
             :class="activeTab === tab.id ? 'scale-110 drop-shadow-[0_0_8px_rgba(35,210,181,0.5)]' : 'group-hover:scale-110'"
           />
           <span
-            class="text-[11.5px] font-black whitespace-nowrap uppercase tracking-wider transition-all duration-300"
+            class="text-[10px] xs:text-[11.5px] font-black whitespace-nowrap uppercase tracking-wider transition-all duration-300"
             :class="activeTab === tab.id ? 'scale-105' : ''"
           >
             {{ tab.name }}
@@ -207,6 +209,17 @@ watch(activeTab, (newTab, oldTab) => {
           />
         </NuxtLink>
       </div>
+
+      <div
+        v-if="canScrollLeft"
+        aria-hidden="true"
+        class="pointer-events-none absolute left-12 sm:left-14 top-0 bottom-0 w-6 bg-gradient-to-r from-white dark:from-vikinger-dark-200 to-transparent"
+      />
+      <div
+        v-if="canScrollRight"
+        aria-hidden="true"
+        class="pointer-events-none absolute right-12 sm:right-14 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-vikinger-dark-200 to-transparent"
+      />
 
       <!-- ปุ่มขวา -->
       <button
@@ -246,6 +259,8 @@ watch(activeTab, (newTab, oldTab) => {
 .tab-scroll {
   scrollbar-width: thin;
   scrollbar-color: #e2e8f0 transparent;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 .dark .tab-scroll {
   scrollbar-color: #334155 transparent;

@@ -20,6 +20,7 @@ Read this file first, then follow the linked project-local rules for the task.
 4. `.agents/latest-analysis.md` - live analysis board, active work, coordination claims, latest decisions.
 5. Task-specific rule or skill:
    - Frontend work: `.agents/rules/frontend.md`, `.agents/agents/frontend-vue.md`, `.agents/skills/nuxnan-vue-sfc/SKILL.md`.
+   - Creating or redesigning UI (pages, components, widgets): `.agents/skills/hopeui-port/SKILL.md` - port designs from the local HopeUI Pro library (`hopa/`) instead of designing from scratch.
    - Backend API work: `.agents/rules/backend.md`, `.agents/agents/backend-laravel.md`, `.agents/skills/nuxnan-laravel-api/SKILL.md`.
    - Cross-stack work: `.agents/agents/fullstack-integrator.md`, `.agents/skills/nuxnan-fullstack-workflow/SKILL.md`.
    - Database work: `.agents/agents/database-migration.md`.

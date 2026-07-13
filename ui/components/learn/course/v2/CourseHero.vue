@@ -221,7 +221,7 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
         <div class="flex-1 min-w-0 pt-2 md:pb-3">
           <!-- Course name + edit -->
           <div class="flex items-start gap-2 mb-1.5">
-            <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white leading-tight">
+            <h1 class="min-w-0 break-words text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white leading-tight">
               {{ course?.name || 'รายวิชาไม่มีชื่อ' }}
             </h1>
             <button

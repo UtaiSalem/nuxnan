@@ -6,7 +6,7 @@
 import { Icon } from '@iconify/vue'
 
 definePageMeta({
-  layout: false, // Using NuxtLayout directly
+  layout: 'main',
   ssr: false // Disable SSR to avoid hydration issues with auth
 })
 
@@ -130,6 +130,57 @@ const fetchRecentActivities = async () => {
   }
 }
 
+const statCards = computed(() => [
+  {
+    label: 'นักเรียน',
+    caption: 'สมาชิกที่อนุมัติแล้ว',
+    value: stats.value.totalStudents,
+    icon: 'fluent:hat-graduation-24-filled',
+    tone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    to: `/academies/${academyName.value}/admin/students`,
+  },
+  {
+    label: 'ครู/อาจารย์',
+    caption: 'บุคลากรในระบบ',
+    value: stats.value.totalTeachers,
+    icon: 'fluent:person-board-24-filled',
+    tone: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+    to: `/academies/${academyName.value}/admin/staff`,
+  },
+  {
+    label: 'รายวิชา',
+    caption: 'รายวิชาทั้งหมด',
+    value: stats.value.totalCourses,
+    icon: 'fluent:book-24-filled',
+    tone: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+    to: `/academies/${academyName.value}/admin/courses`,
+  },
+  {
+    label: 'กลุ่ม/ห้อง',
+    caption: 'ห้องเรียนและกลุ่ม',
+    value: stats.value.totalGroups,
+    icon: 'fluent:people-community-24-filled',
+    tone: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
+    to: `/academies/${academyName.value}/admin/classrooms`,
+  },
+  {
+    label: 'รอดำเนินการ',
+    caption: 'คำขอเข้าร่วมใหม่',
+    value: stats.value.pendingRequests,
+    icon: 'fluent:person-clock-24-filled',
+    tone: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    to: `/academies/${academyName.value}/admin/requests`,
+  },
+  {
+    label: 'ใช้งานวันนี้',
+    caption: 'สมาชิกที่ใช้งานล่าสุด',
+    value: stats.value.activeToday,
+    icon: 'fluent:pulse-24-filled',
+    tone: 'bg-green-500/10 text-green-600 dark:text-green-400',
+    to: `/academies/${academyName.value}/admin/activity-log`,
+  },
+])
+
 const quickActions = computed(() => [
   {
     title: 'จัดการสมาชิก',
@@ -217,76 +268,77 @@ const rejectRequest = async (memberId: number) => {
       <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>
     </div>
 
-    <div v-else class="space-y-8">
-      <!-- Header -->
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-1">ภาพรวมการบริหารจัดการโรงเรียน</p>
-      </div>
-
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div class="p-2 lg:p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl w-fit mb-3">
-            <Icon icon="fluent:hat-graduation-24-filled" class="w-5 h-5 lg:w-6 lg:h-6 text-emerald-600 dark:text-emerald-400" />
+    <div v-else class="space-y-6">
+      <!-- HopeUI nav header: wave banner behind, content cards overlap it -->
+      <div class="relative isolate">
+        <div class="absolute inset-x-0 top-0 -z-10 h-52 overflow-hidden rounded-2xl lg:h-56">
+          <img
+            src="/images/hopeui/top-header.png"
+            alt=""
+            class="hero-wave h-full w-full rounded-2xl object-cover"
+          />
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-4 p-6 lg:p-8">
+          <div>
+            <h1 class="mb-2 text-2xl font-bold text-white">Dashboard</h1>
+            <p class="mb-4 text-white">ภาพรวมการบริหารจัดการโรงเรียน</p>
           </div>
-          <p class="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalStudents }}</p>
-          <p class="text-xs lg:text-sm text-gray-500 dark:text-gray-400">นักเรียน</p>
+          <div>
+            <NuxtLink
+              :to="`/academies/${academyName}/admin/announcements`"
+              class="inline-flex items-center gap-2 rounded-lg bg-white/20 px-4 py-2 font-medium text-white shadow-md backdrop-blur transition hover:bg-white/30 hover:shadow-xl"
+            >
+              <Icon icon="fluent:megaphone-24-filled" class="w-5 h-5" />
+              สร้างประกาศ
+            </NuxtLink>
+          </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div class="p-2 lg:p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl w-fit mb-3">
-            <Icon icon="fluent:person-board-24-filled" class="w-5 h-5 lg:w-6 lg:h-6 text-blue-600 dark:text-blue-400" />
+        <!-- Stats Cards (HopeUI card style, pulled up over the banner) -->
+        <div class="grid grid-cols-1 gap-4 px-1 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          v-for="stat in statCards"
+          :key="stat.label"
+          class="relative flex flex-col overflow-hidden rounded-lg bg-white p-5 shadow-md transition hover:shadow-lg dark:bg-gray-800"
+        >
+          <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-3">
+              <div :class="['rounded p-2.5', stat.tone]">
+                <Icon :icon="stat.icon" class="w-5 h-5" />
+              </div>
+              <p class="font-medium text-gray-900 dark:text-white">{{ stat.label }}</p>
+            </div>
+            <NuxtLink
+              :to="stat.to"
+              class="rounded-full bg-primary-500/10 px-2 py-1 text-xs font-semibold leading-none text-primary-600 transition hover:bg-primary-500/20 dark:text-primary-400"
+            >
+              ดู
+            </NuxtLink>
           </div>
-          <p class="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalTeachers }}</p>
-          <p class="text-xs lg:text-sm text-gray-500 dark:text-gray-400">ครู/อาจารย์</p>
+          <h2 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">{{ stat.value }}</h2>
+          <small class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ stat.caption }}</small>
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div class="p-2 lg:p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl w-fit mb-3">
-            <Icon icon="fluent:book-24-filled" class="w-5 h-5 lg:w-6 lg:h-6 text-purple-600 dark:text-purple-400" />
-          </div>
-          <p class="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalCourses }}</p>
-          <p class="text-xs lg:text-sm text-gray-500 dark:text-gray-400">รายวิชา</p>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div class="p-2 lg:p-3 bg-cyan-100 dark:bg-cyan-900/50 rounded-xl w-fit mb-3">
-            <Icon icon="fluent:people-community-24-filled" class="w-5 h-5 lg:w-6 lg:h-6 text-cyan-600 dark:text-cyan-400" />
-          </div>
-          <p class="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalGroups }}</p>
-          <p class="text-xs lg:text-sm text-gray-500 dark:text-gray-400">กลุ่ม/ห้อง</p>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div class="p-2 lg:p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl w-fit mb-3">
-            <Icon icon="fluent:person-clock-24-filled" class="w-5 h-5 lg:w-6 lg:h-6 text-amber-600 dark:text-amber-400" />
-          </div>
-          <p class="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{{ stats.pendingRequests }}</p>
-          <p class="text-xs lg:text-sm text-gray-500 dark:text-gray-400">รอดำเนินการ</p>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 lg:p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div class="p-2 lg:p-3 bg-green-100 dark:bg-green-900/50 rounded-xl w-fit mb-3">
-            <Icon icon="fluent:pulse-24-filled" class="w-5 h-5 lg:w-6 lg:h-6 text-green-600 dark:text-green-400" />
-          </div>
-          <p class="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{{ stats.activeToday }}</p>
-          <p class="text-xs lg:text-sm text-gray-500 dark:text-gray-400">ใช้งานวันนี้</p>
         </div>
       </div>
 
-      <!-- Quick Actions -->
+      <!-- Quick Actions (HopeUI widget-card style) -->
       <div>
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">การดำเนินการด่วน</h2>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <template v-for="action in quickActions" :key="action.title">
             <NuxtLink
               v-if="action.show"
               :to="action.to"
-              class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+              class="group relative flex flex-col overflow-hidden rounded-lg bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-gray-800"
             >
-              <div :class="['w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4', action.color]">
-                <Icon :icon="action.icon" class="w-6 h-6 text-white" />
+              <div class="mb-4 flex items-start justify-between">
+                <div :class="['flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br shadow-md', action.color]">
+                  <Icon :icon="action.icon" class="w-6 h-6 text-white" />
+                </div>
+                <Icon
+                  icon="fluent:arrow-right-24-regular"
+                  class="w-5 h-5 -translate-x-1 text-primary-500 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+                />
               </div>
               <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                 {{ action.title }}
@@ -297,17 +349,17 @@ const rejectRequest = async (memberId: number) => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <!-- Pending Requests -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="flex flex-col overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800">
           <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
             <h3 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <Icon icon="fluent:person-add-24-regular" class="w-5 h-5 text-amber-500" />
               คำขอเข้าร่วม
             </h3>
-            <NuxtLink 
+            <NuxtLink
               :to="`/academies/${academyName}/admin/members`"
-              class="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+              class="rounded-full bg-primary-500/10 px-2.5 py-1 text-xs font-semibold leading-none text-primary-600 transition hover:bg-primary-500/20 dark:text-primary-400"
             >
               ดูทั้งหมด
             </NuxtLink>
@@ -348,12 +400,18 @@ const rejectRequest = async (memberId: number) => {
         </div>
 
         <!-- Recent Activities -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="flex flex-col overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800">
           <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
             <h3 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <Icon icon="fluent:history-24-regular" class="w-5 h-5 text-blue-500" />
               กิจกรรมล่าสุด
             </h3>
+            <NuxtLink
+              :to="`/academies/${academyName}/admin/activity-log`"
+              class="rounded-full bg-primary-500/10 px-2.5 py-1 text-xs font-semibold leading-none text-primary-600 transition hover:bg-primary-500/20 dark:text-primary-400"
+            >
+              ดูทั้งหมด
+            </NuxtLink>
           </div>
           
           <div v-if="recentActivities.length === 0" class="p-8 text-center">
@@ -377,3 +435,16 @@ const rejectRequest = async (memberId: number) => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* HopeUI banner slow-zoom (animated-scaleX) */
+.hero-wave {
+  animation: hero-wave-scale 45s 1s ease-in-out infinite;
+}
+
+@keyframes hero-wave-scale {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.175); }
+  100% { transform: scale(1); }
+}
+</style>

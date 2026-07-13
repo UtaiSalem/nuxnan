@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { StudentCardRequest, StudentCardRequestStatus } from '~/types/studentCardRequest'
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'main' })
 const academyId = inject<Ref<number | null>>('academyId', ref(null))
 const academyName = inject<ComputedRef<string>>('academyName', computed(() => String(useRoute().params.name)))
 const api = useStudentCardRequests(academyId)

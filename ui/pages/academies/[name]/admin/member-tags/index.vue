@@ -142,7 +142,7 @@ import Swal from 'sweetalert2'
 import MemberTagFormModal from '~/components/learn/member/MemberTagFormModal.vue'
 
 definePageMeta({
-  layout: 'academy',
+  layout: 'main',
 })
 
 interface Tag {

@@ -4,6 +4,8 @@
  * หน้าดูบัตรนักเรียนของตัวเอง — ใช้ StudentCardFront/Back component เหมือนระบบเดิม
  */
 import { Icon } from '@iconify/vue'
+import StudentCardFront from '~/components/learn/student-card/StudentCardFront.vue'
+import StudentCardBack from '~/components/learn/student-card/StudentCardBack.vue'
 
 definePageMeta({
   layout: false
@@ -125,7 +127,7 @@ const academyDisplayName = computed(() => {
               >
                 <!-- Front Side -->
                 <div class="backface-hidden">
-                  <LazyLearnStudentCardStudentCardFront
+                  <StudentCardFront
                     :student="cardStudent"
                     :academy-name="academyDisplayName"
                     :academy-logo="academyLogo"
@@ -137,7 +139,7 @@ const academyDisplayName = computed(() => {
 
                 <!-- Back Side -->
                 <div class="absolute inset-0 backface-hidden rotate-y-180">
-                  <LazyLearnStudentCardStudentCardBack
+                  <StudentCardBack
                     :academy-name="academyDisplayName"
                     :academy-logo="academyLogo"
                     :academy-address="academyAddress"

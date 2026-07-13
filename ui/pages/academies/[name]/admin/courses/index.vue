@@ -9,7 +9,7 @@ import CourseMarketCardSkeleton from '~/components/academy/CourseMarketCardSkele
 import CoursePurchaseModal from '~/components/academy/CoursePurchaseModal.vue'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
   middleware: 'auth',
   ssr: false,
 })

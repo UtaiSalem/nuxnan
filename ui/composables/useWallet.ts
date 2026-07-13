@@ -16,6 +16,9 @@ export const WITHDRAW_FEE_MIN = 5
 export const WITHDRAW_DAILY_LIMIT = 100000
 export const WITHDRAW_MONTHLY_LIMIT = 500000
 
+/** Minimum transfer amount in THB — must mirror WalletController::transfer (min:10) */
+export const TRANSFER_MIN_AMOUNT = 10
+
 export type WithdrawalStatus = 'pending' | 'under_review' | 'approved' | 'processing' | 'completed' | 'paid' | 'rejected' | 'failed' | 'cancelled'
 
 export const useWallet = () => {
@@ -509,5 +512,6 @@ export const useWallet = () => {
     WITHDRAW_MIN_AMOUNT,
     WITHDRAW_FEE_RATE,
     WITHDRAW_FEE_MIN,
+    TRANSFER_MIN_AMOUNT,
   }
 }

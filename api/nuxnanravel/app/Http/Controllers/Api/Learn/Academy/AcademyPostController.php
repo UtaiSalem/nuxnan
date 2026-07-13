@@ -63,6 +63,8 @@ class AcademyPostController extends Controller
             'reward_points' => 'nullable|integer|min:0|max:999',
             'embed_data' => 'nullable|array',
             'is_pinned' => 'nullable|boolean',
+            'scope_type' => 'nullable|in:academy,department,classroom',
+            'scope_id' => 'nullable|integer',
         ]);
 
         if (empty($validatedData['content']) && ! $request->hasFile('images')) {
@@ -124,6 +126,8 @@ class AcademyPostController extends Controller
         $post = new AcademyPost;
         $post->user_id = auth()->user()->id;
         $post->academy_id = $academy->id;
+        $post->scope_type = $validatedData['scope_type'] ?? 'academy';
+        $post->scope_id = $validatedData['scope_id'] ?? $academy->id;
         $post->content = $content;
         $post->hashtags = json_encode($hashtags);
         if ($request->filled('posted_as_group_id')) {

@@ -715,7 +715,7 @@ class ClassroomController extends Controller
 
         $student = Student::where('academy_id', $academyId)
             ->where('id', $studentId)
-            ->with(['user', 'studentCard', 'currentEnrollment.classroom'])
+            ->with(['user', 'studentCard', 'currentEnrollment.classroom', 'guardians', 'healthInfo', 'addresses', 'contacts'])
             ->firstOrFail();
 
         // The Student model has no `classroom` relation. Surface the active enrollment's

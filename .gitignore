@@ -17,6 +17,11 @@
 !/CLAUDE.md
 !/.agents/
 !/.agents/**
+# Claude Code project skills (sync between home/work) — rest of .claude stays local
+!/.claude/
+/.claude/*
+!/.claude/skills/
+!/.claude/skills/**
 # DB snapshots may contain PII — keep local only
 /.agents/backups/**/*.jsonl
 /.agents/backups/**/*.sql

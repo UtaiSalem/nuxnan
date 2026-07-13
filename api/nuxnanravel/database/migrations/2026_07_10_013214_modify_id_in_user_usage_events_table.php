@@ -11,9 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('user_usage_events', function (Blueprint $table) {
-            $table->bigIncrements('id')->change();
-        });
+        if (config('database.default') === 'mysql') {
+            DB::statement('ALTER TABLE user_usage_events MODIFY id BIGINT UNSIGNED AUTO_INCREMENT;');
+        } else {
+            Schema::table('user_usage_events', function (Blueprint $table) {
+                $table->bigIncrements('id')->change();
+            });
+        }
     }
 
     /**
@@ -21,8 +25,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('user_usage_events', function (Blueprint $table) {
-            $table->bigInteger('id')->unsigned()->change();
-        });
+        if (config('database.default') === 'mysql') {
+            DB::statement('ALTER TABLE user_usage_events MODIFY id BIGINT UNSIGNED NOT NULL;');
+        } else {
+            Schema::table('user_usage_events', function (Blueprint $table) {
+                $table->bigInteger('id')->unsigned()->change();
+            });
+        }
     }
 };

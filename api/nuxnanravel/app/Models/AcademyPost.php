@@ -21,6 +21,7 @@ class AcademyPost extends Model
         'target_audience' => 'array',
         'embed_data' => 'array',
         'is_pinned' => 'boolean',
+        'scope_id' => 'integer',
     ];
 
     public function academy()

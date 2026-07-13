@@ -4,6 +4,77 @@
 **กฎ: ก่อนออกจากแต่ละที่ → อัพเดทไฟล์นี้แล้ว `git push`**
 **กฎ: มาถึงที่ใหม่ → `git pull` แล้วอ่านไฟล์นี้ก่อนเริ่มงาน**
 
+## 2026-07-14 — Scope Security Hardening, Workspace and Feed/Announcement Scope Filtering
+
+> ฟีเจอร์: การทำ Security Hardening และแก้ปัญหาข้อมูลรั่วไหล (Data Leakage) ของระบบฟีดข่าว ประกาศ และพื้นที่ขอบเขตงาน Scoped Workspace (departments & classrooms) พร้อมสร้างชุดทดสอบ PHPUnit ครบถ้วน 100%
+
+### สถานะ: เสร็จสิ้น (ผ่านการทดสอบ 100% ทั้งหมด 11 เทสต์ 32 assertions)
+
+**สถิติการเปลี่ยนแปลง:**
+- **Security Hardening (Workspace API):** เสริมความปลอดภัยใน `AcademyScopeWorkspaceController.php` เพื่อปิดช่องโหว่ IDOR และ Cross-Academy access ในการเรียกจัดการงาน (Tasks) และเอกสาร (Files) โดยบังคับเช็คความเป็นเจ้าของขอบเขตงาน และตรวจสอบสิทธิ์สำหรับบทบาทต่างๆ (แอดมิน, สมาชิกฝ่ายงาน, ครูประจำชั้น, นักเรียน) อย่างรัดกุม
+- **Scope Filtering & Authorization (Announcements & Feed):**
+  - อัปเดต `AnnouncementController@index` ให้รองรับการกรองประกาศตามขอบเขต `scope_type` และ `scope_id` (หากไม่ระบุจะเลือกเป็นระดับ `academy` โดยปริยายเพื่อป้องกันข้อมูลประกาศของฝ่ายงาน/ห้องเรียนรั่วไหล) และบังคับการตรวจสอบสิทธิ์การเข้าถึงขอบเขตนั้นๆ สำหรับผู้ใช้ที่ไม่ใช่แอดมิน
+  - อัปเดต `AcademyActivityController@index` และ `@getActivities` ให้รองรับการกรองโพสต์ในฟีดสถาบันตามขอบเขต `scope_type` และ `scope_id` พร้อมการตรวจสอบสิทธิ์แบบเดียวกัน ป้องกันข้อมูลจากกลุ่มย่อยหรือห้องเรียนรั่วไหลออกสู่ฟีดสถาบันหลัก
+- **Database Schema Sync:** เปลี่ยนการคิวรีเช็คสมาชิกกลุ่มจาก `group_id` เป็น `academy_group_id` ในตาราง `academy_group_members` ให้ตรงตามโครงสร้างฐานข้อมูลจริง
+- **PHP Unit Tests:**
+  - สร้างไฟล์ทดสอบ [AcademyScopeWorkspaceTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/AcademyScopeWorkspaceTest.php) เพื่อตรวจสอบการอนุญาตเข้าถึงพื้นที่ขอบเขตงานในเคสต่างๆ (7 tests, 19 assertions) - **ผ่านหมด 100%**
+  - สร้างไฟล์ทดสอบ [AcademyScopeFilteringTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/AcademyScopeFilteringTest.php) เพื่อตรวจสอบการกรองและความถูกต้องของการแสดงผลประกาศและกิจกรรมตามขอบเขต (4 tests, 13 assertions) - **ผ่านหมด 100%**
+- **Pint Formatting:** จัดระเบียบรูปแบบโค้ดไฟล์ที่พัฒนาใหม่และเกี่ยวข้องผ่าน Pint ครบถ้วนทั้งหมด
+
+---
+
+## 2026-07-14 — Premium Classroom Detail Management Interface
+
+> ฟีเจอร์: หน้าจัดการห้องเรียนเชิงลึก (`ui/pages/academies/[name]/admin/classrooms/[id].vue`) ในรูปแบบแท็บแดชบอร์ด 7 แท็บ (ภาพรวม, นักเรียน, ครูและสมาชิก, การเข้าเรียน, วิชา/เกรด, ประกาศ, รายงาน) สไตล์ HopeUI พรีเมียม พร้อมระบบสแกน QR บอร์ด, เพิ่ม/ย้ายนักเรียนจริง, ดูโปรไฟล์เชิงลึกผู้ปกครอง, บันทึกเช็คชื่อเข้าเรียน, และฟังก์ชันส่งออก Excel ในตัว
+
+### สถานะ: เสร็จสิ้น (พร้อมทดสอบและใช้งานร่วมกับ Laravel API ในตัว + แก้ไขบั๊ก MySQL event table 100%)
+
+**สถิติการเปลี่ยนแปลง:**
+- **Database Bugfix:** แก้ไขบั๊ก `SQLSTATE[HY000]: General error: 1364 Field 'id' doesn't have a default value` ของตาราง `user_usage_events` 
+  - ทำการรันคำสั่ง SQL ด่วนบนเซิร์ฟเวอร์ `ALTER TABLE user_usage_events MODIFY id BIGINT UNSIGNED AUTO_INCREMENT;` เพื่อเปิดใช้งานการเพิ่มค่า ID อัตโนมัติ (ซึ่งแต่เดิมหลุดเนื่องจากความจำกัดของระบบ Doctrine DBAL change)
+  - ปรับปรุงไฟล์ไมเกรต [2026_07_10_013214_modify_id_in_user_usage_events_table.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/database/migrations/2026_07_10_013214_modify_id_in_user_usage_events_table.php) ให้ใช้ raw SQL statement `DB::statement()` บน MySQL ในเมธอด `up` และ `down` เพื่อเสถียรภาพและความเข้ากันได้สูงสุด และ fallback ไปใช้ Schema builder บนเครื่องทดสอบ SQLite
+  - จัดรูปแบบโค้ดไฟล์ไมเกรตผ่าน Pint เรียบร้อยแล้ว
+- **Backend Controllers:** อัปเดต `ClassroomController::getStudent` ให้ eager-load โครงสร้างความสัมพันธ์ `guardians`, `healthInfo`, `addresses`, และ `contacts` เพื่อให้หน้าระบบสามารถดึงประวัตินักเรียนและผู้ปกครองมาแสดงในแถบ Drawer ได้ครบถ้วน
+- **Pint Formatting:** จัดระเบียบ code `ClassroomController.php` ผ่าน Pint เรียบร้อยแล้ว
+- **Frontend UI:**
+  - **Banner / Header:** ออกแบบ HopeUI Wave Hero Banner พร้อมอนิเมชัน slow-zoom อัตโนมัติ แสดงข้อมูลชื่อห้อง ปีการศึกษา และเกรด
+  - **ภาพรวม (Overview):** การ์ดแสดงผลรวม อัตราผู้เรียน/ความจุ, ครูประจำชั้น, สรุปสถิติเข้าเรียน (96.5%), เกรดเฉลี่ยห้อง (3.25), ประกาศล่าสุด, ตารางสอน, และกลุ่มความเสี่ยง (At-Risk)
+  - **นักเรียน (Students):** ตารางรายชื่อนักเรียนพร้อมการค้นหาและฟิลเตอร์, เมนูการจัดการเลขที่/เลขประจำตัวนักเรียน (Inline update), การนำนักเรียนเข้าห้องเรียนจากรายชื่อว่าง (Add Student Modal), การย้ายห้องเรียน (Transfer Student Modal) และแถบ Drawer ด้านข้างสำหรับแสดงผลโปรไฟล์ ประวัติการติดต่อ และผู้ปกครองโดยละเอียด
+  - **ครูและสมาชิกห้อง (Members):** จัดการสมาชิกห้อง บทบาทครูร่วมสอน ครูผู้ช่วย และผู้สังเกตการณ์ พร้อมปุ่มลบ/เปลี่ยนบทบาท
+  - **การเข้าเรียน (Attendance):** ระบบจัดการเช็คชื่อตามวันที่ ค้นหาและบันทึกรายชื่อผู้เข้าเรียน (มา, สาย, ลา, ขาด), แสดงสถิติวงกลม/สถิติกลุ่ม, และการเชื่อม QR Code สำหรับสแกนเข้าชั้นเรียนร่วมกับ `SchoolAttendanceQRDisplay`
+  - **วิชาและผลการเรียน (Grades):** แสดงเกรดเฉลี่ยรายวิชาและ GPA/GPAX พร้อมปุ่มด่วนสำหรับเปิดหน้า Gradebook หลัก
+  - **ประกาศและการสื่อสาร (Announcements):** ประดัษฐ์ระบบประกาศของชั้นเรียน ปฏิทินและแจ้งเตือนนักเรียน/ผู้ปกครองแบบโต้ตอบ
+  - **รายงาน (Reports):** ฟังก์ชันส่งออกรายงานนักเรียน, รายงานเข้าเรียน, และรายงานผลการเรียน ออกมาเป็นไฟล์ Excel (.xlsx) จริงบนฝั่งไคลเอนต์โดยใช้ไลบรารี `xlsx` (SheetJS)
+- **Dependencies:** ใช้งาน `xlsx` (SheetJS) ในการประมวลผลดาวน์โหลดไฟล์โดยตรง
+
+---
+
+## 2026-07-13 — Admin withdrawal payout proof + full detail review
+
+> ฟีเจอร์: บันทึกการโอนเงิน (Mark Paid) ฝั่งแอดมินบังคับแนบหลักฐานสลิป (Payout Proof) เก็บใน private storage, หน้ารายละเอียดคำขอถอนเงิน (Pending Details Modal) แสดงข้อมูลครบถ้วนสำหรับโอนเงินจริง, ป้องกัน Maker-Checker Control ยอดสูง (≥ ฿10,000)
+
+### สถานะ: เสร็จสิ้น (ผ่านการทดสอบ 100% ครบ 35 เทสต์ 146 assertions)
+
+**สถิติการเปลี่ยนแปลง:**
+- **Database:** สร้าง migration `2026_07_13_175026_add_payout_proof_to_wallet_transactions_table` เพิ่ม 6 columns สำหรับ payout proof metadata ใน `wallet_transactions` + backfill/alter migrations table
+- **Models:** อัปเดต `WalletTransaction.php` (เพิ่ม `$fillable` + casts + `$hidden` field `payout_proof_path` + accessor `has_payout_proof`)
+- **Backend Services:** `WalletService::markWithdrawalPaid` อัปเดต signature ให้รับ `proofData` เพื่อบันทึก metadata ลง database และป้องกัน double-paid โดยตรวจสอบ `payout_proof_path` ห้ามเขียนทับ (Immutability)
+- **Backend Controllers:**
+  - `AdminWalletController::pendingWithdrawals` อัปเดตให้รองรับ query param `status=awaiting-payout` (กรอง approved/processing) และ eager load `reviewer` เพื่อแสดงข้อมูลผู้ตรวจคนแรก
+  - `AdminWalletController::showWithdrawal` eager load `reviewer`
+  - `AdminWalletController::markWithdrawalPaid` เปลี่ยนไปใช้ FormRequest `MarkWithdrawalPaidRequest` ในการ validate input (payment_reference + proof file) และอัปโหลดไฟล์หลักฐานไปยัง private disk (local) ก่อนรัน DB Transaction หากล้มเหลวจะทำความสะอาดลบไฟล์ทิ้งใน `finally`/catch block
+  - `AdminWalletController::downloadWithdrawalProof` (ใหม่) endpoint ดาวน์โหลดสลิปโอนเงินทางฝั่งแอดมิน ตรวจสอบ policy สิทธิ์เข้าถึงผ่าน `WithdrawalPolicy` + audit log event `withdrawal.proof_viewed`
+- **FormRequest:** `App\Http\Requests\Admin\MarkWithdrawalPaidRequest` บังคับ `payment_reference` และ `proof` (ไฟล์ภาพ/PDF ≤ 5MB)
+- **Routes:** `routes/admin/admin.php` เพิ่ม route `GET /withdrawals/{id}/proof`
+- **Frontend UI:**
+  - `ui/pages/nuxnan-admin/wallet/pending.vue` ปรับปรุง UI สไตล์ HopeUI มี 3 Tabs: "ถอนเงิน (รอดำเนินการ)", "ถอนเงิน (รอโอน)", "เติมเงิน (รอดำเนินการ)", เพิ่ม Modal รายละเอียดธุรกรรมแสดงข้อมูลครบถ้วนพร้อมปุ่มคัดลอกเลขบัญชีแบบ visual checkmark feedback, warning banner ระบบ Maker-Checker และ interface แนบสลิปพร้อมตรวจสอบ validation ต่างๆ ในตัว
+  - `ui/pages/nuxnan-admin/wallet/index.vue` เพิ่มปุ่ม "ดูหลักฐานการโอน" ใน Modal รายละเอียดธุรกรรมที่เสร็จสิ้นแล้ว โดยจะดึงไฟล์ผ่าน blob stream พร้อมแนบ JWT token ใน header
+- **Pint:** จัดรูปแบบ code จัดระเบียบเรียบร้อย
+
+### ✅ ตรวจแล้ว (PHPUnit)
+- `tests/Feature/Wallet/WithdrawalPayoutProofTest.php` (ใหม่) ผ่านครบ 7/7 เทสต์
+- รันชุดทดสอบ wallet ทั้งหมด (`WalletReconciliationTest`, `WithdrawTest`, `WithdrawalHardeningTest`, `WithdrawalPayoutProofTest`) **ผ่านหมด 100% (35 passed, 146 assertions)**
+
 ---
 
 ## 2026-07-13 — แก้ `gradebook.php` ไม่ถูกโหลด (route หายทั้งไฟล์)

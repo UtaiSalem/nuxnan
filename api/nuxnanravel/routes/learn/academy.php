@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Learn\Academy\AcademyRoleController;
 use App\Http\Controllers\Api\Learn\Academy\ActivitySessionController;
 use App\Http\Controllers\Api\Learn\Academy\AnalyticsController;
 use App\Http\Controllers\Api\Learn\Academy\AnnouncementController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyScopeWorkspaceController;
 use App\Http\Controllers\Api\Learn\Academy\AssetController;
 use App\Http\Controllers\Api\Learn\Academy\BehaviorCategoryController;
 use App\Http\Controllers\Api\Learn\Academy\BehaviorRecordController;
@@ -73,6 +74,10 @@ Route::middleware(['auth:api'])->group(function () {
 });
 
 Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
+    Route::get('/{academy}/scope/tasks', [AcademyScopeWorkspaceController::class, 'tasks']);
+    Route::post('/{academy}/scope/tasks', [AcademyScopeWorkspaceController::class, 'storeTask']);
+    Route::get('/{academy}/scope/files', [AcademyScopeWorkspaceController::class, 'files']);
+    Route::post('/{academy}/scope/files', [AcademyScopeWorkspaceController::class, 'uploadFile']);
     Route::get('/', [AcademyController::class, 'index'])->name('academies');
     Route::post('/', [AcademyController::class, 'store'])->name('academies.store');
     Route::get('/create', [AcademyController::class, 'create'])->name('academy.create');

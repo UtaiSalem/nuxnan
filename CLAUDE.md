@@ -117,6 +117,7 @@ php artisan reverb:start             # websocket server
 ## Conventions ของโปรเจคนี้
 
 ### Frontend
+- **เมื่อสร้าง/redesign หน้าหรือ component ใดๆ ใน `ui/`** → ใช้สกิล `hopeui-port` (`.agents/skills/hopeui-port/SKILL.md`) เพื่อดึงดีไซน์จาก HopeUI Pro (`hopa/`) มาเป็นต้นแบบ markup ก่อนเสมอ
 - ใช้ `<script setup lang="ts">` เป็น default
 - ตั้งชื่อ component แบบ **PascalCase** (เช่น `CourseProfileCover.vue`)
 - จัด component เป็น **domain folder** (เช่น `components/learn/`, `components/academy/`) + design system folders (`atoms/`, `molecules/`, `organisms/`)

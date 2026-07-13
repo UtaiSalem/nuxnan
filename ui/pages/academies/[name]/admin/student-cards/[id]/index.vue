@@ -4,9 +4,11 @@
  * หน้าดูรายละเอียดบัตรนักเรียน พร้อมบัตรด้านหน้า-หลัง
  */
 import { Icon } from '@iconify/vue'
+import StudentCardFront from '~/components/learn/student-card/StudentCardFront.vue'
+import StudentCardBack from '~/components/learn/student-card/StudentCardBack.vue'
 
 definePageMeta({
-  layout: false
+  layout: 'main'
 })
 
 const route = useRoute()
@@ -182,7 +184,7 @@ const formatDate = (dateStr?: string) => {
       <div class="flex justify-center">
         <div class="w-full max-w-[640px]">
           <Transition name="flip" mode="out-in">
-            <LazyLearnStudentCardStudentCardFront
+            <StudentCardFront
               v-if="!showBack"
               key="front"
               :student="student"
@@ -191,7 +193,7 @@ const formatDate = (dateStr?: string) => {
               :academy-address="academyAddress"
               card-id="student-card-front"
             />
-            <LazyLearnStudentCardStudentCardBack
+            <StudentCardBack
               v-else
               key="back"
               :academy-name="academy?.name"

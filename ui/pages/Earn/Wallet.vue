@@ -42,7 +42,8 @@ const {
   formatPromptPay,
   WITHDRAW_MIN_AMOUNT,
   WITHDRAW_FEE_RATE,
-  WITHDRAW_FEE_MIN
+  WITHDRAW_FEE_MIN,
+  TRANSFER_MIN_AMOUNT
 } = useWallet()
 
 const { points, convertToWallet, formatPoints } = usePoints()
@@ -104,7 +105,7 @@ watch(() => withdrawForm.value.method, (method) => {
 
 const transferForm = ref({
   recipient_id: '',
-  amount: 10,
+  amount: TRANSFER_MIN_AMOUNT,
   message: ''
 })
 
@@ -426,7 +427,7 @@ const handleTransfer = async () => {
     
     // Reset form
     transferForm.value.recipient_id = ''
-    transferForm.value.amount = 10
+    transferForm.value.amount = TRANSFER_MIN_AMOUNT
     transferForm.value.message = ''
     
   } catch (err: any) {
@@ -1385,18 +1386,18 @@ onMounted(async () => {
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">จำนวนเงิน</label>
               <div class="relative">
-                <input 
+                <input
                   v-model.number="transferForm.amount"
                   type="number"
-                  min="1"
+                  :min="TRANSFER_MIN_AMOUNT"
                   :max="walletBalance"
                   step="1"
                   class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="ระบุจำนวนเงิน"
+                  :placeholder="`ระบุจำนวนเงิน (ขั้นต่ำ ${TRANSFER_MIN_AMOUNT} บาท)`"
                 >
                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">บาท</span>
               </div>
-              <p class="text-sm text-gray-500 mt-1">ยอดเงินคงเหลือ: {{ formatMoney(walletBalance) }}</p>
+              <p class="text-sm text-gray-500 mt-1">ยอดเงินคงเหลือ: {{ formatMoney(walletBalance) }} | โอนขั้นต่ำ {{ TRANSFER_MIN_AMOUNT }} บาท</p>
             </div>
             
             <!-- Message -->
@@ -1413,7 +1414,7 @@ onMounted(async () => {
             <!-- Submit Button -->
             <button 
               class="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isProcessing || !transferForm.recipient_id || transferForm.amount < 1 || transferForm.amount > walletBalance"
+              :disabled="isProcessing || !transferForm.recipient_id || transferForm.amount < TRANSFER_MIN_AMOUNT || transferForm.amount > walletBalance"
               @click="handleTransfer"
             >
               <Icon v-if="isProcessing" icon="mdi:loading" class="w-5 h-5 animate-spin inline mr-2" />

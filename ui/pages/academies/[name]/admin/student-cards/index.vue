@@ -4,9 +4,10 @@
  * หน้าจัดการบัตรนักเรียน - มี 2 โหมด: ดูตามห้อง / ดูรายชื่อ
  */
 import { Icon } from '@iconify/vue'
+import StudentCardFront from '~/components/learn/student-card/StudentCardFront.vue'
 
 definePageMeta({
-  layout: false
+  layout: 'main'
 })
 
 const route = useRoute()
@@ -367,7 +368,7 @@ const getProfileImage = (student: any) => {
               class="cursor-pointer"
               @click="viewStudentCard(student)"
             >
-              <LazyLearnStudentCardStudentCardFront
+              <StudentCardFront
                 :student="student"
                 :academy-name="academy?.name"
                 :academy-logo="academyLogo"

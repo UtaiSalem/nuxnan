@@ -8,7 +8,7 @@ import { useStudentAccountService } from '~/services/studentAccountService'
 import StudentDataTable from '~/components/academy/student/StudentDataTable.vue'
 
 definePageMeta({
-  layout: false
+  layout: 'main'
 })
 
 const route = useRoute()

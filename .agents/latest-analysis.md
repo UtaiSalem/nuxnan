@@ -1,3 +1,176 @@
+# แผนปรับปรุง: หน้าจัดการฝ่าย (Department Console) + ฟีดแบบแบ่งพื้นที่ (Scoped Feed)
+
+**วันที่:** 2026-07-14
+**สถานะ:** เสร็จสิ้น (ความปลอดภัย, การคัดกรองข้อมูล, และผ่านการทดสอบ 100%)
+**ขอบเขตงาน:** หน้าจัดการฝ่ายรายฝ่าย `ui/pages/academies/[name]/admin/departments/[id].vue` แบบแท็บ + ระบบฟีดข่าว/งาน/เอกสารแยกตามพื้นที่ (โรงเรียน/ฝ่าย/ห้องเรียน) ด้วย scope pattern ชุดเดียว
+
+---
+
+## 1. บทวิเคราะห์แผนเดิมเทียบ codebase จริง
+
+ตรวจโค้ดจริงแล้ว **backend ของ Phase 1 มีอยู่แล้วประมาณ 80%** — แผนเดิมประเมินงานสูงเกินไปเพราะไม่ได้อ้างถึงของที่มีอยู่:
+
+### สิ่งที่มีอยู่แล้ว (ห้ามสร้างซ้ำ)
+
+| ความสามารถ | ที่อยู่ในโค้ด |
+|---|---|
+| ฝ่าย = `AcademyGroup` (type='department') | `app/Models/AcademyGroup.php` — มี `parent_id` (ลำดับชั้น), `settings.head_user_id` (หัวหน้าฝ่าย), `sort_order`, `settings` json |
+| CRUD ฝ่าย + สถิติ + template/setup | `DepartmentController` — index/store/show/update/destroy, statistics, template, setup |
+| สมาชิกฝ่าย + role + bulk add | routes `learn/academy.php:352-368` — getMembers, addMember, **bulkAddMembers**, removeMember, **updateMemberRole** (pivot `role` ใน `academy_group_members`) |
+| สิทธิ์รายฝ่าย (key/enabled) | `AcademyGroupPermission` + `AcademyGroupPermissionService` (`hasPermission` default = true ถ้าไม่มี record) + `AcademyGroupPermissionController` index/update ผูก route แล้ว |
+| ฟีดโรงเรียน ครบ like/dislike/comment/รูป/pin | `AcademyPost` + comment/like/image models ครบชุด, มี `post_type`, `target_audience` (json), `is_pinned`, `posted_as_group_id` |
+| ประกาศ + read tracking + publish workflow | `SchoolAnnouncement` + `AnnouncementRead` + `AnnouncementController` (index/store/stats/publish/unpublish) |
+| Audit log กลาง | `AuditLog` (entity_type/entity_id/module, actions ครบรวม approved/exported/imported) + component `ui/components/school/AuditLogTab.vue` (ใช้แล้วในหน้าห้องเรียน) |
+| Export | `maatwebsite/excel` มีใน composer แล้ว |
+| หน้า list ฝ่าย | `ui/pages/academies/[name]/admin/departments.vue` — CRUD + สถิติ (ยังไม่มีหน้า detail) |
+
+### ข้อแก้ไขสำคัญต่อแผนเดิม
+
+1. **กับดัก nested route (บทเรียนจาก classrooms เมื่อวันนี้):** ต้อง `git mv departments.vue → departments/index.vue` **ก่อน** สร้าง `departments/[id].vue` — ไม่งั้น detail page จะไม่ render เพราะกลายเป็น child ของ departments.vue ที่ไม่มี `<NuxtPage>`
+2. **`posted_as_group_id` ≠ scope:** ฟิลด์นี้คือโพสต์"ในนาม"ฝ่าย ไม่ใช่โพสต์"ถึง"ฝ่าย — แนวคิด `scope_type`/`scope_id` ของแผนเดิมถูกต้อง แต่ให้**เพิ่มคอลัมน์ลงตาราง `academy_posts` เดิม** ไม่สร้างตารางโพสต์ใหม่ → ได้ comment/like/รูป/pin ฟรีทั้งหมด
+3. **scope `user` ไม่จำเป็น:** "ฟีดของฉัน" ควรเป็น aggregate query (โพสต์จากทุก scope ที่ user เป็นสมาชิก) ไม่ใช่ scope type ที่สี่ — ฟีดส่วนตัวมี `Post` (social feed) อยู่แล้วอีกระบบ อย่าปนกัน
+4. **ประกาศฝ่ายไม่ต้องสร้างใหม่:** extend `SchoolAnnouncement` ด้วย scope เดียวกัน → ได้ read tracking + publish workflow ฟรี (ดีกว่าใช้ pinned post เพราะประกาศต้องรู้ว่าใครอ่านแล้ว)
+5. **บทบาทมีแล้วแต่ยังไม่มีมาตรฐาน:** pivot `role` มีอยู่ + endpoint updateMemberRole มีอยู่ — งานจริงคือกำหนดค่ามาตรฐาน `head` / `deputy` / `member` + validation + sync `settings.head_user_id` เมื่อเปลี่ยน head
+6. **งาน/เอกสาร/ปฏิทิน เป็นของใหม่จริง** — เลื่อนไป Phase 3 ตามแผนเดิมถูกแล้ว (มี `Event` model generic อยู่ ต้องตรวจก่อนว่า reuse ได้ไหม)
+
+## 2. การตัดสินใจเชิงสถาปัตยกรรม
+
+### 2.1 Scope pattern กลาง (ใช้ร่วมกันทุกระบบ: ฟีด, ประกาศ, งาน, เอกสาร, ปฏิทิน)
+
+**[ยืนยันแล้ว]** ออกแบบ generic — ทุกตารางที่ผูกพื้นที่ใช้คู่คอลัมน์เดียวกัน:
+```
+scope_type: string(20)                     // 'academy' | 'department' | 'classroom'
+scope_id:   unsignedBigInteger nullable    // null | academy_groups.id | classrooms.id
+index (academy_id, scope_type, scope_id)
+```
+
+**Service กลาง 2 ตัว (Phase 2 สร้างครั้งเดียว ทุก feature ใช้ต่อ):**
+- `App\Services\AcademyScopeResolver` — `membersOf(scope)`, `isMember(user, scope)`, `roleIn(user, scope)` โดย resolve จาก:
+  - `academy` → `AcademyMember` + academy role
+  - `department` → pivot `academy_group_members.role` (head/deputy/member)
+  - `classroom` → homeroom teacher + นักเรียนจาก current enrollment
+- `App\Services\ScopeAccessService` — `can(user, ability, scope)` โดย ability = `feed.view|feed.post|feed.moderate|announce|tasks.manage|tasks.view|files.upload|files.manage` ตัดสินตาม matrix ข้อ 2.3 + `AcademyGroupPermission` + classroom settings
+
+**การใช้กับ `academy_posts` (ฟีด):**
+- เพิ่ม `scope_type` default 'academy' + `scope_id` nullable + index `(academy_id, scope_type, scope_id, is_pinned)`
+- Backfill: แถวเดิมทั้งหมด = `scope_type='academy', scope_id=null` → ฟีดโรงเรียนเดิม**ไม่พัง**
+- `school_announcements` เพิ่มคู่เดียวกัน (ประกาศฝ่าย/ห้องได้ read tracking ฟรี)
+
+### 2.2 โครงแท็บหน้า `departments/[id].vue` (render ตาม phase)
+```
+ภาพรวม | สมาชิก | บทบาทและสิทธิ์ | ฟีด/ประกาศ(P2) | งาน(P3) | เอกสาร(P3) | รายงาน(P4) | ประวัติ
+```
+- ภาพรวม, สมาชิก, บทบาทและสิทธิ์, ประวัติ → Phase 1 (backend มีครบ)
+- ใช้ pattern เดียวกับ `classrooms/[id].vue` + สกิล hopeui-port
+
+### 2.3 Permission matrix (สิทธิ์โพสต์/จัดการฟีด)
+
+| บทบาท | ฟีดโรงเรียน | ฟีดฝ่าย | ฟีดห้องเรียน |
+|---|---|---|---|
+| แอดมินโรงเรียน | โพสต์/pin/ลบ | โพสต์/pin/ลบ (ทุกฝ่าย) | โพสต์/pin/ลบ (ทุกห้อง) |
+| หัวหน้า/รองหัวหน้าฝ่าย | ดู | โพสต์/pin/ลบ (ฝ่ายตน) | ดู |
+| ครูประจำชั้น | ดู | โพสต์ (ฝ่ายที่สังกัด) | โพสต์/pin/ลบ (ห้องตน) |
+| สมาชิกฝ่าย/ครูในห้อง | ดู | โพสต์+คอมเมนต์ | โพสต์+คอมเมนต์ |
+| นักเรียนในห้อง | ดู | — | **โพสต์+คอมเมนต์** (ครู/แอดมินปิดได้รายห้อง) |
+| ผู้ปกครอง | ดู | — | ดู+คอมเมนต์ (ปิดได้รายห้อง) |
+
+- **[ยืนยันแล้ว]** นักเรียนโพสต์ในฟีดห้องเรียนของตัวเองได้เป็น default — ครูประจำชั้น/แอดมินลบโพสต์ได้ (canModerate) และปิดการโพสต์ของนักเรียนได้รายห้องผ่าน setting
+- คุมด้วย `AcademyGroupPermission` keys ใหม่: `departments.feed.post`, `departments.feed.moderate`, `departments.announce` (ฝ่ายไหนปิดฟีดได้)
+- ห้องเรียน: settings ใหม่ `allow_student_posts` (default true) / `allow_comments` (default true) — เก็บใน column `settings` json ของ classrooms (ตรวจว่ามี column แล้วหรือต้องเพิ่ม migration)
+
+## 3. แผนทีละขั้นตอน
+
+### Phase 1 — หน้าจัดการฝ่าย (ภาพรวม/สมาชิก/สิทธิ์/ประวัติ) — งาน frontend เป็นหลัก
+
+1. **ย้าย route:** `git mv "ui/pages/academies/[name]/admin/departments.vue" ".../departments/index.vue"` แล้วทดสอบหน้า list ยังเปิดได้
+2. **Backend เก็บตก `show`:** ตรวจ `DepartmentController::show` ให้คืน description, status, created_at, head_user, members_count, permissions ครบ (เพิ่ม field ที่ขาด — ไม่ต้องแก้ schema เพราะ `settings` json + `$guarded=[]` รองรับ)
+3. **มาตรฐาน role:** เพิ่ม constant `AcademyGroupMemberRoles` (`head`/`deputy`/`member`), validate ใน `updateMemberRole`, sync `settings.head_user_id` เมื่อตั้ง/ถอด head (transaction เดียว), เขียน PHPUnit test
+4. **Audit hooks:** ให้ DepartmentController เขียน `AuditLog` (module='department') ตอน create/update/delete/addMember/removeMember/updateRole/updatePermissions — ตรวจก่อนว่ามี middleware/observer audit อยู่แล้วหรือยัง
+5. **สร้าง `departments/[id].vue`:** โครงแท็บ + แท็บภาพรวม (การ์ดชื่อ/คำอธิบาย/หัวหน้า/จำนวนสมาชิก/สถานะ/วันที่สร้าง + ฝ่ายลูกจาก `parent_id`)
+6. **แท็บสมาชิก:** ตาราง + ค้นหา/กรองตาม role, เพิ่มรายคน (จาก `/api/academies/{id}/members`), **เพิ่มหลายคนผ่าน `members/bulk`**, ลบ, เปลี่ยน role, ลิงก์ไปโปรไฟล์
+7. **แท็บบทบาทและสิทธิ์:** toggle รายการ permission keys ผ่าน `AcademyGroupPermissionController` — นิยาม key ชุดมาตรฐานเป็น constant ฝั่ง backend + i18n label ฝั่ง frontend
+8. **แท็บประวัติ:** ฝัง `SchoolAuditLogTab` (entity-type ของ AcademyGroup)
+9. **ลิงก์จากหน้า list → detail** (NuxtLink อย่างเดียว — ห้ามผสม navigateTo ตามบทเรียน classrooms)
+10. **ทดสอบ:** `./vendor/bin/pint`, PHPUnit role tests, เปิดหน้าจริงทดสอบทุกแท็บ, commit เป็นชุดเล็ก (route move / backend / UI แยก commit)
+
+### Phase 2 — Scoped Feed (ฝ่าย + ห้องเรียน)
+
+1. **Migration:** เพิ่ม `scope_type`/`scope_id` + index ใน `academy_posts` (+ ใน `school_announcements` แบบเดียวกัน)
+2. **`FeedScopeService`:** `canView(user, scope)` / `canPost` / `canModerate` ตาม matrix ข้อ 2.3 + PHPUnit tests ครอบทุกบทบาท
+3. **AcademyPostController:** index/store รับ `scope_type`+`scope_id` (default 'academy' — เดิมไม่พัง), enforce ผ่าน service, pin/ลบเช็ค `canModerate`
+4. **Frontend:** composable `useScopedFeed(scopeType, scopeId)` + component `ScopedFeed.vue` โดย **reuse component ฟีดโรงเรียนที่มีอยู่** (ตรวจ `ui/components/academy/` ก่อนเขียนใหม่)
+5. **ฝังแท็บฟีด** ในหน้า department detail และ classroom detail (`classrooms/[id].vue`)
+6. **ประกาศฝ่าย:** AnnouncementController รับ scope + แท็บประกาศแสดงประกาศ scope นั้น + read stats
+7. **แจ้งเตือน:** ตรวจระบบ notification ที่มีอยู่ (Reverb) แล้ว broadcast event `ScopedPostCreated` ถึงสมาชิกของ scope
+
+### Phase 3 — งาน / เอกสาร / ปฏิทิน (**[ยืนยันแล้ว] ออกแบบ generic ใช้ scope pattern เดียวกับฟีด** — ฝ่ายและห้องเรียนใช้ระบบเดียวกัน)
+
+1. **Migration ชุดเดียว 3 ตาราง** (ทุกตารางมี `academy_id + scope_type + scope_id` ตามข้อ 2.1):
+   ```
+   academy_tasks:          id, academy_id, scope_type, scope_id, title, description,
+                           status (todo|in_progress|review|done|cancelled), priority (low|normal|high),
+                           due_date, created_by, timestamps, softDeletes
+   academy_task_assignees: academy_task_id, user_id, assigned_by, completed_at, timestamps
+   academy_scope_files:    id, academy_id, scope_type, scope_id, name, path, mime_type,
+                           size, uploaded_by, timestamps, softDeletes
+   ```
+2. **Routes generic ตาม scope ไม่ผูกกับ departments:**
+   ```
+   {academy}/scopes/{scopeType}/{scopeId}/tasks       (index/store)
+   {academy}/tasks/{task}                             (show/patch/delete)
+   {academy}/tasks/{task}/assignees                   (put — มอบหมาย)
+   {academy}/tasks/{task}/status                      (patch)
+   {academy}/scopes/{scopeType}/{scopeId}/files       (index/store)
+   {academy}/files/{file}                             (get download/delete)
+   ```
+   → `AcademyTaskController` + `AcademyScopeFileController` ใน `Api/Learn/Academy/` — enforce ทุก action ผ่าน `ScopeAccessService` (`tasks.manage` = head/deputy/ครูประจำชั้น/แอดมิน, `tasks.view` = สมาชิก scope)
+3. **อัปโหลดไฟล์:** ตรวจ `useFiles` composable + วิธีเก็บไฟล์เดิมของโปรเจค (intervention/image, storage disk) แล้ว reuse — ห้ามเขียนระบบ upload ใหม่
+4. **ปฏิทิน/นัดหมาย:** ตรวจ `Event` model (`app/Models/Event.php`) ว่า generic พอไหม — ถ้าไม่ ให้สร้าง `academy_events` ด้วย scope pattern เดิม (title, start_at, end_at, location, created_by) + แจ้งเตือนสมาชิก scope
+5. **Frontend:** `useScopedTasks(scopeType, scopeId)` + `useScopedFiles(...)` composables + components กลาง `ScopedTaskBoard.vue` / `ScopedFileList.vue` ใน `ui/components/academy/scope/` → ฝังเป็นแท็บ "งาน" และ "เอกสาร" ได้**ทั้งหน้า department detail และ classroom detail** โดยส่ง props scope ต่างกันเท่านั้น
+6. **Tests:** PHPUnit — สิทธิ์ tasks/files ทุกบทบาท (member โพสต์งานไม่ได้, assignee เปลี่ยนสถานะงานตัวเองได้, นอก scope มองไม่เห็น), soft delete
+
+### Phase 4 — รายงาน / Export / เชื่อมระบบ
+
+1. รายงานสมาชิก + รายงานกิจกรรมฟีด/งาน ต่อฝ่าย + export Excel (maatwebsite) / PDF
+2. เปิดฟีดห้องเรียนให้ครูประจำชั้น/นักเรียนเห็นจากหน้า (นอก admin) ตามนโยบาย
+3. นโยบายนักเรียน/ผู้ปกครอง per-classroom (`allow_student_posts`, `allow_comments`)
+
+## 4. คำตัดสินใจที่ยืนยันแล้ว (2026-07-14)
+
+1. **นักเรียนโพสต์ในฟีดห้องเรียนของตัวเองได้** — default เปิด, ครูประจำชั้น/แอดมิน moderate ได้และปิดรายห้องได้ (`allow_student_posts`)
+2. **ประกาศฝ่าย/ห้องเรียนใช้ `SchoolAnnouncement` + scope columns** — ได้ read tracking + publish workflow เดิม
+3. **ระบบงาน/เอกสารออกแบบ generic** — ตาราง `academy_tasks` / `academy_scope_files` ผูก scope pattern เดียวกับฟีด ใช้ได้ทั้งฝ่ายและห้องเรียนโดยไม่ต้องสร้างซ้ำ
+
+## 5. แผน commit และเกณฑ์จบงาน (Definition of Done)
+
+**หลักการ:** commit เล็กพอ revert ได้ / รัน `./vendor/bin/pint` ก่อน commit backend ทุกครั้ง / migration ห้ามแก้ไฟล์เดิม ให้เพิ่มไฟล์ใหม่
+
+| ลำดับ commit | เนื้อหา | เกณฑ์ผ่าน |
+|---|---|---|
+| P1-1 | `git mv departments.vue → departments/index.vue` | หน้า list เปิดได้ที่ URL เดิม |
+| P1-2 | backend: role constants + validate + sync head_user_id + audit hooks + tests | `php artisan test` ผ่าน |
+| P1-3 | หน้า `departments/[id].vue` แท็บภาพรวม+สมาชิก | เปิดหน้าจริง เพิ่ม/ลบ/เปลี่ยน role/bulk add ได้ |
+| P1-4 | แท็บสิทธิ์ + แท็บประวัติ + ลิงก์จาก list | toggle permission แล้ว persist, audit แสดง |
+| P2-1 | migration scope columns (posts + announcements) + backfill | ฟีดโรงเรียนเดิมแสดงครบเท่าเดิม |
+| P2-2 | `AcademyScopeResolver` + `ScopeAccessService` + tests | tests ครอบทุกบทบาทใน matrix |
+| P2-3 | AcademyPostController รับ scope + enforce | โพสต์ข้าม scope โดนปฏิเสธ 403 |
+| P2-4 | frontend `ScopedFeed.vue` + แท็บฟีดใน department/classroom detail | โพสต์/คอมเมนต์/pin ได้ตามบทบาท |
+| P2-5 | ประกาศ scope + แจ้งเตือน | ประกาศฝ่ายเห็นเฉพาะสมาชิกฝ่าย |
+| P3-1..n | tasks → files → ปฏิทิน (แยก commit ต่อระบบ) | ใช้ได้ทั้งสอง scope |
+| P4-1..n | รายงาน/export → นโยบายผู้ปกครอง | Excel เปิดได้ข้อมูลถูก |
+
+**ก่อนเริ่มแต่ละ Phase:** อ่านไฟล์ที่เกี่ยวข้องก่อนแก้เสมอ, ใช้สกิล hopeui-port เมื่อสร้างหน้า/component ใหม่, ตรวจ `git diff` ก่อน commit
+
+---
+
+# แผนและผลการปรับปรุง: หน้าจัดการรายละเอียดห้องเรียนเชิงลึก (Classroom Management Tabbed Console)
+
+**วันที่:** 2026-07-14
+**สถานะ:** เสร็จสิ้น (พัฒนาและอัปโหลดโค้ดขึ้นระบบเรียบร้อยแล้ว)
+**ขอบเขตงาน:** ออกแบบระบบแท็บบอร์ด 7 แท็บ (ภาพรวม, นักเรียน, ครูและสมาชิก, การเข้าเรียน, วิชาและผลการเรียน, ประกาศ, รายงาน) ภายในหน้ารายละเอียดห้องเรียน `ui/pages/academies/[name]/admin/classrooms/[id].vue`
+
+---
+
 # แผนแก้ไข: ห้องเรียนซ้ำ (Duplicate Classroom) — ฉบับตรวจสอบกับโค้ดจริง + ทีละขั้นตอน
 
 **วันที่:** 2026-07-12
@@ -3251,3 +3424,50 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 5. `test(campaign): outsider create + review authorization coverage`
 
 สถานะ: แผนพร้อมลงมือ ยังไม่ได้แก้โค้ด (หมายเหตุ: ระบุไม่ได้ว่า production โดนสาเหตุไหนก่อน — race condition น่าจะเป็นตัวหลัก แผนอุดครบทุกทาง)
+## 2026-07-13 - Academy admin layout consistency investigation
+
+- Request: make other academy admin pages use the same layout as the Guardians page, especially the logged-in user information area.
+- Findings: `ui/pages/academies/[name]/admin/guardians/index.vue` has no `definePageMeta`, so it uses the default `main` layout directly. Most sibling admin pages set `layout: false`; the shared `ui/layouts/academy-admin.vue` then wraps its slot in `NuxtLayout name="main"` and adds academy admin navigation/header, producing a different shell.
+- Existing user information source: `ui/layouts/main.vue` reads `useAuthStore()` and renders the authenticated user area. No backend/API change is needed for the layout request.
+- Intended implementation: choose one canonical academy-admin shell, preserve the `main` layout user area, and apply it consistently to academy admin routes without duplicating nested layout wrappers. First normalize the shared layout contract, then update affected pages' page meta only where needed.
+- Risks: broad application to every `/admin` route may affect special pages such as print/import/detail flows; these should be reviewed and excluded when they intentionally need a standalone layout.
+- Verification plan: inspect route metadata and run the Nuxt build/type checks; if browser access is available, compare Guardians, Members, Students, Settings, and one nested detail route at desktop/mobile widths.
+
+### Implementation update
+
+- Added `layout: false` to Guardians so it renders inside the existing academy admin parent shell without an extra default layout.
+- Changed Member Tags and At-Risk admin pages from standalone layouts to `layout: false`, matching the sibling admin pages and preserving the parent shell's authenticated user area.
+- Verification: `git diff --check` passed; Nuxt build is next.
+
+### Clarification and correction
+
+- User clarified that Guardians is the source layout and all Academy Admin pages should match it.
+- Guardians was restored to its original metadata behavior.
+- Core Academy Admin pages now explicitly use `layout: 'main'`, matching Guardians' effective layout while preserving their existing page content and permissions.
+- Member Tags was still explicitly using `layout: 'academy'`; changed it to `layout: 'main'` so the local route now uses the same shell as Guardians.
+- Added responsive grade-level tabs to `ui/pages/academies/[name]/admin/classrooms.vue`, reusing `selectedGradeLevel` and the existing API filter flow; includes an all-level tab and keeps the academic-year filter intact.
+- Fixed the tab data contract: Laravel `ClassroomController::getGradeLevels()` returns `gradeLevels`, while the page only read `grade_levels`, which caused the UI to render only the “ทั้งหมด” tab.
+- Added classroom detail route `ui/pages/academies/[name]/admin/classrooms/[id].vue`, backed by the existing classroom `show` endpoint; classroom cards now link to a dedicated management page with summary stats and student roster.
+- Follow-up diagnosis: the source page contains both `NuxtLink` targets and an explicit `navigateTo()` click handler, but the generated `.nuxt/routes.mjs` is absent in the current workspace, so route registration/dev-server refresh has not been verified. The next fix should verify the route table and browser console/network first, then simplify to one navigation mechanism and restart/rebuild Nuxt if the new nested page was not picked up.
+- Updated both duplicate `/admin/students` route definitions (`students.vue` parent and `students/index.vue`) from `layout: false` to `layout: 'main'`, so the actual registry route and its parent now use the same shell as the other Academy Admin pages.
+- Updated the Student Cards management route family (index, import, detail, edit, and request pages) to `layout: 'main'`; left the print route standalone for print-friendly output.
+- Resolved the Student Cards runtime warning by replacing unresolved auto-import tags `LazyLearnStudentCardStudentCardFront/Back` with explicit imports of `StudentCardFront` and `StudentCardBack` across admin index/detail/print, profile tab, and my-card usages. The `<Suspense>` and transition messages are framework warnings; the missing component warning was the actionable error.
+- Updated Academy Admin dashboard child route `admin/index.vue` from `layout: false` to `layout: 'main'` so `/admin` uses the same layout contract as Guardians and the other admin pages.
+- Diagnosed department detail navigation: `departments/[id].vue` is a nested child of `departments.vue`, but the parent page did not render `<NuxtPage>`. Added conditional child rendering and hides the department list while viewing `/departments/{id}`.
+
+## 2026-07-14 - Department management Phase 1 implementation
+
+- Moved the existing department list page to `ui/pages/academies/[name]/admin/departments/index.vue` so Nuxt registers the list and detail routes predictably.
+- Rebuilt `ui/pages/academies/[name]/admin/departments/[id].vue` as a responsive tabbed management surface: overview, members with search, permissions, and audit history. It consumes the existing department show/members/permissions endpoints and reuses `AuditLogTab`.
+- No database schema change was needed. Tasks, files, calendar, scoped feed, and announcement scopes remain Phase 2-4 work.
+- Verification plan: `git diff --check`, Nuxt build/type check, and authenticated browser smoke test for department list/detail plus member and permission tabs.
+- Completed the Phase 1 detail interactions: department info editing via `AcademyGroupsManageTabInfo`, member search/list with department-specific bulk add, remove, and role updates (`head/staff/member`), and permission editing via `AcademyGroupsManageTabPermissions`.
+- Verification: Nuxt client transformation reached 3014 modules and chunk rendering; the full build exceeded the 120-second command timeout while emitting existing sourcemap/deprecation warnings, with no compile error observed in the captured output.
+
+## 2026-07-14 - Scoped workspace foundation for Phases 2-4
+
+- Added migration `2026_07_14_100000_add_scope_and_workspace_tables.php`: `scope_type/scope_id` on academy posts and announcements, plus generic `academy_scope_tasks` and `academy_scope_files` tables.
+- Added `AcademyScopeWorkspaceController` endpoints for scoped task listing/creation and private file upload/listing. Allowed scopes are academy, department, and classroom.
+- Academy post and announcement creation now accepts scope metadata, defaulting legacy records to academy scope.
+- Added `ScopedWorkspace.vue` and exposed it on department detail under the งานและเอกสาร tab. Existing `SchoolEvent`/event APIs and report/export infrastructure are reused rather than duplicated.
+- PHP syntax checks and Pint passed. Full Nuxt build still exceeds the local 120-second timeout after client transformation; authenticated browser, migration execution, and endpoint authorization tests remain required before production deployment.

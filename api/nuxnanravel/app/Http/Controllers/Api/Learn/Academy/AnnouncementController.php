@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\AcademyGroup;
 use App\Models\AnnouncementRead;
+use App\Models\Classroom;
 use App\Models\SchoolAnnouncement;
+use App\Models\Student;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +32,76 @@ class AnnouncementController extends Controller
 
         $query = SchoolAnnouncement::where('academy_id', $academy->id)
             ->with(['creator:id,name,profile_photo_path,email_verified_at']);
+
+        // Scope validation and authorization
+        $scopeType = $request->get('scope_type', 'academy');
+        $scopeId = $request->get('scope_id');
+
+        if ($scopeType === 'department') {
+            if (! $scopeId) {
+                abort(response()->json(['success' => false, 'message' => 'scope_id is required for department scope'], 422));
+            }
+            $group = AcademyGroup::where('id', $scopeId)
+                ->where('academy_id', $academy->id)
+                ->where('type', 'department')
+                ->first();
+            if (! $group) {
+                abort(404);
+            }
+            if (! $this->isAcademyAdmin($user, $academy)) {
+                $isMember = \DB::table('academy_group_members')
+                    ->where('academy_group_id', $group->id)
+                    ->where('user_id', $user->id)
+                    ->exists();
+                if (! $isMember) {
+                    abort(response()->json([
+                        'success' => false,
+                        'message' => 'คุณไม่มีสิทธิ์เข้าถึงฝ่ายงานนี้',
+                    ], 403));
+                }
+            }
+            $query->where('scope_type', 'department')->where('scope_id', $group->id);
+        } elseif ($scopeType === 'classroom') {
+            if (! $scopeId) {
+                abort(response()->json(['success' => false, 'message' => 'scope_id is required for classroom scope'], 422));
+            }
+            $classroom = Classroom::where('id', $scopeId)
+                ->where('academy_id', $academy->id)
+                ->first();
+            if (! $classroom) {
+                abort(404);
+            }
+            if (! $this->isAcademyAdmin($user, $academy)) {
+                $isHomeroomTeacher = $classroom->homeroom_teacher_id === $user->id;
+                $isStudent = false;
+                $student = Student::where('user_id', $user->id)
+                    ->where('academy_id', $academy->id)
+                    ->where('status', 'active')
+                    ->first();
+                if ($student) {
+                    $isStudent = \DB::table('classroom_students')
+                        ->where('classroom_id', $classroom->id)
+                        ->where('student_id', $student->id)
+                        ->where('status', 'active')
+                        ->exists();
+                }
+                if (! $isHomeroomTeacher && ! $isStudent) {
+                    abort(response()->json([
+                        'success' => false,
+                        'message' => 'คุณไม่มีสิทธิ์เข้าถึงห้องเรียนนี้',
+                    ], 403));
+                }
+            }
+            $query->where('scope_type', 'classroom')->where('scope_id', $classroom->id);
+        } else {
+            // Default: academy scope (match scope_type = 'academy' with either academy ID or NULL)
+            $query->where('scope_type', 'academy');
+            if ($scopeId) {
+                $query->where(function ($q) use ($scopeId) {
+                    $q->where('scope_id', $scopeId)->orWhereNull('scope_id');
+                });
+            }
+        }
 
         // For non-admins, only show published and non-expired announcements
         if (! $this->isAcademyAdmin($user, $academy)) {
@@ -146,6 +219,8 @@ class AnnouncementController extends Controller
             'is_pinned' => 'boolean',
             'is_published' => 'boolean',
             'expires_at' => 'nullable|date|after:now',
+            'scope_type' => 'nullable|in:academy,department,classroom',
+            'scope_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -160,6 +235,8 @@ class AnnouncementController extends Controller
         try {
             $announcement = SchoolAnnouncement::create([
                 'academy_id' => $academy->id,
+                'scope_type' => $request->get('scope_type', 'academy'),
+                'scope_id' => $request->get('scope_id', $academy->id),
                 'created_by' => $user->id,
                 'title' => $request->title,
                 'content' => $request->content,

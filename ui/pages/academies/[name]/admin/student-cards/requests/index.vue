@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import type { ClassroomSummary } from '~/types/studentCardRequest'
 import type { SubmitCardRequestPayload } from '~/composables/useStudentCardRequests'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'main' })
 const academyId = inject<Ref<number | null>>('academyId', ref(null))
 const academyName = inject<ComputedRef<string>>('academyName', computed(() => String(useRoute().params.name)))
 const requests = useStudentCardRequests(academyId)

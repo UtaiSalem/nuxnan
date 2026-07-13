@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'main' })
 
 const academyId = inject<Ref<number | null>>('academyId', ref(null))
 const academyName = inject<ComputedRef<string>>('academyName', computed(() => ''))

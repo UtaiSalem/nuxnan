@@ -7,7 +7,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
 definePageMeta({
-  layout: false
+  layout: 'main'
 })
 
 const route = useRoute()
@@ -146,6 +146,10 @@ const handleSearch = () => {
     pagination.value.current_page = 1
     fetchDepartments()
   }, 300)
+}
+
+const openDepartmentPage = (departmentId: number) => {
+  return navigateTo(`/academies/${academyName.value}/admin/departments/${departmentId}`)
 }
 
 // Open create modal
@@ -562,6 +566,8 @@ const onSetupSuccess = async () => {
 </script>
 
 <template>
+  <NuxtPage v-if="route.params.id" />
+  <div v-else>
   <div>
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>
@@ -697,7 +703,13 @@ const onSetupSuccess = async () => {
                   <Icon name="fluent:building-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 class="font-semibold text-gray-900 dark:text-white">{{ department.name }}</h3>
+                  <NuxtLink
+                    :to="`/academies/${academyName}/admin/departments/${department.id}`"
+                    @click.stop="openDepartmentPage(department.id)"
+                    class="font-semibold text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400"
+                  >
+                    {{ department.name }}
+                  </NuxtLink>
                   <p class="text-sm text-gray-500 dark:text-gray-400">{{ department.members_count || 0 }} สมาชิก</p>
                 </div>
               </div>
@@ -767,6 +779,14 @@ const onSetupSuccess = async () => {
               <Icon name="fluent:people-24-regular" class="w-4 h-4" />
               ดูสมาชิก
             </button>
+            <NuxtLink
+              :to="`/academies/${academyName}/admin/departments/${department.id}`"
+              @click.stop="openDepartmentPage(department.id)"
+              class="text-sm font-medium text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400"
+            >
+              ดูรายละเอียด
+              <Icon name="fluent:arrow-right-24-regular" class="ml-1 inline-block h-4 w-4" />
+            </NuxtLink>
             <span class="text-xs text-gray-400">
               สร้างเมื่อ {{ new Date(department.created_at).toLocaleDateString('th-TH') }}
             </span>
@@ -1136,5 +1156,6 @@ const onSetupSuccess = async () => {
         </div>
       </div>
     </Teleport>
+  </div>
   </div>
 </template>

@@ -3,6 +3,8 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { StudentCardInfo } from '~/composables/useStudentProfile'
 import { useStudentCard } from '~/composables/useStudentCard'
+import StudentCardFront from '~/components/learn/student-card/StudentCardFront.vue'
+import StudentCardBack from '~/components/learn/student-card/StudentCardBack.vue'
 import { useApi } from '~/composables/useApi'
 import { useToast } from 'primevue/usetoast'
 
@@ -221,7 +223,7 @@ const saveCardDetails = async () => {
           >
             <!-- Front Face -->
             <div class="backface-hidden w-full">
-              <LazyLearnStudentCardStudentCardFront
+              <StudentCardFront
                 v-if="cardStudentProps"
                 :student="cardStudentProps"
                 :academy-name="academyDisplayName"
@@ -234,7 +236,7 @@ const saveCardDetails = async () => {
 
             <!-- Back Face -->
             <div class="absolute inset-0 backface-hidden rotate-y-180 w-full">
-              <LazyLearnStudentCardStudentCardBack
+              <StudentCardBack
                 :academy-name="academyDisplayName"
                 :academy-logo="academyLogo"
                 :academy-address="academyAddress"

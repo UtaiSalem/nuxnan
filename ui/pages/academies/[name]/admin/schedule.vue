@@ -7,7 +7,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
 definePageMeta({
-  layout: false
+  layout: 'main'
 })
 
 const route = useRoute()

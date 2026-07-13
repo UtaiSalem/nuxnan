@@ -30,6 +30,8 @@ class SchoolAnnouncement extends Model
         'published_at',
         'expires_at',
         'view_count',
+        'scope_type',
+        'scope_id',
     ];
 
     protected $casts = [

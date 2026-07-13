@@ -34,8 +34,8 @@ function confirm() {
         @click.self="$emit('close')"
       >
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
-        <div class="relative w-full max-w-md rounded-3xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in zoom-in-95 duration-200">
-          <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+        <div class="relative w-full max-w-md max-h-[90vh] rounded-3xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+          <div class="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-xl font-black text-gray-900 dark:text-white">เลือกกลุ่มเรียน</h3>
@@ -50,7 +50,7 @@ function confirm() {
             </div>
           </div>
 
-          <div class="p-6 space-y-3 max-h-[50vh] overflow-y-auto no-scrollbar">
+          <div class="p-4 sm:p-6 space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar">
             <label
               v-for="group in groups"
               :key="group.id"
@@ -74,17 +74,17 @@ function confirm() {
             </label>
           </div>
 
-          <div class="p-6 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
+          <div class="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/50 flex flex-col sm:flex-row gap-3">
             <button
               @click="$emit('close')"
-              class="flex-1 px-6 py-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-black hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+              class="flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-black hover:bg-gray-100 dark:hover:bg-gray-700 transition-all min-h-12"
             >
               ยกเลิก
             </button>
             <button
               @click="confirm"
               :disabled="!selectedGroupId || isProcessing"
-              class="flex-[2] px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-600/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              class="flex-[2] px-4 sm:px-6 py-3 sm:py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-600/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 min-h-12"
             >
               <Icon v-if="isProcessing" icon="svg-spinners:ring-resize" class="w-5 h-5" />
               <span>สมัครเข้าเรียนกลุ่มนี้</span>

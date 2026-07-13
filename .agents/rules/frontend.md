@@ -19,6 +19,7 @@ Apply these rules to `ui/`.
 ## UI
 
 - Use Tailwind utility classes and existing PrimeVue components.
+- When creating a new page/component or redesigning UI, follow `.agents/skills/hopeui-port/SKILL.md` to source the design from the local HopeUI Pro library (`hopa/`) before inventing markup from scratch.
 - Avoid broad redesigns unless requested.
 - Keep loading, empty, and error states intact.
 - Preserve responsive behavior.

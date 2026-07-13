@@ -4,6 +4,8 @@
  * หน้าพิมพ์บัตรนักเรียน (ด้านหน้า + ด้านหลัง)
  */
 import { Icon } from '@iconify/vue'
+import StudentCardFront from '~/components/learn/student-card/StudentCardFront.vue'
+import StudentCardBack from '~/components/learn/student-card/StudentCardBack.vue'
 
 definePageMeta({
   layout: false
@@ -241,7 +243,7 @@ const academyAddress = computed(() => academy.value?.address || '')
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ตัวอย่างบัตร</h3>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div v-for="student in studentsToPrint.slice(0, 4)" :key="'preview-' + student.id">
-            <LazyLearnStudentCardStudentCardFront
+                  <StudentCardFront
               :student="student"
               :academy-name="academy?.name"
               :academy-logo="academyLogo"
@@ -263,7 +265,7 @@ const academyAddress = computed(() => academy.value?.address || '')
         >
           <!-- Front Side -->
           <div class="print-card">
-            <LazyLearnStudentCardStudentCardFront
+                  <StudentCardFront
               :student="student"
               :academy-name="academy?.name"
               :academy-logo="academyLogo"
@@ -275,7 +277,7 @@ const academyAddress = computed(() => academy.value?.address || '')
           
           <!-- Back Side (if enabled) -->
           <div v-if="printBackSide" class="print-card">
-            <LazyLearnStudentCardStudentCardBack
+                  <StudentCardBack
               :academy-name="academy?.name"
               :academy-logo="academyLogo"
               :academy-address="academyAddress"
