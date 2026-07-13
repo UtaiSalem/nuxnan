@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
 definePageMeta({
@@ -17,6 +17,7 @@ const searchQuery = ref('')
 const selectedType = ref('all')
 const currentPage = ref(1)
 const totalPages = ref(1)
+const selectedTransaction = ref<any>(null)
 
 // Summary stats
 const summary = ref({
@@ -58,12 +59,24 @@ const types = [
   { value: 'purchase', label: 'ซื้อสินค้า' }
 ]
 
+// Keep the legacy withdrawal option compatible while exposing all persisted types.
+types.push(
+  { value: 'withdraw', label: 'ถอนเงิน' },
+  { value: 'conversion', label: 'แปลงแต้ม' },
+  { value: 'course_income', label: 'รายได้รายวิชา' },
+  { value: 'refund', label: 'คืนเงิน' },
+  { value: 'admin_adjust', label: 'ปรับยอดโดย Admin' },
+  { value: 'opening_balance', label: 'ยอดยกมา' },
+)
+
 // Fetch transactions
 const fetchTransactions = async () => {
   isLoading.value = true
   try {
     const token = useCookie('token')
-    const response = await $fetch(`${apiBase}/api/admin/wallet-transactions`, {
+    const query = new URLSearchParams({ page: String(currentPage.value), per_page: '20' })
+    if (selectedType.value !== 'all') query.set('transaction_type', selectedType.value)
+    const response = await $fetch(`${apiBase}/api/admin/wallet-transactions?${query.toString()}`, {
       headers: {
         Authorization: `Bearer ${token.value}`
       }
@@ -92,16 +105,78 @@ const fetchTransactions = async () => {
 const getTypeBadge = (type: string) => {
   const badges = {
     deposit: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    withdraw: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
     withdrawal: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
     transfer: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    purchase: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+    purchase: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    opening_balance: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
   }
   return badges[type] || 'bg-slate-100 text-slate-700'
 }
 
 const getTypeLabel = (type: string) => {
   const labels = { deposit: 'เติมเงิน', withdrawal: 'ถอนเงิน', transfer: 'โอนเงิน', purchase: 'ซื้อสินค้า' }
-  return labels[type] || type
+  const extraLabels: Record<string, string> = {
+    withdraw: 'ถอนเงิน',
+    conversion: 'แปลงแต้ม',
+    course_income: 'รายได้รายวิชา',
+    refund: 'คืนเงิน',
+    admin_adjust: 'ปรับยอดโดย Admin',
+    opening_balance: 'ยอดยกมา',
+  }
+  return extraLabels[type] || labels[type] || type
+}
+
+const getTransactionType = (tx: any) => tx.transaction_type || tx.type || ''
+
+const isMoneyOut = (tx: any) => {
+  if (getTransactionType(tx) === 'opening_balance') return false
+  if (tx.balance_before != null && tx.balance_after != null) {
+    return Number(tx.balance_after) < Number(tx.balance_before)
+  }
+  return ['withdraw', 'withdrawal', 'purchase'].includes(getTransactionType(tx))
+}
+
+const getAmountPrefix = (tx: any) => getTransactionType(tx) === 'opening_balance' ? '' : (isMoneyOut(tx) ? '-' : '+')
+
+const formatTransactionDate = (value: string | null | undefined) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('th-TH', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+const openTransaction = (transaction: any) => {
+  selectedTransaction.value = transaction
+}
+
+const closeTransaction = () => {
+  selectedTransaction.value = null
+}
+
+const isDownloadingProof = ref(false)
+const downloadProof = async (txId: number) => {
+  isDownloadingProof.value = true
+  try {
+    const token = useCookie('token')
+    const response = await $fetch(`${apiBase}/api/admin/wallet/withdrawals/${txId}/proof`, {
+      headers: {
+        Authorization: `Bearer ${token.value}`
+      },
+      responseType: 'blob'
+    })
+    const blob = response as unknown as Blob
+    const url = window.URL.createObjectURL(blob)
+    window.open(url, '_blank')
+  } catch (error) {
+    console.error('Failed to download proof:', error)
+    alert('ไม่สามารถดาวน์โหลดหลักฐานการโอนได้')
+  } finally {
+    isDownloadingProof.value = false
+  }
 }
 
 const getStatusBadge = (status: string) => {
@@ -116,6 +191,11 @@ const getStatusBadge = (status: string) => {
 onMounted(() => {
   fetchTransactions()
   fetchSummaryStats()
+})
+
+watch(selectedType, () => {
+  currentPage.value = 1
+  fetchTransactions()
 })
 </script>
 
@@ -240,27 +320,100 @@ onMounted(() => {
                 </div>
               </td>
               <td class="px-6 py-4">
-                <span :class="[getTypeBadge(tx.type), 'px-2.5 py-1 rounded-full text-xs font-medium']">
-                  {{ getTypeLabel(tx.type) }}
+                <span :class="[getTypeBadge(getTransactionType(tx)), 'px-2.5 py-1 rounded-full text-xs font-medium']">
+                  {{ getTypeLabel(getTransactionType(tx)) }}
                 </span>
               </td>
-              <td class="px-6 py-4 text-right font-medium" :class="tx.type === 'withdrawal' ? 'text-red-600' : 'text-green-600'">
-                {{ tx.type === 'withdrawal' ? '-' : '+' }}฿{{ tx.amount.toLocaleString() }}
+              <td class="px-6 py-4 text-right font-medium" :class="isMoneyOut(tx) ? 'text-red-600' : 'text-green-600'">
+                {{ getAmountPrefix(tx) }}฿{{ Number(tx.amount).toLocaleString() }}
               </td>
               <td class="px-6 py-4 text-center">
                 <span :class="[getStatusBadge(tx.status), 'px-2.5 py-1 rounded-full text-xs font-medium']">
                   {{ tx.status === 'completed' ? 'สำเร็จ' : tx.status === 'pending' ? 'รอดำเนินการ' : 'ล้มเหลว' }}
                 </span>
               </td>
-              <td class="px-6 py-4 text-right text-slate-500">{{ tx.date }}</td>
+              <td class="px-6 py-4 text-right text-slate-500">{{ formatTransactionDate(tx.created_at || tx.date) }}</td>
               <td class="px-6 py-4 text-right">
-                <button class="p-2 text-slate-500 hover:text-hopeui-primary-600 hover:bg-hopeui-primary-100 dark:hover:bg-hopeui-primary-900/30 rounded-lg transition-colors">
+                <button
+                  type="button"
+                  aria-label="ดูรายละเอียดธุรกรรม"
+                  @click="openTransaction(tx)"
+                  class="p-2 text-slate-500 hover:text-hopeui-primary-600 hover:bg-hopeui-primary-100 dark:hover:bg-hopeui-primary-900/30 rounded-lg transition-colors"
+                >
                   <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div
+      v-if="selectedTransaction"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      @click.self="closeTransaction"
+    >
+      <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-800 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+          <div>
+            <h2 class="text-lg font-bold text-slate-800 dark:text-white">รายละเอียดธุรกรรม #{{ selectedTransaction.id }}</h2>
+            <p class="mt-1 text-sm text-slate-500">{{ formatTransactionDate(selectedTransaction.created_at || selectedTransaction.date) }}</p>
+          </div>
+          <button type="button" aria-label="ปิดรายละเอียด" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" @click="closeTransaction">
+            <Icon icon="fluent:dismiss-24-regular" class="h-5 w-5" />
+          </button>
+        </div>
+        <div class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-6">
+          <div class="rounded-xl bg-slate-50 p-4 dark:bg-slate-700/50">
+            <p class="text-xs text-slate-500">ประเภท</p>
+            <p class="mt-1 font-semibold text-slate-800 dark:text-white">{{ getTypeLabel(getTransactionType(selectedTransaction)) }}</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 p-4 dark:bg-slate-700/50">
+            <p class="text-xs text-slate-500">สถานะ</p>
+            <p class="mt-1 font-semibold text-slate-800 dark:text-white">{{ selectedTransaction.status || '-' }}</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+            <p class="text-xs text-slate-500">ยอดก่อนทำรายการ</p>
+            <p class="mt-1 text-lg font-bold text-slate-800 dark:text-white">฿{{ Number(selectedTransaction.balance_before || 0).toLocaleString() }}</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+            <p class="text-xs text-slate-500">ยอดหลังทำรายการ</p>
+            <p class="mt-1 text-lg font-bold text-slate-800 dark:text-white">฿{{ Number(selectedTransaction.balance_after || 0).toLocaleString() }}</p>
+          </div>
+          <div class="sm:col-span-2 rounded-xl bg-slate-50 p-4 dark:bg-slate-700/50">
+            <p class="text-xs text-slate-500">รายละเอียด</p>
+            <p class="mt-1 text-sm text-slate-800 dark:text-slate-200">{{ selectedTransaction.description || '-' }}</p>
+          </div>
+          <div v-if="selectedTransaction.reference_number" class="rounded-xl bg-slate-50 p-4 dark:bg-slate-700/50">
+            <p class="text-xs text-slate-500">เลขอ้างอิง</p>
+            <p class="mt-1 break-all text-sm text-slate-800 dark:text-slate-200">{{ selectedTransaction.reference_number }}</p>
+          </div>
+          <div v-if="selectedTransaction.payment_reference" class="rounded-xl bg-slate-50 p-4 dark:bg-slate-700/50">
+            <p class="text-xs text-slate-500">เลขอ้างอิงการจ่าย</p>
+            <p class="mt-1 break-all text-sm text-slate-800 dark:text-slate-200">{{ selectedTransaction.payment_reference }}</p>
+          </div>
+          <div v-if="selectedTransaction.rejection_reason || selectedTransaction.admin_note" class="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-900/20">
+            <p class="text-xs text-amber-700 dark:text-amber-300">หมายเหตุผู้ดูแล</p>
+            <p class="mt-1 text-sm text-amber-900 dark:text-amber-100">{{ selectedTransaction.rejection_reason || selectedTransaction.admin_note }}</p>
+          </div>
+          <div v-if="selectedTransaction.has_payout_proof" class="sm:col-span-2 rounded-xl bg-slate-50 p-4 dark:bg-slate-700/50 flex justify-between items-center">
+            <div>
+              <p class="text-xs text-slate-500">หลักฐานการโอนเงิน (สลิป)</p>
+              <p class="mt-1 text-sm text-slate-800 dark:text-slate-200">มีไฟล์หลักฐานอัปโหลดในระบบ</p>
+            </div>
+            <button
+              type="button"
+              :disabled="isDownloadingProof"
+              @click="downloadProof(selectedTransaction.id)"
+              class="px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-slate-300 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <Icon v-if="isDownloadingProof" icon="svg-spinners:ring-resize" class="w-4 h-4 animate-spin" />
+              <Icon v-else icon="fluent:document-pdf-24-regular" class="w-4 h-4" />
+              <span>ดูหลักฐานการโอน</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
