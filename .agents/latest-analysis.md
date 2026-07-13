@@ -3091,3 +3091,163 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Related risk: `ClassroomService::listClassrooms()` does not default to active rows and the page-level query parameters are passed as request options; verify the API wrapper serializes them correctly. There are also two admin classroom UIs with different year contracts.
 - Intended plan: confirm duplicate rows with a read-only grouped query; normalize creation/update to one academic-year identity; add scoped duplicate validation plus transaction-safe DB protection; reconcile existing duplicates before adding/enforcing a non-null unique key; make list filtering and frontend contracts consistent; add feature tests for repeated create, concurrent create, archived rows, and year scoping.
 - Verification: API/controller tests, migration dry-run, `git diff --check`, Pint, Nuxt type/build check, and authenticated browser regression on the referenced Academy page.
+## 2026-07-13 - Course responsive mobile-first pass
+
+- Completed the remaining focused responsive fixes in `CourseTabBar.vue`, `CourseHero.vue`, and `CourseGroupSelectorModal.vue`.
+- Course tab navigation now exposes `tablist` semantics, keeps active-tab auto-scroll, shows edge fade hints when more tabs exist, improves touch scrolling, and uses smaller mobile sizing with larger touch targets on wider screens.
+- Course hero titles now wrap safely on narrow screens. Group selector modal now fits within `90vh`, uses responsive padding, scrollable content, and stacked mobile actions.
+- Existing responsive work in `settings.vue`/`ResponsiveCard.vue` was preserved; no backend/API changes were needed.
+- Verification: `git diff --check` passed. Frontend build intentionally not run per user request; user will run it.
+## 2026-07-13 - Production wallet withdrawal 500 investigation
+
+- Investigated `POST /api/wallet/withdraw` from the reported production console error.
+- Current source has the route, validated bank-transfer/PromptPay inputs, idempotency handling, locked-balance accounting, and withdrawal lifecycle fields/migrations.
+- Focused verification passed: `WithdrawTest` + `WithdrawalHardeningTest` = 21 tests / 64 assertions.
+- The controller catches normal exceptions and returns 400, so a production 500 is not reproduced locally and most likely indicates production is running an older deployment or is missing the withdrawal migrations/columns (`fee`, `net_amount`, `destination_type`, `destination_snapshot`, `idempotency_key`, `locked_balance`, etc.).
+- Required production checks: deploy current backend, run pending migrations, clear Laravel config/route/opcache caches, then inspect the server Laravel log for the exact throwable if 500 persists. No source change was made in this investigation.
+## 2026-07-13 - Localhost wallet withdrawal check
+
+- Opened `http://localhost:3000/Earn/Wallet`; local frontend redirected to `/auth`, and no signed-in browser tab/session was available, so an authenticated withdrawal could not be submitted.
+- Direct unauthenticated POST to local Laravel `http://localhost:8000/api/wallet/withdraw` returned `401`, not `500`, confirming the local route is reachable and protected.
+- The reported authenticated 500 remains unreproduced locally; a signed-in local session is required to test the real wallet/database path.
+## 2026-07-13 - Wallet transfer 400 investigation
+
+- Browser listener errors on `/Learn/Courses/*` are extension message-channel warnings and are unrelated to the wallet API.
+- `POST /api/wallet/transfer` exists and the current backend validates `recipient_id`, a different recipient, and `amount >= 10`.
+- Frontend `ui/pages/Earn/Wallet.vue` still renders transfer amount `min="1"` and enables submit for amounts below 10, so amounts 1–9 can intentionally reach the API and return 400 validation errors.
+- Other valid 400 causes remain insufficient sender balance, invalid/nonexistent recipient, or self-transfer. No code change made during this inspection.
+## 2026-07-13 - Admin wallet transaction contract fix
+
+- Fixed admin wallet transaction rendering to use `transaction_type` with a legacy `type` fallback, normalized `withdraw` handling, complete type labels, and balance-delta-based money direction.
+- Added `type_label` to `WalletTransaction` JSON output and added labels for purchase, course income, refund, and opening balance.
+- Added `transaction_type` filtering to the admin wallet-transactions endpoint; frontend now sends the selected filter and reloads on change.
+- Verification: PHP lint, Laravel Pint, and `git diff --check` passed. Frontend build was not run.
+## 2026-07-13 - Admin wallet transaction detail UX
+
+- Updated `ui/pages/nuxnan-admin/wallet/index.vue` to label `opening_balance` as `ยอดยกมา`, style it as a neutral adjustment, and omit the +/- movement prefix.
+- Transaction dates now use `created_at` with Thai locale formatting and retain mock `date` as fallback.
+- The eye action now opens an in-page responsive transaction detail modal showing type, status, before/after balances, description, references, and admin notes; no new endpoint was added.
+- Verification: `git diff --check` and PHP syntax checks passed. Frontend build not run.
+## 2026-07-13 - Admin withdrawal proof workflow analysis (plan only)
+
+- Current pending UI already shows user identity, masked destination metadata, gross amount, fee/net amount, wallet balance, and created date, but does not expose all safe transaction/user/audit fields in one review surface.
+- Current lifecycle is `pending -> under_review -> approved -> processing -> paid`; `approve` accepts only `admin_note` and optional text `payment_reference`, while `paid` accepts only a required text reference. No proof file field/storage/endpoint exists for withdrawal settlement.
+- Recommended design: keep approval and payout settlement distinct. Admin reviews and approves first; after the actual bank/PromptPay transfer, the admin marks the withdrawal paid with required payment reference plus required proof image/PDF. The UI may present this as one guided workflow, but must not mark money paid before proof upload succeeds.
+- Planned backend files: additive wallet transaction proof migration/model fillable+casts, FormRequest or validation in `AdminWalletController`, private storage upload/delete policy, `markWithdrawalPaid` multipart contract, resource/response URL or signed download route, and audit metadata for proof upload/replacement.
+- Planned frontend file: `ui/pages/nuxnan-admin/wallet/pending.vue`; add complete destination/details review panel, proof file picker/preview/validation, required payment reference, separate approve/process/paid states, and post-success refresh.
+- Security/verification risks: never expose decrypted destination snapshot or unmasked account data publicly; authorize proof view/download to admins and the transaction owner as appropriate; validate MIME/size, store outside public web root, prevent path traversal, handle replacement/deletion, enforce idempotent paid transition, and test maker-checker/high-value flows.
+
+## Work Plan — Admin withdrawal payout proof + full detail review (2026-07-13, ตรวจ codebase จริงแล้ว)
+
+> ปรับปรุงจาก analysis "Admin withdrawal proof workflow analysis (plan only)" ด้านบน — ตรวจกับโค้ดจริงแล้วพบข้อเท็จจริงเพิ่ม 4 จุดที่เปลี่ยนลำดับงาน
+
+### ข้อเท็จจริงจากโค้ดจริงที่แผนเดิมพลาด
+
+1. **Backend มี endpoint ครบ lifecycle แล้ว — ที่ขาดคือ UI** — `routes/admin/admin.php:527-534` มี `show/approve/reject/process/paid/failed` ครบ แต่ `ui/pages/nuxnan-admin/wallet/pending.vue` มีแค่ปุ่มอนุมัติ/ปฏิเสธ → หลังอนุมัติ รายการหายจากจอ ไม่มีที่กด "โอนแล้ว" สถานะค้าง `approved` และ `locked_balance` ไม่ถูกปลด (ปลดตอน `paid` เท่านั้น — `WalletService.php:480`)
+2. **Maker-checker พังอยู่ตอนนี้** — ยอด ≥ threshold (`WALLET_WITHDRAW_MAKER_CHECKER_THRESHOLD` default 10,000 — `config/wallet.php:29`) ต้องมี `reviewed_by` ที่เป็นแอดมินคนละคนกับผู้อนุมัติ (`WalletService.php:575-579`) ซึ่งเซ็ตโดย `GET /withdrawals/{id}` (`viewWithdrawal`) เท่านั้น แต่ frontend ไม่เคยเรียก → ยอดสูงอนุมัติไม่ได้เลย; modal รายละเอียดใหม่ต้องเรียก GET นี้ (แก้ปัญหาในตัว)
+3. **บั๊กต่อเนื่อง** — `pendingWithdrawals` (`AdminWalletController.php:114`) กรองเฉพาะ `status='pending'` → ทันทีที่เปิดดูรายละเอียด สถานะเป็น `under_review` แล้วหายจากลิสต์ ต้องแก้เป็น `whereIn(['pending','under_review'])`
+4. **สลิปเติมเงินเก็บ public disk** (`WalletController.php:531`) — ห้ามลอก pattern นี้กับ payout proof; ของพร้อมใช้: `WithdrawalPolicy`, `AuditLogService`, optimistic locking ผ่าน `version`
+5. **ปรับจากแผนเดิม: ไม่ mask เลขบัญชีในหน้าแอดมิน** — requirement บอกให้แอดมินเห็นเต็มเพื่อใช้โอนจริง; `maskBankAccount()` ใช้กับ response ฝั่งผู้ใช้ต่อไป
+
+### Phase 1 — Database
+
+- Migration ใหม่ `add_payout_proof_to_wallet_transactions`: เพิ่มคอลัมน์ nullable ใน `wallet_transactions` — `payout_proof_path` (string), `payout_proof_original_name` (string), `payout_proof_mime` (string 100), `payout_proof_size` (unsignedInteger), `payout_proof_uploaded_by` (foreignId → users, nullOnDelete), `payout_proof_uploaded_at` (timestamp)
+- ใช้คอลัมน์ ไม่แยกตาราง (1 withdrawal = 1 proof; immutability คุมด้วย service + audit log)
+- `WalletTransaction.php`: เพิ่ม 6 field ใน `$fillable` + cast `payout_proof_uploaded_at => datetime` + ซ่อน `payout_proof_path` จาก response ฝั่งผู้ใช้ (expose แค่ boolean `has_payout_proof`)
+
+### Phase 2 — Backend: แก้บั๊กเดิมก่อน
+
+1. `AdminWalletController::pendingWithdrawals` → `whereIn('status', ['pending','under_review'])` + `->with('user','reviewer')`
+2. เพิ่มลิสต์ "รอโอน": query param `status` ให้ endpoint เดิม (หรือ `GET /admin/wallet/withdrawals/awaiting-payout`) กรอง `['approved','processing']`
+
+### Phase 3 — Backend: payout proof
+
+- **FormRequest** `app/Http/Requests/Admin/MarkWithdrawalPaidRequest.php`: `payment_reference: required|string|max:100`, `proof: required|file|mimes:jpg,jpeg,png,webp,pdf|max:5120`
+- **`markWithdrawalPaid` (controller `AdminWalletController.php:387`)** ลำดับ: validate → เก็บไฟล์ก่อนที่ `Storage::disk('local')->putFile("withdrawal-proofs/{userId}/{txId}", $file)` (private) → เรียก `WalletService::markWithdrawalPaid()` เวอร์ชันรับ proof metadata (ใน DB transaction เดิม: `paid` + `payment_reference` + payout_proof_* 6 field + audit log) → **ถ้า transition ล้มเหลว ลบไฟล์ทิ้ง**
+- กัน mark paid ซ้ำ: ของเดิมกันด้วย `status !== 'processing'` + `lockForUpdate`; เพิ่ม "ถ้ามี `payout_proof_path` แล้วห้ามเขียนทับ" ใน service
+- **Endpoint ดู proof**: `GET /admin/wallet/withdrawals/{id}/proof` — ตรวจ `cannot('view', $tx)` ผ่าน `WithdrawalPolicy` → `Storage::disk('local')->response($path, $originalName)` (stream) → audit `withdrawal.proof_viewed` → 404 ถ้าไม่มี proof
+- Routes ใน `routes/admin/admin.php`
+
+### Phase 4 — Frontend: `pending.vue` (+ `wallet/index.vue`)
+
+1. **Tab ที่สาม "รอโอน"** (approved/processing) จาก endpoint Phase 2.2
+2. **Modal รายละเอียดคำขอถอน** — เปิดจากคลิกแถว → เรียก `GET /withdrawals/{id}` (บันทึก reviewer, ปลด maker-checker) แสดง: ชื่อ/email/เบอร์โทร, ยอดถอน, fee (`metadata.fee`), net (`metadata.net_amount`), ธนาคาร/PromptPay + เลขบัญชีเต็ม + ชื่อบัญชี (`metadata.bank_account`), ยอด wallet, `balance_before/after`, วันที่, สถานะ, `reference_number`, `admin_note`, ผู้ตรวจ (`reviewer.name`+`reviewed_at`), ผู้อนุมัติ (`metadata.approved_by`) + ปุ่มคัดลอกเลขบัญชี + banner เตือน maker-checker เมื่อยอด ≥ threshold
+3. **Modal "ยืนยันโอนแล้ว + แนบสลิป"** — `payment_reference` บังคับ + file input image/PDF ≤ 5MB พร้อม preview; ถ้าสถานะ `approved` เรียก `POST .../process` ก่อนแล้วค่อย `POST .../paid` แบบ FormData; disable ปุ่มกันกดซ้ำ; refresh ทุก tab
+4. แก้เดิม: ปุ่มอนุมัติ withdrawals ส่ง `admin_note` (ตอนนี้ส่ง `{}`), แสดง error 409/422 จาก API แทน console.error เงียบ
+5. `wallet/index.vue`: modal รายละเอียด เพิ่มปุ่ม "ดูหลักฐานการโอน" เมื่อ `has_payout_proof` → fetch เป็น blob พร้อม JWT header
+
+### Phase 5 — Tests + คุณภาพ
+
+`tests/Feature/Wallet/WithdrawalPayoutProofTest.php`:
+1. mark paid + proof ถูกต้อง → 200, ไฟล์อยู่ private disk, field ครบ, locked_balance ลด, audit log เกิด
+2. mark paid ไม่แนบ proof → 422
+3. ผิด MIME / เกิน 5MB → 422 และไม่มีไฟล์ค้าง
+4. mark paid ซ้ำ / สถานะผิด → 409 และไฟล์รอบสองถูกลบ
+5. ดาวน์โหลด proof: non-admin → 403, admin → 200
+6. maker-checker: ยอดสูง ผู้ตรวจ=ผู้อนุมัติ → 422
+7. regression: pending list เห็น `under_review`
+
+ปิดท้าย: `./vendor/bin/pint` + รัน wallet test suite เดิม (รวม `WithdrawalHardeningTest`)
+
+### ลำดับ commit
+
+1. `fix(admin-wallet): include under_review in pending list + eager-load reviewer`
+2. `feat(wallet): add payout proof columns migration + model fields`
+3. `feat(admin-wallet): require payout proof on mark-paid + private proof download`
+4. `feat(admin-ui): withdrawal detail modal + awaiting-payout tab + proof upload`
+5. `test(wallet): payout proof coverage`
+
+สถานะ: เสร็จสิ้น (แก้ไขโค้ดและผ่านการทดสอบ 100% แล้ว)
+
+
+## Work Plan — Advertise create: เปิดสิทธิ์ลงโฆษณาทุกคน + แก้ dropdown ว่าง + widget CTA (2026-07-13, ตรวจ codebase จริงแล้ว)
+
+### วิเคราะห์สาเหตุ dropdown โรงเรียน/รายวิชาว่าง (หน้า /earn/advertise/create)
+
+จุดโหลดข้อมูล: `loadUserData()` ใน `ui/pages/Earn/Advertise/create.vue:66-97` — พังซ้อนกัน 3 ชั้น:
+
+1. **Race condition (ตัวการหลัก)** — `onMounted` เรียกครั้งเดียว ถ้า `authStore.user?.id` ยังไม่พร้อม (refresh/เปิดตรง) จะข้าม fetch เงียบๆ ไม่มี retry → dropdown ว่างถาวร
+2. **`Promise.all` all-or-nothing** — 3 requests (`my-academies`, `membered-academies`, `courses/search?all=true`) ใน try เดียว ตัวเดียวพัง = ว่างหมด; จุดเสี่ยง: `/courses/search` ติด middleware `verified` (`routes/learn/course.php:92`) ขณะที่อีก 2 ตัวใช้แค่ `auth:api`
+3. **Endpoint ไม่ตรงสิทธิ์จริง** — `getMyAcademies` (`AcademyController.php:394`) คืนเฉพาะโรงเรียนที่เป็นเจ้าของ + paginate 10; SUPER_ADMIN ที่ไม่ owner/member โรงเรียนไหนจะได้ลิสต์ว่าง ทั้งที่ `CampaignAuthorizationService::canCreate` อนุญาต SuperAdmin ทุก scope — frontend/backend ใช้คนละเกณฑ์
+
+### นโยบาย: คนนอกลงโฆษณาให้สถาบันได้ไหม
+
+ตอนนี้ไม่ได้ (`canCreate` บังคับ `isAdmin` ของ academy/course) แต่จะเปิดให้ทุกคนสร้างได้ เพราะมีด่านคุมอยู่แล้ว: แคมเปญต้องผ่านรีวิวก่อนแสดง (`PATCH /campaigns/{id}/review` — `routes/earn/campaign.php:20`) โดย `canReview` จำกัดที่แอดมินระบบ + แอดมินของ scope, มีหน้า manage ราย academy/course (`academyManage`/`courseManage`) + ตรวจสลิป/ตัด wallet อยู่แล้ว → เปิด "สร้าง" ให้ทุกคน, "อนุมัติ" ยังเป็นของเจ้าของพื้นที่
+
+### Phase 1 — Backend
+
+1. `CampaignAuthorizationService::canCreate()` — scope `academy`: เหลือ `$academy !== null`; scope `course`: เหลือ `$course !== null` + เงื่อนไข academy/course สอดคล้อง (คงไว้); **ห้ามแตะ `canReview()`**; ตรวจยืนยันว่าโฆษณาแสดงหลังรีวิว+ชำระเงินเท่านั้นใน `CampaignController::store`/`review`
+2. เพิ่ม endpoint ค้นหาเป้าหมาย (type-ahead, ไม่จำกัดสิทธิ์, auth:api) ใน `routes/earn/campaign.php` + method ใน `CampaignController`:
+   - `GET /api/campaigns/targets/academies?q=` → `id, name, logo` ทุกโรงเรียน limit 20
+   - `GET /api/campaigns/targets/courses?q=` → `id, name, title, code, academy_id, cover_image` ทุกวิชา limit 20
+   - ไม่ reuse ของเดิม: `all-academies` paginate 10 + resource หนัก, `courses/search` กรองเฉพาะวิชาที่ตัวเองสอน + ติด `verified`
+
+### Phase 2 — Frontend `create.vue`
+
+1. แก้การโหลด: `watch(() => authStore.user?.id, load, { immediate: true })` + เปลี่ยน `Promise.all` → `Promise.allSettled` แยก error รายส่วน + ปุ่มลองใหม่
+2. เปลี่ยน dropdown → searchable select (debounce เรียก targets endpoints) เลือกได้ทุกสถาบัน/วิชา; แก้ copy: "-- ค้นหาสถาบันที่ต้องการลงโฆษณา --", ตัด "คุณยังไม่มีสถาบันที่สามารถจัดการได้"/"รายวิชาที่คุณสอน"; เพิ่มข้อความ "โฆษณาจะแสดงหลังผ่านการอนุมัติจากผู้ดูแลสถาบัน/รายวิชา"
+3. Prefill จาก query params: `?scope=academy&academy_id=12` / `?scope=course&course_id=34` → ตั้ง scopeType + preselect
+
+### Phase 3 — Widget "ลงโฆษณาหน้านี้"
+
+1. Component ใหม่ `ui/components/widgets/AdvertiseCtaWidget.vue` (สร้างผ่านสกิล hopeui-port) — props `scopeType`, `targetId`, `targetName`; ปุ่มลิงก์ไป create พร้อม query params; (เสริม) จำนวนโฆษณา active จาก `GET /campaigns/widget`
+2. วางที่ sidebar `ui/pages/academies/[name].vue` (แถว AcademyInfoWidget/DonatesWidget) และ widget zone หน้ารายวิชา `ui/pages/Learn/Courses/[id]/` — เห็นได้ทั้งสมาชิกและคนนอก
+
+### Phase 4 — Tests + Verification
+
+1. คนนอกสร้างแคมเปญ scope academy → 201 รอรีวิว
+2. คนนอกสร้าง scope course → 201
+3. คนนอกพยายามรีวิว/อนุมัติแคมเปญ academy ที่ไม่เกี่ยว → 403 (regression สำคัญสุด)
+4. targets endpoints: ค้นหาได้, จำกัด field, ต้อง auth
+5. validation `StoreCampaignRequest` เดิมผ่านครบ
+6. Frontend: build check + เปิดหน้า create ผ่าน dev server (refresh ตรงต้องโหลดได้, prefill ทำงาน) + `./vendor/bin/pint`
+
+### ลำดับ commit
+
+1. `fix(advertise): wait for auth user + resilient data loading on create page`
+2. `feat(campaign): open scoped campaign creation to all users, add target search endpoints`
+3. `feat(advertise): searchable target selects + query-param prefill`
+4. `feat(widgets): advertise CTA widget on academy and course pages`
+5. `test(campaign): outsider create + review authorization coverage`
+
+สถานะ: แผนพร้อมลงมือ ยังไม่ได้แก้โค้ด (หมายเหตุ: ระบุไม่ได้ว่า production โดนสาเหตุไหนก่อน — race condition น่าจะเป็นตัวหลัก แผนอุดครบทุกทาง)
