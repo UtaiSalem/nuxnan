@@ -48,6 +48,14 @@ class StudentCardResource extends JsonResource
             'qr_content' => $this->qr_content,
             'qr_url' => $this->qr_url,
             'order_no' => $enrollment ? $enrollment->student_number : $this->order_no,
+            'has_physical_card' => (bool) $this->card_issue_date,
+            'active_card_request' => $this->when($this->relationLoaded('activeCardRequest'), fn () => $this->activeCardRequest ? [
+                'id' => $this->activeCardRequest->id,
+                'status' => $this->activeCardRequest->status?->value,
+                'request_type' => $this->activeCardRequest->request_type?->value,
+                'reason_code' => $this->activeCardRequest->reason_code,
+                'requested_at' => $this->activeCardRequest->requested_at,
+            ] : null),
         ];
     }
 

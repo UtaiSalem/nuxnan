@@ -6,6 +6,7 @@ use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class StudentCard extends Model
 {
@@ -65,6 +66,17 @@ class StudentCard extends Model
     public function sourceRequests(): HasMany
     {
         return $this->hasMany(StudentCardRequest::class, 'existing_card_id');
+    }
+
+    /**
+     * คำร้องทำบัตรที่ยังค้างอยู่ของนักเรียนเจ้าของบัตรใบนี้
+     * (unique index รับประกันว่ามี open request ได้คนละ 1 รายการ)
+     */
+    public function activeCardRequest(): HasOne
+    {
+        return $this->hasOne(StudentCardRequest::class, 'student_id', 'student_id')
+            ->whereIn('status', ['pending', 'approved', 'in_progress'])
+            ->latest('id');
     }
 
     /**

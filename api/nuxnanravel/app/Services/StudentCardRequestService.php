@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\StudentCardRequestOrigin;
+use App\Enums\StudentCardRequestReason;
 use App\Enums\StudentCardRequestStatus;
 use App\Enums\StudentCardRequestType;
 use App\Models\Academy;
@@ -49,12 +50,12 @@ class StudentCardRequestService
             ->first();
 
         if (! $enrollment || ! $enrollment->classroom) {
-            throw ValidationException::withMessages(['student_id' => 'Student has no active classroom enrollment.']);
+            throw ValidationException::withMessages(['student_id' => 'นักเรียนไม่มีห้องเรียนที่กำลังศึกษาอยู่']);
         }
 
         if (StudentCardRequest::query()->where('academy_id', $academy->id)->where('student_id', $student->id)
             ->whereIn('status', ['pending', 'approved', 'in_progress'])->exists()) {
-            throw ValidationException::withMessages(['student_id' => 'Student already has an open card request.']);
+            throw ValidationException::withMessages(['student_id' => 'นักเรียนมีคำร้องทำบัตรค้างอยู่แล้ว ไม่ต้องส่งซ้ำ']);
         }
 
         $existingCard = StudentCard::query()
@@ -63,13 +64,24 @@ class StudentCardRequestService
             ->where('student_status', 'active')
             ->latest('id')
             ->first();
-        $type = StudentCardRequestType::from($data['request_type']);
+
+        $reasonCode = ! empty($data['reason_code']) ? StudentCardRequestReason::from($data['reason_code']) : null;
+        // ถ้าไม่ได้ระบุประเภทคำร้องมา ให้คำนวณจากเหตุผล + สถานะบัตรจริงในระบบ
+        $type = ! empty($data['request_type'])
+            ? StudentCardRequestType::from($data['request_type'])
+            : $reasonCode?->deriveRequestType((bool) $existingCard);
+
+        if (! $type) {
+            throw ValidationException::withMessages(['request_type' => 'กรุณาระบุประเภทคำร้องหรือเหตุผลการขอทำบัตร']);
+        }
 
         if ($type !== StudentCardRequestType::FirstIssue && ! $existingCard) {
-            throw ValidationException::withMessages(['request_type' => 'Replacement and renewal require an active card.']);
+            $type = StudentCardRequestType::FirstIssue;
         }
         if ($type === StudentCardRequestType::FirstIssue && $existingCard) {
-            throw ValidationException::withMessages(['request_type' => 'Student already has an active card.']);
+            $type = $reasonCode === StudentCardRequestReason::Expired
+                ? StudentCardRequestType::Renewal
+                : StudentCardRequestType::Replacement;
         }
 
         return StudentCardRequest::create([
@@ -87,6 +99,9 @@ class StudentCardRequestService
             'grade_level_snapshot' => $enrollment->classroom->grade_level,
             'section_snapshot' => $enrollment->classroom->section,
             'reason' => $data['reason'] ?? null,
+            'reason_code' => $reasonCode?->value,
+            'requester_name' => $data['requester_name'] ?? null,
+            'requester_phone' => $data['requester_phone'] ?? null,
             'requested_by' => $actor?->id,
             'requested_at' => now(),
         ]);

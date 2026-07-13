@@ -78,7 +78,7 @@ class StudentCardRequestController extends Controller
         abort_unless((int) $classroom->academy_id === (int) $academy->id && (int) $classroom->homeroom_teacher_id === (int) $request->user()->id, 403);
         $classroom->load(['homeroomTeacher:id,name,profile_photo_path', 'academicYear:id,name'])
             ->loadCount(['classroomStudents as student_count' => fn ($query) => $query->active()]);
-        $students = ClassroomStudent::query()->with(['student.studentCard'])
+        $students = ClassroomStudent::query()->with(['student.studentCard', 'student.activeCardRequest'])
             ->where('academy_id', $academy->id)->where('classroom_id', $classroom->id)->active()->get();
 
         return response()->json(['data' => [

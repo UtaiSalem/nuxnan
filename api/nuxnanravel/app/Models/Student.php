@@ -243,6 +243,16 @@ class Student extends Model
     }
 
     /**
+     * คำร้องทำบัตรที่ยังค้างอยู่ (pending/approved/in_progress) — มีได้คนละ 1 รายการ
+     */
+    public function activeCardRequest(): HasOne
+    {
+        return $this->hasOne(StudentCardRequest::class)
+            ->whereIn('status', ['pending', 'approved', 'in_progress'])
+            ->latest('id');
+    }
+
+    /**
      * Get the corresponding student card (Legacy)
      * Use manual query to avoid collation issues
      */

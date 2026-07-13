@@ -31,6 +31,10 @@ Route::prefix('student-card')->name('student-card.')->group(function () {
         Route::middleware('throttle:10,1')->group(function () {
             Route::post('/requests', [PublicStudentCardRequestController::class, 'submitRequest'])->name('submit-request');
         });
+
+        Route::middleware('throttle:5,1')->group(function () {
+            Route::post('/requests/bulk', [PublicStudentCardRequestController::class, 'submitBulkRequests'])->name('submit-bulk-requests');
+        });
     });
 
     // Student Profile & Updates (Public - but with validation)

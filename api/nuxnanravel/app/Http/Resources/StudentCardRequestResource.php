@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\StudentCardRequestReason;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +27,10 @@ class StudentCardRequestResource extends JsonResource
             'grade_level' => $this->grade_level_snapshot,
             'section' => $this->section_snapshot,
             'reason' => $this->reason,
+            'reason_code' => $this->reason_code,
+            'reason_label' => $this->reason_code ? StudentCardRequestReason::tryFrom($this->reason_code)?->label() : null,
+            'requester_name' => $this->requester_name,
+            'requester_phone' => $this->requester_phone,
             'admin_notes' => $this->admin_notes,
             'rejection_reason' => $this->rejection_reason,
             'requested_at' => $this->requested_at,

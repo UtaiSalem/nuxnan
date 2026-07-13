@@ -70,6 +70,7 @@ class StudentCardController extends Controller
             'student.classroomEnrollments' => fn ($query) => $query
                 ->where('status', 'active')
                 ->with('classroom.academicYear'),
+            'activeCardRequest',
         ]);
     }
 
