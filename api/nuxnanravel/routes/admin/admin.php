@@ -476,6 +476,13 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('transaction_type') && $request->transaction_type !== 'all') {
+            $transactionType = $request->transaction_type === 'withdrawal'
+                ? 'withdraw'
+                : $request->transaction_type;
+            $query->where('transaction_type', $transactionType);
+        }
+
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
 
@@ -520,6 +527,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::get('/withdrawals/pending', [AdminWalletController::class, 'pendingWithdrawals'])->name('admin.wallet.withdrawals.pending');
         Route::get('/deposit-requests/pending', [AdminWalletController::class, 'pendingDepositRequests'])->name('admin.wallet.deposits.pending');
         Route::get('/withdrawals/{id}', [AdminWalletController::class, 'showWithdrawal'])->whereNumber('id')->name('admin.wallet.withdrawals.show');
+        Route::get('/withdrawals/{id}/proof', [AdminWalletController::class, 'downloadWithdrawalProof'])->whereNumber('id')->name('admin.wallet.withdrawals.proof');
         Route::post('/withdrawals/{id}/approve', [AdminWalletController::class, 'approveWithdrawal'])->name('admin.wallet.withdrawals.approve');
         Route::post('/withdrawals/{id}/reject', [AdminWalletController::class, 'rejectWithdrawal'])->name('admin.wallet.withdrawals.reject');
         Route::post('/withdrawals/{id}/process', [AdminWalletController::class, 'processWithdrawal'])->name('admin.wallet.withdrawals.process');

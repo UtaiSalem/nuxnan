@@ -10,6 +10,12 @@ class WalletTransaction extends Model
 {
     use HasFactory;
 
+    protected $appends = ['type_label', 'has_payout_proof'];
+
+    protected $hidden = [
+        'payout_proof_path',
+    ];
+
     protected $fillable = [
         'user_id',
         'transaction_type',
@@ -34,6 +40,12 @@ class WalletTransaction extends Model
         'destination_type',
         'destination_snapshot',
         'reference_number',
+        'payout_proof_path',
+        'payout_proof_original_name',
+        'payout_proof_mime',
+        'payout_proof_size',
+        'payout_proof_uploaded_by',
+        'payout_proof_uploaded_at',
     ];
 
     protected $casts = [
@@ -49,6 +61,7 @@ class WalletTransaction extends Model
         'version' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'payout_proof_uploaded_at' => 'datetime',
     ];
 
     /**
@@ -157,6 +170,10 @@ class WalletTransaction extends Model
             'conversion' => 'การแปลงแต้ม',
             'admin_adjust' => 'การปรับจาก Admin',
             'reward' => 'การรับรางวัล',
+            'purchase' => 'การซื้อสินค้า',
+            'course_income' => 'รายได้รายวิชา',
+            'refund' => 'การคืนเงิน',
+            'opening_balance' => 'ยอดยกมา',
             default => $this->transaction_type,
         };
     }
@@ -181,5 +198,13 @@ class WalletTransaction extends Model
     public function getFormattedCurrencyAttribute(): string
     {
         return $this->currency.' '.number_format($this->amount, 2);
+    }
+
+    /**
+     * Check if the transaction has a payout proof
+     */
+    public function getHasPayoutProofAttribute(): bool
+    {
+        return ! empty($this->payout_proof_path);
     }
 }

@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\MarkWithdrawalPaidRequest;
 use App\Models\User;
 use App\Models\WalletDepositRequest;
 use App\Models\WalletTransaction;
+use App\Services\AuditLogService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class AdminWalletController extends Controller
 {
@@ -52,7 +55,7 @@ class AdminWalletController extends Controller
             ->whereNotIn('status', ['rejected', 'cancelled', 'failed'])
             ->count();
         $pendingWithdrawals = WalletTransaction::where('transaction_type', 'withdraw')
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'under_review'])
             ->count();
         $completedWithdrawals = WalletTransaction::where('transaction_type', 'withdraw')
             ->whereIn('status', ['completed', 'paid'])
@@ -108,11 +111,21 @@ class AdminWalletController extends Controller
 
         $perPage = $request->input('per_page', 20);
         $page = $request->input('page', 1);
+        $status = $request->input('status');
 
-        $withdrawals = WalletTransaction::with('user')
-            ->where('transaction_type', 'withdraw')
-            ->where('status', 'pending')
-            ->orderBy('created_at', 'desc')
+        $query = WalletTransaction::with(['user', 'reviewer'])
+            ->where('transaction_type', 'withdraw');
+
+        if ($status === 'awaiting-payout') {
+            $query->whereIn('status', ['approved', 'processing']);
+        } elseif ($status) {
+            $statusArr = is_array($status) ? $status : explode(',', $status);
+            $query->whereIn('status', $statusArr);
+        } else {
+            $query->whereIn('status', ['pending', 'under_review']);
+        }
+
+        $withdrawals = $query->orderBy('created_at', 'desc')
             ->paginate($perPage, ['*'], 'page', $page);
 
         return response()->json([
@@ -352,7 +365,7 @@ class AdminWalletController extends Controller
     public function showWithdrawal(int $transactionId): JsonResponse
     {
         $user = Auth::user();
-        $transaction = WalletTransaction::with('user')->find($transactionId);
+        $transaction = WalletTransaction::with(['user', 'reviewer'])->find($transactionId);
 
         if (! $transaction || $transaction->transaction_type !== 'withdraw') {
             return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
@@ -384,7 +397,7 @@ class AdminWalletController extends Controller
         return response()->json(['success' => $ok, 'data' => ['transaction_id' => $transaction->id, 'status' => $transaction->refresh()->status]], $ok ? 200 : 409);
     }
 
-    public function markWithdrawalPaid(Request $request, int $transactionId): JsonResponse
+    public function markWithdrawalPaid(MarkWithdrawalPaidRequest $request, int $transactionId): JsonResponse
     {
         $user = Auth::user();
         $transaction = WalletTransaction::find($transactionId);
@@ -394,10 +407,57 @@ class AdminWalletController extends Controller
         if (! $user || $user->cannot('approve', $transaction)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
-        $data = $request->validate(['payment_reference' => 'required|string|max:100']);
-        $ok = $this->walletService->markWithdrawalPaid($transaction, $data['payment_reference'], $user);
 
-        return response()->json(['success' => $ok, 'data' => ['transaction_id' => $transaction->id, 'status' => $transaction->refresh()->status]], $ok ? 200 : 409);
+        $file = $request->file('proof');
+        $path = Storage::disk('local')->putFile("withdrawal-proofs/{$transaction->user_id}/{$transaction->id}", $file);
+
+        $proofData = [
+            'path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'mime' => $file->getMimeType(),
+            'size' => $file->getSize(),
+        ];
+
+        try {
+            $ok = $this->walletService->markWithdrawalPaid($transaction, $request->payment_reference, $user, $proofData);
+            if (! $ok) {
+                Storage::disk('local')->delete($path);
+            }
+
+            return response()->json(['success' => $ok, 'data' => ['transaction_id' => $transaction->id, 'status' => $transaction->refresh()->status]], $ok ? 200 : 409);
+        } catch (\Exception $e) {
+            Storage::disk('local')->delete($path);
+            throw $e;
+        }
+    }
+
+    public function downloadWithdrawalProof(int $transactionId)
+    {
+        $user = Auth::user();
+        $transaction = WalletTransaction::find($transactionId);
+
+        if (! $transaction || $transaction->transaction_type !== 'withdraw') {
+            return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
+        }
+
+        if (! $user || $user->cannot('view', $transaction)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        if (empty($transaction->payout_proof_path) || ! Storage::disk('local')->exists($transaction->payout_proof_path)) {
+            return response()->json(['success' => false, 'message' => 'Payout proof not found'], 404);
+        }
+
+        app(AuditLogService::class)->log(
+            'withdrawal.proof_viewed',
+            $transaction,
+            [],
+            [],
+            'wallet',
+            ['admin_id' => $user->id]
+        );
+
+        return Storage::disk('local')->response($transaction->payout_proof_path, $transaction->payout_proof_original_name);
     }
 
     public function markWithdrawalFailed(Request $request, int $transactionId): JsonResponse

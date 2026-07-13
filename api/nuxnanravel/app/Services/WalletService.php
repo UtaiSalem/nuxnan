@@ -466,11 +466,15 @@ class WalletService
         return $this->transitionWithdrawal($transaction, 'processing', $admin, 'withdrawal.processing');
     }
 
-    public function markWithdrawalPaid(WalletTransaction $transaction, string $paymentReference, User $admin): bool
+    public function markWithdrawalPaid(WalletTransaction $transaction, string $paymentReference, User $admin, array $proofData = []): bool
     {
-        return DB::transaction(function () use ($transaction, $paymentReference, $admin) {
+        return DB::transaction(function () use ($transaction, $paymentReference, $admin, $proofData) {
             $tx = WalletTransaction::whereKey($transaction->id)->lockForUpdate()->first();
             if (! $tx || $tx->transaction_type !== 'withdraw' || $tx->status !== 'processing') {
+                return false;
+            }
+
+            if (! empty($tx->payout_proof_path)) {
                 return false;
             }
 
@@ -479,8 +483,32 @@ class WalletService
             $user = User::query()->whereKey($tx->user_id)->lockForUpdate()->firstOrFail();
             $user->update(['locked_balance' => bcsub((string) $user->locked_balance, (string) $tx->amount, 2)]);
 
-            $tx->update(['status' => 'paid', 'payment_reference' => $paymentReference, 'processed_at' => now(), 'version' => $tx->version + 1]);
-            app(AuditLogService::class)->log('withdrawal.paid', $tx, ['status' => 'processing'], ['status' => 'paid'], 'wallet', ['admin_id' => $admin->id]);
+            $updateData = [
+                'status' => 'paid',
+                'payment_reference' => $paymentReference,
+                'processed_at' => now(),
+                'version' => $tx->version + 1,
+            ];
+
+            if (! empty($proofData)) {
+                $updateData['payout_proof_path'] = $proofData['path'];
+                $updateData['payout_proof_original_name'] = $proofData['original_name'];
+                $updateData['payout_proof_mime'] = $proofData['mime'];
+                $updateData['payout_proof_size'] = $proofData['size'];
+                $updateData['payout_proof_uploaded_by'] = $admin->id;
+                $updateData['payout_proof_uploaded_at'] = now();
+            }
+
+            $tx->update($updateData);
+
+            app(AuditLogService::class)->log(
+                'withdrawal.paid',
+                $tx,
+                ['status' => 'processing'],
+                ['status' => 'paid'],
+                'wallet',
+                array_merge(['admin_id' => $admin->id], $proofData)
+            );
 
             return true;
         });
