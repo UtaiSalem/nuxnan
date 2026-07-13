@@ -564,4 +564,60 @@ class CampaignSystemTest extends TestCase
         ])->patchJson("/api/campaigns/{$campaign->id}/review", ['action' => 'approve'])
             ->assertStatus(200);
     }
+
+    /** @test */
+    public function an_outsider_can_create_academy_and_course_campaigns_but_cannot_review_them(): void
+    {
+        $academy = Academy::factory()->create();
+        $course = Course::factory()->create(['academy_id' => $academy->id]);
+
+        foreach ([
+            ['scope_type' => 'academy', 'academy_id' => $academy->id],
+            ['scope_type' => 'course', 'academy_id' => $academy->id, 'course_id' => $course->id],
+        ] as $scope) {
+            $response = $this->withHeaders(['Authorization' => "Bearer {$this->userToken}"])
+                ->postJson('/api/campaigns', array_merge([
+                    'campaign_type' => 'support',
+                    'budget_amount' => 1,
+                    'payment_method' => 'wallet',
+                ], $scope));
+
+            $response->assertCreated();
+            $campaignId = $response->json('campaign.id');
+
+            $this->withHeaders(['Authorization' => "Bearer {$this->userToken}"])
+                ->patchJson("/api/campaigns/{$campaignId}/review", ['action' => 'approve'])
+                ->assertForbidden();
+        }
+    }
+
+    /** @test */
+    public function authenticated_users_can_search_all_campaign_targets(): void
+    {
+        $academy = Academy::factory()->create(['name' => 'Target Academy']);
+        $course = Course::factory()->create(['name' => 'Target Course', 'academy_id' => $academy->id]);
+
+        $this->withHeaders(['Authorization' => "Bearer {$this->userToken}"])
+            ->getJson('/api/campaigns/targets/academies?q=Target')
+            ->assertOk()
+            ->assertJsonPath('academies.0.id', $academy->id);
+
+        $this->withHeaders(['Authorization' => "Bearer {$this->userToken}"])
+            ->getJson('/api/campaigns/targets/courses?q=Target')
+            ->assertOk()
+            ->assertJsonPath('courses.0.id', $course->id);
+
+        // Lookup by id (used by the create page to prefill from query params)
+        $this->withHeaders(['Authorization' => "Bearer {$this->userToken}"])
+            ->getJson("/api/campaigns/targets/academies?id={$academy->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'academies')
+            ->assertJsonPath('academies.0.id', $academy->id);
+
+        $this->withHeaders(['Authorization' => "Bearer {$this->userToken}"])
+            ->getJson("/api/campaigns/targets/courses?id={$course->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'courses')
+            ->assertJsonPath('courses.0.id', $course->id);
+    }
 }

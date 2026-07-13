@@ -53,6 +53,35 @@ class CampaignController extends Controller
         return response()->json(['success' => true, 'campaigns' => CampaignResource::collection($campaigns)]);
     }
 
+    public function targetAcademies(Request $request): JsonResponse
+    {
+        $query = Academy::query()
+            ->select(['id', 'name', 'logo'])
+            ->when($request->filled('id'), fn ($q) => $q->whereKey($request->integer('id')))
+            ->when($request->filled('q'), fn ($q) => $q->where('name', 'like', '%'.$request->string('q')->toString().'%'))
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+
+        return response()->json(['success' => true, 'academies' => $query]);
+    }
+
+    public function targetCourses(Request $request): JsonResponse
+    {
+        $query = Course::query()
+            ->select(['id', 'name', 'title', 'code', 'academy_id', 'cover as cover_image'])
+            ->when($request->filled('id'), fn ($q) => $q->whereKey($request->integer('id')))
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $term = '%'.$request->string('q')->toString().'%';
+                $q->where(fn ($inner) => $inner->where('name', 'like', $term)->orWhere('title', 'like', $term)->orWhere('code', 'like', $term));
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+
+        return response()->json(['success' => true, 'courses' => $query]);
+    }
+
     public function store(StoreCampaignRequest $request, SupportPaymentService $payments): JsonResponse
     {
         $data = $request->validated();
@@ -82,7 +111,7 @@ class CampaignController extends Controller
                 'title' => $data['title'] ?? 'สนับสนุนการเรียนรู้',
                 'description' => $data['description'] ?? null,
                 'media_link' => $data['media_link'] ?? null,
-                'media_image' => $mediaFilename,
+                'media_image' => $mediaFilename ?? '',
                 'amounts' => $data['budget_amount'],
                 'budget_amount' => $data['budget_amount'],
                 'exchange_points' => $type === CampaignType::SUPPORT

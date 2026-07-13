@@ -8,6 +8,11 @@ Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns.
 // Impressions are counted for everyone (including guests); the request/service handle a null viewer.
 Route::post('/campaigns/{campaign}/impression', [CampaignController::class, 'impression'])->name('campaigns.impression');
 
+Route::middleware(['auth:api', config('jetstream.auth_session')])->group(function () {
+    Route::get('/campaigns/targets/academies', [CampaignController::class, 'targetAcademies'])->name('campaigns.targets.academies');
+    Route::get('/campaigns/targets/courses', [CampaignController::class, 'targetCourses'])->name('campaigns.targets.courses');
+});
+
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->group(function () {
     Route::post('/campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
     Route::post('/campaigns/{campaign}/view', [CampaignController::class, 'view'])->name('campaigns.view');

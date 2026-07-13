@@ -17,13 +17,12 @@ class CampaignAuthorizationService
         }
 
         if ($scope === 'academy') {
-            return $academy !== null && $academy->isAdmin($user);
+            return $academy !== null;
         }
 
         return $scope === 'course'
             && $course !== null
-            && ($course->academy_id === null || $academy === null || (int) $course->academy_id === (int) $academy->id)
-            && $course->isAdmin($user);
+            && ($course->academy_id === null || $academy === null || (int) $course->academy_id === (int) $academy->id);
     }
 
     public function assertCanCreate(User $user, string $scope, ?Academy $academy = null, ?Course $course = null): void
