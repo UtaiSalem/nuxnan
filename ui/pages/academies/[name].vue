@@ -8,6 +8,7 @@ import CourseCard from '~/components/learn/course/CourseCard.vue'
 import EventFormModal from '~/components/academy/events/EventFormModal.vue'
 import { useCourseGrouping } from '~/composables/useCourseGrouping'
 import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
+import AdvertiseCtaWidget from '~/components/widgets/AdvertiseCtaWidget.vue'
 
 definePageMeta({
   layout: 'main',
@@ -2337,6 +2338,7 @@ watch(() => route.hash, (newHash) => {
             :academy-name="academyName"
           />
 
+          <AdvertiseCtaWidget v-if="academy" scope-type="academy" :target-id="academy.id" :target-name="academy.name" />
           <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-sidebar" />
 
           <!-- Upcoming Events -->

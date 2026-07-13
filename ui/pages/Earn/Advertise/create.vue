@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useObjectUrl } from '@vueuse/core'
 import Swal from 'sweetalert2'
@@ -13,6 +13,7 @@ const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 const api = useApi()
 const router = useRouter()
+const route = useRoute()
 
 definePageMeta({
   layout: 'main',
@@ -35,6 +36,9 @@ const campaignType = ref('advertisement') // 'advertisement' | 'support'
 const scopeType = ref('public') // 'public' | 'academy' | 'course'
 const selectedAcademy = ref(null)
 const selectedCourse = ref(null)
+const academySearch = ref('')
+const courseSearch = ref('')
+let targetSearchTimer
 const inheritToAcademy = ref(false)
 
 // Creative Fields (Advertisement)
@@ -64,36 +68,30 @@ const durationOptions = [5, 10, 15, 30, 60]
 
 // Fetch user's academies and courses
 async function loadUserData() {
-  try {
-    isDataLoading.value = true
-    const userId = authStore.user?.id
-    if (userId) {
-      // Load owned and membered academies in parallel
-      const [ownedRes, memberedRes, coursesRes] = await Promise.all([
-        api.get(`/api/academies/users/${userId}/my-academies`),
-        api.get(`/api/academies/users/${userId}/membered-academies`),
-        api.get(`/api/courses/search?all=true`)
-      ])
+  const userId = authStore.user?.id
+  if (!userId) return
+  isDataLoading.value = true
+  const results = await Promise.allSettled([
+    api.get('/api/campaigns/targets/academies'),
+    api.get('/api/campaigns/targets/courses')
+  ])
+  const academyResult = results[0]
+  const courseResult = results[1]
+  if (academyResult.status === 'fulfilled') academies.value = academyResult.value.academies || []
+  if (courseResult.status === 'fulfilled') courses.value = courseResult.value.courses || []
+  isDataLoading.value = false
+}
 
-      const owned = ownedRes.academies?.data || ownedRes.academies || []
-      const membered = memberedRes.academies?.data || memberedRes.academies || []
-      
-      // Deduplicate academies
-      const allAcademies = [...owned, ...membered]
-      const seen = new Set()
-      academies.value = allAcademies.filter(ac => {
-        const dup = seen.has(ac.id)
-        seen.add(ac.id)
-        return !dup
-      })
+async function searchTargets(type, value) {
+  const endpoint = type === 'academy' ? 'academies' : 'courses'
+  const response = await api.get(`/api/campaigns/targets/${endpoint}`, { params: { q: value } })
+  if (type === 'academy') academies.value = response.academies || []
+  else courses.value = response.courses || []
+}
 
-      courses.value = coursesRes.courses || []
-    }
-  } catch (error) {
-    console.error('Failed to load user academies/courses', error)
-  } finally {
-    isDataLoading.value = false
-  }
+function queueTargetSearch(type, value) {
+  clearTimeout(targetSearchTimer)
+  targetSearchTimer = setTimeout(() => searchTargets(type, value).catch(console.error), 300)
 }
 
 // Compute dynamic budget
@@ -325,9 +323,40 @@ async function submitForm() {
   }
 }
 
-onMounted(() => {
-  loadUserData()
-})
+// Prefill scope/target from query params (e.g. from the AdvertiseCtaWidget).
+// Set the selection after nextTick so the scopeType reset-watcher (which nulls
+// the selection) has already run before the prefilled value is applied.
+async function applyQueryPrefill() {
+  const scope = route.query.scope
+  const academyId = Number(route.query.academy_id)
+  const courseId = Number(route.query.course_id)
+  if ((scope !== 'academy' && scope !== 'course') || (!academyId && !courseId)) return
+
+  scopeType.value = scope
+  await nextTick()
+
+  if (scope === 'academy' && academyId) {
+    selectedAcademy.value = academyId
+    if (!academies.value.some(ac => ac.id === academyId)) {
+      const res = await api.get('/api/campaigns/targets/academies', { params: { id: academyId } }).catch(() => null)
+      if (res?.academies?.length) academies.value = [...res.academies, ...academies.value]
+    }
+  }
+
+  if (scope === 'course' && courseId) {
+    selectedCourse.value = courseId
+    if (!courses.value.some(c => c.id === courseId)) {
+      const res = await api.get('/api/campaigns/targets/courses', { params: { id: courseId } }).catch(() => null)
+      if (res?.courses?.length) courses.value = [...res.courses, ...courses.value]
+    }
+  }
+}
+
+watch(() => authStore.user?.id, async (id) => {
+  if (!id) return
+  await loadUserData()
+  await applyQueryPrefill()
+}, { immediate: true })
 </script>
 
 <template>
@@ -437,28 +466,32 @@ onMounted(() => {
               <!-- Academy Select -->
               <div v-if="scopeType === 'academy'">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เลือกโรงเรียน/สถาบัน <span class="text-red-500">*</span></label>
+                <input v-model="academySearch" @input="queueTargetSearch('academy', academySearch)" type="search" placeholder="ค้นหาสถาบันที่ต้องการลงโฆษณา" class="mb-2 h-12 w-full rounded-2xl border-gray-300 px-4 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
                 <select 
                   v-model="selectedAcademy" 
                   class="w-full rounded-2xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-blue-500 focus:ring-blue-500 shadow-sm px-4 h-12"
                 >
-                  <option :value="null" disabled>-- เลือกสถาบันของคุณ --</option>
+                  <option :value="null" disabled>-- เลือกสถาบันที่ต้องการลงโฆษณา --</option>
                   <option v-for="ac in academies" :key="ac.id" :value="ac.id">{{ ac.name }}</option>
                 </select>
-                <p v-if="!academies.length" class="text-red-500 text-xs mt-2">คุณยังไม่มีสถาบันที่สามารถจัดการได้</p>
+                <p v-if="!academies.length" class="text-red-500 text-xs mt-2">ไม่พบสถาบันที่ตรงกับคำค้นหา</p>
+                <p class="text-xs text-gray-400 mt-2">โฆษณาจะแสดงหลังผ่านการอนุมัติจากผู้ดูแลสถาบันหรือผู้ดูแลระบบ</p>
               </div>
 
               <!-- Course Select -->
               <div v-if="scopeType === 'course'" class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เลือกรายวิชา <span class="text-red-500">*</span></label>
+                  <input v-model="courseSearch" @input="queueTargetSearch('course', courseSearch)" type="search" placeholder="ค้นหารายวิชาที่ต้องการลงโฆษณา" class="mb-2 h-12 w-full rounded-2xl border-gray-300 px-4 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
                   <select 
                     v-model="selectedCourse" 
                     class="w-full rounded-2xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-blue-500 focus:ring-blue-500 shadow-sm px-4 h-12"
                   >
-                    <option :value="null" disabled>-- เลือกรายวิชาที่คุณสอน --</option>
+                    <option :value="null" disabled>-- เลือกรายวิชาที่ต้องการลงโฆษณา --</option>
                     <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name || c.title }}</option>
                   </select>
-                  <p v-if="!courses.length" class="text-red-500 text-xs mt-2">คุณยังไม่มีรายวิชาที่สามารถจัดการได้</p>
+                  <p v-if="!courses.length" class="text-red-500 text-xs mt-2">ไม่พบรายวิชาที่ตรงกับคำค้นหา</p>
+                  <p class="text-xs text-gray-400 mt-2">โฆษณาจะแสดงหลังผ่านการอนุมัติจากผู้ดูแลรายวิชาหรือผู้ดูแลระบบ</p>
                 </div>
 
                 <!-- Inherit Toggle -->

@@ -18,6 +18,7 @@ import FavoriteCoursesWidget from '~/components/widgets/FavoriteCoursesWidget.vu
 import MemberedCoursesWidget from '~/components/widgets/MemberedCoursesWidget.vue'
 import MyCoursesWidget from '~/components/widgets/MyCoursesWidget.vue'
 import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
+import AdvertiseCtaWidget from '~/components/widgets/AdvertiseCtaWidget.vue'
 
 // Feed-specific sidebars
 import CourseFeedLeftSidebar from '~/components/learn/course/v2/CourseFeedLeftSidebar.vue'
@@ -235,6 +236,7 @@ usePageLayoutWidgets({
 
       <!-- Default right widgets (non-feed pages) -->
       <template v-if="!isCourseBoardRoute">
+        <AdvertiseCtaWidget v-if="course" scope-type="course" :target-id="course.id" :target-name="course.name || course.title" />
         <CampaignWidget v-if="course" scope="course" :academy-id="course.academy_id" :course-id="course.id" placement="course-sidebar" />
         <!-- Course-related widgets moved here on the lessons index page -->
         <CourseInstructorWidget v-if="course && isCourseLessonsIndexRoute" :course="course" :owner="course.user" :show-lessons-menu="false" />
