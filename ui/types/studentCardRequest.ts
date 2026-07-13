@@ -50,6 +50,10 @@ export interface StudentCardRequest {
   grade_level: string | null
   section: string | null
   reason: string | null
+  reason_code: StudentCardRequestReason | null
+  reason_label: string | null
+  requester_name: string | null
+  requester_phone: string | null
   admin_notes: string | null
   rejection_reason: string | null
   result_card_id: number | null
