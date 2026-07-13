@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import Swal from 'sweetalert2'
+import { Icon } from '@iconify/vue'
 import StudentCardItem from '~/components/student-card/StudentCardItem.vue'
 import AddStudentModal from '~/components/student-card/AddStudentModal.vue'
 import TransferStudentModal from '~/components/student-card/TransferStudentModal.vue'
 import RemoveStudentModal from '~/components/student-card/RemoveStudentModal.vue'
 import RequestCardModal from '~/components/student-card/RequestCardModal.vue'
-import { usePublicCardRequest } from '~/composables/usePublicCardRequest'
+import BulkRequestCardModal from '~/components/student-card/BulkRequestCardModal.vue'
+import { usePublicCardRequest, type PublicBulkCardRequestResult } from '~/composables/usePublicCardRequest'
 
 definePageMeta({ layout: false })
 
@@ -32,13 +34,45 @@ const {
     removeStudent,
 } = useClassroomManagement(level, room)
 
-const { submitCardRequest } = usePublicCardRequest(level, room)
+const { submitCardRequest, submitBulkCardRequests } = usePublicCardRequest(level, room)
 
 const showAddModal = ref(false)
 const showTransferModal = ref(false)
 const showRemoveModal = ref(false)
 const showRequestModal = ref(false)
+const showBulkRequestModal = ref(false)
 const selectedStudent = ref<any | null>(null)
+
+// โหมดส่งคำร้องหลายคน
+const selectMode = ref(false)
+const selectedIds = ref<Set<number>>(new Set())
+
+// นักเรียนที่ยังส่งคำร้องได้ (มี student_id และไม่มีคำร้องค้างอยู่)
+const eligibleStudents = computed(() =>
+    students.value.filter(s => s.student_id && !s.active_card_request))
+
+const selectedStudents = computed(() =>
+    eligibleStudents.value.filter(s => selectedIds.value.has(s.student_id)))
+
+const toggleSelectMode = () => {
+    selectMode.value = !selectMode.value
+    selectedIds.value = new Set()
+}
+
+const toggleSelect = (student: any) => {
+    const next = new Set(selectedIds.value)
+    if (next.has(student.student_id)) next.delete(student.student_id)
+    else next.add(student.student_id)
+    selectedIds.value = next
+}
+
+const selectAllEligible = () => {
+    selectedIds.value = new Set(eligibleStudents.value.map(s => s.student_id))
+}
+
+const clearSelection = () => {
+    selectedIds.value = new Set()
+}
 
 const selectedStudentName = computed(() => selectedStudent.value?.full_name_thai
     || [selectedStudent.value?.first_name_thai, selectedStudent.value?.last_name_thai].filter(Boolean).join(' ')
@@ -59,8 +93,34 @@ const openRequestModal = (student: any) => {
     showRequestModal.value = true
 }
 
-const handleRequestSubmitted = () => {
+const handleRequestSubmitted = async () => {
+    await fetchStudents() // refresh เพื่อให้การ์ดขึ้นสถานะ "ส่งคำร้องแล้ว" ทันที
     Swal.fire({ icon: 'success', title: 'ส่งคำร้องขอทำบัตรนักเรียนสำเร็จ', timer: 1800, showConfirmButton: false })
+}
+
+const handleBulkSubmitted = async (result: PublicBulkCardRequestResult) => {
+    selectMode.value = false
+    selectedIds.value = new Set()
+    await fetchStudents()
+
+    const failed = result.results.filter(r => !r.success)
+    if (failed.length === 0) {
+        Swal.fire({ icon: 'success', title: result.message, timer: 2200, showConfirmButton: false })
+        return
+    }
+
+    const nameOf = (id: number) => {
+        const s = students.value.find(st => st.student_id === id)
+        return s?.full_name_thai || `รหัส ${id}`
+    }
+    Swal.fire({
+        icon: 'warning',
+        title: result.message,
+        html: '<div style="text-align:left;font-size:0.875rem"><b>ส่งไม่สำเร็จ:</b><br>'
+            + failed.map(f => `• ${nameOf(f.student_id)} — ${f.message || 'ไม่ทราบสาเหตุ'}`).join('<br>')
+            + '</div>',
+        confirmButtonText: 'ตกลง',
+    })
 }
 
 const handleAdded = async () => {
@@ -197,6 +257,42 @@ onMounted(() => {
                 </div>
             </div>
 
+            <!-- Bulk request toolbar -->
+            <div v-if="manageContext?.can_request && students.length" class="bg-white border border-blue-100 rounded-2xl p-4 mb-6 shadow-sm">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 text-gray-700">
+                        <Icon icon="heroicons:credit-card" class="w-5 h-5 text-blue-600 flex-shrink-0" />
+                        <div>
+                            <div class="font-semibold text-sm">ส่งคำร้องทำบัตรหลายคนในคราวเดียว</div>
+                            <div class="text-xs text-gray-500">
+                                เหมาะสำหรับนักเรียนเข้าใหม่ทั้งห้อง — เหลือนักเรียนที่ยังส่งคำร้องได้ {{ eligibleStudents.length }} คน
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <template v-if="selectMode">
+                            <button @click="selectAllEligible"
+                                class="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                                เลือกทั้งหมด ({{ eligibleStudents.length }})
+                            </button>
+                            <button @click="clearSelection" :disabled="!selectedIds.size"
+                                class="px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-40">
+                                ล้างที่เลือก
+                            </button>
+                            <button @click="toggleSelectMode"
+                                class="px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                                ยกเลิก
+                            </button>
+                        </template>
+                        <button v-else @click="toggleSelectMode"
+                            class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                            <Icon icon="heroicons:user-group" class="w-5 h-5" />
+                            ส่งคำร้องหลายคน
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Loading -->
             <div v-if="isLoading" class="flex items-center justify-center py-20">
                 <div class="text-center">
@@ -223,9 +319,12 @@ onMounted(() => {
                     :studentInfo="student"
                     :canManage="!!manageContext?.can_manage"
                     :canRequest="!!manageContext?.can_request"
+                    :selectMode="selectMode"
+                    :selected="!!student.student_id && selectedIds.has(student.student_id)"
                     @transfer="openTransferModal"
                     @remove="openRemoveModal"
                     @request="openRequestModal"
+                    @toggle-select="toggleSelect"
                 />
             </div>
         </div>
@@ -257,9 +356,47 @@ onMounted(() => {
         <RequestCardModal
             :open="showRequestModal"
             :student="selectedStudent"
+            :defaultRequesterName="manageContext?.homeroom_teacher_name || null"
             :submitRequest="submitCardRequest"
             @close="showRequestModal = false"
             @submitted="handleRequestSubmitted"
         />
+        <BulkRequestCardModal
+            :open="showBulkRequestModal"
+            :students="selectedStudents"
+            :defaultRequesterName="manageContext?.homeroom_teacher_name || null"
+            :submitBulk="submitBulkCardRequests"
+            @close="showBulkRequestModal = false"
+            @submitted="handleBulkSubmitted"
+        />
+
+        <!-- แถบสรุปลอยด้านล่างระหว่างโหมดเลือกหลายคน -->
+        <Transition name="fade">
+            <div v-if="selectMode" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-xl">
+                <div class="bg-gray-900/95 text-white rounded-2xl shadow-2xl px-5 py-3 flex items-center justify-between gap-3 backdrop-blur">
+                    <div class="flex items-center gap-2 text-sm">
+                        <Icon icon="heroicons:check-circle" class="w-5 h-5 text-blue-400" />
+                        เลือกแล้ว <span class="font-bold text-blue-300">{{ selectedIds.size }}</span> คน
+                    </div>
+                    <button @click="showBulkRequestModal = true" :disabled="!selectedIds.size"
+                        class="px-4 py-2 text-sm font-semibold bg-blue-600 rounded-xl hover:bg-blue-500 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
+                        <Icon icon="heroicons:paper-airplane" class="w-4 h-4" />
+                        ส่งคำร้อง
+                    </button>
+                </div>
+            </div>
+        </Transition>
     </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+}
+</style>

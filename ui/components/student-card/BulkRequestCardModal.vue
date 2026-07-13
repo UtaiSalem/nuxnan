@@ -3,50 +3,47 @@ import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
 import { STUDENT_CARD_REQUEST_REASONS, type StudentCardRequestReason } from '~/types/studentCardRequest'
-import type { PublicCardRequestPayload } from '~/composables/usePublicCardRequest'
+import type { PublicBulkCardRequestPayload, PublicBulkCardRequestResult } from '~/composables/usePublicCardRequest'
 
 const props = defineProps<{
     open: boolean
-    student: {
-        student_id: number | null
-        student_number: string
-        full_name_thai: string
-        has_physical_card?: boolean
-    } | null
+    students: { student_id: number; full_name_thai: string }[]
     defaultRequesterName?: string | null
-    submitRequest: (payload: PublicCardRequestPayload) => Promise<{ success: boolean; message: string; request_id: number; status: string }>
+    submitBulk: (payload: PublicBulkCardRequestPayload) => Promise<PublicBulkCardRequestResult>
 }>()
 
 const emit = defineEmits<{
     close: []
-    submitted: []
+    submitted: [result: PublicBulkCardRequestResult]
 }>()
 
-const reasonCode = ref<StudentCardRequestReason>('lost')
+const reasonCode = ref<StudentCardRequestReason>('new_student')
 const reasonDetail = ref('')
 const requesterName = ref('')
 const requesterPhone = ref('')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+const showAllStudents = ref(false)
 
 const detailRequired = computed(() => reasonCode.value === 'other')
+const previewStudents = computed(() => showAllStudents.value ? props.students : props.students.slice(0, 5))
 
 watch(() => props.open, (open) => {
     if (open) {
-        // ค่าเริ่มต้นอัจฉริยะ: นักเรียนที่ยังไม่เคยออกบัตรจริง → เหตุผล "นักเรียนใหม่ยังไม่มีบัตร"
-        reasonCode.value = props.student?.has_physical_card === false ? 'new_student' : 'lost'
+        // เคสหลักคือ ม.1 เข้าใหม่ทั้งห้อง → default เหตุผล "นักเรียนใหม่ยังไม่มีบัตร"
+        reasonCode.value = 'new_student'
         reasonDetail.value = ''
-        // ลดภาระครู: ผู้แจ้ง default เป็นครูประจำชั้นของห้องนี้
         requesterName.value = props.defaultRequesterName || ''
         requesterPhone.value = ''
         errorMessage.value = ''
         isSubmitting.value = false
+        showAllStudents.value = false
     }
 })
 
 const handleSubmit = async () => {
-    if (!props.student || !props.student.student_id) {
-        errorMessage.value = 'ข้อมูลนักเรียนไม่ถูกต้อง'
+    if (!props.students.length) {
+        errorMessage.value = 'ยังไม่ได้เลือกนักเรียน'
         return
     }
     if (detailRequired.value && !reasonDetail.value.trim()) {
@@ -57,14 +54,14 @@ const handleSubmit = async () => {
     errorMessage.value = ''
     isSubmitting.value = true
     try {
-        await props.submitRequest({
-            student_id: props.student.student_id,
+        const result = await props.submitBulk({
+            student_ids: props.students.map(s => s.student_id),
             reason_code: reasonCode.value,
             reason: reasonDetail.value.trim() || null,
             requester_name: requesterName.value.trim() || null,
             requester_phone: requesterPhone.value.trim() || null,
         })
-        emit('submitted')
+        emit('submitted', result)
         emit('close')
     } catch (error: any) {
         errorMessage.value = error?.data?.message || 'ส่งคำร้องไม่สำเร็จ'
@@ -75,24 +72,36 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-    <Dialog as="div" :open="open" @close="emit('close')" class="relative z-50">
+    <Dialog as="div" :open="open" @close="!isSubmitting && emit('close')" class="relative z-50">
         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" aria-hidden="true" />
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <DialogPanel class="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-gray-100 overflow-hidden transform transition-all">
+            <DialogPanel class="w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl border border-gray-100 overflow-hidden transform transition-all max-h-[90vh] overflow-y-auto">
                 <div class="flex items-center gap-3 border-b border-gray-100 pb-4 mb-4">
                     <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
-                        <Icon icon="heroicons:credit-card" class="w-6 h-6" />
+                        <Icon icon="heroicons:user-group" class="w-6 h-6" />
                     </div>
                     <div>
-                        <DialogTitle class="text-lg font-bold text-gray-900">ยื่นคำร้องขอทำบัตรนักเรียน</DialogTitle>
-                        <p class="text-xs text-gray-500">เลือกเหตุผลจากรายการ ระบบจะจัดประเภทคำร้องให้อัตโนมัติ</p>
+                        <DialogTitle class="text-lg font-bold text-gray-900">ส่งคำร้องทำบัตรหลายคน</DialogTitle>
+                        <p class="text-xs text-gray-500">เหตุผลและผู้แจ้งชุดเดียวกันจะใช้กับนักเรียนทุกคนที่เลือก</p>
                     </div>
                 </div>
 
-                <div v-if="student" class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-150">
-                    <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider">นักเรียน</div>
-                    <div class="text-base font-bold text-gray-800">{{ student.full_name_thai }}</div>
-                    <div class="text-xs text-gray-500">รหัสประจำตัว: {{ student.student_number }}</div>
+                <!-- รายชื่อที่เลือก -->
+                <div class="mb-4 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                    <div class="flex items-center justify-between">
+                        <div class="text-xs text-blue-500 font-semibold uppercase tracking-wider">นักเรียนที่เลือก</div>
+                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-600 text-white">{{ students.length }} คน</span>
+                    </div>
+                    <ul class="mt-2 space-y-0.5 text-sm text-gray-700">
+                        <li v-for="s in previewStudents" :key="s.student_id" class="flex items-center gap-1.5">
+                            <Icon icon="heroicons:check-circle-solid" class="w-4 h-4 text-blue-500 flex-shrink-0" />
+                            {{ s.full_name_thai }}
+                        </li>
+                    </ul>
+                    <button v-if="students.length > 5" @click="showAllStudents = !showAllStudents"
+                        class="mt-1.5 text-xs font-medium text-blue-600 hover:underline">
+                        {{ showAllStudents ? 'ย่อรายชื่อ' : `ดูอีก ${students.length - 5} คน` }}
+                    </button>
                 </div>
 
                 <div v-if="errorMessage" class="mb-4 px-3 py-2.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg flex items-start gap-2">
@@ -160,7 +169,7 @@ const handleSubmit = async () => {
                     <button @click="handleSubmit" :disabled="isSubmitting"
                         class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-1.5">
                         <Icon v-if="isSubmitting" icon="eos-icons:bubble-loading" class="w-4 h-4" />
-                        <span>{{ isSubmitting ? 'กำลังส่ง...' : 'ส่งคำร้อง' }}</span>
+                        <span>{{ isSubmitting ? 'กำลังส่ง...' : `ส่งคำร้อง ${students.length} คน` }}</span>
                     </button>
                 </div>
             </DialogPanel>

@@ -8,10 +8,38 @@ import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
 const props = defineProps({
     studentInfo: { type: Object, required: true },
     canManage: { type: Boolean, default: false },
-    canRequest: { type: Boolean, default: false }
+    canRequest: { type: Boolean, default: false },
+    selectMode: { type: Boolean, default: false },
+    selected: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['transfer', 'remove', 'request'])
+const emit = defineEmits(['transfer', 'remove', 'request', 'toggle-select'])
+
+// คำร้องทำบัตรที่ค้างอยู่ของนักเรียนคนนี้ (มาจาก active_card_request ใน API)
+const activeRequest = computed(() => props.studentInfo.active_card_request || null)
+
+const requestStatusLabel = computed(() => {
+    switch (activeRequest.value?.status) {
+        case 'pending': return 'ส่งคำร้องแล้ว • รอตรวจสอบ'
+        case 'approved': return 'อนุมัติแล้ว • รอจัดทำบัตร'
+        case 'in_progress': return 'กำลังจัดทำบัตร'
+        default: return ''
+    }
+})
+
+const requestStatusClass = computed(() => {
+    switch (activeRequest.value?.status) {
+        case 'pending': return 'bg-amber-50 text-amber-700 border-amber-200'
+        case 'approved': return 'bg-blue-50 text-blue-700 border-blue-200'
+        case 'in_progress': return 'bg-violet-50 text-violet-700 border-violet-200'
+        default: return 'bg-gray-50 text-gray-600 border-gray-200'
+    }
+})
+
+const requestedAtText = computed(() => {
+    if (!activeRequest.value?.requested_at) return ''
+    return new Date(activeRequest.value.requested_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+})
 
 const isActionMenuOpen = ref(false)
 
@@ -199,11 +227,16 @@ const studentPrefixName = (prefix) => {
                             <Icon icon="heroicons:user-minus" class="w-4 h-4" />
                             นำออกจากห้อง
                         </button>
-                        <button v-if="canRequest" @click="isActionMenuOpen = false; emit('request', studentInfo)"
+                        <button v-if="canRequest && !activeRequest" @click="isActionMenuOpen = false; emit('request', studentInfo)"
                             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 text-left">
                             <Icon icon="heroicons:credit-card" class="w-4.5 h-4.5 text-blue-600" />
                             ขอทำบัตรใหม่
                         </button>
+                        <div v-else-if="canRequest && activeRequest"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-amber-700 bg-amber-50/60 cursor-default">
+                            <Icon icon="heroicons:clock" class="w-4 h-4" />
+                            {{ requestStatusLabel }}
+                        </div>
                     </div>
                 </div>
                 <div class="absolute z-10 top-6 md:top-[52px] right-2 text-white bg-blue-700 px-2 py-1 text-end rounded-md">
@@ -379,21 +412,47 @@ const studentPrefixName = (prefix) => {
                     <Icon icon="heroicons:identification" class="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <span class="truncate">จัดการบัตรของ <span class="font-semibold text-gray-700">{{ displayFullNameThai }}</span></span>
                 </div>
-                <button v-if="canManage" @click="emit('transfer', studentInfo)"
-                    class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition shadow-sm">
-                    <Icon icon="heroicons:arrow-right-circle" class="w-4 h-4" />
-                    ย้ายห้อง
-                </button>
-                <button v-if="canManage" @click="emit('remove', studentInfo)"
-                    class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition shadow-sm">
-                    <Icon icon="heroicons:user-minus" class="w-4 h-4" />
-                    นำออกจากห้อง
-                </button>
-                <button v-if="canRequest" @click="emit('request', studentInfo)"
-                    class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm">
-                    <Icon icon="heroicons:credit-card" class="w-4 h-4" />
-                    ขอทำบัตรใหม่
-                </button>
+                <!-- โหมดเลือกหลายคน: checkbox แทนปุ่มรายคน -->
+                <template v-if="selectMode && canRequest">
+                    <label v-if="!activeRequest"
+                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border cursor-pointer transition shadow-sm select-none"
+                        :class="selected ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'">
+                        <input type="checkbox" class="sr-only" :checked="selected" @change="emit('toggle-select', studentInfo)" />
+                        <Icon :icon="selected ? 'heroicons:check-circle-solid' : 'heroicons:plus-circle'" class="w-4 h-4" />
+                        {{ selected ? 'เลือกแล้ว' : 'เลือกส่งคำร้อง' }}
+                    </label>
+                    <span v-else class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border"
+                        :class="requestStatusClass">
+                        <Icon icon="heroicons:clock" class="w-4 h-4" />
+                        {{ requestStatusLabel }}
+                    </span>
+                </template>
+
+                <template v-else>
+                    <button v-if="canManage" @click="emit('transfer', studentInfo)"
+                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition shadow-sm">
+                        <Icon icon="heroicons:arrow-right-circle" class="w-4 h-4" />
+                        ย้ายห้อง
+                    </button>
+                    <button v-if="canManage" @click="emit('remove', studentInfo)"
+                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition shadow-sm">
+                        <Icon icon="heroicons:user-minus" class="w-4 h-4" />
+                        นำออกจากห้อง
+                    </button>
+                    <button v-if="canRequest && !activeRequest" @click="emit('request', studentInfo)"
+                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm">
+                        <Icon icon="heroicons:credit-card" class="w-4 h-4" />
+                        ขอทำบัตรใหม่
+                    </button>
+                    <span v-else-if="canRequest && activeRequest"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border"
+                        :class="requestStatusClass"
+                        :title="requestedAtText ? `ส่งคำร้องเมื่อ ${requestedAtText}` : ''">
+                        <Icon icon="heroicons:clock" class="w-4 h-4" />
+                        {{ requestStatusLabel }}
+                        <span v-if="requestedAtText" class="opacity-70">({{ requestedAtText }})</span>
+                    </span>
+                </template>
             </div>
         </div>
     </div>

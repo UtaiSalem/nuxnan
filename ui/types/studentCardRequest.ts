@@ -1,5 +1,26 @@
 export type StudentCardRequestStatus = 'pending' | 'approved' | 'rejected' | 'in_progress' | 'completed' | 'cancelled'
 export type StudentCardRequestType = 'first_issue' | 'replacement' | 'renewal'
+export type StudentCardRequestReason = 'lost' | 'damaged' | 'expired' | 'name_changed' | 'photo_outdated' | 'new_student' | 'other'
+
+/** ตัวเลือกเหตุผลใน dropdown — ต้องตรงกับ App\Enums\StudentCardRequestReason ฝั่ง Laravel */
+export const STUDENT_CARD_REQUEST_REASONS: { value: StudentCardRequestReason; label: string }[] = [
+  { value: 'lost', label: 'บัตรหาย' },
+  { value: 'damaged', label: 'บัตรชำรุด' },
+  { value: 'expired', label: 'บัตรหมดอายุ' },
+  { value: 'name_changed', label: 'เปลี่ยนชื่อ–สกุล' },
+  { value: 'photo_outdated', label: 'รูปถ่ายไม่เป็นปัจจุบัน' },
+  { value: 'new_student', label: 'นักเรียนใหม่ยังไม่มีบัตร' },
+  { value: 'other', label: 'อื่นๆ (ระบุรายละเอียด)' },
+]
+
+/** สรุปคำร้องที่ยังค้างอยู่ของนักเรียน แนบมากับรายชื่อนักเรียนในห้อง */
+export interface ActiveCardRequestSummary {
+  id: number
+  status: StudentCardRequestStatus
+  request_type: StudentCardRequestType
+  reason_code: StudentCardRequestReason | null
+  requested_at: string | null
+}
 
 export interface HomeroomTeacher {
   id: number
