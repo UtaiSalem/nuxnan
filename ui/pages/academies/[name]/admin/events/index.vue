@@ -8,7 +8,7 @@ import EventFormModal from '~/components/academy/events/EventFormModal.vue'
 import EventTypeBadge from '~/components/academy/events/EventTypeBadge.vue'
 import { schoolEventTypesByGroup } from '~/constants/schoolEventTypes'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'main' })
 
 const route = useRoute()
 const api = useApi()

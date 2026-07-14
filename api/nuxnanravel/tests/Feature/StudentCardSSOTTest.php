@@ -46,7 +46,7 @@ class StudentCardSSOTTest extends TestCase
             'user_id' => $admin->id,
             'academy_id' => $academy->id,
             'role' => 'admin',
-            'status' => 'active',
+            'status' => 2,
         ]);
 
         $student = Student::create([
@@ -61,11 +61,20 @@ class StudentCardSSOTTest extends TestCase
             'status' => 'active',
         ]);
 
+        $studentRole = \App\Models\AcademyRole::create([
+            'academy_id' => $academy->id,
+            'name' => 'student-local',
+            'display_name_th' => 'นักเรียน',
+            'permissions' => ['students.view'],
+            'is_active' => true,
+        ]);
+
         AcademyMember::create([
             'user_id' => $owner->id,
             'academy_id' => $academy->id,
             'role' => 'student',
-            'status' => 'active',
+            'academy_role_id' => $studentRole->id,
+            'status' => 2,
         ]);
 
         $year = AcademicYear::create([

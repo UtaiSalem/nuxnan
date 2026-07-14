@@ -6,6 +6,15 @@
 
 ---
 
+## 2026-07-14 - Diagnosis plan: academy admin student-cards page is blank
+
+- User reports `/academies/{name}/admin/student-cards` renders no visible data.
+- Frontend entry is `ui/pages/academies/[name]/admin/student-cards/index.vue`. Initial load is a serial chain: `GET /api/academies/{name}` -> `GET /api/academies/{id}/my-role` -> permission check -> `GET /api/academies/{id}/student-cards/statistics`. The page only renders its main content after `isLoading` becomes false and has no user-visible error state; any failed request leaves zeroed stats and no level tabs, which appears blank.
+- The page does not call `fetchStudents()` on initial load. The default `rooms` mode depends on `statistics.byLevel` to create room tabs; students are fetched only after clicking a room. List data is fetched only after switching to list mode.
+- Backend routes are present in `api/nuxnanravel/routes/learn/academy-student-card.php` and protected by `auth:api` plus `academy.permission:students.manage` for admin endpoints. Statistics itself is academy-scoped and returns `statistics.byLevel` / `sectionsByLevel`.
+- Likely investigation order: browser Network/Console status for academy, my-role, statistics; verify authenticated user has `students.manage`; verify academy ID resolution from the Thai slug; verify `student_cards.academy_id`, active status, and class-level data; then test room endpoint and list endpoint independently.
+- Planned implementation (after approval): add explicit page-level error/empty states and retry; make initial load resilient and observable; decide whether initial list fetch is desired; align permission behavior with backend; add focused frontend/API regression coverage and authenticated browser smoke test. No code implementation was made in this turn.
+
 ## 1. บทวิเคราะห์แผนเดิมเทียบ codebase จริง
 
 ตรวจโค้ดจริงแล้ว **backend ของ Phase 1 มีอยู่แล้วประมาณ 80%** — แผนเดิมประเมินงานสูงเกินไปเพราะไม่ได้อ้างถึงของที่มีอยู่:
@@ -3471,3 +3480,49 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Academy post and announcement creation now accepts scope metadata, defaulting legacy records to academy scope.
 - Added `ScopedWorkspace.vue` and exposed it on department detail under the งานและเอกสาร tab. Existing `SchoolEvent`/event APIs and report/export infrastructure are reused rather than duplicated.
 - PHP syntax checks and Pint passed. Full Nuxt build still exceeds the local 120-second timeout after client transformation; authenticated browser, migration execution, and endpoint authorization tests remain required before production deployment.
+
+## 2026-07-14 - Diagnosis and refined plan: student-cards index loading & permission fixes
+
+- **Findings:**
+  - Page-level initial loading is serial and vulnerable: if `/academies/{name}` or `/my-role` or `/statistics` fails, the page shows all-zero metrics and empty content with no user-visible error state.
+  - Permission discrepancy: Sidebar checks `students.view` to show "บัตรนักเรียน", but index page list mode calls `/student-cards/admin/students` which requires `students.manage`. Users without `students.manage` get a silent 403 Forbidden.
+  - Action buttons like Import/Print are visible to everyone even if they lack `students.manage` permission.
+  - If statistics return empty (e.g. 0 active students), the levels array is empty, which renders no tabs and leaves the room grid completely blank.
+- **Intended files:**
+  - `ui/pages/academies/[name]/admin/student-cards/index.vue`
+- **Decisions:**
+  - Introduce `pageError` ref for page-level error state with a reload button.
+  - Introduce `isLoadingList` ref for local loading state in list mode.
+  - Implement fallback in `fetchStudents()`: check `can('students.manage')`. If true, call admin endpoint `/admin/students`; if false, fall back to public `/search` endpoint which performs same search but has no `students.manage` restriction.
+  - Protect actions ("พิมพ์บัตร", "นำเข้าข้อมูล") and List tab/mode by hiding them or applying permission alerts if the user lacks `students.manage`.
+  - Add overall Empty State if `stats.totalStudents === 0` after a successful load.
+- **Verification Plan:**
+  - Verify routing layout compatibility, page compilation, and role validation.
+  - Test browser display under different scenarios: user with `students.manage`, user with only `students.view`, and user with no roles (should redirect).
+  - Test empty database (0 student cards) and simulated network failure (failed API).
+
+## 2026-07-14 - Review of proposed student-cards bugfix plan
+
+- The referenced artifact `student_cards_bugfix_plan.md` was not present in the current workspace, so the review used the user's summarized findings plus the live page/routes/controller.
+- Important correction: `/student-cards/search` is not public; the entire academy student-card route group is behind `auth:api`. The plan must not describe it as an unauthenticated/public endpoint. Its authorization semantics must be explicitly verified before using it for users with only `students.view`.
+- The current backend route protects `/admin/students` with `academy.permission:students.manage`, while the page entry allows `students.view`. The final design must choose and document one of two contracts: (A) add/confirm a read-only permission-protected endpoint for `students.view`, or (B) restrict list mode and all student-card reads to `students.manage`. A frontend fallback alone is insufficient security design.
+- Expanded implementation sequence: establish permission matrix and endpoint contract first; add backend authorization tests before changing UI; then make the page load pipeline observable with typed page error, retry, and independent loading states; then implement empty states and capability-based actions; finally verify response-shape compatibility and browser flows for admin, view-only, unauthorized, empty, and API-failure cases.
+- Additional risks to cover: `byLevel` and `sectionsByLevel` can be empty even when the page loads successfully; current room discovery is derived from card rows rather than classroom enrollment; list mode is lazy-loaded only after a user click; `isAdmin || can('students.manage')` must be treated as a UI convenience, never the sole security control; and imported/print/detail/request child routes need separate permission review.
+
+## 2026-07-14 - Implementation of Student Cards permission and state fixes
+
+- **Backend Route Scoping:** Scoped all read-only endpoints (statistics, search, levels, sections, profile, by-student, getStudentByRoom) under `students.view` permission, and write/admin endpoints under `students.manage` in [academy-student-card.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/routes/learn/academy-student-card.php). Wrapped all endpoints under the `academy.permission` middleware to prevent cross-academy/tenancy data leaks.
+- **Seeding & Feature Test Fixes:** Updated database seeders in [StudentCardSSOTTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/StudentCardSSOTTest.php) and [StudentCardByStudentTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/StudentCardByStudentTest.php) to use integer status `2` (approved member) instead of the string `'active'` (which resolves to `0` in tinyInteger columns, failing middleware checks). Also seeded a local `AcademyRole` with `students.view` permission for the student user to satisfy the new route permissions. Verified all 17 tests pass successfully.
+- **Frontend Refactoring:** Added `pageError`, `statsError`, `listError`, `roomError`, `isLoadingStats`, `isLoadingList`, and `hasLoaded` refs to [index.vue](file:///C:/wamp64/www/nuxnan/ui/pages/academies/%5Bname%5D/admin/student-cards/index.vue). Refactored page initialization to catch errors and display retry buttons.
+- **Frontend Fallbacks & Controls:** Scoped list endpoint to swap between `/admin/students` (manager) and `/search` (viewer) based on role capabilities. Restricted the print and import button actions to users with `students.manage` permission. Added comprehensive empty states for zero students, missing levels, local table loading/errors, and room loading/errors.
+
+## 2026-07-14 - School attendance layout consistency
+
+- The school-attendance list and detail routes explicitly used `layout: false`, unlike the canonical Academy Admin pages using `layout: 'main'`.
+- Changed both attendance route files to `layout: 'main'` so they render with the shared authenticated user area and Academy Admin shell.
+- Verification: reviewed the route metadata against sibling admin pages and ran `git diff --check`; existing unrelated whitespace warnings remain in previously modified files.
+
+## 2026-07-14 - Academy Admin layout consistency follow-up
+
+- Updated the main routes for gradebook, home visits, events, and store from `layout: false` to `layout: 'main'` so the linked admin pages use the same shared shell as the other Academy Admin pages.
+- Intentionally limited this pass to the four requested entry routes; specialized export/print and nested workflow routes retain their existing metadata pending separate visual review.

@@ -5,7 +5,7 @@
  */
 import { Icon } from '@iconify/vue'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'main' })
 
 const route = useRoute()
 const api = useApi()

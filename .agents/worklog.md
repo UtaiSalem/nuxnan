@@ -4,6 +4,27 @@
 **กฎ: ก่อนออกจากแต่ละที่ → อัพเดทไฟล์นี้แล้ว `git push`**
 **กฎ: มาถึงที่ใหม่ → `git pull` แล้วอ่านไฟล์นี้ก่อนเริ่มงาน**
 
+## 2026-07-14 — Student Card Security Hardening & Robust UI State Handling
+
+> ฟีเจอร์: การแก้ไขปัญหาหน้าจัดการบัตรนักเรียนว่างเปล่า/ไม่โหลดข้อมูล (Student Cards Page) พร้อมการจัดกลุ่มสิทธิ์อ่าน/เขียนฝั่ง Backend และการจัดการสถานะความคลาดเคลื่อน (Loading, Error, Empty) ครบถ้วน 100%
+
+### สถานะ: เสร็จสิ้น (ผ่านการทดสอบ 100% ทั้งหมด 17 เทสต์ 50 assertions และคอมไพล์ผ่าน)
+
+**สถิติการเปลี่ยนแปลง:**
+- **Backend Authorization Contract:** 
+  - แก้ไข [academy-student-card.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/routes/learn/academy-student-card.php) เพื่อจัดกลุ่ม Route อ่านข้อมูล (statistics, search, levels, sections, profile, by-student, getStudentByRoom) ให้ใช้สิทธิ์ `students.view` และหุ้มด้วย middleware `academy.permission` ป้องกันปัญหาสิทธิ์รั่วไหลข้ามโรงเรียน
+  - จัดกลุ่ม Route เขียน/จัดการข้อมูล (update, destroyPhoto, adminIndex, adminStudents, adminGetStudentByRoom, store, import, export, upload-photo, update-code, update-name-th/en, bulk-update/upload-photos, sync/commit/preview, audit) ให้ใช้สิทธิ์ `students.manage`
+- **Unit & Feature Tests Fixes:** 
+  - แก้ไข database seeding ใน [StudentCardSSOTTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/StudentCardSSOTTest.php) และ [StudentCardByStudentTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/StudentCardByStudentTest.php) จากสถานะ `'status' => 'active'` ให้เป็นสถานะตัวเลข `2` (approved member) เพื่อให้ผ่าน middleware ตรวจสอบสิทธิ์ของ Laravel
+  - ทำการ Seed ข้อมูล `AcademyRole` ที่ผูกสิทธิ์ `students.view` ให้แก่ผู้ใช้งานบทบาทนักเรียน (`$owner`) เพื่อความเข้ากันได้ของการจำลองการเข้าถึงระบบ
+  - รันการทดสอบ `php artisan test --filter=StudentCard` แล้วผ่านการทดสอบทั้งหมด (17 Passed, 50 Assertions)
+- **Frontend State Handling & UI Enhancements:**
+  - แก้ไขไฟล์ [index.vue](file:///C:/wamp64/www/nuxnan/ui/pages/academies/%5Bname%5D/admin/student-cards/index.vue) โดยการเพิ่ม refs `pageError`, `statsError`, `listError`, `roomError`, `isLoadingStats`, `isLoadingList` และ `hasLoaded` เพื่อเก็บและประมวลผลกรณีเกิดความผิดพลาดในการเรียกใช้ API รายส่วน
+  - เพิ่มส่วนแสดงผล Error Boundary ขนาดใหญ่สำหรับหน้ารวมพร้อมปุ่ม **"ลองใหม่อีกครั้ง"** เมื่อการโหลดเริ่มต้นหน้าเว็บล้มเหลว
+  - เพิ่มสเตตัส Empty State ใน 4 รูปแบบ: โหลดสถิติไม่สำเร็จ (พร้อมปุ่มรีดึงข้อมูล), ไม่มีจำนวนนักเรียนเลย (พร้อมปุ่มนำเข้าข้อมูลเฉพาะแอดมินที่มีสิทธิ์เขียน), โครงสร้างระดับชั้น/ห้องเรียนเป็นค่าว่าง, และนักเรียนในห้องเรียนที่เลือกเป็นศูนย์
+  - ปรับปรุงการสลับสิทธิ์การค้นหารายชื่อระหว่าง `/admin/students` (สำหรับแอดมิน/ผู้จัดการ) และ `/search` (สำหรับครู/ผู้รับชมทั่วไป) พร้อมควบคุมสิทธิ์การเห็นปุ่ม "นำเข้าข้อมูล", "พิมพ์บัตร" และปุ่ม "แก้ไขข้อมูลนักเรียน" ให้มีสิทธิ์เฉพาะคนที่มี `students.manage` เท่านั้น
+- **Pint Formatting:** จัดรูปแบบโค้ดไฟล์ php ทั้งหมดด้วย Pint เรียบร้อยแล้ว
+
 ## 2026-07-14 — Scope Security Hardening, Workspace and Feed/Announcement Scope Filtering
 
 > ฟีเจอร์: การทำ Security Hardening และแก้ปัญหาข้อมูลรั่วไหล (Data Leakage) ของระบบฟีดข่าว ประกาศ และพื้นที่ขอบเขตงาน Scoped Workspace (departments & classrooms) พร้อมสร้างชุดทดสอบ PHPUnit ครบถ้วน 100%
