@@ -128,6 +128,8 @@ class AdminWalletController extends Controller
         $withdrawals = $query->orderBy('created_at', 'desc')
             ->paginate($perPage, ['*'], 'page', $page);
 
+        $withdrawals->getCollection()->transform(fn (WalletTransaction $withdrawal) => $this->withAdminDestinationDetails($withdrawal));
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -379,7 +381,24 @@ class AdminWalletController extends Controller
         // the maker-checker control depends on.
         $this->walletService->viewWithdrawal($transaction, $user);
 
-        return response()->json(['success' => true, 'data' => $transaction->refresh()]);
+        return response()->json(['success' => true, 'data' => $this->withAdminDestinationDetails($transaction->refresh())]);
+    }
+
+    /**
+     * Reveal the encrypted payout destination only to an authorized admin.
+     * The public metadata remains masked by design.
+     */
+    private function withAdminDestinationDetails(WalletTransaction $transaction): WalletTransaction
+    {
+        if ($transaction->destination_snapshot) {
+            try {
+                $transaction->setAttribute('destination_details', decrypt($transaction->destination_snapshot));
+            } catch (\Throwable $e) {
+                // Keep the masked metadata available if an old/corrupt snapshot cannot be decrypted.
+            }
+        }
+
+        return $transaction;
     }
 
     public function processWithdrawal(Request $request, int $transactionId): JsonResponse
