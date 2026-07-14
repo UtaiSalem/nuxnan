@@ -509,6 +509,9 @@ const isPromptPay = (request: any) =>
   request?.metadata?.destination_type === 'promptpay'
   || request?.metadata?.bank_account?.bank_name === 'promptpay'
 
+const getBankAccount = (request: any) =>
+  request?.destination_details || request?.metadata?.bank_account || {}
+
 // Format a PromptPay number for readability
 const formatPromptPay = (raw: string) => {
   const digits = (raw || '').replace(/\D/g, '')
@@ -651,7 +654,7 @@ onMounted(() => {
             </div>
 
             <!-- Bank / PromptPay Info (for withdrawals) -->
-            <div v-if="activeTab !== 'deposits' && request.metadata?.bank_account" class="flex-1 min-w-0 bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
+            <div v-if="activeTab !== 'deposits' && getBankAccount(request).account_number" class="flex-1 min-w-0 bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
               <div class="flex items-center justify-between mb-1">
                 <p class="text-xs text-slate-400">
                   {{ isPromptPay(request) ? 'ข้อมูลพร้อมเพย์' : 'ข้อมูลบัญชีธนาคาร' }}
@@ -668,15 +671,15 @@ onMounted(() => {
               <div class="space-y-1">
                 <p v-if="!isPromptPay(request)" class="text-sm font-medium text-slate-800 dark:text-white flex items-center gap-2">
                   <Icon icon="fluent:building-bank-24-regular" class="w-4 h-4 text-hopeui-info" />
-                  {{ getBankName(request.metadata.bank_account.bank_name) }}
+                  {{ getBankName(getBankAccount(request).bank_name) }}
                 </p>
                 <p class="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2 font-mono">
                   <Icon :icon="isPromptPay(request) ? 'fluent:phone-24-regular' : 'fluent:document-number-24-regular'" class="w-4 h-4 text-slate-400" />
-                  {{ isPromptPay(request) ? formatPromptPay(request.metadata.bank_account.account_number) : request.metadata.bank_account.account_number }}
+                  {{ isPromptPay(request) ? formatPromptPay(getBankAccount(request).account_number) : getBankAccount(request).account_number }}
                 </p>
                 <p class="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
                   <Icon icon="fluent:person-24-regular" class="w-4 h-4 text-slate-400" />
-                  {{ request.metadata.bank_account.account_name }}
+                  {{ getBankAccount(request).account_name }}
                 </p>
               </div>
             </div>
@@ -853,7 +856,7 @@ onMounted(() => {
               <!-- Section Right: Bank / Payout details -->
               <div class="space-y-4">
                 <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">ปลายทางบัญชีผู้รับเงิน</h4>
-                <div v-if="selectedRequestDetails.metadata?.bank_account" class="bg-slate-50 dark:bg-slate-900/20 rounded-2xl p-4 space-y-3">
+                <div v-if="getBankAccount(selectedRequestDetails).account_number" class="bg-slate-50 dark:bg-slate-900/20 rounded-2xl p-4 space-y-3">
                   <div class="flex justify-between items-center">
                     <span class="text-xs font-semibold px-2 py-0.5 rounded-full" :class="isPromptPay(selectedRequestDetails) ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-300'">
                       {{ isPromptPay(selectedRequestDetails) ? 'พร้อมเพย์' : 'บัญชีธนาคาร' }}
@@ -863,16 +866,16 @@ onMounted(() => {
                   <div class="space-y-2 text-sm">
                     <div v-if="!isPromptPay(selectedRequestDetails)" class="flex justify-between">
                       <span class="text-slate-500 text-xs">ธนาคาร:</span>
-                      <span class="text-slate-800 dark:text-white font-medium">{{ getBankName(selectedRequestDetails.metadata.bank_account.bank_name) }}</span>
+                      <span class="text-slate-800 dark:text-white font-medium">{{ getBankName(getBankAccount(selectedRequestDetails).bank_name) }}</span>
                     </div>
                     <div class="flex justify-between items-center">
                       <span class="text-slate-500 text-xs">เลขบัญชี/เบอร์:</span>
                       <div class="flex items-center gap-1.5 font-mono">
                         <span class="text-slate-800 dark:text-white font-semibold">
-                          {{ isPromptPay(selectedRequestDetails) ? formatPromptPay(selectedRequestDetails.metadata.bank_account.account_number) : selectedRequestDetails.metadata.bank_account.account_number }}
+                          {{ isPromptPay(selectedRequestDetails) ? formatPromptPay(getBankAccount(selectedRequestDetails).account_number) : getBankAccount(selectedRequestDetails).account_number }}
                         </span>
                         <button
-                          @click="copyToClipboard(selectedRequestDetails.metadata.bank_account.account_number, 'account_number')"
+                          @click="copyToClipboard(getBankAccount(selectedRequestDetails).account_number, 'account_number')"
                           class="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
                           title="คัดลอก"
                         >
@@ -882,7 +885,7 @@ onMounted(() => {
                     </div>
                     <div class="flex justify-between">
                       <span class="text-slate-500 text-xs">ชื่อบัญชี:</span>
-                      <span class="text-slate-800 dark:text-white font-semibold">{{ selectedRequestDetails.metadata.bank_account.account_name }}</span>
+                      <span class="text-slate-800 dark:text-white font-semibold">{{ getBankAccount(selectedRequestDetails).account_name }}</span>
                     </div>
                   </div>
                 </div>
