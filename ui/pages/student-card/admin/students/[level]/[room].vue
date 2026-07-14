@@ -4,12 +4,11 @@ import QRCodeVue3 from "qrcode-vue3"
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
-definePageMeta({ layout: false, middleware: ['auth'] })
+definePageMeta({ layout: false })
 
 const route = useRoute()
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
-const api = useApi()
 
 const level = computed(() => route.params.level)
 const room = computed(() => route.params.room)
@@ -19,11 +18,29 @@ useHead({ title: computed(() => `ข้อมูลนักเรียน - �
 const students = ref([])
 const isLoading = ref(true)
 const searchTerm = ref('')
+const requestFilter = ref('with_request') // 'all' | 'with_request' | 'without_request'
+
+const REQUEST_STATUS_META = {
+    pending: { label: 'รออนุมัติ', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+    approved: { label: 'อนุมัติแล้ว', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
+    in_progress: { label: 'กำลังจัดทำ', cls: 'bg-violet-100 text-violet-800 border-violet-200' },
+    completed: { label: 'เสร็จสิ้น', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    rejected: { label: 'ถูกปฏิเสธ', cls: 'bg-red-100 text-red-800 border-red-200' },
+    cancelled: { label: 'ยกเลิก', cls: 'bg-gray-100 text-gray-700 border-gray-200' },
+}
+const requestStatusMeta = (status) => REQUEST_STATUS_META[status] || { label: status || '-', cls: 'bg-gray-100 text-gray-700 border-gray-200' }
+
+const withRequestStudents = computed(() => students.value.filter(s => s.active_card_request))
+const withoutRequestStudents = computed(() => students.value.filter(s => !s.active_card_request))
 
 const filteredStudents = computed(() => {
-    if (!searchTerm.value) return students.value
+    let list = students.value
+    if (requestFilter.value === 'with_request') list = withRequestStudents.value
+    else if (requestFilter.value === 'without_request') list = withoutRequestStudents.value
+
+    if (!searchTerm.value) return list
     const term = searchTerm.value.toLowerCase()
-    return students.value.filter(s =>
+    return list.filter(s =>
         (s.first_name_thai && s.first_name_thai.toLowerCase().includes(term)) ||
         (s.student_number && s.student_number.toString().includes(term))
     )
@@ -32,7 +49,7 @@ const filteredStudents = computed(() => {
 const fetchStudents = async () => {
     isLoading.value = true
     try {
-        const response = await api.get(`/api/student-card/admin/students/${level.value}/${room.value}`)
+        const response = await $fetch(`${apiBase}/api/student-card/admin/students/${level.value}/${room.value}`)
         students.value = response.students || []
     } catch (error) {
         console.error('Error fetching students:', error)
@@ -134,6 +151,23 @@ const downloadCard = async (index, studentNumber) => {
                         </div>
                     </div>
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
+                        <div class="flex gap-2 flex-wrap">
+                            <button @click="requestFilter = 'with_request'"
+                                :class="requestFilter === 'with_request' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'"
+                                class="px-3 py-2 border rounded-lg text-sm font-medium transition">
+                                มีคำร้อง ({{ withRequestStudents.length }})
+                            </button>
+                            <button @click="requestFilter = 'without_request'"
+                                :class="requestFilter === 'without_request' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'"
+                                class="px-3 py-2 border rounded-lg text-sm font-medium transition">
+                                ไม่มีคำร้อง ({{ withoutRequestStudents.length }})
+                            </button>
+                            <button @click="requestFilter = 'all'"
+                                :class="requestFilter === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'"
+                                class="px-3 py-2 border rounded-lg text-sm font-medium transition">
+                                ทั้งหมด ({{ students.length }})
+                            </button>
+                        </div>
                         <div class="relative w-full sm:w-80">
                             <input type="text" v-model="searchTerm" placeholder="ค้นหาชื่อหรือรหัสนักเรียน..."
                                 class="w-full px-4 py-2 pr-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
@@ -170,8 +204,19 @@ const downloadCard = async (index, studentNumber) => {
             </div>
 
             <!-- Cards -->
+            <div v-else-if="filteredStudents.length === 0" class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-12">
+                <Icon icon="fluent:filter-24-regular" class="w-16 h-16 text-gray-300" />
+                <p class="mt-4 text-gray-500 text-lg">ไม่มีนักเรียนตรงตามตัวกรอง</p>
+            </div>
             <div v-else class="grid grid-cols-1 gap-4">
                 <div v-for="(student, index) in filteredStudents" :key="student.id">
+                    <div v-if="student.active_card_request" class="mb-2 flex items-center justify-center gap-2">
+                        <span :class="requestStatusMeta(student.active_card_request.status).cls"
+                            class="px-3 py-1 border rounded-full text-sm font-medium">
+                            คำร้อง: {{ requestStatusMeta(student.active_card_request.status).label }}
+                        </span>
+                        <span class="text-sm text-gray-500">{{ student.active_card_request.request_type }}</span>
+                    </div>
                     <div class="flex justify-center items-center">
                         <div :id="`card-${index}`" :style="cardBgStyle"
                             class="w-full aspect-[1.95/1.20] relative overflow-hidden rounded-2xl shadow-lg border border-gray-300">

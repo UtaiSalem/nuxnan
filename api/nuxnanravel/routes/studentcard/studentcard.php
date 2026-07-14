@@ -45,15 +45,21 @@ Route::prefix('student-card')->name('student-card.')->group(function () {
     });
 
     // Admin Functions (Public - with admin password verification per action)
-    Route::middleware('auth:api')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/', [StudentCardController::class, 'adminIndex'])->name('index');
-        Route::get('/students', [StudentCardController::class, 'adminStudents'])->name('students');
-        Route::get('/students/{level}/{room}', [StudentCardController::class, 'adminGetStudentByRoom'])->name('students.by-room');
+    Route::prefix('admin')->name('admin.')->group(function () {
+        // Public read-only listing (intentionally unauthenticated — matches public page access)
+        Route::middleware('throttle:60,1')->group(function () {
+            Route::get('/students/{level}/{room}', [StudentCardController::class, 'adminGetStudentByRoom'])->name('students.by-room');
+        });
 
-        // Admin actions (with inline password verification)
-        Route::post('/upload-photo/{student_card}', [StudentCardController::class, 'updateImage'])->name('upload-photo');
-        Route::patch('/update-code/{student_card}', [StudentCardController::class, 'updateStudentID'])->name('update-student-id');
-        Route::patch('/update-name-th/{student_card}', [StudentCardController::class, 'updateStudentNameTh'])->name('update-student-name-th');
-        Route::patch('/update-name-en/{student_card}', [StudentCardController::class, 'updateStudentNameEn'])->name('update-student-name-en');
+        Route::middleware('auth:api')->group(function () {
+            Route::get('/', [StudentCardController::class, 'adminIndex'])->name('index');
+            Route::get('/students', [StudentCardController::class, 'adminStudents'])->name('students');
+
+            // Admin actions (with inline password verification)
+            Route::post('/upload-photo/{student_card}', [StudentCardController::class, 'updateImage'])->name('upload-photo');
+            Route::patch('/update-code/{student_card}', [StudentCardController::class, 'updateStudentID'])->name('update-student-id');
+            Route::patch('/update-name-th/{student_card}', [StudentCardController::class, 'updateStudentNameTh'])->name('update-student-name-th');
+            Route::patch('/update-name-en/{student_card}', [StudentCardController::class, 'updateStudentNameEn'])->name('update-student-name-en');
+        });
     });
 });

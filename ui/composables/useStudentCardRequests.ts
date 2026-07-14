@@ -16,6 +16,21 @@ export interface BulkSubmitResultItem {
   message?: string
 }
 
+export interface PaginationMeta {
+  current_page: number
+  from: number | null
+  last_page: number
+  per_page: number
+  to: number | null
+  total: number
+}
+
+export interface PaginatedStudentCardRequests {
+  data: StudentCardRequest[]
+  meta?: PaginationMeta
+  links?: { first?: string, last?: string, prev?: string | null, next?: string | null }
+}
+
 export const useStudentCardRequests = (academyId: Ref<number | null>) => {
   const api = useApi()
   const base = computed(() => `/api/academies/${academyId.value}/student-card-requests`)
@@ -25,9 +40,9 @@ export const useStudentCardRequests = (academyId: Ref<number | null>) => {
   }
 
   return {
-    list: async (params = ''): Promise<{ data: StudentCardRequest[] }> => {
+    list: async (params = ''): Promise<PaginatedStudentCardRequests> => {
       requireAcademy()
-      return await api.get(`${base.value}${params ? `?${params}` : ''}`) as { data: StudentCardRequest[] }
+      return await api.get(`${base.value}${params ? `?${params}` : ''}`) as PaginatedStudentCardRequests
     },
     counts: async (): Promise<{ data: Record<string, number> }> => {
       requireAcademy()

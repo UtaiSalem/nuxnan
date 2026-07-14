@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\Learn\Student\Card\StudentCardRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:api')->prefix('academies/{academy}/student-card-requests')->group(function () {
-    Route::middleware('academy.permission:students.cards.request')->group(function () {
+    Route::middleware('academy.permission:students.cards.request,students.cards.produce')->group(function () {
         Route::get('my-classrooms', [StudentCardRequestController::class, 'myClassrooms']);
         Route::get('classrooms/{classroom}/students', [StudentCardRequestController::class, 'classroomStudents']);
         Route::post('/', [StudentCardRequestController::class, 'store']);

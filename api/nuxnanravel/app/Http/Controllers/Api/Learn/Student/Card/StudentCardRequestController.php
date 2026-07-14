@@ -26,18 +26,30 @@ class StudentCardRequestController extends Controller
     public function index(Request $request, Academy $academy)
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:pending,approved,rejected,in_progress,completed,cancelled'],
+            'status' => ['nullable', 'in:pending,approved,rejected,in_progress,completed,cancelled,active'],
             'priority' => ['nullable', 'in:normal,urgent'],
             'classroom_id' => ['nullable', 'integer'],
+            'academic_year_id' => ['nullable', 'integer'],
+            'grade_level' => ['nullable', 'string', 'max:50'],
+            'section' => ['nullable', 'string', 'max:50'],
             'search' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
         $query = StudentCardRequest::query()
             ->with(['requestedBy', 'classroom.homeroomTeacher:id,name,profile_photo_path', 'classroom.academicYear:id,name'])
             ->where('academy_id', $academy->id);
-        $query->when($validated['status'] ?? null, fn ($q, $value) => $q->where('status', $value));
+        $query->when($validated['status'] ?? null, function ($q, $value) {
+            if ($value === 'active') {
+                $q->whereIn('status', ['pending', 'approved', 'in_progress']);
+            } else {
+                $q->where('status', $value);
+            }
+        });
         $query->when($validated['priority'] ?? null, fn ($q, $value) => $q->where('priority', $value));
         $query->when($validated['classroom_id'] ?? null, fn ($q, $value) => $q->where('classroom_id', $value));
+        $query->when($validated['academic_year_id'] ?? null, fn ($q, $value) => $q->whereHas('classroom', fn ($c) => $c->where('academic_year_id', $value)));
+        $query->when($validated['grade_level'] ?? null, fn ($q, $value) => $q->where('grade_level', $value));
+        $query->when($validated['section'] ?? null, fn ($q, $value) => $q->where('section', $value));
         $query->when($validated['search'] ?? null, fn ($q, $value) => $q->where(function ($nested) use ($value) {
             $nested->where('full_name_snapshot', 'like', "%{$value}%")->orWhere('student_number_snapshot', 'like', "%{$value}%");
         }));
@@ -75,7 +87,8 @@ class StudentCardRequestController extends Controller
 
     public function classroomStudents(Request $request, Academy $academy, Classroom $classroom)
     {
-        abort_unless((int) $classroom->academy_id === (int) $academy->id && (int) $classroom->homeroom_teacher_id === (int) $request->user()->id, 403);
+        abort_unless((int) $classroom->academy_id === (int) $academy->id, 404);
+        abort_unless($this->canManageAnyClassroom($request, $academy) || (int) $classroom->homeroom_teacher_id === (int) $request->user()->id, 403);
         $classroom->load(['homeroomTeacher:id,name,profile_photo_path', 'academicYear:id,name'])
             ->loadCount(['classroomStudents as student_count' => fn ($query) => $query->active()]);
         $students = ClassroomStudent::query()->with(['student.studentCard', 'student.activeCardRequest'])
@@ -179,7 +192,33 @@ class StudentCardRequestController extends Controller
 
     private function ensureHomeroom(Request $request, Academy $academy, ?int $classroomId): void
     {
-        abort_unless($classroomId && Classroom::query()->whereKey($classroomId)->where('academy_id', $academy->id)
+        abort_unless($classroomId, 403);
+        $classroomInAcademy = Classroom::query()->whereKey($classroomId)->where('academy_id', $academy->id)->exists();
+        abort_unless($classroomInAcademy, 404);
+        if ($this->canManageAnyClassroom($request, $academy)) {
+            return;
+        }
+        abort_unless(Classroom::query()->whereKey($classroomId)->where('academy_id', $academy->id)
             ->where('homeroom_teacher_id', $request->user()->id)->exists(), 403);
+    }
+
+    private function canManageAnyClassroom(Request $request, Academy $academy): bool
+    {
+        $user = $request->user();
+        if (! $user) {
+            return false;
+        }
+        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+            return true;
+        }
+        if (method_exists($academy, 'isAdmin') && $academy->isAdmin($user)) {
+            return true;
+        }
+        $member = \App\Models\AcademyMember::where('user_id', $user->id)
+            ->where('academy_id', $academy->id)
+            ->where('status', 2)
+            ->first();
+
+        return $member?->academyRole?->hasAnyPermission(['students.cards.produce']) === true;
     }
 }
