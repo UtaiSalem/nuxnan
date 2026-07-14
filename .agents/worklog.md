@@ -4,6 +4,22 @@
 **กฎ: ก่อนออกจากแต่ละที่ → อัพเดทไฟล์นี้แล้ว `git push`**
 **กฎ: มาถึงที่ใหม่ → `git pull` แล้วอ่านไฟล์นี้ก่อนเริ่มงาน**
 
+## 2026-07-14 — Legacy Student Card 401 Fix & Telescope Sequence Migration
+
+> ฟีเจอร์/แก้ไข: แก้ไขปัญหาสิทธิ์ (401 Unauthorized) ในหน้าของครู/แอดมินสำหรับจัดการระดับชั้น/ห้องเรียน และแก้ไขโครงสร้างตาราง Telescope (`telescope_entries.sequence`) ที่ไม่มี auto-increment ซึ่งทำให้เกิด 500 error บนหน้าสาธารณะ
+
+### สถานะ: เสร็จสิ้น (อัปโหลดและทดสอบความถูกต้องของสคริปต์ไมเกรตแล้ว)
+
+**สถิติการเปลี่ยนแปลง:**
+- **Legacy Student Card 401 Fix:**
+  - อัปเดต [[room].vue](file:///C:/wamp64/www/nuxnan/ui/pages/student-card/admin/students/[level]/[room].vue) เพื่อเปลี่ยนมาใช้งาน `useApi()` แทน `$fetch` ตัวเดิม เพื่อให้แนบ JWT token ใน HTTP Header อัตโนมัติและจัดการ session refresh ได้อย่างถูกต้อง
+  - กำหนด `middleware: ['auth']` ใน `definePageMeta` เพื่อกรองผู้ใช้ที่ยังไม่ล็อกอิน
+- **Telescope Database Schema Fix:**
+  - สร้างไฟล์ Migration [2026_07_14_130000_repair_telescope_sequence_auto_increment.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/database/migrations/2026_07_14_130000_repair_telescope_sequence_auto_increment.php) สำหรับตรวจสอบและทำการแก้ไขตาราง `telescope_entries` คอลัมน์ `sequence` ให้เป็น `AUTO_INCREMENT` กรณีที่ยังไม่ได้กำหนด เพื่อแก้ปัญหา QueryException ที่ยิงผ่าน Telescope
+- **Formatting & Analysis:**
+  - รัน Laravel Pint เพื่อจัดระเบียบรูปแบบโค้ดไฟล์ migration ที่สร้างขึ้นใหม่
+  - ปรับปรุง [.agents/latest-analysis.md](file:///C:/wamp64/www/nuxnan/.agents/latest-analysis.md)
+
 ## 2026-07-14 — Student Card Security Hardening & Robust UI State Handling
 
 > ฟีเจอร์: การแก้ไขปัญหาหน้าจัดการบัตรนักเรียนว่างเปล่า/ไม่โหลดข้อมูล (Student Cards Page) พร้อมการจัดกลุ่มสิทธิ์อ่าน/เขียนฝั่ง Backend และการจัดการสถานะความคลาดเคลื่อน (Loading, Error, Empty) ครบถ้วน 100%

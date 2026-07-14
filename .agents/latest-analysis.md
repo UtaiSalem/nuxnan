@@ -3526,3 +3526,21 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 
 - Updated the main routes for gradebook, home visits, events, and store from `layout: false` to `layout: 'main'` so the linked admin pages use the same shared shell as the other Academy Admin pages.
 - Intentionally limited this pass to the four requested entry routes; specialized export/print and nested workflow routes retain their existing metadata pending separate visual review.
+## 2026-07-14 - Admin wallet withdrawal destination visibility
+
+- Findings: `WalletService` masks `metadata.bank_account.account_number`, while the full destination is retained in encrypted `destination_snapshot`. The Admin pending withdrawal API previously returned only the masked metadata.
+- Changes: `AdminWalletController` now decrypts and exposes `destination_details` only in authorized pending/list and detail responses. `ui/pages/nuxnan-admin/wallet/pending.vue` prefers this field for both cards and the detail modal, including copy-to-clipboard, with masked metadata as fallback for legacy records.
+- Verification: PHP syntax check and `git diff --check` passed. Frontend build/browser smoke test remains to be run.
+## 2026-07-14 - Diagnosis: public student-card request returns 500
+
+- The failing endpoint is `/api/student-card/{level}/{room}/requests`, implemented by `PublicStudentCardRequestController::submitRequest` and `StudentCardRequestService::createPublic`.
+- The latest Laravel log repeatedly reports `SQLSTATE[HY000]: General error: 1364 Field 'sequence' doesn't have a default value` while Telescope inserts into `telescope_entries`. This is a database/schema mismatch: the migration defines `sequence` as an auto-incrementing primary key, but the local table does not currently behave that way. Telescope failure can turn otherwise handled request responses into HTTP 500 during request termination.
+- The request flow also intentionally returns 403 when `student-card.public_requests` or academy `card_request_flow_enabled` is disabled, and 422 for invalid student/enrollment/duplicate request; these should be checked after Telescope is repaired.
+- No application code was changed during diagnosis. Proposed fix: inspect `SHOW CREATE TABLE telescope_entries`, reconcile the local schema with the existing Telescope migration (prefer a safe migration if this DB is shared), then retry the endpoint and inspect the actual JSON response.
+- Implemented migration `2026_07_14_130000_repair_telescope_sequence_auto_increment.php`; it detects the configured Telescope database and repairs `sequence` only when `AUTO_INCREMENT` is missing. Ran the migration successfully against the local database. PHP syntax check, Pint, and `git diff --check` passed.
+## 2026-07-14 - Fix legacy student-card admin room 401
+
+- The legacy page `ui/pages/student-card/admin/students/[level]/[room].vue` called `/api/student-card/admin/students/{level}/{room}` with raw `$fetch` and no JWT header, while the backend route is protected by `auth:api`.
+- Added `useAuthStore()` and sent `Authorization: Bearer ${authStore.token}` on the request. This aligns the page with the existing authenticated API patterns.
+- Verification: `git diff --check` planned; browser retry should confirm the endpoint now reaches authorization/business checks instead of returning 401.
+- Follow-up: direct `$fetch` with `authStore.token` still returned 401, indicating the legacy page could use a stale/expired cookie without the shared refresh flow. Replaced it with `useApi().get()` (which attaches the token and handles refresh) and added the page `auth` middleware, matching current authenticated pages. Browser must reload/restart the Nuxt dev bundle before retesting.

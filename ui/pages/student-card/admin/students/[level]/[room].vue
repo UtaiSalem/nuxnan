@@ -4,11 +4,12 @@ import QRCodeVue3 from "qrcode-vue3"
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: false, middleware: ['auth'] })
 
 const route = useRoute()
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
+const api = useApi()
 
 const level = computed(() => route.params.level)
 const room = computed(() => route.params.room)
@@ -31,7 +32,7 @@ const filteredStudents = computed(() => {
 const fetchStudents = async () => {
     isLoading.value = true
     try {
-        const response = await $fetch(`${apiBase}/api/student-card/admin/students/${level.value}/${room.value}`)
+        const response = await api.get(`/api/student-card/admin/students/${level.value}/${room.value}`)
         students.value = response.students || []
     } catch (error) {
         console.error('Error fetching students:', error)
