@@ -3544,3 +3544,22 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Added `useAuthStore()` and sent `Authorization: Bearer ${authStore.token}` on the request. This aligns the page with the existing authenticated API patterns.
 - Verification: `git diff --check` planned; browser retry should confirm the endpoint now reaches authorization/business checks instead of returning 401.
 - Follow-up: direct `$fetch` with `authStore.token` still returned 401, indicating the legacy page could use a stale/expired cookie without the shared refresh flow. Replaced it with `useApi().get()` (which attaches the token and handles refresh) and added the page `auth` middleware, matching current authenticated pages. Browser must reload/restart the Nuxt dev bundle before retesting.
+
+## 2026-07-14 - Add wallet convert-money-to-points menu card
+
+- Added an overview card in `ui/pages/Earn/Wallet.vue` that opens the existing `convert-to-points` tab.
+- Kept the points-to-money menu removed from Wallet; the conversion form remains available through points management.
+- Verification: `git diff --check` and targeted search for the new menu/card/form.
+## 2026-07-15 - Diagnosis and fix plan: course post emoji insert failure
+
+- **Finding:** `CoursePostController::store()` accepts HTML, Thai text, and emoji in `content`; Laravel's MySQL connection is already configured for `utf8mb4`, but the existing `course_posts` table/schema is not. MySQL rejects `📸` with error 1366 (`Incorrect string value`), wrapped by the controller as a generic 500.
+- **Decision:** Add a forward-only migration to convert the complete `course_posts` table to `utf8mb4_unicode_ci`. Do not edit `.env` or perform manual/destructive SQL outside migrations.
+- **Verification:** PHP syntax, Pint, diff check, and focused course-post tests where available. After deployment, run `php artisan migrate` and retry a post containing Thai text, emoji, and HTML.
+
+## 2026-07-15 - Diagnosis: student registry to student-card navigation does not load
+
+- **Scope:** User reports that navigating from `/academies/{name}/admin/students` to `/admin/student-cards` leaves the card page without data, while entering the card page from another admin page loads normally.
+- **Findings:** Both pages are nested child routes under `ui/pages/academies/[name]/admin.vue`, which owns the persistent `<NuxtPage />` and is not remounted during sibling navigation. The student-card page uses its own `onMounted(initializePage)` and its own `academyId` ref, independently fetching the academy and role before statistics. This makes route-transition timing and duplicate academy/role initialization the primary suspect; the page does not watch route/context changes or retry initialization if the child mounts during an incomplete parent transition.
+- **Relevant files:** `ui/pages/academies/[name]/admin.vue`, `ui/pages/academies/[name]/admin/students/index.vue`, `ui/pages/academies/[name]/admin/student-cards/index.vue`, and the API contract in `api/nuxnanravel/routes/learn/academy-student-card.php`.
+- **Next plan:** reproduce with browser/network logs, compare requests and console errors for direct load versus sibling navigation, then consolidate the child page on the parent-provided academy context or add a route-aware/watch-based initialization with cancellation/retry. Verify API response shapes and permissions before changing backend behavior.
+- **Verification plan:** focused browser smoke test for direct load, students → cards, cards → students → cards, hard refresh, and slow API timing; then `git diff --check` and Nuxt type/build checks if implementation is approved.
