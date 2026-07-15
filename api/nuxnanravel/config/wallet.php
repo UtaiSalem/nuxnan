@@ -23,11 +23,6 @@ return [
 
         // Minimum fee floor in THB — applied when the percentage is smaller.
         'fee_min' => (float) env('WALLET_WITHDRAW_FEE_MIN', 5),
-        'max_pending_requests' => (int) env('WALLET_WITHDRAW_MAX_PENDING', 1),
-        'daily_limit' => (float) env('WALLET_WITHDRAW_DAILY_LIMIT', 100000),
-        'monthly_limit' => (float) env('WALLET_WITHDRAW_MONTHLY_LIMIT', 500000),
-        'maker_checker_threshold' => (float) env('WALLET_WITHDRAW_MAKER_CHECKER_THRESHOLD', 10000),
-        'sla_hours' => (int) env('WALLET_WITHDRAW_SLA_HOURS', 48),
     ],
 
 ];

@@ -688,7 +688,7 @@ onMounted(async () => {
           กระเป๋าเงิน
         </h1>
         <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          จัดการเงินในกระเป๋า เติมเงิน ถอนเงิน โอนเงิน และแปลงแต้มเป็นเงิน
+          จัดการเงินในกระเป๋า เติมเงิน ถอนเงิน และโอนเงิน
         </p>
       </div>
 
@@ -738,12 +738,6 @@ onMounted(async () => {
               <Icon icon="mdi:star-circle" class="w-5 h-5 text-yellow-300" />
               <span>แต้มที่มี: <strong>{{ formatPoints(points) }}</strong> แต้ม</span>
             </div>
-            <button 
-              class="text-sm underline hover:no-underline"
-              @click="activeTab = 'convert'"
-            >
-              แปลงเป็นเงิน →
-            </button>
           </div>
         </div>
       </BaseCard>
@@ -768,7 +762,6 @@ onMounted(async () => {
             { key: 'deposit-requests', label: 'คำขอเติมเงิน', icon: 'mdi:clock-outline', badge: depositRequests.filter(r => r.status === 'pending').length },
             { key: 'withdraw', label: 'ถอนเงิน', icon: 'mdi:minus-circle' },
             { key: 'transfer', label: 'โอนเงิน', icon: 'mdi:send' },
-            { key: 'convert', label: 'แปลงแต้มเป็นเงิน', icon: 'mdi:swap-horizontal' },
             { key: 'convert-to-points', label: 'แปลงเงินเป็นแต้ม', icon: 'mdi:swap-horizontal-circle' },
             { key: 'history', label: 'ประวัติ', icon: 'mdi:history' },
           ]"
@@ -847,19 +840,20 @@ onMounted(async () => {
               <Icon icon="mdi:chevron-right" class="w-6 h-6 text-gray-400 ml-auto" />
             </div>
           </BaseCard>
-          
-          <BaseCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="activeTab = 'convert'">
+
+          <BaseCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="activeTab = 'convert-to-points'">
             <div class="flex items-center gap-4 p-2">
               <div class="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
-                <Icon icon="mdi:swap-horizontal" class="w-7 h-7 text-purple-500" />
+                <Icon icon="mdi:swap-horizontal-circle" class="w-7 h-7 text-purple-500" />
               </div>
               <div>
-                <h3 class="font-semibold text-gray-900 dark:text-white">แปลงแต้ม</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">แปลงแต้มเป็นเงิน</p>
+                <h3 class="font-semibold text-gray-900 dark:text-white">แปลงเงินเป็นแต้ม</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">ใช้เงินในกระเป๋าแลกเป็นแต้ม</p>
               </div>
               <Icon icon="mdi:chevron-right" class="w-6 h-6 text-gray-400 ml-auto" />
             </div>
           </BaseCard>
+
         </div>
         
         <!-- Recent Transactions -->
