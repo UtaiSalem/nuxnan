@@ -8,6 +8,12 @@ return new class extends Migration
     public function up(): void
     {
         $connection = config('telescope.storage.database.connection') ?: config('database.default');
+
+        // information_schema / AUTO_INCREMENT are MySQL-only; skip on sqlite (tests) etc.
+        if (DB::connection($connection)->getDriverName() !== 'mysql') {
+            return;
+        }
+
         $schema = DB::connection($connection)->getDatabaseName();
 
         $column = DB::connection($connection)->selectOne(
