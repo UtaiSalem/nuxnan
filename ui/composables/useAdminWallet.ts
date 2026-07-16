@@ -160,8 +160,12 @@ export const useAdminWallet = () => {
     return $fetch(`${apiBase}/api/admin/wallet/withdrawals/${transactionId}/process`, { method: 'POST', headers: { Authorization: `Bearer ${authStore.token}` } })
   }
 
-  const markWithdrawalPaid = async (transactionId: number, paymentReference: string) => {
-    return $fetch(`${apiBase}/api/admin/wallet/withdrawals/${transactionId}/paid`, { method: 'POST', headers: { Authorization: `Bearer ${authStore.token}` }, body: { payment_reference: paymentReference } })
+  // Backend requires a payout slip file (proof) — must be multipart/form-data
+  const markWithdrawalPaid = async (transactionId: number, paymentReference: string, proofFile: File) => {
+    const formData = new FormData()
+    formData.append('payment_reference', paymentReference)
+    formData.append('proof', proofFile)
+    return $fetch(`${apiBase}/api/admin/wallet/withdrawals/${transactionId}/paid`, { method: 'POST', headers: { Authorization: `Bearer ${authStore.token}` }, body: formData })
   }
 
   const markWithdrawalFailed = async (transactionId: number, reason: string) => {
