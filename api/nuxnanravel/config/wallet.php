@@ -18,8 +18,8 @@ return [
         // Minimum amount a user may withdraw (THB).
         'min_amount' => (float) env('WALLET_WITHDRAW_MIN_AMOUNT', 25),
 
-        // Percentage fee on real withdrawals (0.005 = 0.5%).
-        'fee_rate' => (float) env('WALLET_WITHDRAW_FEE_RATE', 0.005),
+        // Percentage fee on real withdrawals (0.01 = 1%).
+        'fee_rate' => (float) env('WALLET_WITHDRAW_FEE_RATE', 0.01),
 
         // Minimum fee floor in THB — applied when the percentage is smaller.
         'fee_min' => (float) env('WALLET_WITHDRAW_FEE_MIN', 5),

@@ -8,8 +8,8 @@ import { useAuthStore } from '~/stores/auth'
 /** Minimum withdrawal amount in THB */
 export const WITHDRAW_MIN_AMOUNT = 25
 
-/** Percentage fee rate (0.005 = 0.5%) */
-export const WITHDRAW_FEE_RATE = 0.005
+/** Percentage fee rate (0.01 = 1%) */
+export const WITHDRAW_FEE_RATE = 0.01
 
 /** Minimum fee floor in THB */
 export const WITHDRAW_FEE_MIN = 5

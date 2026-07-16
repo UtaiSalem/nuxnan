@@ -251,7 +251,7 @@ class WithdrawTest extends TestCase
     {
         [$user, $token] = $this->actingUser();
 
-        // 5000 * 0.5% = 25, above the 10 THB floor → fee = 25.
+        // 5000 * 1% = 50, above the 5 THB floor → fee = 50.
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->postJson('/api/wallet/withdraw', [
                 'amount' => 5000,
@@ -266,8 +266,8 @@ class WithdrawTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'data' => [
-                    'fee' => 25,
-                    'net_amount' => 4975,
+                    'fee' => 50,
+                    'net_amount' => 4950,
                 ],
             ]);
     }
@@ -276,10 +276,10 @@ class WithdrawTest extends TestCase
     {
         [$user, $token] = $this->actingUser();
 
-        // 3333 * 0.5% = 16.665 → rounded to 16.67, net = 3316.33.
+        // 3333.50 * 1% = 33.335 → rounded to 33.34, net = 3300.16.
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->postJson('/api/wallet/withdraw', [
-                'amount' => 3333,
+                'amount' => 3333.50,
                 'method' => 'bank_transfer',
                 'bank_account' => [
                     'bank_name' => 'kbank',
@@ -291,8 +291,8 @@ class WithdrawTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'data' => [
-                    'fee' => 16.67,
-                    'net_amount' => 3316.33,
+                    'fee' => 33.34,
+                    'net_amount' => 3300.16,
                 ],
             ]);
     }

@@ -179,11 +179,11 @@ class WalletReconciliationTest extends TestCase
     {
         $user = User::factory()->create(['wallet' => 5000]);
 
-        // 1001 * 0.005 = 5.005 -> rounds half-up to 5.01 (the classic float pitfall).
-        $tx = $this->wallet->withdraw($user, '1001', 'bank_transfer', $this->bank());
+        // 1000.50 * 0.01 = 10.005 -> rounds half-up to 10.01 (the classic float pitfall).
+        $tx = $this->wallet->withdraw($user, '1000.50', 'bank_transfer', $this->bank());
 
-        $this->assertSame('5.01', (string) $tx->fee);
-        $this->assertSame('995.99', (string) $tx->net_amount);
+        $this->assertSame('10.01', (string) $tx->fee);
+        $this->assertSame('990.49', (string) $tx->net_amount);
     }
 
     public function test_flagging_legacy_withdrawal_clears_refund_integrity(): void

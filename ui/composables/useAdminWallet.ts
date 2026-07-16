@@ -145,9 +145,9 @@ export const useAdminWallet = () => {
     return `${value.toFixed(2)}%`
   }
 
-  // Calculate withdrawal fee
+  // Calculate withdrawal fee — mirrors config/wallet.php (1% rate, 5 THB floor)
   const calculateFee = (amount: number) => {
-    return Math.round(Math.max(amount * 0.005, 5) * 100) / 100
+    return Math.round(Math.max(amount * 0.01, 5) * 100) / 100
   }
 
   // Calculate net amount after fee
