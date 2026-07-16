@@ -59,6 +59,15 @@ class StudentIntakeController extends Controller
             $query->whereHas('classroomEnrollments', fn ($q) => $q->where('classroom_id', $classroomId)->where('status', 'active'));
         }
 
+        if ($gradeLevel = $request->input('grade_level')) {
+            $query->whereHas('classroomEnrollments', fn ($q) => $q->where('status', 'active')
+                ->whereHas('classroom', fn ($c) => $c->where('grade_level', $gradeLevel)));
+        }
+
+        if ($request->boolean('unassigned')) {
+            $query->whereDoesntHave('classroomEnrollments', fn ($q) => $q->where('status', 'active'));
+        }
+
         if ($accountStatus = $request->input('account_status')) {
             $query->where('account_status', $accountStatus);
         }

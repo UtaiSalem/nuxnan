@@ -36,7 +36,7 @@ export const useStudentIntakeService = () => {
 
   const listStudents = async (
     academyId: string | number,
-    params: { page?: number; per_page?: number; search?: string; status?: string; classroom_id?: number; account_status?: string; sort_field?: string; sort_order?: string }
+    params: { page?: number; per_page?: number; search?: string; status?: string; classroom_id?: number; grade_level?: string; unassigned?: number; account_status?: string; sort_field?: string; sort_order?: string }
   ): Promise<StudentListResponse> => {
     const response = await api.get(`/api/academies/${academyId}/student-intakes/list`, { params })
     return response as any as StudentListResponse

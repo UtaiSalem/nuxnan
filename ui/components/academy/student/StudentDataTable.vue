@@ -53,7 +53,9 @@ const lazyParams = ref({
   sortOrder: -1,
   search: '',
   status: '',
-  accountStatus: ''
+  accountStatus: '',
+  gradeLevel: '',
+  classroomId: '' as '' | 'none' | number,
 })
 
 const searchInput = ref('')
@@ -73,6 +75,27 @@ const accountStatusOptions = [
   { label: 'เปิดแล้ว', value: 'active' },
 ]
 
+const gradeLevelOptions = computed(() => {
+  const grades = [...new Set(availableClassrooms.value.map(c => c.grade_level).filter((g): g is string => !!g))]
+  grades.sort((a, b) => a.localeCompare(b, 'th', { numeric: true }))
+  return grades
+})
+
+const classroomOptions = computed(() => {
+  const list = lazyParams.value.gradeLevel
+    ? availableClassrooms.value.filter(c => c.grade_level === lazyParams.value.gradeLevel)
+    : availableClassrooms.value
+  return [...list].sort((a, b) => a.display_name.localeCompare(b.display_name, 'th', { numeric: true }))
+})
+
+const onGradeChange = () => {
+  const selected = lazyParams.value.classroomId
+  if (typeof selected === 'number' && !classroomOptions.value.some(c => c.id === selected)) {
+    lazyParams.value.classroomId = ''
+  }
+  onFilterChange()
+}
+
 const fetchData = async () => {
   if (!props.academyId) return
   loading.value = true
@@ -83,6 +106,9 @@ const fetchData = async () => {
       search: lazyParams.value.search || undefined,
       status: lazyParams.value.status || undefined,
       account_status: lazyParams.value.accountStatus || undefined,
+      grade_level: lazyParams.value.gradeLevel || undefined,
+      classroom_id: typeof lazyParams.value.classroomId === 'number' ? lazyParams.value.classroomId : undefined,
+      unassigned: lazyParams.value.classroomId === 'none' ? 1 : undefined,
       sort_field: lazyParams.value.sortField,
       sort_order: lazyParams.value.sortOrder === 1 ? 'asc' : 'desc',
     })
@@ -245,8 +271,19 @@ const onActivateAccount = (student: StudentListItem) => {
   activationModalOpen.value = true
 }
 
+const filterUnassigned = () => {
+  lazyParams.value.gradeLevel = ''
+  lazyParams.value.classroomId = 'none'
+  onFilterChange()
+}
+
+defineExpose({ filterUnassigned })
+
 watch(() => props.academyId, (id) => {
-  if (id) fetchData()
+  if (id) {
+    fetchData()
+    fetchClassrooms()
+  }
 }, { immediate: true })
 </script>
 
@@ -264,6 +301,23 @@ watch(() => props.academyId, (id) => {
           class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         />
       </div>
+      <select
+        v-model="lazyParams.gradeLevel"
+        @change="onGradeChange"
+        class="px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
+      >
+        <option value="">ทุกระดับชั้น</option>
+        <option v-for="grade in gradeLevelOptions" :key="grade" :value="grade">{{ grade }}</option>
+      </select>
+      <select
+        v-model="lazyParams.classroomId"
+        @change="onFilterChange"
+        class="px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
+      >
+        <option value="">ทุกห้องเรียน</option>
+        <option value="none">ยังไม่มีห้องเรียน</option>
+        <option v-for="c in classroomOptions" :key="c.id" :value="c.id">{{ c.display_name }}</option>
+      </select>
       <select
         v-model="lazyParams.status"
         @change="onFilterChange"

@@ -26,6 +26,11 @@ const stats = ref({
 
 const isLoading = ref(true)
 const api = useApi()
+const studentTableRef = ref<InstanceType<typeof StudentDataTable> | null>(null)
+
+const filterUnassigned = () => {
+  studentTableRef.value?.filterUnassigned()
+}
 
 const fetchStats = async () => {
   if (!academyId.value) return
@@ -164,8 +169,13 @@ watch(academyId, (id) => {
         </div>
       </div>
 
-      <!-- Unassigned -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+      <!-- Unassigned (คลิกเพื่อกรองรายชื่อ) -->
+      <button
+        type="button"
+        @click="filterUnassigned"
+        class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm text-left hover:border-orange-300 dark:hover:border-orange-700 transition-colors"
+        title="กรองรายชื่อนักเรียนที่ยังไม่มีห้องเรียน"
+      >
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
             <Icon icon="fluent:class-24-regular" class="w-6 h-6 text-orange-600 dark:text-orange-400" />
@@ -180,7 +190,7 @@ watch(academyId, (id) => {
             </div>
           </div>
         </div>
-      </div>
+      </button>
 
       <!-- Pending Activation -->
       <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
@@ -202,6 +212,6 @@ watch(academyId, (id) => {
     </div>
 
     <!-- Student List -->
-    <StudentDataTable :academy-id="academyId" />
+    <StudentDataTable ref="studentTableRef" :academy-id="academyId" />
   </div>
 </template>
