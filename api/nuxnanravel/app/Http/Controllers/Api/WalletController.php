@@ -252,6 +252,107 @@ class WalletController extends Controller
     }
 
     /**
+     * List the authenticated user's withdrawal requests with their statuses.
+     */
+    public function myWithdrawals(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'User not authenticated'], 401);
+        }
+
+        $query = WalletTransaction::where('user_id', $user->id)
+            ->where('transaction_type', 'withdraw');
+
+        if ($request->filled('status')) {
+            $query->whereIn('status', explode(',', (string) $request->input('status')));
+        }
+
+        $withdrawals = $query->orderByDesc('created_at')
+            ->paginate((int) $request->input('per_page', 20), ['*'], 'page', (int) $request->input('page', 1));
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'withdrawals' => $withdrawals->items(),
+                'pagination' => [
+                    'current_page' => $withdrawals->currentPage(),
+                    'total_pages' => $withdrawals->lastPage(),
+                    'per_page' => $withdrawals->perPage(),
+                    'total_items' => $withdrawals->total(),
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Cancel the authenticated user's own pending withdrawal. Money is
+     * refunded back to the wallet by the service with a ledger entry.
+     */
+    public function cancelWithdrawal(int $id): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'User not authenticated'], 401);
+        }
+
+        $transaction = WalletTransaction::where('user_id', $user->id)
+            ->where('transaction_type', 'withdraw')
+            ->find($id);
+
+        if (! $transaction) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบคำขอถอนเงิน'], 404);
+        }
+
+        $ok = $this->walletService->cancelWithdrawal($transaction, $user);
+
+        if (! $ok) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ยกเลิกไม่ได้ — คำขอนี้ถูกรับไปตรวจสอบแล้ว หากต้องการยกเลิกกรุณาติดต่อผู้ดูแลระบบ',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ยกเลิกคำขอถอนเงินแล้ว เงินถูกคืนเข้ากระเป๋าเรียบร้อย',
+            'data' => [
+                'transaction_id' => $transaction->id,
+                'status' => $transaction->refresh()->status,
+            ],
+        ]);
+    }
+
+    /**
+     * Let the owner download the payout slip the admin attached when the
+     * withdrawal was paid.
+     */
+    public function myWithdrawalProof(int $id)
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'User not authenticated'], 401);
+        }
+
+        $transaction = WalletTransaction::where('user_id', $user->id)
+            ->where('transaction_type', 'withdraw')
+            ->find($id);
+
+        if (! $transaction) {
+            return response()->json(['success' => false, 'message' => 'ไม่พบคำขอถอนเงิน'], 404);
+        }
+
+        if (empty($transaction->payout_proof_path) || ! Storage::disk('local')->exists($transaction->payout_proof_path)) {
+            return response()->json(['success' => false, 'message' => 'ยังไม่มีหลักฐานการโอนเงินสำหรับรายการนี้'], 404);
+        }
+
+        return Storage::disk('local')->response($transaction->payout_proof_path, $transaction->payout_proof_original_name);
+    }
+
+    /**
      * Transfer money to another user.
      */
     public function transfer(Request $request): JsonResponse

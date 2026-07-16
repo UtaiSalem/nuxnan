@@ -55,6 +55,11 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/convert-to-points', [WalletController::class, 'convertToPoints']);
         Route::get('/transactions', [WalletController::class, 'transactions']);
 
+        // Withdrawal Routes (User)
+        Route::get('/withdrawals', [WalletController::class, 'myWithdrawals']);
+        Route::post('/withdrawals/{id}/cancel', [WalletController::class, 'cancelWithdrawal'])->whereNumber('id');
+        Route::get('/withdrawals/{id}/proof', [WalletController::class, 'myWithdrawalProof'])->whereNumber('id');
+
         // Deposit Request Routes (User)
         Route::post('/deposit-request', [WalletController::class, 'createDepositRequest']);
         Route::get('/deposit-requests', [WalletController::class, 'getDepositRequests']);

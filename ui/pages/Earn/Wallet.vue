@@ -28,6 +28,9 @@ const {
   getBalance,
   deposit,
   withdraw,
+  getMyWithdrawals,
+  cancelWithdrawal,
+  getWithdrawalProof,
   transfer,
   convertToPoints,
   getTransactions,
@@ -55,6 +58,14 @@ const transactionsLoading = ref(false)
 // Deposit Requests
 const depositRequests = ref<any[]>([])
 const depositRequestsLoading = ref(false)
+
+// My Withdrawals
+const myWithdrawals = ref<any[]>([])
+const myWithdrawalsLoading = ref(false)
+const activeWithdrawalStatuses = ['pending', 'under_review', 'approved', 'processing']
+const activeWithdrawalsCount = computed(() =>
+  myWithdrawals.value.filter(w => activeWithdrawalStatuses.includes(w.status)).length
+)
 
 // Tab state
 const activeTab = ref('overview') // 'overview' | 'deposit' | 'withdraw' | 'transfer' | 'convert' | 'convert-to-points' | 'history' | 'deposit-requests'
@@ -297,6 +308,77 @@ const loadDepositRequests = async () => {
   }
 }
 
+const loadMyWithdrawals = async () => {
+  try {
+    myWithdrawalsLoading.value = true
+    const data = await getMyWithdrawals({ per_page: 20 })
+    myWithdrawals.value = data?.withdrawals || []
+  } catch (err) {
+    console.error('Failed to load my withdrawals:', err)
+  } finally {
+    myWithdrawalsLoading.value = false
+  }
+}
+
+const handleCancelWithdrawal = async (transactionId: number) => {
+  if (!confirm('ต้องการยกเลิกคำขอถอนเงินนี้หรือไม่? เงินจะถูกคืนเข้ากระเป๋าทันที')) return
+
+  try {
+    isProcessing.value = true
+    await cancelWithdrawal(transactionId)
+    processSuccess.value = true
+    processMessage.value = 'ยกเลิกคำขอถอนเงินสำเร็จ เงินถูกคืนเข้ากระเป๋าแล้ว'
+    await Promise.all([getBalance(), loadMyWithdrawals(), loadTransactions()])
+  } catch (err: any) {
+    processSuccess.value = false
+    processMessage.value = err.message || 'เกิดข้อผิดพลาด'
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+const handleViewWithdrawalProof = async (transactionId: number) => {
+  try {
+    const blob = await getWithdrawalProof(transactionId)
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch (err: any) {
+    processSuccess.value = false
+    processMessage.value = 'ไม่สามารถเปิดหลักฐานการโอนเงินได้'
+  }
+}
+
+const getWithdrawalStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    pending: 'รอตรวจสอบ',
+    under_review: 'กำลังตรวจสอบ',
+    approved: 'อนุมัติแล้ว รอโอนเงิน',
+    processing: 'กำลังโอนเงิน',
+    paid: 'โอนเงินแล้ว',
+    completed: 'เสร็จสิ้น',
+    rejected: 'ถูกปฏิเสธ',
+    failed: 'โอนล้มเหลว (คืนเงินแล้ว)',
+    cancelled: 'ยกเลิกแล้ว'
+  }
+  return labels[status] || status
+}
+
+const getWithdrawalStatusClass = (status: string) => {
+  const classes: Record<string, string> = {
+    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    under_review: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+    approved: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+    processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    cancelled: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+}
+
 const handleCancelRequest = async (requestId: number) => {
   if (!confirm('ต้องการยกเลิกคำขอเติมเงินนี้หรือไม่?')) return
   
@@ -393,12 +475,12 @@ const handleWithdraw = async () => {
     })
     
     processSuccess.value = true
-    processMessage.value = `ส่งคำขอถอนเงิน ${formatMoney(withdrawForm.value.amount)} สำเร็จ!`
-    
-    // Refresh balance
-    await getBalance()
-    await loadTransactions()
-    
+    processMessage.value = `ส่งคำขอถอนเงิน ${formatMoney(withdrawForm.value.amount)} สำเร็จ! ติดตามสถานะได้ที่แท็บ "คำขอถอนเงิน"`
+
+    // Refresh balance and jump to the tracking tab
+    await Promise.all([getBalance(), loadTransactions(), loadMyWithdrawals()])
+    activeTab.value = 'withdrawals'
+
   } catch (err: any) {
     processSuccess.value = false
     processMessage.value = err.message || 'เกิดข้อผิดพลาด'
@@ -671,7 +753,8 @@ onMounted(async () => {
   await Promise.all([
     getBalance(),
     loadTransactions(),
-    loadDepositRequests()
+    loadDepositRequests(),
+    loadMyWithdrawals()
   ])
 })
 </script>
@@ -761,6 +844,7 @@ onMounted(async () => {
             { key: 'deposit', label: 'เติมเงิน', icon: 'mdi:plus-circle' },
             { key: 'deposit-requests', label: 'คำขอเติมเงิน', icon: 'mdi:clock-outline', badge: depositRequests.filter(r => r.status === 'pending').length },
             { key: 'withdraw', label: 'ถอนเงิน', icon: 'mdi:minus-circle' },
+            { key: 'withdrawals', label: 'คำขอถอนเงิน', icon: 'mdi:progress-clock', badge: activeWithdrawalsCount },
             { key: 'transfer', label: 'โอนเงิน', icon: 'mdi:send' },
             { key: 'convert-to-points', label: 'แปลงเงินเป็นแต้ม', icon: 'mdi:swap-horizontal-circle' },
             { key: 'history', label: 'ประวัติ', icon: 'mdi:history' },
@@ -1114,6 +1198,109 @@ onMounted(async () => {
             >
               เติมเงินเลย
             </button>
+          </div>
+        </div>
+      </BaseCard>
+
+      <!-- My Withdrawals -->
+      <BaseCard v-if="activeTab === 'withdrawals'">
+        <div class="p-2">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">คำขอถอนเงินของฉัน</h3>
+            <button
+              type="button"
+              class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-1"
+              :disabled="myWithdrawalsLoading"
+              @click="loadMyWithdrawals"
+            >
+              <Icon icon="mdi:refresh" class="w-4 h-4" :class="myWithdrawalsLoading ? 'animate-spin' : ''" />
+              รีเฟรช
+            </button>
+          </div>
+
+          <div v-if="myWithdrawalsLoading && myWithdrawals.length === 0" class="py-8 text-center">
+            <Icon icon="mdi:loading" class="w-8 h-8 text-primary-500 animate-spin mx-auto" />
+            <p class="text-gray-500 mt-2">กำลังโหลด...</p>
+          </div>
+
+          <div v-else-if="myWithdrawals.length > 0" class="space-y-4">
+            <div
+              v-for="w in myWithdrawals"
+              :key="w.id"
+              class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4"
+            >
+              <div class="flex items-start justify-between mb-3">
+                <div>
+                  <p class="font-semibold text-gray-900 dark:text-white">{{ formatMoney(w.amount) }}</p>
+                  <p class="text-xs text-gray-500">#{{ w.id }} · {{ formatDate(w.created_at) }}</p>
+                </div>
+                <span
+                  class="px-3 py-1 text-xs font-medium rounded-full"
+                  :class="getWithdrawalStatusClass(w.status)"
+                >
+                  {{ getWithdrawalStatusLabel(w.status) }}
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+                <div>
+                  <span class="text-gray-500 dark:text-gray-400">ช่องทาง:</span>
+                  <span class="ml-1 text-gray-900 dark:text-white">
+                    {{ w.destination_type === 'promptpay' || w.metadata?.destination_type === 'promptpay' ? 'พร้อมเพย์' : 'โอนเข้าธนาคาร' }}
+                  </span>
+                </div>
+                <div>
+                  <span class="text-gray-500 dark:text-gray-400">บัญชีปลายทาง:</span>
+                  <span class="ml-1 text-gray-900 dark:text-white font-mono">{{ w.metadata?.bank_account?.account_number || '-' }}</span>
+                </div>
+                <div>
+                  <span class="text-gray-500 dark:text-gray-400">ค่าธรรมเนียม:</span>
+                  <span class="ml-1 text-red-500">-{{ formatMoney(w.metadata?.fee || w.fee || 0) }}</span>
+                </div>
+                <div>
+                  <span class="text-gray-500 dark:text-gray-400">ยอดรับจริง:</span>
+                  <span class="ml-1 text-green-600 dark:text-green-400 font-semibold">{{ formatMoney(w.metadata?.net_amount ?? w.net_amount ?? w.amount) }}</span>
+                </div>
+                <div v-if="w.payment_reference" class="col-span-2">
+                  <span class="text-gray-500 dark:text-gray-400">เลขอ้างอิงการโอน:</span>
+                  <span class="ml-1 text-gray-900 dark:text-white font-mono">{{ w.payment_reference }}</span>
+                </div>
+              </div>
+
+              <div v-if="(w.status === 'rejected' || w.status === 'failed') && w.rejection_reason" class="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 mb-3">
+                <p class="text-sm text-red-700 dark:text-red-400">
+                  <Icon icon="mdi:alert-circle" class="w-4 h-4 inline mr-1" />
+                  เหตุผล: {{ w.rejection_reason }} (เงินถูกคืนเข้ากระเป๋าแล้ว)
+                </p>
+              </div>
+
+              <div class="flex items-center justify-end gap-2">
+                <button
+                  v-if="w.status === 'paid' && w.has_payout_proof"
+                  type="button"
+                  class="px-4 py-2 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                  @click="handleViewWithdrawalProof(w.id)"
+                >
+                  <Icon icon="mdi:receipt-text-check" class="w-4 h-4 inline mr-1" />
+                  ดูสลิปการโอนเงิน
+                </button>
+                <button
+                  v-if="w.status === 'pending'"
+                  type="button"
+                  class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  :disabled="isProcessing"
+                  @click="handleCancelWithdrawal(w.id)"
+                >
+                  <Icon icon="mdi:close-circle" class="w-4 h-4 inline mr-1" />
+                  ยกเลิกคำขอ
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="py-8 text-center text-gray-500 dark:text-gray-400">
+            <Icon icon="mdi:inbox-outline" class="w-12 h-12 mx-auto mb-3" />
+            <p>ยังไม่มีคำขอถอนเงิน</p>
           </div>
         </div>
       </BaseCard>

@@ -170,6 +170,83 @@ export const useWallet = () => {
   }
 
   /**
+   * List my withdrawal requests with statuses
+   */
+  const getMyWithdrawals = async (params: { status?: string, page?: number, per_page?: number } = {}) => {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const query = new URLSearchParams()
+      if (params.status) query.set('status', params.status)
+      if (params.page) query.set('page', String(params.page))
+      if (params.per_page) query.set('per_page', String(params.per_page))
+
+      const response = await $fetch(`${apiBase.value}/api/wallet/withdrawals?${query.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+        },
+      }) as any
+
+      if (response.success) {
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to load withdrawals')
+      }
+    } catch (err: any) {
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to load withdrawals'
+      error.value = msg
+      console.error('Get withdrawals error:', err)
+      throw new Error(msg)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Cancel my own pending withdrawal (refunds money back to wallet)
+   */
+  const cancelWithdrawal = async (transactionId: number) => {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const response = await $fetch(`${apiBase.value}/api/wallet/withdrawals/${transactionId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+        },
+      }) as any
+
+      if (response.success) {
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to cancel withdrawal')
+      }
+    } catch (err: any) {
+      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to cancel withdrawal'
+      error.value = msg
+      console.error('Cancel withdrawal error:', err)
+      throw new Error(msg)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Download/view the payout slip for my paid withdrawal
+   */
+  const getWithdrawalProof = async (transactionId: number): Promise<Blob> => {
+    const response = await $fetch(`${apiBase.value}/api/wallet/withdrawals/${transactionId}/proof`, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+      },
+      responseType: 'blob',
+    }) as Blob
+    return response
+  }
+
+  /**
    * Deduct money from wallet (for internal purchases/exams)
    */
   const deduct = async (data: {
@@ -489,6 +566,9 @@ export const useWallet = () => {
     getBalance,
     deposit,
     withdraw,
+    getMyWithdrawals,
+    cancelWithdrawal,
+    getWithdrawalProof,
     deduct,
     transfer,
     convertToPoints,

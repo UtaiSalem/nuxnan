@@ -14,6 +14,8 @@ class WalletTransaction extends Model
 
     protected $hidden = [
         'payout_proof_path',
+        'destination_snapshot',
+        'idempotency_key',
     ];
 
     protected $fillable = [
