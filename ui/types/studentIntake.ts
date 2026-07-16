@@ -101,7 +101,7 @@ export interface StudentListItem {
   status: string
   account_status: string | null
   created_at: string
-  classroom_students: Array<{
+  classroom_enrollments: Array<{
     id: number
     classroom_id: number
     status: string

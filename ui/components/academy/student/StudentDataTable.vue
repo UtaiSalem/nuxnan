@@ -125,7 +125,7 @@ const onFilterChange = () => {
 }
 
 const getClassroomName = (student: StudentListItem): string => {
-  const active = student.classroom_students?.find(cs => cs.status === 'active')
+  const active = student.classroom_enrollments?.find(cs => cs.status === 'active')
   if (!active?.classroom) return '-'
   const c = active.classroom
   if (c.grade_level && c.section) return `${c.grade_level}/${c.section}`
@@ -172,7 +172,7 @@ const toStudentSummary = (s: StudentListItem): StudentSummaryDTO => ({
 })
 
 const toCurrentEnrollment = (s: StudentListItem): ClassroomStudentDTO | null => {
-  const active = s.classroom_students?.find(cs => cs.status === 'active')
+  const active = s.classroom_enrollments?.find(cs => cs.status === 'active')
   if (!active) return null
   return {
     id: active.id,
