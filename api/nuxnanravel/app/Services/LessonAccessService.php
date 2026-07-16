@@ -190,13 +190,17 @@ class LessonAccessService
 
         return DB::transaction(function () use ($user, $lesson, $fee) {
             // ตัดเงิน
-            $transaction = $this->walletService->withdraw(
+            $transaction = $this->walletService->deductForPurchase(
                 $user,
-                $fee,
+                (string) $fee,
                 'lesson_purchase',
-                [],
-                "ซื้อบทเรียน: {$lesson->title}"
+                "ซื้อบทเรียน: {$lesson->title}",
+                ['lesson_id' => $lesson->id, 'course_id' => $lesson->course_id]
             );
+
+            if (! $transaction) {
+                return ['success' => false, 'message' => 'ยอดเงินในกระเป๋าไม่เพียงพอ'];
+            }
 
             // สร้าง access record
             LessonAccess::create([

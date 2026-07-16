@@ -120,17 +120,12 @@ class WalletController extends Controller
         ]);
 
         try {
-            // using WalletService to withdraw without bank account (internal deduction)
-            $transaction = $this->walletService->withdraw(
+            $transaction = $this->walletService->deductForPurchase(
                 $user,
-                $validated['amount'],
-                'internal_deduction',
-                [
-                    'bank_name' => 'Internal',
-                    'account_number' => 'N/A',
-                    'account_name' => 'Internal Deduction',
-                ],
-                $validated['reason']
+                (string) $validated['amount'],
+                $validated['reason'],
+                null,
+                $validated['metadata'] ?? []
             );
 
             if (! $transaction) {

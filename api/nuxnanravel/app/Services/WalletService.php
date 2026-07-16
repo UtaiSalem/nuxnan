@@ -54,10 +54,58 @@ class WalletService
     }
 
     /**
+     * Deduct money for an internal purchase (lesson unlock, coupon creation,
+     * exam fees, ...). Unlike withdraw(), this settles immediately: no fee,
+     * no locked_balance hold, no admin approval, and it does NOT count
+     * against the user's pending-withdrawal quota or withdraw limits.
+     */
+    public function deductForPurchase(User $user, string $amount, string $reason, ?string $description = null, array $metadata = []): ?WalletTransaction
+    {
+        return DB::transaction(function () use ($user, $amount, $reason, $description, $metadata) {
+            $user = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            $amount = bcround((string) $amount, 2);
+            $balanceBefore = (string) $user->wallet;
+
+            if (bccomp($balanceBefore, $amount, 2) < 0) {
+                Log::warning('Insufficient wallet balance for purchase', [
+                    'user_id' => $user->id,
+                    'required' => $amount,
+                    'available' => $balanceBefore,
+                    'reason' => $reason,
+                ]);
+
+                return null;
+            }
+
+            $balanceAfter = bcsub($balanceBefore, $amount, 2);
+            $user->update(['wallet' => $balanceAfter]);
+
+            return WalletTransaction::create([
+                'user_id' => $user->id,
+                'transaction_type' => 'purchase',
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'currency' => 'THB',
+                'description' => $description ?? $reason,
+                'metadata' => array_merge($metadata, ['reason' => $reason]),
+                'status' => 'completed',
+            ]);
+        });
+    }
+
+    /**
      * Withdraw money from user wallet
      */
     public function withdraw(User $user, string $amount, string $method, array $bankAccount, ?string $description = null, ?string $idempotencyKey = null): ?WalletTransaction
     {
+        // Internal spends must go through deductForPurchase() — they settle
+        // immediately and must not enter the withdrawal approval pipeline.
+        if (! in_array($method, ['bank_transfer', 'promptpay'], true)) {
+            throw new \InvalidArgumentException("withdraw() only supports payout methods, got '{$method}' — use deductForPurchase() for internal deductions");
+        }
+
         return DB::transaction(function () use ($user, $amount, $method, $bankAccount, $description, $idempotencyKey) {
             $user = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
 
@@ -70,11 +118,29 @@ class WalletService
 
             $activeStatuses = ['pending', 'under_review', 'approved', 'processing'];
             $maxPending = (int) config('wallet.withdraw.max_pending_requests', 1);
-            if ($maxPending > 0 && WalletTransaction::where('user_id', $user->id)
-                ->where('transaction_type', 'withdraw')
-                ->whereIn('status', $activeStatuses)
-                ->count() >= $maxPending) {
-                throw new \DomainException('A withdrawal is already pending');
+            if ($maxPending > 0) {
+                $blocking = WalletTransaction::where('user_id', $user->id)
+                    ->where('transaction_type', 'withdraw')
+                    ->whereIn('status', $activeStatuses)
+                    ->orderBy('id')
+                    ->get(['id', 'status', 'amount', 'created_at']);
+
+                if ($blocking->count() >= $maxPending) {
+                    $statusLabels = [
+                        'pending' => 'รอตรวจสอบ',
+                        'under_review' => 'กำลังตรวจสอบ',
+                        'approved' => 'อนุมัติแล้ว รอโอนเงิน',
+                        'processing' => 'กำลังโอนเงิน',
+                    ];
+                    $first = $blocking->first();
+                    $msg = sprintf(
+                        'คุณมีคำขอถอนเงิน #%d จำนวน %s บาท (สถานะ: %s) ที่ยังไม่เสร็จสิ้น กรุณารอให้ดำเนินการเสร็จหรือยกเลิกคำขอเดิมก่อนสร้างคำขอใหม่',
+                        $first->id,
+                        number_format((float) $first->amount, 2),
+                        $statusLabels[$first->status] ?? $first->status
+                    );
+                    throw new \DomainException($msg);
+                }
             }
 
             $amount = bcround((string) $amount, 2);
@@ -94,15 +160,13 @@ class WalletService
                 return null;
             }
 
-            // Calculate fee. Internal deductions incur no fee; real withdrawals use
-            // the configured percentage with a minimum floor (see config/wallet.php).
-            $fee = $method === 'internal_deduction'
-                ? '0.00'
-                : bcround(bcmax(
-                    bcmul($amount, (string) config('wallet.withdraw.fee_rate'), 6),
-                    (string) config('wallet.withdraw.fee_min'),
-                    6
-                ), 2);
+            // Calculate fee: the configured percentage with a minimum floor
+            // (see config/wallet.php).
+            $fee = bcround(bcmax(
+                bcmul($amount, (string) config('wallet.withdraw.fee_rate'), 6),
+                (string) config('wallet.withdraw.fee_min'),
+                6
+            ), 2);
             $netAmount = bcsub($amount, $fee, 2);
             $balanceAfter = bcsub($balanceBefore, $amount, 2);
 

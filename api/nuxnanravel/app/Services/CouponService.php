@@ -118,15 +118,10 @@ class CouponService
             }
 
             // Deduct amount from wallet
-            $transaction = $this->walletService->withdraw(
+            $transaction = $this->walletService->deductForPurchase(
                 $user,
-                $totalAmount,
+                (string) $totalAmount,
                 'coupon_creation',
-                [
-                    'bank_name' => 'Internal',
-                    'account_number' => 'N/A',
-                    'account_name' => 'Coupon Creation',
-                ],
                 $description ?? "สร้างคูปองเงิน {$quantity} ใบ"
             );
 
