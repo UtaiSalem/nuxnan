@@ -176,12 +176,13 @@ const openSlipModal = (request: any) => {
   showSlipModal.value = true
 }
 
-// Open paid modal
+// Open paid modal (also handles approve step when status is pending/under_review)
 const openPaidModal = (request: any) => {
   selectedRequest.value = request
   paymentReference.value = ''
   proofFile.value = null
   proofPreviewUrl.value = ''
+  adminNote.value = ''
   showPaidModal.value = true
   errorMessage.value = ''
 }
@@ -237,11 +238,14 @@ const isMakerCheckerRequired = computed(() => {
 
 const canCurrentAdminApprove = computed(() => {
   if (!selectedRequestDetails.value) return false
+  if (selectedRequestDetails.value.name_mismatch) return false
   if (isMakerCheckerRequired.value) {
     return !isCurrentAdminReviewer.value
   }
   return true
 })
+
+const hasNameMismatch = computed(() => !!selectedRequestDetails.value?.name_mismatch)
 
 // Approve request (handles deposit/withdrawal approve)
 const approveRequest = async () => {
@@ -329,8 +333,8 @@ const rejectRequest = async () => {
 
 // Submit Paid (marks withdrawal paid with payout proof)
 const submitPaid = async () => {
-  if (!selectedRequest.value || !paymentReference.value || !proofFile.value) {
-    errorMessage.value = 'กรุณากรอกเลขอ้างอิงและแนบรูปหลักฐานการโอน'
+  if (!selectedRequest.value || !proofFile.value) {
+    errorMessage.value = 'กรุณาแนบรูปหลักฐานการโอน'
     return
   }
 
@@ -339,9 +343,27 @@ const submitPaid = async () => {
   try {
     const token = useCookie('token')
     const reqId = selectedRequest.value.id
+    const status = selectedRequest.value.status
 
-    // 1. ถ้าสถานะเป็น approved ให้เรียก process ก่อน
-    if (selectedRequest.value.status === 'approved') {
+    // 1. If still pending/under_review, approve first (single-step admin flow)
+    if (status === 'pending' || status === 'under_review') {
+      const approveResponse = await $fetch(`${apiBase}/api/admin/wallet/withdrawals/${reqId}/approve`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+          'Content-Type': 'application/json'
+        },
+        body: { admin_note: adminNote.value }
+      })
+      if (!approveResponse.success) {
+        errorMessage.value = approveResponse.message || 'ไม่สามารถอนุมัติคำขอได้'
+        isPaidProcessing.value = false
+        return
+      }
+    }
+
+    // 2. If approved (or just approved above), move to processing
+    if (status === 'pending' || status === 'under_review' || status === 'approved') {
       const processResponse = await $fetch(`${apiBase}/api/admin/wallet/withdrawals/${reqId}/process`, {
         method: 'POST',
         headers: {
@@ -356,9 +378,11 @@ const submitPaid = async () => {
       }
     }
 
-    // 2. ส่ง paid request แบบ FormData
+    // 3. Send paid request with slip
     const formData = new FormData()
-    formData.append('payment_reference', paymentReference.value)
+    if (paymentReference.value) {
+      formData.append('payment_reference', paymentReference.value)
+    }
     formData.append('proof', proofFile.value)
 
     const paidResponse = await $fetch(`${apiBase}/api/admin/wallet/withdrawals/${reqId}/paid`, {
@@ -803,6 +827,27 @@ onMounted(() => {
               <span>{{ errorMessage }}</span>
             </div>
 
+            <!-- Name Mismatch Warning Banner -->
+            <div v-if="hasNameMismatch" class="bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-800 text-red-900 dark:text-red-200 p-4 rounded-2xl space-y-2">
+              <div class="flex items-center gap-2 font-bold text-sm">
+                <Icon icon="fluent:shield-error-24-filled" class="w-6 h-6 text-red-600" />
+                <span>ตรวจพบชื่อบัญชีปลายทางไม่ตรงกับชื่อผู้ใช้</span>
+              </div>
+              <div class="text-xs space-y-1 pl-8">
+                <div class="flex justify-between">
+                  <span class="text-red-700 dark:text-red-300">ชื่อในโปรไฟล์ผู้ใช้:</span>
+                  <span class="font-semibold">{{ selectedRequestDetails.expected_account_name || '— (ไม่มีข้อมูล)' }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-red-700 dark:text-red-300">ชื่อบัญชีปลายทาง:</span>
+                  <span class="font-semibold">{{ getBankAccount(selectedRequestDetails).account_name || '—' }}</span>
+                </div>
+              </div>
+              <p class="text-xs pt-1 border-t border-red-200 dark:border-red-900/60 mt-2">
+                <strong>ปิดกั้นการอนุมัติเพื่อป้องกันการทุจริต</strong> — กรุณาปฏิเสธคำขอนี้และแจ้งให้ผู้ใช้ใช้บัญชีที่เป็นชื่อของตนเอง
+              </p>
+            </div>
+
             <!-- Maker-Checker Warning Banner -->
             <div v-if="isMakerCheckerRequired" class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 p-4 rounded-2xl space-y-1">
               <div class="flex items-center gap-2 font-semibold text-sm">
@@ -945,12 +990,12 @@ onMounted(() => {
             <!-- If state is pending / under_review (Needs review/approve) -->
             <template v-if="selectedRequestDetails?.status === 'pending' || selectedRequestDetails?.status === 'under_review'">
               <button
-                @click="openApproveModal(selectedRequestDetails)"
+                @click="openPaidModal(selectedRequestDetails)"
                 :disabled="!canCurrentAdminApprove"
                 class="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
               >
-                <Icon icon="fluent:checkmark-24-regular" class="w-4 h-4" />
-                อนุมัติคำขอ
+                <Icon icon="fluent:receipt-play-24-regular" class="w-4 h-4" />
+                อนุมัติและบันทึกการโอน
               </button>
               <button
                 @click="openRejectModal(selectedRequestDetails)"
@@ -965,7 +1010,7 @@ onMounted(() => {
             <template v-else-if="selectedRequestDetails?.status === 'approved' || selectedRequestDetails?.status === 'processing'">
               <button
                 @click="openPaidModal(selectedRequestDetails)"
-                :disabled="isMakerCheckerRequired && isCurrentAdminReviewer"
+                :disabled="hasNameMismatch || (isMakerCheckerRequired && isCurrentAdminReviewer)"
                 class="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
               >
                 <Icon icon="fluent:receipt-play-24-regular" class="w-4 h-4" />
@@ -1124,10 +1169,12 @@ onMounted(() => {
 
           <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
             <Icon icon="fluent:receipt-play-24-regular" class="text-green-600 w-6 h-6" />
-            บันทึกการโอนเงินสำเร็จ
+            {{ selectedRequest?.status === 'pending' || selectedRequest?.status === 'under_review'
+              ? 'อนุมัติและบันทึกการโอน'
+              : 'บันทึกการโอนเงินสำเร็จ' }}
           </h3>
           <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            กรุณาแนบหลักฐานการโอนและระบุรหัสธุรกรรมจากธนาคารเพื่อยืนยันรายการจ่ายเงิน
+            กรุณาโอนเงินให้ผู้ใช้ก่อน แล้วแนบหลักฐาน (สลิป) เพื่อยืนยันการอนุมัติในขั้นตอนเดียว
           </p>
 
           <div v-if="errorMessage" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 p-3 rounded-xl text-xs mb-4">
@@ -1143,18 +1190,17 @@ onMounted(() => {
               </span>
             </div>
 
-            <!-- Payment Reference Input -->
-            <div>
+            <!-- Admin Note (only shown when approving in single step) -->
+            <div v-if="selectedRequest?.status === 'pending' || selectedRequest?.status === 'under_review'">
               <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                รหัสอ้างอิงธุรกรรม / Ref ID <span class="text-red-500">*</span>
+                หมายเหตุจากแอดมิน
               </label>
-              <inpu
-                v-model="paymentReference"
-                type="text"
-                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                placeholder="ระบุเลขอ้างอิงจากสลิป (เช่น Ref 1/Transaction ID)..."
-                required
-              />
+              <textarea
+                v-model="adminNote"
+                rows="2"
+                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm"
+                placeholder="บันทึกเหตุผลการอนุมัติ (ถ้ามี)..."
+              ></textarea>
             </div>
 
             <!-- Payout Proof File Upload -->
@@ -1202,7 +1248,7 @@ onMounted(() => {
           <div class="flex gap-3 mt-6">
             <button
               @click="submitPaid"
-              :disabled="isPaidProcessing || !paymentReference || !proofFile"
+              :disabled="isPaidProcessing || !proofFile"
               class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 disabled:text-slate-500 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
             >
               <span v-if="isPaidProcessing" class="flex items-center justify-center gap-2">

@@ -20,7 +20,7 @@ class MarkWithdrawalPaidRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'payment_reference' => 'required|string|max:100',
+            'payment_reference' => 'nullable|string|max:100',
             'proof' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
         ];
     }

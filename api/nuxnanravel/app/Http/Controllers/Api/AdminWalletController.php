@@ -9,6 +9,7 @@ use App\Models\WalletDepositRequest;
 use App\Models\WalletTransaction;
 use App\Services\AuditLogService;
 use App\Services\WalletService;
+use App\Support\BankAccountNameMatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -231,6 +232,27 @@ class AdminWalletController extends Controller
             ], 403);
         }
 
+        // Fraud guard: refuse approval when the payout destination name does
+        // not match the user's legal name on file.
+        $transaction->load('user.profile');
+        $accountName = null;
+        if ($transaction->destination_snapshot) {
+            try {
+                $accountName = decrypt($transaction->destination_snapshot)['account_name'] ?? null;
+            } catch (\Throwable) {
+                $accountName = null;
+            }
+        }
+        $accountName = $accountName ?? ($transaction->metadata['bank_account']['account_name'] ?? null);
+        $firstName = $transaction->user?->profile?->first_name;
+        $lastName = $transaction->user?->profile?->last_name;
+        if (empty($firstName) || empty($lastName) || ! BankAccountNameMatcher::matches($firstName, $lastName, $accountName)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่สามารถอนุมัติได้ เนื่องจากชื่อบัญชีปลายทางไม่ตรงกับชื่อ-นามสกุลของผู้ใช้',
+            ], 422);
+        }
+
         $validated = $request->validate(['admin_note' => 'nullable|string|max:500', 'payment_reference' => 'nullable|string|max:100']);
 
         try {
@@ -367,7 +389,7 @@ class AdminWalletController extends Controller
     public function showWithdrawal(int $transactionId): JsonResponse
     {
         $user = Auth::user();
-        $transaction = WalletTransaction::with(['user', 'reviewer'])->find($transactionId);
+        $transaction = WalletTransaction::with(['user.profile', 'reviewer'])->find($transactionId);
 
         if (! $transaction || $transaction->transaction_type !== 'withdraw') {
             return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
@@ -381,7 +403,36 @@ class AdminWalletController extends Controller
         // the maker-checker control depends on.
         $this->walletService->viewWithdrawal($transaction, $user);
 
-        return response()->json(['success' => true, 'data' => $this->withAdminDestinationDetails($transaction->refresh())]);
+        $transaction = $transaction->refresh();
+        $transaction->load('user.profile');
+
+        $data = $this->withAdminDestinationDetails($transaction);
+        $this->attachNameMismatch($data);
+
+        return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    /**
+     * Attach a name-mismatch flag to a withdrawal so the admin UI can warn and
+     * block approval when the payout account name doesn't match the user's
+     * legal name on file (defense-in-depth for legacy pre-guard requests).
+     */
+    private function attachNameMismatch(WalletTransaction $transaction): void
+    {
+        $accountName = $transaction->destination_details['account_name']
+            ?? $transaction->metadata['bank_account']['account_name']
+            ?? null;
+
+        $profile = $transaction->user?->profile;
+        $firstName = $profile->first_name ?? null;
+        $lastName = $profile->last_name ?? null;
+
+        $hasProfile = ! empty($firstName) && ! empty($lastName);
+        $matches = $hasProfile && BankAccountNameMatcher::matches($firstName, $lastName, $accountName);
+
+        $transaction->setAttribute('name_mismatch', ! $matches);
+        $transaction->setAttribute('expected_account_name', $hasProfile ? trim($firstName.' '.$lastName) : null);
+        $transaction->setAttribute('has_profile', $hasProfile);
     }
 
     /**

@@ -530,7 +530,7 @@ class WalletService
         return $this->transitionWithdrawal($transaction, 'processing', $admin, 'withdrawal.processing');
     }
 
-    public function markWithdrawalPaid(WalletTransaction $transaction, string $paymentReference, User $admin, array $proofData = []): bool
+    public function markWithdrawalPaid(WalletTransaction $transaction, ?string $paymentReference, User $admin, array $proofData = []): bool
     {
         return DB::transaction(function () use ($transaction, $paymentReference, $admin, $proofData) {
             $tx = WalletTransaction::whereKey($transaction->id)->lockForUpdate()->first();

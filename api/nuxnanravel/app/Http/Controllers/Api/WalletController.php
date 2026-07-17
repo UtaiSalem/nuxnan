@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\WalletDepositRequest;
 use App\Models\WalletTransaction;
 use App\Services\WalletService;
+use App\Support\BankAccountNameMatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -175,6 +176,29 @@ class WalletController extends Controller
             'bank_account.account_name' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
         ]);
+
+        // Fraud guard: the payout account name must match the user's own legal
+        // name on file. A user without a completed profile cannot withdraw.
+        $profile = $user->profile()->first();
+        if (! $profile || empty($profile->first_name) || empty($profile->last_name)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'กรุณากรอกชื่อ-นามสกุลใน "ข้อมูลบัญชี" ให้ครบก่อนทำรายการถอนเงิน',
+                'errors' => [
+                    'profile' => ['โปรไฟล์ผู้ใช้ยังไม่สมบูรณ์'],
+                ],
+            ], 422);
+        }
+
+        if (! BankAccountNameMatcher::matches($profile->first_name, $profile->last_name, $validated['bank_account']['account_name'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ชื่อบัญชีผู้รับเงินต้องตรงกับชื่อ-นามสกุลของเจ้าของบัญชีผู้ใช้งาน',
+                'errors' => [
+                    'bank_account.account_name' => ['ชื่อบัญชีปลายทางไม่ตรงกับชื่อ-นามสกุลในโปรไฟล์'],
+                ],
+            ], 422);
+        }
 
         // Method-specific validation and normalization of the destination.
         if ($validated['method'] === 'promptpay') {
