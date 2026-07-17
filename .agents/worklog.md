@@ -4,6 +4,42 @@
 **กฎ: ก่อนออกจากแต่ละที่ → อัพเดทไฟล์นี้แล้ว `git push`**
 **กฎ: มาถึงที่ใหม่ → `git pull` แล้วอ่านไฟล์นี้ก่อนเริ่มงาน**
 
+## 2026-07-17 — Typing Game (Typing Master) — ทบทวนแผน + review implementation + เก็บงาน P3
+
+> งานนี้ **ไม่ได้เขียน feature ใหม่** — เป็นการวิเคราะห์/ยกเครื่องแผนปรับปรุงเกมพิมพ์ดีดให้ตรงกับซอร์สจริง แล้ว review การ implement + commit งานเก็บเล็กน้อย
+
+### สถานะ: เสร็จสิ้น (build ผ่าน exit 0) — **ยังไม่ได้ smoke test ในเบราว์เซอร์**
+
+**สิ่งที่ทำ:**
+- เขียน [.agents/typing-game-improvement-plan.md](file:///C:/wamp64/www/nuxnan/.agents/typing-game-improvement-plan.md) ใหม่ทั้งฉบับ (ตรวจกับซอร์สจริงทุกไฟล์ frontend+backend) — มี Reality Check, จุดตัดสินใจ D1–D5, แบ่ง 4 phase, verification plan, risk/rollback
+- **ช่องโหว่สำคัญที่แผนเดิมมองข้าม (บันทึกไว้ในแผน §1.4):** backend `TypingSessionController@store` บังคับ payload ตายตัว — Key Training เป็นแบบ *รายคีย์* ไม่มี word/difficulty/WPM ถ้า emit ผิดรูปจะโดน **422**. ต้องส่ง `difficulty: 'beginner'` (placeholder) + `time_elapsed: Math.max(1, …)` (validation คือ `min:1`) + map chars→words ด้วยมาตรฐาน 5 char/word
+- **backend รองรับ `key_training`/`letter_runner` เป็น game_mode อยู่แล้ว → ไม่ต้องแก้ backend** (งานนี้เป็น frontend-only)
+- review implementation ทั้ง 5 ประเด็น (regex/`LAYOUT_MAP`, store+lobby config, focus Phaser, unified result, Spacebar) — ตรวจแล้วถูกต้องตามแผน
+- commit งานเก็บ P3: `971378a3 style(typing): polish Key Training lobby & Spacebar key`
+  - [VirtualKeyboard.vue](file:///C:/wamp64/www/nuxnan/ui/components/games/typing/ui/VirtualKeyboard.vue) — ห่อ label "SPACE" ใน span (idle=slate-500, flash=white) เพราะ `keyClasses('Space')` ไปทับสีเดิมหาย
+  - [index.vue](file:///C:/wamp64/www/nuxnan/ui/pages/Play/Games/typing/index.vue) — ลบ dead code `v-if="false"` (placeholder เก่าที่ถูกแทนด้วย Language/Lesson selector แล้ว)
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+- [ ] **smoke test ในเบราว์เซอร์ (สำคัญสุด)** — หน้า `/play/games/typing` อยู่หลัง auth middleware ทดสอบไม่ได้โดยไม่ login:
+  1. เล่น Key Training จนจบ → ยืนยัน `POST /typing/sessions` คืน **200 ไม่ใช่ 422** (payload ตรวจเชิง schema แล้วแต่ยังไม่ยิงจริง)
+  2. ไทย lesson แถวบน/แถวตัวเลข → กด `[ ] \ - =` ต้องได้ `บ ล ฃ ข ช`
+  3. Monster Battle / Falling Words → คลิกกลาง canvas แล้วต้องพิมพ์ต่อได้
+- [ ] `git push` — main ahead origin 1 commit (ผู้ใช้สั่ง "เก็บไว้ก่อน" ยังไม่ push)
+
+### Context สำคัญ
+- **VirtualKeyboard Spacebar ยังไม่มีผลจริง** — ไม่มี lesson ไหนใส่ `' '` (space) ใน `keys` เลย ไฮไลต์นี้เป็น future-proof/cosmetic จนกว่าจะเพิ่ม lesson ที่ใช้ space
+- **KeyTrainingMode ยังคงหน้า finished ของตัวเองไว้** (D3 เลือกไม่ลบ) → ตอนจบเกมจะเห็นหน้า finished วาบสั้นๆ ก่อน navigate ไป `/result` (เพราะ submit เป็น async) — ยอมรับได้ ถ้ารำคาญค่อยลบ block นั้น
+- **`difficulty: 'beginner'` เป็น placeholder** ของ key_training (ตัวคูณ score ต่ำสุด 1.0 ไม่ปั่นคะแนน) — ถ้าอยากให้ได้ XP มากขึ้นค่อยปรับ (D1 ในแผน)
+- key_training จะเข้าตาราง typing_sessions ด้วย แต่ backend แยก leaderboard ตาม `game_mode` อยู่แล้ว → ไม่ปน WPM โหมดอื่น
+- ⚠️ **git state ระหว่าง session นี้แสดงผลไม่คงเส้นคงวา** — เห็น history คนละสายสลับกันหลายรอบ (ชุด wallet/deploy `34722636` กับชุดนี้ `a736d9ab`) และ reflog ไม่ตรงกับที่เห็น น่าจะมาจาก sync ข้ามเครื่อง (มี stash `codex-safe-pull`) **ก่อนเชื่อสถานะ git ให้ verify ด้วยการอ่านเนื้อไฟล์ใน HEAD จริง อย่าเชื่อ log อย่างเดียว**
+- ยืนยันด้วยการอ่าน `git show HEAD:…` แล้วว่า **typing implementation อยู่ใน HEAD ครบ** (store/emit/LAYOUT_MAP/@finished/selectedKeyLesson)
+
+### Branch / Git State
+- Branch: main
+- Uncommitted: มี — แต่เป็นงานค้างของ **session อื่น** (academy scope/classroom: `AcademyPostController`, `AcademyScopeAccessService` (untracked), `AssignHomeroomTeacherModal`, classrooms/departments pages, `latest-analysis.md`) **ไม่ใช่งาน typing — อย่าเผลอ commit รวม**
+- Push status: **not pushed** — main ahead origin/main 1 commit
+
+
 ## 2026-07-17 — Student Card Request Form Improvements (ลดภาระครูประจำชั้น)
 
 > ฟีเจอร์: ปรับปรุงระบบคำร้องทำบัตรนักเรียนทั้ง 2 ช่องทาง (หน้า public `/student-card/{level}/{room}` และหน้าครูล็อกอิน) ตามหลัก "ลดภาระผู้ใช้": แสดงสถานะกันส่งซ้ำ, เหตุผลเป็น dropdown, ผู้แจ้ง default ครูประจำชั้น, ส่งคำร้องทั้งห้องในคราวเดียว
