@@ -10,12 +10,18 @@ definePageMeta({
   layout: 'main'
 })
 
-const route = useRoute()
 const api = useApi()
-const academyName = computed(() => route.params.name as string)
+
+// Consume parent-provided academy context to avoid re-fetching (and to avoid
+// racing an extra useAcademyRole watcher against admin.vue's own instance —
+// two concurrent /my-role calls collide with the JWT refresh path in useApi
+// and can leave this page stuck when arriving from a page that already had
+// requests in flight, e.g. the students registry).
+const academyId = inject<Ref<number | null>>('academyId', ref(null))
+const academyName = inject<ComputedRef<string>>('academyName', computed(() => String(useRoute().params.name)))
+const academy = inject<Ref<any>>('academy', ref(null))
 
 // State
-const academy = ref<any>(null)
 const students = ref<any[]>([])
 const isLoading = ref(true)
 const searchQuery = ref('')
@@ -27,8 +33,8 @@ const totalPages = ref(1)
 // View Mode: 'rooms' = browse by classroom, 'list' = search all
 const viewMode = ref<'rooms' | 'list'>('rooms')
 
-// Academy Role
-const academyId = ref<number | null>(null)
+// Academy Role — reuse parent academyId so the watcher inside useAcademyRole
+// does not re-reset/re-fetch just because this page mounted.
 const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
 
 // Statistics
@@ -55,28 +61,25 @@ const isLoadingList = ref(false)
 const hasLoaded = ref(false)
 
 const initializePage = async () => {
+  if (!academyId.value) return
   pageError.value = null
   statsError.value = null
   listError.value = null
   roomError.value = null
   isLoading.value = true
   try {
-    const response: any = await api.get(`/api/academies/${academyName.value}`)
-    if (response.success) {
-      academy.value = response.academy
-      academyId.value = response.academy.id
-      await fetchMyRole()
-      
-      if (!isAdmin.value && !can('students.view')) {
-        pageError.value = 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้'
-        return
-      }
-      
-      await fetchStatistics()
-      hasLoaded.value = true
-    } else {
-      pageError.value = 'ไม่สามารถดึงข้อมูลโรงเรียนได้'
+    // Parent (admin.vue) already resolved my-role, but our local useAcademyRole
+    // instance still needs its own copy. Await once — no watcher race because
+    // academyId was set before this composable's watcher was even registered.
+    await fetchMyRole()
+
+    if (!isAdmin.value && !can('students.view')) {
+      pageError.value = 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้'
+      return
     }
+
+    await fetchStatistics()
+    hasLoaded.value = true
   } catch (err: any) {
     console.error('Failed to load:', err)
     pageError.value = err?.data?.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลโรงเรียน'
@@ -85,7 +88,19 @@ const initializePage = async () => {
   }
 }
 
-onMounted(initializePage)
+// academyId may already be resolved by parent (typical navigation from a
+// sibling admin page) or may arrive a tick later (deep link / hard refresh).
+// Handle both without double-firing.
+if (academyId.value) {
+  onMounted(initializePage)
+} else {
+  const stop = watch(academyId, (id) => {
+    if (id) {
+      stop()
+      initializePage()
+    }
+  })
+}
 
 const fetchStatistics = async () => {
   if (!academyId.value) return
