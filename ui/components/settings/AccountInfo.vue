@@ -54,6 +54,7 @@ async function saveAccount() {
   isLoadingAccount.value = true
   try {
     const res = await api.post<any>('/api/settings/account', {
+      username: form.value.username,
       name: form.value.name,
       phone_number: form.value.phone_number,
     })
