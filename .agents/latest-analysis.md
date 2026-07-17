@@ -3563,3 +3563,10 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - **Relevant files:** `ui/pages/academies/[name]/admin.vue`, `ui/pages/academies/[name]/admin/students/index.vue`, `ui/pages/academies/[name]/admin/student-cards/index.vue`, and the API contract in `api/nuxnanravel/routes/learn/academy-student-card.php`.
 - **Next plan:** reproduce with browser/network logs, compare requests and console errors for direct load versus sibling navigation, then consolidate the child page on the parent-provided academy context or add a route-aware/watch-based initialization with cancellation/retry. Verify API response shapes and permissions before changing backend behavior.
 - **Verification plan:** focused browser smoke test for direct load, students → cards, cards → students → cards, hard refresh, and slow API timing; then `git diff --check` and Nuxt type/build checks if implementation is approved.
+## 2026-07-17 - Homeroom Teacher Assignment
+
+- Updated `ClassroomService::updateClassroom` to use a transaction and auto-add a changed non-null homeroom teacher to `classroom_members`; old members are preserved.
+- Added `roles[]` filtering to academy member search.
+- Added `ui/components/academy/AssignHomeroomTeacherModal.vue` and connected it to classroom detail overview.
+- Verification: Pint and PHP syntax passed; frontend build timed out after 124 seconds.
+- Remaining: classroom list quick-action/badge and full members-tab action polish/manual UI verification.
