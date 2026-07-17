@@ -299,7 +299,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
     // =====================================================
     Route::prefix('courses')->group(function () {
         Route::get('/', function (Request $request) {
-            $query = Course::with(['user'])->withCount('members');
+            $query = Course::with(['user', 'academy:id,name'])->withCount('members');
 
             if ($request->has('search') && $request->search) {
                 $query->where('title', 'like', '%'.$request->search.'%');
