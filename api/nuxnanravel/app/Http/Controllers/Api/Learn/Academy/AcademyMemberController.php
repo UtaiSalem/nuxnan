@@ -614,6 +614,11 @@ class AcademyMemberController extends Controller
             $query->where('role', $request->role);
         }
 
+        if ($request->filled('roles')) {
+            $roles = is_array($request->input('roles')) ? $request->input('roles') : [$request->input('roles')];
+            $query->whereIn('role', array_filter($roles));
+        }
+
         // Filter by academy_role_id
         if ($request->has('academy_role_id') && $request->academy_role_id) {
             $query->where('academy_role_id', $request->academy_role_id);

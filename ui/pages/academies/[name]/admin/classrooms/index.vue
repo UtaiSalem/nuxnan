@@ -42,7 +42,19 @@ const showStudentsModal = ref(false)
 const modalActiveTab = ref<'students' | 'history'>('students')
 const showAddStudentsModal = ref(false)
 const showTransferModal = ref(false)
+const showAssignHomeroomModal = ref(false)
 const selectedClassroom = ref<any>(null)
+
+const openAssignHomeroomModal = (classroom: any) => {
+  selectedClassroom.value = classroom
+  showAssignHomeroomModal.value = true
+}
+
+const handleHomeroomAssigned = async () => {
+  showAssignHomeroomModal.value = false
+  await fetchClassrooms()
+  await fetchStatistics()
+}
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -881,8 +893,18 @@ const getGradeColor = (grade: string) => {
                     <p class="text-xs text-amber-600 dark:text-amber-400">ครูประจำชั้น</p>
                   </div>
                 </div>
-                <div v-else class="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-3 text-center dark:border-gray-700 dark:bg-gray-700/40">
-                  <p class="text-sm text-gray-500 dark:text-gray-400">ยังไม่มีครูประจำชั้น</p>
+                <div v-else class="flex items-center justify-between gap-2 rounded-2xl border border-dashed border-amber-200 bg-amber-50/60 p-3 dark:border-amber-800/50 dark:bg-amber-900/10">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <Icon name="fluent:warning-24-regular" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p class="truncate text-sm text-amber-700 dark:text-amber-300">ยังไม่ได้กำหนดครูประจำชั้น</p>
+                  </div>
+                  <button
+                    type="button"
+                    @click.stop="openAssignHomeroomModal(classroom)"
+                    class="shrink-0 rounded-lg bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-700"
+                  >
+                    แต่งตั้ง
+                  </button>
                 </div>
               </div>
 
@@ -1350,5 +1372,14 @@ const getGradeColor = (grade: string) => {
         </div>
       </div>
     </Teleport>
+
+    <AssignHomeroomTeacherModal
+      v-if="showAssignHomeroomModal && academyId && selectedClassroom"
+      :academy-id="academyId"
+      :classroom-id="selectedClassroom.id"
+      :current-teacher-id="selectedClassroom.homeroom_teacher_id"
+      @close="showAssignHomeroomModal = false"
+      @updated="handleHomeroomAssigned"
+    />
   </div>
 </template>

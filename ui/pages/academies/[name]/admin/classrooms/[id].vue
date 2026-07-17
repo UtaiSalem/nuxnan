@@ -58,6 +58,7 @@ const editingStudentNumberValue = ref<number | null>(null)
 const showProfileDrawer = ref(false)
 const selectedStudentForProfile = ref<any>(null)
 const isLoadingProfile = ref(false)
+const showAssignHomeroomModal = ref(false)
 
 // Members tab state
 const showAddMemberModal = ref(false)
@@ -113,8 +114,29 @@ const capacity = computed(() => classroom.value?.capacity || 40)
 const occupancy = computed(() => Math.min(Math.round((studentCount.value / capacity.value) * 100), 100))
 
 const homeroomTeacher = computed(() => {
-  return members.value.find((m: any) => m.role === 'teacher') || classroom.value?.homeroom_teacher
+  return classroom.value?.homeroom_teacher || members.value.find((m: any) => (m.user_id || m.user?.id) === classroom.value?.homeroom_teacher_id) || members.value.find((m: any) => m.role === 'teacher')
 })
+
+const clearHomeroomTeacher = async () => {
+  const result = await Swal.fire({ title: 'ล้างครูประจำชั้น?', text: 'ห้องนี้จะยังไม่มีครูประจำชั้นหลัก', icon: 'warning', showCancelButton: true, confirmButtonText: 'ล้าง', cancelButtonText: 'ยกเลิก' })
+  if (!result.isConfirmed) return
+  try {
+    await api.patch(`/api/academies/${academy.value.id}/classrooms/${classroomId.value}`, { homeroom_teacher_id: null })
+    await loadClassroom()
+    await Swal.fire({ icon: 'success', title: 'ล้างครูประจำชั้นแล้ว', timer: 1200, showConfirmButton: false })
+  } catch (error: any) {
+    await Swal.fire({ icon: 'error', title: 'ไม่สามารถล้างครูประจำชั้นได้', text: error?.data?.message || '' })
+  }
+}
+
+const assignTeacherFromMember = async (member: any) => {
+  try {
+    await api.patch(`/api/academies/${academy.value.id}/classrooms/${classroomId.value}`, { homeroom_teacher_id: member.user_id || member.user?.id })
+    await loadClassroom()
+  } catch (error: any) {
+    await Swal.fire({ icon: 'error', title: 'ไม่สามารถแต่งตั้งครูได้', text: error?.data?.message || '' })
+  }
+}
 
 const classroomMembersList = computed(() => {
   return members.value.filter((m: any) => m.role !== 'student')
@@ -769,6 +791,7 @@ onMounted(async () => {
             </div>
 
             <!-- Homeroom Teacher card -->
+            <button class="absolute right-6 top-6 z-10 text-xs font-bold text-primary-600 hover:underline" @click="showAssignHomeroomModal = true">{{ homeroomTeacher ? 'เปลี่ยน' : 'แต่งตั้ง' }}</button>
             <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
               <div class="flex items-center justify-between">
                 <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">ครูประจำชั้น</p>
@@ -1128,8 +1151,8 @@ onMounted(async () => {
         <div v-else-if="activeTab === 'members'" class="space-y-6">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-lg font-bold text-slate-900 dark:text-white">ครูประจำวิชาและผู้ช่วยสอน</h2>
-              <p class="text-sm text-slate-500 dark:text-slate-400">สมาชิกที่มีสิทธิ์เข้าถึง จัดการคะแนน และเช็คชื่อนักเรียนในห้องนี้</p>
+              <h2 class="text-lg font-bold text-slate-900 dark:text-white">ครูประจำชั้นและผู้ช่วยสอน</h2>
+              <p class="text-sm text-slate-500 dark:text-slate-400">สมาชิกที่มีสิทธิ์เข้าถึง จัดการคะแนน และเช็คชื่อนักเรียนในห้องเรียนนี้</p>
             </div>
             <button
               @click="openAddMemberModal"
@@ -1172,20 +1195,39 @@ onMounted(async () => {
                 </div>
               </div>
               
-              <div class="mt-6 pt-4 border-t dark:border-slate-700/60 flex justify-between items-center text-xs">
-                <span class="text-slate-400 font-medium">สิทธิ์: จัดการข้อมูลในห้องเรียน</span>
-                <button 
-                  v-if="member.role !== 'teacher'"
-                  @click="handleRemoveMember(member)"
-                  class="text-red-500 hover:text-red-600 font-bold flex items-center gap-1"
-                >
-                  <Icon icon="fluent:delete-16-regular" class="h-4 w-4" />
-                  ลบออก
-                </button>
+              <div class="mt-6 pt-4 border-t dark:border-slate-700/60 flex justify-between items-center text-xs gap-2">
+                <span class="text-slate-400 font-medium truncate">สิทธิ์: จัดการข้อมูลในห้องเรียน</span>
+                <div class="flex items-center gap-3 shrink-0">
+                  <button
+                    v-if="(member.user_id || member.user?.id) !== classroom.homeroom_teacher_id"
+                    @click="assignTeacherFromMember(member)"
+                    class="text-primary-600 hover:text-primary-700 font-bold flex items-center gap-1 dark:text-primary-400"
+                  >
+                    <Icon icon="fluent:person-star-24-regular" class="h-4 w-4" />
+                    ตั้งเป็นครูประจำชั้น
+                  </button>
+                  <button
+                    v-if="member.role !== 'teacher'"
+                    @click="handleRemoveMember(member)"
+                    class="text-red-500 hover:text-red-600 font-bold flex items-center gap-1"
+                  >
+                    <Icon icon="fluent:delete-16-regular" class="h-4 w-4" />
+                    ลบออก
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        <AssignHomeroomTeacherModal
+          v-if="showAssignHomeroomModal && academy && classroom"
+          :academy-id="academy.id"
+          :classroom-id="classroom.id"
+          :current-teacher-id="classroom.homeroom_teacher_id"
+          @close="showAssignHomeroomModal = false"
+          @updated="showAssignHomeroomModal = false; loadClassroom()"
+        />
 
         <!-- TAB 4: ATTENDANCE -->
         <div v-else-if="activeTab === 'attendance'" class="space-y-6">

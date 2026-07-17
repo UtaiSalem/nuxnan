@@ -188,9 +188,22 @@ class ClassroomService
         $this->checkUniqueness($classroom->academy_id, $mergedData, $classroom->id);
 
         try {
-            $classroom->update($mergedData);
+            return DB::transaction(function () use ($classroom, $mergedData, $data) {
+                $previousTeacherId = $classroom->homeroom_teacher_id;
+                $newTeacherId = array_key_exists('homeroom_teacher_id', $data)
+                    ? $data['homeroom_teacher_id']
+                    : $previousTeacherId;
 
-            return $classroom->fresh(['academicYear', 'homeroomTeacher']);
+                $classroom->update($mergedData);
+
+                if (array_key_exists('homeroom_teacher_id', $data)
+                    && $newTeacherId !== null
+                    && (int) $previousTeacherId !== (int) $newTeacherId) {
+                    $this->addTeacherMember($classroom, (int) $newTeacherId);
+                }
+
+                return $classroom->fresh(['academicYear', 'homeroomTeacher']);
+            });
         } catch (QueryException $e) {
             if ($e->getCode() === '23000') {
                 throw ValidationException::withMessages([
@@ -221,16 +234,31 @@ class ClassroomService
 
     /**
      * Auto-add the homeroom teacher as a classroom member with role=teacher.
+     *
+     * If the user is already a member with a different role (e.g. co_teacher,
+     * observer), upgrade the row to teacher so classroom_members stays in sync
+     * with classrooms.homeroom_teacher_id.
      */
     private function addTeacherMember(Classroom $classroom, int $userId): void
     {
-        ClassroomMember::firstOrCreate(
-            ['classroom_id' => $classroom->id, 'user_id' => $userId],
-            [
-                'role' => ClassroomMember::ROLE_TEACHER,
-                'join_method' => ClassroomMember::JOIN_ADMIN,
-                'added_by' => Auth::id(),
-            ]
-        );
+        $existing = ClassroomMember::where('classroom_id', $classroom->id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($existing) {
+            if ($existing->role !== ClassroomMember::ROLE_TEACHER) {
+                $existing->update(['role' => ClassroomMember::ROLE_TEACHER]);
+            }
+
+            return;
+        }
+
+        ClassroomMember::create([
+            'classroom_id' => $classroom->id,
+            'user_id' => $userId,
+            'role' => ClassroomMember::ROLE_TEACHER,
+            'join_method' => ClassroomMember::JOIN_ADMIN,
+            'added_by' => Auth::id(),
+        ]);
     }
 }
