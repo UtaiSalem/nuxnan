@@ -4,6 +4,37 @@
 **กฎ: ก่อนออกจากแต่ละที่ → อัพเดทไฟล์นี้แล้ว `git push`**
 **กฎ: มาถึงที่ใหม่ → `git pull` แล้วอ่านไฟล์นี้ก่อนเริ่มงาน**
 
+## 2026-07-17 — Student Card Request Form Improvements (ลดภาระครูประจำชั้น)
+
+> ฟีเจอร์: ปรับปรุงระบบคำร้องทำบัตรนักเรียนทั้ง 2 ช่องทาง (หน้า public `/student-card/{level}/{room}` และหน้าครูล็อกอิน) ตามหลัก "ลดภาระผู้ใช้": แสดงสถานะกันส่งซ้ำ, เหตุผลเป็น dropdown, ผู้แจ้ง default ครูประจำชั้น, ส่งคำร้องทั้งห้องในคราวเดียว
+
+### สถานะ: เสร็จสิ้น (เทสต์ผ่าน 13/13, build ผ่าน, ตรวจ UI ในเบราว์เซอร์กับข้อมูลจริงแล้ว)
+
+**Commits ของงานนี้ (อยู่ใน main แล้ว):** `0e9f6559`, `3ed8ee81`, `d68fef06`, `810c29b4`
+
+**สิ่งที่ทำ:**
+- **Backend:**
+  - Enum ใหม่ [StudentCardRequestReason.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Enums/StudentCardRequestReason.php) — 7 เหตุผล (lost, damaged, expired, name_changed, photo_outdated, new_student, other) พร้อม `deriveRequestType()`
+  - Migration เพิ่มคอลัมน์ `reason_code`, `requester_name`, `requester_phone` ใน `student_card_requests` (รัน migrate บนเครื่องนี้แล้ว)
+  - `StudentCardRequestService` — คำนวณ request_type อัตโนมัติจากเหตุผล + สถานะบัตรจริง (ไม่มีบัตร → first_issue, expired → renewal, อื่น → replacement) และ**แก้ type ให้เองแทนการ throw** เมื่อ type ที่ส่งมาขัดกับสถานะบัตร; ข้อความ error เป็นภาษาไทยแล้ว
+  - Endpoint ใหม่ `POST /api/student-card/{level}/{room}/requests/bulk` (สูงสุด 60 คน/ครั้ง, ตอบผลรายคน, throttle 5/นาที)
+  - ผู้แจ้งไม่กรอก → backend default เป็นชื่อครูประจำชั้นของห้อง
+  - รายชื่อนักเรียนในห้อง (ทั้ง public และ classroomStudents) แนบ `active_card_request` + `has_physical_card` มาด้วย (relation `activeCardRequest` บน Student + StudentCard)
+- **Frontend public:** การ์ดขึ้น badge สถานะแทนปุ่มเมื่อมีคำร้องค้าง, RequestCardModal ใหม่ (dropdown เหตุผล + badge จำเป็น/ไม่จำเป็น + prefill ครูประจำชั้น), โหมดเลือกหลายคน + [BulkRequestCardModal.vue](file:///C:/wamp64/www/nuxnan/ui/components/student-card/BulkRequestCardModal.vue)
+- **Frontend ครูล็อกอิน:** ตาราง requests เพิ่มสถานะ + checkbox bulk submit (ใช้ endpoint `/bulk` เดิมที่มีอยู่แล้ว), SubmitRequestModal + BulkSubmitRequestModal ใหม่ใน `ui/components/school/studentCard/`
+- **เทสต์:** เขียน [PublicCardRequestTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/PublicCardRequestTest.php) ใหม่ 13 เทสต์ครอบคลุม reason codes / type derivation / requester defaults / bulk / กันส่งซ้ำ + แก้เทสต์เก่า `manage_context_reports_disabled_when_config_off` ที่พังค้างมาก่อน (ไม่ได้สร้างห้องก่อนเรียก)
+
+### Context สำคัญ
+- **หน้า public ทุกคนที่โผล่ในห้องมี StudentCard record เสมอ** (list ดึงจากตาราง student_cards) ดังนั้น first_issue จากหน้านี้จะเกิดเฉพาะเมื่อ record ไม่มีจริงๆ — ระบบใช้ derived type เป็นหลัก UI ไม่ให้เลือก type เอง
+- หน้า admin requests index ถูก session "Student card request list filtering" redesign เพิ่ม filter/pagination ทับภายหลัง — ตรวจแล้วยังต่อกับ component/bulk logic ของงานนี้ครบ ไม่ชนกัน
+- ตรวจ UI แล้วแบบ **ไม่กดส่งคำร้องจริง** (DB เครื่องนี้มีนักเรียนจริง 2,195 คน) — ถ้าจะทดสอบ e2e จริงให้ใช้ข้อมูลเทสต์
+- Screenshot ใน browser pane จะ timeout บนหน้าห้องเรียน (การ์ด 43 ใบ + QR canvas) — ใช้ read_page/get_page_text แทน
+
+### Branch / Git State
+- Branch: main — commits ของงานนี้ push ขึ้น origin แล้ว (มีงาน session อื่นต่อยอดทับจนถึง `8f02cd30`)
+- Uncommitted: ไม่มี (เหลือเฉพาะ worklog นี้)
+
+
 ## 2026-07-14 — Legacy Student Card 401 Fix & Telescope Sequence Migration
 
 > ฟีเจอร์/แก้ไข: แก้ไขปัญหาสิทธิ์ (401 Unauthorized) ในหน้าของครู/แอดมินสำหรับจัดการระดับชั้น/ห้องเรียน และแก้ไขโครงสร้างตาราง Telescope (`telescope_entries.sequence`) ที่ไม่มี auto-increment ซึ่งทำให้เกิด 500 error บนหน้าสาธารณะ
