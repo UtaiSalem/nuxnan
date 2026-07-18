@@ -2,7 +2,7 @@
 
 # 2026-07-18 - ระบบแต้มโฆษณา → โรงเรียน (Academy Ad Revenue) — Phase 1 Foundation
 
-**สถานะ:** เริ่มทำ (Phase 1 — Foundation)
+**สถานะ:** เสร็จสิ้น (Phase 1 — Foundation)
 **จุดประสงค์:** เชื่อมรายได้โฆษณาเข้า `AcademyPointAccount` โดยตรงเพื่อให้โรงเรียนได้รับแต้มจาก ad revenue เทียบเท่ารายวิชา
 
 ## Business Rules ที่ตกลง (
@@ -17,32 +17,32 @@
 - `AcademyPointAccount` + `AcademyPointTransaction` (มี balance_before/after, idempotency_key) ✓
 - `AcademyDonateService` (point/cash flow ครบ) ✓
 - `CoursePointAccountService::creditFromAdRevenue` ✓
-- `AcademyPointTransaction::TYPE_DONATION_POINT_CREDIT` ✓ (แต่ยังไม่มี `TYPE_AD_REVENUE`)
+- `AcademyPointTransaction::TYPE_AD_REVENUE` ✓
 
-## ช่องโหว่ที่ Phase 1 ต้องเติม
-1. `revenue_share_policies.academy_pct` — migration stub `2026_07_18_210029` ว่างเปล่า ยังไม่เพิ่ม column จริง
-2. `RevenueSharePolicy` model ไม่มี `academy_pct` (fillable/cast) และ `sumsTo100()` นับแค่ 3 ฝ่าย
-3. `RevenueSharePolicyResolver::split()` หาย `academy` leg → Academy ไม่ได้สัดส่วน
-4. `RewardDistributionService::distribute()` จ่ายเฉพาะ course/platform → ต้องเพิ่ม leg เข้า Academy เมื่อ `advert.academy_id` มีค่า
-5. `AcademyPointTransaction::TYPE_AD_REVENUE` ยังไม่มี
-6. seed default policy เป็น 70/20/10 → ต้องอัปเดตเป็น 60/25/10/5 (และแก้ให้รองรับ 4 ฝ่าย)
+## สิ่งที่ทำแล้ว (Phase 1 เสร็จสิ้น)
+1. `revenue_share_policies.academy_pct` — migration `2026_07_18_210029` เพิ่ม column จริง ✓
+2. `RevenueSharePolicy` model มี `academy_pct` (fillable/cast) และ `sumsTo100()` นับ 4 ฝ่าย ✓
+3. `RevenueSharePolicyResolver::split()` คืน `academy` leg ✓
+4. `RewardDistributionService::distribute()` จ่าย course/academy/platform ตาม `advert.academy_id`/`course_id` ✓
+5. `AcademyPointTransaction::TYPE_AD_REVENUE` มีอยู่ ✓
+6. seed default policy เป็น 60/25/10/5 (migration `2026_07_18_220000`) ✓
 
-## แผนทำงาน (Phase 1 ทีละ commit)
-- P1-A: migration เพิ่ม `academy_pct` จริง + model fillable/cast + `sumsTo100()` 4 ฝ่าย + seed 60/25/10/5
-- P1-B: `RevenueSharePolicyResolver::split()` คืน `academy` leg ด้วยลำดับถูกต้อง (student→course→academy→platform เหลือให้ platform)
-- P1-C: `AcademyPointTransaction::TYPE_AD_REVENUE` + helper credit เข้า Academy ด้วย idempotency key `ad-{$deliveryId}`
-- P1-D: `RewardDistributionService` เช็ค `advert.academy_id` → credit เข้า AcademyPointAccount; ปรับ condition ให้ course leg ทำเมื่อมี course_id เท่านั้น
-- P1-E: PHPUnit test กระจายแต้ม (academy ad revenue path) + `./vendor/bin/pint`
+## แผนทำงาน (Phase 1 เสร็จสิ้น)
+- P1-A: migration เพิ่ม `academy_pct` จริง + model fillable/cast + `sumsTo100()` 4 ฝ่าย + seed 60/25/10/5 ✓
+- P1-B: `RevenueSharePolicyResolver::split()` คืน `academy` leg ด้วยลำดับถูกต้อง ✓
+- P1-C: `AcademyPointTransaction::TYPE_AD_REVENUE` + helper credit เข้า Academy ด้วย idempotency key ✓
+- P1-D: `RewardDistributionService` เช็ค `advert.academy_id` → credit เข้า AcademyPointAccount ✓
+- P1-E: PHPUnit test กระจายแต้ม (academy ad revenue path) + `./vendor/bin/pint` ✓
 
-## ไฟล์ที่จะแก้
+## ไฟล์ที่แก้ (Phase 1)
 | ไฟล์ | Action |
 |------|--------|
-| `database/migrations/2026_07_18_210029_add_academy_pct_to_revenue_share_policies_table.php` | แก้ stub ให้เพิ่ม column จริง |
+| `database/migrations/2026_07_18_210029_add_academy_pct_to_revenue_share_policies_table.php` | เพิ่ม column `academy_pct` |
 | `app/Models/RevenueSharePolicy.php` | เพิ่ม fillable/cast + `sumsTo100()` 4 ฝ่าย |
 | `app/Services/RevenueSharePolicyResolver.php` | `split()` คืน `academy` |
 | `app/Models/AcademyPointTransaction.php` | `TYPE_AD_REVENUE` |
 | `app/Services/Campaign/RewardDistributionService.php` | credit เข้า Academy |
-| `database/migrations/2026_07_18_200002_seed_default_revenue_share_policy.php` | seed 60/25/10/5 |
+| `database/migrations/2026_07_18_220000_seed_default_revenue_share_policy.php` | seed 60/25/10/5 |
 
 ---
 
