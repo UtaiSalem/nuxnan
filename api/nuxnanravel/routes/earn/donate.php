@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\Academies\AcademyDonationController;
+use App\Http\Controllers\Api\Academies\AcademyAllocationController;
 use App\Http\Controllers\Api\Courses\CourseDonationController;
 use App\Http\Controllers\Api\Courses\CoursePointWithdrawalController;
 use App\Http\Controllers\Api\Earn\DonateController;
+use App\Http\Controllers\Api\PlearndAdmin\AcademyDonationAdminController;
 use App\Http\Controllers\Api\PlearndAdmin\CourseDonationAdminController;
 use App\Http\Controllers\Api\PlearndAdmin\CoursePointWithdrawalAdminController;
 use App\Http\Controllers\Api\PlearndAdmin\RevenueSharePolicyController;
@@ -14,9 +17,21 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->g
     Route::post('/courses/{course}/donations/cash', [CourseDonationController::class, 'storeCash'])->name('course.donation.cash');
     Route::get('/me/course-donations', [CourseDonationController::class, 'mine']);
     Route::get('/courses/{course}/donations', [CourseDonationController::class, 'showForCourse']);
+    Route::post('/academies/{academy}/donations/points', [AcademyDonationController::class, 'storePoint']);
+    Route::post('/academies/{academy}/donations/cash', [AcademyDonationController::class, 'storeCash']);
+    Route::get('/me/academy-donations', [AcademyDonationController::class, 'mine']);
+    Route::get('/academies/{academy}/donations', [AcademyDonationController::class, 'showForAcademy']);
+    Route::post('/academies/{academy}/allocations', [AcademyAllocationController::class, 'store']);
+    Route::get('/academies/{academy}/allocations', [AcademyAllocationController::class, 'index']);
     Route::post('/courses/{course}/withdrawals', [CoursePointWithdrawalController::class, 'store']);
     Route::get('/courses/{course}/withdrawals', [CoursePointWithdrawalController::class, 'index']);
     Route::post('/course-withdrawals/{withdrawal}/cancel', [CoursePointWithdrawalController::class, 'cancel']);
+});
+Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/academy-donations')->group(function () {
+    Route::get('/', [AcademyDonationAdminController::class, 'index']);
+    Route::get('/{donation}', [AcademyDonationAdminController::class, 'show']);
+    Route::patch('/{donation}/approve', [AcademyDonationAdminController::class, 'approve']);
+    Route::patch('/{donation}/reject', [AcademyDonationAdminController::class, 'reject']);
 });
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/course-withdrawals')->group(function () {
     Route::get('/', [CoursePointWithdrawalAdminController::class, 'index']);
@@ -38,8 +53,11 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'pl
     Route::get('/{policy}/usage', [RevenueSharePolicyController::class, 'usage']);
 });
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/risk-events')->group(function () {
-    Route::get('/', [RiskEventController::class, 'index']); Route::get('/{risk}', [RiskEventController::class, 'show']);
-    Route::patch('/{risk}/acknowledge', [RiskEventController::class, 'acknowledge']); Route::patch('/{risk}/resolve', [RiskEventController::class, 'resolve']); Route::patch('/{risk}/dismiss', [RiskEventController::class, 'dismiss']);
+    Route::get('/', [RiskEventController::class, 'index']);
+    Route::get('/{risk}', [RiskEventController::class, 'show']);
+    Route::patch('/{risk}/acknowledge', [RiskEventController::class, 'acknowledge']);
+    Route::patch('/{risk}/resolve', [RiskEventController::class, 'resolve']);
+    Route::patch('/{risk}/dismiss', [RiskEventController::class, 'dismiss']);
 });
 
 // Public routes for creating donations (anonymous allowed)

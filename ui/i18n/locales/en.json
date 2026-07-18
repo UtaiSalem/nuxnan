@@ -147,12 +147,51 @@
     "en": "English",
     "selectLanguage": "Select Language"
   },
+  "academyDonation": {
+    "hero": "Support this School",
+    "chooseType": "Choose support type",
+    "points": "Support with Points",
+    "cash": "Cash donation",
+    "amount": "Amount",
+    "purpose": "Purpose",
+    "review": "Review donation",
+    "submit": "Submit donation",
+    "success": "Donation submitted",
+    "reference": "Reference #{id}",
+    "error": "Unable to submit donation",
+    "replayed": "This donation was already submitted"
+  },
   "donation": {
     "support": "Support with Points",
     "anonymousHint": "Your name will not be shown publicly, but the system still records it.",
     "replayed": "This item was already submitted"
   },
-  "withdrawal": { "title": "Course point withdrawal", "request": "Request withdrawal", "amount": "Amount", "purpose": "Purpose", "status": { "pending": "Pending", "reviewing": "Reviewing", "approved": "Approved", "paid": "Paid", "rejected": "Rejected", "cancelled": "Cancelled" }, "action": { "review": "Review", "approve": "Approve", "reject": "Reject", "mark_paid": "Mark paid", "cancel": "Cancel" }, "error": { "below_minimum": "Amount is below the minimum", "insufficient_balance": "Insufficient balance", "rate_limit": "Too many requests. Please try again later." } },
+  "withdrawal": {
+    "title": "Course point withdrawal",
+    "request": "Request withdrawal",
+    "amount": "Amount",
+    "purpose": "Purpose",
+    "status": {
+      "pending": "Pending",
+      "reviewing": "Reviewing",
+      "approved": "Approved",
+      "paid": "Paid",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "action": {
+      "review": "Review",
+      "approve": "Approve",
+      "reject": "Reject",
+      "mark_paid": "Mark paid",
+      "cancel": "Cancel"
+    },
+    "error": {
+      "below_minimum": "Amount is below the minimum",
+      "insufficient_balance": "Insufficient balance",
+      "rate_limit": "Too many requests. Please try again later."
+    }
+  },
   "learn": {
     "progress": {
       "lesson_assignments_short": "Lesson Assign",
@@ -168,5 +207,58 @@
     "failure_replayed": "This item was already recorded",
     "failure_generic": "Unable to grant the reward at this time"
   },
-  "admin": { "revenue_share": { "title": "Revenue share policies", "new": "New policy", "active_only": "Active only", "usage_count": "Used by {count} deliveries" }, "risk": { "title": "Risk event queue", "subtitle": "Review reconciliation and fraud alerts", "all_severity": "All severity", "open": "Open", "all": "All statuses", "rule_filter": "Filter by rule", "severity": "Severity", "rule": "Rule", "subject": "Subject", "created": "Created", "status": "Status", "empty": "No risk events", "note": "Resolution note", "acknowledge": "Acknowledge", "resolve": "Resolve", "dismiss": "Dismiss" } }
+  "admin": {
+    "revenue_share": {
+      "title": "Revenue share policies",
+      "new": "New policy",
+      "active_only": "Active only",
+      "usage_count": "Used by {count} deliveries"
+    },
+    "risk": {
+      "title": "Risk event queue",
+      "subtitle": "Review reconciliation and fraud alerts",
+      "all_severity": "All severity",
+      "open": "Open",
+      "all": "All statuses",
+      "rule_filter": "Filter by rule",
+      "severity": "Severity",
+      "rule": "Rule",
+      "subject": "Subject",
+      "created": "Created",
+      "status": "Status",
+      "empty": "No risk events",
+      "note": "Resolution note",
+      "acknowledge": "Acknowledge",
+      "resolve": "Resolve",
+      "dismiss": "Dismiss"
+    }
+  },
+  "discoverySchools": {
+    "title": "Support a School",
+    "subtitle": "Help fund the schools that inspire our next generation.",
+    "search_placeholder": "Search by school name...",
+    "loading": "Loading...",
+    "empty": "No schools found. Try different filters.",
+    "sort": {
+      "recent": "Recently added",
+      "most_supported": "Most supported",
+      "most_courses": "Most courses"
+    },
+    "support_button": "Support this school",
+    "not_available": "This school is not accepting support at the moment.",
+    "back_to_list": "Back to schools",
+    "stat": {
+      "donated_points": "Total donated points",
+      "donors": "Donors",
+      "courses": "Courses",
+      "active_campaigns": "Active campaigns"
+    }
+  },
+  "discovery": {
+    "title": "Support a Course",
+    "subtitle": "Choose a course to help fund.",
+    "search_placeholder": "Search by course name...",
+    "loading": "Loading...",
+    "empty": "No courses found."
+  }
 }

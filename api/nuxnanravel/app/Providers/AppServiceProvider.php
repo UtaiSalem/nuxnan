@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Academy;
+use App\Models\AcademyDonate;
 use App\Models\AcademyPost;
 use App\Models\AcademyPostComment;
 use App\Models\AcademyPostLike;
@@ -22,6 +24,7 @@ use App\Observers\ClassroomStudentObserver;
 use App\Observers\CourseMemberObserver;
 use App\Observers\EventRegistrationObserver;
 use App\Observers\StudentObserver;
+use App\Policies\AcademyDonatePolicy;
 use App\Policies\CourseDonatePolicy;
 use App\Policies\CoursePointWithdrawalPolicy;
 use App\Policies\CoursePolicy;
@@ -53,6 +56,8 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191);
         Gate::policy(Course::class, CoursePolicy::class);
         Gate::policy(CourseDonate::class, CourseDonatePolicy::class);
+        Gate::policy(Academy::class, AcademyDonatePolicy::class);
+        Gate::policy(AcademyDonate::class, AcademyDonatePolicy::class);
         Gate::policy(CoursePointWithdrawalRequest::class, CoursePointWithdrawalPolicy::class);
         Gate::policy(WalletTransaction::class, WithdrawalPolicy::class);
         Gate::policy(Student::class, StudentMasterProfilePolicy::class);

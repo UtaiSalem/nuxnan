@@ -105,6 +105,10 @@ const menuItems = computed(() => [
         show: can('courses.view') || can('courses.manage'),
       },
       {
+        name: 'Allocations', icon: 'fluent:arrow-swap-24-regular',
+        to: `/academies/${academyName.value}/admin/allocations`, show: can('courses.view') || can('courses.manage'),
+      },
+      {
         name: 'หลักสูตร',
         icon: 'fluent:book-globe-24-regular',
         to: `/academies/${academyName.value}/admin/curriculums`,

@@ -72,7 +72,25 @@ class Academy extends Model
         'province',
         'country',
         'name_slug',
+        'donation_enabled',
     ];
+
+    protected $casts = ['donation_enabled' => 'boolean'];
+
+    public function donationEnabled(): bool
+    {
+        return $this->donation_enabled ?? (bool) config('platform.course_donation.enabled');
+    }
+
+    public function pointAccount(): HasOne
+    {
+        return $this->hasOne(AcademyPointAccount::class);
+    }
+
+    public function donations(): HasMany
+    {
+        return $this->hasMany(AcademyDonate::class);
+    }
 
     /**
      * Get the academySetting associated with the Academy

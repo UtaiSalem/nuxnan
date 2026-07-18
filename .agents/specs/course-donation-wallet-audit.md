@@ -414,6 +414,37 @@ Estimate confirmed: **1.5 to 2 developer weeks** for Phase 1a-1d. 1e is deferrab
 - **11a** — Public `/api/public/courses` + `/api/public/courses/{course}/support-summary` + `CourseMarketplaceResource` extension with donation signals.
 - **11b** — Public frontend `ui/pages/courses/index.vue` listing + course detail with donation flow entry.
 
+## 14. Phase 12 audit — Academy (school) donation, Slim scope (2026-07-18)
+
+### 14.1 What exists
+
+- `Academy` model with settings, roles, members, admins.
+- `AcademyPointRule` — rules for point reward within an academy (not a wallet).
+- Course.academy_id — hierarchy is Academy → Course.
+- Existing course-donation infrastructure (Phase 1b) uses a sibling `course_donates` table pattern.
+
+### 14.2 What does NOT exist
+
+- No `academy_point_accounts`, `academy_donates`, or academy-level wallet.
+- No academy-scoped donation UI or admin queue.
+- No allocation flow from Academy → Course.
+- No public academy discovery page (Phase 11 covers only courses).
+
+### 14.3 Slim scope decision (per user, 2026-07-18)
+
+Build donor → Academy direct donation with allocation-down-to-course support. Defer:
+- Ad revenue routing to Academy Wallet (was audit §13.2 note; keep in Course wallet for now).
+- Academy-level campaigns (all-course promos).
+- Academy-level withdrawal maker-checker.
+
+### 14.4 Sub-task split
+
+- **12a** — `academy_point_accounts` migration + `academy_donates` migration + models + AcademyDonateService (point + cash paths, feature-flag guard). Tests.
+- **12b** — Controllers + FormRequests + Resource + routes + admin queue + policy.
+- **12c** — AcademyAllocationService — academy admin transfers points from academy pool into a course_point_account under the same academy (with ledger rows both sides).
+- **12d** — Frontend: AcademyDonationModal (mirror CourseDonationModal), academy admin allocation UI, my/academy-donations history.
+- **12e** — Public schools discovery: `/api/public/schools` list + `/api/public/schools/{academy}` detail with support-summary + Nuxt `/schools` and `/schools/[slug]` pages.
+
 ## Appendix — Codex delegation failure
 
 For future reference: the Codex-companion `task-mrpl1unp-xbu4v2` was spawned via the `codex:codex-rescue` agent. Log at `~/.claude/plugins/data/codex-inline/state/nuxnan-13289e662c060836/jobs/task-mrpl1unp-xbu4v2.log` shows the task started, ran ~4 PowerShell scans in the first 2 minutes, produced one assistant message ("audit context present at line 3621"), then went silent. Process PID 37356 disappeared without emitting a stop event, so companion status kept reporting `running` for 48 minutes. Recovery: Claude did the audit inline. If we retry Codex on later phases, poll `codex-companion status --json` every ~10 min and treat any `updatedAt` gap over 5 min as a hang.

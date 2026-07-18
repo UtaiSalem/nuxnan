@@ -9,6 +9,7 @@ import EventFormModal from '~/components/academy/events/EventFormModal.vue'
 import { useCourseGrouping } from '~/composables/useCourseGrouping'
 import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
 import AdvertiseCtaWidget from '~/components/widgets/AdvertiseCtaWidget.vue'
+import AcademyDonationModal from '~/components/donation/AcademyDonationModal.vue'
 
 definePageMeta({
   layout: 'main',
@@ -21,6 +22,8 @@ const api = useApi()
 const config = useRuntimeConfig()
 const { t } = useI18n()
 const { user } = storeToRefs(useAuthStore())
+const showAcademyDonation = ref(false)
+const openAcademyDonation = () => { if (!user.value) navigateTo(`/login?return=${encodeURIComponent(route.fullPath)}`); else showAcademyDonation.value = true }
 
 // State
 const academy = ref<any>(null)
@@ -1067,6 +1070,8 @@ watch(() => route.hash, (newHash) => {
 </script>
 
 <template>
+  <button v-if="academy && user?.id !== academy.user_id" class="fixed bottom-6 right-6 z-40 rounded-full bg-primary-600 px-5 py-3 font-semibold text-white shadow-lg" @click="openAcademyDonation">สนับสนุนโรงเรียน / Support this School</button>
+  <AcademyDonationModal v-if="academy" v-model:visible="showAcademyDonation" :academy-id="academy.id" :academy-name="academy.name" :academy-owner-id="academy.user_id" />
   <div>
     <!-- Child Route Content (admin, dashboard, etc.) -->
     <NuxtPage v-if="isChildRoute" />
