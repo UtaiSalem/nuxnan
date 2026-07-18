@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class CourseDonateService
 {
-    public function __construct(protected CoursePointAccountService $accountService, protected PointsService $pointsService) {}
+    public function __construct(protected PointLedgerService $ledger) {}
 
     public function createPointDonation(User $donor, Course $course, int $pointsAmount, array $meta, ?string $key): CourseDonate
     {
@@ -32,13 +32,9 @@ class CourseDonateService
             if ($key && ($old = CourseDonate::where('idempotency_key', $key)->first())) {
                 return $old;
             }
-            $spent = $this->pointsService->spend($donor, $pointsAmount, 'course_donation', $course->id, 'Course donation', ['reason' => 'course_donation'] + $meta);
-            if (! $spent) {
-                throw new DomainException('Insufficient points for this donation.');
-            }
-            $tx = $this->accountService->creditFromDonation($course->id, $donor->id, $pointsAmount, $key, ['source' => 'donation_point', 'related_points_transaction_id' => $spent->id] + $meta);
+            $result = $this->ledger->donatePoints($donor, 'course', $course->id, $pointsAmount, 'course_donation', $key, ['reason' => 'course_donation'] + $meta);
 
-            return CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_POINT, 'points_amount' => $pointsAmount, 'status' => CourseDonate::STATUS_COMPLETED, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'course_point_transaction_id' => $tx->id, 'metadata' => $meta, 'idempotency_key' => $key]);
+            return CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_POINT, 'points_amount' => $pointsAmount, 'status' => CourseDonate::STATUS_COMPLETED, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'course_point_transaction_id' => $result['destination_transaction_id'], 'metadata' => $meta, 'idempotency_key' => $key]);
         });
     }
 
@@ -77,7 +73,7 @@ class CourseDonateService
             $d = CourseDonate::whereKey($donation->id)->lockForUpdate()->firstOrFail();
             if ($d->status !== CourseDonate::STATUS_PENDING) {
                 throw new DomainException('Donation is no longer pending.');
-            } $tx = $this->accountService->creditFromDonation($d->course_id, $d->donor_id, (int) $d->cash_amount, null, ['source' => 'donation_cash', 'note' => $note]);
+            }             $tx = $this->ledger->creditCoursePoints($d->course_id, $d->donor_id, (int) $d->cash_amount, null, ['source' => 'donation_cash', 'note' => $note]);
             $d->update(['status' => CourseDonate::STATUS_COMPLETED, 'course_point_transaction_id' => $tx->id, 'approved_by' => $admin->id, 'reviewed_at' => now(), 'version' => $d->version + 1]);
 
             return $d->fresh();

@@ -24,7 +24,7 @@ class RevenueSharePolicyAdminTest extends TestCase
 
     private function payload(): array
     {
-        return ['scope_type' => 'platform', 'student_pct' => 70, 'course_pct' => 20, 'platform_pct' => 10, 'effective_from' => now()->toDateString()];
+        return ['scope_type' => 'platform', 'student_pct' => 70, 'course_pct' => 20, 'academy_pct' => 0, 'platform_pct' => 10, 'effective_from' => now()->toDateString()];
     }
 
     public function test_platform_admin_can_list_policies(): void

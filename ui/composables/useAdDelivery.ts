@@ -1,6 +1,7 @@
 export interface AdRewardSplits {
   student: number
   course: number
+  academy: number
   platform: number
   policy_id: number
   policy_version: number

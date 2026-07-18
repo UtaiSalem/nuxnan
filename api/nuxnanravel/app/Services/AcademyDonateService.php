@@ -4,8 +4,6 @@ namespace App\Services;
 
 use App\Models\Academy;
 use App\Models\AcademyDonate;
-use App\Models\AcademyPointAccount;
-use App\Models\AcademyPointTransaction;
 use App\Models\User;
 use DomainException;
 use Illuminate\Database\DatabaseManager;
@@ -13,7 +11,7 @@ use Illuminate\Http\UploadedFile;
 
 class AcademyDonateService
 {
-    public function __construct(protected PointsService $pointsService, protected DatabaseManager $database) {}
+    public function __construct(protected PointLedgerService $ledger, protected AcademyPointAccountService $academyPoints, protected DatabaseManager $database) {}
 
     public function createPointDonation(User $donor, Academy $academy, int $pointsAmount, array $meta, ?string $idempotencyKey): AcademyDonate
     {
@@ -30,13 +28,9 @@ class AcademyDonateService
             if ($idempotencyKey && ($old = AcademyDonate::where('idempotency_key', $idempotencyKey)->first())) {
                 return $old;
             }
-            $spent = $this->pointsService->spend($donor, $pointsAmount, 'academy_donation', $academy->id, 'Academy donation', $meta);
-            if (! $spent) {
-                throw new DomainException('Insufficient points for this donation.');
-            }
+            $result = $this->ledger->donatePoints($donor, 'academy', $academy->id, $pointsAmount, 'academy_donation', $idempotencyKey, $meta);
             $donation = AcademyDonate::create(['academy_id' => $academy->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => AcademyDonate::TYPE_POINT, 'points_amount' => $pointsAmount, 'status' => AcademyDonate::STATUS_COMPLETED, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'metadata' => $meta, 'idempotency_key' => $idempotencyKey]);
-            $tx = $this->credit($academy->id, $donor->id, $pointsAmount, AcademyPointTransaction::TYPE_DONATION_POINT_CREDIT, $idempotencyKey, ['related_points_transaction_id' => $spent->id, 'related_academy_donate_id' => $donation->id] + $meta);
-            $donation->update(['academy_point_transaction_id' => $tx->id]);
+            $donation->update(['academy_point_transaction_id' => $result['destination_transaction_id']]);
 
             return $donation->fresh();
         });
@@ -68,7 +62,7 @@ class AcademyDonateService
             $d = AcademyDonate::whereKey($donation->id)->lockForUpdate()->firstOrFail();
             if ($d->status !== 'pending') {
                 throw new DomainException('Donation is no longer pending.');
-            } $tx = $this->credit($d->academy_id, $d->donor_id, (int) $d->cash_amount, AcademyPointTransaction::TYPE_DONATION_CASH_CREDIT, null, ['note' => $note, 'related_academy_donate_id' => $d->id]);
+            }             $tx = $this->academyPoints->creditFromCashDonation($d->academy_id, $d->donor_id, (int) $d->cash_amount, null, ['note' => $note, 'related_academy_donate_id' => $d->id]);
             $d->update(['status' => 'completed', 'academy_point_transaction_id' => $tx->id, 'approved_by' => $admin->id, 'reviewed_at' => now(), 'version' => $d->version + 1]);
 
             return $d->fresh();
@@ -89,16 +83,6 @@ class AcademyDonateService
 
             return $d->fresh();
         });
-    }
-
-    protected function credit(int $academyId, ?int $userId, int $amount, string $type, ?string $key, array $metadata): AcademyPointTransaction
-    {
-        $account = AcademyPointAccount::where('academy_id', $academyId)->lockForUpdate()->first() ?? AcademyPointAccount::create(['academy_id' => $academyId]);
-        $before = (int) $account->balance;
-        $after = $before + $amount;
-        $account->update(['balance' => $after, 'total_earned' => $account->total_earned + $amount, 'version' => $account->version + 1]);
-
-        return AcademyPointTransaction::create(['academy_point_account_id' => $account->id, 'academy_id' => $academyId, 'user_id' => $userId, 'type' => $type, 'amount' => $amount, 'balance_before' => $before, 'balance_after' => $after, 'idempotency_key' => $key, 'metadata' => $metadata]);
     }
 
     protected function guardEnabled(Academy $academy): void

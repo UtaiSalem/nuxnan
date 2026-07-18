@@ -25,7 +25,7 @@ class RevenueSharePolicyController extends Controller
             $q->where('notes', 'like', '%'.$r->search.'%');
         }
 
-return RevenueSharePolicyResource::collection($q->paginate($r->integer('per_page', 15)));
+        return RevenueSharePolicyResource::collection($q->paginate($r->integer('per_page', 15)));
     }
 
     public function store(StoreRevenueSharePolicyRequest $r)

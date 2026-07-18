@@ -205,7 +205,11 @@
     "failure_below_duration": "The ad was not watched long enough; no reward this time",
     "failure_low_visibility": "The page was hidden while watching; no reward this time",
     "failure_replayed": "This item was already recorded",
-    "failure_generic": "Unable to grant the reward at this time"
+    "failure_generic": "Unable to grant the reward at this time",
+    "split_viewer": "Viewer",
+    "split_course": "Course",
+    "split_academy": "Academy",
+    "split_platform": "Platform"
   },
   "admin": {
     "revenue_share": {

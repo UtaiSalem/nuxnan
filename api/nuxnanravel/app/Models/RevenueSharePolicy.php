@@ -17,9 +17,9 @@ class RevenueSharePolicy extends Model
 
     public const SCOPE_CAMPAIGN = 'campaign';
 
-    protected $fillable = ['scope_type', 'scope_id', 'student_pct', 'course_pct', 'platform_pct', 'effective_from', 'effective_to', 'version', 'notes', 'created_by'];
+    protected $fillable = ['scope_type', 'scope_id', 'student_pct', 'course_pct', 'academy_pct', 'platform_pct', 'effective_from', 'effective_to', 'version', 'notes', 'created_by'];
 
-    protected $casts = ['student_pct' => 'decimal:2', 'course_pct' => 'decimal:2', 'platform_pct' => 'decimal:2', 'effective_from' => 'datetime', 'effective_to' => 'datetime'];
+    protected $casts = ['student_pct' => 'decimal:2', 'course_pct' => 'decimal:2', 'academy_pct' => 'decimal:2', 'platform_pct' => 'decimal:2', 'effective_from' => 'datetime', 'effective_to' => 'datetime'];
 
     public function creator(): BelongsTo
     {
@@ -36,6 +36,6 @@ class RevenueSharePolicy extends Model
 
     public function sumsTo100(): bool
     {
-        return round((float) $this->student_pct + (float) $this->course_pct + (float) $this->platform_pct, 2) === 100.00;
+        return round((float) $this->student_pct + (float) $this->course_pct + (float) $this->academy_pct + (float) $this->platform_pct, 2) === 100.00;
     }
 }

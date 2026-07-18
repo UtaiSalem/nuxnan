@@ -28,8 +28,9 @@ class RevenueSharePolicyResolver
         $gross = max(0, (int) floor($grossAmount));
         $student = min($gross, (int) floor($gross * (float) $policy->student_pct / 100));
         $course = min($gross - $student, (int) floor($gross * (float) $policy->course_pct / 100));
-        $platform = max(0, $gross - $student - $course);
+        $academy = min($gross - $student - $course, (int) floor($gross * (float) $policy->academy_pct / 100));
+        $platform = max(0, $gross - $student - $course - $academy);
 
-        return compact('student', 'course', 'platform') + ['policy_version' => (int) $policy->version, 'policy_id' => (int) $policy->id];
+        return compact('student', 'course', 'academy', 'platform') + ['policy_version' => (int) $policy->version, 'policy_id' => (int) $policy->id];
     }
 }

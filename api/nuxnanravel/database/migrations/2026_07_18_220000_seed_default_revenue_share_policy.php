@@ -10,9 +10,9 @@ return new class extends Migration
         if (! DB::table('revenue_share_policies')->where('scope_type', 'platform')->whereNull('scope_id')->exists()) {
             DB::table('revenue_share_policies')->insert([
                 'scope_type' => 'platform', 'scope_id' => null,
-                'student_pct' => 70.00, 'course_pct' => 20.00, 'platform_pct' => 10.00,
+                'student_pct' => 60.00, 'course_pct' => 25.00, 'academy_pct' => 10.00, 'platform_pct' => 5.00,
                 'effective_from' => now(), 'version' => 1,
-                'notes' => 'Default platform revenue share',
+                'notes' => 'Default platform revenue share (student 60 / course 25 / academy 10 / platform 5)',
                 'created_at' => now(), 'updated_at' => now(),
             ]);
         }

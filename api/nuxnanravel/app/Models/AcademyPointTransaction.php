@@ -14,5 +14,7 @@ class AcademyPointTransaction extends Model
 
     public const TYPE_ALLOCATION_OUT = 'allocation_out';
 
+    public const TYPE_AD_REVENUE = 'ad_revenue';
+
     protected $casts = ['metadata' => 'array'];
 }

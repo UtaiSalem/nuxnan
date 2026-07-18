@@ -121,9 +121,13 @@ class PointsService
     /**
      * Spend points for a user
      */
-    public function spend(User $user, float $amount, string $sourceType, ?int $sourceId = null, ?string $description = null, ?array $metadata = null): ?PointsTransaction
+    public function spend(User $user, float $amount, string $sourceType, ?int $sourceId = null, ?string $description = null, ?array $metadata = null, ?string $idempotencyKey = null): ?PointsTransaction
     {
-        return DB::transaction(function () use ($user, $amount, $sourceType, $sourceId, $description, $metadata) {
+        return DB::transaction(function () use ($user, $amount, $sourceType, $sourceId, $description, $metadata, $idempotencyKey) {
+            if ($idempotencyKey && PointsTransaction::where('idempotency_key', $idempotencyKey)->exists()) {
+                return PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+            }
+
             $balanceBefore = $user->pp;
 
             // Check if user has enough points
@@ -154,6 +158,7 @@ class PointsService
                 'balance_after' => $balanceAfter,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
+                'idempotency_key' => $idempotencyKey,
                 'description' => $description,
                 'metadata' => $metadata,
                 'status' => 'completed',

@@ -205,7 +205,11 @@
     "failure_below_duration": "โฆษณาไม่ครบเวลา ไม่ได้รับรางวัลครั้งนี้",
     "failure_low_visibility": "หน้าจอถูกซ่อนขณะดูโฆษณา ไม่ได้รับรางวัลครั้งนี้",
     "failure_replayed": "รายการนี้ถูกบันทึกไปแล้ว",
-    "failure_generic": "ไม่สามารถให้รางวัลได้ในขณะนี้"
+    "failure_generic": "ไม่สามารถให้รางวัลได้ในขณะนี้",
+    "split_viewer": "ผู้ดูโฆษณา",
+    "split_course": "รายวิชา",
+    "split_academy": "โรงเรียน",
+    "split_platform": "แพลตฟอร์ม"
   },
   "admin": {
     "revenue_share": {
