@@ -98,6 +98,26 @@
 
 ---
 
+# 2026-07-19 - Phase 5: Reconciliation + Fraud Detection (เสร็จสิ้น)
+
+**สถานะ:** เสร็จสิ้น (40 tests ผ่าน)
+**เป้าหมาย:** เพิ่มตรวจสอบยอด (reconciliation) และตรวจจับทุจริต (fraud) ตามแผนข้อ 11–12
+
+## สิ่งที่ทำ
+- `app/Console/Commands/ReconcileAll.php`:
+  - เพิ่ม check `academy_balance` (เทียบ `AcademyPointAccount.balance` กับ sum ของ `AcademyPointTransaction`)
+  - เพิ่ม check `ad_revenue_gross` (ตรวจ gross = student+course+academy+platform จาก `required_duration * per_second`)
+  - รองรับ `--academy=` option
+- `app/Services/FraudDetectionService.php`:
+  - `scanAdRevenuePolicy($windowHours)` — ตรวจ split ไม่ตรง gross → RiskEvent (severity high, score 85)
+  - `scanAcademyNegativeBalance()` — ตรวจ academy balance ติดลบ → RiskEvent (severity critical, score 100)
+- `app/Console/Commands/RiskScanCommand.php` (ใหม่) — `php artisan risk:scan` รัน scan ทั้งหมด (donation velocity, self-donation, ad fraud, ad revenue policy, academy negative)
+
+## Tests ใหม่
+- `tests/Feature/AdRevenueIntegrityTest.php` — tampered split ถูก flag, academy negative balance ถูก flag/ไม่ flag กรณีบวก, reconcile:all รันผ่าน
+
+---
+
 # 2026-07-18 - ย้ายปุ่มสนับสนุนวิชา (Course Donation) ไปยัง Course Profile (CourseHero)
 - **สถานะ:** เสร็จสิ้น (คอมไพล์ผ่าน `✨ Build complete!`)
 - **ไฟล์ที่เกี่ยวข้อง:**

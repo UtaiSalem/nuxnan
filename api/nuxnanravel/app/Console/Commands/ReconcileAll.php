@@ -2,6 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\AcademyPointAccount;
+use App\Models\AcademyPointTransaction;
+use App\Models\CampaignDeliveryEvent;
 use App\Models\CoursePointAccount;
 use App\Models\CoursePointCampaign;
 use App\Models\CoursePointTransaction;
@@ -14,9 +17,9 @@ use Illuminate\Support\Facades\DB;
 
 class ReconcileAll extends Command
 {
-    protected $signature = 'reconcile:all {--emit-risk : create RiskEvent on mismatch} {--user= : limit to one user id} {--course= : limit to one course id}';
+    protected $signature = 'reconcile:all {--emit-risk : create RiskEvent on mismatch} {--user= : limit to one user id} {--course= : limit to one course id} {--academy= : limit to one academy id}';
 
-    protected $description = 'Reconcile user wallets and course point ledgers';
+    protected $description = 'Reconcile user wallets, course and academy point ledgers, and ad revenue splits';
 
     public function handle(): int
     {
@@ -24,6 +27,8 @@ class ReconcileAll extends Command
             'user_wallet' => $this->userWallets(),
             'course_balance' => $this->courseBalances(),
             'course_reserved' => $this->courseReserved(),
+            'academy_balance' => $this->academyBalances(),
+            'ad_revenue_gross' => $this->adRevenueGross(),
         ];
         $rows = [];
         $totalMismatches = 0;
@@ -94,6 +99,53 @@ class ReconcileAll extends Command
             $diff = round($stored - $expected, 2);
             if (abs($diff) > 0.01) {
                 $mismatches[] = ['id' => $account->course_id, 'subject' => $account, 'stored' => $stored, 'expected' => $expected, 'diff' => $diff];
+            }
+        });
+
+        return ['scanned' => $scanned, 'mismatches' => $mismatches];
+    }
+
+    private function academyBalances(): array
+    {
+        $query = AcademyPointAccount::query();
+        if ($this->option('academy')) {
+            $query->where('academy_id', $this->option('academy'));
+        }
+        $mismatches = [];
+        $scanned = $query->count();
+        $query->each(function (AcademyPointAccount $account) use (&$mismatches) {
+            $expected = (float) AcademyPointTransaction::where('academy_point_account_id', $account->id)->sum(DB::raw('balance_after - balance_before'));
+            $stored = (float) $account->balance;
+            $diff = round($stored - $expected, 2);
+            if (abs($diff) > 0.01) {
+                $mismatches[] = ['id' => $account->academy_id, 'subject' => $account, 'stored' => $stored, 'expected' => $expected, 'diff' => $diff];
+            }
+        });
+
+        return ['scanned' => $scanned, 'mismatches' => $mismatches];
+    }
+
+    /**
+     * Verify that each completed ad delivery's gross reward equals the sum of
+     * its splits: viewer (student points) + course + academy + platform shares.
+     * The gross is recomputed from required_duration * per-second rate so a
+     * tampered metadata block is caught.
+     */
+    private function adRevenueGross(): array
+    {
+        $perSecond = (int) config('campaign.gross_reward_per_view_per_second', 20);
+        $query = CampaignDeliveryEvent::where('status', CampaignDeliveryEvent::STATUS_COMPLETED)
+            ->where('event_type', 'rewarded_view')
+            ->whereNotNull('metadata->reward_splits');
+        $mismatches = [];
+        $scanned = 0;
+        $query->each(function (CampaignDeliveryEvent $delivery) use (&$mismatches, &$scanned, $perSecond) {
+            $scanned++;
+            $splits = $delivery->metadata['reward_splits'] ?? [];
+            $gross = (int) ($delivery->required_duration * $perSecond);
+            $distributed = (int) ($splits['student'] ?? 0) + (int) ($splits['course'] ?? 0) + (int) ($splits['academy'] ?? 0) + (int) ($splits['platform'] ?? 0);
+            if ($distributed !== $gross) {
+                $mismatches[] = ['id' => $delivery->id, 'subject' => $delivery, 'stored' => $distributed, 'expected' => $gross, 'diff' => $distributed - $gross];
             }
         });
 
