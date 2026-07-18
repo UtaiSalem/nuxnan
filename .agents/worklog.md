@@ -1,5 +1,16 @@
 # Work Log — nuxnan project
 
+## 2026-07-18 — ย้ายปุ่มสนับสนุนวิชา (Course Donation) ไปยัง Course Profile (CourseHero)
+- **สถานะ:** เสร็จสิ้น (แก้ไขโค้ดและรัน build ผ่าน exit 0)
+- **สิ่งที่ทำ:**
+  - ย้ายปุ่ม "สนับสนุนแต้ม / Support with Points" จากเนื้อหากลางของหน้าวิชา [\[id\].vue](file:///C:/wamp64/www/nuxnan/ui/pages/Learn/Courses/%5Bid%5D.vue) มาแสดงในหน้าโปรไฟล์รายวิชา ( Course Hero ) ด้านขวาบนถัดจากปุ่มดำเนินการหลัก
+  - กำหนดการยิงอีเวนต์ `support-course` จากปุ่มใน [CourseHero.vue](file:///C:/wamp64/www/nuxnan/ui/components/learn/course/v2/CourseHero.vue) ส่งต่อผ่าน [CoursePageShell.vue](file:///C:/wamp64/www/nuxnan/ui/components/learn/course/v2/CoursePageShell.vue) เพื่อเรียกฟังก์ชัน `openDonation` บน [\[id\].vue](file:///C:/wamp64/www/nuxnan/ui/pages/Learn/Courses/%5Bid%5D.vue)
+  - เพิ่มปุ่มด้วยสไตล์สีส้ม/amber และไอคอน `mdi:hand-heart` โดยจะซ่อนเมื่อ user เป็นผู้ดูแลวิชา (`isAdmin === true`) หรือเมื่อไม่ได้เปิดใช้งานฟังก์ชันสนับสนุนแต้ม (`course.donation_enabled === false`)
+  - ปรับปรุง CSS/Layout ใน [CourseHero.vue](file:///C:/wamp64/www/nuxnan/ui/components/learn/course/v2/CourseHero.vue) และ [CourseActionButton.vue](file:///C:/wamp64/www/nuxnan/ui/components/learn/course/v2/CourseActionButton.vue) เพื่อให้รองรับขนาดหน้าจอเล็ก (Mobile Responsive) โดยให้ปุ่มสามารถเว้นและซ้อนบรรทัดได้อย่างเป็นระเบียบ (`w-full sm:w-auto` และ `flex-wrap`)
+  - รันคำสั่ง `npm.cmd run build` ในโฟลเดอร์ `ui/` สำเร็จเรียบร้อยดี ไม่มีปัญหาความผิดพลาดของการคอมไพล์โค้ด
+
+---
+
 ## 2026-07-18 — แสดงปุ่มจัดการสมาชิกเลยโดยไม่ต้องรอ Hover
 - **สถานะ:** เสร็จสิ้น (แก้ไขโค้ดเรียบร้อยและตรวจสอบ git diff แล้ว)
 - **สิ่งที่ทำ:**

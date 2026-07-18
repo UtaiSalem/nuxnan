@@ -1,3 +1,118 @@
+---
+
+# 2026-07-18 - ระบบแต้มโฆษณา → โรงเรียน (Academy Ad Revenue) — Phase 1 Foundation
+
+**สถานะ:** เริ่มทำ (Phase 1 — Foundation)
+**จุดประสงค์:** เชื่อมรายได้โฆษณาเข้า `AcademyPointAccount` โดยตรงเพื่อให้โรงเรียนได้รับแต้มจาก ad revenue เทียบเท่ารายวิชา
+
+## Business Rules ที่ตกลง (
+- โฆษณาผูก `academy_id` → หักส่วน `academy` เข้า `AcademyPointAccount` โดยตรง (ไม่ผ่านรายวิชา)
+- Viewer 60% / Course 25% / Academy 10% / Platform 5% (policy id=3 ตามลำดับ fallback campaign→course→academy→platform)
+- แต้มโฆษณาเข้า User Points ก่อน ค่อยบริจาค
+- MVP เฉพาะแต้ม; cash ยังใช้ตรวจสลิปแบบเดิม
+
+## สิ่งที่มีอยู่แล้ว (ห้ามสร้างซ้ำ)
+- `Advert.academy_id` / `course_id` ✓ (migration `2026_07_12_120000`)
+- `RevenueSharePolicyResolver::resolve` (campaign→course→academy→platform) ✓
+- `AcademyPointAccount` + `AcademyPointTransaction` (มี balance_before/after, idempotency_key) ✓
+- `AcademyDonateService` (point/cash flow ครบ) ✓
+- `CoursePointAccountService::creditFromAdRevenue` ✓
+- `AcademyPointTransaction::TYPE_DONATION_POINT_CREDIT` ✓ (แต่ยังไม่มี `TYPE_AD_REVENUE`)
+
+## ช่องโหว่ที่ Phase 1 ต้องเติม
+1. `revenue_share_policies.academy_pct` — migration stub `2026_07_18_210029` ว่างเปล่า ยังไม่เพิ่ม column จริง
+2. `RevenueSharePolicy` model ไม่มี `academy_pct` (fillable/cast) และ `sumsTo100()` นับแค่ 3 ฝ่าย
+3. `RevenueSharePolicyResolver::split()` หาย `academy` leg → Academy ไม่ได้สัดส่วน
+4. `RewardDistributionService::distribute()` จ่ายเฉพาะ course/platform → ต้องเพิ่ม leg เข้า Academy เมื่อ `advert.academy_id` มีค่า
+5. `AcademyPointTransaction::TYPE_AD_REVENUE` ยังไม่มี
+6. seed default policy เป็น 70/20/10 → ต้องอัปเดตเป็น 60/25/10/5 (และแก้ให้รองรับ 4 ฝ่าย)
+
+## แผนทำงาน (Phase 1 ทีละ commit)
+- P1-A: migration เพิ่ม `academy_pct` จริง + model fillable/cast + `sumsTo100()` 4 ฝ่าย + seed 60/25/10/5
+- P1-B: `RevenueSharePolicyResolver::split()` คืน `academy` leg ด้วยลำดับถูกต้อง (student→course→academy→platform เหลือให้ platform)
+- P1-C: `AcademyPointTransaction::TYPE_AD_REVENUE` + helper credit เข้า Academy ด้วย idempotency key `ad-{$deliveryId}`
+- P1-D: `RewardDistributionService` เช็ค `advert.academy_id` → credit เข้า AcademyPointAccount; ปรับ condition ให้ course leg ทำเมื่อมี course_id เท่านั้น
+- P1-E: PHPUnit test กระจายแต้ม (academy ad revenue path) + `./vendor/bin/pint`
+
+## ไฟล์ที่จะแก้
+| ไฟล์ | Action |
+|------|--------|
+| `database/migrations/2026_07_18_210029_add_academy_pct_to_revenue_share_policies_table.php` | แก้ stub ให้เพิ่ม column จริง |
+| `app/Models/RevenueSharePolicy.php` | เพิ่ม fillable/cast + `sumsTo100()` 4 ฝ่าย |
+| `app/Services/RevenueSharePolicyResolver.php` | `split()` คืน `academy` |
+| `app/Models/AcademyPointTransaction.php` | `TYPE_AD_REVENUE` |
+| `app/Services/Campaign/RewardDistributionService.php` | credit เข้า Academy |
+| `database/migrations/2026_07_18_200002_seed_default_revenue_share_policy.php` | seed 60/25/10/5 |
+
+---
+
+# 2026-07-19 - Phase 3: Unified Donation Ledger (已完成)
+
+**สถานะ:** เสร็จสิ้น (53 tests ผ่าน)
+**เป้าหมาย:** รวม flow debit/credit ของการบริจาคแต้ม course/academy ให้ใช้ `PointLedgerService` มาตรฐานเดียวกัน
+
+## สิ่งที่สร้าง/แก้
+- `app/Services/PointLedgerService.php` (ใหม่) — orchestrator กลาง:
+  - `debitUserPoints()` / `creditUserPoints()` — ห่อ PointsService (spend/earn)
+  - `creditCoursePoints()` / `creditAcademyPoints()` — ห่อ account services
+  - `donatePoints(User, 'course'|'academy', id, amount, sourceType, key, meta)` — flow มาตรฐาน:
+    เช็ค idempotency → lock wallet → debit → credit destination → คืน `{points_transaction_id, destination_transaction_id}`
+  - `reconcileCourseAccount()` / `reconcileAcademyAccount()` — ตรวจ sum transaction = balance
+  - **ลำดับ lock คงที่:** user wallet → course account → academy account (ป้องกัน deadlock)
+- `app/Services/AcademyPointAccountService.php` (ใหม่) — เหมือน `CoursePointAccountService` แต่สำหรับ academy:
+  - `credit()` / `creditFromDonation()` / `creditFromAdRevenue()` / `creditFromCashDonation()` ทุกตัว lock `academy_point_accounts` แถวแล้วสร้าง transaction + idempotency key
+- `app/Services/AcademyDonateService.php` — constructor ใช้ `PointLedgerService` + `AcademyPointAccountService`; `createPointDonation` เรียก `ledger->donatePoints(...)`; ลบ method `credit()`/`creditFromAdRevenue()` ซ้ำซ้อน
+- `app/Services/CourseDonateService.php` — constructor ใช้ `PointLedgerService`; `createPointDonation` เรียก `ledger->donatePoints(...)`; `approve()` ใช้ `ledger->creditCoursePoints(...)`
+- `app/Services/PointsService.php` — `spend()` รับ param `?string $idempotencyKey` แล้วใส่ใน PointsTransaction + เช็ค replay (แก้ช่องโหว่ idempotency บน user wallet)
+- `app/Services/Campaign/RewardDistributionService.php` — เปลี่ยน inject `AcademyDonateService` → `AcademyPointAccountService` (แก้ circular dependency)
+
+## หมายเหตุสำคัญ
+- **แก้ circular dependency:** `PointLedgerService` ไม่ควรพึ่ง `AcademyDonateService` (ที่พึ่ง ledger กลับ) → ให้พึ่ง `AcademyPointAccountService` แทน
+- **แก้ idempotency จริง:** เดิม `spend()` ไม่ใส่ idempotency_key ทำให้ replay 借记ซ้ำ + ชน unique `daily_point_limits` → เพิ่ม key ลง PointsTransaction
+
+## Tests ใหม่
+- `tests/Feature/PointLedgerServiceTest.php` — donate course/academy, idempotent, insufficient, reconcile ทั้งสองบัญชี
+
+---
+
+# 2026-07-19 - Phase 4: Frontend Ad Viewer + Ledger Composable (ส่วนแรก)
+
+**สถานะ:** เสร็จสิ้น (typecheck ผ่าน สำหรับไฟล์ที่แก้)
+**เป้าหมาย:** ให้ `AdViewerModal` ใช้ reward จาก API เท่านั้น และเพิ่ม composable กลาง `usePointLedger`
+
+## สิ่งที่ทำ
+- `ui/composables/useAdDelivery.ts` — เพิ่ม `academy` leg ใน `AdRewardSplits` interface (สอดคล้อง Phase 1 backend)
+- `ui/composables/usePointLedger.ts` (ใหม่) — composable กลางสำหรับดึง:
+  - `getMyTransactions()`, `getMyCourseDonations()`, `getMyAcademyDonations()`
+  - `getCourseAccount()`, `getCourseTransactions()`, `getAcademyAccount()`, `getAcademyTransactions()`
+  - type `PointTransaction`, `DonationRecord`, `PointAccount` ตรงกับ API contract ของแผน
+- `ui/components/widgets/advertises/AdViewerModal.vue`:
+  - แสดงรายได้ที่เข้าสู่ **รายวิชา/โรงเรียน/แพลตฟอร์ม** จาก `result.reward.splits` ของ API (ไม่คำนวณเอง)
+  - เพิ่ม `rewardSplits` ref + เชื่อมจาก `complete()` result + reset ใน `resetAd()`
+  - แก้ pre-existing bug: template ใช้ `requiredDuration` (ไม่มีใน script) → เปลี่ยนเป็น `totalDuration` ที่มีจริง
+- `ui/i18n/locales/th.json` + `en.json` — เพิ่ม `ad.split_viewer/course/academy/platform`
+
+## หมายเหตุ
+- ยังไม่แตะไฟล์ donation modal / dashboard เจ้าของ (CourseSupportWidget, support.vue, AcademyDonationModal ฯลฯ) — เป็น uncommitted work ของผู้ใช้ ตามกฎ AGENTS.md ไม่แก้แทรก
+- typecheck: ไฟล์ที่เราแก้ไม่มี error (error อื่นใน repo เป็น pre-existing ใน quests.vue/schools/index.vue/plugins/api.ts ฯลฯ)
+
+---
+
+# 2026-07-18 - ย้ายปุ่มสนับสนุนวิชา (Course Donation) ไปยัง Course Profile (CourseHero)
+- **สถานะ:** เสร็จสิ้น (คอมไพล์ผ่าน `✨ Build complete!`)
+- **ไฟล์ที่เกี่ยวข้อง:**
+  - [id].vue (Link: [\[id\].vue](file:///C:/wamp64/www/nuxnan/ui/pages/Learn/Courses/%5Bid%5D.vue))
+  - CoursePageShell.vue (Link: [CoursePageShell.vue](file:///C:/wamp64/www/nuxnan/ui/components/learn/course/v2/CoursePageShell.vue))
+  - CourseHero.vue (Link: [CourseHero.vue](file:///C:/wamp64/www/nuxnan/ui/components/learn/course/v2/CourseHero.vue))
+  - CourseActionButton.vue (Link: [CourseActionButton.vue](file:///C:/wamp64/www/nuxnan/ui/components/learn/course/v2/CourseActionButton.vue))
+- **การเปลี่ยนแปลง:**
+  - ย้ายปุ่มสนับสนุนแต้มจากตรงกลางหน้าจอ `ui/pages/Learn/Courses/[id].vue`
+  - ยิงอีเวนต์ `support-course` ผ่าน `CourseHero.vue` -> `CoursePageShell.vue` -> `[id].vue`
+  - ปรับสไตล์ปุ่มสนับสนุนแต้มให้อยู่ในหน้าโปรไฟล์รายวิชา ( Course Hero ) ถัดจากปุ่มดำเนินการหลัก ใช้สีส้ม/amber และไอคอน `mdi:hand-heart`
+  - ปรับปุ่มต่าง ๆ ใน `CourseActionButton.vue` และ `CourseHero.vue` ให้รองรับ Mobile (ใช้ `w-full sm:w-auto` และ `flex-wrap`) เพื่อไม่ให้ปุ่มล้นขอบจอเมื่อแสดงผลบนหน้าจอขนาดเล็ก
+
+---
+
 # 2026-07-18 - แสดงปุ่มจัดการสมาชิกเลยโดยไม่ต้องรอ Hover
 - **สถานะ:** เสร็จสิ้น
 - **ไฟล์ที่เกี่ยวข้อง:** `ui/components/academy/member/MemberListView.vue` (Link: [MemberListView.vue](file:///C:/wamp64/www/nuxnan/ui/components/academy/member/MemberListView.vue))
@@ -3932,3 +4047,18 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 7. **Reset scope** — ระบบผลิตอยู่แล้ว มี user จริง มียอดจริง ต้อง freeze/notify user ก่อน migrate หรือไม่?
 
 หัวใจสำคัญตามที่แผนผู้ใช้สรุปไว้ถูกต้องแล้ว: **"ยกระดับจากเพิ่มฟีเจอร์ → สร้างระบบบัญชี Wallet กลาง"** — Phase 0–2 คือหัวใจ ถ้า foundation เสร็จดี phase อื่นเป็นเพียงการต่อ endpoint
+## 2026-07-18 - Course support navigation and widget
+
+- Moved course support actions into the course shell/header navigation model and added a dedicated `/Learn/Courses/:id/support` page.
+- Added `CourseSupportWidget.vue` using existing donation and course-point composables; no new backend contract was introduced.
+- Added support tab id `16` to `CourseTabBar.vue` and support route handling in `CoursePageShell.vue`.
+- Verification plan: run the focused Nuxt production build and inspect the course route manually when the local server/auth session is available.
+
+## 2026-07-18 - Plan: unify academy/course point donations with ad-earned rewards
+
+- Scope: plan-only analysis; no feature implementation performed.
+- Findings: course and academy point donations already have authenticated endpoints, idempotency keys, wallet/account transactions, and admin history; rewarded-ad delivery already has start/heartbeat/complete, replay protection, visibility/duration checks, and student reward distribution.
+- Main gap: ad revenue distribution currently credits only Course Point Account for course-targeted adverts; Academy Point Account has no equivalent delivery credit path. Donation flows and ad reward flows also use separate transaction abstractions and UI contracts, while course campaigns remain a separate claim model.
+- Intended work areas: `AdDeliveryService`, `RewardDistributionService`, academy/course point account services and transaction models, campaign/ad request-resource contracts, donation composables/modals, course/academy support widgets, and focused feature tests.
+- Key decisions to confirm before implementation: whether academy-targeted ads fund the academy account directly; whether ad revenue can be donated automatically or only displayed as available balance; canonical reward/ledger model; campaign budget and revenue-share percentages; and whether cash donations remain manual-review in MVP.
+- Verification plan: API contract tests, idempotency/concurrency tests, replay/fraud tests, wallet invariants/reconciliation, and manual desktop/mobile smoke tests for ad viewing and course/academy donation history.
