@@ -33,3 +33,5 @@ Schedule::command('wallet:reconcile')
     ->onFailure(function () {
         Log::critical('[wallet:reconcile] ledger integrity check FAILED — investigate before processing payouts.');
     });
+
+Schedule::command('course-points:cleanup-reservations')->everyFiveMinutes();

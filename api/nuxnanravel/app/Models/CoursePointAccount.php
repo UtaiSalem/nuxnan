@@ -8,7 +8,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CoursePointAccount extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'course_id', 'balance', 'total_earned', 'total_withdrawn', 'total_distributed',
+        'reserved_balance', 'commission_rate', 'minimum_withdrawal', 'version',
+    ];
 
     protected $casts = ['commission_rate' => 'decimal:4'];
 

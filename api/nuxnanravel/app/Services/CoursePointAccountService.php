@@ -26,7 +26,12 @@ class CoursePointAccountService
         int $userId,
         int $amount,
         int $pointsTransactionId,
+        ?string $idempotencyKey = null,
     ): CoursePointTransaction {
+        if ($idempotencyKey && ($existing = CoursePointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
+            return $existing;
+        }
+
         // 🔐 lockForUpdate — ป้องกัน concurrent credit ทำ balance ผิด
         $account = CoursePointAccount::lockForUpdate()
             ->firstOrCreate(
@@ -48,6 +53,7 @@ class CoursePointAccountService
         $account->update([
             'balance' => $balanceAfter,
             'total_earned' => $account->total_earned + $amount,
+            'version' => $account->version + 1,
         ]);
 
         return CoursePointTransaction::create([
@@ -62,6 +68,31 @@ class CoursePointAccountService
             'related_points_transaction_id' => $pointsTransactionId,
             'metadata' => ['source' => 'lesson_unlock'],
             'created_by' => $userId,
+            'idempotency_key' => $idempotencyKey,
+        ]);
+    }
+
+    public function creditFromDonation(int $courseId, int $donorId, int $amount, ?string $idempotencyKey = null, array $metadata = []): CoursePointTransaction
+    {
+        if ($idempotencyKey && ($existing = CoursePointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
+            return $existing;
+        }
+
+        $account = CoursePointAccount::firstOrCreate(['course_id' => $courseId], [
+            'balance' => 0, 'total_earned' => 0, 'total_withdrawn' => 0, 'total_distributed' => 0,
+            'reserved_balance' => 0, 'commission_rate' => 0.0000,
+            'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL,
+        ]);
+        $account = CoursePointAccount::lockForUpdate()->findOrFail($account->id);
+        $before = $account->balance;
+        $account->update(['balance' => $before + $amount, 'total_earned' => $account->total_earned + $amount, 'version' => $account->version + 1]);
+
+        return CoursePointTransaction::create([
+            'course_point_account_id' => $account->id, 'course_id' => $courseId, 'user_id' => $donorId,
+            'type' => (($metadata['source'] ?? '') === 'donation_cash') ? CoursePointTransaction::TYPE_DONATION_CASH_CREDIT : CoursePointTransaction::TYPE_DONATION_POINT_CREDIT,
+            'amount' => $amount, 'balance_before' => $before, 'balance_after' => $before + $amount,
+            'related_points_transaction_id' => $metadata['related_points_transaction_id'] ?? null,
+            'metadata' => $metadata, 'created_by' => $donorId, 'idempotency_key' => $idempotencyKey,
         ]);
     }
 
@@ -95,6 +126,7 @@ class CoursePointAccountService
             $account->update([
                 'balance' => $balanceAfter,
                 'total_withdrawn' => $account->total_withdrawn + $amount,
+                'version' => $account->version + 1,
             ]);
 
             // สร้าง ledger รายวิชา
@@ -143,17 +175,15 @@ class CoursePointAccountService
     public function createCampaign(int $courseId, array $data, int $createdBy): array
     {
         return DB::transaction(function () use ($courseId, $data, $createdBy) {
-            $account = CoursePointAccount::where('course_id', $courseId)
-                ->lockForUpdate()
-                ->firstOrCreate(
-                    ['course_id' => $courseId],
-                    [
-                        'balance' => 0, 'total_earned' => 0, 'total_withdrawn' => 0,
-                        'total_distributed' => 0, 'reserved_balance' => 0,
-                        'commission_rate' => 0.0000,
-                        'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL,
-                    ]
-                );
+            CoursePointAccount::firstOrCreate(
+                ['course_id' => $courseId],
+                [
+                    'balance' => 0, 'total_earned' => 0, 'total_withdrawn' => 0,
+                    'total_distributed' => 0, 'reserved_balance' => 0,
+                    'commission_rate' => 0.0000, 'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL,
+                ]
+            );
+            $account = CoursePointAccount::where('course_id', $courseId)->lockForUpdate()->firstOrFail();
 
             // ถ้ากำหนด max_claims ต้องจองงบ
             $reserveAmount = 0;
@@ -165,7 +195,6 @@ class CoursePointAccountService
                         'message' => "แต้มไม่พอ ต้องการ {$reserveAmount} แต้ม (Available: {$account->available_balance} แต้ม)",
                     ];
                 }
-                $this->reserve($account, $reserveAmount);
             }
 
             $campaign = CoursePointCampaign::create([
@@ -183,6 +212,10 @@ class CoursePointAccountService
                 'created_by' => $createdBy,
             ]);
 
+            if ($reserveAmount > 0) {
+                $this->reserve($account, $reserveAmount, $campaign->id, $createdBy);
+            }
+
             return ['success' => true, 'campaign' => $campaign];
         });
     }
@@ -192,17 +225,15 @@ class CoursePointAccountService
     public function createLessonRewardCampaign(int $courseId, int $lessonId, array $data, int $createdBy): array
     {
         return DB::transaction(function () use ($courseId, $lessonId, $data, $createdBy) {
-            $account = CoursePointAccount::where('course_id', $courseId)
-                ->lockForUpdate()
-                ->firstOrCreate(
-                    ['course_id' => $courseId],
-                    [
-                        'balance' => 0, 'total_earned' => 0, 'total_withdrawn' => 0,
-                        'total_distributed' => 0, 'reserved_balance' => 0,
-                        'commission_rate' => 0.0000,
-                        'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL,
-                    ]
-                );
+            CoursePointAccount::firstOrCreate(
+                ['course_id' => $courseId],
+                [
+                    'balance' => 0, 'total_earned' => 0, 'total_withdrawn' => 0,
+                    'total_distributed' => 0, 'reserved_balance' => 0,
+                    'commission_rate' => 0.0000, 'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL,
+                ]
+            );
+            $account = CoursePointAccount::where('course_id', $courseId)->lockForUpdate()->firstOrFail();
 
             $existing = CoursePointCampaign::where('course_id', $courseId)
                 ->where('lesson_id', $lessonId)
@@ -223,7 +254,6 @@ class CoursePointAccountService
                         'message' => "แต้มไม่พอต้องการจอง {$reserveAmount} แต้ม (Available: {$account->available_balance} แต้ม)",
                     ];
                 }
-                $this->reserve($account, $reserveAmount);
             }
 
             $campaign = CoursePointCampaign::create([
@@ -242,13 +272,17 @@ class CoursePointAccountService
                 'created_by' => $createdBy,
             ]);
 
+            if ($reserveAmount > 0) {
+                $this->reserve($account, $reserveAmount, $campaign->id, $createdBy);
+            }
+
             return ['success' => true, 'campaign' => $campaign];
         });
     }
 
     // ─── 5. Auto-Grant Lesson Reward ───
 
-    public function grantLessonCompletionReward(Lesson $lesson, User $student): array
+    public function grantLessonCompletionReward(Lesson $lesson, User $student, ?string $idempotencyKey = null): array
     {
         $campaign = CoursePointCampaign::where('lesson_id', $lesson->id)
             ->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_LESSON)
@@ -259,7 +293,10 @@ class CoursePointAccountService
             return ['rewarded' => false, 'reason' => 'no_active_campaign'];
         }
 
-        return DB::transaction(function () use ($campaign, $lesson, $student) {
+        return DB::transaction(function () use ($campaign, $lesson, $student, $idempotencyKey) {
+            if ($idempotencyKey && ($existing = CoursePointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
+                return ['rewarded' => true, 'points_received' => $existing->amount, 'campaign_title' => $campaign->title];
+            }
             // ลำดับ lock: campaign -> account เพื่อเลี่ยง deadlock
             $campaign = CoursePointCampaign::lockForUpdate()->find($campaign->id);
             if (! $campaign->isClaimable()) {
@@ -294,6 +331,7 @@ class CoursePointAccountService
             $updateData = [
                 'balance' => $balanceAfter,
                 'total_distributed' => $account->total_distributed + $amount,
+                'version' => $account->version + 1,
             ];
             if ($campaign->max_claims) {
                 $updateData['reserved_balance'] = max(0, $account->reserved_balance - $amount);
@@ -312,6 +350,7 @@ class CoursePointAccountService
                 'related_campaign_id' => $campaign->id,
                 'metadata' => ['source' => 'lesson_completion'],
                 'created_by' => $student->id,
+                'idempotency_key' => $idempotencyKey,
             ]);
 
             $userTx = $this->pointsService->earn(
@@ -363,7 +402,7 @@ class CoursePointAccountService
             if ($campaign->max_claims) {
                 $remaining = ($campaign->max_claims - $campaign->total_claimed) * $campaign->points_per_claim;
                 if ($remaining > 0 && $account) {
-                    $this->releaseReserve($account, $remaining);
+                    $this->releaseReserve($account, $remaining, $campaign->id, $campaign->created_by);
                 }
             }
 
@@ -375,14 +414,28 @@ class CoursePointAccountService
 
     // ─── Internal Helpers ───
 
-    protected function reserve(CoursePointAccount $account, int $amount): void
+    protected function reserve(CoursePointAccount $account, int $amount, int $campaignId, int $performedBy): void
     {
-        $account->update(['reserved_balance' => $account->reserved_balance + $amount]);
+        if (DB::transactionLevel() === 0) {
+            throw new \RuntimeException('Course point reservation requires an open transaction.');
+        }
+        $account = CoursePointAccount::lockForUpdate()->findOrFail($account->id);
+        $before = $account->reserved_balance;
+        $after = $before + $amount;
+        $account->update(['reserved_balance' => $after, 'version' => $account->version + 1]);
+        CoursePointTransaction::create(['course_point_account_id' => $account->id, 'course_id' => $account->course_id, 'type' => CoursePointTransaction::TYPE_CAMPAIGN_RESERVE, 'amount' => $amount, 'balance_before' => $before, 'balance_after' => $after, 'related_campaign_id' => $campaignId, 'created_by' => $performedBy, 'metadata' => ['source' => 'campaign_reserve']]);
     }
 
-    protected function releaseReserve(CoursePointAccount $account, int $amount): void
+    protected function releaseReserve(CoursePointAccount $account, int $amount, int $campaignId, int $performedBy): void
     {
-        $account->update(['reserved_balance' => max(0, $account->reserved_balance - $amount)]);
+        if (DB::transactionLevel() === 0) {
+            throw new \RuntimeException('Course point reservation requires an open transaction.');
+        }
+        $account = CoursePointAccount::lockForUpdate()->findOrFail($account->id);
+        $before = $account->reserved_balance;
+        $after = max(0, $before - $amount);
+        $account->update(['reserved_balance' => $after, 'version' => $account->version + 1]);
+        CoursePointTransaction::create(['course_point_account_id' => $account->id, 'course_id' => $account->course_id, 'type' => CoursePointTransaction::TYPE_CAMPAIGN_RELEASE, 'amount' => $amount, 'balance_before' => $before, 'balance_after' => $after, 'related_campaign_id' => $campaignId, 'created_by' => $performedBy, 'metadata' => ['source' => 'campaign_release']]);
     }
 
     public function getAccount(int $courseId): ?CoursePointAccount

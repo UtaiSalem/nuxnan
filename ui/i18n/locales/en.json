@@ -147,6 +147,11 @@
     "en": "English",
     "selectLanguage": "Select Language"
   },
+  "donation": {
+    "support": "Support with Points",
+    "anonymousHint": "Your name will not be shown publicly, but the system still records it.",
+    "replayed": "This item was already submitted"
+  },
   "learn": {
     "progress": {
       "lesson_assignments_short": "Lesson Assign",

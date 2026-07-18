@@ -147,6 +147,11 @@
     "en": "English",
     "selectLanguage": "เลือกภาษา"
   },
+  "donation": {
+    "support": "สนับสนุนแต้ม",
+    "anonymousHint": "ชื่อจะไม่ถูกแสดงต่อสาธารณะ แต่ระบบยังบันทึกไว้",
+    "replayed": "รายการนี้เคยส่งไปแล้ว"
+  },
   "learn": {
     "progress": {
       "lesson_assignments_short": "งานบทเรียน",

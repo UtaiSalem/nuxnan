@@ -17,4 +17,20 @@ class CoursePointTransaction extends Model
     const TYPE_STUDENT_CLAIM = 'student_claim';
 
     const TYPE_REFUND = 'refund';
+
+    const TYPE_CAMPAIGN_RESERVE = 'campaign_reserve';
+
+    const TYPE_CAMPAIGN_RELEASE = 'campaign_release';
+
+    const TYPE_DONATION_POINT_CREDIT = 'donation_point_credit';
+
+    const TYPE_DONATION_CASH_CREDIT = 'donation_cash_credit';
+
+    protected $fillable = [
+        'course_point_account_id', 'course_id', 'lesson_id', 'user_id', 'type', 'amount',
+        'balance_before', 'balance_after', 'related_points_transaction_id', 'related_campaign_id',
+        'metadata', 'created_by', 'idempotency_key',
+    ];
+
+    protected $casts = ['metadata' => 'array'];
 }

@@ -123,6 +123,7 @@ class Course extends Model
         'price_type',
         'total_sales',
         'source_course_id',
+        'donation_enabled',
     ];
 
     protected $casts = [
@@ -154,7 +155,17 @@ class Course extends Model
         'unlock_reading_lesson_ids' => 'array',
         'allow_self_unlock' => 'boolean',
         'end_date' => 'datetime',
+        'donation_enabled' => 'boolean',
     ];
+
+    public function donationEnabled(): bool
+    {
+        if ($this->donation_enabled !== null) {
+            return (bool) $this->donation_enabled;
+        }
+
+        return (bool) config('platform.course_donation.enabled', true);
+    }
 
     /**
      * Derived lifecycle state for this course.

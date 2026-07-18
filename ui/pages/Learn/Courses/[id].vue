@@ -8,6 +8,8 @@ import CourseInvitationBanner from '~/components/learn/course/v2/CourseInvitatio
 import CourseEditModal from '~/components/learn/course/v2/CourseEditModal.vue'
 import CourseGroupSelectorModal from '~/components/learn/course/v2/CourseGroupSelectorModal.vue'
 import AcademyCoursePurchaseModal from '~/components/academy/CoursePurchaseModal.vue'
+import CourseDonationModal from '~/components/donation/CourseDonationModal.vue'
+import { useCourseDonations, type CourseDonation } from '~/composables/useCourseDonations'
 
 definePageMeta({
   layout: 'main',
@@ -37,6 +39,9 @@ const isEnrolling = ref(false)
 const isTogglingFavorite = ref(false)
 const isWishlisted = ref(false)
 const selectedGroupId = ref<number | null>(null)
+const showDonationModal = ref(false)
+const ownerDonations = ref<CourseDonation[]>([])
+const { fetchCourseDonations } = useCourseDonations()
 
 const courseId = computed(() => route.params.id as string)
 const courseGroups = computed(() => courseGroupStore.groups || [])
@@ -186,6 +191,11 @@ provide('refreshCourse', fetchCourse)
 
 const authStore = useAuthStore()
 
+const openDonation = () => {
+  if (!authStore.user) return navigateTo(`/login?return=${encodeURIComponent(route.fullPath)}`)
+  showDonationModal.value = true
+}
+
 onMounted(() => {
   if (authStore.user) {
     fetchCourse()
@@ -200,6 +210,9 @@ watch(() => authStore.user?.id, (id) => {
 watch(course, (newCourse) => {
   if (newCourse?.name) {
     useHead({ title: `${newCourse.name} - รายวิชา` })
+  }
+  if (newCourse?.user_id && authStore.user?.id === newCourse.user_id) {
+    fetchCourseDonations(Number(newCourse.id)).then(response => { ownerDonations.value = response.data })
   }
 })
 
@@ -248,17 +261,24 @@ watch(courseId, (newId) => {
         @toggle-favorite="toggleWishlist"
         @update:selected-group-id="selectedGroupId = $event"
       >
-        <!-- Invitation Banner (Admin/TA) -->
-        <CourseInvitationBanner
-          v-if="courseMemberOfAuth && courseMemberOfAuth.status === 2"
-          :course-id="courseId"
-          :course-member-of-auth="courseMemberOfAuth"
-          @refresh="fetchCourse(true)"
-        />
+        <template #default>
+          <button v-if="authStore.user?.id !== course.user_id && course.donation_enabled !== false" class="mb-4 rounded-xl bg-amber-500 px-5 py-3 font-bold text-white shadow" @click="openDonation">สนับสนุนแต้ม / Support with Points</button>
+          <div v-if="authStore.user?.id === course.user_id" class="mb-4 rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
+            <h2 class="font-bold">การสนับสนุน</h2><div v-for="donation in ownerDonations" :key="donation.id" class="mt-2 flex justify-between text-sm"><span>{{ donation.donor_display_name || 'ผู้ไม่ประสงค์ออกนาม' }}</span><span>{{ donation.donation_type === 'point' ? donation.points_amount + ' points' : donation.cash_amount + ' ' + (donation.currency || 'THB') }}</span></div>
+          </div>
+          <!-- Invitation Banner (Admin/TA) -->
+          <CourseInvitationBanner
+            v-if="courseMemberOfAuth && courseMemberOfAuth.status === 2"
+            :course-id="courseId"
+            :course-member-of-auth="courseMemberOfAuth"
+            @refresh="fetchCourse(true)"
+          />
 
-        <!-- Actual Content (NuxtPage) -->
-        <NuxtPage />
+          <!-- Actual Content (NuxtPage) -->
+          <NuxtPage />
+        </template>
       </CoursePageShell>
+      <CourseDonationModal v-model:visible="showDonationModal" :course-id="Number(course.id)" :course-name="course.name" :course-owner-id="Number(course.user_id)" :balance="authStore.user?.pp" />
 
       <!-- Modals -->
       <CourseEditModal

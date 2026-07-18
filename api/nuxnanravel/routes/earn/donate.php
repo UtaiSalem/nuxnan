@@ -1,7 +1,21 @@
 <?php
 
+use App\Http\Controllers\Api\Courses\CourseDonationController;
 use App\Http\Controllers\Api\Earn\DonateController;
+use App\Http\Controllers\Api\PlearndAdmin\CourseDonationAdminController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->group(function () {
+    Route::post('/courses/{course}/donations/points', [CourseDonationController::class, 'storePoint'])->name('course.donation.point');
+    Route::post('/courses/{course}/donations/cash', [CourseDonationController::class, 'storeCash'])->name('course.donation.cash');
+    Route::get('/me/course-donations', [CourseDonationController::class, 'mine']);
+    Route::get('/courses/{course}/donations', [CourseDonationController::class, 'showForCourse']);
+});
+Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/course-donations')->group(function () {
+    Route::get('/', [CourseDonationAdminController::class, 'index']);
+    Route::patch('/{donation}/approve', [CourseDonationAdminController::class, 'approve']);
+    Route::patch('/{donation}/reject', [CourseDonationAdminController::class, 'reject']);
+});
 
 // Public routes for creating donations (anonymous allowed)
 Route::get('/supports/donates/create', [DonateController::class, 'create'])->name('support.donate.create');
