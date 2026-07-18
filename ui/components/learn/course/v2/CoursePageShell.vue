@@ -43,6 +43,7 @@ const emit = defineEmits<{
   (e: 'purchase-course'): void
   (e: 'toggle-favorite'): void
   (e: 'update:selected-group-id', id: number | null): void
+  (e: 'support-course'): void
 }>()
 
 const route = useRoute()
@@ -134,6 +135,7 @@ usePageLayoutWidgets({
         @refresh="$emit('refresh')"
         @request-member="$emit('request-member')"
         @purchase-course="$emit('purchase-course')"
+        @support-course="$emit('support-course')"
       >
         <template #stats>
           <CourseHeroStats 

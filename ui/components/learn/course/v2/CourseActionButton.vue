@@ -163,13 +163,13 @@ async function completePayment() {
 </script>
 
 <template>
-  <div class="w-full" :class="variant === 'standalone' ? 'space-y-3' : 'flex items-center gap-2'">
+  <div class="w-full sm:w-auto" :class="variant === 'standalone' ? 'space-y-3' : 'flex flex-wrap items-center gap-2'">
     <!-- Guard: กำลังตรวจสอบสถานะ -->
     <button
       v-if="isCheckingMembership"
       disabled
       class="flex items-center justify-center gap-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-black opacity-50 cursor-wait"
-      :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+      :class="[variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto', buttonClasses]"
     >
       <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" />
       <span>กำลังตรวจสอบ...</span>
@@ -181,7 +181,7 @@ async function completePayment() {
       @click="handleAction"
       :disabled="isProcessing"
       class="group flex items-center justify-center gap-2 rounded-xl bg-emerald-500 text-white font-black shadow-lg shadow-emerald-500/20 hover:bg-red-500 transition-all active:scale-95 disabled:opacity-50"
-      :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+      :class="[variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto', buttonClasses]"
     >
       <Icon v-if="isProcessing" icon="svg-spinners:ring-resize" class="w-5 h-5" />
       <template v-else>
@@ -198,7 +198,7 @@ async function completePayment() {
       @click="completePayment"
       :disabled="isProcessing"
       class="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 text-white font-black shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
-      :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+      :class="[variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto', buttonClasses]"
     >
       <Icon v-if="isProcessing" icon="svg-spinners:ring-resize" class="w-5 h-5" />
       <template v-else>
@@ -208,11 +208,11 @@ async function completePayment() {
     </button>
 
     <!-- Pending Status Button -->
-    <div v-else-if="courseMemberOfAuth && isPendingApproval" class="relative" :class="variant === 'standalone' ? 'w-full' : ''">
+    <div v-else-if="courseMemberOfAuth && isPendingApproval" class="relative" :class="variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto'">
       <button
         @click="showPendingMenu = !showPendingMenu"
         class="flex items-center justify-center gap-2 rounded-xl bg-amber-500 text-white font-black shadow-lg shadow-amber-500/20 hover:bg-amber-600 transition-all active:scale-95"
-        :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+        :class="[variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto', buttonClasses]"
       >
         <Icon icon="heroicons:clock" class="w-5 h-5" />
         <span>รอการตอบรับ</span>
@@ -236,12 +236,12 @@ async function completePayment() {
 
     <!-- Not Member: Enrollment Closed -->
     <div v-else-if="!courseMemberOfAuth && !course.is_enrollment_open"
-      :class="variant === 'standalone' ? 'w-full' : 'flex items-center gap-2'"
+      :class="variant === 'standalone' ? 'w-full' : 'flex flex-wrap items-center gap-2 w-full sm:w-auto'"
     >
       <button
         disabled
         class="flex items-center justify-center gap-2 rounded-xl bg-gray-400 dark:bg-gray-600 text-white font-black cursor-not-allowed"
-        :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+        :class="[variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto', buttonClasses]"
       >
         <Icon icon="heroicons:lock-closed" class="w-5 h-5" />
         <span>ปิดรับสมัครแล้ว</span>
@@ -252,7 +252,7 @@ async function completePayment() {
     <div v-else-if="!courseMemberOfAuth"
       class="grid"
       :class="[
-        variant === 'standalone' ? 'w-full grid-cols-1 gap-3' : 'flex items-center gap-2',
+        variant === 'standalone' ? 'w-full grid-cols-1 gap-3' : 'flex flex-wrap items-center gap-2 w-full sm:w-auto',
         variant === 'standalone' && canPurchaseCopy && !isCourseSelf ? 'sm:grid-cols-2' : ''
       ]"
     >
@@ -260,7 +260,7 @@ async function completePayment() {
         @click="handleAction"
         :disabled="isProcessing"
         class="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white font-black shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
-        :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+        :class="[variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto', buttonClasses]"
       >
         <Icon v-if="isProcessing" icon="svg-spinners:ring-resize" class="w-5 h-5" />
         <Icon v-else icon="heroicons:user-plus-solid" class="w-5 h-5" />
@@ -273,7 +273,7 @@ async function completePayment() {
           v-if="alreadyPurchased"
           disabled
           class="flex items-center justify-center gap-2 rounded-xl bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 font-black cursor-not-allowed"
-          :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+          :class="[variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto', buttonClasses]"
         >
           <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
           <span>ซื้อแล้ว</span>
@@ -283,7 +283,7 @@ async function completePayment() {
           @click="emit('purchase-course')"
           :disabled="isCheckingPurchase"
           class="flex items-center justify-center gap-2 rounded-xl bg-cyan-500 text-white font-black shadow-lg shadow-cyan-500/20 hover:bg-cyan-600 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait"
-          :class="[variant === 'standalone' ? 'w-full' : '', buttonClasses]"
+          :class="[variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto', buttonClasses]"
         >
           <Icon v-if="isCheckingPurchase" icon="svg-spinners:ring-resize" class="w-5 h-5" />
           <Icon v-else icon="fluent:cart-24-filled" class="w-5 h-5" />

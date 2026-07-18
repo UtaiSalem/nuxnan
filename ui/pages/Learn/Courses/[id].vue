@@ -193,6 +193,9 @@ const authStore = useAuthStore()
 
 const openDonation = () => {
   if (!authStore.user) return navigateTo(`/login?return=${encodeURIComponent(route.fullPath)}`)
+  if (Number(authStore.user.id) === Number(course.value?.user_id)) {
+    return navigateTo(`/Learn/Courses/${courseId.value}/support`)
+  }
   showDonationModal.value = true
 }
 
@@ -260,9 +263,9 @@ watch(courseId, (newId) => {
         @purchase-course="showCopyPurchaseModal = true"
         @toggle-favorite="toggleWishlist"
         @update:selected-group-id="selectedGroupId = $event"
+        @support-course="openDonation"
       >
         <template #default>
-          <button v-if="authStore.user?.id !== course.user_id && course.donation_enabled !== false" class="mb-4 rounded-xl bg-amber-500 px-5 py-3 font-bold text-white shadow" @click="openDonation">สนับสนุนแต้ม / Support with Points</button>
           <div v-if="authStore.user?.id === course.user_id" class="mb-4 rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
             <h2 class="font-bold">การสนับสนุน</h2><div v-for="donation in ownerDonations" :key="donation.id" class="mt-2 flex justify-between text-sm"><span>{{ donation.donor_display_name || 'ผู้ไม่ประสงค์ออกนาม' }}</span><span>{{ donation.donation_type === 'point' ? donation.points_amount + ' points' : donation.cash_amount + ' ' + (donation.currency || 'THB') }}</span></div>
           </div>

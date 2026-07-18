@@ -14,7 +14,13 @@ const props = defineProps({
   hideCover: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['edit-name', 'refresh', 'request-member', 'purchase-course'])
+const emit = defineEmits([
+  'edit-name',
+  'refresh',
+  'request-member',
+  'purchase-course',
+  'support-course'
+])
 
 const config = useRuntimeConfig()
 const courseStore = useCourseStore()
@@ -275,7 +281,16 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
             <div class="flex items-center gap-3 flex-wrap">
               <slot name="stats" />
             </div>
-            <div v-if="!isAdmin" class="shrink-0">
+            <div class="flex flex-wrap items-center gap-3 shrink-0 w-full sm:w-auto">
+              <button
+                type="button"
+                v-if="course?.donation_enabled !== false"
+                class="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 h-10 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-amber-600 w-full sm:w-auto"
+                @click.stop.prevent="emit('support-course')"
+              >
+                <Icon icon="mdi:hand-heart" class="h-5 w-5" />
+                <span>สนับสนุนแต้ม / Support with Points</span>
+              </button>
               <CourseActionButton
                 variant="hero"
                 :course="course"
