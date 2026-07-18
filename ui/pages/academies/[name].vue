@@ -33,7 +33,28 @@ const courseFilters = ref({
   search: '',
 })
 const courseAvailableFilters = ref<any>(null)
+const selectedGroupTab = ref('all')
 const expandedCourseGroups = ref<Record<string, boolean>>({})
+
+const shortenGroupLabel = (label: string): string => {
+  return label
+    .replace(/^มัธยมศึกษา ปี (\d+)$/, 'ม.$1')
+    .replace(/^ประถมศึกษา ปี (\d+)$/, 'ป.$1')
+    .replace(/^ปวช\. ปี (\d+)$/, 'ปวช.$1')
+    .replace(/^ปวส\. ปี (\d+)$/, 'ปวส.$1')
+    .replace(/^ยังไม่ระบุกลุ่มนักเรียน$/, 'ไม่ระบุ')
+}
+
+const courseGroupTabs = computed(() => [
+  { key: 'all', label: 'ทั้งหมด', count: courses.value.length },
+  ...groupedCourses.value.map(g => ({ key: g.key, label: shortenGroupLabel(g.label), count: g.courses.length })),
+])
+
+const displayedCourseGroups = computed(() =>
+  selectedGroupTab.value === 'all'
+    ? groupedCourses.value
+    : groupedCourses.value.filter(g => g.key === selectedGroupTab.value),
+)
 const members = ref<any[]>([])
 const groups = ref<any[]>([])
 const activities = ref<any[]>([])
@@ -386,6 +407,7 @@ const toggleCourseGroup = (groupKey: string) => {
 }
 
 const resetCourseFilters = async () => {
+  selectedGroupTab.value = 'all'
   courseFilters.value = {
     education_level: '',
     education_year: '',
@@ -1358,21 +1380,29 @@ watch(() => route.hash, (newHash) => {
           
           <!-- Courses Tab -->
           <div v-else-if="currentTab === 'courses'" class="space-y-4">
-            <div v-if="academy.authIsAcademyAdmin" class="flex justify-end">
-              <NuxtLink
-                to="/Learn/Courses/create"
-                class="px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium text-sm hover:bg-vikinger-purple/90 transition-colors flex items-center gap-2"
-              >
-                <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
-                สร้างรายวิชาใหม่
-              </NuxtLink>
-            </div>
 
-            <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
-              <div class="flex flex-col gap-3 xl:flex-row">
+            <!-- Level Tabs + Create button row -->
+            <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_10px_30px_rgba(30,41,59,0.06)] dark:border-gray-700 dark:bg-vikinger-dark-200">
+              <div class="flex items-center justify-end gap-3 px-3 pt-3 md:px-4">
+                <!-- Create button (admin only) -->
+                <NuxtLink
+                  v-if="academy.authIsAcademyAdmin"
+                  to="/Learn/Courses/create"
+                  class="shrink-0 rounded-xl bg-vikinger-purple px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-vikinger-purple/90 flex items-center gap-1.5"
+                >
+                  <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
+                  สร้างรายวิชา
+                </NuxtLink>
+              </div>
+
+              <!-- Divider -->
+              <div class="mx-3 border-t border-slate-100 dark:border-gray-700 md:mx-4" />
+
+              <!-- Secondary filters -->
+              <div class="flex flex-wrap items-center gap-2 p-3 md:p-4">
                 <select
                   v-model="courseFilters.academic_year"
-                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  class="min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-gray-700 outline-none transition focus:border-vikinger-purple focus:ring-2 focus:ring-vikinger-purple/10 dark:border-gray-700 dark:bg-vikinger-dark-100 dark:text-gray-200"
                   @change="fetchCourses"
                 >
                   <option value="">ทุกปีการศึกษา</option>
@@ -1380,14 +1410,12 @@ watch(() => route.hash, (newHash) => {
                     v-for="option in courseAvailableFilters?.academic_years || []"
                     :key="`academic-year-${option.value}`"
                     :value="option.value === 'unspecified' ? '' : option.value"
-                  >
-                    {{ option.label }} ({{ option.count }})
-                  </option>
+                  >{{ option.label }} ({{ option.count }})</option>
                 </select>
 
                 <select
                   v-model="courseFilters.semester"
-                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  class="min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-gray-700 outline-none transition focus:border-vikinger-purple focus:ring-2 focus:ring-vikinger-purple/10 dark:border-gray-700 dark:bg-vikinger-dark-100 dark:text-gray-200"
                   @change="fetchCourses"
                 >
                   <option value="">ทุกภาคเรียน</option>
@@ -1395,29 +1423,12 @@ watch(() => route.hash, (newHash) => {
                     v-for="option in courseAvailableFilters?.semesters || []"
                     :key="`semester-${option.value}`"
                     :value="option.value === 'unspecified' ? '' : option.value"
-                  >
-                    {{ option.label }} ({{ option.count }})
-                  </option>
-                </select>
-
-                <select
-                  v-model="courseFilters.education_level"
-                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
-                  @change="fetchCourses"
-                >
-                  <option value="">ทุกระดับชั้น</option>
-                  <option
-                    v-for="option in courseAvailableFilters?.education_levels || []"
-                    :key="`level-${option.value}`"
-                    :value="option.value === 'unspecified' ? '' : option.value"
-                  >
-                    {{ option.label }} ({{ option.count }})
-                  </option>
+                  >{{ option.label }} ({{ option.count }})</option>
                 </select>
 
                 <select
                   v-model="courseFilters.education_year"
-                  class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                  class="min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-gray-700 outline-none transition focus:border-vikinger-purple focus:ring-2 focus:ring-vikinger-purple/10 dark:border-gray-700 dark:bg-vikinger-dark-100 dark:text-gray-200"
                   @change="fetchCourses"
                 >
                   <option value="">ทุกปี/ชั้นเรียน</option>
@@ -1425,87 +1436,126 @@ watch(() => route.hash, (newHash) => {
                     v-for="option in courseAvailableFilters?.education_years || []"
                     :key="`year-${option.value}`"
                     :value="option.value === 'unspecified' ? '' : option.value"
-                  >
-                    {{ option.label }} ({{ option.count }})
-                  </option>
+                  >{{ option.label }} ({{ option.count }})</option>
                 </select>
-              </div>
 
-              <div class="flex flex-col gap-3 lg:flex-row">
-                <div class="relative flex-1">
+                <!-- Search -->
+                <div class="flex-1 min-w-[160px] relative">
                   <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     v-model="courseFilters.search"
                     type="text"
                     placeholder="ค้นหารายวิชา..."
-                    class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-vikinger-dark-100 py-2 pl-10 pr-4 text-sm text-gray-700 dark:text-gray-200"
+                  class="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-gray-700 outline-none transition placeholder:text-slate-400 focus:border-vikinger-purple focus:ring-2 focus:ring-vikinger-purple/10 dark:border-gray-700 dark:bg-vikinger-dark-100 dark:text-gray-200"
                     @keyup.enter="fetchCourses"
                   />
                 </div>
 
-                <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    class="px-4 py-2 bg-vikinger-purple text-white rounded-lg text-sm font-medium hover:bg-vikinger-purple/90 transition-colors"
-                    @click="fetchCourses"
-                  >
-                    ค้นหา
-                  </button>
-                  <button
-                    v-if="hasActiveCourseFilters"
-                    type="button"
-                    class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
-                    @click="resetCourseFilters"
-                  >
-                    ล้างตัวกรอง
-                  </button>
+                <button
+                  type="button"
+                  class="min-h-10 rounded-xl bg-vikinger-purple px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-vikinger-purple/90"
+                  @click="fetchCourses"
+                >ค้นหา</button>
+
+                <button
+                  v-if="hasActiveCourseFilters"
+                  type="button"
+                  class="min-h-10 rounded-xl border border-slate-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-slate-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-vikinger-dark-100"
+                  @click="resetCourseFilters"
+                >ล้าง</button>
+              </div>
+
+              <!-- Level tabs: placed below filters for a familiar browsing flow -->
+              <div class="border-t border-slate-100 px-3 pt-1 dark:border-gray-700 md:px-4">
+                <div class="overflow-x-auto scrollbar-none">
+                  <div class="flex min-w-max items-center gap-0.5">
+                    <button
+                      v-for="tab in courseGroupTabs"
+                      :key="tab.key"
+                      type="button"
+                      class="relative flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition-colors md:px-4"
+                      :class="selectedGroupTab === tab.key
+                        ? 'border-vikinger-purple text-vikinger-purple'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+                      @click="selectedGroupTab = tab.key"
+                    >
+                      {{ tab.label }}
+                      <span
+                        class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+                        :class="selectedGroupTab === tab.key
+                          ? 'bg-vikinger-purple/10 text-vikinger-purple'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'"
+                      >{{ tab.count }}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div v-if="courses.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
+            <!-- Empty state -->
+            <div v-if="courses.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-10 text-center">
               <Icon icon="fluent:book-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p class="text-gray-500 dark:text-gray-400">
                 {{ hasActiveCourseFilters ? 'ไม่พบรายวิชาตามตัวกรองที่เลือก' : 'ยังไม่มีรายวิชา' }}
               </p>
-              <p v-if="hasActiveCourseFilters" class="text-sm text-gray-400 dark:text-gray-500 mt-2">ลองเปลี่ยนระดับชั้น ภาคเรียน หรือคำค้นหา ดูแล้วลองใหม่อีกครั้ง</p>
-              <p v-else-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">คลิก "สร้างรายวิชาใหม่" เพื่อเริ่มต้น</p>
+              <p v-if="hasActiveCourseFilters" class="text-sm text-gray-400 dark:text-gray-500 mt-2">ลองเปลี่ยนระดับชั้น ภาคเรียน หรือคำค้นหา แล้วลองใหม่</p>
+              <p v-else-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">คลิก "สร้างรายวิชา" เพื่อเริ่มต้น</p>
             </div>
 
+            <!-- Course groups -->
             <div v-else class="space-y-3">
-              <div
-                v-for="group in groupedCourses"
-                :key="group.key"
-                class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
-              >
-                <button
-                  type="button"
-                  class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
-                  @click="toggleCourseGroup(group.key)"
-                >
-                  <div class="flex items-center gap-2">
-                    <span class="font-semibold text-gray-900 dark:text-white">{{ group.label }}</span>
-                    <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-300">
-                      {{ group.courses.length }} รายวิชา
-                    </span>
+              <!-- Single tab selected → flat grid, no accordion -->
+              <template v-if="selectedGroupTab !== 'all'">
+                <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <CourseCard
+                      v-for="(course, index) in displayedCourseGroups[0]?.courses || []"
+                      :key="course.id"
+                      :course="course"
+                      :index="index"
+                      :to="`/Learn/Courses/${course.id}`"
+                      class="h-full"
+                    />
                   </div>
-                  <Icon
-                    :icon="expandedCourseGroups[group.key] ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'"
-                    class="w-5 h-5 text-gray-400"
-                  />
-                </button>
-
-                <div v-if="expandedCourseGroups[group.key]" class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <CourseCard
-                    v-for="(course, index) in group.courses"
-                    :key="course.id"
-                    :course="course"
-                    :index="index"
-                    :to="`/Learn/Courses/${course.id}`"
-                    class="h-full"
-                  />
                 </div>
-              </div>
+              </template>
+
+              <!-- All tab → accordion per group -->
+              <template v-else>
+                <div
+                  v-for="group in displayedCourseGroups"
+                  :key="group.key"
+                  class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
+                >
+                  <button
+                    type="button"
+                    class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
+                    @click="toggleCourseGroup(group.key)"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-gray-900 dark:text-white">{{ group.label }}</span>
+                      <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-300">
+                        {{ group.courses.length }} รายวิชา
+                      </span>
+                    </div>
+                    <Icon
+                      :icon="expandedCourseGroups[group.key] ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'"
+                      class="w-5 h-5 text-gray-400"
+                    />
+                  </button>
+
+                  <div v-if="expandedCourseGroups[group.key]" class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <CourseCard
+                      v-for="(course, index) in group.courses"
+                      :key="course.id"
+                      :course="course"
+                      :index="index"
+                      :to="`/Learn/Courses/${course.id}`"
+                      class="h-full"
+                    />
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
           

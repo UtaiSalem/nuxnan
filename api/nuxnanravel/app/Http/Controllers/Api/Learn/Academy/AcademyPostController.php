@@ -13,6 +13,7 @@ use App\Models\AcademyGroupPermission;
 use App\Models\AcademyPost;
 use App\Models\Activity;
 use App\Models\Notification;
+use App\Services\AcademyScopeAccessService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -105,6 +106,14 @@ class AcademyPostController extends Controller
             }
         }
 
+        // ตรวจว่า scope เป็นของโรงเรียนนี้จริง และผู้โพสต์เป็นสมาชิกของฝ่าย/ห้องนั้น
+        $scope = app(AcademyScopeAccessService::class)->authorizePost(
+            $academy,
+            auth()->user(),
+            $validatedData['scope_type'] ?? null,
+            isset($validatedData['scope_id']) ? (int) $validatedData['scope_id'] : null
+        );
+
         $content = $validatedData['content'] ?? '';
         $hashtags = $this->extractHashtags($content);
 
@@ -126,8 +135,8 @@ class AcademyPostController extends Controller
         $post = new AcademyPost;
         $post->user_id = auth()->user()->id;
         $post->academy_id = $academy->id;
-        $post->scope_type = $validatedData['scope_type'] ?? 'academy';
-        $post->scope_id = $validatedData['scope_id'] ?? $academy->id;
+        $post->scope_type = $scope['scope_type'];
+        $post->scope_id = $scope['scope_id'];
         $post->content = $content;
         $post->hashtags = json_encode($hashtags);
         if ($request->filled('posted_as_group_id')) {

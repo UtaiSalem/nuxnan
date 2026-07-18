@@ -50,6 +50,8 @@ const load = async () => {
     const response: any = await api.get(`/api/academies/${academy.value.id}/departments/${departmentId.value}`)
     if (!response.success) throw new Error('ไม่พบฝ่ายงาน')
     department.value = response.data?.department || response.department
+    // API คืน head แยกจาก department — ผูกกลับเข้า object เดียวให้ template ใช้
+    if (department.value && response.data?.head) department.value.head = response.data.head
     await Promise.all([loadMembers(), loadPermissions()])
   } catch (error: any) {
     errorMessage.value = error?.message || 'ไม่สามารถโหลดข้อมูลฝ่ายได้'
@@ -147,7 +149,7 @@ onMounted(load)
       <section v-else-if="activeTab === 'permissions'" class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800"><AcademyGroupsManageTabPermissions :academy-id="academy.id" :group="department" /></section>
       <AcademyScopesScopedWorkspace v-else-if="activeTab === 'tasks'" :academy-id="academy.id" scope-type="department" :scope-id="department.id" />
       <section v-else-if="activeTab === 'announcements' || activeTab === 'reports'" class="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"><p class="text-gray-500">{{ activeTab === 'announcements' ? 'ประกาศของฝ่ายจะใช้ scope เดียวกับฟีดและระบบประกาศกลาง' : 'รายงานของฝ่ายจะใช้ข้อมูลสมาชิก กิจกรรม งาน และประวัติการใช้งาน' }}</p><NuxtLink v-if="activeTab === 'reports'" :to="`/academies/${academyName}/admin/reports?scope_type=department&scope_id=${department.id}`" class="mt-4 inline-flex rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white">เปิดหน้ารายงาน</NuxtLink></section>
-      <section v-else class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800"><AuditLogTab v-if="academy?.id && department?.id" :academy-id="academy.id" entity-type="AcademyGroup" :entity-id="department.id" /></section>
+      <section v-else class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800"><SchoolAuditLogTab v-if="academy?.id && department?.id" :academy-id="academy.id" entity-type="AcademyGroup" :entity-id="department.id" /></section>
     </template>
   </div>
 </template>

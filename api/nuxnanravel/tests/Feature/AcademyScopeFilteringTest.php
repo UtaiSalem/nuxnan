@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Academy;
+use App\Models\AcademicYear;
 use App\Models\AcademyGroup;
 use App\Models\AcademyPost;
 use App\Models\Activity;
+use App\Models\Classroom;
 use App\Models\SchoolAnnouncement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -188,5 +190,123 @@ class AcademyScopeFilteringTest extends TestCase
             ->assertStatus(200)
             ->assertJsonCount(1, 'activities.data')
             ->assertJsonPath('activities.data.0.target_resource.content', 'Support Feed Post');
+    }
+
+    public function test_posting_to_department_scope_requires_membership()
+    {
+        $owner = User::factory()->create(['pp' => 1000]);
+        $academy = Academy::factory()->create(['user_id' => $owner->id]);
+
+        $department = AcademyGroup::create([
+            'academy_id' => $academy->id,
+            'name' => 'IT Department',
+            'type' => 'department',
+        ]);
+
+        $member = User::factory()->create(['pp' => 1000]);
+        $academy->members()->attach($member->id, ['status' => 2]);
+        $department->members()->attach($member->id, ['role' => 'member']);
+
+        $outsider = User::factory()->create(['pp' => 1000]);
+        $academy->members()->attach($outsider->id, ['status' => 2]);
+
+        // Non-member of the department must not be able to post into its feed
+        $this->actingAs($outsider, 'api')
+            ->postJson("/api/academies/{$academy->id}/posts", [
+                'content' => 'Sneaky post',
+                'scope_type' => 'department',
+                'scope_id' => $department->id,
+            ])
+            ->assertStatus(403);
+
+        // Department member can post
+        $this->actingAs($member, 'api')
+            ->postJson("/api/academies/{$academy->id}/posts", [
+                'content' => 'Department update',
+                'scope_type' => 'department',
+                'scope_id' => $department->id,
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('post.scope_type', 'department')
+            ->assertJsonPath('post.scope_id', $department->id);
+    }
+
+    public function test_posting_to_classroom_scope_requires_membership()
+    {
+        $owner = User::factory()->create(['pp' => 1000]);
+        $academy = Academy::factory()->create(['user_id' => $owner->id]);
+
+        $teacher = User::factory()->create(['pp' => 1000]);
+        $academicYear = AcademicYear::create([
+            'academy_id' => $academy->id,
+            'name' => '2569',
+            'start_date' => '2026-05-01',
+            'end_date' => '2027-03-31',
+            'is_current' => true,
+        ]);
+        $classroom = Classroom::create([
+            'academy_id' => $academy->id,
+            'academic_year_id' => $academicYear->id,
+            'grade_level' => 'ม.1',
+            'section' => '1',
+            'name' => 'ม.1/1',
+            'homeroom_teacher_id' => $teacher->id,
+        ]);
+
+        $outsider = User::factory()->create(['pp' => 1000]);
+        $academy->members()->attach($outsider->id, ['status' => 2]);
+
+        // Academy member who is not in the classroom must not be able to post
+        $this->actingAs($outsider, 'api')
+            ->postJson("/api/academies/{$academy->id}/posts", [
+                'content' => 'Sneaky classroom post',
+                'scope_type' => 'classroom',
+                'scope_id' => $classroom->id,
+            ])
+            ->assertStatus(403);
+
+        // Homeroom teacher can post
+        $this->actingAs($teacher, 'api')
+            ->postJson("/api/academies/{$academy->id}/posts", [
+                'content' => 'Classroom update',
+                'scope_type' => 'classroom',
+                'scope_id' => $classroom->id,
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('post.scope_type', 'classroom')
+            ->assertJsonPath('post.scope_id', $classroom->id);
+    }
+
+    public function test_posting_rejects_scope_from_another_academy_and_forged_academy_scope_id()
+    {
+        $owner = User::factory()->create(['pp' => 1000]);
+        $academy = Academy::factory()->create(['user_id' => $owner->id]);
+
+        $otherOwner = User::factory()->create(['pp' => 1000]);
+        $otherAcademy = Academy::factory()->create(['user_id' => $otherOwner->id]);
+        $otherDepartment = AcademyGroup::create([
+            'academy_id' => $otherAcademy->id,
+            'name' => 'Other Department',
+            'type' => 'department',
+        ]);
+
+        // Department of another academy → 404, even for the academy owner
+        $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$academy->id}/posts", [
+                'content' => 'Cross academy post',
+                'scope_type' => 'department',
+                'scope_id' => $otherDepartment->id,
+            ])
+            ->assertStatus(404);
+
+        // Academy scope always binds to the current academy, ignoring forged scope_id
+        $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$academy->id}/posts", [
+                'content' => 'Normal academy post',
+                'scope_id' => $otherAcademy->id,
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('post.scope_type', 'academy')
+            ->assertJsonPath('post.scope_id', $academy->id);
     }
 }

@@ -43,10 +43,11 @@ const filterOptions = ref<{
 // Filters
 const searchQuery = ref('')
 const selectedStatus = ref<number | null>(null)
-const selectedRole = ref<string | null>(null)
+const selectedRole = ref<number | null>(null)
 const selectedTag = ref<number | null>(null)
 const selectedClassLevel = ref<string | null>(null)
 const selectedClassSection = ref<string | null>(null)
+const selectedClassroomKey = ref<string | null>(null)
 const selectedGender = ref<number | null>(null)
 const selectedMemberType = ref<string | null>(null)
 const sortBy = ref('created_at')
@@ -163,7 +164,7 @@ const statusOptions = [
 
 const roleOptions = computed(() => [
   { value: null, label: 'ทุกบทบาท' },
-  ...roles.value.map(r => ({ value: r.name, label: r.display_name_th }))
+  ...roles.value.map(r => ({ value: r.id, label: r.display_name_th }))
 ])
 
 const tagOptions = computed(() => [
@@ -200,14 +201,19 @@ const classLevelOptions = computed(() => [
 
 const classSectionOptions = computed(() => [
   { value: null, label: 'ทุกห้อง' },
-  ...filterOptions.value.class_sections
+  ...[...filterOptions.value.classrooms]
+    .sort((a, b) => String(a.label).localeCompare(String(b.label), 'th', { numeric: true, sensitivity: 'base' }))
+    .map(classroom => ({
+      value: `${classroom.class_level}::${classroom.class_section}`,
+      label: classroom.label
+    }))
 ])
 
 const genderOptions = computed(() => [
   { value: null, label: 'ทุกเพศ' },
   ...filterOptions.value.genders.map(g => ({
     value: g.value,
-    label: `${g.label} (${g.count})`
+    label: `${g.value === 1 ? 'ชาย' : 'หญิง'} (${g.count})`
   }))
 ])
 
@@ -295,7 +301,7 @@ onMounted(async () => {
       // Make API calls more resilient - if one fails, the others should still work
       // fetchMembers and fetchStats are critical, fetchTags and fetchFilterOptions are secondary
       const criticalCalls = [fetchMembers(), fetchStats()]
-      const secondaryCalls = [fetchTags(), fetchFilterOptions()]
+      const secondaryCalls = [fetchRoles(), fetchTags(), fetchFilterOptions()]
       
       // Wait for critical calls to complete
       await Promise.allSettled(criticalCalls)
@@ -330,12 +336,14 @@ const fetchMembers = async (page = 1) => {
     params.append('per_page', String(pagination.value.per_page))
     if (searchQuery.value) params.append('search', searchQuery.value)
     if (selectedStatus.value !== null) params.append('status', String(selectedStatus.value))
-    if (selectedRole.value) params.append('role', selectedRole.value)
+    if (selectedRole.value !== null) params.append('academy_role_id', String(selectedRole.value))
     if (selectedTag.value !== null) params.append('tag_id', String(selectedTag.value))
     if (selectedClassLevel.value) params.append('class_level', selectedClassLevel.value)
     if (selectedClassSection.value) params.append('class_section', selectedClassSection.value)
     if (selectedGender.value !== null) params.append('gender', String(selectedGender.value))
     if (selectedMemberType.value) params.append('member_type', selectedMemberType.value)
+    if (advancedFilters.value.dateFrom) params.append('date_from', advancedFilters.value.dateFrom)
+    if (advancedFilters.value.dateTo) params.append('date_to', advancedFilters.value.dateTo)
     params.append('sort_by', sortBy.value)
     params.append('sort_order', sortOrder.value)
 
@@ -531,6 +539,18 @@ const onSearch = () => {
   fetchMembers(1)
 }
 
+const onClassroomChange = () => {
+  if (selectedClassroomKey.value) {
+    const [level, section] = selectedClassroomKey.value.split('::')
+    selectedClassLevel.value = level || null
+    selectedClassSection.value = section || null
+  } else {
+    selectedClassLevel.value = null
+    selectedClassSection.value = null
+  }
+  onSearch()
+}
+
 // Advanced Filter handlers
 const applyAdvancedFilters = (filters: any) => {
   advancedFilters.value = {
@@ -559,6 +579,7 @@ const resetAdvancedFilters = () => {
   selectedRole.value = null
   selectedClassLevel.value = null
   selectedClassSection.value = null
+  selectedClassroomKey.value = null
   selectedGender.value = null
   selectedMemberType.value = null
   sortBy.value = 'created_at'
@@ -1046,11 +1067,11 @@ const getRoleBadge = (member: any) => {
           </div>
           
           <!-- Class Section Filter -->
-          <div v-if="filterOptions.class_sections.length > 0" class="relative inline-flex items-center">
+          <div v-if="filterOptions.classrooms.length > 0" class="relative inline-flex items-center">
             <Icon icon="fluent:door-24-regular" class="absolute left-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
             <select
-              v-model="selectedClassSection"
-              @change="onSearch"
+              v-model="selectedClassroomKey"
+              @change="onClassroomChange"
               class="pl-8 pr-8 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm appearance-none cursor-pointer hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
             >
               <option v-for="opt in classSectionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
@@ -1135,7 +1156,7 @@ const getRoleBadge = (member: any) => {
           <button
             v-for="classroom in filterOptions.classrooms"
             :key="`${classroom.class_level}-${classroom.class_section}`"
-            @click="selectedClassLevel = classroom.class_level; selectedClassSection = classroom.class_section; onSearch()"
+            @click="selectedClassroomKey = `${classroom.class_level}::${classroom.class_section}`; selectedClassLevel = classroom.class_level; selectedClassSection = classroom.class_section; onSearch()"
             :class="[
               'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
               selectedClassLevel === classroom.class_level && selectedClassSection === classroom.class_section

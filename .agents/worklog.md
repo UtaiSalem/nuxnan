@@ -1,5 +1,15 @@
 # Work Log — nuxnan project
 
+## 2026-07-18 — แสดงปุ่มจัดการสมาชิกเลยโดยไม่ต้องรอ Hover
+- **สถานะ:** เสร็จสิ้น (แก้ไขโค้ดเรียบร้อยและตรวจสอบ git diff แล้ว)
+- **สิ่งที่ทำ:**
+  - แก้ไขไฟล์ [MemberListView.vue](file:///C:/wamp64/www/nuxnan/ui/components/academy/member/MemberListView.vue) ในโฟลเดอร์ Nuxt Frontend (`ui/components/academy/member/`) เพื่อยกเลิกเงื่อนไขการซ่อนปุ่ม Actions บนสถานะ Hover ของผู้ใช้ (ลบ class `opacity-0 group-hover:opacity-100 transition-opacity` และ `opacity-0 group-hover:opacity-100`) ส่งผลให้:
+    1. ในมุมมองการ์ด (Card View): ปุ่มจัดการ (กำหนดบทบาท, ตั้งค่า, ลบ) ทางด้านขวาบนจะปรากฏทันทีตั้งแต่เปิดหน้าจอขึ้นมาโดยไม่ต้อง hover เมาส์ก่อน
+    2. ในมุมมองตาราง (Table View): คอลัมน์การดำเนินการขวาสุด ปุ่มจัดการทั้ง 3 ปุ่มจะปรากฏให้ผู้ใช้เห็นทันทีในสถานะปกติ (สีเทาอ่อนและเปลี่ยนสีเมื่อ hover เพื่อความสวยงาม)
+  - ปรับปรุงไฟล์วิเคราะห์ [latest-analysis.md](file:///C:/wamp64/www/nuxnan/.agents/latest-analysis.md)
+
+---
+
 ไฟล์นี้ใช้สำหรับส่งต่อ context ระหว่างที่บ้านและที่ทำงาน
 **กฎ: ก่อนออกจากแต่ละที่ → อัพเดทไฟล์นี้แล้ว `git push`**
 **กฎ: มาถึงที่ใหม่ → `git pull` แล้วอ่านไฟล์นี้ก่อนเริ่มงาน**

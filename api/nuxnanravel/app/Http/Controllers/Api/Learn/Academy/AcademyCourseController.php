@@ -73,7 +73,7 @@ class AcademyCourseController extends Controller
 
             $newCourse->user_id = auth()->id();
             $newCourse->instructor_id = auth()->id();
-            $newCourse->academy_id = $request->academy_id == 'null' || $request->academy_id == null ? null : $academy->id;
+            $newCourse->academy_id = $academy->id;
             $newCourse->name = $validated['name'];
             // $newCourse->slug            = Str::slug($validated['name'], '-');
             $newCourse->code = $request->code == 'null' || $request->code == null ? null : $request->code;

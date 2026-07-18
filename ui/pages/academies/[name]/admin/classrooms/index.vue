@@ -5,6 +5,7 @@
  */
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
+import AssignHomeroomTeacherModal from '~/components/academy/AssignHomeroomTeacherModal.vue'
 
 definePageMeta({
   layout: 'main'

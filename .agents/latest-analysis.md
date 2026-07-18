@@ -1,3 +1,10 @@
+# 2026-07-18 - แสดงปุ่มจัดการสมาชิกเลยโดยไม่ต้องรอ Hover
+- **สถานะ:** เสร็จสิ้น
+- **ไฟล์ที่เกี่ยวข้อง:** `ui/components/academy/member/MemberListView.vue` (Link: [MemberListView.vue](file:///C:/wamp64/www/nuxnan/ui/components/academy/member/MemberListView.vue))
+- **การเปลี่ยนแปลง:** ลบ class `opacity-0 group-hover:opacity-100 transition-opacity` ใน Card view และ `opacity-0 group-hover:opacity-100` ใน Table view ของ component `MemberListView.vue` ออก เพื่อให้ปุ่มการดำเนินการ (Actions) ทั้งหมด (กำหนดบทบาท, ตั้งค่า, ลบ) แสดงผลให้ผู้ใช้เห็นทันทีตั้งแต่แรก โดยยังคงรักษาเอฟเฟกต์การ hover เปลี่ยนสีเพื่อบ่งบอกสถานะการโฟกัสอยู่
+
+---
+
 # แผนปรับปรุง: หน้าจัดการฝ่าย (Department Console) + ฟีดแบบแบ่งพื้นที่ (Scoped Feed)
 
 **วันที่:** 2026-07-14
@@ -3570,3 +3577,358 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Added `ui/components/academy/AssignHomeroomTeacherModal.vue` and connected it to classroom detail overview.
 - Verification: Pint and PHP syntax passed; frontend build timed out after 124 seconds.
 - Remaining: classroom list quick-action/badge and full members-tab action polish/manual UI verification.
+
+## 2026-07-17 - Homeroom Teacher Search Display Fix
+
+- Root cause: `AcademyMemberResource` exposes `member_name` and `member_avatar`; modal was reading only `name` and nested user fields.
+- Updated modal mapping and role filtering to support the resource contract while retaining fallback fields.
+## 2026-07-17 - Academy member filters
+- พบว่าหน้า `ui/pages/academies/[name]/admin/members.vue` ไม่ได้เรียก `fetchRoles()` และส่งค่าบทบาทเป็น `role`/ชื่อ ขณะที่ API รองรับ `academy_role_id`/รหัสบทบาท
+- แก้ให้โหลดบทบาท, ใช้ role id ใน dropdown/request และส่ง date range จาก advanced filters
+- Backend `AcademyMemberController@searchMembers` รองรับ `date_from`/`date_to`
+- Verification: ตรวจ diff และเตรียมรัน type/build กับ PHP syntax
+## 2026-07-17 - Classroom filter alignment
+- พบว่า filter options ใช้ `classrooms.grade_level/section` จาก `classroom_students` แต่ search ใช้ `students.class_level/class_section` ทำให้ข้อมูลห้องปัจจุบันกับฟิลด์นักเรียนไม่ตรงกัน
+- ปรับ `AcademyMemberController@searchMembers` ให้กรองจาก active classroom enrollment และ current academic year เมื่อมีปีปัจจุบัน
+- Verification plan: PHP lint, diff check, ตรวจ query scope และ build หากใช้เวลาพอ
+## 2026-07-17 - Classroom filter option ordering
+- จากภาพพบว่าตัวเลือกห้องเรียงแบบ string (`1, 10, 11, 2...`) ทำให้รายการดูไม่ถูกต้อง
+- ปรับ `classSectionOptions` ในหน้า members ให้เรียงด้วย `localeCompare` แบบ `numeric: true` รองรับค่าห้องที่เป็นตัวเลขหรือข้อความผสม
+- Verification: ตรวจ diff และ syntax ของไฟล์ที่เกี่ยวข้อง
+## 2026-07-17 - Classroom filter labels
+- ตัวเลือก “ทุกห้อง” เดิมแสดงค่า `class_sections` ซึ่งเป็น section ดิบ ไม่ใช่ชื่อห้องจาก `classrooms.name`
+- ปรับให้ใช้รายการ `classrooms` แสดงชื่อห้องจริง และ map กลับเป็น `class_level/class_section` เพื่อเรียก API เดิม
+- ปรับ quick classroom chips ให้ sync กับ dropdown
+- Verification: `git diff --check`, PHP lint และตรวจการอ้างอิงตัวเลือกใน SFC
+## 2026-07-17 - Gender filter labels
+- API gender labelsบาง branch มีข้อความ encoding/สะกดผิด
+- ปรับหน้า members ให้ใช้ label มาตรฐานจากค่าเพศ: `1 = ชาย`, `0 = หญิง` แทนข้อความจาก API
+- Verification: `git diff --check`, PHP lint และตรวจ mapping ใน SFC
+## 2026-07-18 - Login fails when recording usage event
+
+- **Finding:** `AuthController@login` calls `UsageEventService::fire()`, which creates `user_usage_events` through Eloquent. The live MySQL table has a non-null `id` without `AUTO_INCREMENT`, causing error 1364 before the login response is returned. The existing `2026_07_10_013214_modify_id_in_user_usage_events_table` migration cannot repair databases where it was already marked as applied.
+- **Fix:** Added forward-only migration `2026_07_18_040000_repair_user_usage_events_id_auto_increment.php` that checks MySQL metadata and safely restores `AUTO_INCREMENT` only when missing.
+- **Verification:** PHP lint, Pint, focused `GamificationTest` (10 tests/42 assertions) passed. Migration initially exposed that `id` was also missing its primary-key index; the repair now restores the primary key when absent before enabling `AUTO_INCREMENT`. `php artisan migrate --force` completed successfully on the local database.
+## 2026-07-18 - Academy courses filter UI polish
+
+- **Scope:** frontend-only redesign of `ui/pages/academies/[name].vue`, focused on the Courses tab shown in the provided reference.
+- **Changes:** compact tab strip, softer HopeUI-inspired card treatment, consistent rounded controls, clearer focus states, and stronger primary actions while preserving existing filters, API calls, counts, and responsive behavior.
+- **Verification plan:** `git diff --check` and frontend build if available; manual browser smoke test should confirm the academy route and course filtering.
+- **Follow-up:** moved the level-selection tabs below the filter controls, keeping the tabs inside the same control card and preserving horizontal scrolling on small screens.
+
+---
+
+## 2026-07-18 - Course Donation + Wallet Ledger: บทวิเคราะห์แผนฉบับผู้ใช้ + Work Plan ปรับปรุง
+
+### สรุปสิ่งที่มีอยู่จริงใน codebase (ยืนยันจริงก่อนวางแผน)
+
+จากการตรวจ `app/Models/` และ `database/migrations/`:
+
+| องค์ประกอบ | สถานะปัจจุบัน | ช่องว่าง |
+|---|---|---|
+| `CoursePointAccount` | มี `balance`, `commission`, `minimum_withdrawal`, `reserved_balance` (2026_05_25_000004) | ยังไม่มี `pending_balance`, `withdrawable_balance`, `lifetime_income/expense`, `version` |
+| `CoursePointTransaction` | มีแล้ว — เป็น per-course ledger สำหรับแต้ม | ไม่มีการเชื่อมกับเงินจริง / ไม่มี ledger กลาง / ไม่มี idempotency_key เข้มงวด |
+| `CoursePointCampaign` | มี lesson_reward fields, budget concept | ยังไม่มี state machine ที่ชัดเจน, reserved_budget แยกจาก account.reserved |
+| `CoursePointCampaignClaim` | มีอยู่ | ต้องตรวจ unique constraint action_reference |
+| `CampaignDeliveryEvent` | มี `idempotency_key` แล้ว | ยังไม่มี heartbeat, page visibility, device fingerprint |
+| `Advert` | มี campaign fields (backfill 2026_07_12) | Advert เอง = campaign — ทำให้ต้องระวังการซ้อนความหมายกับ CoursePointCampaign |
+| `WalletTransaction` | เป็น **user-scoped** wallet (ไม่ใช่ course) มี withdrawal fields, payout_proof, decimal columns | ไม่ได้ผูกกับ course wallet — course wallet เป็นคนละระบบจากผู้ใช้ |
+| `WalletDepositRequest` | มี — สำหรับ user deposit ไม่ใช่ course donation | ต้องคิดใหม่ว่าจะ reuse หรือแยก |
+| `CourseDonation` | **ยังไม่มีทั้ง model และ controller** | ต้องสร้างใหม่ทั้งหมด |
+| `CourseCashWallet` (เงินจริงของ course) | **ยังไม่มี** | ต้องสร้างใหม่ |
+| Generic Wallet Ledger | **ไม่มี** — ระบบเปลี่ยน balance โดยตรงหรือผ่าน CoursePointTransaction เฉพาะแต้ม | ต้องสร้าง ledger กลาง |
+| Revenue-share policy | **ไม่มี** — ค่า commission เก็บใน CoursePointAccount เท่านั้น | ต้องสร้าง policy table + versioning |
+| Idempotency ทั่วระบบ | บางส่วน (CampaignDeliveryEvent) | ต้องขยายทั้งระบบ donation, claim, ad reward |
+
+### ข้อสังเกตสำคัญที่ทำให้แผนต้องปรับ
+
+1. **CoursePointAccount `reserved_balance` มีอยู่แล้ว** — Phase Wallet ไม่ต้องสร้าง reservation concept ใหม่ทั้งหมด แค่ต่อยอด
+2. **Advert คือ Campaign** ในตัวเอง — มี `CoursePointCampaign` แยกอีก แสดงว่าโดเมนซ้อน 2 แบบ (แคมเปญโฆษณา vs แคมเปญแจกแต้ม) ต้องตัดสินใจว่ารวมหรือแยก
+3. **`WalletTransaction` เป็น user-scoped ล้วน** — course wallet เป็นคนละโลก ห้ามพยายามยัดเงินรายวิชาลง `wallet_transactions`
+4. **มี `CoursePointTransaction` อยู่แล้วเป็น ledger เฉพาะแต้ม** — ledger กลางที่จะสร้างใหม่ต้อง superset ของนี่ พร้อมแผน migrate ข้อมูลเก่า
+5. **ยังไม่มี Payment Gateway integration ในระบบเลย** — WalletDepositRequest เป็น manual/slip เท่านั้น ดังนั้น phase เงินจริงต้องรวม cost integration gateway เป็นครั้งแรกของโปรเจ็ค
+
+### ประเด็นเพิ่มเติม/ปรับจากแผนที่ผู้ใช้เขียน
+
+**ประเด็นที่แผนเดิมยังไม่ครอบคลุม:**
+
+1. **Advert ↔ CoursePointCampaign duplication** — ต้องรวมโมเดลหรือกำหนดขอบเขตชัด (แนะนำ: Advert = "แหล่งเงิน/โฆษณา" ที่ให้ทุนแคมเปญประเภท `ad_view`; แคมเปญคือหน่วยที่นักเรียนกดรับ)
+2. **การ migrate ยอดเก่า** — CoursePointAccount ที่มี balance ปัจจุบันต้องมี opening balance entry ใน ledger ใหม่ ไม่งั้น sum ไม่ตรง
+3. **สกุลเงิน/หน่วยแต้ม** — ระบบมีทั้งแต้ม (int), เงิน (decimal ใน wallet_transactions) — Ledger กลางต้อง polymorphic ต่อ currency_type และมี unit ที่ต่างกัน (bigint vs decimal)
+4. **นโยบายภาษี/ใบเสร็จ/e-Tax invoice** — โรงเรียนหลายแห่งต้องออกใบเสร็จ อาจต้องเชื่อม RD e-Tax Invoice ในอนาคต — เผื่อไว้ตั้งแต่โครง Data
+5. **PDPA/anonymous donor** — ต้องแยก "แสดงชื่อ" กับ "เก็บชื่อภายใน" ให้ชัด รวมถึงสิทธิ์ครูดูรายการ (ไม่ให้เห็นเลขบัญชี/email เต็ม)
+6. **Fee absorption** — ใครจ่ายค่าธรรมเนียม gateway? ผู้บริจาค (ทบยอด) หรือรายวิชา (หักออก)? ต้องเป็น setting ต่อรายวิชา/ต่อแคมเปญ
+7. **Wallet เงินสำหรับครูส่วนบุคคล** — แผนบอกว่า "รายได้ไม่ควรตกครูเป็นส่วนตัวโดยอัตโนมัติ" ถูกต้อง แต่ต้องระบุปลายทางว่าไปที่ *ใคร* — เสนอ: เข้าบัญชี "โรงเรียน" (Academy Wallet) ไม่ใช่ครูคนเดียว
+8. **Feature flag & pilot rollout** — แผนพูดถึงแต่ยังไม่ใส่ mechanism: เพิ่ม `platform_settings.donation_module_enabled` + per-course opt-in
+9. **Rate limiting policy layer** — ต้องระบุค่าเริ่มต้น (เช่น donation 10/min ต่อ user, claim 30/min ต่อ user, ad start 5/min)
+10. **Idempotency Key ที่มาจาก client** — ต้องระบุ contract: ให้ client generate UUID v4 แนบ `Idempotency-Key` header, server เก็บ 24 ชม.
+11. **Concurrency ของ approve/reject โดย Admin** — แผนยังไม่พูด: ต้อง lock donation row + version column ป้องกัน double-approve
+12. **การจัดการ orphan reservation** — ถ้า process ตายกลางทาง reserved_balance ค้าง ต้องมี scheduler ปล่อย reservation ที่หมดอายุ (grace 5 นาที)
+13. **Money precision** — decimal(18,4) สำหรับเงิน, bigint สำหรับแต้ม, ห้ามใช้ float ทุกจุด (โดยเฉพาะการคูณ 70/20/10)
+14. **Rounding policy สำหรับ revenue split** — 100 บาท / 3 คน อาจได้ 33.33/33.33/33.34 — ต้องกำหนดใครรับเศษ (แนะนำ: platform รับเศษเสมอ)
+15. **Ledger append-only enforcement** — ต้อง revoke UPDATE/DELETE ระดับ DB user (หรืออย่างน้อย model-level guard) มิใช่แค่ระเบียบ
+16. **Multi-currency ในอนาคต** — ตอนนี้ THB อย่างเดียว แต่ควรมี currency column เพื่อ forward compat
+
+---
+
+## Work Plan — Course Donation + Wallet Ledger ฉบับปรับปรุง (2026-07-18)
+
+### หลักการหลัก (Guiding Principles)
+
+- **Ledger เป็น source of truth** — balance เป็นแค่ cache
+- **Append-only** — ไม่ลบ/ไม่แก้ transaction เดิม ใช้ reversal เสมอ
+- **Idempotent by design** — ทุก endpoint ที่แตะเงิน/แต้มต้องรองรับ retry
+- **Double-entry** — ทุก entry ต้องมีคู่ (debit + credit) ยอดรวมทั้ง entries เป็น 0 เสมอ
+- **Separation of duties** — ผู้ริเริ่ม ≠ ผู้อนุมัติสำหรับรายการเงินจริง
+- **No frontend-computed money** — server กำหนดยอดทุกจุด รวม reward, fee, split
+- **Feature flag first** — เปิด/ปิดได้ต่อ course ต่อ academy ต่อ platform
+- **Backward compatible migration** — ระบบเดิมต้องทำงานได้ระหว่าง phase 1–4
+
+### Phase 0 — Discovery & Design Freeze (1–2 สัปดาห์, no code)
+
+**เป้าหมาย:** ล็อคดีไซน์ก่อนแตะโค้ด production
+
+1. **Data audit** — export snapshot จริงของ `course_point_accounts`, `course_point_transactions`, `wallet_transactions`, `advert*`, `campaign*` ตรวจว่ายอดรวม balance ตรงกับ sum ของ transactions หรือไม่ (ถ้าไม่ตรง — ต้อง reconcile ก่อน migrate)
+2. **Route inventory** — grep เส้นทางทั้งหมดที่เขียนใส่ `balance`/`reserved_balance` ในโค้ดปัจจุบัน (controllers, jobs, services, tinker) → ทำ list ให้ครบก่อน refactor
+3. **Advert vs Campaign decision** — จัดประชุมตัดสินใจ (ผู้ใช้ + owner): รวม 2 โมเดลเป็น 1 หรือให้ Advert = source-of-fund และ Campaign = distribution-unit
+4. **Payment gateway selection** — เลือก GBPrimePay / Omise / 2c2p — เขียน integration spec, sandbox account
+5. **Slip verification provider** — เลือก EasySlip / RD OpenAPI / Manual — เขียน spec
+6. **PDPA + tax compliance review** — ปรึกษาที่ปรึกษาการเงิน/บัญชี ถ้ามีเงินจริง (สำคัญ)
+7. **Revenue-share policy default** — confirm 70/20/10 หรือปรับ (แนะนำเก็บใน DB ไม่ hard-code)
+8. **Fee absorption policy** — ผู้บริจาคจ่าย fee หรือรายวิชารับ?
+9. **State machine diagrams** — วาด donation, campaign, ad-delivery, withdrawal, refund ให้ครบทุก transition ก่อนเขียนโค้ด
+10. **DoD document** — เขียน spec ตายตัวเป็น `.agents/specs/course-donation-wallet.md` ให้ทุก phase อ้างอิง
+
+**Exit criteria:** spec ผ่านการรีวิว + snapshot data reconcile ผ่าน + gateway sandbox ทดสอบได้
+
+---
+
+### Phase 1 — Wallet Ledger Foundation (2–3 สัปดาห์)
+
+**เป้าหมาย:** วางระบบบัญชีกลางโดยยังไม่แตะเส้นทางเงินจริง (shadow mode)
+
+**Migrations (append-only, ไม่ drop):**
+
+1. `create_wallets_table` — polymorphic (owner_type, owner_id, currency_type, available_balance, pending_balance, reserved_balance, withdrawable_balance, lifetime_credit, lifetime_debit, status, version) — unique (owner_type, owner_id, currency_type)
+2. `create_ledger_transactions_table` — ชื่อใหม่ห้ามชนกับตารางเดิม (id, transaction_no, type, status, gross_amount, net_amount, fee_amount, currency_type, idempotency_key UNIQUE, initiated_by, approved_by, approved_at, metadata JSON, timestamps)
+3. `create_ledger_entries_table` — (id, transaction_id FK, wallet_id FK, entry_type, direction enum(debit,credit), amount decimal(18,4), balance_before, balance_after, reference_type nullable morph, reference_id, description, created_by, metadata) — index (wallet_id, created_at)
+4. `create_wallet_locks_table` (optional) — ถ้าใช้ table-based lock
+
+**Services (ใหม่):**
+
+- `LedgerService::openWallet(owner, currency)`
+- `LedgerService::recordTransaction(TransactionData, LedgerEntry[])` — atomic, validate double-entry balance = 0, lock wallets
+- `LedgerService::reverse(transactionId, reason)`
+- `WalletBalanceReconciler::verify(walletId)` — sum(entries) == balance?
+- `IdempotencyService::rememberOrReplay(key, callable)`
+
+**Migration ของข้อมูลเดิม (สำคัญ):**
+
+- ทุก `CoursePointAccount` ที่มีอยู่ → สร้าง wallet currency=point owner=Course + opening_balance entry
+- ทุก `CoursePointTransaction` เก่า → replay เป็น ledger entries (แต่**อ่านอย่างเดียว**) หรือ mark เป็น legacy + ไม่ replay ก็ได้ (แนะนำแบบหลัง — ประหยัดเวลา)
+
+**Shadow mode:** ระบบเดิมยังใช้งานได้ปกติ — service ใหม่แค่เขียน parallel ledger — เทียบยอดทุกวันจน stable แล้วค่อย cutover
+
+**Tests:**
+- unit: double-entry invariant, reversal, idempotency
+- concurrency: 100 concurrent debits/credits ยอดต้องตรง
+- reconciliation command runnable
+
+**DoD:** reconciler บอกยอดตรงทุก wallet ต่อเนื่อง 7 วัน
+
+---
+
+### Phase 2 — Course Wallet Split (Point vs Cash) (1 สัปดาห์)
+
+1. เปิด wallet 4 ตัวต่อ course: point/available, point/reserved, cash/available, cash/pending (หรือใช้ column แยก state ใน wallet เดียว)
+2. เขียน `CourseWalletProvisioner` — job สร้าง wallet ให้ course ที่ยังไม่มี (idempotent)
+3. Backfill: ให้ CoursePointAccount ที่มียอด → เข้า point/available wallet
+4. Read-side API `GET /api/courses/{course}/wallets` (owner only + admin)
+
+**DoD:** ทุก course active มี wallet ครบ, ยอดตรง
+
+---
+
+### Phase 3 — Point Donation MVP (2 สัปดาห์)
+
+**Backend:**
+1. `course_donations` table — ตามสเปกในหัวข้อ 7.4 ของแผนผู้ใช้ + `idempotency_key` UNIQUE + `version` + `platform_fee_amount`
+2. `CourseDonationService::createPointDonation(donor, course, amount, meta, idempotencyKey)` — validate → lock donor wallet + course point wallet → double-entry via LedgerService → donation status=`completed`
+3. FormRequest `CoursePointDonationRequest` — validate amount ≥ min, ≤ max, ≤ donor balance
+4. Policy: `CourseDonationPolicy@donate` — donor ≠ course owner (or flag with anti-self-donation limit)
+5. Anti-abuse: rate limit, velocity check (จำนวนบริจาค/ชม.), risk_score enum
+6. Endpoint: `POST /api/courses/{course}/donations/points` — header `Idempotency-Key`
+7. `GET /api/me/donations` — history
+
+**Frontend:**
+1. Donation Modal ใน `ui/components/donation/CourseDonationModal.vue` — step wizard (amount → purpose → anonymous flag → review → result)
+2. หน้า public `/courses/{slug}` — เพิ่มปุ่ม "สนับสนุนแต้ม"
+3. `ui/pages/me/donations.vue` — ประวัติ
+4. Owner view `ui/pages/courses/[id]/wallet/donations.vue` — รายการรับบริจาค (readonly + ไม่แสดง email/บัญชีเต็ม)
+
+**Tests:**
+- unit + integration Feature test
+- concurrency: 20 concurrent donations
+- self-donation policy
+
+**DoD:** end-to-end แต้มไหลจากผู้บริจาค → course wallet ผ่าน Ledger + reconcile ผ่าน
+
+---
+
+### Phase 4 — Campaign Budget Reservation Refactor (2 สัปดาห์)
+
+1. เพิ่ม `reserved_budget`, `spent_budget`, `remaining_budget` ใน `course_point_campaigns` (ถ้ายังไม่มี)
+2. `CampaignBudgetService::reserve(campaign)` — เมื่อ activate: ย้ายจาก point/available → point/reserved ผ่าน ledger entry `campaign_reserve`
+3. `CampaignBudgetService::release(campaign, remaining)` — เมื่อ close/expire คืนงบ
+4. Claim flow refactor: `CampaignClaimService::claim(campaign, student, actionReference, idempotencyKey)` — lock campaign row + wallets, ตัดจาก reserved, จ่ายเข้า student wallet, unique (campaign_id, student_id, action_reference)
+5. State machine: `draft → pending_review → scheduled → active → closing → closed / suspended`
+6. Scheduled job: expire campaign ที่หมดเวลา + คืนงบ (ทุก 5 นาที)
+7. Migration ระบบเก่า: campaign active ปัจจุบันให้คำนวณ reserved_budget จาก (total_budget - spent) แล้ว sync
+
+**Frontend:**
+- Campaign builder ใหม่ที่คำนวณ max liability + reserved preview ก่อน activate
+- แสดง reserved budget bar
+
+**DoD:** activate 5 แคมเปญพร้อมกัน — reservation ตรง, close คืนงบตรง
+
+---
+
+### Phase 5 — Ad Delivery Verification Hardening (2 สัปดาห์)
+
+1. เพิ่มคอลัมน์ใน `campaign_delivery_events`: session_id, delivery_token_hash, started_at, last_heartbeat_at, completed_at, required_duration, page_visibility_ratio, device_fingerprint_hash, ip_hash, status, fraud_reason
+2. Endpoint: `POST /ad-deliveries/start` → issue signed JWT token (short TTL, single-use)
+3. `POST /ad-deliveries/{id}/heartbeat` — ทุก 5 วิ (rate-limited)
+4. `POST /ad-deliveries/{id}/complete` — verify token ไม่ถูก replay, watch_duration ≥ required (server-side compute จาก heartbeats), visibility_ratio ≥ threshold, ไม่หมดอายุ
+5. `AdCompletionVerifier` service — ทำ fraud scoring; ถ้าผ่านเรียก `RewardDistributionService`
+6. `RewardDistributionService::distribute(deliveryEvent)` — คำนวณ split จาก `RevenueSharePolicy::resolve(course, campaign, at)` → สร้าง multi-entry transaction (student credit, course credit, platform credit, sponsor debit) → double-entry balanced
+
+**Frontend `AdViewerModal.vue`:**
+- แสดง reward preview ที่มาจาก API (ห้าม compute เอง)
+- ส่ง heartbeat
+- แสดง sponsor + duration
+- แสดง result ผ่าน reference number
+
+**DoD:** replay token/duplicate complete → 409; fraud test suite ผ่าน
+
+---
+
+### Phase 6 — Revenue Share Policy + Platform Wallet (1 สัปดาห์)
+
+1. `revenue_share_policies` — (scope_type platform/academy/course/campaign, scope_id, student_pct, course_pct, platform_pct, effective_from, effective_to, version)
+2. `RevenueSharePolicyResolver::resolve(course, campaign, at)` — pick most specific active policy
+3. Platform Wallet (owner_type=platform, owner_id=1) — สร้างครั้งเดียว
+4. Rounding: platform รับเศษ (integer division; remainder to platform)
+5. เก็บ policy_version ใน transaction metadata เพื่อ audit
+6. Admin UI สำหรับตั้งค่า policy (Super Admin เท่านั้น)
+
+**DoD:** เปลี่ยน policy ใหม่ไม่กระทบ transaction เก่า, invariant test ผ่าน
+
+---
+
+### Phase 7 — Cash Donation via Payment Gateway (3–4 สัปดาห์)
+
+1. `PaymentIntent` model (provider, provider_intent_id, donation_id, amount, status, webhook_events JSON)
+2. `POST /donations/{donation}/payment-intent` — server ตัดสินยอด ไม่รับจาก client
+3. Webhook handler `POST /api/payment/webhooks/{provider}` — verify signature, dedupe by event_id, update donation → `paid` → เข้า cash/pending wallet
+4. Settlement job: หลัง N วัน (per policy) ย้าย pending → available
+5. Chargeback handler: reverse via ledger, freeze relevant balances
+6. e-Receipt PDF generation
+7. Frontend: donation modal เพิ่ม tab "เงินจริง" + Stripe/Omise widget
+
+**DoD:** sandbox e2e ผ่าน, chargeback flow ผ่าน, reconciliation vs gateway daily รายงานตรง
+
+---
+
+### Phase 8 — Slip Upload + Manual Verification (1–2 สัปดาห์)
+
+1. `POST /donations/{donation}/proof` — upload slip → private storage
+2. Slip verification API integration (EasySlip/RD)
+3. Admin queue `GET /api/admin/donations/pending` → approve/reject
+4. Maker–checker: approver ≠ creator, ครูของ course นั้นห้ามอนุมัติ (policy check)
+5. Frontend Admin queue page + slip preview
+6. Rate limit + duplicate slip reference detection
+
+---
+
+### Phase 9 — Withdrawal (Maker–Checker) (2 สัปดาห์)
+
+1. `course_withdrawal_requests` — ตามสเปก 7.8
+2. Bank account verification workflow (owner ต้อง verify bank account ก่อน)
+3. State: `draft → academy_review → finance_pending → approved → paid / rejected`
+4. Course owner ยื่น → Academy admin review → Finance/Super Admin approve → paid
+5. Payment reference upload
+6. Notification ทุก transition
+7. Frontend: request form + status tracker
+
+---
+
+### Phase 10 — Fraud Detection + Reconciliation Ops (2 สัปดาห์)
+
+1. `risk_events` table + `FraudDetectionService` — rule-based (velocity, device farm, self-donation cluster)
+2. Daily reconciliation command: gateway vs donation vs ledger vs wallet balance
+3. Alert to admin ถ้าไม่ตรง + freeze affected wallets
+4. Admin risk queue UI
+5. Audit log viewer (read-only)
+
+---
+
+### Phase 11 — Frontend Public Discovery + Course Public Page (2 สัปดาห์)
+
+1. หน้า `/courses` — search/filter/sort ตามสเปก 19.1
+2. หน้า `/courses/{slug}` public — สเปก 19.2 (transparency section, กราฟยอดสนับสนุน, ไม่โชว์ balance ทั้งหมด)
+3. QR code generator สำหรับเจ้าของรายวิชา — link ต้อง verify course status server-side
+4. Course Wallet Dashboard ครบตามสเปก 19.4
+
+---
+
+### Phase 12 — Rollout & Migration (2 สัปดาห์)
+
+1. Feature flag `donation_module_enabled` per platform/academy/course
+2. Backup + tested restore
+3. Enable ledger shadow-mode → cutover 1 pilot course → 5 → 50 → all
+4. Monitor 30 วันหลัง full rollout
+5. Deprecate legacy code paths หลัง confirm ยอดตรง 60 วัน
+
+---
+
+### Cross-cutting: Testing Strategy (ทำคู่ทุก phase)
+
+- **Unit**: service level, all state transitions, all invariants
+- **Integration (Feature test)**: end-to-end per user flow
+- **Concurrency**: parallel PHPUnit + pcntl_fork หรือ artisan test with locks
+- **Financial invariant**: หลัง test run — sum(all ledger entries)=0, no negative wallets (except allowed debt), campaign spent ≤ budget
+- **Security**: mass assignment, ID tampering, replay, CSRF, upload injection
+- **Contract test**: frontend ↔ backend schema เสถียร
+
+### Cross-cutting: Observability
+
+- Structured log ทุก transaction พร้อม transaction_no
+- Metric: donation success rate, ad completion rate, reconciliation delta
+- Alert: ledger imbalance, reservation orphan > 15 นาที, webhook failure > 3 ครั้ง
+
+---
+
+### Timeline สรุป (12 phase)
+
+- Phase 0–2: **~5–6 สัปดาห์** (foundation, ไม่ user-facing)
+- Phase 3–5: **~6 สัปดาห์** (แต้ม + campaign + ad — MVP user-facing)
+- Phase 6: **~1 สัปดาห์** (policy)
+- Phase 7–8: **~5 สัปดาห์** (เงินจริง)
+- Phase 9: **~2 สัปดาห์** (withdrawal)
+- Phase 10–12: **~6 สัปดาห์** (fraud, discovery, rollout)
+
+**รวม ~25 สัปดาห์ (6 เดือน)** สำหรับระบบครบวงจร production-grade — เร็วกว่านี้ต้องตัด scope (เช่นเลื่อน gateway/withdrawal ไป phase 2 ของโครงการใหญ่)
+
+---
+
+### สิ่งที่ยังต้องผู้ใช้ตัดสินใจก่อนเริ่ม Phase 0
+
+1. **Advert vs CoursePointCampaign** — รวมหรือแยก?
+2. **Payment gateway** — ตัวไหน?
+3. **Fee absorption** — ผู้บริจาคหรือรายวิชา?
+4. **รายได้ครูส่วนตัว** — ตกที่ Academy Wallet หรือให้ครูถอนได้ตรง?
+5. **Timeline** — 6 เดือนตามข้างบน หรือทำ Slim MVP (เฉพาะแต้ม + basic campaign) ใน 2 เดือนก่อน?
+6. **Legacy CoursePointTransaction** — replay เป็น ledger entries หรือปล่อยเป็น legacy?
+7. **Reset scope** — ระบบผลิตอยู่แล้ว มี user จริง มียอดจริง ต้อง freeze/notify user ก่อน migrate หรือไม่?
+
+หัวใจสำคัญตามที่แผนผู้ใช้สรุปไว้ถูกต้องแล้ว: **"ยกระดับจากเพิ่มฟีเจอร์ → สร้างระบบบัญชี Wallet กลาง"** — Phase 0–2 คือหัวใจ ถ้า foundation เสร็จดี phase อื่นเป็นเพียงการต่อ endpoint

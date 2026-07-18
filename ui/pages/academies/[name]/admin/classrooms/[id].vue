@@ -7,6 +7,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import * as XLSX from 'xlsx'
+import AssignHomeroomTeacherModal from '~/components/academy/AssignHomeroomTeacherModal.vue'
 
 definePageMeta({
   layout: 'main',
@@ -430,12 +431,22 @@ const fetchAvailableUsers = async () => {
   try {
     // Search users in academy
     const res: any = await api.get(`/api/academies/${academy.value.id}/members/search`, {
-      params: { query: searchQueryMember.value || undefined }
+      params: { search: searchQueryMember.value || undefined, status: 2, per_page: 50 }
     })
     if (res.success) {
-      // Filter out existing members
-      const existingMemberUserIds = new Set(members.value.map(m => m.user_id || m.user?.id))
-      availableUsers.value = (res.data || []).filter((u: any) => !existingMemberUserIds.has(u.id || u.user_id))
+      const allMembers: any[] = res.members?.data ?? res.members ?? res.data ?? []
+      const existingMemberUserIds = new Set(members.value.map((m: any) => m.user_id || m.user?.id))
+      availableUsers.value = allMembers
+        .filter((u: any) => {
+          const uid = u.user_id || u.user?.id
+          return uid && u.role !== 'student' && u.role !== 'parent' && !existingMemberUserIds.has(uid)
+        })
+        .map((u: any) => ({
+          id: u.user_id || u.user?.id,
+          name: u.member_name || u.user?.name || u.name || '-',
+          email: u.user?.email || u.email || '',
+          avatar: u.member_avatar || u.user?.profile_photo_url || '',
+        }))
     }
   } catch (err) {
     console.error('Failed to fetch users:', err)

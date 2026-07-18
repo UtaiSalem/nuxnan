@@ -583,6 +583,10 @@ class AcademyMemberController extends Controller
     public function searchMembers(Academy $academy, Request $request)
     {
         $query = AcademyMember::where('academy_id', $academy->id);
+        $currentYearId = AcademicYear::query()
+            ->where('academy_id', $academy->id)
+            ->where('is_current', true)
+            ->value('id');
 
         // Search by name, email, or member code
         if ($request->has('search') && $request->search) {
@@ -631,17 +635,38 @@ class AcademyMemberController extends Controller
             });
         }
 
-        // Filter by class_level (ชั้นเรียน)
+        // Filter by the student's current classroom enrollment. The filter options
+        // are sourced from classrooms, so do not rely only on stale student fields.
         if ($request->has('class_level') && $request->class_level) {
-            $query->whereHas('student', function ($q) use ($request) {
-                $q->where('class_level', $request->class_level);
+            $query->whereExists(function ($subquery) use ($academy, $request, $currentYearId) {
+                $subquery->selectRaw('1')
+                    ->from('classroom_students')
+                    ->join('classrooms', 'classrooms.id', '=', 'classroom_students.classroom_id')
+                    ->whereColumn('classroom_students.student_id', 'academy_members.student_id')
+                    ->where('classroom_students.academy_id', $academy->id)
+                    ->where('classroom_students.status', ClassroomStudent::STATUS_ACTIVE)
+                    ->where('classrooms.is_active', true)
+                    ->where('classrooms.grade_level', $request->class_level);
+                if ($currentYearId) {
+                    $subquery->where('classroom_students.academic_year_id', $currentYearId);
+                }
             });
         }
 
-        // Filter by class_section (ห้อง)
+        // Filter by the classroom section from the same enrollment source.
         if ($request->has('class_section') && $request->class_section) {
-            $query->whereHas('student', function ($q) use ($request) {
-                $q->where('class_section', $request->class_section);
+            $query->whereExists(function ($subquery) use ($academy, $request, $currentYearId) {
+                $subquery->selectRaw('1')
+                    ->from('classroom_students')
+                    ->join('classrooms', 'classrooms.id', '=', 'classroom_students.classroom_id')
+                    ->whereColumn('classroom_students.student_id', 'academy_members.student_id')
+                    ->where('classroom_students.academy_id', $academy->id)
+                    ->where('classroom_students.status', ClassroomStudent::STATUS_ACTIVE)
+                    ->where('classrooms.is_active', true)
+                    ->where('classrooms.section', $request->class_section);
+                if ($currentYearId) {
+                    $subquery->where('classroom_students.academic_year_id', $currentYearId);
+                }
             });
         }
 
@@ -659,6 +684,14 @@ class AcademyMemberController extends Controller
             } elseif ($request->member_type === 'user') {
                 $query->whereNotNull('user_id')->whereNull('student_id');
             }
+        }
+
+        // Filter by membership date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
         }
 
         // Sort

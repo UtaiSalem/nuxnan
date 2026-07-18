@@ -326,8 +326,8 @@ const isAllSelected = computed(() =>
           </div>
         </div>
 
-        <!-- Actions on Hover -->
-        <div v-if="isAdmin && member.status !== 1" class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <!-- Actions -->
+        <div v-if="isAdmin && member.status !== 1" class="absolute top-3 right-3">
           <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-1">
             <button
               @click="emit('edit-role', member)"
@@ -497,21 +497,21 @@ const isAllSelected = computed(() =>
                   <!-- Regular actions -->
                   <button
                     @click="emit('edit-role', member)"
-                    class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
                     title="กำหนดบทบาท"
                   >
                     <Icon icon="fluent:shield-person-24-regular" class="w-4 h-4" />
                   </button>
                   <button
                     @click="emit('manage-member', member)"
-                    class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                     title="จัดการสมาชิก"
                   >
                     <Icon icon="fluent:settings-24-regular" class="w-4 h-4" />
                   </button>
                   <button
                     @click="emit('remove-member', member)"
-                    class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="ลบสมาชิก"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
