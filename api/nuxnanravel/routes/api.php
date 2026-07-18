@@ -223,6 +223,7 @@ require __DIR__.'/learn/student-profile.php';
 
 // Academy Store Management Routes (School Store System)
 require __DIR__.'/learn/academy-store.php';
+require __DIR__.'/public/courses.php';
 
 // Student Master Profile Routes
 Route::middleware(['auth:api'])->prefix('student')->group(function () {

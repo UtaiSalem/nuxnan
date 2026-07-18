@@ -26,6 +26,14 @@ class CoursePointTransaction extends Model
 
     const TYPE_DONATION_CASH_CREDIT = 'donation_cash_credit';
 
+    const TYPE_AD_REVENUE = 'ad_revenue';
+
+    const TYPE_WITHDRAWAL_RESERVE = 'withdrawal_reserve';
+
+    const TYPE_WITHDRAWAL_RELEASE = 'withdrawal_release';
+
+    const TYPE_WITHDRAWAL_PAID = 'withdrawal_paid';
+
     protected $fillable = [
         'course_point_account_id', 'course_id', 'lesson_id', 'user_id', 'type', 'amount',
         'balance_before', 'balance_after', 'related_points_transaction_id', 'related_campaign_id',

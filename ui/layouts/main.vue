@@ -215,6 +215,7 @@ const navigation = [
   { name: 'กระดานข่าว', href: '/play/newsfeed', icon: 'fluent:feed-24-regular' },
   { name: 'โรงเรียน', href: '/academies', icon: 'mdi:school-outline' },
   { name: 'รายวิชา', href: '/Learn/Courses', icon: 'fluent-mdl2:publish-course' },
+  { name: 'Support a Course', href: '/courses', icon: 'mdi:hand-heart-outline' },
   { name: 'สะสมแต้ม', href: '/earn/donates', icon: 'mdi:hand-coin-outline' },
   { name: 'ดูสินค้า', href: '/earn/advertise', icon: 'eos-icons:product-subscriptions-outlined' },
 ]

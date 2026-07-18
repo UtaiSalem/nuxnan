@@ -256,6 +256,16 @@ class Course extends Model
         return $this->belongsTo(Academy::class);
     }
 
+    public function courseDonates(): HasMany
+    {
+        return $this->hasMany(CourseDonate::class);
+    }
+
+    public function pointCampaigns(): HasMany
+    {
+        return $this->hasMany(CoursePointCampaign::class);
+    }
+
     public function scopeForMarketplace($query)
     {
         return $query->where('is_for_marketplace', true);

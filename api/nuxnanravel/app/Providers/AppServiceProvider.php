@@ -10,6 +10,7 @@ use App\Models\ClassroomStudent;
 use App\Models\Course;
 use App\Models\CourseDonate;
 use App\Models\CourseMember;
+use App\Models\CoursePointWithdrawalRequest;
 use App\Models\EventRegistration;
 use App\Models\Student;
 use App\Models\WalletTransaction;
@@ -22,6 +23,7 @@ use App\Observers\CourseMemberObserver;
 use App\Observers\EventRegistrationObserver;
 use App\Observers\StudentObserver;
 use App\Policies\CourseDonatePolicy;
+use App\Policies\CoursePointWithdrawalPolicy;
 use App\Policies\CoursePolicy;
 use App\Policies\EnrollmentPolicy;
 use App\Policies\StudentMasterProfilePolicy;
@@ -51,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191);
         Gate::policy(Course::class, CoursePolicy::class);
         Gate::policy(CourseDonate::class, CourseDonatePolicy::class);
+        Gate::policy(CoursePointWithdrawalRequest::class, CoursePointWithdrawalPolicy::class);
         Gate::policy(WalletTransaction::class, WithdrawalPolicy::class);
         Gate::policy(Student::class, StudentMasterProfilePolicy::class);
 

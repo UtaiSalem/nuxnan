@@ -32,6 +32,7 @@ class CourseFactory extends Factory
             'status' => 1,
             'is_for_marketplace' => false,
             'saleable' => false,
+            'donation_enabled' => true,
         ];
     }
 }

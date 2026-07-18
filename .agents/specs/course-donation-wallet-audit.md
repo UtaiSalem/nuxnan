@@ -338,6 +338,82 @@ Confirmed Phase 1 backlog (Slim MVP):
 
 Estimate confirmed: **1.5 to 2 developer weeks** for Phase 1a-1d. 1e is deferrable.
 
+## 12. Phase 5 audit (2026-07-18, after Phase 1 completion)
+
+### 12.1 What exists for Ad delivery + reward
+
+- `Advert` model (`app/Models/Advert.php`) — fused ad+campaign. Enums `CampaignType`, `CampaignScopeType`, `CampaignPaymentStatus`, `CampaignReviewStatus`. Fields include `budget_amount`, `remaining_views`, `duration`, `review_status`, `impressions_count`, `academy_id`, `course_id`, `advertiser_id`, `beneficiary_id`.
+- `AdvertViewer` — per-viewer log with `idempotency_key`.
+- `CampaignDeliveryEvent` (`app/Models/CampaignDeliveryEvent.php`) — has `event_type`, `ip_hash`, `user_agent`, `placement`, `idempotency_key`, `metadata`. No timestamps on update. **Missing** for Phase 5b: `session_id`, `delivery_token_hash`, `started_at`, `last_heartbeat_at`, `completed_at`, `required_duration`, `page_visibility_ratio`, `device_fingerprint_hash`, `fraud_reason`, `status`.
+- `Services/Campaign/CampaignViewService::rewardedView(Advert, User, string idempotencyKey)` — already has: lockForUpdate on Advert + User, idempotency check via `advertViewers`, daily view limit (config `campaign.daily_views_per_user`, default 5), pp deduction (`duration * 20`), wallet reward for viewer (`duration * viewer_reward_per_second + pointsRequired/pointsPerBaht`), referrer wallet reward (`duration * referrer_reward_per_second`), fallback to platform account for referrer (`config('campaign.platform_account_code')`).
+- `CampaignController::view` (line 156) — thin wrapper that calls `rewardedView`.
+- `Services/Campaign/CampaignPricingService`, `CampaignRefundService`, `CampaignAuthorizationService`, `CampaignDeliveryService`, `SupportPaymentService` — full domain layer already split.
+
+### 12.2 Gaps for Phase 5b (hardening)
+
+- Client trust: `POST /adverts/{campaign}/view` accepts a claim that user watched, no server-side duration proof. Needs `start` + `heartbeat` + `complete` endpoints.
+- No token issuance for delivery session — replay/reuse cannot be detected beyond the idempotency_key check.
+- No page-visibility ratio; a user with the tab hidden gets full reward.
+- No fraud scoring; `FraudDetectionService` does not exist yet.
+- `Advert.remaining_views` decrement happens at the *view* call — should move to *complete* call so a started-but-never-completed view does not consume a slot.
+
+### 12.3 Gaps for Phase 5c (revenue split refactor)
+
+- `rewardedView` computes viewer/referrer rewards from config, not from `RevenueSharePolicyResolver` (Phase 5a).
+- Course share is ZERO today. `Advert.course_id` is set but `CoursePointAccount` is never credited.
+- Platform share is implicit (whatever isn't distributed stays in `budget_amount`). Should be explicit via `CoursePointAccount.platform_earned` (Phase 5a helper) or a dedicated Platform Wallet.
+- Reward split is coupled to `duration` and `pointsRequired`, not to a `gross_reward` amount and a policy. Refactor: compute `gross = duration * gross_reward_per_second`, then `split = resolver->split(gross, policy)`, credit each leg accordingly. Existing `viewer_reward_per_second` becomes derived from student_pct of the policy.
+- No policy_version stored in metadata, so historical audit of "what split was applied to this view" is impossible.
+
+### 12.4 What Phase 5b/5c/5d must NOT break
+
+- Existing donor pp deduction and referrer wallet flow — must remain but be re-expressed through the policy.
+- Existing `advertViewers` idempotency semantic — new session/token flow is layered on top; the underlying view still de-duplicates by `(user_id, advert_id, idempotency_key)`.
+- Ad selection / query (`CampaignDeliveryService::query`) — untouched.
+- `campaign.daily_views_per_user` config guard — moves from `view` to `start` (must not allow starting more than N sessions/day).
+
+### 12.5 Recommended Phase 5 sub-task split (post-audit)
+
+- **5a — Foundation** (already in Task #20 to Codex): `revenue_share_policies` table, resolver, split calculator, `CoursePointAccount.platform_earned` helper. Foundation-only, no touching ad flow.
+- **5b — Delivery hardening** (Task #21): Widen `campaign_delivery_events` with new columns; new endpoints `POST /adverts/{advert}/deliveries/start`, `POST /deliveries/{delivery}/heartbeat`, `POST /deliveries/{delivery}/complete`. Signed JWT delivery token (short TTL, single-use). Server-side duration = last_heartbeat_at - started_at. Fraud rules: token replay, missing heartbeat, low visibility ratio, IP/device velocity. Move `remaining_views` decrement from view→complete.
+- **5c — Reward distribution refactor** (Task #22): Replace hard-coded reward math in `CampaignViewService::rewardedView` (or its `complete`-time successor) with `RevenueSharePolicyResolver::resolve` + `split`. Credit viewer via `PointsService::earn` (or `wallet` increment for the wallet share, TBD), credit course via `CoursePointAccountService::creditFromDonation(...) with new type `TYPE_AD_REVENUE`, credit platform via `CoursePointAccount::incrementPlatformEarned` per-course. Store `policy_version` and `policy_id` in `campaign_delivery_events.metadata`. All in one DB::transaction, double-entry invariant test.
+- **5d — Frontend `AdViewerModal.vue`** (Task #23): Show reward preview fetched from server (never compute). Heartbeat every 5s. Progress bar from server duration. Sponsor + course beneficiary info. Handle token replay 409.
+- **5e — Admin policy management UI** (Task #24): Super Admin CRUD on `revenue_share_policies` (platform/academy/course/campaign scope). Effective dates + version history. "Which policy was used for transaction X" report.
+
+## 13. Phase 9/10/11 audit (2026-07-18, post Phase 5)
+
+### 13.1 Phase 9 — Course-level withdrawal maker-checker
+
+- `CoursePointAccountService::withdraw($courseId, $recipient, $amount, $performedBy)` is a **one-shot immediate** withdraw: lock account, check `canWithdraw`, decrement balance, create `CoursePointTransaction` type=`owner_withdraw`, and immediately credit recipient's `pp` via `PointsService::earn`. No pending state, no approval flow, no maker/checker.
+- No `course_point_withdrawal_requests` table exists.
+- User-level withdrawal via `WalletService` **does** have maker/checker (Phase 0 audit §1.1). Pattern to mimic: `viewWithdrawal → approveWithdrawal → processWithdrawal → markWithdrawalPaid` with `reviewed_by ≠ approved_by` guard at high-value threshold.
+- Existing `CoursePointAccountService::withdraw` must NOT be broken — course owners with low balances doing small self-withdrawals to their own `pp` should still work.
+- New flow: request → academy admin review → super admin approve → paid (with proof upload). Above a config threshold, require different approver from creator/reviewer.
+
+### 13.2 Phase 10 — Fraud detection + reconciliation
+
+- `WalletReconciliationService` exists (`app/Services/WalletReconciliationService.php` — not yet read; assume it verifies `users.wallet` vs `sum(wallet_transactions delta)` since `WalletService::recordOpeningBalance` follows same invariant).
+- No `FraudDetectionService`.
+- No `risk_events` table.
+- `AuditLogService` is wired for withdrawal events (Phase 0 §1.1).
+- Existing ad delivery hardening (Phase 5b) has `fraud_reason` and `status` in `campaign_delivery_events` — can populate risk events from these.
+
+### 13.3 Phase 11 — Public discovery
+
+- `CourseMarketplaceController` exists at `app/Http/Controllers/Api/Learn/Course/CourseMarketplaceController.php`; route `GET /api/courses/marketplace` returns list. Not audited for donation-support surfacing yet — likely does NOT expose `donation_enabled`, `total_donated`, or campaign progress.
+- No `ui/pages/marketplace/` directory. Public course listing may be part of `ui/pages/Learn/*` or academies; needs grep before writing new page.
+- No public `/courses/{slug}` route in Nuxt. Course detail today likely lives at `ui/pages/Learn/Courses/[id].vue` (auth-required).
+
+### 13.4 Sub-task split for Phase 9/10/11
+
+- **9a** — `course_point_withdrawal_requests` migration + model + `CoursePointWithdrawalService` (request/review/approve/reject/mark-paid with maker-checker) + tests.
+- **9b** — Controllers + policy + admin queue endpoints (mimics donate admin queue).
+- **9c** — Frontend: course owner "ขอถอนแต้ม" form + admin approval page.
+- **10a** — `risk_events` table + `FraudDetectionService` (rule-based scoring: velocity, self-donation cluster, ad fraud reason).
+- **10b** — Daily `reconcile:all` command + alert + admin risk queue page.
+- **11a** — Public `/api/public/courses` + `/api/public/courses/{course}/support-summary` + `CourseMarketplaceResource` extension with donation signals.
+- **11b** — Public frontend `ui/pages/courses/index.vue` listing + course detail with donation flow entry.
+
 ## Appendix — Codex delegation failure
 
 For future reference: the Codex-companion `task-mrpl1unp-xbu4v2` was spawned via the `codex:codex-rescue` agent. Log at `~/.claude/plugins/data/codex-inline/state/nuxnan-13289e662c060836/jobs/task-mrpl1unp-xbu4v2.log` shows the task started, ran ~4 PowerShell scans in the first 2 minutes, produced one assistant message ("audit context present at line 3621"), then went silent. Process PID 37356 disappeared without emitting a stop event, so companion status kept reporting `running` for 48 minutes. Recovery: Claude did the audit inline. If we retry Codex on later phases, poll `codex-companion status --json` every ~10 min and treat any `updatedAt` gap over 5 min as a hang.

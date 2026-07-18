@@ -96,6 +96,29 @@ class CoursePointAccountService
         ]);
     }
 
+    public function creditFromAdRevenue(int $courseId, int $sourceUserId, int $amount, ?string $idempotencyKey = null, array $metadata = []): CoursePointTransaction
+    {
+        if ($idempotencyKey && ($existing = CoursePointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
+            return $existing;
+        }
+
+        $account = CoursePointAccount::firstOrCreate(['course_id' => $courseId], [
+            'balance' => 0, 'total_earned' => 0, 'total_withdrawn' => 0, 'total_distributed' => 0,
+            'reserved_balance' => 0, 'commission_rate' => 0.0000,
+            'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL,
+        ]);
+        $account = CoursePointAccount::lockForUpdate()->findOrFail($account->id);
+        $before = $account->balance;
+        $account->update(['balance' => $before + $amount, 'total_earned' => $account->total_earned + $amount, 'version' => $account->version + 1]);
+
+        return CoursePointTransaction::create([
+            'course_point_account_id' => $account->id, 'course_id' => $courseId, 'user_id' => $sourceUserId,
+            'type' => CoursePointTransaction::TYPE_AD_REVENUE, 'amount' => $amount,
+            'balance_before' => $before, 'balance_after' => $before + $amount,
+            'metadata' => $metadata, 'created_by' => $sourceUserId, 'idempotency_key' => $idempotencyKey,
+        ]);
+    }
+
     // ─── 2. Withdraw (owner ถอนเข้าแต้มตัวเอง) ───
 
     public function withdraw(

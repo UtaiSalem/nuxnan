@@ -152,10 +152,21 @@
     "anonymousHint": "ชื่อจะไม่ถูกแสดงต่อสาธารณะ แต่ระบบยังบันทึกไว้",
     "replayed": "รายการนี้เคยส่งไปแล้ว"
   },
+  "withdrawal": { "title": "ถอนแต้มคอร์ส", "request": "ส่งคำขอถอนแต้ม", "amount": "จำนวนแต้ม", "purpose": "วัตถุประสงค์", "status": { "pending": "รอดำเนินการ", "reviewing": "กำลังตรวจสอบ", "approved": "อนุมัติแล้ว", "paid": "โอนแล้ว", "rejected": "ปฏิเสธ", "cancelled": "ยกเลิก" }, "action": { "review": "รับเรื่อง", "approve": "อนุมัติ", "reject": "ปฏิเสธ", "mark_paid": "บันทึกโอนแล้ว", "cancel": "ยกเลิก" }, "error": { "below_minimum": "จำนวนต่ำกว่าขั้นต่ำ", "insufficient_balance": "แต้มคงเหลือไม่เพียงพอ", "rate_limit": "คำขอถูกจำกัดชั่วคราว กรุณาลองใหม่ภายหลัง" } },
   "learn": {
     "progress": {
       "lesson_assignments_short": "งานบทเรียน",
       "lesson_quizzes_short": "ทดสอบบทเรียน"
     }
-  }
+  },
+  "ad": {
+    "reward_preview": "ดูโฆษณา {duration} วินาที รับ ~{points} แต้ม",
+    "watching": "กำลังดูโฆษณา...",
+    "success": "🎉 คุณได้รับ {points} แต้ม (Reference #{id})",
+    "failure_below_duration": "โฆษณาไม่ครบเวลา ไม่ได้รับรางวัลครั้งนี้",
+    "failure_low_visibility": "หน้าจอถูกซ่อนขณะดูโฆษณา ไม่ได้รับรางวัลครั้งนี้",
+    "failure_replayed": "รายการนี้ถูกบันทึกไปแล้ว",
+    "failure_generic": "ไม่สามารถให้รางวัลได้ในขณะนี้"
+  },
+  "admin": { "revenue_share": { "title": "นโยบายแบ่งรายได้", "new": "สร้างนโยบาย", "active_only": "ใช้งานอยู่เท่านั้น", "usage_count": "ถูกใช้กับการส่งโฆษณา {count} รายการ" }, "risk": { "title": "คิวตรวจสอบความเสี่ยง", "subtitle": "ตรวจสอบการแจ้งเตือนจากบัญชีและการทุจริต", "all_severity": "ทุกระดับ", "open": "เปิดอยู่", "all": "ทุกสถานะ", "rule_filter": "กรองตามกฎ", "severity": "ระดับ", "rule": "กฎ", "subject": "รายการ", "created": "สร้างเมื่อ", "status": "สถานะ", "empty": "ไม่มีรายการ", "note": "หมายเหตุ", "acknowledge": "รับทราบ", "resolve": "แก้ไขแล้ว", "dismiss": "ยกเลิก" } }
 }

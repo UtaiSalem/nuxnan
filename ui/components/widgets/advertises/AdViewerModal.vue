@@ -1,301 +1,79 @@
 <template>
   <Transition name="fade">
-      <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
-        
-        <!-- Modal Content -->
-        <div class="relative bg-white dark:bg-gray-900 w-screen h-screen flex flex-col md:flex-row overflow-hidden">
-          
-          <!-- Close Button -->
-           <button 
-            v-if="canClose" 
-            @click="closeModal" 
-            class="absolute top-4 right-4 z-10 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
-          >
-            <Icon icon="mdi:close" class="w-6 h-6" />
-          </button>
-
-          <!-- Left Side: Image/Video -->
-          <div class="w-full md:w-2/3 h-1/2 md:h-full bg-black flex items-center justify-center relative">
-              <video 
-                v-if="isVideo"
-                :src="advert?.media_image" 
-                class="w-full h-full object-contain" 
-                autoplay 
-                loop 
-                muted 
-                playsinline 
-                controls
-              ></video>
-              <img 
-                v-else
-                :src="advert?.media_image" 
-                class="w-full h-full object-contain" 
-                alt="Ad Content" 
-              />
-          </div>
-
-          <!-- Right Side: Interaction & Timer -->
-          <div class="w-full md:w-1/3 h-1/2 md:h-full bg-white dark:bg-gray-800 p-8 flex flex-col items-center justify-center text-center relative">
-               
-               <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2 line-clamp-2">
-                   {{ advert?.title || 'Product Advertisement' }}
-               </h3>
-               
-               <p v-if="advert?.description" class="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-3">
-                   {{ advert.description }}
-               </p>
-
-               <a 
-                v-if="advert?.media_link" 
-                :href="advert.media_link" 
-                target="_blank"
-                class="mb-6 inline-flex items-center text-teal-600 hover:text-teal-700 font-medium text-sm"
-               >
-                 <Icon icon="mdi:link" class="mr-1 w-4 h-4" />
-                 เยี่ยมชมเว็บไซต์
-               </a>
-               <div v-else class="mb-6"></div>
-
-               <!-- Circular Progress -->
-               <div v-if="timeLeft > 0" class="relative mb-8">
-                   <svg class="w-32 h-32 transform -rotate-90">
-                       <circle
-                           cx="64"
-                           cy="64"
-                           r="60"
-                           stroke="currentColor"
-                           stroke-width="8"
-                           fill="transparent"
-                           class="text-gray-200 dark:text-gray-700"
-                       />
-                       <circle
-                           cx="64"
-                           cy="64"
-                           r="60"
-                           stroke="currentColor"
-                           stroke-width="8"
-                           fill="transparent"
-                           :stroke-dasharray="circumference"
-                           :stroke-dashoffset="dashOffset"
-                           class="text-teal-500 transition-all duration-1000 ease-linear"
-                           stroke-linecap="round"
-                       />
-                   </svg>
-                   <div class="absolute inset-0 flex items-center justify-center flex-col">
-                       <span class="text-3xl font-bold text-gray-800 dark:text-white">{{ timeLeft }}</span>
-                       <span class="text-xs text-gray-500 uppercase">Seconds</span>
-                   </div>
-               </div>
-
-               <!-- Success State -->
-               <div v-else-if="rewardClaimed" class="mb-8 flex flex-col items-center animate-bounce-in">
-                   <div class="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-                       <Icon icon="mdi:check-bold" class="w-12 h-12 text-green-600 dark:text-green-400" />
-                   </div>
-                   <h4 class="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">สำเร็จ!</h4>
-                   <p class="text-gray-600 dark:text-gray-400">ได้รับรางวัลเรียบร้อยแล้ว</p>
-               </div>
-               
-               <!-- Processing State (Center) -->
-               <div v-else-if="processing" class="mb-8 flex flex-col items-center">
-                   <Icon icon="svg-spinners:3-dots-fade" class="w-24 h-24 text-teal-500" />
-                   <h4 class="text-xl font-bold text-gray-600 dark:text-gray-300 mb-1">กำลังประมวลผล...</h4>
-               </div>
-
-               <!-- Max Views Reached State -->
-               <div v-else-if="maxViewsReached" class="mb-8 flex flex-col items-center">
-                   <div class="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                       <Icon icon="mdi:eye-off-outline" class="w-12 h-12 text-gray-500 dark:text-gray-400" />
-                   </div>
-                   <h4 class="text-2xl font-bold text-gray-600 dark:text-gray-300 mb-1">โฆษณานี้แสดงผลครบแล้ว</h4>
-                   <p class="text-gray-500 dark:text-gray-400 text-sm max-w-xs">
-                       โฆษณานี้มียอดการรับชมครบตามจำนวนที่กำหนดแล้ว ไม่สามารถรับรางวัลได้
-                   </p>
-               </div>
-
-               <!-- Failed State -->
-               <div v-else class="mb-8 flex flex-col items-center">
-                    <Icon icon="mdi:alert-circle" class="w-24 h-24 text-red-500" />
-                    <h4 class="text-xl font-bold text-red-500 mb-1">เสร็จสิ้น</h4>
-                    <p class="text-sm text-gray-500">กรุณารอผลสักครู่...</p>
-               </div>
-
-               <div v-if="timeLeft > 0" class="space-y-2">
-                   <p class="text-gray-600 dark:text-gray-300">รับชมเพื่อรับรางวัล</p>
-                   <p class="text-2xl font-bold text-amber-500">{{ (advert?.duration * 0.07).toFixed(2) }} ฿</p>
-               </div>
-
-               <div v-if="processing" class="absolute bottom-4 left-0 right-0">
-                    <div class="flex items-center justify-center text-teal-500 gap-2">
-                        <Icon icon="svg-spinners:3-dots-fade" class="w-6 h-6" />
-                        <span class="text-sm">Processing Reward...</span>
-                    </div>
-               </div>
-
-          </div>
-
+    <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
+      <div class="relative flex h-screen w-screen flex-col overflow-hidden bg-white dark:bg-gray-900 md:flex-row">
+        <button v-if="canClose" @click="closeModal" class="absolute right-4 top-4 z-10 rounded-full bg-black/50 p-2 text-white">
+          <Icon icon="mdi:close" class="h-6 w-6" />
+        </button>
+        <div class="flex h-1/2 w-full items-center justify-center bg-black md:h-full md:w-2/3">
+          <video v-if="isVideo" :src="advert?.media_image" class="h-full w-full object-contain" autoplay loop muted playsinline controls />
+          <img v-else :src="advert?.media_image" class="h-full w-full object-contain" alt="Ad Content" />
+        </div>
+        <div class="relative flex h-1/2 w-full flex-col items-center justify-center bg-white p-8 text-center dark:bg-gray-800 md:h-full md:w-1/3">
+          <p v-if="!useLegacyFlow && requiredDuration" class="mb-4 text-sm font-medium text-amber-500">
+            {{ t('ad.reward_preview', { duration: requiredDuration, points: expectedStudentReward }) }}
+          </p>
+          <h3 class="mb-2 line-clamp-2 text-xl font-bold text-gray-900 dark:text-white">{{ advert?.title || 'Product Advertisement' }}</h3>
+          <p v-if="advert?.description" class="mb-4 line-clamp-3 text-sm text-gray-500">{{ advert.description }}</p>
+          <a v-if="advert?.media_link" :href="advert.media_link" target="_blank" class="mb-6 text-sm font-medium text-teal-600">ชมเว็บไซต์</a>
+          <div v-if="timeLeft > 0" class="relative mb-8"><div class="text-3xl font-bold text-gray-800 dark:text-white">{{ timeLeft }}</div><div class="text-xs text-gray-500">{{ t('ad.watching') }}</div></div>
+          <div v-else-if="rewardClaimed" class="mb-8 text-green-600 dark:text-green-400"><Icon icon="mdi:check-bold" class="mx-auto mb-3 h-16 w-16" /><p>{{ t('ad.success', { points: awardedPoints, id: completionId }) }}</p></div>
+          <div v-else-if="resultMessage" class="mb-8 text-sm text-red-500">{{ resultMessage }}</div>
+          <div v-else-if="maxViewsReached" class="mb-8 text-gray-500">โฆษณานี้แสดงผลครบแล้ว</div>
+          <div v-if="processing" class="text-teal-500">{{ t('ad.watching') }}</div>
         </div>
       </div>
+    </div>
   </Transition>
 </template>
 
-<script setup>
-import { ref, watch, onUnmounted, computed } from 'vue';
-import { Icon } from '@iconify/vue';
-import Swal from 'sweetalert2';
-import { useRuntimeConfig } from '#app';
-import { useAuthStore } from '~/stores/auth'
+<script setup lang="ts">
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
+import Swal from 'sweetalert2'
+import { useAdDelivery } from '~/composables/useAdDelivery'
 
-const props = defineProps({
-  isOpen: Boolean,
-  advert: Object,
-});
+const props = defineProps<{ isOpen: boolean; advert?: any; expectedStudentReward: number }>()
+const emit = defineEmits<{ close: []; completed: [advert: any] }>()
+const { t } = useI18n()
+const { start, heartbeat, complete } = useAdDelivery()
+const timeLeft = ref(0), totalDuration = ref(0), processing = ref(false), rewardClaimed = ref(false), maxViewsReached = ref(false)
+const canClose = ref(false), useLegacyFlow = ref(false), resultMessage = ref(''), awardedPoints = ref(0), completionId = ref<number | string>('')
+const token = ref(''), deliveryId = ref(0), timer = ref<ReturnType<typeof setInterval> | null>(null), heartbeatTimer = ref<ReturnType<typeof setInterval> | null>(null)
+const isVideo = computed(() => ['mp4', 'webm', 'ogg'].includes((props.advert?.media_image?.split('.').pop() || '').toLowerCase()))
 
-const emit = defineEmits(['close', 'completed']);
+watch(() => props.isOpen, value => value && props.advert ? startAd() : resetAd())
 
-const config = useRuntimeConfig();
-const apiBase = config.public.apiBase;
-const authStore = useAuthStore();
-
-const timeLeft = ref(0);
-const timer = ref(null);
-const canClose = ref(false);
-const processing = ref(false);
-const totalDuration = ref(0);
-const rewardClaimed = ref(false);
-const maxViewsReached = ref(false);
-
-// Circular Progress Logic
-const radius = 60;
-const circumference = 2 * Math.PI * radius;
-const dashOffset = computed(() => {
-    if (totalDuration.value === 0) return 0;
-    const progress = timeLeft.value / totalDuration.value;
-    return circumference * (1 - progress); // Inverted logic for countdown filling or emptying
-});
-
-const isVideo = computed(() => {
-    if (!props.advert?.media_image) return false;
-    const ext = props.advert.media_image.split('.').pop().toLowerCase();
-    return ['mp4', 'webm', 'ogg'].includes(ext);
-});
-
-
-watch(() => props.isOpen, (newVal) => {
-    if (newVal && props.advert) {
-        startAd();
-    } else {
-        resetAd();
-    }
-});
-
-function startAd() {
-    timeLeft.value = props.advert.duration;
-    totalDuration.value = props.advert.duration;
-    canClose.value = false;
-    processing.value = false;
-    rewardClaimed.value = false;
-    maxViewsReached.value = false;
-    
-    // Check remaining views
-    if (props.advert.remaining_views <= 0) {
-        maxViewsReached.value = true;
-        canClose.value = true;
-        timeLeft.value = 0; // Ensure timer UI doesn't show
-        return;
-    }
-    
-    // Clear any existing timer
-    if (timer.value) clearInterval(timer.value);
-
-    timer.value = setInterval(() => {
-        timeLeft.value--;
-        if (timeLeft.value <= 0) {
-            clearInterval(timer.value);
-            claimReward();
-        }
-    }, 1000);
+async function startAd() {
+  resetAd(); canClose.value = false; resultMessage.value = ''
+  if (props.advert.remaining_views <= 0) { maxViewsReached.value = true; canClose.value = true; return }
+  try {
+    const delivery = await start(props.advert.id); token.value = delivery.token; deliveryId.value = delivery.deliveryId; totalDuration.value = delivery.requiredDuration; timeLeft.value = delivery.requiredDuration
+    beginTimers()
+  } catch (error: any) {
+    const status = error.status || error.originalError?.status
+    if ([401, 403, 404].includes(status)) { useLegacyFlow.value = true; totalDuration.value = props.advert.duration; timeLeft.value = props.advert.duration; beginTimers() }
+    else { canClose.value = true; resultMessage.value = t('ad.failure_generic') }
+  }
 }
-
+function beginTimers() {
+  timer.value = setInterval(() => { timeLeft.value--; if (timeLeft.value <= 0) { clearTimers(); claimReward() } }, 1000)
+  if (!useLegacyFlow.value) heartbeatTimer.value = setInterval(() => heartbeat(deliveryId.value, token.value, document.visibilityState === 'visible' ? 1 : 0).catch(() => {}), 5000)
+}
 async function claimReward() {
-    processing.value = true;
-    try {
-        const response = await $fetch(`${apiBase}/api/advertises/${props.advert.id}/view`, {
-            method: 'POST',
-             headers: {
-                Authorization: `Bearer ${authStore.token}`
-            }
-        });
-        
-        if (response.success) {
-            // Update auth store if possible
-            if(authStore.fetchUser) authStore.fetchUser();
-
-             // Play sound effect? (Optional)
-             rewardClaimed.value = true;
-             emit('completed', props.advert);
-        }
-    } catch (error) {
-        console.error(error);
-        const errorData = error.data || {};
-        const statusCode = error.statusCode || error.response?.status;
-
-        if (statusCode === 402) {
-             Swal.fire({
-                 icon: 'warning',
-                 title: 'คะแนนไม่เพียงพอ',
-                 text: errorData.message || 'Points not enough',
-                 customClass: { popup: 'rounded-xl' }
-             });
-        } else if (statusCode === 404) {
-             maxViewsReached.value = true;
-             Swal.fire({
-                 icon: 'info',
-                 title: 'ครบจำนวนแล้ว',
-                 text: 'โฆษณานี้มีผู้รับชมครบตามจำนวนแล้ว',
-                 customClass: { popup: 'rounded-xl' }
-             });
-        } else {
-             Swal.fire('เกิดข้อผิดพลาด', errorData.message || 'Failed to claim reward', 'error');
-        }
-    } finally {
-        processing.value = false;
-        canClose.value = true; 
-    }
+  processing.value = true
+  try {
+    if (useLegacyFlow.value) { await $fetch(`/api/advertises/${props.advert.id}/view`, { method: 'POST' }); rewardClaimed.value = true; emit('completed', props.advert); return }
+    const result = await complete(deliveryId.value, token.value); completionId.value = (result as any).delivery?.id || deliveryId.value
+    if (result.valid) { awardedPoints.value = result.reward?.splits.student || 0; rewardClaimed.value = true; emit('completed', props.advert) }
+    else resultMessage.value = ({ below_required_duration: t('ad.failure_below_duration'), low_visibility: t('ad.failure_low_visibility'), replayed: t('ad.failure_replayed') } as Record<string, string>)[result.reason || ''] || t('ad.failure_generic')
+  } catch (error: any) { if ((error.status || error.originalError?.status) === 409) resultMessage.value = t('ad.failure_replayed'); else { resultMessage.value = t('ad.failure_generic'); Swal.fire('Error', resultMessage.value, 'error') } }
+  finally { processing.value = false; canClose.value = true }
 }
-
-function resetAd() {
-    if (timer.value) clearInterval(timer.value);
-    timeLeft.value = 0;
-}
-
-function closeModal() {
-    resetAd();
-    emit('close');
-}
-
-onUnmounted(() => {
-    if (timer.value) clearInterval(timer.value);
-});
+function clearTimers() { if (timer.value) clearInterval(timer.value); if (heartbeatTimer.value) clearInterval(heartbeatTimer.value); timer.value = null; heartbeatTimer.value = null }
+function resetAd() { clearTimers(); timeLeft.value = 0; totalDuration.value = 0; token.value = ''; deliveryId.value = 0; useLegacyFlow.value = false; processing.value = false; rewardClaimed.value = false; canClose.value = false; maxViewsReached.value = false }
+function closeModal() { if (!canClose.value) return; resetAd(); emit('close') }
+onUnmounted(clearTimers)
 </script>
 
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-.animate-bounce-in {
-    animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-
-@keyframes bounceIn {
-    0% { transform: scale(0); opacity: 0;}
-    100% { transform: scale(1); opacity: 1;}
-}
-</style>
+<style scoped>.fade-enter-active,.fade-leave-active{transition:opacity .3s}.fade-enter-from,.fade-leave-to{opacity:0}</style>

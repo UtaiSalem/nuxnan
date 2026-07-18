@@ -10,7 +10,7 @@ class CoursePointAccount extends Model
 {
     protected $fillable = [
         'course_id', 'balance', 'total_earned', 'total_withdrawn', 'total_distributed',
-        'reserved_balance', 'commission_rate', 'minimum_withdrawal', 'version',
+        'reserved_balance', 'commission_rate', 'minimum_withdrawal', 'version', 'platform_earned',
     ];
 
     protected $casts = ['commission_rate' => 'decimal:4'];
@@ -48,5 +48,14 @@ class CoursePointAccount extends Model
     {
         return $this->available_balance >= $amount
             && $amount >= $this->minimum_withdrawal;
+    }
+
+    public function incrementPlatformEarned(int $amount): bool
+    {
+        if ($amount < 0) {
+            throw new \InvalidArgumentException('Platform earned amount cannot be negative.');
+        }
+
+        return $this->increment('platform_earned', $amount) && $this->increment('version');
     }
 }

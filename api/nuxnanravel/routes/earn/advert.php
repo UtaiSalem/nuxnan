@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdvertController;
 use App\Http\Controllers\Api\Shared\SupportController;
+use App\Http\Controllers\Api\Campaign\AdDeliveryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/advertises/widget', [AdvertController::class, 'widget'])->name('advertises.widget');
@@ -14,6 +15,9 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->g
     Route::post('/advertises', [AdvertController::class, 'store'])->name('advertises.store');
     Route::post('/supports/plearnd', [SupportController::class, 'storePlearndSupport'])->name('support.store.plearnd');
     Route::post('/advertises/{advert}/view', [AdvertController::class, 'view'])->name('advertises.view');
+    Route::post('/adverts/{advert}/deliveries/start', [AdDeliveryController::class, 'start']);
+    Route::post('/ad-deliveries/{delivery}/heartbeat', [AdDeliveryController::class, 'heartbeat']);
+    Route::post('/ad-deliveries/{delivery}/complete', [AdDeliveryController::class, 'complete']);
 
     Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/advertises')->group(function () {
         Route::get('/', [AdvertController::class, 'advertisesIndex'])->name('admin.advertises.index');

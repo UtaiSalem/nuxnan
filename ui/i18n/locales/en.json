@@ -152,10 +152,21 @@
     "anonymousHint": "Your name will not be shown publicly, but the system still records it.",
     "replayed": "This item was already submitted"
   },
+  "withdrawal": { "title": "Course point withdrawal", "request": "Request withdrawal", "amount": "Amount", "purpose": "Purpose", "status": { "pending": "Pending", "reviewing": "Reviewing", "approved": "Approved", "paid": "Paid", "rejected": "Rejected", "cancelled": "Cancelled" }, "action": { "review": "Review", "approve": "Approve", "reject": "Reject", "mark_paid": "Mark paid", "cancel": "Cancel" }, "error": { "below_minimum": "Amount is below the minimum", "insufficient_balance": "Insufficient balance", "rate_limit": "Too many requests. Please try again later." } },
   "learn": {
     "progress": {
       "lesson_assignments_short": "Lesson Assign",
       "lesson_quizzes_short": "Lesson Quiz"
     }
-  }
+  },
+  "ad": {
+    "reward_preview": "Watch ad for {duration}s to earn ~{points} points",
+    "watching": "Watching...",
+    "success": "🎉 You earned {points} points (Reference #{id})",
+    "failure_below_duration": "The ad was not watched long enough; no reward this time",
+    "failure_low_visibility": "The page was hidden while watching; no reward this time",
+    "failure_replayed": "This item was already recorded",
+    "failure_generic": "Unable to grant the reward at this time"
+  },
+  "admin": { "revenue_share": { "title": "Revenue share policies", "new": "New policy", "active_only": "Active only", "usage_count": "Used by {count} deliveries" }, "risk": { "title": "Risk event queue", "subtitle": "Review reconciliation and fraud alerts", "all_severity": "All severity", "open": "Open", "all": "All statuses", "rule_filter": "Filter by rule", "severity": "Severity", "rule": "Rule", "subject": "Subject", "created": "Created", "status": "Status", "empty": "No risk events", "note": "Resolution note", "acknowledge": "Acknowledge", "resolve": "Resolve", "dismiss": "Dismiss" } }
 }
