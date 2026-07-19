@@ -9,6 +9,7 @@ use App\Models\AcademyPermission;
 use App\Models\AcademyRole;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class AcademyRoleController extends Controller
@@ -242,6 +243,19 @@ class AcademyRoleController extends Controller
             ], 422);
         }
 
+        if ($academy->user_id !== Auth::id()
+            && $request->has('permissions')
+            && ! in_array('members.roles.manage', $request->input('permissions', []), true)
+            && AcademyMember::where('academy_id', $academy->id)
+                ->where('user_id', Auth::id())
+                ->where('academy_role_id', $role->id)
+                ->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่สามารถแก้ไขสิทธิ์ของบทบาทตัวเองจนสูญเสียสิทธิ์จัดการบทบาท',
+            ], 403);
+        }
+
         $role->update($request->only([
             'display_name_th',
             'display_name_en',
@@ -279,19 +293,52 @@ class AcademyRoleController extends Controller
             ], 403);
         }
 
-        // Check if role is being used
-        if ($role->members()->exists()) {
+        if ($academy->user_id !== Auth::id()
+            && AcademyMember::where('academy_id', $academy->id)
+                ->where('user_id', Auth::id())
+                ->where('academy_role_id', $role->id)
+                ->exists()) {
             return response()->json([
                 'success' => false,
-                'message' => 'ไม่สามารถลบบทบาทที่มีสมาชิกใช้งานอยู่',
-            ], 422);
+                'message' => 'ไม่สามารถลบบทบาทของตัวเอง',
+            ], 403);
         }
 
-        $role->delete();
+        $studentRole = null;
+        $roleSnapshot = [];
+        $reassignedCount = DB::transaction(function () use ($academy, $role, &$studentRole, &$roleSnapshot) {
+            $studentRole = AcademyRole::where('name', 'student')
+                ->whereNull('academy_id')
+                ->first();
+
+            if (! $studentRole) {
+                return null;
+            }
+
+            $reassignedCount = AcademyMember::where('academy_id', $academy->id)
+                ->where('academy_role_id', $role->id)
+                ->update([
+                    'academy_role_id' => $studentRole->id,
+                    'role' => 'student',
+                ]);
+            $roleSnapshot = $role->only(['id', 'name', 'display_name_th', 'permissions']);
+
+            $role->delete();
+
+            return $reassignedCount;
+        });
+
+        if (! $studentRole) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบบทบาทเริ่มต้น student — ติดต่อผู้ดูแลระบบ',
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'ลบบทบาทสำเร็จ',
+            'message' => "ลบบทบาทสำเร็จ (โอน {$reassignedCount} สมาชิกไปเป็นนักเรียน)",
+            'reassigned_count' => $reassignedCount,
         ]);
     }
 

@@ -21,6 +21,8 @@ const isLoading = ref(true)
 
 // Modal
 const showRoleModal = ref(false)
+const showPreviewModal = ref(false)
+const previewingRole = ref<any>(null)
 const editingRole = ref<any>(null)
 const isSubmitting = ref(false)
 
@@ -170,6 +172,32 @@ const openEditModal = (role: any) => {
     permissions: role.permissions || []
   }
   showRoleModal.value = true
+}
+
+const duplicateRole = (role: any) => {
+  editingRole.value = null
+  const baseName = `${role.name}_copy`
+  let name = baseName
+  let copyNumber = 2
+  while (roles.value.some(existingRole => existingRole.name === name)) {
+    name = `${baseName}${copyNumber}`
+    copyNumber++
+  }
+  roleForm.value = {
+    name,
+    display_name_th: `${role.display_name_th || role.name} (สำเนา)`,
+    display_name_en: role.display_name_en ? `${role.display_name_en} (Copy)` : '',
+    description: role.description || '',
+    color: role.color || '#6366f1',
+    icon: role.icon || 'fluent:person-24-regular',
+    permissions: [...(role.permissions || [])]
+  }
+  showRoleModal.value = true
+}
+
+const openPreview = (role: any) => {
+  previewingRole.value = role
+  showPreviewModal.value = true
 }
 
 const saveRole = async () => {
@@ -334,8 +362,18 @@ const colorOptions = [
               </div>
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">{{ role.display_name_th }}</p>
-                <p class="text-xs text-gray-500">{{ role.name }}</p>
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-2">
+                    <p class="text-xs text-gray-500">{{ role.name }}</p>
+                    <span v-if="role.members_count !== undefined && role.members_count > 0" class="text-xs px-2 py-0.5 rounded bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">{{ role.members_count }} คน</span>
+                  </div>
+                  <span v-if="role.members_count !== undefined && role.members_count > 0" class="text-xs px-2 py-0.5 rounded bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">{{ role.members_count }} คน</span>
+                </div>
               </div>
+            </div>
+            <div class="flex justify-end gap-1 mt-3">
+              <button @click="openPreview(role)" title="ดูสิทธิ์" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg"><Icon name="fluent:eye-24-regular" class="w-4 h-4" /></button>
+              <button @click="duplicateRole(role)" title="ทำสำเนา" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg"><Icon name="fluent:copy-24-regular" class="w-4 h-4" /></button>
             </div>
             <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
               {{ role.description || 'ไม่มีคำอธิบาย' }}
@@ -386,6 +424,12 @@ const colorOptions = [
                 </div>
               </div>
               <div class="flex items-center gap-1">
+                <button @click="openPreview(role)" title="ดูสิทธิ์" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg">
+                  <Icon name="fluent:eye-24-regular" class="w-4 h-4" />
+                </button>
+                <button @click="duplicateRole(role)" title="ทำสำเนา" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg">
+                  <Icon name="fluent:copy-24-regular" class="w-4 h-4" />
+                </button>
                 <button 
                   @click="openEditModal(role)"
                   class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
@@ -600,4 +644,20 @@ const colorOptions = [
       </div>
     </Teleport>
   </div>
+    <Teleport to="body">
+      <div v-if="showPreviewModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50" @click="showPreviewModal = false" />
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div><h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ previewingRole?.display_name_th }}</h3><p class="text-xs text-gray-500">{{ previewingRole?.name }}</p></div>
+            <button @click="showPreviewModal = false" class="p-2 text-gray-400"><Icon name="fluent:dismiss-24-regular" class="w-5 h-5" /></button>
+          </div>
+          <div class="p-6 overflow-y-auto max-h-[70vh]"><p class="text-sm text-gray-600 dark:text-gray-400 mb-5">{{ previewingRole?.description || 'ไม่มีคำอธิบาย' }}</p>
+            <div v-if="previewingRole?.name === 'owner' && previewingRole?.permissions?.includes('*')" class="rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 p-4 font-medium">สิทธิ์ทั้งหมด (Owner)</div>
+            <div v-else class="space-y-5"><div v-for="group in permissionGroups" :key="group.name"><h4 class="font-medium text-gray-900 dark:text-white mb-2">{{ group.name }}</h4><div class="space-y-1"><div v-for="permission in group.permissions" :key="permission.key" class="flex items-center gap-2 text-sm" :class="previewingRole?.permissions?.includes(permission.key) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'"><Icon :name="previewingRole?.permissions?.includes(permission.key) ? 'fluent:checkmark-circle-24-filled' : 'fluent:circle-24-regular'" class="w-4 h-4" /><span>{{ permission.key }} — {{ permission.label }}</span></div></div></div></div>
+          </div>
+          <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end"><button @click="showPreviewModal = false" class="px-5 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg">ปิด</button></div>
+        </div>
+      </div>
+    </Teleport>
 </template>
