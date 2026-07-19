@@ -10,6 +10,7 @@ use App\Http\Requests\StoreStudentCardRequest;
 use App\Http\Resources\ClassroomSummaryResource;
 use App\Http\Resources\StudentCardRequestResource;
 use App\Models\Academy;
+use App\Models\AcademyMember;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\Student;
@@ -214,7 +215,7 @@ class StudentCardRequestController extends Controller
         if (method_exists($academy, 'isAdmin') && $academy->isAdmin($user)) {
             return true;
         }
-        $member = \App\Models\AcademyMember::where('user_id', $user->id)
+        $member = AcademyMember::where('user_id', $user->id)
             ->where('academy_id', $academy->id)
             ->where('status', 2)
             ->first();

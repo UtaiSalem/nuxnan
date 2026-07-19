@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\AcademyMember;
+use App\Models\AcademyRole;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\Student;
@@ -61,7 +62,7 @@ class StudentCardSSOTTest extends TestCase
             'status' => 'active',
         ]);
 
-        $studentRole = \App\Models\AcademyRole::create([
+        $studentRole = AcademyRole::create([
             'academy_id' => $academy->id,
             'name' => 'student-local',
             'display_name_th' => 'นักเรียน',

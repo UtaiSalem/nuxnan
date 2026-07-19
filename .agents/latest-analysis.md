@@ -4082,3 +4082,28 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Intended work areas: `AdDeliveryService`, `RewardDistributionService`, academy/course point account services and transaction models, campaign/ad request-resource contracts, donation composables/modals, course/academy support widgets, and focused feature tests.
 - Key decisions to confirm before implementation: whether academy-targeted ads fund the academy account directly; whether ad revenue can be donated automatically or only displayed as available balance; canonical reward/ledger model; campaign budget and revenue-share percentages; and whether cash donations remain manual-review in MVP.
 - Verification plan: API contract tests, idempotency/concurrency tests, replay/fraud tests, wallet invariants/reconciliation, and manual desktop/mobile smoke tests for ad viewing and course/academy donation history.
+
+## 2026-07-19 - Review: implementation status against point donation/ad reward plan
+
+- Worktree was clean; review covered current committed implementation rather than an uncommitted diff.
+- Completed areas confirmed: academy point account/service, academy and course point donations, academy ad-revenue credit path, revenue-share policy split, ad delivery hardening fields, reconciliation/risk checks, public course/academy donation flags, and focused feature coverage.
+- High-risk contract gap: `AdDeliveryController::complete()` does not include the service result's `reward`, while `useAdDelivery()` and `AdViewerModal.vue` expect `response.reward`; the actual split/reference UI therefore cannot receive server reward data.
+- High-risk business/data gap: academy platform-share handling assumes an existing academy account when only platform points are positive; account creation/target validation needs a dedicated test and safe path.
+- Remaining work: full ledger unification, exact server-driven reward preview, ownership authorization tests, concurrency tests, academy owner dashboard/history, cash gateway/settlement/withdrawal completion, and rollout/manual smoke verification.
+
+## 2026-07-19 - Plan: academy support/revenue cards across school pages
+
+- Request is plan-only: when an academy has support records, show point-support and advertising-support cards in the academy Revenue tab, and expose reusable support widgets/cards on other academy pages.
+- Current state: `ui/pages/academies/[name].vue` owns the main academy tabs and currently embeds `AcademyDonationModal`, `AdvertiseCtaWidget`, and `CampaignWidget`; `useAcademyDonations.fetchAcademyDonations()` already provides academy donation history. `CampaignWidget` loads campaigns for viewing/reward flow, so it is not sufficient as a received-support summary card.
+- Proposed implementation: add a typed academy support summary/history contract, create reusable `AcademySupportWidget`/card components, load data once per academy with loading/empty/error states, conditionally render cards only when relevant records exist, place the widgets in Revenue and shared academy sidebars/child-page shells, and preserve the existing donation modal and campaign creation actions.
+- Backend decision point: verify whether academy ad-support records are already queryable by academy; if not, add a read-only summary endpoint/resource (no mutation) that aggregates approved point donations, approved cash donations if supported, active academy advertising campaigns, completed ad delivery/reward totals, and recent items with authorization-safe visibility.
+- Verification plan: API feature/contract tests for empty, populated, pending/rejected, and unauthorized cases; Nuxt type/build checks; manual desktop/mobile smoke tests across Revenue, feed, courses, members, events, groups, and child/admin routes.
+- Role requirement added: Revenue must support separate normal-user and academy-admin experiences. Normal users can view public approved summaries, support the academy, and view public campaign cards; academy admins/owners can view pending/private records, manage campaigns, review support records where authorized, and access management actions. Backend authorization and frontend route guards must enforce the same matrix.
+
+## 2026-07-19 - Plan: dedicated academy-admin advertising management menu
+
+- Clarification: add a direct Admin-school menu for advertising management, separate from the public Revenue tab and its summary widgets.
+- Current state: `ui/pages/academies/[name]/admin/index.vue` already has `quickActions` and an admin revenue summary; `AcademyCampaignManagementTable.vue` currently lives inside the main academy Revenue tab; backend has academy revenue campaign endpoints protected by `finance.view`/`finance.manage` middleware.
+- Proposed route/menu: add `/academies/{name}/admin/advertising` (or the repository's chosen equivalent) with a quick-action card labeled “จัดการโฆษณา”; reuse the existing campaign management component after extracting page-level state and add admin-only campaign filters, create/edit/stop actions, payment/review/status columns, and links back to Revenue.
+- Permission matrix: `finance.view` can view campaigns and performance; `finance.manage` can create/update/stop campaigns and review payment-related actions. Public users must never see the admin menu or management endpoint data. Backend must remain authoritative and verify academy scope plus permission.
+- Verification plan: route visibility tests, API 403 tests for normal users, cross-academy authorization tests, campaign create/update/stop tests, frontend build/type checks, and manual desktop/mobile smoke tests.

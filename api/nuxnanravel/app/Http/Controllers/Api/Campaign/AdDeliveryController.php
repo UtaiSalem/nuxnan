@@ -31,6 +31,6 @@ class AdDeliveryController extends Controller
     {
         $result = $service->complete($delivery, $request->string('token')->toString());
 
-        return response()->json(['valid' => $result['valid'], 'reason' => $result['reason']]);
+        return response()->json(['valid' => $result['valid'], 'reason' => $result['reason'], 'reward' => $result['reward'] ?? null]);
     }
 }

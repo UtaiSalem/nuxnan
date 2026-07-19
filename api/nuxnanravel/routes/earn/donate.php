@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\Academies\AcademyDonationController;
 use App\Http\Controllers\Api\Academies\AcademyAllocationController;
+use App\Http\Controllers\Api\Academies\AcademyDonationController;
 use App\Http\Controllers\Api\Courses\CourseDonationController;
 use App\Http\Controllers\Api\Courses\CoursePointWithdrawalController;
 use App\Http\Controllers\Api\Earn\DonateController;

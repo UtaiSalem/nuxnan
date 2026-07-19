@@ -44,6 +44,7 @@ class AdvertResource extends JsonResource
             'media_image' => $this->media_image,
             'transfer_date' => $this->transfer_date,
             'transfer_time' => $this->transfer_time,
+            'gross_reward_per_view_per_second' => (int) config('campaign.gross_reward_per_view_per_second', 20),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

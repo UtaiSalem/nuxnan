@@ -61,6 +61,10 @@ class AcademyRole extends Model
                 'announcements.view', 'announcements.create', 'announcements.manage',
                 'home_visits.view', 'home_visits.manage',
                 'behavior.view', 'behavior.record', 'behavior.approve', 'behavior.manage',
+                'roles.view', 'roles.manage', 'groups.view', 'groups.manage', 'schedule.view',
+                'grades.view', 'grades.manage', 'staff.view', 'staff.manage',
+                'settings.view', 'settings.manage', 'events.view', 'events.manage',
+                'school_attendance.view', 'school_attendance.manage', 'courses.manage',
             ],
         ],
         'admin' => [
@@ -81,6 +85,10 @@ class AcademyRole extends Model
                 'announcements.view', 'announcements.create', 'announcements.manage',
                 'home_visits.view', 'home_visits.manage',
                 'behavior.view', 'behavior.record', 'behavior.approve', 'behavior.manage',
+                'roles.view', 'roles.manage', 'groups.view', 'groups.manage', 'schedule.view',
+                'grades.view', 'grades.manage', 'staff.view', 'staff.manage',
+                'settings.view', 'settings.manage', 'events.view', 'events.manage',
+                'school_attendance.view', 'school_attendance.manage', 'courses.manage',
             ],
         ],
         'teacher' => [
@@ -99,6 +107,8 @@ class AcademyRole extends Model
                 'announcements.view', 'announcements.create.own',
                 'home_visits.view', 'home_visits.create',
                 'behavior.view', 'behavior.record',
+                'grades.view', 'schedule.view', 'groups.view', 'staff.view', 'events.view',
+                'school_attendance.view',
             ],
         ],
         'registrar' => [
@@ -115,6 +125,7 @@ class AcademyRole extends Model
                 'reports.view',
                 'announcements.view',
                 'behavior.view',
+                'groups.view', 'schedule.view', 'staff.view', 'events.view',
             ],
         ],
         'staff' => [
@@ -129,6 +140,7 @@ class AcademyRole extends Model
                 'students.view',
                 'announcements.view',
                 'behavior.view',
+                'schedule.view', 'events.view',
             ],
         ],
         'card_admin' => [
@@ -155,6 +167,7 @@ class AcademyRole extends Model
                 'students.view',
                 'finance.view', 'finance.manage', 'finance.reports',
                 'announcements.view',
+                'events.view', 'settings.view',
             ],
         ],
         'student' => [

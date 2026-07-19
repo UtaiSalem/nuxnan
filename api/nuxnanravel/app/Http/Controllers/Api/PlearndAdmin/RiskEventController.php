@@ -20,7 +20,7 @@ class RiskEventController extends Controller
             $q->where('evidence', 'like', '%'.$request->search.'%');
         }
 
-return RiskEventResource::collection($q->paginate($request->integer('per_page', 20)));
+        return RiskEventResource::collection($q->paginate($request->integer('per_page', 20)));
     }
 
     public function show(RiskEvent $risk)

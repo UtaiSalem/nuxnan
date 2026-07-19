@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\Public\PublicCourseController;
 use App\Http\Controllers\Api\Public\PublicAcademyController;
+use App\Http\Controllers\Api\Public\PublicCourseController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:10,1')->prefix('public')->group(function () {

@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\AdvertController;
-use App\Http\Controllers\Api\Shared\SupportController;
 use App\Http\Controllers\Api\Campaign\AdDeliveryController;
+use App\Http\Controllers\Api\Shared\SupportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/advertises/widget', [AdvertController::class, 'widget'])->name('advertises.widget');

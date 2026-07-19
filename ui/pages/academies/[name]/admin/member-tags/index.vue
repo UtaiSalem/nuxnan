@@ -170,7 +170,7 @@ const showFormModal = ref(false)
 const formMode = ref<'create' | 'edit'>('create')
 const selectedTag = ref<Tag | null>(null)
 
-const canManage = computed(() => can('manage_members'))
+const canManage = computed(() => can('members.manage'))
 
 onMounted(async () => {
   await fetchAcademyId()

@@ -7,7 +7,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
 definePageMeta({
-  layout: 'main'
+  layout: 'academy-admin'
 })
 
 const route = useRoute()
@@ -104,9 +104,6 @@ const permissionGroups = [
   },
 ]
 
-// System roles (cannot be edited/deleted)
-const systemRoles = ['owner', 'director', 'admin', 'teacher', 'staff', 'finance_staff', 'student', 'parent']
-
 onMounted(async () => {
   try {
     const response: any = await api.get(`/api/academies/${academyName.value}`)
@@ -157,7 +154,7 @@ const openCreateModal = () => {
 }
 
 const openEditModal = (role: any) => {
-  if (isSystemRole(role.name)) {
+  if (isSystemRole(role)) {
     Swal.fire('ไม่สามารถแก้ไขได้', 'บทบาทระบบไม่สามารถแก้ไขได้', 'warning')
     return
   }
@@ -200,7 +197,7 @@ const saveRole = async () => {
 }
 
 const deleteRole = async (role: any) => {
-  if (isSystemRole(role.name)) {
+  if (isSystemRole(role)) {
     Swal.fire('ไม่สามารถลบได้', 'บทบาทระบบไม่สามารถลบได้', 'warning')
     return
   }
@@ -226,7 +223,7 @@ const deleteRole = async (role: any) => {
   }
 }
 
-const isSystemRole = (name: string) => systemRoles.includes(name)
+const isSystemRole = (role: any) => Boolean(role?.is_system)
 
 const togglePermission = (permission: string) => {
   const index = roleForm.value.permissions.indexOf(permission)
@@ -324,7 +321,7 @@ const colorOptions = [
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6">
           <div
-            v-for="role in roles.filter(r => isSystemRole(r.name))"
+            v-for="role in roles.filter(r => isSystemRole(r))"
             :key="role.id"
             class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
           >
@@ -357,7 +354,7 @@ const colorOptions = [
           <p class="text-sm text-gray-500 mt-1">สร้างบทบาทเฉพาะสำหรับโรงเรียนของคุณ</p>
         </div>
         
-        <div v-if="roles.filter(r => !isSystemRole(r.name)).length === 0" class="p-12 text-center">
+        <div v-if="roles.filter(r => !isSystemRole(r)).length === 0" class="p-12 text-center">
           <Icon name="fluent:shield-add-24-regular" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
           <p class="text-gray-500 dark:text-gray-400 mb-4">ยังไม่มีบทบาทกำหนดเอง</p>
           <button 
@@ -371,7 +368,7 @@ const colorOptions = [
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
           <div
-            v-for="role in roles.filter(r => !isSystemRole(r.name))"
+            v-for="role in roles.filter(r => !isSystemRole(r))"
             :key="role.id"
             class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:border-primary-300 dark:hover:border-primary-600 transition-colors"
           >

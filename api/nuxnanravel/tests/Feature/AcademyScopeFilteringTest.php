@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Academy;
 use App\Models\AcademicYear;
+use App\Models\Academy;
 use App\Models\AcademyGroup;
 use App\Models\AcademyPost;
 use App\Models\Activity;

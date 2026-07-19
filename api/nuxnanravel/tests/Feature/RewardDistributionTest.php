@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Academy;
+use App\Models\AcademyPointAccount;
+use App\Models\AcademyPointTransaction;
 use App\Models\Advert;
 use App\Models\CampaignDeliveryEvent;
 use App\Models\Course;
 use App\Models\CoursePointAccount;
 use App\Models\CoursePointTransaction;
+use App\Models\RevenueSharePolicy;
 use App\Models\User;
 use App\Services\Campaign\AdDeliveryService;
 use App\Services\Campaign\RewardDistributionService;
@@ -68,7 +72,7 @@ class RewardDistributionTest extends TestCase
 
     public function test_distribute_credits_academy_when_advert_is_academy_scoped(): void
     {
-        $academy = \App\Models\Academy::factory()->create();
+        $academy = Academy::factory()->create();
         $data = $this->completeDelivery(null, $academy->id, budget: 1000, duration: 10);
 
         $this->assertTrue($data['result']['valid']);
@@ -81,11 +85,11 @@ class RewardDistributionTest extends TestCase
         $this->assertSame(0, CoursePointTransaction::where('type', 'ad_revenue')->count());
 
         // Academy receives its share directly
-        $academyAccount = \App\Models\AcademyPointAccount::where('academy_id', $academy->id)->first();
+        $academyAccount = AcademyPointAccount::where('academy_id', $academy->id)->first();
         $this->assertNotNull($academyAccount);
         $this->assertSame(1, (int) $academyAccount->balance);
-        $this->assertSame(1, \App\Models\AcademyPointTransaction::where('type', 'ad_revenue')->count());
-        $this->assertSame('ad-'.$data['delivery']->id.'-academy', \App\Models\AcademyPointTransaction::where('type', 'ad_revenue')->first()->idempotency_key);
+        $this->assertSame(1, AcademyPointTransaction::where('type', 'ad_revenue')->count());
+        $this->assertSame('ad-'.$data['delivery']->id.'-academy', AcademyPointTransaction::where('type', 'ad_revenue')->first()->idempotency_key);
     }
 
     public function test_distribute_is_idempotent_on_repeated_call(): void
@@ -117,5 +121,61 @@ class RewardDistributionTest extends TestCase
         $data = $this->completeDelivery($course->id, budget: 3, duration: 10);
         $splits = $data['result']['reward']['splits'];
         $this->assertLessThanOrEqual(3, $splits['student'] + $splits['course'] + $splits['academy'] + $splits['platform']);
+    }
+
+    public function test_complete_returns_reward_in_response(): void
+    {
+        $course = Course::factory()->create();
+        $data = $this->completeDelivery($course->id, budget: 1000, duration: 10);
+
+        $this->assertTrue($data['result']['valid']);
+        $this->assertArrayHasKey('reward', $data['result']);
+        $this->assertArrayHasKey('splits', $data['result']['reward']);
+        $this->assertSame(6, $data['result']['reward']['splits']['student']);
+    }
+
+    public function test_academy_account_is_auto_created_when_platform_share_exists_without_academy_share(): void
+    {
+        $academy = Academy::factory()->create();
+        RevenueSharePolicy::create([
+            'scope_type' => RevenueSharePolicy::SCOPE_ACADEMY,
+            'scope_id' => $academy->id,
+            'student_pct' => 90.00,
+            'course_pct' => 0.00,
+            'academy_pct' => 0.00,
+            'platform_pct' => 10.00,
+            'effective_from' => now(),
+            'version' => 1,
+        ]);
+
+        $data = $this->completeDelivery(null, $academy->id, budget: 1000, duration: 10);
+
+        $this->assertTrue($data['result']['valid']);
+        $academyAccount = AcademyPointAccount::where('academy_id', $academy->id)->first();
+        $this->assertNotNull($academyAccount);
+        $this->assertSame(0, (int) $academyAccount->balance);
+        $this->assertGreaterThan(0, (int) $academyAccount->platform_earned);
+    }
+
+    public function test_distribute_credits_course_and_academy_when_both_are_set(): void
+    {
+        $course = Course::factory()->create();
+        $academy = Academy::factory()->create();
+        $data = $this->completeDelivery($course->id, $academy->id, budget: 1000, duration: 10);
+
+        $this->assertTrue($data['result']['valid']);
+        $splits = $data['result']['reward']['splits'];
+        $this->assertSame(6, $splits['student']);
+        $this->assertSame(2, $splits['course']);
+        $this->assertSame(1, $splits['academy']);
+        $this->assertSame(1, $splits['platform']);
+
+        $courseAccount = CoursePointAccount::where('course_id', $course->id)->first();
+        $this->assertSame(2, (int) $courseAccount->balance);
+        $this->assertSame(1, (int) $courseAccount->platform_earned);
+
+        $academyAccount = AcademyPointAccount::where('academy_id', $academy->id)->first();
+        $this->assertNotNull($academyAccount);
+        $this->assertSame(1, (int) $academyAccount->balance);
     }
 }

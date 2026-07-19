@@ -70,7 +70,8 @@ class RewardDistributionService
                     )->lockForUpdate()->firstOrFail();
                     $account->incrementPlatformEarned($split['platform']);
                 } elseif ($academyId !== null) {
-                    $academyAccount = AcademyPointAccount::where('academy_id', $academyId)->lockForUpdate()->firstOrFail();
+                    $academyAccount = AcademyPointAccount::where('academy_id', $academyId)->lockForUpdate()->first()
+                        ?? AcademyPointAccount::create(['academy_id' => $academyId]);
                     $academyAccount->incrementPlatformEarned($split['platform']);
                 }
             }

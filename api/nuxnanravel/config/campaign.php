@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'gross_reward_per_view_per_second' => (int) env('CAMPAIGN_GROSS_REWARD_PER_VIEW_PER_SECOND', 20),
     'ad_price_per_view_second' => (float) env('CAMPAIGN_AD_PRICE_PER_VIEW_SECOND', 0.10),
     'viewer_reward_per_second' => (float) env('CAMPAIGN_VIEWER_REWARD_PER_SECOND', 0.06),
     'referrer_reward_per_second' => (float) env('CAMPAIGN_REFERRER_REWARD_PER_SECOND', 0.02),

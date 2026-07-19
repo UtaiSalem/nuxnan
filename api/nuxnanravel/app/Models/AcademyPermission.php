@@ -20,6 +20,14 @@ class AcademyPermission extends Model
      * All available academy-level permissions grouped by category
      */
     public const PERMISSIONS = [
+        'roles' => [
+            ['name' => 'roles.view', 'display_name' => 'ดูบทบาท'],
+            ['name' => 'roles.manage', 'display_name' => 'จัดการบทบาท: สร้าง/แก้ไข/ลบ'],
+        ],
+        'groups' => [
+            ['name' => 'groups.view', 'display_name' => 'ดูกลุ่มเรียน/ฝ่าย/แผนก'],
+            ['name' => 'groups.manage', 'display_name' => 'จัดการกลุ่มเรียน/ฝ่าย/แผนก'],
+        ],
         'academy' => [
             ['name' => 'academy.view', 'display_name' => 'ดูข้อมูลโรงเรียน'],
             ['name' => 'academy.view.public', 'display_name' => 'ดูข้อมูลสาธารณะของโรงเรียน'],
@@ -33,6 +41,7 @@ class AcademyPermission extends Model
             ['name' => 'members.roles.manage', 'display_name' => 'จัดการบทบาทสมาชิก'],
         ],
         'courses' => [
+            ['name' => 'courses.manage', 'display_name' => 'จัดการรายวิชา'],
             ['name' => 'courses.view', 'display_name' => 'ดูรายวิชาทั้งหมด'],
             ['name' => 'courses.view.enrolled', 'display_name' => 'ดูรายวิชาที่ลงทะเบียน'],
             ['name' => 'courses.create', 'display_name' => 'สร้างรายวิชา'],
@@ -65,6 +74,8 @@ class AcademyPermission extends Model
             ['name' => 'gradebook.manage', 'display_name' => 'จัดการคะแนน'],
         ],
         'grades' => [
+            ['name' => 'grades.view', 'display_name' => 'ดูผลการเรียนของโรงเรียน'],
+            ['name' => 'grades.manage', 'display_name' => 'จัดการผลการเรียน'],
             ['name' => 'grades.view.own', 'display_name' => 'ดูผลการเรียนของตนเอง'],
             ['name' => 'grades.view.all', 'display_name' => 'ดูผลการเรียนทั้งหมด'],
         ],
@@ -74,6 +85,7 @@ class AcademyPermission extends Model
             ['name' => 'assignments.manage', 'display_name' => 'จัดการงานที่มอบหมาย'],
         ],
         'schedule' => [
+            ['name' => 'schedule.view', 'display_name' => 'ดูตารางเรียนของโรงเรียน'],
             ['name' => 'schedule.view.own', 'display_name' => 'ดูตารางเรียนของตนเอง'],
             ['name' => 'schedule.view.all', 'display_name' => 'ดูตารางเรียนทั้งหมด'],
             ['name' => 'schedule.manage', 'display_name' => 'จัดการตารางเรียน'],
@@ -109,10 +121,34 @@ class AcademyPermission extends Model
             ['name' => 'messages.teacher', 'display_name' => 'ส่งข้อความหาครู'],
         ],
         'children' => [
+            ['name' => 'children.behavior.view', 'display_name' => 'ดูพฤติกรรมบุตรหลาน'],
             ['name' => 'children.view', 'display_name' => 'ดูข้อมูลบุตรหลาน'],
             ['name' => 'children.grades.view', 'display_name' => 'ดูผลการเรียนบุตรหลาน'],
             ['name' => 'children.attendance.view', 'display_name' => 'ดูการเข้าเรียนบุตรหลาน'],
             ['name' => 'children.schedule.view', 'display_name' => 'ดูตารางเรียนบุตรหลาน'],
+        ],
+        'staff' => [
+            ['name' => 'staff.view', 'display_name' => 'ดูบุคลากร'],
+            ['name' => 'staff.manage', 'display_name' => 'จัดการบุคลากร'],
+        ],
+        'settings' => [
+            ['name' => 'settings.view', 'display_name' => 'ดูการตั้งค่า'],
+            ['name' => 'settings.manage', 'display_name' => 'จัดการการตั้งค่า'],
+        ],
+        'behavior' => [
+            ['name' => 'behavior.view', 'display_name' => 'ดูพฤติกรรม'],
+            ['name' => 'behavior.record', 'display_name' => 'บันทึกพฤติกรรม'],
+            ['name' => 'behavior.approve', 'display_name' => 'อนุมัติพฤติกรรม'],
+            ['name' => 'behavior.manage', 'display_name' => 'จัดการพฤติกรรม'],
+            ['name' => 'behavior.view.own', 'display_name' => 'ดูพฤติกรรมของตนเอง'],
+        ],
+        'events' => [
+            ['name' => 'events.view', 'display_name' => 'ดูกิจกรรม'],
+            ['name' => 'events.manage', 'display_name' => 'จัดการกิจกรรม'],
+        ],
+        'school_attendance' => [
+            ['name' => 'school_attendance.view', 'display_name' => 'ดูการเข้าเรียนของโรงเรียน'],
+            ['name' => 'school_attendance.manage', 'display_name' => 'จัดการการเข้าเรียนของโรงเรียน'],
         ],
     ];
 

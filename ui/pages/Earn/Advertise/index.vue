@@ -78,7 +78,7 @@
     <AdViewerModal 
         :isOpen="isAdModalOpen" 
         :advert="selectedAdvert" 
-        :expectedStudentReward="Math.floor((selectedAdvert?.duration || 0) * 0.07)"
+        :expectedStudentReward="Math.floor((selectedAdvert?.duration || 0) * (selectedAdvert?.gross_reward_per_view_per_second || 20) * 0.6)"
         @close="handleAdClose" 
         @completed="handleAdCompleted" 
     />

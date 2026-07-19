@@ -1,12 +1,66 @@
 <?php
+
 namespace App\Http\Controllers\Api\Public;
-use App\Http\Controllers\Controller; use App\Http\Resources\Public\PublicAcademyDetailResource; use App\Http\Resources\Public\PublicAcademyResource; use App\Models\Academy; use App\Models\CoursePointCampaign; use Illuminate\Http\Request;
-class PublicAcademyController extends Controller {
- private function query(){return Academy::query()->where(fn($q)=>$q->where('donation_enabled',true)->when(config('platform.course_donation.enabled',true),fn($q)=>$q->orWhereNull('donation_enabled')));}
- private function resolve(string $key):Academy{return $this->query()->with('user')->where(fn($q)=>$q->when(ctype_digit($key),fn($q)=>$q->where('id',(int)$key),fn($q)=>$q->where('name',$key)))->firstOrFail();}
- private function donations(Academy $a){return $a->donations()->whereIn('status',['completed','approved']);}
- public function index(Request $r){$q=$this->query()->with('user')->withSum(['donations as total_donated_points'=>fn($q)=>$q->whereIn('status',['completed','approved'])],'points_amount')->withCount(['donations as total_donors'=>fn($q)=>$q->whereIn('status',['completed','approved'])->whereNotNull('donor_id'),'courses']);if($r->filled('q')){$t='%'.$r->q.'%';$q->where(fn($q)=>$q->where('name','like',$t)->orWhere('description','like',$t));}if($r->sort==='most_supported')$q->orderByDesc('total_donated_points');elseif($r->sort==='most_courses')$q->orderByDesc('courses_count');else$q->latest();return PublicAcademyResource::collection($q->paginate(12));}
- public function show(string $academy){$a=$this->resolve($academy);$a->setAttribute('support_summary',$this->summary($a));return new PublicAcademyDetailResource($a);}
- public function supportSummary(string $academy){return response()->json(['data'=>$this->summary($this->resolve($academy))]);}
- private function summary(Academy $a):array{$d=$this->donations($a);$ids=$a->courses()->pluck('id');return['total_donated_points'=>(int)(clone$d)->sum('points_amount'),'total_donated_cash'=>(float)(clone$d)->sum('cash_amount'),'total_donors'=>(int)(clone$d)->whereNotNull('donor_id')->distinct('donor_id')->count('donor_id'),'courses_count'=>(int)$ids->count(),'active_campaigns_count'=>(int)CoursePointCampaign::whereIn('course_id',$ids)->where('status','active')->where(fn($q)=>$q->whereNull('starts_at')->orWhere('starts_at','<=',now()))->where(fn($q)=>$q->whereNull('ends_at')->orWhere('ends_at','>',now()))->count(),'recent_donors'=>(clone$d)->latest()->limit(5)->get()->map(fn($x)=>['display_name'=>$x->anonymous?'Anonymous donor':($x->donor_display_name?:'Supporter')])->values()];}
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Public\PublicAcademyDetailResource;
+use App\Http\Resources\Public\PublicAcademyResource;
+use App\Models\Academy;
+use App\Models\CoursePointCampaign;
+use Illuminate\Http\Request;
+
+class PublicAcademyController extends Controller
+{
+    private function query()
+    {
+        return Academy::query()->where(fn ($q) => $q->where('donation_enabled', true)->when(config('platform.course_donation.enabled', true), fn ($q) => $q->orWhereNull('donation_enabled')));
+    }
+
+    private function resolve(string $key): Academy
+    {
+        return $this->query()->with('user')->where(fn ($q) => $q->when(ctype_digit($key), fn ($q) => $q->where('id', (int) $key), fn ($q) => $q->where('name', $key)))->firstOrFail();
+    }
+
+    private function donations(Academy $a)
+    {
+        return $a->donations()->whereIn('status', ['completed', 'approved']);
+    }
+
+    public function index(Request $r)
+    {
+        $q = $this->query()->with('user')->withSum(['donations as total_donated_points' => fn ($q) => $q->whereIn('status', ['completed', 'approved'])], 'points_amount')->withCount(['donations as total_donors' => fn ($q) => $q->whereIn('status', ['completed', 'approved'])->whereNotNull('donor_id'), 'courses']);
+        if ($r->filled('q')) {
+            $t = '%'.$r->q.'%';
+            $q->where(fn ($q) => $q->where('name', 'like', $t)->orWhere('description', 'like', $t));
+        }if ($r->sort === 'most_supported') {
+            $q->orderByDesc('total_donated_points');
+        } elseif ($r->sort === 'most_courses') {
+            $q->orderByDesc('courses_count');
+        } else {
+            $q->latest();
+        }
+
+return PublicAcademyResource::collection($q->paginate(12));
+    }
+
+    public function show(string $academy)
+    {
+        $a = $this->resolve($academy);
+        $a->setAttribute('support_summary', $this->summary($a));
+
+        return new PublicAcademyDetailResource($a);
+    }
+
+    public function supportSummary(string $academy)
+    {
+        return response()->json(['data' => $this->summary($this->resolve($academy))]);
+    }
+
+    private function summary(Academy $a): array
+    {
+        $d = $this->donations($a);
+        $ids = $a->courses()->pluck('id');
+
+        return ['total_donated_points' => (int) (clone $d)->sum('points_amount'), 'total_donated_cash' => (float) (clone $d)->sum('cash_amount'), 'total_donors' => (int) (clone $d)->whereNotNull('donor_id')->distinct('donor_id')->count('donor_id'), 'courses_count' => (int) $ids->count(), 'active_campaigns_count' => (int) CoursePointCampaign::whereIn('course_id', $ids)->where('status', 'active')->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now()))->count(), 'recent_donors' => (clone $d)->latest()->limit(5)->get()->map(fn ($x) => ['display_name' => $x->anonymous ? 'Anonymous donor' : ($x->donor_display_name ?: 'Supporter')])->values()];
+    }
 }

@@ -135,7 +135,7 @@ const quickActions = computed(() => [
     icon: 'fluent:payment-24-regular',
     to: `/academies/${academyName.value}/parent/payments`,
     color: 'bg-amber-500',
-    show: can('payments.make'),
+    show: can('payments.pay'),
   },
   {
     title: 'ติดต่อครูผู้สอน',

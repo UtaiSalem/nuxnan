@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Academy;
 use App\Models\AcademyMember;
+use App\Models\AcademyRole;
 use App\Models\Student;
 use App\Models\StudentCard;
 use App\Models\User;
@@ -54,7 +55,7 @@ class StudentCardByStudentTest extends TestCase
             'status' => 'studying',
         ]);
 
-        $studentRole = \App\Models\AcademyRole::create([
+        $studentRole = AcademyRole::create([
             'academy_id' => $academy->id,
             'name' => 'student-local',
             'display_name_th' => 'นักเรียน',
