@@ -14,6 +14,7 @@ use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\CourseGrade;
 use App\Models\CourseMember;
+use App\Models\MemberActivityLog;
 use App\Models\SemesterTranscript;
 use App\Models\Student;
 use App\Models\User;
@@ -67,6 +68,10 @@ class AcademyMemberController extends Controller
             }
         }
 
+        if (isset($newStatus)) {
+            MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $newStatus->id, 'target_user_id' => auth()->id(), 'action' => MemberActivityLog::ACTION_JOIN, 'description' => 'ส่งคำขอเข้าร่วมโรงเรียน']);
+        }
+
         // $academy->members()->toggle(auth()->id());
         // $isMember = $academy->isMember(auth()->user());
         // $isMember ? $academy->increment('total_students'): $academy->decrement('total_students');
@@ -98,6 +103,7 @@ class AcademyMemberController extends Controller
 
         // Only delete the current user's membership, not all members
         $auth_member->delete();
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $auth_member->id, 'target_user_id' => auth()->id(), 'action' => MemberActivityLog::ACTION_LEAVE, 'description' => 'ออกจากโรงเรียน']);
 
         return response()->json([
             'success' => true,
@@ -107,9 +113,11 @@ class AcademyMemberController extends Controller
 
     public function acceptmember(Academy $academy, AcademyMember $member)
     {
-        $member->update([
-            'status' => 2,
-        ]);
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์อนุมัติสมาชิก'], 403);
+        }
+        $member->update(['status' => 2]);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $member->id, 'target_user_id' => $member->user_id, 'action' => MemberActivityLog::ACTION_APPROVE, 'description' => 'อนุมัติสมาชิก']);
         $academy->increment('total_students');
 
         return response()->json([
@@ -121,9 +129,11 @@ class AcademyMemberController extends Controller
 
     public function rejectmember(Academy $academy, AcademyMember $member)
     {
-        $member->update([
-            'status' => 3,
-        ]);
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์ปฏิเสธคำขอ'], 403);
+        }
+        $member->update(['status' => 3]);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $member->id, 'target_user_id' => $member->user_id, 'action' => MemberActivityLog::ACTION_REJECT, 'description' => 'ปฏิเสธคำขอสมาชิก']);
         $academy->decrement('total_students');
 
         return response()->json([
@@ -472,6 +482,7 @@ class AcademyMemberController extends Controller
             'status' => 4, // 4 = invited
             'invited_by' => auth()->id(),
         ]);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $invitation->id, 'target_user_id' => $userId, 'action' => MemberActivityLog::ACTION_INVITE, 'description' => 'ส่งคำเชิญสมาชิก']);
 
         return response()->json([
             'success' => true,
@@ -501,6 +512,7 @@ class AcademyMemberController extends Controller
             'status' => 2, // member status
         ]);
         $academy->increment('total_students');
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $invitation->id, 'target_user_id' => auth()->id(), 'action' => MemberActivityLog::ACTION_ACCEPT_INVITE, 'description' => 'ยอมรับคำเชิญ']);
 
         return response()->json([
             'success' => true,
@@ -528,6 +540,7 @@ class AcademyMemberController extends Controller
         }
 
         $invitation->delete();
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $invitation->id, 'target_user_id' => auth()->id(), 'action' => MemberActivityLog::ACTION_DECLINE_INVITE, 'description' => 'ปฏิเสธคำเชิญ']);
 
         return response()->json([
             'success' => true,
@@ -751,6 +764,9 @@ class AcademyMemberController extends Controller
                 'message' => 'ไม่สามารถลบเจ้าของโรงเรียนได้',
             ], 403);
         }
+        if ($member->user_id === auth()->id() && $academy->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'ไม่สามารถลบตัวเองได้'], 403);
+        }
 
         // Decrement total_students if member was approved
         if ($member->status == 2) {
@@ -758,6 +774,7 @@ class AcademyMemberController extends Controller
         }
 
         $memberName = $member->member_name;
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $member->id, 'target_user_id' => $member->user_id, 'action' => MemberActivityLog::ACTION_REMOVE, 'old_values' => ['role' => $member->role, 'status' => $member->status], 'description' => 'ลบสมาชิก']);
         $member->delete();
 
         return response()->json([
@@ -793,6 +810,9 @@ class AcademyMemberController extends Controller
                 'message' => 'ไม่สามารถระงับเจ้าของโรงเรียนได้',
             ], 403);
         }
+        if ($member->user_id === auth()->id() && $academy->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'ไม่สามารถระงับตัวเองได้'], 403);
+        }
 
         $previousStatus = $member->status;
         $member->update([
@@ -804,6 +824,7 @@ class AcademyMemberController extends Controller
         if ($previousStatus == 2) {
             $academy->decrement('total_students');
         }
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $member->id, 'target_user_id' => $member->user_id, 'action' => MemberActivityLog::ACTION_SUSPEND, 'new_values' => ['reason' => $member->note_comment], 'description' => 'ระงับสมาชิก']);
 
         return response()->json([
             'success' => true,
@@ -844,6 +865,7 @@ class AcademyMemberController extends Controller
         ]);
 
         $academy->increment('total_students');
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $member->id, 'target_user_id' => $member->user_id, 'action' => MemberActivityLog::ACTION_UNSUSPEND, 'description' => 'ยกเลิกการระงับสมาชิก']);
 
         return response()->json([
             'success' => true,
@@ -875,12 +897,17 @@ class AcademyMemberController extends Controller
                 'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
+        if ($member->user_id === $academy->user_id && auth()->id() !== $academy->user_id) {
+            return response()->json(['success' => false, 'message' => 'ไม่สามารถแก้ไขข้อมูลเจ้าของโรงเรียนได้'], 403);
+        }
 
         $validated = $request->validate([
             'member_code' => 'nullable|string|max:50',
         ]);
 
+        $oldValues = $member->only(array_keys($validated));
         $member->update($validated);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $member->id, 'target_user_id' => $member->user_id, 'action' => MemberActivityLog::ACTION_PROFILE_UPDATE, 'old_values' => $oldValues, 'new_values' => $member->only(array_keys($validated)), 'description' => 'อัปเดตข้อมูลสมาชิก']);
 
         return response()->json([
             'success' => true,
@@ -907,6 +934,9 @@ class AcademyMemberController extends Controller
                 'message' => 'สมาชิกไม่ได้อยู่ในโรงเรียนนี้',
             ], 404);
         }
+        if ($member->user_id === $academy->user_id && auth()->id() !== $academy->user_id) {
+            return response()->json(['success' => false, 'message' => 'ไม่สามารถแก้ไขข้อมูลเจ้าของโรงเรียนได้'], 403);
+        }
 
         $validated = $request->validate([
             'member_code' => 'nullable|string|max:50',
@@ -916,7 +946,9 @@ class AcademyMemberController extends Controller
             'additional_info' => 'nullable|string',
         ]);
 
+        $oldValues = $member->only(array_keys($validated));
         $member->update($validated);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $member->id, 'target_user_id' => $member->user_id, 'action' => MemberActivityLog::ACTION_PROFILE_UPDATE, 'old_values' => $oldValues, 'new_values' => $member->only(array_keys($validated)), 'description' => 'อัปเดตข้อมูลสมาชิก']);
 
         return response()->json([
             'success' => true,
@@ -1245,6 +1277,8 @@ class AcademyMemberController extends Controller
             }
         }
 
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_INVITE, 'new_values' => ['invited_count' => $invitedCount, 'skipped_count' => $skippedCount], 'description' => 'ส่งคำเชิญสมาชิกแบบกลุ่ม']);
+
         return response()->json([
             'success' => true,
             'message' => "ส่งคำเชิญเรียบร้อย {$invitedCount} คน",
@@ -1370,6 +1404,7 @@ class AcademyMemberController extends Controller
         }
 
         fclose($handle);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_BULK_ACTION, 'new_values' => ['imported' => $imported, 'skipped' => $skipped, 'errors' => count($errors)], 'description' => 'นำเข้าสมาชิกแบบกลุ่ม']);
 
         $statusText = $autoApprove ? 'เพิ่มสมาชิก' : 'ส่งคำเชิญ';
 
@@ -1411,6 +1446,7 @@ class AcademyMemberController extends Controller
         $successCount = 0;
         $failedCount = 0;
         $errors = [];
+        $skipped = [];
 
         foreach ($memberIds as $memberId) {
             $member = AcademyMember::where('id', $memberId)
@@ -1427,7 +1463,14 @@ class AcademyMemberController extends Controller
             // Cannot modify academy owner
             if ($member->user_id === $academy->user_id) {
                 $failedCount++;
+                $skipped[] = ['member_id' => $member->id, 'reason' => 'owner'];
                 $errors[] = 'ไม่สามารถดำเนินการกับเจ้าของโรงเรียนได้';
+
+                continue;
+            }
+            if (in_array($action, ['suspend', 'remove'], true) && $member->user_id === auth()->id()) {
+                $failedCount++;
+                $skipped[] = ['member_id' => $member->id, 'reason' => 'self'];
 
                 continue;
             }
@@ -1504,12 +1547,15 @@ class AcademyMemberController extends Controller
             'remove' => 'ลบ',
         ];
 
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_BULK_ACTION, 'new_values' => ['action' => $action, 'target_ids' => $memberIds, 'success_count' => $successCount, 'skipped' => $skipped], 'description' => 'ดำเนินการสมาชิกแบบกลุ่ม']);
+
         return response()->json([
             'success' => $successCount > 0,
             'message' => "{$actionLabels[$action]}สำเร็จ {$successCount} รายการ".($failedCount > 0 ? ", ล้มเหลว {$failedCount} รายการ" : ''),
             'success_count' => $successCount,
             'failed_count' => $failedCount,
             'errors' => $errors,
+            'skipped' => $skipped,
             'total_students' => $academy->fresh()->total_students,
         ], 200);
     }

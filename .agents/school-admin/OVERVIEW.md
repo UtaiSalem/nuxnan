@@ -46,8 +46,8 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 
 | # | เมนู | หน้า (`ui/`) | Permission | ไฟล์รอง | สถานะ |
 |---|---|---|---|---|---|
-| **1** | **บทบาทและสิทธิ์** | `admin/roles.vue` | `roles.view` / `roles.manage` | [01-roles-permissions.md](01-roles-permissions.md) | 🟡 S1 done (audit+fix) · S2–S8 pending |
-| 2 | สมาชิก | `admin/members.vue` + `admin/members/` | `members.view` / `members.manage` | 02-members.md | ⚪ |
+| **1** | **บทบาทและสิทธิ์** | `admin/roles.vue` | `roles.view` / `roles.manage` | [01-roles-permissions.md](01-roles-permissions.md) | 🟢 S1–S6 done · S7/S8 (dept scope) deferred → เมนู #9 |
+| 2 | สมาชิก | `admin/members.vue` + `admin/members/` | `members.view` / `members.manage` | [02-members.md](02-members.md) | 🟡 planned, awaiting M-S1 audit |
 | 3 | คำขอเข้าร่วม | `admin/requests.vue` | `members.manage` | 03-join-requests.md | ⚪ |
 | 4 | ลิงก์เชิญสมาชิก | `admin/invite-links/` | `members.manage` | 04-invite-links.md | ⚪ |
 | 5 | แท็กสมาชิก | `admin/member-tags/` | `members.manage` | 05-member-tags.md | ⚪ |
