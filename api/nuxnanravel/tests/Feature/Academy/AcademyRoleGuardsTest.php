@@ -79,7 +79,30 @@ class AcademyRoleGuardsTest extends TestCase
         $this->actingAs($owner, 'api')->deleteJson("/api/academies/{$academy->id}/roles/{$admin->id}")->assertForbidden();
     }
 
-    public function test_delete_role_with_no_student_role_seeded_returns_500(): void
+    public function test_delete_role_only_reassigns_active_members(): void
+    {
+        $owner = User::factory()->create();
+        $academy = Academy::factory()->create(['user_id' => $owner->id]);
+        $role = $this->role($academy);
+        $active = $this->member($academy, User::factory()->create(), $role);
+        $pending = AcademyMember::create([
+            'academy_id' => $academy->id,
+            'user_id' => User::factory()->create()->id,
+            'academy_role_id' => $role->id,
+            'role' => $role->name,
+            'status' => 1,
+        ]);
+
+        $this->actingAs($owner, 'api')->deleteJson("/api/academies/{$academy->id}/roles/{$role->id}")
+            ->assertOk()->assertJsonPath('reassigned_count', 1);
+
+        $studentRoleId = AcademyRole::where('name', 'student')->whereNull('academy_id')->value('id');
+        $this->assertDatabaseHas('academy_members', ['id' => $active->id, 'academy_role_id' => $studentRoleId, 'role' => 'student']);
+        // Non-active members keep their (now-null) role reference and are not reassigned
+        $this->assertDatabaseMissing('academy_members', ['id' => $pending->id, 'academy_role_id' => $studentRoleId]);
+    }
+
+    public function test_delete_role_creates_student_role_when_missing(): void
     {
         $owner = User::factory()->create();
         $academy = Academy::factory()->create(['user_id' => $owner->id]);
@@ -87,7 +110,9 @@ class AcademyRoleGuardsTest extends TestCase
         AcademyRole::where('name', 'student')->whereNull('academy_id')->delete();
 
         $this->actingAs($owner, 'api')->deleteJson("/api/academies/{$academy->id}/roles/{$role->id}")
-            ->assertStatus(500)->assertJsonPath('message', 'ไม่พบบทบาทเริ่มต้น student — ติดต่อผู้ดูแลระบบ');
+            ->assertOk();
+
+        $this->assertDatabaseHas('academy_roles', ['name' => 'student', 'academy_id' => null]);
     }
 
     public function test_admin_cannot_edit_own_role_to_remove_roles_manage_permission(): void
@@ -126,5 +151,33 @@ class AcademyRoleGuardsTest extends TestCase
         $this->member($academy, $admin, $role);
 
         return [$academy, $admin, $role];
+    }
+
+    public function test_manager_cannot_assign_role_to_self(): void
+    {
+        [$academy, $admin, $role] = $this->adminSetup();
+        $adminMember = AcademyMember::where('academy_id', $academy->id)->where('user_id', $admin->id)->firstOrFail();
+        $target = $this->role($academy, ['*']);
+
+        $this->actingAs($admin, 'api')->postJson("/api/academies/{$academy->id}/members/{$adminMember->id}/role", ['role_id' => $target->id])
+            ->assertForbidden()->assertJsonPath('message', 'ไม่สามารถกำหนดบทบาทให้ตัวเองได้');
+
+        $this->assertDatabaseHas('academy_members', ['id' => $adminMember->id, 'academy_role_id' => $role->id]);
+    }
+
+    public function test_bulk_assign_role_skips_self(): void
+    {
+        [$academy, $admin, $role] = $this->adminSetup();
+        $adminMember = AcademyMember::where('academy_id', $academy->id)->where('user_id', $admin->id)->firstOrFail();
+        $other = $this->member($academy, User::factory()->create(), $role);
+        $target = $this->role($academy, ['*']);
+
+        $this->actingAs($admin, 'api')->postJson("/api/academies/{$academy->id}/members/bulk-role", [
+            'member_ids' => [$adminMember->id, $other->id],
+            'role_id' => $target->id,
+        ])->assertOk()->assertJsonPath('updated_count', 1);
+
+        $this->assertDatabaseHas('academy_members', ['id' => $adminMember->id, 'academy_role_id' => $role->id]);
+        $this->assertDatabaseHas('academy_members', ['id' => $other->id, 'academy_role_id' => $target->id]);
     }
 }

@@ -247,6 +247,7 @@ class AcademyRoleController extends Controller
 
         if ($academy->user_id !== Auth::id()
             && $request->has('permissions')
+            && in_array('members.roles.manage', (array) $role->permissions, true)
             && ! in_array('members.roles.manage', $request->input('permissions', []), true)
             && AcademyMember::where('academy_id', $academy->id)
                 ->where('user_id', Auth::id())
@@ -312,16 +313,20 @@ class AcademyRoleController extends Controller
         $studentRole = null;
         $roleSnapshot = [];
         $reassignedCount = DB::transaction(function () use ($academy, $role, &$studentRole, &$roleSnapshot) {
-            $studentRole = AcademyRole::where('name', 'student')
-                ->whereNull('academy_id')
-                ->first();
-
-            if (! $studentRole) {
-                return null;
-            }
+            $studentRole = AcademyRole::firstOrCreate(
+                ['name' => 'student', 'academy_id' => null],
+                [
+                    'display_name_th' => 'นักเรียน',
+                    'display_name_en' => 'Student',
+                    'permissions' => [],
+                    'is_system' => true,
+                    'is_active' => true,
+                ]
+            );
 
             $reassignedCount = AcademyMember::where('academy_id', $academy->id)
                 ->where('academy_role_id', $role->id)
+                ->where('status', 2)
                 ->update([
                     'academy_role_id' => $studentRole->id,
                     'role' => 'student',
@@ -333,12 +338,6 @@ class AcademyRoleController extends Controller
             return $reassignedCount;
         });
 
-        if (! $studentRole) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบบทบาทเริ่มต้น student — ติดต่อผู้ดูแลระบบ',
-            ], 500);
-        }
         MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_ROLE_DELETE, 'action_category' => MemberActivityLog::CATEGORY_ROLE, 'old_values' => array_merge($roleSnapshot, ['reassigned_count' => $reassignedCount]), 'description' => "ลบบทบาท '{$roleSnapshot['display_name_th']}' (โอน {$reassignedCount} สมาชิก)"]);
 
         return response()->json([
@@ -384,6 +383,14 @@ class AcademyRoleController extends Controller
                 'success' => false,
                 'message' => 'บทบาทไม่ถูกต้อง',
             ], 422);
+        }
+
+        // Prevent a non-owner manager from assigning a role to their own member record (privilege escalation)
+        if ($academy->user_id !== Auth::id() && $member->user_id === Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่สามารถกำหนดบทบาทให้ตัวเองได้',
+            ], 403);
         }
 
         $member->update([
@@ -438,13 +445,23 @@ class AcademyRoleController extends Controller
             ], 422);
         }
 
+        $memberIds = $request->member_ids;
+        // Prevent a non-owner manager from assigning a role to their own member record (privilege escalation)
+        if ($academy->user_id !== Auth::id()) {
+            $ownMemberIds = AcademyMember::where('academy_id', $academy->id)
+                ->where('user_id', Auth::id())
+                ->pluck('id')
+                ->all();
+            $memberIds = array_values(array_diff($memberIds, $ownMemberIds));
+        }
+
         $updated = AcademyMember::where('academy_id', $academy->id)
-            ->whereIn('id', $request->member_ids)
+            ->whereIn('id', $memberIds)
             ->update([
                 'academy_role_id' => $role->id,
                 'role' => $role->name,
             ]);
-        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_ROLE_BULK_ASSIGN, 'action_category' => MemberActivityLog::CATEGORY_ROLE, 'new_values' => ['role_id' => $role->id, 'role_name' => $role->name, 'member_ids' => $request->member_ids, 'updated_count' => $updated], 'description' => "กำหนดบทบาท '{$role->display_name_th}' แบบกลุ่ม ({$updated} คน)"]);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_ROLE_BULK_ASSIGN, 'action_category' => MemberActivityLog::CATEGORY_ROLE, 'new_values' => ['role_id' => $role->id, 'role_name' => $role->name, 'member_ids' => $memberIds, 'updated_count' => $updated], 'description' => "กำหนดบทบาท '{$role->display_name_th}' แบบกลุ่ม ({$updated} คน)"]);
 
         return response()->json([
             'success' => true,

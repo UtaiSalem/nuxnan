@@ -363,10 +363,7 @@ const colorOptions = [
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">{{ role.display_name_th }}</p>
                 <div class="flex items-center gap-2">
-                  <div class="flex items-center gap-2">
-                    <p class="text-xs text-gray-500">{{ role.name }}</p>
-                    <span v-if="role.members_count !== undefined && role.members_count > 0" class="text-xs px-2 py-0.5 rounded bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">{{ role.members_count }} คน</span>
-                  </div>
+                  <p class="text-xs text-gray-500">{{ role.name }}</p>
                   <span v-if="role.members_count !== undefined && role.members_count > 0" class="text-xs px-2 py-0.5 rounded bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">{{ role.members_count }} คน</span>
                 </div>
               </div>
