@@ -7,7 +7,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
 definePageMeta({
-  layout: 'main',
+  layout: 'academy-admin',
 })
 
 const route = useRoute()
@@ -21,7 +21,7 @@ const isLoading = ref(true)
 const processingIds = ref<Set<number>>(new Set())
 
 // Academy Role
-const { can, isOwner, isAdmin } = useAcademyRole(academyId)
+const { can, fetchMyRole } = useAcademyRole(academyId)
 
 onMounted(async () => {
   try {
@@ -29,6 +29,13 @@ onMounted(async () => {
     const response: any = await api.get(`/api/academies/${academyName.value}`)
     if (response.success) {
       academyId.value = response.academy.id
+      await fetchMyRole()
+
+      if (!can('members.manage')) {
+        navigateTo(`/academies/${academyName.value}/admin`)
+        return
+      }
+
       await fetchPendingRequests()
     }
   } catch (err: any) {
@@ -121,7 +128,7 @@ const rejectRequest = async (request: any) => {
 
 const acceptAll = async () => {
   if (pendingRequests.value.length === 0) return
-  
+
   const result = await Swal.fire({
     title: 'อนุมัติทั้งหมด?',
     text: `ต้องการอนุมัติคำขอทั้ง ${pendingRequests.value.length} รายการหรือไม่?`,
@@ -132,33 +139,37 @@ const acceptAll = async () => {
     confirmButtonText: 'อนุมัติทั้งหมด',
     cancelButtonText: 'ยกเลิก'
   })
-  
+
   if (!result.isConfirmed) return
-  
+
   isLoading.value = true
-  let successCount = 0
-  
-  for (const request of [...pendingRequests.value]) {
-    try {
-      const response: any = await api.post(`/api/academies/${academyId.value}/members/${request.id}/accept`, {})
-      if (response.success) {
-        pendingRequests.value = pendingRequests.value.filter(r => r.id !== request.id)
-        successCount++
-      }
-    } catch (err) {
-      console.error('Failed to accept:', request.id, err)
-    }
+  try {
+    const memberIds = pendingRequests.value.map(r => r.id)
+    const response: any = await api.post(`/api/academies/${academyId.value}/members/bulk-action`, {
+      member_ids: memberIds,
+      action: 'approve',
+    })
+
+    const successCount = response?.success_count ?? 0
+    await fetchPendingRequests()
+
+    Swal.fire({
+      icon: 'success',
+      title: 'อนุมัติสำเร็จ',
+      text: `อนุมัติแล้ว ${successCount} รายการ`,
+      timer: 2000,
+      showConfirmButton: false
+    })
+  } catch (err) {
+    console.error('Failed to bulk accept:', err)
+    Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: 'ไม่สามารถอนุมัติทั้งหมดได้',
+    })
+  } finally {
+    isLoading.value = false
   }
-  
-  isLoading.value = false
-  
-  Swal.fire({
-    icon: 'success',
-    title: 'อนุมัติสำเร็จ',
-    text: `อนุมัติแล้ว ${successCount} รายการ`,
-    timer: 2000,
-    showConfirmButton: false
-  })
 }
 
 const formatDate = (dateString: string) => {

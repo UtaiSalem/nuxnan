@@ -201,6 +201,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::get('/{academy}/members/search', [AcademyMemberController::class, 'searchMembers'])->name('api.academy.members.search');
     Route::get('/{academy}/members/stats', [AcademyMemberController::class, 'getMemberStats'])->name('api.academy.members.stats');
     Route::get('/{academy}/members/filter-options', [AcademyMemberController::class, 'getFilterOptions'])->name('api.academy.members.filter-options');
+    Route::get('/{academy}/members/invitations', [AcademyMemberController::class, 'invitationHistory'])->name('api.academy.members.invitations');
 
     // Member management (accept/reject/suspend/remove)
     Route::post('/{academy}/members/{member}/accept', [AcademyMemberController::class, 'acceptmember'])->name('api.academy.members.accept');

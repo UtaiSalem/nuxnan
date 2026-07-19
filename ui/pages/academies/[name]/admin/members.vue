@@ -204,7 +204,7 @@ const classSectionOptions = computed(() => [
   ...[...filterOptions.value.classrooms]
     .sort((a, b) => String(a.label).localeCompare(String(b.label), 'th', { numeric: true, sensitivity: 'base' }))
     .map(classroom => ({
-      value: `${classroom.class_level}::${classroom.class_section}`,
+      value: `${classroom.class_level}|${classroom.class_section}`,
       label: classroom.label
     }))
 ])
@@ -340,6 +340,7 @@ const fetchMembers = async (page = 1) => {
     if (selectedTag.value !== null) params.append('tag_id', String(selectedTag.value))
     if (selectedClassLevel.value) params.append('class_level', selectedClassLevel.value)
     if (selectedClassSection.value) params.append('class_section', selectedClassSection.value)
+    if (selectedClassroomKey.value) params.append('classroom_key', selectedClassroomKey.value)
     if (selectedGender.value !== null) params.append('gender', String(selectedGender.value))
     if (selectedMemberType.value) params.append('member_type', selectedMemberType.value)
     if (advancedFilters.value.dateFrom) params.append('date_from', advancedFilters.value.dateFrom)
@@ -541,7 +542,7 @@ const onSearch = () => {
 
 const onClassroomChange = () => {
   if (selectedClassroomKey.value) {
-    const [level, section] = selectedClassroomKey.value.split('::')
+    const [level, section] = selectedClassroomKey.value.split('|')
     selectedClassLevel.value = level || null
     selectedClassSection.value = section || null
   } else {
@@ -849,6 +850,14 @@ const getRoleBadge = (member: any) => {
             <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
             <span class="hidden sm:inline">ส่งออก CSV</span>
           </button>
+          <NuxtLink
+            v-if="can('members.view')"
+            :to="`/academies/${academyName}/admin/members/invitations`"
+            class="px-3 py-2.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+          >
+            <Icon icon="fluent:history-24-regular" class="w-5 h-5" />
+            <span class="hidden sm:inline">ประวัติการเชิญ</span>
+          </NuxtLink>
           <NuxtLink 
             :to="`/academies/${academyName}/admin/roles`"
             class="px-3 py-2.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
@@ -1156,7 +1165,7 @@ const getRoleBadge = (member: any) => {
           <button
             v-for="classroom in filterOptions.classrooms"
             :key="`${classroom.class_level}-${classroom.class_section}`"
-            @click="selectedClassroomKey = `${classroom.class_level}::${classroom.class_section}`; selectedClassLevel = classroom.class_level; selectedClassSection = classroom.class_section; onSearch()"
+            @click="selectedClassroomKey = `${classroom.class_level}|${classroom.class_section}`; selectedClassLevel = classroom.class_level; selectedClassSection = classroom.class_section; onSearch()"
             :class="[
               'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
               selectedClassLevel === classroom.class_level && selectedClassSection === classroom.class_section

@@ -249,6 +249,7 @@ class AcademyMemberController extends Controller
 
                     return [
                         'id' => $item->id,
+                        'key' => $item->class_level.'|'.$item->class_section,
                         'class_level' => $item->class_level,
                         'class_section' => $item->class_section,
                         'label' => $item->name ?? $label,
@@ -279,6 +280,7 @@ class AcademyMemberController extends Controller
                     'class_levels' => $classLevels,
                     'class_sections' => $classSections,
                     'classrooms' => $classrooms,
+                    'all_classrooms' => $classrooms,
                     'genders' => $genders,
                 ],
             ], 200);
@@ -334,6 +336,7 @@ class AcademyMemberController extends Controller
 
                     return [
                         'id' => $item->id,
+                        'key' => $item->class_level.'|'.$item->class_section,
                         'class_level' => $item->class_level,
                         'class_section' => $item->class_section,
                         'label' => $item->name ?? $label,
@@ -390,6 +393,7 @@ class AcademyMemberController extends Controller
                     }
 
                     return [
+                        'key' => $item->class_level.'|'.$item->class_section,
                         'class_level' => $item->class_level,
                         'class_section' => $item->class_section,
                         'label' => $label,
@@ -421,6 +425,7 @@ class AcademyMemberController extends Controller
                 'class_levels' => $classLevels,
                 'class_sections' => $classSections,
                 'classrooms' => $classrooms,
+                'all_classrooms' => $classrooms,
                 'genders' => $genders,
             ],
         ], 200);
@@ -571,8 +576,8 @@ class AcademyMemberController extends Controller
      */
     public function getPendingRequests(Academy $academy)
     {
-        // Check if the current user is an admin of this academy
-        if ($academy->user_id !== auth()->id()) {
+        // Owner, academy admins, or members holding members.manage may view join requests
+        if (! $this->canManageMembers($academy)) {
             return response()->json([
                 'success' => false,
                 'message' => 'คุณไม่มีสิทธิ์ดูข้อมูลนี้',
@@ -582,6 +587,7 @@ class AcademyMemberController extends Controller
         $pendingRequests = AcademyMember::where('academy_id', $academy->id)
             ->where('status', 1) // pending status
             ->with('user:id,name,email,profile_photo_path,reference_code')
+            ->latest('created_at')
             ->get();
 
         return response()->json([
@@ -646,6 +652,13 @@ class AcademyMemberController extends Controller
             $query->whereHas('tags', function ($q) use ($request) {
                 $q->where('member_tags.id', $request->tag_id);
             });
+        }
+
+        // A classroom_key is authoritative when supplied: it is the FE's level|section composite.
+        $classroomKey = $request->input('classroom_key');
+        if ($classroomKey) {
+            [$keyLevel, $keySection] = array_pad(explode('|', $classroomKey, 2), 2, null);
+            $request->merge(['class_level' => $keyLevel, 'class_section' => $keySection]);
         }
 
         // Filter by the student's current classroom enrollment. The filter options
@@ -734,6 +747,45 @@ class AcademyMemberController extends Controller
                 'total' => $members->total(),
             ],
         ], 200);
+    }
+
+    public function invitationHistory(Academy $academy, Request $request)
+    {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์ดูประวัติการเชิญ'], 403);
+        }
+
+        $query = MemberActivityLog::forAcademy($academy->id)
+            ->whereIn('action', [MemberActivityLog::ACTION_INVITE, MemberActivityLog::ACTION_ACCEPT_INVITE, MemberActivityLog::ACTION_DECLINE_INVITE])
+            ->with(['user', 'targetUser']);
+
+        if ($request->filled('q')) {
+            $q = $request->input('q');
+            $query->where(function ($builder) use ($q) {
+                $builder->whereHas('user', fn ($user) => $user->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%"))
+                    ->orWhereHas('targetUser', fn ($user) => $user->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%"));
+            });
+        }
+        if ($request->filled('action')) {
+            $query->where('action', $request->input('action'));
+        }
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->input('from'));
+        }
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->input('to'));
+        }
+
+        $logs = $query->latest('created_at')->paginate(25);
+
+        return response()->json([
+            'success' => true,
+            'data' => $logs->items(),
+            'pagination' => [
+                'current_page' => $logs->currentPage(), 'last_page' => $logs->lastPage(),
+                'per_page' => $logs->perPage(), 'total' => $logs->total(),
+            ],
+        ]);
     }
 
     /**
